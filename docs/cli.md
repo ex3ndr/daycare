@@ -5,7 +5,9 @@ The CLI is implemented with Commander in `sources/main.ts`. It always initialize
 ## Commands
 - `start` - launches configured connectors and attaches the echo handler.
 - `status` - placeholder status command.
-- `add telegram` - prompts for a bot token and writes `.scout/telegram.json`.
+- `add telegram` - prompts for a bot token and writes `auth.json`.
+- `add codex` - prompts for a Codex token and writes `auth.json`.
+- `add claude` - prompts for a Claude Code token and writes `auth.json`.
 
 ## Development
 - `yarn dev` runs the CLI directly via `tsx`.
@@ -30,7 +32,7 @@ sequenceDiagram
   participant Sessions
   User->>CLI: scout start
   CLI->>Config: load scout.config.json
-  CLI->>Config: fallback .scout/telegram.json
+  CLI->>Config: read auth.json
   CLI->>Connector: init connectors
   CLI->>Cron: init cron tasks (optional)
   CLI->>PM2: start pm2 processes (optional)

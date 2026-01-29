@@ -3,24 +3,24 @@ import path from "node:path";
 
 import { readAuthFile, writeAuthFile } from "../auth.js";
 
-export type AddTelegramOptions = {
+export type AddClaudeCodeOptions = {
   token?: string;
   output: string;
 };
 
 const DEFAULT_OUTPUT = "auth.json";
 
-export async function addTelegramCommand(
-  options: AddTelegramOptions
+export async function addClaudeCodeCommand(
+  options: AddClaudeCodeOptions
 ): Promise<void> {
-  intro("scout add telegram");
+  intro("scout add claude");
 
   const outputPath = path.resolve(options.output || DEFAULT_OUTPUT);
 
   const tokenInput =
     options.token ??
     (await password({
-      message: "Telegram bot token",
+      message: "Claude Code token",
       validate: (value) => (value ? undefined : "Token is required")
     }));
 
@@ -30,12 +30,11 @@ export async function addTelegramCommand(
   }
 
   const token = String(tokenInput);
-
   const auth = await readAuthFile(outputPath);
 
-  if (auth.telegram?.token) {
+  if (auth["claude-code"]?.token || auth.claude?.token) {
     const overwrite = await confirm({
-      message: `Overwrite existing telegram token in ${outputPath}?`,
+      message: `Overwrite existing Claude Code token in ${outputPath}?`,
       initialValue: false
     });
 
@@ -45,8 +44,8 @@ export async function addTelegramCommand(
     }
   }
 
-  auth.telegram = { token };
+  auth["claude-code"] = { token };
   await writeAuthFile(outputPath, auth);
 
-  outro(`Saved telegram token to ${outputPath}`);
+  outro(`Saved Claude Code token to ${outputPath}`);
 }

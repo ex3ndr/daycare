@@ -9,6 +9,7 @@ Scout includes a small set of general-purpose helpers in `sources/util/`.
 - `debounce.ts` - configurable debounce helpers.
 - `trimIdent.ts` - trims shared indentation.
 - `stringUtils.ts` - camelCase + safe filename helpers.
+- `shutdown.ts` - coordinated shutdown hooks and signal handling.
 
 ```mermaid
 flowchart TD
@@ -19,4 +20,5 @@ flowchart TD
   Debounce[debounce.ts] --> Callers
   Trim[trimIdent.ts] --> Text
   StringUtils[stringUtils.ts] --> Text
+  Shutdown[shutdown.ts] --> Exit[graceful exit]
 ```

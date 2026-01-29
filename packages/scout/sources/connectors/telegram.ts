@@ -9,7 +9,7 @@ import type {
   MessageContext,
   MessageHandler
 } from "./types.js";
-import { getLogger } from "../logging/index.js";
+import { getLogger } from "../log.js";
 
 export type TelegramConnectorOptions = {
   token: string;
@@ -23,6 +23,7 @@ export type TelegramConnectorOptions = {
     jitter?: number;
   };
   enableGracefulShutdown?: boolean;
+  onFatal?: (reason: string, error?: unknown) => void;
 };
 
 const DEFAULT_STATE_PATH = ".scout/telegram-offset.json";
@@ -41,11 +42,13 @@ export class TelegramConnector implements Connector {
   private retryOptions?: TelegramConnectorOptions["retry"];
   private clearWebhookOnStart: boolean;
   private clearedWebhook = false;
+  private onFatal?: TelegramConnectorOptions["onFatal"];
 
   constructor(options: TelegramConnectorOptions) {
     this.pollingEnabled = options.polling ?? true;
     this.clearWebhookOnStart = options.clearWebhook ?? true;
     this.retryOptions = options.retry;
+    this.onFatal = options.onFatal;
     this.statePath =
       options.statePath === undefined ? DEFAULT_STATE_PATH : options.statePath;
     if (this.statePath) {
@@ -220,6 +223,7 @@ export class TelegramConnector implements Connector {
         "Telegram polling stopped (another instance is polling)"
       );
       void this.stopPolling("conflict");
+      this.onFatal?.("polling_conflict", error);
       return;
     }
 
@@ -283,7 +287,7 @@ export class TelegramConnector implements Connector {
     process.once("SIGTERM", handler);
   }
 
-  private async shutdown(reason: string): Promise<void> {
+  async shutdown(reason: string = "shutdown"): Promise<void> {
     if (this.shuttingDown) {
       return;
     }

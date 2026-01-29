@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
+    "@mariozechner/pi-ai": "0.50.3",
     "commander": "^12.1.0",
     "node-telegram-bot-api": "^0.66.0",
-    "pm2": "^5.4.2",
     "pino": "^9.0.0",
-    "pino-pretty": "^11.0.0"
+    "pino-pretty": "^11.0.0",
+    "pm2": "^5.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

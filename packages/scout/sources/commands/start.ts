@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { getLogger } from "../logging/index.js";
+import { DEFAULT_AUTH_PATH, readAuthFile } from "../auth.js";
+import { getLogger } from "../log.js";
+import { awaitShutdown, onShutdown, requestShutdown } from "../util/shutdown.js";
 
 import type { CronTaskConfig } from "../modules/runtime/cron.js";
 import { CronScheduler } from "../modules/runtime/cron.js";
@@ -65,14 +67,14 @@ export async function startCommand(options: StartOptions): Promise<void> {
 
   const configPath = path.resolve(options.config);
   const config = (await readJsonFile<ScoutConfig>(configPath)) ?? {};
+  const auth = await readAuthFile(DEFAULT_AUTH_PATH);
   const telegramFallback = await readJsonFile<TelegramConfig>(
     path.resolve(DEFAULT_TELEGRAM_CONFIG_PATH)
   );
 
   const connectors: { name: string; connector: Connector }[] = [];
 
-  const telegramConfig =
-    config.connectors?.telegram ?? telegramFallback ?? null;
+  const telegramConfig = config.connectors?.telegram ?? null;
   const legacyCronConfig =
     config.connectors?.chron ??
     config.connectors?.cron ??
@@ -86,11 +88,31 @@ export async function startCommand(options: StartOptions): Promise<void> {
     ? pm2Config
     : pm2Config?.processes ?? [];
 
-  if (telegramConfig?.token) {
+  const telegramAuthToken = auth.telegram?.token ?? null;
+  const telegramLegacyToken = telegramConfig?.token ?? telegramFallback?.token;
+  const telegramToken = telegramAuthToken ?? telegramLegacyToken ?? null;
+
+  if (telegramToken) {
+    if (!telegramAuthToken && telegramLegacyToken) {
+      logger.warn(
+        "telegram auth should be stored in auth.json (auth.telegram.token)"
+      );
+    }
     logger.info("load: telegram");
     connectors.push({
       name: "telegram",
-      connector: new TelegramConnector(telegramConfig)
+      connector: new TelegramConnector({
+        ...(telegramConfig ?? {}),
+        token: telegramToken,
+        enableGracefulShutdown: false,
+        onFatal: (reason, error) => {
+          logger.warn(
+            { reason, error },
+            "Telegram connector requested shutdown"
+          );
+          void requestShutdown("fatal");
+        }
+      })
     });
   }
 
@@ -127,6 +149,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
   }
 
   let cron: CronScheduler | null = null;
+  let pm2Runtime: Pm2Runtime | null = null;
 
   if (cronConfig) {
     if (config.connectors?.chron) {
@@ -156,13 +179,11 @@ export async function startCommand(options: StartOptions): Promise<void> {
 
   if (pm2Processes.length > 0) {
     logger.info("load: pm2");
-    const pm2Runtime = new Pm2Runtime({
+    pm2Runtime = new Pm2Runtime({
       connectTimeoutMs: !Array.isArray(pm2Config)
         ? pm2Config?.connectTimeoutMs
         : undefined,
-      disconnectOnExit: !Array.isArray(pm2Config)
-        ? pm2Config?.disconnectOnExit
-        : undefined
+      disconnectOnExit: false
     });
 
     try {
@@ -172,12 +193,51 @@ export async function startCommand(options: StartOptions): Promise<void> {
     }
   }
 
+  for (const { name, connector } of connectors) {
+    if (typeof connector.shutdown !== "function") {
+      continue;
+    }
+    onShutdown(`connector:${name}`, async () => {
+      try {
+        const maybe = connector.shutdown?.();
+        if (maybe && typeof (maybe as Promise<void>).catch === "function") {
+          void (maybe as Promise<void>).catch((error) => {
+            logger.warn(
+              { connector: name, error },
+              "Connector shutdown failed"
+            );
+          });
+        }
+      } catch (error) {
+        logger.warn({ connector: name, error }, "Connector shutdown failed");
+      }
+    });
+  }
+
+  if (cron) {
+    onShutdown("cron", () => {
+      cron?.stop();
+    });
+  }
+
+  if (pm2Runtime) {
+    onShutdown("pm2", () => {
+      void pm2Runtime?.disconnect().catch((error) => {
+        logger.warn({ error }, "pm2 disconnect failed");
+      });
+    });
+  }
+
   logger.info(
     { connectors: connectors.map((entry) => entry.name) },
     "Bot started"
   );
   cron?.start();
   logger.info("Ready. Listening for messages.");
+
+  const signal = await awaitShutdown();
+  logger.info({ signal }, "Shutdown complete");
+  process.exit(0);
 }
 
 async function handleSessionMessage(

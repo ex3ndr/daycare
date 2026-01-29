@@ -7,6 +7,8 @@ Key pieces:
 - **Connectors** expose `onMessage`/`sendMessage`.
 - **Cron scheduler** emits messages on timers for internal automation.
 - **PM2 runtime** keeps background processes running.
+- **Auth** stores tokens for connectors and inference.
+- **Inference** wraps model providers for Codex/Claude Code.
 - **Session manager** serializes handling per session.
 - **Logging** is centralized via `initLogging`.
 
@@ -17,6 +19,8 @@ flowchart LR
   Connectors -->|message| Sessions[SessionManager]
   Cron[CronScheduler] -->|message| Sessions
   Start --> PM2[Pm2Runtime]
+  Start --> Auth[auth.json]
+  Auth --> Inference[Inference client]
   Sessions -->|handler| Echo[echo handler]
   Echo -->|sendMessage| Connectors
   CLI --> Logging[initLogging]

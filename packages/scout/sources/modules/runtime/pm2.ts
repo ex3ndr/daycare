@@ -1,6 +1,6 @@
 import pm2, { type ProcessDescription, type StartOptions } from "pm2";
 
-import { getLogger } from "../../logging/index.js";
+import { getLogger } from "../../log.js";
 
 export type Pm2ProcessConfig = {
   name: string;

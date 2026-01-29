@@ -16,4 +16,5 @@ export type MessageHandler = (
 export interface Connector {
   onMessage(handler: MessageHandler): void;
   sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
+  shutdown?: (reason?: string) => void | Promise<void>;
 }

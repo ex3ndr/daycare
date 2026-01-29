@@ -7,6 +7,8 @@ This folder documents the current Scout CLI, connectors, sessions, and logging.
 - `cli.md` - CLI commands and runtime behavior
 - `connectors.md` - connector abstraction, telegram, and chron connector
 - `cron.md` - cron scheduler tasks and actions
+- `auth.md` - auth tokens and helper commands
+- `inference.md` - inference runtime helpers
 - `pm2.md` - pm2 runtime process management
 - `util.md` - shared utility helpers
 - `conventions.md` - import and compatibility rules
@@ -22,9 +24,11 @@ flowchart TD
   Docs --> Conn[connectors.md]
   Docs --> Sess[sessions.md]
   Docs --> Config[config.md]
+  Docs --> Auth[auth.md]
   Docs --> Log[logging.md]
   Docs --> Test[testing.md]
   Docs --> PM2[pm2.md]
   Docs --> Util[util.md]
   Docs --> Conv[conventions.md]
+  Docs --> Infer[inference.md]
 ```

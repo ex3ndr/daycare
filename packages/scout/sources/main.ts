@@ -1,8 +1,10 @@
 import { Command } from "commander";
+import { addClaudeCodeCommand } from "./commands/add-claude-code.js";
+import { addCodexCommand } from "./commands/add-codex.js";
 import { addTelegramCommand } from "./commands/add-telegram.js";
 import { startCommand } from "./commands/start.js";
 import { statusCommand } from "./commands/status.js";
-import { initLogging } from "./logging/index.js";
+import { initLogging } from "./log.js";
 
 const program = new Command();
 
@@ -30,7 +32,26 @@ addCommand
   .command("telegram")
   .description("Add Telegram connector")
   .option("-t, --token <token>", "Telegram bot token")
-  .option("-o, --output <path>", "Config output path", ".scout/telegram.json")
+  .option("-o, --output <path>", "Auth output path", "auth.json")
   .action(addTelegramCommand);
+
+addCommand
+  .command("codex")
+  .description("Add Codex token")
+  .option("-t, --token <token>", "Codex token")
+  .option("-o, --output <path>", "Auth output path", "auth.json")
+  .action(addCodexCommand);
+
+addCommand
+  .command("claude")
+  .description("Add Claude Code token")
+  .option("-t, --token <token>", "Claude Code token")
+  .option("-o, --output <path>", "Auth output path", "auth.json")
+  .action(addClaudeCodeCommand);
+
+if (process.argv.length <= 2) {
+  program.outputHelp();
+  process.exit(0);
+}
 
 await program.parseAsync(process.argv);
