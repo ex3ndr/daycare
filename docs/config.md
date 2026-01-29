@@ -49,6 +49,18 @@ flowchart TD
         "channelId": "local"
       }
     ]
+  },
+  "runtime": {
+    "pm2": {
+      "processes": [
+        {
+          "name": "worker",
+          "script": "dist/worker.js",
+          "args": ["--mode", "job"],
+          "autorestart": true
+        }
+      ]
+    }
   }
 }
 ```
@@ -56,6 +68,7 @@ flowchart TD
 Notes:
 - `cron` is the preferred top-level config for scheduled tasks.
 - `connectors.chron` is still accepted for backward compatibility and will warn.
+- `runtime.pm2` configures PM2-managed processes.
 
 ## `.scout/telegram.json`
 Written by `scout add telegram`.

@@ -6,6 +6,7 @@ Key pieces:
 - **CLI** (`sources/main.ts`) sets up commands and logging.
 - **Connectors** expose `onMessage`/`sendMessage`.
 - **Cron scheduler** emits messages on timers for internal automation.
+- **PM2 runtime** keeps background processes running.
 - **Session manager** serializes handling per session.
 - **Logging** is centralized via `initLogging`.
 
@@ -15,6 +16,7 @@ flowchart LR
   Start -->|config| Connectors
   Connectors -->|message| Sessions[SessionManager]
   Cron[CronScheduler] -->|message| Sessions
+  Start --> PM2[Pm2Runtime]
   Sessions -->|handler| Echo[echo handler]
   Echo -->|sendMessage| Connectors
   CLI --> Logging[initLogging]

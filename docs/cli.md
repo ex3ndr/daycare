@@ -25,6 +25,7 @@ sequenceDiagram
   participant CLI
   participant Config
   participant Cron
+  participant PM2
   participant Connector
   participant Sessions
   User->>CLI: scout start
@@ -32,6 +33,7 @@ sequenceDiagram
   CLI->>Config: fallback .scout/telegram.json
   CLI->>Connector: init connectors
   CLI->>Cron: init cron tasks (optional)
+  CLI->>PM2: start pm2 processes (optional)
   Connector->>Sessions: onMessage
   Sessions->>Connector: sendMessage (echo)
 ```

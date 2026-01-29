@@ -1,4 +1,4 @@
-import pm2 from "pm2";
+import pm2, { type ProcessDescription, type StartOptions } from "pm2";
 
 import { getLogger } from "../../logging/index.js";
 
@@ -50,7 +50,7 @@ export class Pm2Runtime {
   async startProcess(config: Pm2ProcessConfig): Promise<void> {
     await this.ensureConnected();
 
-    const options: pm2.StartOptions = {
+    const options: StartOptions = {
       name: config.name,
       script: config.script,
       args: config.args,
@@ -122,7 +122,7 @@ export class Pm2Runtime {
     });
   }
 
-  async listProcesses(): Promise<pm2.ProcessDescription[]> {
+  async listProcesses(): Promise<ProcessDescription[]> {
     await this.ensureConnected();
     return new Promise((resolve, reject) => {
       pm2.list((error, list) => {
@@ -131,7 +131,7 @@ export class Pm2Runtime {
           reject(error);
           return;
         }
-        resolve(list);
+        resolve(list ?? []);
       });
     });
   }

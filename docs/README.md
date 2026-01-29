@@ -22,4 +22,5 @@ flowchart TD
   Docs --> Config[config.md]
   Docs --> Log[logging.md]
   Docs --> Test[testing.md]
+  Docs --> PM2[pm2.md]
 ```
