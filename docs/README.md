@@ -9,6 +9,7 @@ This folder documents the current Scout CLI, connectors, sessions, and logging.
 - `cron.md` - cron scheduler tasks and actions
 - `pm2.md` - pm2 runtime process management
 - `util.md` - shared utility helpers
+- `conventions.md` - import and compatibility rules
 - `sessions.md` - session queueing and sequencing
 - `config.md` - config files and resolution order
 - `logging.md` - logging configuration and output
@@ -25,4 +26,5 @@ flowchart TD
   Docs --> Test[testing.md]
   Docs --> PM2[pm2.md]
   Docs --> Util[util.md]
+  Docs --> Conv[conventions.md]
 ```

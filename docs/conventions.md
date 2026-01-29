@@ -1,0 +1,13 @@
+# Conventions
+
+Scout keeps module boundaries explicit and avoids barrel `index.ts` files.
+
+- Import modules directly (e.g., `./log.js`, `./connectors/telegram.js`).
+- Avoid internal compatibility shims between modules.
+
+```mermaid
+flowchart TD
+  Direct[Direct imports] --> ModuleA[module file]
+  Direct --> ModuleB[module file]
+  ModuleA -. no barrels .-> None[(no index.ts)]
+```
