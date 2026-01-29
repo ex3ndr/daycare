@@ -24,3 +24,4 @@ yarn typecheck
 - commit after each ready-to-use change using Angular-style commits
 - build before each commit and run tests
 - document every change in `/docs/` with mermaid diagrams
+- do not use barrel `index.ts` files
