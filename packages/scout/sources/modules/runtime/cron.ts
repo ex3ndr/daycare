@@ -10,6 +10,7 @@ export type CronTaskConfig = {
   channelId?: string;
   sessionId?: string;
   userId?: string | null;
+  source?: string;
   enabled?: boolean;
   runOnStart?: boolean;
   once?: boolean;
@@ -41,12 +42,14 @@ export class CronScheduler {
   private timers = new Map<string, NodeJS.Timeout>();
   private started = false;
   private stopped = false;
+  private taskCounter = 0;
   private onMessage: CronSchedulerOptions["onMessage"];
   private actions: Record<string, CronAction>;
   private onError?: CronSchedulerOptions["onError"];
 
   constructor(options: CronSchedulerOptions) {
     this.tasks = CronScheduler.normalizeTasks(options.tasks);
+    this.taskCounter = CronScheduler.seedTaskCounter(this.tasks);
     this.onMessage = options.onMessage;
     this.actions = options.actions ?? {};
     this.onError = options.onError;
@@ -64,33 +67,7 @@ export class CronScheduler {
         continue;
       }
 
-      if (!this.isValidInterval(task.everyMs)) {
-        void this.reportError(
-          new Error(`Invalid interval for task ${task.id}`),
-          task
-        );
-        continue;
-      }
-
-      if (task.runOnStart) {
-        void this.dispatchTask(task);
-      }
-
-      if (task.once) {
-        if (!task.runOnStart) {
-          const timer = setTimeout(() => {
-            void this.dispatchTask(task).finally(() => {
-              this.timers.delete(task.id);
-            });
-          }, task.everyMs);
-          this.timers.set(task.id, timer);
-        }
-      } else {
-        const timer = setInterval(() => {
-          void this.dispatchTask(task);
-        }, task.everyMs);
-        this.timers.set(task.id, timer);
-      }
+      this.scheduleTask(task);
     }
   }
 
@@ -104,6 +81,22 @@ export class CronScheduler {
       clearInterval(timer);
     }
     this.timers.clear();
+  }
+
+  addTask(task: CronTaskConfig): CronTask {
+    const normalized = this.normalizeTask(task);
+
+    if (this.tasks.some((existing) => existing.id === normalized.id)) {
+      throw new Error(`Cron task already exists: ${normalized.id}`);
+    }
+
+    this.tasks.push(normalized);
+
+    if (this.started && !this.stopped && normalized.enabled !== false) {
+      this.scheduleTask(normalized);
+    }
+
+    return normalized;
   }
 
   private async dispatchTask(task: CronTask): Promise<void> {
@@ -155,8 +148,59 @@ export class CronScheduler {
     await this.onError(error, task);
   }
 
+  private scheduleTask(task: CronTask): void {
+    if (!this.isValidInterval(task.everyMs)) {
+      void this.reportError(
+        new Error(`Invalid interval for task ${task.id}`),
+        task
+      );
+      return;
+    }
+
+    if (task.runOnStart) {
+      void this.dispatchTask(task);
+    }
+
+    if (task.once) {
+      if (!task.runOnStart) {
+        const timer = setTimeout(() => {
+          void this.dispatchTask(task).finally(() => {
+            this.timers.delete(task.id);
+          });
+        }, task.everyMs);
+        this.timers.set(task.id, timer);
+      }
+    } else {
+      const timer = setInterval(() => {
+        void this.dispatchTask(task);
+      }, task.everyMs);
+      this.timers.set(task.id, timer);
+    }
+  }
+
   private isValidInterval(value: number): boolean {
     return Number.isFinite(value) && value > 0;
+  }
+
+  private normalizeTask(task: CronTaskConfig): CronTask {
+    return {
+      ...task,
+      id: task.id ?? this.nextTaskId(),
+      everyMs: task.everyMs
+    };
+  }
+
+  private nextTaskId(): string {
+    let candidate = this.taskCounter + 1;
+    let id = `task-${candidate}`;
+
+    while (this.tasks.some((task) => task.id === id)) {
+      candidate += 1;
+      id = `task-${candidate}`;
+    }
+
+    this.taskCounter = candidate;
+    return id;
   }
 
   private static normalizeTasks(tasks: CronTaskConfig[]): CronTask[] {
@@ -165,5 +209,19 @@ export class CronScheduler {
       id: task.id ?? `task-${index + 1}`,
       everyMs: task.everyMs
     }));
+  }
+
+  private static seedTaskCounter(tasks: CronTask[]): number {
+    let max = 0;
+    for (const task of tasks) {
+      const match = /^task-(\d+)$/.exec(task.id);
+      if (match) {
+        const value = Number(match[1]);
+        if (Number.isFinite(value) && value > max) {
+          max = value;
+        }
+      }
+    }
+    return Math.max(max, tasks.length);
   }
 }

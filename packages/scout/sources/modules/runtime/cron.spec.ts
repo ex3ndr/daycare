@@ -96,4 +96,27 @@ describe("CronScheduler", () => {
 
     cron.stop();
   });
+
+  it("adds tasks after start", async () => {
+    const received: string[] = [];
+    const cron = new CronScheduler({
+      tasks: [],
+      onMessage: (message, context) => {
+        received.push(`${context.channelId}:${message.text ?? ""}`);
+      }
+    });
+
+    cron.start();
+    cron.addTask({
+      everyMs: 300,
+      message: "late",
+      once: true,
+      channelId: "session-c"
+    });
+
+    await vi.advanceTimersByTimeAsync(300);
+    expect(received).toEqual(["session-c:late"]);
+
+    cron.stop();
+  });
 });

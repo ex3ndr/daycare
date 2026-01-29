@@ -5,6 +5,13 @@ import fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
 
 import { DEFAULT_AUTH_PATH, updateAuthFile, type AuthConfig } from "../auth.js";
+import {
+  DEFAULT_SETTINGS_PATH,
+  removeAgent,
+  updateSettingsFile,
+  upsertAgent,
+  type SettingsConfig
+} from "../settings.js";
 import { getLogger } from "../log.js";
 import {
   applyClaudeCodeAuthUpdate,
@@ -20,6 +27,7 @@ import type { ConnectorActionResult } from "../connectors/manager.js";
 export type EngineServerOptions = {
   socketPath?: string;
   onAuthUpdated?: (auth: AuthConfig) => void | Promise<void>;
+  onSettingsUpdated?: (settings: SettingsConfig) => void | Promise<void>;
   onConnectorLoad?: (id: string) => Promise<ConnectorActionResult>;
   onConnectorUnload?: (id: string) => Promise<ConnectorActionResult>;
 };
@@ -46,6 +54,7 @@ export async function startEngineServer(
   const logger = getLogger("engine.server");
   const socketPath = resolveEngineSocketPath(options.socketPath);
   const authPath = DEFAULT_AUTH_PATH;
+  const settingsPath = DEFAULT_SETTINGS_PATH;
 
   await fs.mkdir(path.dirname(socketPath), { recursive: true });
   await fs.rm(socketPath, { force: true });
@@ -80,7 +89,16 @@ export async function startEngineServer(
     const updated = await updateAuthFile(authPath, (auth) =>
       applyCodexAuthUpdate(auth, payload)
     );
+    const updatedSettings = await updateSettingsFile(settingsPath, (settings) => ({
+      ...settings,
+      agents: upsertAgent(
+        settings.agents,
+        { provider: "codex", model: payload.model },
+        payload.main
+      )
+    }));
     await options.onAuthUpdated?.(updated);
+    await options.onSettingsUpdated?.(updatedSettings);
     return reply.send({ ok: true });
   });
 
@@ -88,7 +106,12 @@ export async function startEngineServer(
     const updated = await updateAuthFile(authPath, (auth) =>
       removeCodexAuth(auth)
     );
+    const updatedSettings = await updateSettingsFile(settingsPath, (settings) => ({
+      ...settings,
+      agents: removeAgent(settings.agents, "codex")
+    }));
     await options.onAuthUpdated?.(updated);
+    await options.onSettingsUpdated?.(updatedSettings);
     return reply.send({ ok: true });
   });
 
@@ -100,7 +123,16 @@ export async function startEngineServer(
     const updated = await updateAuthFile(authPath, (auth) =>
       applyClaudeCodeAuthUpdate(auth, payload)
     );
+    const updatedSettings = await updateSettingsFile(settingsPath, (settings) => ({
+      ...settings,
+      agents: upsertAgent(
+        settings.agents,
+        { provider: "claude-code", model: payload.model },
+        payload.main
+      )
+    }));
     await options.onAuthUpdated?.(updated);
+    await options.onSettingsUpdated?.(updatedSettings);
     return reply.send({ ok: true });
   });
 
@@ -108,7 +140,12 @@ export async function startEngineServer(
     const updated = await updateAuthFile(authPath, (auth) =>
       removeClaudeCodeAuth(auth)
     );
+    const updatedSettings = await updateSettingsFile(settingsPath, (settings) => ({
+      ...settings,
+      agents: removeAgent(settings.agents, "claude-code")
+    }));
     await options.onAuthUpdated?.(updated);
+    await options.onSettingsUpdated?.(updatedSettings);
     return reply.send({ ok: true });
   });
 

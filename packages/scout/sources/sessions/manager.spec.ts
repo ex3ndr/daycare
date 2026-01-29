@@ -48,7 +48,7 @@ describe("SessionManager", () => {
     let sessionId = "";
 
     await manager.handleMessage(
-      "chron",
+      "cron",
       { text: "tick" },
       context,
       (session) => {

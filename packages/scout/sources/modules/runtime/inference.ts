@@ -11,13 +11,13 @@ import {
   type ProviderStreamOptions
 } from "@mariozechner/pi-ai";
 
-import type { AuthConfig, InferenceProviderConfig } from "../../auth.js";
 import {
   DEFAULT_AUTH_PATH,
   getClaudeCodeToken,
   getCodexToken,
   readAuthFile
 } from "../../auth.js";
+import type { AgentConfig } from "../../settings.js";
 
 export type InferenceClient = {
   model: Model<Api>;
@@ -37,23 +37,22 @@ export type InferenceConnectOptions = {
 };
 
 export type InferenceRuntime = {
-  providers: InferenceProviderConfig[];
+  providers: AgentConfig[];
   codexToken?: string | null;
   claudeCodeToken?: string | null;
-  auth?: AuthConfig;
-  onAttempt?: (provider: InferenceProviderConfig, modelId: string) => void;
-  onFallback?: (provider: InferenceProviderConfig, error: unknown) => void;
+  onAttempt?: (provider: AgentConfig, modelId: string) => void;
+  onFallback?: (provider: AgentConfig, error: unknown) => void;
   onSuccess?: (
-    provider: InferenceProviderConfig,
+    provider: AgentConfig,
     modelId: string,
     message: AssistantMessage
   ) => void;
-  onFailure?: (provider: InferenceProviderConfig, error: unknown) => void;
+  onFailure?: (provider: AgentConfig, error: unknown) => void;
 };
 
 export type InferenceResult = {
   message: AssistantMessage;
-  provider: InferenceProviderConfig;
+  provider: AgentConfig;
 };
 
 export async function connectCodex(
@@ -136,45 +135,22 @@ async function resolveToken(
 }
 
 async function connectProvider(
-  provider: InferenceProviderConfig,
+  provider: AgentConfig,
   runtime: InferenceRuntime
 ): Promise<InferenceClient> {
-  switch (provider.id) {
+  switch (provider.provider) {
     case "codex":
       return connectCodex({
-        model: resolveProviderModel(provider, runtime),
+        model: provider.model,
         token: runtime.codexToken ?? undefined
       });
     case "claude-code":
       return connectClaudeCode({
-        model: resolveProviderModel(provider, runtime),
+        model: provider.model,
         token: runtime.claudeCodeToken ?? undefined
       });
     default:
-      throw new Error(`Unsupported inference provider: ${provider.id}`);
-  }
-}
-
-function resolveProviderModel(
-  provider: InferenceProviderConfig,
-  runtime: InferenceRuntime
-): string | undefined {
-  if (provider.model) {
-    return provider.model;
-  }
-
-  const auth = runtime.auth;
-  if (!auth) {
-    return undefined;
-  }
-
-  switch (provider.id) {
-    case "codex":
-      return auth.codex?.model ?? auth["openai-codex"]?.model;
-    case "claude-code":
-      return auth["claude-code"]?.model ?? auth.claude?.model;
-    default:
-      return undefined;
+      throw new Error(`Unsupported inference provider: ${provider.provider}`);
   }
 }
 

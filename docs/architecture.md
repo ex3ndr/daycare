@@ -9,6 +9,7 @@ Key pieces:
 - **PM2 runtime** keeps background processes running.
 - **Container runtime** manages Docker containers via API.
 - **Auth** stores tokens for connectors and inference.
+- **Settings** stores agent provider/model selection.
 - **Inference** wraps model providers for Codex/Claude Code.
 - **Session manager** serializes handling per session.
 - **Logging** is centralized via `initLogging`.
@@ -23,7 +24,8 @@ flowchart LR
   Start --> PM2[Pm2Runtime]
   Start --> Containers[DockerRuntime]
   Start --> Auth[.scout/auth.json]
-  Auth --> Inference[Inference client]
+  Start --> Settings[.scout/settings.json]
+  Settings --> Inference[Inference client]
   Sessions -->|handler| Echo[echo handler]
   Echo -->|sendMessage| Connectors
   CLI --> Logging[initLogging]

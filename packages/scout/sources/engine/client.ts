@@ -3,6 +3,12 @@ import { promises as fs } from "node:fs";
 
 import { DEFAULT_AUTH_PATH, updateAuthFile } from "../auth.js";
 import {
+  DEFAULT_SETTINGS_PATH,
+  removeAgent,
+  updateSettingsFile,
+  upsertAgent
+} from "../settings.js";
+import {
   applyClaudeCodeAuthUpdate,
   applyCodexAuthUpdate,
   applyTelegramAuthUpdate,
@@ -74,6 +80,14 @@ export async function saveCodexAuth(
       await updateAuthFile(DEFAULT_AUTH_PATH, (auth) =>
         applyCodexAuthUpdate(auth, update)
       );
+      await updateSettingsFile(DEFAULT_SETTINGS_PATH, (settings) => ({
+        ...settings,
+        agents: upsertAgent(
+          settings.agents,
+          { provider: "codex", model: update.model },
+          update.main
+        )
+      }));
     }
   });
 }
@@ -89,6 +103,10 @@ export async function removeCodexAuth(
       await updateAuthFile(DEFAULT_AUTH_PATH, (auth) =>
         stripCodexAuth(auth)
       );
+      await updateSettingsFile(DEFAULT_SETTINGS_PATH, (settings) => ({
+        ...settings,
+        agents: removeAgent(settings.agents, "codex")
+      }));
     }
   });
 }
@@ -106,6 +124,14 @@ export async function saveClaudeCodeAuth(
       await updateAuthFile(DEFAULT_AUTH_PATH, (auth) =>
         applyClaudeCodeAuthUpdate(auth, update)
       );
+      await updateSettingsFile(DEFAULT_SETTINGS_PATH, (settings) => ({
+        ...settings,
+        agents: upsertAgent(
+          settings.agents,
+          { provider: "claude-code", model: update.model },
+          update.main
+        )
+      }));
     }
   });
 }
@@ -121,6 +147,10 @@ export async function removeClaudeCodeAuth(
       await updateAuthFile(DEFAULT_AUTH_PATH, (auth) =>
         stripClaudeCodeAuth(auth)
       );
+      await updateSettingsFile(DEFAULT_SETTINGS_PATH, (settings) => ({
+        ...settings,
+        agents: removeAgent(settings.agents, "claude-code")
+      }));
     }
   });
 }
@@ -258,15 +288,18 @@ function requestSocket<TPayload>(
 ): Promise<SocketResponse> {
   return new Promise((resolve, reject) => {
     const body = payload ? JSON.stringify(payload) : "";
+    const headers: Record<string, number | string> = {};
+    if (body) {
+      headers["content-type"] = "application/json";
+      headers["content-length"] = Buffer.byteLength(body);
+    }
+
     const request = http.request(
       {
         socketPath,
         path: endpoint,
         method,
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body)
-        }
+        headers
       },
       (response) => {
         const chunks: Buffer[] = [];
