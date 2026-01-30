@@ -30,7 +30,6 @@ export type TelegramConnectorOptions = {
   onFatal?: (reason: string, error?: unknown) => void;
 };
 
-const DEFAULT_STATE_PATH = ".scout/telegram-offset.json";
 const logger = getLogger("connector.telegram");
 
 export class TelegramConnector implements Connector {
@@ -60,7 +59,9 @@ export class TelegramConnector implements Connector {
     this.fileStore = options.fileStore;
     this.dataDir = options.dataDir;
     this.statePath =
-      options.statePath === undefined ? DEFAULT_STATE_PATH : options.statePath;
+      options.statePath === undefined
+        ? path.join(this.dataDir, "telegram-offset.json")
+        : options.statePath;
     if (this.statePath) {
       this.statePath = path.resolve(this.statePath);
     }

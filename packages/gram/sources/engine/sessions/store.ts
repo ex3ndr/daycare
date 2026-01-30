@@ -7,6 +7,7 @@ import type { MessageContext } from "../connectors/types.js";
 import type { FileReference } from "../../files/types.js";
 import type { Session } from "./session.js";
 import type { SessionMessage, SessionSummary } from "./types.js";
+import { resolveScoutPath } from "../../paths.js";
 
 export type SessionLogEntry<State = Record<string, unknown>> =
   | {
@@ -62,7 +63,7 @@ export type SessionStoreOptions = {
   basePath?: string;
 };
 
-const DEFAULT_BASE_PATH = ".scout/sessions";
+const DEFAULT_BASE_PATH = resolveScoutPath("sessions");
 
 export class SessionStore<State = Record<string, unknown>> {
   private basePath: string;

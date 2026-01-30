@@ -1,6 +1,8 @@
 import path from "node:path";
 
-export const DEFAULT_ENGINE_SOCKET_PATH = ".scout/scout.sock";
+import { resolveScoutPath } from "../../paths.js";
+
+export const DEFAULT_ENGINE_SOCKET_PATH = resolveScoutPath("scout.sock");
 
 export function resolveEngineSocketPath(override?: string): string {
   return path.resolve(override ?? DEFAULT_ENGINE_SOCKET_PATH);

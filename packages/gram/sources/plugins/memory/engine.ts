@@ -17,17 +17,17 @@ export type MemoryEntry = {
 
 export type MemoryEngineOptions = {
   basePath?: string;
+  dataDir?: string;
   maxEntries?: number;
 };
-
-const DEFAULT_BASE_PATH = ".scout/memory";
 
 export class MemoryEngine {
   private basePath: string;
   private maxEntries?: number;
 
   constructor(options: MemoryEngineOptions) {
-    this.basePath = options.basePath ?? DEFAULT_BASE_PATH;
+    this.basePath =
+      options.basePath ?? path.join(options.dataDir ?? process.cwd(), "memory");
     this.maxEntries = options.maxEntries;
   }
 

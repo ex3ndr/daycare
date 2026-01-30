@@ -14,6 +14,7 @@ import {
   upsertPlugin
 } from "../../settings.js";
 import type { EngineEventBus } from "./events.js";
+import { requestShutdown } from "../../util/shutdown.js";
 
 export type EngineServerOptions = {
   socketPath?: string;
@@ -209,6 +210,14 @@ export async function startEngineServer(
     await options.runtime.getAuthStore().setField(payload.id, payload.key, payload.value);
     logger.debug("Auth field set");
     return reply.send({ ok: true });
+  });
+
+  app.post("/v1/engine/shutdown", async (_request, reply) => {
+    logger.info("Shutdown requested via API");
+    reply.send({ ok: true });
+    setImmediate(() => {
+      requestShutdown("SIGTERM");
+    });
   });
 
   app.get("/v1/engine/events", async (request, reply) => {

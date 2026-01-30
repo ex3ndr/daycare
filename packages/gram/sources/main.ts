@@ -6,6 +6,7 @@ import { loadPluginCommand, unloadPluginCommand } from "./commands/plugins.js";
 import { setAuthCommand } from "./commands/auth.js";
 import { addCommand } from "./commands/add.js";
 import { removeCommand } from "./commands/remove.js";
+import { DEFAULT_SETTINGS_PATH } from "./settings.js";
 
 const program = new Command();
 
@@ -22,8 +23,9 @@ program
   .option(
     "-s, --settings <path>",
     "Path to settings file",
-    ".scout/settings.json"
+    DEFAULT_SETTINGS_PATH
   )
+  .option("-f, --force", "Stop any running engine server before starting")
   .action(startCommand);
 
 program
@@ -37,7 +39,7 @@ program
   .option(
     "-s, --settings <path>",
     "Path to settings file",
-    ".scout/settings.json"
+    DEFAULT_SETTINGS_PATH
   )
   .action(addCommand);
 
@@ -47,7 +49,7 @@ program
   .option(
     "-s, --settings <path>",
     "Path to settings file",
-    ".scout/settings.json"
+    DEFAULT_SETTINGS_PATH
   )
   .action(removeCommand);
 

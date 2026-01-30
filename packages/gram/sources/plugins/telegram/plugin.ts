@@ -50,7 +50,9 @@ export const plugin = definePlugin({
         const statePath =
           config.statePath === undefined
             ? path.join(api.dataDir, "telegram-offset.json")
-            : config.statePath;
+            : config.statePath === null
+              ? null
+              : resolvePluginPath(api.dataDir, config.statePath);
         const connector = new TelegramConnector({
           ...config,
           statePath,
@@ -70,3 +72,7 @@ export const plugin = definePlugin({
     };
   }
 });
+
+function resolvePluginPath(baseDir: string, target: string): string {
+  return path.isAbsolute(target) ? target : path.join(baseDir, target);
+}

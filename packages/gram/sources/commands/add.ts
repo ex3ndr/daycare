@@ -24,6 +24,7 @@ import {
 import { listProviderDefinitions, getProviderDefinition } from "../providers/catalog.js";
 import type { ProviderDefinition } from "../providers/types.js";
 import { getLogger } from "../log.js";
+import { DEFAULT_SCOUT_DIR } from "../paths.js";
 
 export type AddOptions = {
   settings?: string;
@@ -34,7 +35,7 @@ export async function addCommand(options: AddOptions): Promise<void> {
 
   const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
   const settings = await readSettingsFile(settingsPath);
-  const dataDir = path.resolve(settings.engine?.dataDir ?? ".scout");
+  const dataDir = path.resolve(settings.engine?.dataDir ?? DEFAULT_SCOUT_DIR);
   const authStore = new AuthStore(path.join(dataDir, "auth.json"));
 
   const addTarget = await promptSelect({

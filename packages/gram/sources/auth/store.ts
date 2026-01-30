@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { resolveScoutPath } from "../paths.js";
+
 export type AuthEntry = {
   type?: "apiKey" | "oauth" | "token";
   apiKey?: string;
@@ -10,7 +12,7 @@ export type AuthEntry = {
 
 export type AuthConfig = Record<string, AuthEntry>;
 
-export const DEFAULT_AUTH_PATH = ".scout/auth.json";
+export const DEFAULT_AUTH_PATH = resolveScoutPath("auth.json");
 
 export class AuthStore {
   private filePath: string;

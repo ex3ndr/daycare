@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { CronTaskConfig } from "./modules/runtime/cron.js";
+import { resolveScoutPath } from "./paths.js";
 
 export type LegacyPluginSettings = {
   id: string;
@@ -64,7 +65,7 @@ export type AssistantSettings = {
   workspaceDir?: string;
 };
 
-export const DEFAULT_SETTINGS_PATH = ".scout/settings.json";
+export const DEFAULT_SETTINGS_PATH = resolveScoutPath("settings.json");
 
 export async function readSettingsFile(
   filePath: string = DEFAULT_SETTINGS_PATH

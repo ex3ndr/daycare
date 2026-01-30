@@ -43,8 +43,12 @@ export const plugin = definePlugin({
   create: (api) => {
     const settings = api.settings as MemorySettings;
     const engineMemory = api.engineSettings.memory;
+    const basePath =
+      resolvePluginPath(api.dataDir, settings.basePath) ??
+      path.join(api.dataDir, "memory");
     const memory = new MemoryEngine({
-      basePath: settings.basePath ?? path.join(api.dataDir, "memory"),
+      basePath,
+      dataDir: api.dataDir,
       maxEntries: settings.maxEntries ?? engineMemory?.maxEntries
     });
     let unsubscribe: (() => void) | null = null;
@@ -107,3 +111,10 @@ export const plugin = definePlugin({
     };
   }
 });
+
+function resolvePluginPath(baseDir: string, target?: string): string | undefined {
+  if (!target) {
+    return undefined;
+  }
+  return path.isAbsolute(target) ? target : path.join(baseDir, target);
+}

@@ -5,12 +5,13 @@ import { createId } from "@paralleldrive/cuid2";
 
 import type { StoredFile } from "./types.js";
 import { sanitizeFilename } from "../util/filename.js";
+import { resolveScoutPath } from "../paths.js";
 
 export type FileStoreOptions = {
   basePath?: string;
 };
 
-const DEFAULT_BASE_PATH = ".scout/files";
+const DEFAULT_BASE_PATH = resolveScoutPath("files");
 
 export class FileStore {
   private basePath: string;
