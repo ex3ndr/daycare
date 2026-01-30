@@ -1,4 +1,6 @@
 import Enquirer from "enquirer";
+// @ts-expect-error enquirer does not ship types for internal keypress module
+import keypress from "enquirer/lib/keypress.js";
 
 export type PromptChoice<TValue extends string> = {
   value: TValue;
@@ -35,6 +37,34 @@ function isPromptCancelled(error: unknown): boolean {
   }
   const code = (error as Error & { code?: string }).code;
   return CANCEL_ERROR_NAMES.has(error.name) || (code ? CANCEL_ERROR_CODES.has(code) : false);
+}
+
+type KeypressModule = {
+  listen: (...args: unknown[]) => () => void;
+  __gramPatched?: boolean;
+};
+
+const keypressModule = keypress as unknown as KeypressModule;
+if (!keypressModule.__gramPatched) {
+  const originalListen = keypressModule.listen.bind(keypressModule);
+  keypressModule.listen = (...args: unknown[]) => {
+    const stop = originalListen(...args);
+    let stopped = false;
+    return () => {
+      if (stopped) {
+        return;
+      }
+      stopped = true;
+      try {
+        stop();
+      } catch (error) {
+        if (!isPromptCancelled(error)) {
+          throw error;
+        }
+      }
+    };
+  };
+  keypressModule.__gramPatched = true;
 }
 
 const { prompt } = Enquirer;
