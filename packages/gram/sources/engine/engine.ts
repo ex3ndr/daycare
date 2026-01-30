@@ -36,22 +36,6 @@ import { ProviderManager } from "../providers/manager.js";
 
 const logger = getLogger("engine.runtime");
 const MAX_TOOL_ITERATIONS = 5;
-const DEFAULT_CODEX_SYSTEM_PROMPT = "You are a coding assistant.";
-
-function resolveCodexSystemPrompt(
-  context: Context,
-  providerId?: string
-): string | null {
-  if (providerId !== "openai-codex") {
-    return null;
-  }
-  const existing = context.systemPrompt;
-  if (typeof existing === "string" && existing.trim()) {
-    return existing;
-  }
-  context.systemPrompt = DEFAULT_CODEX_SYSTEM_PROMPT;
-  return context.systemPrompt;
-}
 
 type SessionState = {
   context: Context;
@@ -606,7 +590,6 @@ export class Engine {
 
     const sessionContext = session.context.state.context;
     const providerId = this.resolveSessionProvider(session, entry.context);
-    const codexPrompt = resolveCodexSystemPrompt(sessionContext, providerId);
     logger.debug(`Building context sessionId=${session.id} existingMessageCount=${sessionContext.messages.length}`);
 
     const providerSettings = providerId
@@ -621,9 +604,6 @@ export class Engine {
       tools: this.listContextTools(),
       systemPrompt
     };
-    if (codexPrompt) {
-      resolveCodexSystemPrompt(context, providerId);
-    }
     logger.debug(
       `Context built toolCount=${context.tools?.length ?? 0} systemPrompt=${context.systemPrompt ? "set" : "none"}`
     );
