@@ -1,5 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ImageGenerationRegistry } from "../modules.js";
@@ -57,17 +58,29 @@ export function buildImageGenerationTool(
         }
       );
 
+      const workspaceDir = toolContext.permissions.workingDir;
+      const workspaceImagesDir = path.join(workspaceDir, "images");
+      await fs.mkdir(workspaceImagesDir, { recursive: true });
+      const createdAt = new Date();
+      const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
+
       const content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }> = [
         {
           type: "text",
           text: `Generated ${result.files.length} image(s) with ${providerId}.`
         }
       ];
-      for (const file of result.files) {
+      const workspaceFiles: Array<{ name: string; path: string; mimeType: string }> = [];
+      for (const [index, file] of result.files.entries()) {
         if (!file.mimeType.startsWith("image/")) {
           continue;
         }
         const data = await fs.readFile(file.path);
+        const suffix = result.files.length > 1 ? `-${index + 1}` : "";
+        const filename = `${timestamp}${suffix}.png`;
+        const outputPath = path.join(workspaceImagesDir, filename);
+        await fs.writeFile(outputPath, data);
+        workspaceFiles.push({ name: filename, path: outputPath, mimeType: file.mimeType });
         content.push({
           type: "image",
           data: data.toString("base64"),
@@ -87,7 +100,11 @@ export function buildImageGenerationTool(
             name: file.name,
             mimeType: file.mimeType,
             size: file.size
-          }))
+          })),
+          workspace: {
+            dir: workspaceImagesDir,
+            files: workspaceFiles
+          }
         },
         isError: false,
         timestamp: Date.now()
