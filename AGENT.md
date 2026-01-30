@@ -9,6 +9,7 @@
 - typescript only, esm output
 - sources live in `sources/`
 - tests use `*.spec.ts`
+- tests must be minimal and live next to the file under test
 
 ## Build, Test, and Development Commands
 - Runtime baseline: Node **22+**.

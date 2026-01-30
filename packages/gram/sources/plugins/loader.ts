@@ -1,8 +1,8 @@
-import { promises as fs } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import vm from "node:vm";
+import * as vm from "node:vm";
 
 import type { PluginModule } from "./types.js";
 
@@ -20,6 +20,8 @@ export class PluginModuleLoader {
   private moduleCache = new Map<string, vm.Module>();
   private linkPromises = new Map<string, Promise<void>>();
   private evaluatePromises = new Map<string, Promise<void>>();
+  private cjsCache = new Map<string, unknown>();
+  private supportsModules = typeof vm.SourceTextModule === "function";
 
   constructor(contextName: string) {
     this.context = vm.createContext(buildSandbox(), { name: contextName });
@@ -29,6 +31,11 @@ export class PluginModuleLoader {
     const resolved = await resolveFile(entryPath, process.cwd());
     if (!resolved) {
       throw new Error(`Plugin entry not found: ${entryPath}`);
+    }
+    if (!this.supportsModules) {
+      const moduleExports = this.loadCjsModuleSync(resolved);
+      const plugin = extractPlugin(moduleExports, resolved);
+      return { context: this.context, module: plugin };
     }
     const module = await this.getModule(resolved);
     await this.linkModule(module);
@@ -53,7 +60,7 @@ export class PluginModuleLoader {
 
     const extension = path.extname(resolvedPath);
     if (extension === ".json") {
-      const raw = await fs.readFile(resolvedPath, "utf8");
+      const raw = await fs.promises.readFile(resolvedPath, "utf8");
       const data = JSON.parse(raw) as unknown;
       const jsonModule = new vm.SyntheticModule(["default"], function () {
         this.setExport("default", data);
@@ -65,7 +72,7 @@ export class PluginModuleLoader {
       return jsonModule;
     }
 
-    const source = await fs.readFile(resolvedPath, "utf8");
+    const source = await fs.promises.readFile(resolvedPath, "utf8");
     const code = await maybeTranspile(source, resolvedPath);
     const module = new vm.SourceTextModule(code, {
       context: this.context,
@@ -145,6 +152,48 @@ export class PluginModuleLoader {
     const module = await this.getModule(resolved.path);
     return module;
   }
+
+  private loadCjsModuleSync(resolvedPath: string): unknown {
+    const cached = this.cjsCache.get(resolvedPath);
+    if (cached) {
+      return cached;
+    }
+
+    const extension = path.extname(resolvedPath);
+    if (extension === ".json") {
+      const raw = fs.readFileSync(resolvedPath, "utf8");
+      const data = JSON.parse(raw) as unknown;
+      this.cjsCache.set(resolvedPath, data);
+      return data;
+    }
+
+    const source = fs.readFileSync(resolvedPath, "utf8");
+    const code = maybeTranspileSync(source, resolvedPath);
+    const wrapper = `(function (exports, require, module, __filename, __dirname) {\n${code}\n})`;
+    const script = new vm.Script(wrapper, { filename: resolvedPath });
+    const module: { exports: unknown } = { exports: {} };
+    const localRequire = (specifier: string): unknown => {
+      if (specifier.startsWith("node:")) {
+        return nodeRequire(specifier);
+      }
+      if (!specifier.startsWith(".") && !specifier.startsWith("/") && !specifier.startsWith("file:")) {
+        return nodeRequire(specifier);
+      }
+      const basePath = path.dirname(resolvedPath);
+      const target = specifier.startsWith("file:")
+        ? fileURLToPath(specifier)
+        : path.resolve(basePath, specifier);
+      const resolved = resolveFileSync(target, basePath);
+      if (!resolved) {
+        throw new Error(`Unable to resolve ${specifier} from ${resolvedPath}`);
+      }
+      return this.loadCjsModuleSync(resolved);
+    };
+    const fn = script.runInContext(this.context) as unknown as Function;
+    fn(module.exports, localRequire, module, resolvedPath, path.dirname(resolvedPath));
+    this.cjsCache.set(resolvedPath, module.exports);
+    return module.exports;
+  }
 }
 
 type ResolvedSpecifier =
@@ -218,9 +267,61 @@ async function resolveFile(target: string, basePath: string): Promise<string | n
   }
 }
 
-async function statIfExists(target: string): Promise<ReturnType<typeof fs.stat> | null> {
+function resolveFileSync(target: string, basePath: string): string | null {
+  const stats = statIfExistsSync(target);
+  if (stats?.isFile()) {
+    return target;
+  }
+
+  if (stats?.isDirectory()) {
+    for (const ext of moduleExtensions) {
+      const candidate = path.join(target, `index${ext}`);
+      if (statIfExistsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  const ext = path.extname(target);
+  if (ext) {
+    if (ext === ".js" || ext === ".mjs") {
+      for (const replacement of [".ts", ".tsx", ".mts"]) {
+        const candidate = target.replace(ext, replacement);
+        if (statIfExistsSync(candidate)) {
+          return candidate;
+        }
+      }
+    }
+    return null;
+  }
+
+  for (const extension of moduleExtensions) {
+    const candidate = `${target}${extension}`;
+    if (statIfExistsSync(candidate)) {
+      return candidate;
+    }
+  }
+
   try {
-    return await fs.stat(target);
+    return nodeRequire.resolve(target, { paths: [basePath] });
+  } catch {
+    return null;
+  }
+}
+
+async function statIfExists(
+  target: string
+): Promise<ReturnType<typeof fs.promises.stat> | null> {
+  try {
+    return await fs.promises.stat(target);
+  } catch {
+    return null;
+  }
+}
+
+function statIfExistsSync(target: string): ReturnType<typeof fs.statSync> | null {
+  try {
+    return fs.statSync(target);
   } catch {
     return null;
   }
@@ -236,6 +337,20 @@ async function maybeTranspile(source: string, filename: string): Promise<string>
       target: ts.ScriptTarget.ES2022,
       module: ts.ModuleKind.ESNext,
       sourceMap: false
+    },
+    fileName: filename
+  });
+  return result.outputText;
+}
+
+function maybeTranspileSync(source: string, filename: string): string {
+  const ts = nodeRequire("typescript");
+  const result = ts.transpileModule(source, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.CommonJS,
+      sourceMap: false,
+      allowJs: true
     },
     fileName: filename
   });
@@ -265,3 +380,17 @@ function buildSandbox(): Record<string, unknown> {
     process
   };
 }
+
+function extractPlugin(exports: unknown, resolved: string): PluginModule {
+  if (!exports || typeof exports !== "object") {
+    throw new Error(`Plugin module did not export a plugin: ${resolved}`);
+  }
+  const record = exports as Record<string, unknown>;
+  const plugin = record.plugin ?? record.default;
+  if (!plugin) {
+    throw new Error(`Plugin module did not export a plugin: ${resolved}`);
+  }
+  return plugin as PluginModule;
+}
+
+const nodeRequire = createRequire(import.meta.url);

@@ -338,9 +338,9 @@ export class EngineRuntime {
     this.dockerRuntime = runtime;
   }
 
-  updateSettings(settings: SettingsConfig): void {
+  async updateSettings(settings: SettingsConfig): Promise<void> {
     this.settings = settings;
-    this.pluginManager.updateSettings(settings);
+    await this.pluginManager.syncWithSettings(settings);
     this.inferenceRouter.updateProviders(listInferenceProviders(settings));
   }
 

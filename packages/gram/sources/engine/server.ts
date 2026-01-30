@@ -126,13 +126,7 @@ export async function startEngineServer(
       };
     });
 
-    options.runtime.updateSettings(settings);
-    const config = listPlugins(settings).find(
-      (plugin) => plugin.instanceId === instanceId
-    );
-    if (config) {
-      await options.runtime.getPluginManager().load(config);
-    }
+    await options.runtime.updateSettings(settings);
 
     options.eventBus.emit("plugin.loaded", { id: instanceId });
     return reply.send({ ok: true });
@@ -161,8 +155,7 @@ export async function startEngineServer(
       })
     }));
 
-    options.runtime.updateSettings(settings);
-    await options.runtime.getPluginManager().unload(instanceId);
+    await options.runtime.updateSettings(settings);
     options.eventBus.emit("plugin.unloaded", { id: instanceId });
     return reply.send({ ok: true });
   });

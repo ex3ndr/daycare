@@ -64,6 +64,38 @@ export class PluginManager {
     this.settings = settings;
   }
 
+  async syncWithSettings(settings: SettingsConfig): Promise<void> {
+    this.settings = settings;
+    const desired = listEnabledPlugins(settings);
+    const desiredMap = new Map(desired.map((plugin) => [plugin.instanceId, plugin]));
+
+    for (const [instanceId, entry] of this.loaded) {
+      const next = desiredMap.get(instanceId);
+      if (!next) {
+        await this.unload(instanceId);
+        continue;
+      }
+      if (
+        next.pluginId !== entry.config.pluginId ||
+        !settingsEqual(next.settings, entry.config.settings)
+      ) {
+        await this.unload(instanceId);
+      }
+    }
+
+    for (const plugin of desired) {
+      if (this.loaded.has(plugin.instanceId)) {
+        const entry = this.loaded.get(plugin.instanceId);
+        if (entry) {
+          entry.config = plugin;
+          entry.settings = plugin.settings ?? {};
+        }
+        continue;
+      }
+      await this.load(plugin);
+    }
+  }
+
   getConfig(instanceId: string): PluginInstanceSettings | null {
     return this.loaded.get(instanceId)?.config ?? null;
   }
@@ -162,4 +194,8 @@ export class PluginManager {
     await fs.mkdir(dir, { recursive: true });
     return dir;
   }
+}
+
+function settingsEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 }
