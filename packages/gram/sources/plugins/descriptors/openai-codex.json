@@ -1,0 +1,6 @@
+{
+  "id": "openai-codex",
+  "name": "OpenAI Codex",
+  "description": "OpenAI Codex inference provider.",
+  "entry": "../openai-codex.js"
+}

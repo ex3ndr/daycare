@@ -4,7 +4,7 @@ import { promises as fs } from "node:fs";
 
 import { getLogger } from "../log.js";
 import { ConnectorRegistry } from "../connectors/registry.js";
-import type { MessageContext } from "../connectors/types.js";
+import type { ConnectorMessage, MessageContext } from "../connectors/types.js";
 import { FileStore } from "../files/store.js";
 import type { FileReference } from "../files/types.js";
 import { InferenceRegistry } from "../inference/registry.js";
@@ -12,6 +12,8 @@ import { InferenceRouter } from "../inference/router.js";
 import { ImageGenerationRegistry } from "../images/registry.js";
 import { MemoryEngine } from "../memory/engine.js";
 import { PluginRegistry } from "../plugins/registry.js";
+import { PluginEventEngine } from "../plugins/event-engine.js";
+import { PluginEventQueue } from "../plugins/events.js";
 import { PluginManager } from "../plugins/manager.js";
 import { buildPluginCatalog } from "../plugins/catalog.js";
 import type { SettingsConfig } from "../settings.js";
@@ -57,6 +59,8 @@ export class EngineRuntime {
   private toolRegistry: ToolRegistry;
   private pluginRegistry: PluginRegistry;
   private pluginManager: PluginManager;
+  private pluginEventQueue: PluginEventQueue;
+  private pluginEventEngine: PluginEventEngine;
   private sessionStore: SessionStore<SessionState>;
   private sessionManager: SessionManager<SessionState>;
   private memoryEngine: MemoryEngine | null;
@@ -73,10 +77,14 @@ export class EngineRuntime {
     this.secretsStore = new SecretsStore(options.secretsPath);
     this.fileStore = new FileStore({ basePath: `${this.dataDir}/files` });
 
+    this.pluginEventQueue = new PluginEventQueue();
+    this.pluginEventEngine = new PluginEventEngine(this.pluginEventQueue);
+
     this.connectorRegistry = new ConnectorRegistry({
       onMessage: (source, message, context) => {
-        void this.sessionManager.handleMessage(source, message, context, (session, entry) =>
-          this.handleSessionMessage(entry, session, source)
+        this.pluginEventQueue.emit(
+          { pluginId: source, instanceId: source },
+          { type: "connector.message", payload: { source, message, context } }
         );
       },
       onFatal: (source, reason, error) => {
@@ -100,8 +108,9 @@ export class EngineRuntime {
       registry: this.pluginRegistry,
       secrets: this.secretsStore,
       fileStore: this.fileStore,
-      pluginFactories: buildPluginCatalog(),
-      dataDir: this.dataDir
+      pluginCatalog: buildPluginCatalog(),
+      dataDir: this.dataDir,
+      eventQueue: this.pluginEventQueue
     });
 
     this.sessionStore = new SessionStore<SessionState>({
@@ -181,6 +190,23 @@ export class EngineRuntime {
       }
     });
 
+    this.pluginEventEngine.register("connector.message", async (event) => {
+      const payload = event.payload as {
+        source: string;
+        message: ConnectorMessage;
+        context: MessageContext;
+      };
+      if (!payload) {
+        return;
+      }
+      await this.sessionManager.handleMessage(
+        payload.source,
+        payload.message,
+        payload.context,
+        (session, entry) => this.handleSessionMessage(entry, session, payload.source)
+      );
+    });
+
     this.inferenceRouter = new InferenceRouter({
       providers: listInferenceProviders(this.settings),
       registry: this.inferenceRegistry,
@@ -190,6 +216,7 @@ export class EngineRuntime {
 
   async start(): Promise<void> {
     await this.pluginManager.loadEnabled(this.settings);
+    this.pluginEventEngine.start();
 
     this.cron = new CronScheduler({
       tasks: this.settings.cron?.tasks ?? [],
@@ -247,6 +274,7 @@ export class EngineRuntime {
     if (this.cron) {
       this.cron.stop();
     }
+    this.pluginEventEngine.stop();
     await this.pluginManager.unloadAll();
   }
 
