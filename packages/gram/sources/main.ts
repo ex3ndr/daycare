@@ -79,12 +79,8 @@ authCommand
   .argument("<value>", "Credential value")
   .action(setAuthCommand);
 
-const providerCommand = program
+program
   .command("providers")
-  .description("Manage providers");
-
-providerCommand
-  .command("default")
   .description("Select the default provider")
   .option(
     "-s, --settings <path>",
