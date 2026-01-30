@@ -14,3 +14,5 @@ export const DEFAULT_SCOUT_DIR = resolveScoutRoot();
 export function resolveScoutPath(...segments: string[]): string {
   return path.join(DEFAULT_SCOUT_DIR, ...segments);
 }
+
+export const DEFAULT_SOUL_PATH = resolveScoutPath("SOUL.md");

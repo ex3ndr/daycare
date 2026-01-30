@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { CronTaskConfig } from "./modules/runtime/cron.js";
-import { resolveScoutPath } from "./paths.js";
+import { resolveScoutPath, DEFAULT_SOUL_PATH } from "./paths.js";
 
 export type LegacyPluginSettings = {
   id: string;
@@ -63,6 +63,7 @@ export type SettingsConfig = {
 
 export type AssistantSettings = {
   workspaceDir?: string;
+  systemPrompt?: string;
 };
 
 export const DEFAULT_SETTINGS_PATH = resolveScoutPath("settings.json");
@@ -183,4 +184,20 @@ function normalizePlugin(
     enabled: plugin.enabled,
     settings: plugin.config
   };
+}
+
+export async function readSystemPrompt(
+  filePath: string = DEFAULT_SOUL_PATH
+): Promise<string | null> {
+  const resolvedPath = path.resolve(filePath);
+  try {
+    const content = await fs.readFile(resolvedPath, "utf8");
+    const trimmed = content.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
 }

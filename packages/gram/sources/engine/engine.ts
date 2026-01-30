@@ -19,6 +19,7 @@ import { PluginEventQueue } from "./plugins/events.js";
 import { PluginManager } from "./plugins/manager.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import type { SettingsConfig } from "../settings.js";
+import { readSystemPrompt } from "../settings.js";
 import { listActiveInferenceProviders } from "../providers/catalog.js";
 import { SessionManager } from "./sessions/manager.js";
 import { SessionStore } from "./sessions/store.js";
@@ -83,6 +84,7 @@ export class Engine {
   private cron: CronScheduler | null = null;
   private inferenceRouter: InferenceRouter;
   private eventBus: EngineEventBus;
+  private systemPrompt: string | null = null;
 
   constructor(options: EngineOptions) {
     logger.debug(`Engine constructor starting, dataDir=${options.dataDir}`);
@@ -164,6 +166,9 @@ export class Engine {
         const providerId = this.resolveProviderId(context);
         if (providerId) {
           session.context.state.providerId = providerId;
+        }
+        if (this.systemPrompt) {
+          session.context.state.context.systemPrompt = this.systemPrompt;
         }
         logger.info(
           {
@@ -258,6 +263,15 @@ export class Engine {
     logger.debug("Syncing provider manager with settings");
     await this.providerManager.sync(this.settings);
     logger.debug("Provider manager sync complete");
+
+    logger.debug("Loading system prompt from SOUL.md");
+    this.systemPrompt = await readSystemPrompt();
+    if (this.systemPrompt) {
+      logger.info("System prompt loaded from SOUL.md");
+    } else {
+      logger.debug("No SOUL.md found, using default behavior");
+    }
+
     logger.debug("Loading enabled plugins");
     await this.pluginManager.loadEnabled(this.settings);
     logger.debug("Plugins loaded, starting plugin event engine");

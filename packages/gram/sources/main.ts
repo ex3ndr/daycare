@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { startCommand } from "./commands/start.js";
 import { statusCommand } from "./commands/status.js";
+import { initCommand } from "./commands/init.js";
 import { initLogging } from "./log.js";
 import { loadPluginCommand, unloadPluginCommand } from "./commands/plugins.js";
 import { setAuthCommand } from "./commands/auth.js";
@@ -28,6 +29,12 @@ program
   )
   .option("-f, --force", "Stop any running engine server before starting")
   .action(startCommand);
+
+program
+  .command("init")
+  .description("Initialize config with default SOUL.md")
+  .option("-f, --force", "Overwrite existing SOUL.md")
+  .action(initCommand);
 
 program
   .command("status")

@@ -4,14 +4,17 @@ Grambot now reads from a single settings file plus the auth store.
 
 - `.scout/settings.json` (or the path passed to `gram start --settings`)
 - `.scout/auth.json` for credentials
+- `.scout/SOUL.md` for the system prompt (optional)
 
 ```mermaid
 flowchart TD
   Start[gram start] --> Settings[.scout/settings.json]
   Start --> Auth[.scout/auth.json]
+  Start --> Soul[.scout/SOUL.md]
   Settings --> Plugins
   Settings --> Inference
   Settings --> Cron
+  Soul --> SystemPrompt[Session System Prompt]
 ```
 
 ## Sample `.scout/settings.json`
@@ -65,3 +68,28 @@ Credentials are stored per plugin or provider id:
   "nanobanana": { "type": "apiKey", "apiKey": "..." }
 }
 ```
+
+## `.scout/SOUL.md`
+The system prompt defines the assistant's personality and behavior. Create this file
+to customize how the assistant responds:
+
+```bash
+gram init
+```
+
+This creates a default SOUL.md that you can edit:
+
+```markdown
+# System Prompt
+
+You are a helpful assistant. Be concise and direct in your responses.
+
+## Guidelines
+
+- Respond in the same language as the user
+- Ask clarifying questions when needed
+- Be honest about limitations
+```
+
+The system prompt is loaded when the engine starts and applied to all new sessions.
+Edit SOUL.md and restart the engine to apply changes.
