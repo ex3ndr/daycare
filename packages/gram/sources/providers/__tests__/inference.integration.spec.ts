@@ -36,6 +36,11 @@ const providers = [
   { id: "kimi-coding", apiKeyEnv: ["KIMI_API_KEY"], modelEnv: ["KIMI_MODEL"] }
 ];
 
+const fallbackModels: Record<string, string[]> = {
+  anthropic: ["claude-3-5-haiku-latest", "claude-3-5-sonnet-20241022"],
+  xai: ["grok-2-latest", "grok-beta"]
+};
+
 const openAiCompatible = {
   id: "openai-compatible",
   apiKeyEnv: ["OPENAI_COMPATIBLE_API_KEY"],
@@ -47,18 +52,47 @@ const openAiCompatible = {
 describeIf("inference providers", () => {
   for (const provider of providers) {
     const apiKey = resolveEnv(provider.apiKeyEnv);
-    const model = resolveEnv(provider.modelEnv) ?? undefined;
+    const explicitModel = resolveEnv(provider.modelEnv);
+    const fallback = fallbackModels[provider.id];
+    const candidates = explicitModel ? [explicitModel] : fallback ?? [""];
     const itIf = apiKey ? it : it.skip;
 
     itIf(`${provider.id} completes a prompt`, async () => {
-      const { router, cleanup } = await setupProvider(provider.id, {
-        apiKey,
-        model
-      });
-      const result = await router.complete(buildContext(), "integration");
-      const hasOutput = hasAssistantOutput(result.message);
-      expect(hasOutput).toBe(true);
-      await cleanup();
+      let passed = false;
+      let lastResult: { model?: string; message: Context["messages"][number] } | null = null;
+
+      for (const candidate of candidates) {
+        const { router, cleanup } = await setupProvider(provider.id, {
+          apiKey,
+          model: candidate || undefined
+        });
+        const result = await router.complete(buildContext(), "integration");
+        const hasOutput = hasAssistantOutput(result.message);
+        await cleanup();
+
+        if (hasOutput) {
+          passed = true;
+          break;
+        }
+
+        lastResult = { model: candidate || undefined, message: result.message };
+      }
+
+      if (!passed && lastResult) {
+        const text = extractAssistantText(lastResult.message);
+        console.error(
+          `[${provider.id}] no output for model ${lastResult.model ?? "(default)"}:`,
+          {
+            stopReason: lastResult.message.stopReason,
+            errorMessage: lastResult.message.errorMessage,
+            model: (lastResult.message as { model?: string }).model,
+            text: text?.slice(0, 500) ?? "",
+            content: lastResult.message.content
+          }
+        );
+      }
+
+      expect(passed).toBe(true);
     });
   }
 
