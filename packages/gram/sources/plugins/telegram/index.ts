@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { TelegramConnector, type TelegramConnectorOptions } from "../../engine/connectors/telegram.js";
+import { TelegramConnector, type TelegramConnectorOptions } from "./connector.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 
 const settingsSchema = z
