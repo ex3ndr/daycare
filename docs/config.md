@@ -70,14 +70,8 @@ Credentials are stored per plugin or provider id:
 ```
 
 ## `.scout/SOUL.md`
-The system prompt defines the assistant's personality and behavior. Create this file
-to customize how the assistant responds:
-
-```bash
-gram init
-```
-
-This creates a default SOUL.md that you can edit:
+The system prompt defines the assistant's personality and behavior. A default SOUL.md
+is created automatically on first run:
 
 ```markdown
 # System Prompt
@@ -91,5 +85,4 @@ You are a helpful assistant. Be concise and direct in your responses.
 - Be honest about limitations
 ```
 
-The system prompt is loaded when the engine starts and applied to all new sessions.
-Edit SOUL.md and restart the engine to apply changes.
+Edit SOUL.md to customize the assistant. Restart the engine to apply changes.

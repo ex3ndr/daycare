@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/",
     "dev": "tsx sources/main.ts",
     "test": "vitest run",
     "test:watch": "vitest",

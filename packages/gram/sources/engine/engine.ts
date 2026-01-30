@@ -266,11 +266,7 @@ export class Engine {
 
     logger.debug("Loading system prompt from SOUL.md");
     this.systemPrompt = await readSystemPrompt();
-    if (this.systemPrompt) {
-      logger.info("System prompt loaded from SOUL.md");
-    } else {
-      logger.debug("No SOUL.md found, using default behavior");
-    }
+    logger.info("System prompt loaded from SOUL.md");
 
     logger.debug("Loading enabled plugins");
     await this.pluginManager.loadEnabled(this.settings);

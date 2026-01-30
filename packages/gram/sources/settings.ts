@@ -188,16 +188,29 @@ function normalizePlugin(
 
 export async function readSystemPrompt(
   filePath: string = DEFAULT_SOUL_PATH
-): Promise<string | null> {
+): Promise<string> {
   const resolvedPath = path.resolve(filePath);
   try {
     const content = await fs.readFile(resolvedPath, "utf8");
     const trimmed = content.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return null;
+    if (trimmed.length > 0) {
+      return trimmed;
     }
-    throw error;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
   }
+
+  // File missing or empty - create from bundled default
+  const defaultContent = await readDefaultSoulPrompt();
+  const dir = path.dirname(resolvedPath);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(resolvedPath, defaultContent, "utf8");
+  return defaultContent.trim();
+}
+
+async function readDefaultSoulPrompt(): Promise<string> {
+  const promptsDir = new URL("./prompts/SOUL.md", import.meta.url);
+  return fs.readFile(promptsDir, "utf8");
 }
