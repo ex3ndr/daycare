@@ -714,16 +714,12 @@ export class Engine {
 
     if (response.message.stopReason === "error" || response.message.stopReason === "aborted") {
       const message = "Inference failed.";
+      const errorDetail =
+        response.message.errorMessage && response.message.errorMessage.length > 0
+          ? response.message.errorMessage
+          : "unknown";
       logger.warn(
-        {
-          sessionId: session.id,
-          messageId: entry.id,
-          provider: response.providerId,
-          model: response.modelId,
-          stopReason: response.message.stopReason,
-          errorMessage: response.message.errorMessage
-        },
-        "Inference returned error response"
+        `Inference returned error response provider=${response.providerId} model=${response.modelId} stopReason=${response.message.stopReason} error=${errorDetail}`
       );
       try {
         await connector.sendMessage(entry.context.channelId, {
