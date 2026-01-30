@@ -16,6 +16,7 @@ export type PluginApi<TSettings = unknown> = {
   dataDir: string;
   registrar: PluginRegistrar;
   fileStore: FileStore;
+  mode: "runtime" | "validate";
   events: {
     emit: (event: PluginEventInput) => void;
   };

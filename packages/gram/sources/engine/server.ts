@@ -107,6 +107,8 @@ export async function startEngineServer(
       return;
     }
 
+    logger.info({ plugin: pluginId, instance: instanceId }, "Plugin load requested");
+
     const settings = await updateSettingsFile(options.settingsPath, (current) => {
       const existing = listPlugins(current).find(
         (plugin) => plugin.instanceId === instanceId
@@ -143,6 +145,8 @@ export async function startEngineServer(
       reply.status(400).send({ error: "instanceId required" });
       return;
     }
+
+    logger.info({ instance: instanceId }, "Plugin unload requested");
 
     const settings = await updateSettingsFile(options.settingsPath, (current) => ({
       ...current,

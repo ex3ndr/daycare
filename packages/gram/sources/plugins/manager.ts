@@ -20,6 +20,7 @@ export type PluginManagerOptions = {
   pluginCatalog: Map<string, PluginDefinition>;
   dataDir: string;
   eventQueue: PluginEventQueue;
+  mode?: "runtime" | "validate";
 };
 
 type LoadedPlugin = {
@@ -39,6 +40,7 @@ export class PluginManager {
   private pluginCatalog: Map<string, PluginDefinition>;
   private dataDir: string;
   private eventQueue: PluginEventQueue;
+  private mode: "runtime" | "validate";
   private loaded = new Map<string, LoadedPlugin>();
   private logger = getLogger("plugins.manager");
 
@@ -50,6 +52,7 @@ export class PluginManager {
     this.pluginCatalog = options.pluginCatalog;
     this.dataDir = options.dataDir;
     this.eventQueue = options.eventQueue;
+    this.mode = options.mode ?? "runtime";
   }
 
   listLoaded(): string[] {
@@ -72,6 +75,7 @@ export class PluginManager {
     for (const [instanceId, entry] of this.loaded) {
       const next = desiredMap.get(instanceId);
       if (!next) {
+        this.logger.info({ instance: instanceId }, "Unloading plugin (disabled)");
         await this.unload(instanceId);
         continue;
       }
@@ -79,6 +83,10 @@ export class PluginManager {
         next.pluginId !== entry.config.pluginId ||
         !settingsEqual(next.settings, entry.config.settings)
       ) {
+        this.logger.info(
+          { instance: instanceId, plugin: entry.config.pluginId },
+          "Reloading plugin (settings changed)"
+        );
         await this.unload(instanceId);
       }
     }
@@ -92,6 +100,10 @@ export class PluginManager {
         }
         continue;
       }
+      this.logger.info(
+        { plugin: plugin.pluginId, instance: plugin.instanceId },
+        "Loading plugin (settings sync)"
+      );
       await this.load(plugin);
     }
   }
@@ -111,6 +123,11 @@ export class PluginManager {
       throw new Error(`Unknown plugin: ${pluginConfig.pluginId}`);
     }
 
+    this.logger.info(
+      { plugin: pluginConfig.pluginId, instance: instanceId },
+      "Loading plugin"
+    );
+
     const loader = new PluginModuleLoader(`plugin:${instanceId}`);
     const { module } = await loader.load(definition.entryPath);
     const parsedSettings = module.settingsSchema.parse(pluginConfig.settings ?? {});
@@ -127,6 +144,7 @@ export class PluginManager {
       dataDir,
       registrar,
       fileStore: this.fileStore,
+      mode: this.mode,
       events: {
         emit: (event) => {
           this.eventQueue.emit(
@@ -164,6 +182,11 @@ export class PluginManager {
     if (!entry) {
       return;
     }
+
+    this.logger.info(
+      { instance: instanceId, plugin: entry.config.pluginId },
+      "Unloading plugin"
+    );
 
     try {
       await entry.instance.unload?.();

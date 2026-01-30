@@ -546,7 +546,8 @@ async function validatePluginLoad(
     fileStore,
     pluginCatalog: buildPluginCatalog(),
     dataDir,
-    eventQueue: pluginEventQueue
+    eventQueue: pluginEventQueue,
+    mode: "validate"
   });
 
   await pluginManager.load(pluginConfig);

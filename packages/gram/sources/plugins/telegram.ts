@@ -43,6 +43,9 @@ export const plugin = definePlugin({
         if (!token) {
           throw new Error("Missing telegram token in auth store");
         }
+        if (api.mode === "validate") {
+          return;
+        }
         const config = api.settings as TelegramPluginConfig;
         const statePath =
           config.statePath === undefined
