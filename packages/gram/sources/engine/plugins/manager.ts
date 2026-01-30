@@ -124,7 +124,11 @@ export class PluginManager {
 
     const definition = this.pluginCatalog.get(pluginConfig.pluginId);
     if (!definition) {
-      throw new Error(`Unknown plugin: ${pluginConfig.pluginId}`);
+      this.logger.warn(
+        { plugin: pluginConfig.pluginId, instance: instanceId },
+        "Unknown plugin - skipping"
+      );
+      return;
     }
 
     this.logger.info(
