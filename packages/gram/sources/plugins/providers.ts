@@ -28,7 +28,8 @@ export const PROVIDER_DEFINITIONS: ProviderDefinition[] = [
   },
   { id: "openrouter", label: "OpenRouter", auth: "apiKey", kind: "pi-ai" },
   { id: "mistral", label: "Mistral", auth: "apiKey", kind: "pi-ai" },
-  { id: "groq", label: "Groq", auth: "apiKey", kind: "pi-ai" }
+  { id: "groq", label: "Groq", auth: "apiKey", kind: "pi-ai" },
+  { id: "xai", label: "xAI", auth: "apiKey", kind: "pi-ai" }
 ];
 
 export function getProviderDefinition(id: string): ProviderDefinition | null {
