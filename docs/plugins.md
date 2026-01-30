@@ -90,6 +90,7 @@ flowchart TD
 - `telegram` (connector)
 - `brave-search` (tool)
 - `memory` (tool + storage)
+- `shell` (tools: read/write/edit/exec)
 
 ## Providers
 Providers are built-in modules (not plugins). They register inference and/or image

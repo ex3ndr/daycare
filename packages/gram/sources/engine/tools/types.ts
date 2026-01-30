@@ -9,6 +9,7 @@ import type { Session } from "../sessions/session.js";
 import type { AuthStore } from "../../auth/store.js";
 import type { Logger } from "pino";
 import type { AssistantSettings } from "../../settings.js";
+import type { SessionPermissions } from "../permissions.js";
 
 export type ToolExecutionContext<State = Record<string, unknown>> = {
   connectorRegistry: ConnectorRegistry | null;
@@ -16,6 +17,7 @@ export type ToolExecutionContext<State = Record<string, unknown>> = {
   auth: AuthStore;
   logger: Logger;
   assistant: AssistantSettings | null;
+  permissions: SessionPermissions;
   session: Session<State>;
   source: string;
   messageContext: MessageContext;

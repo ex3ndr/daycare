@@ -19,6 +19,12 @@ import { PluginEventQueue } from "./plugins/events.js";
 import { PluginManager } from "./plugins/manager.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import type { SettingsConfig } from "../settings.js";
+import {
+  ensureWorkspaceDir,
+  normalizePermissions,
+  resolveWorkspaceDir,
+  type SessionPermissions
+} from "./permissions.js";
 import { createSystemPrompt } from "./createSystemPrompt.js";
 import { listActiveInferenceProviders } from "../providers/catalog.js";
 import { SessionManager } from "./sessions/manager.js";
@@ -40,6 +46,7 @@ const MAX_TOOL_ITERATIONS = 5;
 type SessionState = {
   context: Context;
   providerId?: string;
+  permissions: SessionPermissions;
 };
 
 export type EngineOptions = {
@@ -47,11 +54,15 @@ export type EngineOptions = {
   dataDir: string;
   authPath: string;
   eventBus: EngineEventBus;
+  configDir: string;
 };
 
 export class Engine {
   private settings: SettingsConfig;
   private dataDir: string;
+  private configDir: string;
+  private workspaceDir: string;
+  private defaultPermissions: SessionPermissions;
   private authStore: AuthStore;
   private fileStore: FileStore;
   private connectorRegistry: ConnectorRegistry;
@@ -73,6 +84,9 @@ export class Engine {
     logger.debug(`Engine constructor starting, dataDir=${options.dataDir}`);
     this.settings = options.settings;
     this.dataDir = options.dataDir;
+    this.configDir = options.configDir;
+    this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
+    this.defaultPermissions = { workingDir: this.workspaceDir };
     this.eventBus = options.eventBus;
     this.authStore = new AuthStore(options.authPath);
     this.fileStore = new FileStore({ basePath: `${this.dataDir}/files` });
@@ -135,7 +149,11 @@ export class Engine {
     });
 
     this.sessionManager = new SessionManager<SessionState>({
-      createState: () => ({ context: { messages: [] }, providerId: undefined }),
+      createState: () => ({
+        context: { messages: [] },
+        providerId: undefined,
+        permissions: { ...this.defaultPermissions }
+      }),
       sessionIdFor: (_source, context) => {
         if (context.sessionId) {
           return context.sessionId;
@@ -240,6 +258,7 @@ export class Engine {
 
   async start(): Promise<void> {
     logger.debug("Engine.start() beginning");
+    await ensureWorkspaceDir(this.workspaceDir);
     logger.debug("Syncing provider manager with settings");
     await this.providerManager.sync(this.settings);
     logger.debug("Provider manager sync complete");
@@ -433,7 +452,11 @@ export class Engine {
         id: sessionId,
         createdAt: now,
         updatedAt: now,
-        state: { context: { messages: [] } }
+        state: {
+          context: { messages: [] },
+          providerId: undefined,
+          permissions: { ...this.defaultPermissions }
+        }
       },
       createId()
     );
@@ -450,6 +473,7 @@ export class Engine {
       auth: this.authStore,
       logger,
       assistant: this.settings.assistant ?? null,
+      permissions: session.context.state.permissions,
       session,
       source: "system",
       messageContext: context
@@ -459,6 +483,9 @@ export class Engine {
 
   async updateSettings(settings: SettingsConfig): Promise<void> {
     this.settings = settings;
+    this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
+    this.defaultPermissions = { workingDir: this.workspaceDir };
+    await ensureWorkspaceDir(this.workspaceDir);
     await this.providerManager.sync(settings);
     await this.pluginManager.syncWithSettings(settings);
     this.inferenceRouter.updateProviders(listActiveInferenceProviders(settings));
@@ -515,7 +542,7 @@ export class Engine {
       const session = this.sessionManager.restoreSession(
         restored.sessionId,
         restored.storageId,
-        normalizeSessionState(restored.state),
+        normalizeSessionState(restored.state, this.defaultPermissions),
         restored.createdAt,
         restored.updatedAt
       );
@@ -679,6 +706,7 @@ export class Engine {
             auth: this.authStore,
             logger,
             assistant: this.settings.assistant ?? null,
+            permissions: session.context.state.permissions,
             session,
             source,
             messageContext: entry.context
@@ -895,15 +923,33 @@ function extractToolCalls(message: Context["messages"][number]): ToolCall[] {
   );
 }
 
-function normalizeSessionState(state: unknown): SessionState {
+function normalizeSessionState(
+  state: unknown,
+  defaultPermissions: SessionPermissions
+): SessionState {
+  const fallback: SessionState = {
+    context: { messages: [] },
+    providerId: undefined,
+    permissions: { ...defaultPermissions }
+  };
   if (state && typeof state === "object") {
-    const candidate = state as { context?: Context; providerId?: string };
+    const candidate = state as {
+      context?: Context;
+      providerId?: string;
+      permissions?: unknown;
+    };
+    const permissions = normalizePermissions(
+      candidate.permissions,
+      defaultPermissions.workingDir
+    );
     if (candidate.context && Array.isArray(candidate.context.messages)) {
       return {
         context: candidate.context,
-        providerId: typeof candidate.providerId === "string" ? candidate.providerId : undefined
+        providerId: typeof candidate.providerId === "string" ? candidate.providerId : undefined,
+        permissions
       };
     }
+    return { ...fallback, permissions };
   }
-  return { context: { messages: [] }, providerId: undefined };
+  return fallback;
 }

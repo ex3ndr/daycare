@@ -31,6 +31,10 @@ Tools are registered dynamically by plugins and core runtime:
 - `web_search` (Brave) performs web search.
 - `generate_image` uses registered image providers and is only added when one is available.
 - `set_reaction` sets connector reactions (Telegram).
+- `read` reads a UTF-8 text file from the session workspace (paths must resolve inside the workspace; large files may be truncated).
+- `write` writes UTF-8 text to a file in the session workspace, creating parent directories as needed (paths must resolve inside the workspace; supports append).
+- `edit` applies sequential find/replace edits to a file in the session workspace (each edit must match at least once; paths must resolve inside the workspace).
+- `exec` runs a shell command with the working directory locked to the session workspace (or a subdirectory within it) and returns stdout/stderr.
 
 ```mermaid
 sequenceDiagram
