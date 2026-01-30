@@ -1,4 +1,4 @@
-import { prompt } from "enquirer";
+import Enquirer from "enquirer";
 
 export type PromptChoice<TValue extends string> = {
   value: TValue;
@@ -31,6 +31,8 @@ const CANCEL_ERROR_NAMES = new Set(["CancelError", "ExitPromptError", "AbortErro
 function isPromptCancelled(error: unknown): boolean {
   return error instanceof Error && CANCEL_ERROR_NAMES.has(error.name);
 }
+
+const { prompt } = Enquirer;
 
 async function runPrompt<TValue>(config: Record<string, unknown>): Promise<TValue | null> {
   try {

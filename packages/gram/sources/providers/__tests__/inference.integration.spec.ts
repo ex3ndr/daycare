@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { Context } from "@mariozechner/pi-ai";
+import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 
 import { AuthStore } from "../../auth/store.js";
 import { FileStore } from "../../files/store.js";
@@ -59,7 +59,7 @@ describeIf("inference providers", () => {
 
     itIf(`${provider.id} completes a prompt`, async () => {
       let passed = false;
-      let lastResult: { model?: string; message: Context["messages"][number] } | null = null;
+      let lastResult: { model?: string; message: AssistantMessage } | null = null;
 
       for (const candidate of candidates) {
         const { router, cleanup } = await setupProvider(provider.id, {
