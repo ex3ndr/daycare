@@ -10,13 +10,13 @@ const program = new Command();
 initLogging();
 
 program
-  .name("scout")
+  .name("gram")
   .description("Personal AI agent")
   .version("0.0.0");
 
 program
   .command("start")
-  .description("Launch the scout bot")
+  .description("Launch the gram bot")
   .option(
     "-s, --settings <path>",
     "Path to settings file",

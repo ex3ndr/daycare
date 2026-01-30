@@ -1,4 +1,4 @@
-# scout
+# grambot
 
 Personal AI agent.
 
@@ -16,5 +16,5 @@ yarn typecheck
 ```
 
 ## Notes
-- Workspace packages: `packages/scout`, `packages/scout-dashboard`
+- Workspace packages: `packages/gram`, `packages/gram-dashboard`
 - Tests use `*.spec.ts`

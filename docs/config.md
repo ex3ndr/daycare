@@ -1,13 +1,13 @@
 # Configuration
 
-Scout now reads from a single settings file plus the secrets store.
+Grambot now reads from a single settings file plus the secrets store.
 
-- `.scout/settings.json` (or the path passed to `scout start --settings`)
+- `.scout/settings.json` (or the path passed to `gram start --settings`)
 - `.scout/secrets.json` for plugin secrets
 
 ```mermaid
 flowchart TD
-  Start[scout start] --> Settings[.scout/settings.json]
+  Start[gram start] --> Settings[.scout/settings.json]
   Start --> Secrets[.scout/secrets.json]
   Settings --> Plugins
   Settings --> Inference
@@ -70,7 +70,7 @@ flowchart TD
     "maxEntries": 1000
   },
   "assistant": {
-    "workspaceDir": "/Users/you/workspace/scout-project",
+    "workspaceDir": "/Users/you/workspace/grambot-project",
     "containerWorkspacePath": "/workspace",
     "allowedDockerImages": ["node:22-alpine", "python:3.12-slim"],
     "allowedPm2Processes": ["worker", "api"]

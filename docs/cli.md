@@ -29,7 +29,7 @@ sequenceDiagram
   participant Secrets
   participant Plugins
   participant Engine
-  User->>CLI: scout start
+  User->>CLI: gram start
   CLI->>Settings: read .scout/settings.json
   CLI->>Secrets: read .scout/secrets.json
   CLI->>Plugins: load enabled plugins

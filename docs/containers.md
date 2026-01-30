@@ -1,6 +1,6 @@
 # Container runtime
 
-Scout can manage container lifecycles through the Docker Engine API (no shell calls).
+Grambot can manage container lifecycles through the Docker Engine API (no shell calls).
 The assistant can also run one-off containers via the `docker_run` tool.
 
 ## Responsibilities
@@ -9,7 +9,7 @@ The assistant can also run one-off containers via the `docker_run` tool.
 
 ```mermaid
 flowchart TD
-  Start[scout start] --> Load[load runtime.containers]
+  Start[gram start] --> Load[load runtime.containers]
   Load --> Connect[Docker API ping]
   Connect --> Apply[apply container actions]
 ```

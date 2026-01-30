@@ -32,7 +32,7 @@ export function startServer({ staticDir, rootDir }) {
   });
 
   server.listen(PORT, () => {
-    console.log(`scout-dashboard listening on http://localhost:${PORT}`);
+    console.log(`gram-dashboard listening on http://localhost:${PORT}`);
   });
 }
 
@@ -80,7 +80,7 @@ async function resolveSocketPath(rootDir) {
     path.resolve(process.cwd(), DEFAULT_SOCKET_PATH),
     path.resolve(rootDir, DEFAULT_SOCKET_PATH),
     path.resolve(workspaceRoot, DEFAULT_SOCKET_PATH),
-    path.resolve(workspaceRoot, "packages", "scout", DEFAULT_SOCKET_PATH)
+    path.resolve(workspaceRoot, "packages", "gram", DEFAULT_SOCKET_PATH)
   ];
 
   for (const candidate of candidates) {

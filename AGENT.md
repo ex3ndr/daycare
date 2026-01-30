@@ -1,11 +1,11 @@
-# scout agent notes
+# grambot agent notes
 
 ## Goals
 - keep the core minimal and composable
 - add integrations incrementally
 
 ## Conventions
-- single workspace package at `packages/scout`
+- single workspace package at `packages/gram`
 - typescript only, esm output
 - sources live in `sources/`
 - tests use `*.spec.ts`

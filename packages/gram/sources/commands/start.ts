@@ -29,7 +29,7 @@ type Pm2Config = {
 export async function startCommand(options: StartOptions): Promise<void> {
   const settingsPath = path.resolve(options.settings);
   const settings = await readSettingsFile(settingsPath);
-  logger.info({ settings: settingsPath }, "Starting scout");
+  logger.info({ settings: settingsPath }, "Starting grambot");
 
   const dataDir = path.resolve(settings.engine?.dataDir ?? ".scout");
   const secretsPath = path.join(dataDir, "secrets.json");

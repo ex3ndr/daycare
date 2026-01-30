@@ -7,7 +7,7 @@ export async function setSecretCommand(
   key: string,
   value: string
 ): Promise<void> {
-  intro("scout secrets");
+  intro("gram secrets");
   await setSecret(pluginId, key, value);
   outro(`Stored ${key} for ${pluginId}.`);
 }

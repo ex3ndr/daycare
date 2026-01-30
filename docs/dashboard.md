@@ -1,13 +1,13 @@
-# Scout dashboard
+# Grambot dashboard
 
-`scout-dashboard` is a static SPA served by a lightweight Node proxy.
+`gram-dashboard` is a static SPA served by a lightweight Node proxy.
 The proxy serves the UI and forwards `/api/*` to the local engine socket.
 
 Default port: `7331`.
 
 ```mermaid
 flowchart LR
-  Browser[Browser] --> Dashboard[scout-dashboard]
+  Browser[Browser] --> Dashboard[gram-dashboard]
   Dashboard -->|/api| Socket[.scout/scout.sock]
   Socket --> Engine[Engine server]
   Dashboard -->|static files| UI[SPA]
@@ -26,7 +26,7 @@ flowchart TD
   Cwd -->|found| UseCwd[Use cwd socket]
   Cwd -->|missing| Root[Check workspace root .scout/scout.sock]
   Root -->|found| UseRoot[Use root socket]
-  Root -->|missing| ScoutPkg[Check packages/scout/.scout/scout.sock]
-  ScoutPkg -->|found| UseScout[Use scout package socket]
-  ScoutPkg -->|missing| Fallback[Fallback to cwd socket path]
+  Root -->|missing| GramPkg[Check packages/gram/.scout/scout.sock]
+  GramPkg -->|found| UseGram[Use gram package socket]
+  GramPkg -->|missing| Fallback[Fallback to cwd socket path]
 ```

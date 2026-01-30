@@ -74,7 +74,7 @@ function resolveLogConfig(overrides: Partial<LogConfig>): LogConfig {
   const service =
     overrides.service ??
     envValue("SCOUT_LOG_SERVICE") ??
-    "scout";
+    "grambot";
   const environment =
     overrides.environment ??
     envValue("NODE_ENV") ??

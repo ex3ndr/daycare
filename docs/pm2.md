@@ -1,6 +1,6 @@
 # PM2 runtime
 
-Scout can launch long-running processes via programmatic PM2. This keeps processes alive independently of the CLI.
+Grambot can launch long-running processes via programmatic PM2. This keeps processes alive independently of the CLI.
 The assistant can also manage PM2 via the `pm2_manage` tool.
 
 ## Responsibilities
@@ -11,7 +11,7 @@ The assistant can also manage PM2 via the `pm2_manage` tool.
 
 ```mermaid
 flowchart TD
-  Start[scout start] --> Load[load runtime.pm2]
+  Start[gram start] --> Load[load runtime.pm2]
   Load --> Connect[pm2.connect]
   Connect --> StartProc[pm2.start]
   StartProc --> KeepAlive[pm2 keeps process alive]
@@ -42,7 +42,7 @@ flowchart LR
           "name": "worker",
           "script": "dist/worker.js",
           "args": ["--mode", "job"],
-          "cwd": "/srv/scout",
+          "cwd": "/srv/grambot",
           "env": { "NODE_ENV": "production" },
           "autorestart": true,
           "maxRestarts": 10,

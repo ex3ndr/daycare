@@ -1,13 +1,13 @@
-# Scout documentation
+# Grambot documentation
 
-This folder documents the current Scout CLI, plugins, sessions, and runtime.
+This folder documents the current Grambot CLI, plugins, sessions, and runtime.
 
 ## Index
 - `architecture.md` - system overview and message flow
 - `cli.md` - CLI commands and runtime behavior
 - `connectors.md` - connector abstraction and telegram connector
 - `plugins.md` - plugin system and built-in plugins
-- `dashboard.md` - scout-dashboard SPA + proxy
+- `dashboard.md` - gram-dashboard SPA + proxy
 - `memory.md` - memory engine and search
 - `cron.md` - cron scheduler tasks and actions
 - `auth.md` - secrets store and helper commands

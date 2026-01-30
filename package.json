@@ -1,5 +1,5 @@
 {
-  "name": "scout",
+  "name": "grambot",
   "private": true,
   "packageManager": "yarn@1.22.22",
   "workspaces": [
@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "build": "yarn workspaces run build",
-    "dev": "yarn workspace scout run dev",
+    "dev": "yarn workspace gram run dev",
     "test": "yarn workspaces run test",
     "test:watch": "yarn workspaces run test:watch",
     "typecheck": "yarn workspaces run typecheck"

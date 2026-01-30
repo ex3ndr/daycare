@@ -4,7 +4,7 @@ import { intro, outro } from "@clack/prompts";
 import { resolveEngineSocketPath } from "../engine/socket.js";
 
 export async function statusCommand(): Promise<void> {
-  intro("scout status");
+  intro("gram status");
   try {
     const status = await fetchStatus();
     console.log(JSON.stringify(status, null, 2));

@@ -1,6 +1,6 @@
 # Engine updates
 
-Scout updates engine settings using a three-step strategy:
+Grambot updates engine settings using a three-step strategy:
 
 1. **Local server running**: send a mutation request over the local HTTP socket
    at `.scout/scout.sock`.

@@ -1,6 +1,6 @@
 # Architecture
 
-Scout is a plugin-driven engine that routes connector traffic through sessions, inference, tools, and memory.
+Grambot is a plugin-driven engine that routes connector traffic through sessions, inference, tools, and memory.
 
 Key pieces:
 - **CLI** (`sources/main.ts`) starts the engine and manages plugins/secrets.
@@ -12,11 +12,11 @@ Key pieces:
 - **Cron scheduler** emits timed messages into sessions.
 - **Inference router** picks providers from settings.
 - **Engine server** exposes a local HTTP socket + SSE for status/events.
-- **Dashboard** (`scout-dashboard`) proxies `/api` to the engine socket.
+- **Dashboard** (`gram-dashboard`) proxies `/api` to the engine socket.
 
 ```mermaid
 flowchart LR
-  CLI[CLI: scout] --> Start[start command]
+  CLI[CLI: gram] --> Start[start command]
   Start --> Settings[.scout/settings.json]
   Start --> Secrets[.scout/secrets.json]
   Start --> Plugins[PluginManager]
@@ -31,7 +31,7 @@ flowchart LR
   Tools --> Connectors
   Sessions --> Memory[MemoryEngine]
   Start --> Engine[Engine server]
-  Engine --> Dashboard[scout-dashboard /api proxy]
+  Engine --> Dashboard[gram-dashboard /api proxy]
 ```
 
 ## Message lifecycle

@@ -1,6 +1,6 @@
 # Secrets Store
 
-Scout stores plugin credentials in `.scout/secrets.json`.
+Grambot stores plugin credentials in `.scout/secrets.json`.
 The file is read by the engine on startup and on demand by plugins.
 
 ## Structure
@@ -19,11 +19,11 @@ The file is read by the engine on startup and on demand by plugins.
 ```
 
 ## CLI helpers
-- `scout secrets set <plugin> <key> <value>` updates the secrets store.
+- `gram secrets set <plugin> <key> <value>` updates the secrets store.
 
 ```mermaid
 flowchart TD
-  CLI[scout secrets set] --> Secrets[.scout/secrets.json]
+  CLI[gram secrets set] --> Secrets[.scout/secrets.json]
   Secrets --> Plugins
 ```
 

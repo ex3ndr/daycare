@@ -1,6 +1,6 @@
 # Connectors
 
-Connectors are plugin modules that bridge Scout to external systems.
+Connectors are plugin modules that bridge Grambot to external systems.
 They emit messages (text + files) into sessions and send responses back.
 
 ## Connector interface
