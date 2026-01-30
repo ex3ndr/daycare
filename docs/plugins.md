@@ -6,36 +6,87 @@ Plugins are first-class runtime modules that can register:
 - Tools
 - Image generation providers
 
-Each plugin instance runs inside its own Node.js VM context and receives a
-restricted API surface. Instances are identified by `instanceId`, while
-`pluginId` points to the plugin type.
+## Isolation model
+Each plugin instance runs inside its own Node.js VM context. That means:
+- global state is isolated per instance (no shared `globalThis`)
+- module caches are isolated per instance
+- instance lifetime is managed by the engine (load/unload is internal)
 
-Each plugin provides:
-- a JSON descriptor (`id`, `name`, `description`, `entry`)
-- a Zod settings schema
-- a `create()` factory that returns `load()`/`unload()` handlers
+This is *not* an OS-level sandbox. Plugins still execute in the same process and
+have access to Node.js built-ins and network primitives exposed in the sandbox
+(e.g., `fetch`, `process`, `Buffer`). Use isolation for safety boundaries inside
+Grambot, not for untrusted code.
 
-Plugins receive:
-- settings from `.scout/settings.json`
-- a dedicated data directory `.scout/plugins/<instanceId>`
-- access to the auth store
-- a registrar for connectors, inference, tools, and images
+## Plugin protocol
+Each plugin type is described by a JSON descriptor and a module that exports a
+`plugin` object (or default export) with:
+- `settingsSchema` (Zod) to validate instance settings
+- `create(api)` returning `{ load?, unload? }`
 
-Plugins can emit events via the plugin event queue. Events are processed
-sequentially by the plugin event engine, so plugins may emit during startup
-before the engine begins handling them.
+The plugin API surface is intentionally narrow:
+- `api.instance`: `{ instanceId, pluginId, enabled }`
+- `api.settings`: validated settings for the instance
+- `api.engineSettings`: full engine settings snapshot
+- `api.registrar`: connector/inference/tool/image registration
+- `api.secrets`: secrets store (keyed by instance id)
+- `api.events.emit({ type, payload })`: enqueue plugin events
+
+Load/unload is internal: the plugin manager reconciles enabled instances from
+`.scout/settings.json` and loads or unloads instances to match.
+
+### Descriptor format
+```json
+{
+  "id": "telegram",
+  "name": "Telegram",
+  "description": "Telegram connector and incoming message adapter.",
+  "entry": "../telegram.js"
+}
+```
+
+### Settings format
+```json
+{
+  "plugins": [
+    {
+      "instanceId": "telegram",
+      "pluginId": "telegram",
+      "enabled": true,
+      "settings": { "polling": true }
+    }
+  ]
+}
+```
+
+### Event format
+Plugin events are queued and processed sequentially. Each event is persisted in
+memory with metadata for later routing:
+- `id` (generated)
+- `pluginId`
+- `instanceId`
+- `type`
+- `payload`
+- `createdAt`
+
+## Data & secrets
+Each instance gets a dedicated data directory:
+- `.scout/plugins/<instanceId>`
+
+Secrets are stored per instance id in `.scout/secrets.json`.
 
 ```mermaid
 flowchart TD
-  Settings[settings.json] --> PluginManager
-  PluginManager --> Plugin[Plugin load()]
-  Plugin --> Registrar[PluginRegistrar]
-  Plugin --> Events[PluginEventQueue]
-  Registrar --> Connectors
-  Registrar --> Inference
-  Registrar --> Tools
-  Registrar --> Images
-  Events --> Engine[PluginEventEngine]
+  Settings["settings.json"] --> Manager["PluginManager"]
+  Manager --> Loader["PluginModuleLoader"]
+  Loader --> VM["VM context (per instance)"]
+  VM --> Plugin["Plugin instance<br/>load()/unload()"]
+  Plugin --> Registrar["PluginRegistrar"]
+  Plugin --> Events["PluginEventQueue"]
+  Registrar --> Connectors["ConnectorRegistry"]
+  Registrar --> Inference["InferenceRegistry"]
+  Registrar --> Tools["ToolRegistry"]
+  Registrar --> Images["ImageGenerationRegistry"]
+  Events --> Engine["PluginEventEngine"]
 ```
 
 ## Built-in plugins
