@@ -9,6 +9,7 @@ The CLI is implemented with Commander in `sources/main.ts`. It always initialize
 - `plugins load <pluginId> [instanceId]` - loads a plugin instance (updates settings if engine is down).
 - `plugins unload <instanceId>` - unloads a plugin instance.
 - `auth set <id> <key> <value>` - stores an auth credential.
+- `doctor` - runs basic inference checks for configured providers.
 
 ## Development
 - `yarn dev` runs the CLI directly via `tsx`.
@@ -20,6 +21,7 @@ flowchart TD
   main --> add[add]
   main --> plugins[plugins]
   main --> auth[auth]
+  main --> doctor[doctor]
 ```
 
 ## start command flow

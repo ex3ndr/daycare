@@ -1,0 +1,6 @@
+{
+  "id": "nano-banana-pro",
+  "name": "Nano Banana Pro",
+  "description": "Nano Banana Pro image generation provider.",
+  "entry": "./plugin.js"
+}

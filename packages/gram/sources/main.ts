@@ -7,6 +7,7 @@ import { setAuthCommand } from "./commands/auth.js";
 import { addCommand } from "./commands/add.js";
 import { removeCommand } from "./commands/remove.js";
 import { setDefaultProviderCommand } from "./commands/providers.js";
+import { doctorCommand } from "./commands/doctor.js";
 import { DEFAULT_SETTINGS_PATH } from "./settings.js";
 
 const program = new Command();
@@ -88,6 +89,16 @@ program
     DEFAULT_SETTINGS_PATH
   )
   .action(setDefaultProviderCommand);
+
+program
+  .command("doctor")
+  .description("Run basic inference checks for configured providers")
+  .option(
+    "-s, --settings <path>",
+    "Path to settings file",
+    DEFAULT_SETTINGS_PATH
+  )
+  .action(doctorCommand);
 
 if (process.argv.length <= 2) {
   program.outputHelp();
