@@ -28,7 +28,7 @@ export function buildReactionTool(): ToolDefinition {
       }
       const source = payload.source ?? toolContext.source;
       const connector = toolContext.connectorRegistry.get(source);
-      if (!connector || !connector.setReaction) {
+      if (!connector || !connector.capabilities.reactions || !connector.setReaction) {
         throw new Error(`Connector does not support reactions: ${source}`);
       }
       const messageId = payload.messageId ?? toolContext.messageContext.messageId;

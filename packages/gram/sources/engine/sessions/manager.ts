@@ -36,6 +36,11 @@ export type SessionManagerOptions<State = Record<string, unknown>> = {
   idFactory?: () => string;
   storageIdFactory?: () => string;
   sessionIdFor?: (source: string, context: MessageContext) => string;
+  messageTransform?: (
+    message: ConnectorMessage,
+    context: MessageContext,
+    receivedAt: Date
+  ) => ConnectorMessage;
   onSessionCreated?: SessionCreatedHandler<State>;
   onSessionUpdated?: SessionUpdatedHandler<State>;
   onMessageStart?: SessionMessageHandler<State>;
@@ -54,6 +59,7 @@ export class SessionManager<State = Record<string, unknown>> {
   private idFactory: () => string;
   private storageIdFactory: () => string;
   private sessionIdFor: (source: string, context: MessageContext) => string;
+  private messageTransform?: SessionManagerOptions<State>["messageTransform"];
   private onSessionCreated?: SessionCreatedHandler<State>;
   private onSessionUpdated?: SessionUpdatedHandler<State>;
   private onMessageStart?: SessionMessageHandler<State>;
@@ -79,6 +85,7 @@ export class SessionManager<State = Record<string, unknown>> {
     this.onSessionUpdated = options.onSessionUpdated;
     this.onMessageStart = options.onMessageStart;
     this.onMessageEnd = options.onMessageEnd;
+    this.messageTransform = options.messageTransform;
   }
 
   getSession(source: string, context: MessageContext): Session<State> {
@@ -174,7 +181,11 @@ export class SessionManager<State = Record<string, unknown>> {
   ): Promise<SessionMessage> {
     logger.debug(`handleMessage() called source=${source} channelId=${context.channelId} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`);
     const session = this.getSession(source, context);
-    const entry = session.enqueue(message, context, this.now(), this.idFactory());
+    const receivedAt = this.now();
+    const normalizedMessage = this.messageTransform
+      ? this.messageTransform(message, context, receivedAt)
+      : message;
+    const entry = session.enqueue(normalizedMessage, context, receivedAt, this.idFactory());
     logger.debug(`Message enqueued sessionId=${session.id} messageId=${entry.id} queueSize=${session.size}`);
 
     if (this.onSessionUpdated) {

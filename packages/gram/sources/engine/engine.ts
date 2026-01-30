@@ -35,6 +35,8 @@ import { AuthStore } from "../auth/store.js";
 import { buildCronTool } from "./tools/cron.js";
 import { buildImageGenerationTool } from "./tools/image-generation.js";
 import { buildReactionTool } from "./tools/reaction.js";
+import { buildSendFileTool } from "./tools/send-file.js";
+import { formatTimeAI } from "../util/timeFormat.js";
 import type { ToolExecutionResult } from "./tools/types.js";
 import { CronScheduler } from "../modules/runtime/cron.js";
 import { EngineEventBus } from "./ipc/events.js";
@@ -163,6 +165,9 @@ export class Engine {
         return `${providerId}:${userKey}`;
       },
       storageIdFactory: () => this.sessionStore.createStorageId(),
+      messageTransform: (message, context, receivedAt) => {
+        return formatIncomingMessage(message, context, receivedAt);
+      },
       onSessionCreated: (session, source, context) => {
         const providerId = this.resolveProviderId(context);
         if (providerId) {
@@ -318,7 +323,8 @@ export class Engine {
     );
     this.toolResolver.register("core", buildImageGenerationTool(this.imageRegistry));
     this.toolResolver.register("core", buildReactionTool());
-    logger.debug("Core tools registered: cron, image_generation, reaction");
+    this.toolResolver.register("core", buildSendFileTool());
+    logger.debug("Core tools registered: cron, image_generation, reaction, send_file");
 
     logger.debug("Restoring sessions from disk");
     await this.restoreSessions();
@@ -425,12 +431,29 @@ export class Engine {
     return this.inferenceRouter;
   }
 
-  private listContextTools() {
+  private listContextTools(source?: string) {
     const tools = this.toolResolver.listTools();
+    const connectorCapabilities = source
+      ? this.connectorRegistry.get(source)?.capabilities ?? null
+      : null;
+    const supportsFiles = connectorCapabilities
+      ? (connectorCapabilities.sendFiles?.modes.length ?? 0) > 0
+      : this.connectorRegistry
+          .list()
+          .some(
+            (id) =>
+              (this.connectorRegistry.get(id)?.capabilities.sendFiles?.modes.length ?? 0) > 0
+          );
+    const supportsReactions = connectorCapabilities
+      ? connectorCapabilities.reactions === true
+      : this.connectorRegistry
+          .list()
+          .some((id) => this.connectorRegistry.get(id)?.capabilities.reactions === true);
     if (this.imageRegistry.list().length === 0) {
-      return tools.filter((tool) => tool.name !== "generate_image");
+      const filtered = tools.filter((tool) => tool.name !== "generate_image");
+      return filterConnectorTools(filtered, supportsFiles, supportsReactions);
     }
-    return tools;
+    return filterConnectorTools(tools, supportsFiles, supportsReactions);
   }
 
   async executeTool(
@@ -622,14 +645,25 @@ export class Engine {
     const providerSettings = providerId
       ? listActiveInferenceProviders(this.settings).find((p) => p.id === providerId)
       : listActiveInferenceProviders(this.settings)[0];
+    const connector = this.connectorRegistry.get(source);
+    const connectorCapabilities = connector?.capabilities ?? null;
+    const fileSendModes = connectorCapabilities?.sendFiles?.modes ?? [];
+    const channelType = entry.context.channelType;
+    const channelIsPrivate = channelType ? channelType === "private" : null;
     const systemPrompt = await createSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
-      workspace: session.context.state.permissions.workingDir
+      workspace: session.context.state.permissions.workingDir,
+      connector: source,
+      canSendFiles: fileSendModes.length > 0,
+      fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
+      channelId: entry.context.channelId,
+      channelType,
+      channelIsPrivate
     });
     const context: Context = {
       ...sessionContext,
-      tools: this.listContextTools(),
+      tools: this.listContextTools(source),
       systemPrompt
     };
     logger.debug(
@@ -922,6 +956,40 @@ function extractToolCalls(message: Context["messages"][number]): ToolCall[] {
   return message.content.filter(
     (block): block is ToolCall => block.type === "toolCall"
   );
+}
+
+function filterConnectorTools(
+  tools: Array<{ name: string }>,
+  supportsFiles: boolean,
+  supportsReactions: boolean
+) {
+  let filtered = tools;
+  if (!supportsFiles) {
+    filtered = filtered.filter((tool) => tool.name !== "send_file");
+  }
+  if (!supportsReactions) {
+    filtered = filtered.filter((tool) => tool.name !== "set_reaction");
+  }
+  return filtered;
+}
+
+function formatIncomingMessage(
+  message: ConnectorMessage,
+  context: MessageContext,
+  receivedAt: Date
+): ConnectorMessage {
+  if (!message.text && (!message.files || message.files.length === 0)) {
+    return message;
+  }
+  const time = formatTimeAI(receivedAt);
+  const text = message.text ?? "";
+  const messageIdTag = context.messageId
+    ? `<message_id>${context.messageId}</message_id>`
+    : "";
+  return {
+    ...message,
+    text: `<time>${time}</time>${messageIdTag}<message>${text}</message>`
+  };
 }
 
 function normalizeSessionState(

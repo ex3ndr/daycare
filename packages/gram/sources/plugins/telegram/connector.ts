@@ -6,6 +6,8 @@ import TelegramBot from "node-telegram-bot-api";
 import type {
   Connector,
   ConnectorMessage,
+  ConnectorFile,
+  ConnectorCapabilities,
   MessageContext,
   MessageHandler
 } from "../../engine/connectors/types.js";
@@ -33,6 +35,14 @@ export type TelegramConnectorOptions = {
 const logger = getLogger("connector.telegram");
 
 export class TelegramConnector implements Connector {
+  capabilities: ConnectorCapabilities = {
+    sendText: true,
+    sendFiles: {
+      modes: ["document", "photo", "video"]
+    },
+    reactions: true,
+    typing: true
+  };
   private bot: TelegramBot;
   private handlers: MessageHandler[] = [];
   private pollingEnabled: boolean;
@@ -92,6 +102,7 @@ export class TelegramConnector implements Connector {
 
       const context: MessageContext = {
         channelId: String(message.chat.id),
+        channelType: (message.chat.type as MessageContext["channelType"]) ?? "unknown",
         userId: message.from ? String(message.from.id) : null,
         messageId: message.message_id ? String(message.message_id) : undefined
       };
@@ -189,12 +200,29 @@ export class TelegramConnector implements Connector {
 
   private async sendFile(
     targetId: string,
-    file: FileReference,
+    file: ConnectorFile,
     caption?: string
   ): Promise<void> {
     const options = caption ? { caption } : undefined;
+    const sendAs = file.sendAs ?? "auto";
+    if (sendAs === "photo") {
+      await this.bot.sendPhoto(targetId, file.path, options);
+      return;
+    }
+    if (sendAs === "video") {
+      await this.bot.sendVideo(targetId, file.path, options);
+      return;
+    }
+    if (sendAs === "document") {
+      await this.bot.sendDocument(targetId, file.path, options);
+      return;
+    }
     if (file.mimeType.startsWith("image/")) {
       await this.bot.sendPhoto(targetId, file.path, options);
+      return;
+    }
+    if (file.mimeType.startsWith("video/")) {
+      await this.bot.sendVideo(targetId, file.path, options);
       return;
     }
     await this.bot.sendDocument(targetId, file.path, options);
@@ -545,4 +573,3 @@ function isTelegramConflictError(error: unknown): boolean {
   const status = maybe.response?.statusCode ?? maybe.response?.body?.error_code;
   return maybe.code === "ETELEGRAM" && status === 409;
 }
-
