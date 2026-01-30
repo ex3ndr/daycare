@@ -6,8 +6,8 @@ The CLI is implemented with Commander in `sources/main.ts`. It always initialize
 - `start` - launches the engine (default settings `.scout/settings.json`).
 - `status` - prints engine status if the socket is live.
 - `add` - interactive setup for an inference provider.
-- `plugins load <id>` - loads a plugin (updates settings if engine is down).
-- `plugins unload <id>` - unloads a plugin.
+- `plugins load <pluginId> [instanceId]` - loads a plugin instance (updates settings if engine is down).
+- `plugins unload <instanceId>` - unloads a plugin instance.
 - `auth set <id> <key> <value>` - stores an auth credential.
 
 ## Development

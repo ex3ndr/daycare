@@ -8,10 +8,17 @@ import type {
 } from "./modules/runtime/containers.js";
 import type { Pm2ProcessConfig } from "./modules/runtime/pm2.js";
 
-export type PluginSettings = {
+export type LegacyPluginSettings = {
   id: string;
   enabled?: boolean;
   config?: Record<string, unknown>;
+};
+
+export type PluginInstanceSettings = {
+  instanceId: string;
+  pluginId: string;
+  enabled?: boolean;
+  settings?: Record<string, unknown>;
 };
 
 export type InferenceProviderSettings = {
@@ -26,7 +33,7 @@ export type SettingsConfig = {
     dataDir?: string;
   };
   assistant?: AssistantSettings;
-  plugins?: PluginSettings[];
+  plugins?: Array<PluginInstanceSettings | LegacyPluginSettings>;
   inference?: {
     providers?: InferenceProviderSettings[];
   };
@@ -101,32 +108,52 @@ export async function updateSettingsFile(
   return updated;
 }
 
-export function listPlugins(settings: SettingsConfig): PluginSettings[] {
-  return settings.plugins ?? [];
+export function listPlugins(settings: SettingsConfig): PluginInstanceSettings[] {
+  return normalizePlugins(settings.plugins ?? []);
 }
 
-export function listEnabledPlugins(settings: SettingsConfig): PluginSettings[] {
-  return (settings.plugins ?? []).filter((plugin) => plugin.enabled !== false);
+export function listEnabledPlugins(settings: SettingsConfig): PluginInstanceSettings[] {
+  return listPlugins(settings).filter((plugin) => plugin.enabled !== false);
 }
 
 export function upsertPlugin(
-  plugins: PluginSettings[] | undefined,
-  entry: PluginSettings
-): PluginSettings[] {
-  const list = plugins ?? [];
-  const filtered = list.filter((item) => item.id !== entry.id);
+  plugins: Array<PluginInstanceSettings | LegacyPluginSettings> | undefined,
+  entry: PluginInstanceSettings
+): PluginInstanceSettings[] {
+  const list = normalizePlugins(plugins ?? []);
+  const filtered = list.filter((item) => item.instanceId !== entry.instanceId);
   return [...filtered, entry];
 }
 
 export function removePlugin(
-  plugins: PluginSettings[] | undefined,
-  id: string
-): PluginSettings[] {
-  return (plugins ?? []).filter((item) => item.id !== id);
+  plugins: Array<PluginInstanceSettings | LegacyPluginSettings> | undefined,
+  instanceId: string
+): PluginInstanceSettings[] {
+  return normalizePlugins(plugins ?? []).filter((item) => item.instanceId !== instanceId);
 }
 
 export function listInferenceProviders(
   settings: SettingsConfig
 ): InferenceProviderSettings[] {
   return settings.inference?.providers ?? [];
+}
+
+function normalizePlugins(
+  plugins: Array<PluginInstanceSettings | LegacyPluginSettings>
+): PluginInstanceSettings[] {
+  return plugins.map((plugin) => normalizePlugin(plugin));
+}
+
+function normalizePlugin(
+  plugin: PluginInstanceSettings | LegacyPluginSettings
+): PluginInstanceSettings {
+  if ("instanceId" in plugin && "pluginId" in plugin) {
+    return plugin;
+  }
+  return {
+    instanceId: plugin.id,
+    pluginId: plugin.id,
+    enabled: plugin.enabled,
+    settings: plugin.config
+  };
 }

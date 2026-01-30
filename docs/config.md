@@ -23,15 +23,16 @@ flowchart TD
     "dataDir": ".scout"
   },
   "plugins": [
-    { "id": "telegram", "enabled": true, "config": { "polling": true } },
-    { "id": "brave-search", "enabled": true },
-    { "id": "gpt-image", "enabled": true },
-    { "id": "nanobanana", "enabled": false, "config": { "endpoint": "https://api.example.com/images" } },
-    { "id": "openai", "enabled": true }
+    { "instanceId": "telegram", "pluginId": "telegram", "enabled": true, "settings": { "polling": true } },
+    { "instanceId": "brave-search", "pluginId": "brave-search", "enabled": true },
+    { "instanceId": "gpt-image", "pluginId": "gpt-image", "enabled": true },
+    { "instanceId": "nanobanana", "pluginId": "nanobanana", "enabled": false, "settings": { "endpoint": "https://api.example.com/images" } },
+    { "instanceId": "openai-codex", "pluginId": "openai-codex", "enabled": true },
+    { "instanceId": "anthropic", "pluginId": "anthropic", "enabled": false }
   ],
   "inference": {
     "providers": [
-      { "id": "openai", "model": "gpt-4o-mini" }
+      { "id": "openai-codex", "model": "gpt-4o-mini" }
     ]
   },
   "cron": {
@@ -77,14 +78,14 @@ flowchart TD
 ```
 
 ## `.scout/auth.json`
-Credentials are stored per provider id:
+Credentials are stored per plugin instance id:
 
 ```json
 {
   "telegram": { "type": "token", "token": "..." },
   "brave-search": { "type": "apiKey", "apiKey": "..." },
-  "openai": { "type": "apiKey", "apiKey": "..." },
-  "openai": { "type": "apiKey", "apiKey": "..." },
+  "openai-codex": { "type": "apiKey", "apiKey": "..." },
+  "anthropic": { "type": "apiKey", "apiKey": "..." },
   "gpt-image": { "type": "apiKey", "apiKey": "..." },
   "nanobanana": { "type": "apiKey", "apiKey": "..." }
 }

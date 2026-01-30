@@ -15,6 +15,8 @@ The file is read by the engine on startup and on demand by plugins.
 }
 ```
 
+Auth entries are keyed by plugin instance id (defaults to the plugin id when no instance id is provided).
+
 ## CLI helpers
 - `gram auth set <id> <key> <value>` updates the auth store.
 

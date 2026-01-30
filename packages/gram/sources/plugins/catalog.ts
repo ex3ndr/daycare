@@ -1,26 +1,32 @@
-import type { PluginFactory } from "./manager.js";
-import { createTelegramPlugin } from "./telegram.js";
-import { createBraveSearchPlugin } from "./brave-search.js";
-import { createGptImagePlugin } from "./gpt-image.js";
-import { createNanobananaPlugin } from "./nanobanana.js";
-import { PROVIDER_DEFINITIONS } from "./providers.js";
-import { createPiAiProviderPlugin } from "./pi-ai-provider.js";
-import { createOpenAICompatiblePlugin } from "./openai-compatible.js";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-export function buildPluginCatalog(): Map<string, PluginFactory> {
-  const catalog = new Map<string, PluginFactory>([
-    ["telegram", createTelegramPlugin],
-    ["brave-search", createBraveSearchPlugin],
-    ["gpt-image", createGptImagePlugin],
-    ["nanobanana", createNanobananaPlugin]
-  ]);
+import { pluginDescriptorSchema, type PluginDescriptor } from "./descriptor.js";
 
-  for (const provider of PROVIDER_DEFINITIONS) {
-    if (provider.kind === "openai-compatible") {
-      catalog.set(provider.id, () => createOpenAICompatiblePlugin());
-      continue;
-    }
-    catalog.set(provider.id, () => createPiAiProviderPlugin(provider));
+export type PluginDefinition = {
+  descriptor: PluginDescriptor;
+  entryPath: string;
+};
+
+const descriptorFiles = [
+  new URL("./descriptors/telegram.json", import.meta.url),
+  new URL("./descriptors/openai-codex.json", import.meta.url),
+  new URL("./descriptors/anthropic.json", import.meta.url),
+  new URL("./descriptors/brave-search.json", import.meta.url),
+  new URL("./descriptors/gpt-image.json", import.meta.url),
+  new URL("./descriptors/nanobanana.json", import.meta.url)
+];
+
+export function buildPluginCatalog(): Map<string, PluginDefinition> {
+  const catalog = new Map<string, PluginDefinition>();
+
+  for (const descriptorUrl of descriptorFiles) {
+    const descriptorPath = fileURLToPath(descriptorUrl);
+    const raw = fs.readFileSync(descriptorPath, "utf8");
+    const parsed = pluginDescriptorSchema.parse(JSON.parse(raw));
+    const entryPath = path.resolve(path.dirname(descriptorPath), parsed.entry);
+    catalog.set(parsed.id, { descriptor: parsed, entryPath });
   }
 
   return catalog;

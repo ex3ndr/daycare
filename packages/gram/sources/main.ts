@@ -45,13 +45,14 @@ const pluginCommand = program.command("plugins").description("Manage plugins");
 pluginCommand
   .command("load")
   .description("Load a plugin")
-  .argument("<id>", "Plugin id")
+  .argument("<pluginId>", "Plugin id")
+  .argument("[instanceId]", "Instance id (defaults to plugin id)")
   .action(loadPluginCommand);
 
 pluginCommand
   .command("unload")
   .description("Unload a plugin")
-  .argument("<id>", "Plugin id")
+  .argument("<instanceId>", "Plugin instance id")
   .action(unloadPluginCommand);
 
 const authCommand = program.command("auth").description("Manage auth credentials");
