@@ -49,10 +49,39 @@ export type MessageHandler = (
 
 export type MessageUnsubscribe = () => void;
 
+export type PermissionKind = "read" | "write" | "web";
+
+export type PermissionRequest = {
+  token: string;
+  kind: PermissionKind;
+  path?: string;
+  reason: string;
+  message: string;
+  permission: string;
+};
+
+export type PermissionDecision = {
+  token: string;
+  kind: PermissionKind;
+  path?: string;
+  approved: boolean;
+};
+
+export type PermissionHandler = (
+  decision: PermissionDecision,
+  context: MessageContext
+) => void | Promise<void>;
+
 export interface Connector {
   capabilities: ConnectorCapabilities;
   onMessage(handler: MessageHandler): MessageUnsubscribe;
+  onPermission?: (handler: PermissionHandler) => MessageUnsubscribe;
   sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
+  requestPermission?: (
+    targetId: string,
+    request: PermissionRequest,
+    context: MessageContext
+  ) => Promise<void>;
   startTyping?: (targetId: string) => () => void;
   setReaction?: (
     targetId: string,

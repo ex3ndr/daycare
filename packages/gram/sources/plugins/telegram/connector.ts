@@ -10,7 +10,10 @@ import type {
   ConnectorCapabilities,
   ConnectorCommand,
   MessageContext,
-  MessageHandler
+  MessageHandler,
+  PermissionDecision,
+  PermissionHandler,
+  PermissionRequest
 } from "../../engine/connectors/types.js";
 import { getLogger } from "../../log.js";
 import type { FileStore } from "../../files/store.js";
@@ -46,6 +49,7 @@ export class TelegramConnector implements Connector {
   };
   private bot: TelegramBot;
   private handlers: MessageHandler[] = [];
+  private permissionHandlers: PermissionHandler[] = [];
   private pollingEnabled: boolean;
   private statePath: string | null;
   private lastUpdateId: number | null = null;
@@ -55,6 +59,10 @@ export class TelegramConnector implements Connector {
   private pendingRetry: NodeJS.Timeout | null = null;
   private persistTimer: NodeJS.Timeout | null = null;
   private typingTimers = new Map<string, NodeJS.Timeout>();
+  private pendingPermissions = new Map<
+    string,
+    { request: PermissionRequest; context: MessageContext }
+  >();
   private shuttingDown = false;
   private retryOptions?: TelegramConnectorOptions["retry"];
   private clearWebhookOnStart: boolean;
@@ -120,6 +128,43 @@ export class TelegramConnector implements Connector {
       logger.debug(`All handlers completed channelId=${context.channelId}`);
     });
 
+    this.bot.on("callback_query", async (query) => {
+      const data = query.data;
+      if (!data || !data.startsWith("perm:")) {
+        return;
+      }
+      const parts = data.split(":");
+      if (parts.length < 3) {
+        return;
+      }
+      const action = parts[1];
+      const token = parts[2];
+      if (!token) {
+        return;
+      }
+      const pending = this.pendingPermissions.get(token);
+      if (!pending) {
+        await this.bot.answerCallbackQuery(query.id, {
+          text: "Permission request expired."
+        });
+        return;
+      }
+      this.pendingPermissions.delete(token);
+      const approved = action === "allow";
+      const decision: PermissionDecision = {
+        token,
+        kind: pending.request.kind,
+        path: pending.request.path,
+        approved
+      };
+      for (const handler of this.permissionHandlers) {
+        await handler(decision, pending.context);
+      }
+      await this.bot.answerCallbackQuery(query.id, {
+        text: approved ? "Permission granted." : "Permission denied."
+      });
+    });
+
     this.bot.on("polling_error", (error) => {
       if (this.shuttingDown) {
         return;
@@ -140,6 +185,16 @@ export class TelegramConnector implements Connector {
       const index = this.handlers.indexOf(handler);
       if (index !== -1) {
         this.handlers.splice(index, 1);
+      }
+    };
+  }
+
+  onPermission(handler: PermissionHandler): () => void {
+    this.permissionHandlers.push(handler);
+    return () => {
+      const index = this.permissionHandlers.indexOf(handler);
+      if (index !== -1) {
+        this.permissionHandlers.splice(index, 1);
       }
     };
   }
@@ -168,6 +223,25 @@ export class TelegramConnector implements Connector {
       await this.sendFile(targetId, file);
     }
     logger.debug(`All files sent targetId=${targetId} totalFiles=${files.length}`);
+  }
+
+  async requestPermission(
+    targetId: string,
+    request: PermissionRequest,
+    context: MessageContext
+  ): Promise<void> {
+    const text = request.message;
+    this.pendingPermissions.set(request.token, { request, context });
+    await this.bot.sendMessage(targetId, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "Allow", callback_data: `perm:allow:${request.token}` },
+            { text: "Deny", callback_data: `perm:deny:${request.token}` }
+          ]
+        ]
+      }
+    });
   }
 
   startTyping(targetId: string): () => void {

@@ -5,6 +5,9 @@ import type { AssistantSettings } from "../settings.js";
 
 export type SessionPermissions = {
   workingDir: string;
+  writeDirs: string[];
+  readDirs: string[];
+  web: boolean;
 };
 
 export function resolveWorkspaceDir(
@@ -28,15 +31,50 @@ export function normalizePermissions(
   value: unknown,
   defaultWorkingDir: string
 ): SessionPermissions {
+  let writeDirs: string[] = [];
+  let readDirs: string[] = [];
+  let web = false;
   if (value && typeof value === "object") {
-    const candidate = value as { workingDir?: unknown };
+    const candidate = value as {
+      workingDir?: unknown;
+      writeDirs?: unknown;
+      readDirs?: unknown;
+      web?: unknown;
+    };
     if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {
       if (path.isAbsolute(candidate.workingDir)) {
-        return { workingDir: path.resolve(candidate.workingDir) };
+        if (Array.isArray(candidate.writeDirs)) {
+          writeDirs = candidate.writeDirs
+            .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+            .map((entry) => entry.trim())
+            .filter((entry) => path.isAbsolute(entry))
+            .map((entry) => path.resolve(entry));
+        }
+        if (Array.isArray(candidate.readDirs)) {
+          readDirs = candidate.readDirs
+            .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+            .map((entry) => entry.trim())
+            .filter((entry) => path.isAbsolute(entry))
+            .map((entry) => path.resolve(entry));
+        }
+        if (typeof candidate.web === "boolean") {
+          web = candidate.web;
+        }
+        return {
+          workingDir: path.resolve(candidate.workingDir),
+          writeDirs: dedupe(writeDirs),
+          readDirs: dedupe(readDirs),
+          web
+        };
       }
     }
   }
-  return { workingDir: path.resolve(defaultWorkingDir) };
+  return {
+    workingDir: path.resolve(defaultWorkingDir),
+    writeDirs: [],
+    readDirs: [],
+    web: false
+  };
 }
 
 export function resolveWorkspacePath(workingDir: string, target: string): string {
@@ -46,4 +84,8 @@ export function resolveWorkspacePath(workingDir: string, target: string): string
     throw new Error("Path is outside the session workspace.");
   }
   return resolved;
+}
+
+function dedupe(values: string[]): string[] {
+  return Array.from(new Set(values));
 }

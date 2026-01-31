@@ -7,7 +7,9 @@ import type {
   ConnectorMessage,
   MessageContext,
   MessageHandler,
-  MessageUnsubscribe
+  MessageUnsubscribe,
+  PermissionDecision,
+  PermissionHandler
 } from "./connectors/types.js";
 import type { InferenceProvider } from "./inference/types.js";
 import type { ImageGenerationProvider } from "./images/types.js";
@@ -23,12 +25,18 @@ export type ConnectorRegistryOptions = {
     message: ConnectorMessage,
     context: MessageContext
   ) => void | Promise<void>;
+  onPermission?: (
+    source: string,
+    decision: PermissionDecision,
+    context: MessageContext
+  ) => void | Promise<void>;
   onFatal?: (source: string, reason: string, error?: unknown) => void;
 };
 
 type ManagedConnector = {
   connector: Connector;
   unsubscribe?: MessageUnsubscribe;
+  permissionUnsubscribe?: MessageUnsubscribe;
   loadedAt: Date;
 };
 
@@ -43,11 +51,13 @@ const logger = getLogger("engine.modules");
 export class ConnectorRegistry {
   private connectors = new Map<string, ManagedConnector>();
   private onMessage: ConnectorRegistryOptions["onMessage"];
+  private onPermission?: ConnectorRegistryOptions["onPermission"];
   private onFatal?: ConnectorRegistryOptions["onFatal"];
   private logger = getLogger("connectors.registry");
 
   constructor(options: ConnectorRegistryOptions) {
     this.onMessage = options.onMessage;
+    this.onPermission = options.onPermission;
     this.onFatal = options.onFatal;
     this.logger.debug("ConnectorRegistry initialized");
   }
@@ -80,9 +90,11 @@ export class ConnectorRegistry {
 
     this.logger.debug(`Attaching message handler connectorId=${id}`);
     const unsubscribe = this.attach(id, connector);
+    const permissionUnsubscribe = this.attachPermission(id, connector);
     this.connectors.set(id, {
       connector,
       unsubscribe,
+      permissionUnsubscribe,
       loadedAt: new Date()
     });
     this.logger.debug(`Connector added to registry connectorId=${id} totalConnectors=${this.connectors.size}`);
@@ -100,6 +112,7 @@ export class ConnectorRegistry {
 
     this.logger.debug(`Unsubscribing message handler connectorId=${id}`);
     entry.unsubscribe?.();
+    entry.permissionUnsubscribe?.();
     try {
       this.logger.debug(`Calling connector.shutdown() connectorId=${id} reason=${reason}`);
       await entry.connector.shutdown?.(reason);
@@ -131,6 +144,16 @@ export class ConnectorRegistry {
       return this.onMessage(id, message, context);
     };
     return connector.onMessage(handler);
+  }
+
+  private attachPermission(id: string, connector: Connector): MessageUnsubscribe | undefined {
+    if (!this.onPermission || !connector.onPermission) {
+      return undefined;
+    }
+    const handler: PermissionHandler = (decision, context) => {
+      return this.onPermission?.(id, decision, context);
+    };
+    return connector.onPermission(handler);
   }
 }
 

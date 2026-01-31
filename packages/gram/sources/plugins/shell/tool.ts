@@ -6,7 +6,9 @@ import { exec as execCallback, type ExecException } from "node:child_process";
 import { promisify } from "node:util";
 
 import type { ToolDefinition } from "../../engine/tools/types.js";
+import type { SessionPermissions } from "../../engine/permissions.js";
 import { resolveWorkspacePath } from "../../engine/permissions.js";
+import { wrapWithSandbox } from "../../sandbox/runtime.js";
 
 const exec = promisify(execCallback);
 
@@ -52,6 +54,18 @@ type WriteArgs = Static<typeof writeSchema>;
 type EditArgs = Static<typeof editSchema>;
 type EditSpec = Static<typeof editItemSchema>;
 
+const allowWriteSchema = Type.Object(
+  {
+    paths: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })
+  },
+  { additionalProperties: false }
+);
+
+const resetSchema = Type.Object({}, { additionalProperties: false });
+
+type AllowWriteArgs = Static<typeof allowWriteSchema>;
+type ResetArgs = Static<typeof resetSchema>;
+
 const execSchema = Type.Object(
   {
     command: Type.String({ minLength: 1 }),
@@ -69,7 +83,7 @@ export function buildWorkspaceReadTool(): ToolDefinition {
     tool: {
       name: "read",
       description:
-        "Read a UTF-8 text file from the session workspace. The path must be an absolute path that resolves inside the workspace. Large files are truncated.",
+        "Read a UTF-8 text file from the session workspace or an allowed read directory. The path must be absolute and within the allowed read set. Large files are truncated.",
       parameters: readSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -79,7 +93,8 @@ export function buildWorkspaceReadTool(): ToolDefinition {
         throw new Error("Session workspace is not configured.");
       }
       ensureAbsolutePath(payload.path);
-      return handleRead(payload.path, workingDir, toolCall);
+      const resolved = resolveReadPath(toolContext.permissions, payload.path);
+      return handleRead(resolved, workingDir, toolCall);
     }
   };
 }
@@ -89,7 +104,7 @@ export function buildWorkspaceWriteTool(): ToolDefinition {
     tool: {
       name: "write",
       description:
-        "Write UTF-8 text to a file within the session workspace. Creates parent directories as needed. If append is true, appends to the file. Paths must be absolute and resolve inside the workspace.",
+        "Write UTF-8 text to a file within the session workspace or an allowed write directory. Creates parent directories as needed. If append is true, appends to the file. Paths must be absolute and within the allowed write set.",
       parameters: writeSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -99,8 +114,9 @@ export function buildWorkspaceWriteTool(): ToolDefinition {
         throw new Error("Session workspace is not configured.");
       }
       ensureAbsolutePath(payload.path);
+      const resolved = resolveWritePath(toolContext.permissions, payload.path);
       return handleWrite(
-        payload.path,
+        resolved,
         payload.content,
         payload.append ?? false,
         workingDir,
@@ -115,7 +131,7 @@ export function buildWorkspaceEditTool(): ToolDefinition {
     tool: {
       name: "edit",
       description:
-        "Apply one or more find/replace edits to a file in the session workspace. Edits are applied sequentially and must match at least once. Paths must be absolute and resolve inside the workspace.",
+        "Apply one or more find/replace edits to a file in the session workspace or an allowed write directory. Edits are applied sequentially and must match at least once. Paths must be absolute and within the allowed write set.",
       parameters: editSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -125,7 +141,8 @@ export function buildWorkspaceEditTool(): ToolDefinition {
         throw new Error("Session workspace is not configured.");
       }
       ensureAbsolutePath(payload.path);
-      return handleEdit(payload.path, payload.edits, workingDir, toolCall);
+      const resolved = resolveWritePath(toolContext.permissions, payload.path);
+      return handleEdit(resolved, payload.edits, workingDir, toolCall);
     }
   };
 }
@@ -135,7 +152,7 @@ export function buildExecTool(): ToolDefinition {
     tool: {
       name: "exec",
       description:
-        "Execute a shell command inside the session workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Returns stdout/stderr and failure details.",
+        "Execute a shell command inside the session workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Writes are sandboxed to the allowed write directories. Returns stdout/stderr and failure details.",
       parameters: execSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -152,9 +169,11 @@ export function buildExecTool(): ToolDefinition {
         : workingDir;
       const env = payload.env ? { ...process.env, ...payload.env } : process.env;
       const timeout = payload.timeoutMs ?? DEFAULT_EXEC_TIMEOUT;
+      const sandboxConfig = buildSandboxConfig(toolContext.permissions);
+      const sandboxedCommand = await wrapWithSandbox(payload.command, sandboxConfig);
 
       try {
-        const result = await exec(payload.command, {
+        const result = await exec(sandboxedCommand, {
           cwd,
           env,
           timeout,
@@ -190,13 +209,80 @@ export function buildExecTool(): ToolDefinition {
   };
 }
 
+export function buildAllowWriteTool(): ToolDefinition {
+  return {
+    tool: {
+      name: "allow_write",
+      description:
+        "Expand the set of absolute directories that shell tools may write to. Paths must be absolute and are persisted for the session.",
+      parameters: allowWriteSchema
+    },
+    execute: async (args, toolContext, toolCall) => {
+      const payload = args as AllowWriteArgs;
+      const permissions = toolContext.permissions;
+      const next = new Set(permissions.writeDirs);
+      const added: string[] = [];
+      for (const entry of payload.paths) {
+        ensureAbsolutePath(entry);
+        const resolved = path.resolve(entry);
+        if (!next.has(resolved)) {
+          next.add(resolved);
+          added.push(resolved);
+        }
+      }
+      const updated = Array.from(next.values());
+      permissions.writeDirs = updated;
+      toolContext.session.context.state.permissions.writeDirs = updated;
+
+      const toolMessage = buildToolMessage(
+        toolCall,
+        added.length > 0
+          ? `Added ${added.length} writable path(s).`
+          : "No new writable paths added.",
+        false,
+        {
+          added,
+          writeDirs: updated
+        }
+      );
+
+      return { toolMessage };
+    }
+  };
+}
+
+export function buildResetPermissionsTool(): ToolDefinition {
+  return {
+    tool: {
+      name: "reset_permissions",
+      description: "Reset extra read/write/web permissions back to workspace-only defaults.",
+      parameters: resetSchema
+    },
+    execute: async (args, toolContext, toolCall) => {
+      const _payload = args as ResetArgs;
+      toolContext.permissions.writeDirs = [];
+      toolContext.session.context.state.permissions.writeDirs = [];
+      toolContext.permissions.readDirs = [];
+      toolContext.session.context.state.permissions.readDirs = [];
+      toolContext.permissions.web = false;
+      toolContext.session.context.state.permissions.web = false;
+      const toolMessage = buildToolMessage(
+        toolCall,
+        "Reset permissions to workspace defaults.",
+        false,
+        { writeDirs: [], readDirs: [], web: false }
+      );
+      return { toolMessage };
+    }
+  };
+}
+
 async function handleRead(
-  target: string,
+  resolvedPath: string,
   workingDir: string,
   toolCall: { id: string; name: string }
 ): Promise<{ toolMessage: ToolResultMessage }> {
-  const resolved = resolveWorkspacePath(workingDir, target);
-  const stats = await fs.stat(resolved);
+  const stats = await fs.stat(resolvedPath);
   if (!stats.isFile()) {
     throw new Error("Path is not a file.");
   }
@@ -204,17 +290,17 @@ async function handleRead(
   let content = "";
   let truncated = false;
   if (stats.size > MAX_READ_BYTES) {
-    const handle = await fs.open(resolved, "r");
+    const handle = await fs.open(resolvedPath, "r");
     const buffer = Buffer.alloc(MAX_READ_BYTES);
     await handle.read(buffer, 0, MAX_READ_BYTES, 0);
     await handle.close();
     content = buffer.toString("utf8");
     truncated = true;
   } else {
-    content = await fs.readFile(resolved, "utf8");
+    content = await fs.readFile(resolvedPath, "utf8");
   }
 
-  const displayPath = path.relative(workingDir, resolved) || ".";
+  const displayPath = formatDisplayPath(workingDir, resolvedPath);
   const suffix = truncated
     ? `\n[truncated to ${MAX_READ_BYTES} bytes from ${stats.size}]`
     : "";
@@ -231,21 +317,20 @@ async function handleRead(
 }
 
 async function handleWrite(
-  target: string,
+  resolvedPath: string,
   content: string,
   append: boolean,
   workingDir: string,
   toolCall: { id: string; name: string }
 ): Promise<{ toolMessage: ToolResultMessage }> {
-  const resolved = resolveWorkspacePath(workingDir, target);
-  await fs.mkdir(path.dirname(resolved), { recursive: true });
+  await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
   if (append) {
-    await fs.appendFile(resolved, content, "utf8");
+    await fs.appendFile(resolvedPath, content, "utf8");
   } else {
-    await fs.writeFile(resolved, content, "utf8");
+    await fs.writeFile(resolvedPath, content, "utf8");
   }
   const bytes = Buffer.byteLength(content, "utf8");
-  const displayPath = path.relative(workingDir, resolved) || ".";
+  const displayPath = formatDisplayPath(workingDir, resolvedPath);
   const text = `${append ? "Appended" : "Wrote"} ${bytes} bytes to ${displayPath}.`;
   const toolMessage = buildToolMessage(toolCall, text, false, {
     action: "write",
@@ -257,13 +342,12 @@ async function handleWrite(
 }
 
 async function handleEdit(
-  target: string,
+  resolvedPath: string,
   edits: EditSpec[],
   workingDir: string,
   toolCall: { id: string; name: string }
 ): Promise<{ toolMessage: ToolResultMessage }> {
-  const resolved = resolveWorkspacePath(workingDir, target);
-  const original = await fs.readFile(resolved, "utf8");
+  const original = await fs.readFile(resolvedPath, "utf8");
   let updated = original;
   const counts: number[] = [];
 
@@ -277,8 +361,8 @@ async function handleEdit(
     updated = next;
   }
 
-  await fs.writeFile(resolved, updated, "utf8");
-  const displayPath = path.relative(workingDir, resolved) || ".";
+  await fs.writeFile(resolvedPath, updated, "utf8");
+  const displayPath = formatDisplayPath(workingDir, resolvedPath);
   const summary = counts
     .map((count, index) => `edit ${index + 1}: ${count} replacement${count === 1 ? "" : "s"}`)
     .join(", ");
@@ -351,4 +435,55 @@ function ensureAbsolutePath(target: string): void {
   if (!path.isAbsolute(target)) {
     throw new Error("Path must be absolute.");
   }
+}
+
+function resolveWritePath(permissions: SessionPermissions, target: string): string {
+  const resolved = path.resolve(target);
+  const allowedDirs = [permissions.workingDir, ...permissions.writeDirs];
+  for (const dir of allowedDirs) {
+    if (isWithin(dir, resolved)) {
+      return resolved;
+    }
+  }
+  throw new Error("Path is outside the allowed write directories.");
+}
+
+function resolveReadPath(permissions: SessionPermissions, target: string): string {
+  const resolved = path.resolve(target);
+  const allowedDirs = [permissions.workingDir, ...permissions.readDirs];
+  for (const dir of allowedDirs) {
+    if (isWithin(dir, resolved)) {
+      return resolved;
+    }
+  }
+  throw new Error("Path is outside the allowed read directories.");
+}
+
+function isWithin(base: string, target: string): boolean {
+  const relative = path.relative(base, target);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function formatDisplayPath(workingDir: string, target: string): string {
+  if (isWithin(workingDir, target)) {
+    return path.relative(workingDir, target) || ".";
+  }
+  return target;
+}
+
+function buildSandboxConfig(permissions: SessionPermissions) {
+  const allowWrite = Array.from(
+    new Set([permissions.workingDir, ...permissions.writeDirs])
+  );
+  return {
+    filesystem: {
+      denyRead: [],
+      allowWrite,
+      denyWrite: []
+    },
+    network: {
+      allowedDomains: [],
+      deniedDomains: []
+    }
+  };
 }

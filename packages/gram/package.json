@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "^0.0.32",
     "@mariozechner/pi-ai": "0.50.3",
     "@paralleldrive/cuid2": "^2.2.2",
     "@sinclair/typebox": "^0.34.41",

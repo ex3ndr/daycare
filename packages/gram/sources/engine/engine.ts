@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import type { Context, ToolCall } from "@mariozechner/pi-ai";
 import { promises as fs } from "node:fs";
+import path from "node:path";
 
 import { getLogger } from "../log.js";
 import {
@@ -9,7 +10,8 @@ import {
   InferenceRegistry,
   ToolResolver
 } from "./modules.js";
-import type { Connector, ConnectorMessage, MessageContext } from "./connectors/types.js";
+import type { ConnectorMessage, MessageContext } from "./connectors/types.js";
+import type { PermissionDecision } from "./connectors/types.js";
 import { FileStore } from "../files/store.js";
 import type { FileReference } from "../files/types.js";
 import { InferenceRouter } from "./inference/router.js";
@@ -35,6 +37,7 @@ import { AuthStore } from "../auth/store.js";
 import { buildCronTool } from "./tools/cron.js";
 import { buildImageGenerationTool } from "./tools/image-generation.js";
 import { buildReactionTool } from "./tools/reaction.js";
+import { buildPermissionRequestTool } from "./tools/permissions.js";
 import { buildSendFileTool } from "./tools/send-file.js";
 import { formatTimeAI } from "../util/timeFormat.js";
 import type { ToolExecutionResult } from "./tools/types.js";
@@ -88,7 +91,12 @@ export class Engine {
     this.dataDir = options.dataDir;
     this.configDir = options.configDir;
     this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
-    this.defaultPermissions = { workingDir: this.workspaceDir };
+    this.defaultPermissions = {
+      workingDir: this.workspaceDir,
+      writeDirs: [],
+      readDirs: [],
+      web: false
+    };
     this.eventBus = options.eventBus;
     this.authStore = new AuthStore(options.authPath);
     this.fileStore = new FileStore({ basePath: `${this.dataDir}/files` });
@@ -110,6 +118,9 @@ export class Engine {
           { type: "connector.message", payload: { source, message, context: messageContext } }
         );
         logger.debug(`Connector message emitted to event queue: source=${source}`);
+      },
+      onPermission: (source, decision, context) => {
+        void this.handlePermissionDecision(source, decision, context);
       },
       onFatal: (source, reason, error) => {
         logger.warn({ source, reason, error }, "Connector requested shutdown");
@@ -324,7 +335,8 @@ export class Engine {
     this.toolResolver.register("core", buildImageGenerationTool(this.imageRegistry));
     this.toolResolver.register("core", buildReactionTool());
     this.toolResolver.register("core", buildSendFileTool());
-    logger.debug("Core tools registered: cron, image_generation, reaction, send_file");
+    this.toolResolver.register("core", buildPermissionRequestTool());
+    logger.debug("Core tools registered: cron, image_generation, reaction, send_file, request_permission");
 
     logger.debug("Restoring sessions from disk");
     await this.restoreSessions();
@@ -456,133 +468,6 @@ export class Engine {
     return filterConnectorTools(tools, supportsFiles, supportsReactions);
   }
 
-  private async handleSlashCommand(
-    command: ResolvedCommand,
-    entry: SessionMessage,
-    session: Session<SessionState>,
-    source: string,
-    connector: Connector
-  ): Promise<boolean> {
-    const name = command.name.toLowerCase();
-    if (name !== "reset" && name !== "compact") {
-      return false;
-    }
-
-    if (name === "reset") {
-      const ok = this.resetSession(session.id);
-      const message = ok ? "Session reset." : "Failed to reset session.";
-      await this.replyToCommand(connector, entry, session, source, message);
-      return true;
-    }
-
-    const result = await this.compactSession(session, entry, source);
-    await this.replyToCommand(
-      connector,
-      entry,
-      session,
-      source,
-      result.ok ? "Compaction complete." : `Compaction failed: ${result.error}`
-    );
-    return true;
-  }
-
-  private async replyToCommand(
-    connector: Connector,
-    entry: SessionMessage,
-    session: Session<SessionState>,
-    source: string,
-    text: string
-  ): Promise<void> {
-    try {
-      await connector.sendMessage(entry.context.channelId, {
-        text,
-        replyToMessageId: entry.context.messageId
-      });
-      await recordOutgoingEntry(this.sessionStore, session, source, entry.context, text);
-    } catch (error) {
-      logger.warn({ connector: source, error }, "Failed to send command reply");
-    } finally {
-      await recordSessionState(this.sessionStore, session, source);
-    }
-  }
-
-  private async compactSession(
-    session: Session<SessionState>,
-    entry: SessionMessage,
-    source: string
-  ): Promise<{ ok: true; summary: string } | { ok: false; error: string }> {
-    const history = session.context.state.context.messages;
-    if (!history || history.length === 0) {
-      return { ok: false, error: "No conversation history to compact." };
-    }
-
-    const providerId = this.resolveSessionProvider(session, entry.context);
-    const providersForSession = providerId
-      ? listActiveInferenceProviders(this.settings).filter((provider) => provider.id === providerId)
-      : [];
-
-    const compactContext: Context = {
-      messages: [
-        ...history,
-        {
-          role: "user",
-          content:
-            "Summarize the conversation so far for future context. " +
-            "Include key facts, decisions, tasks, preferences, and any important identifiers. " +
-            "Be concise and factual.",
-          timestamp: Date.now()
-        }
-      ],
-      tools: [],
-      systemPrompt:
-        "You are a compaction assistant. Return a concise summary of the conversation for reuse."
-    };
-
-    try {
-      const result = await this.inferenceRouter.complete(compactContext, session.id, {
-        providersOverride: providersForSession
-      });
-      const summary = extractAssistantText(result.message);
-      if (!summary || summary.trim().length === 0) {
-        return { ok: false, error: "No summary produced." };
-      }
-      session.context.state.context.messages = [
-        {
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: `Conversation summary:\n${summary.trim()}`
-            }
-          ],
-          api: "compaction",
-          provider: "system",
-          model: "summary",
-          usage: {
-            input: 0,
-            output: 0,
-            cacheRead: 0,
-            cacheWrite: 0,
-            totalTokens: 0,
-            cost: {
-              input: 0,
-              output: 0,
-              cacheRead: 0,
-              cacheWrite: 0,
-              total: 0
-            }
-          },
-          stopReason: "stop",
-          timestamp: Date.now()
-        }
-      ];
-      await recordSessionState(this.sessionStore, session, source);
-      return { ok: true, summary };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  }
-
   async executeTool(
     name: string,
     args: Record<string, unknown>,
@@ -634,7 +519,12 @@ export class Engine {
   async updateSettings(settings: SettingsConfig): Promise<void> {
     this.settings = settings;
     this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
-    this.defaultPermissions = { workingDir: this.workspaceDir };
+    this.defaultPermissions = {
+      workingDir: this.workspaceDir,
+      writeDirs: [],
+      readDirs: [],
+      web: false
+    };
     await ensureWorkspaceDir(this.workspaceDir);
     await this.providerManager.sync(settings);
     await this.pluginManager.syncWithSettings(settings);
@@ -678,6 +568,84 @@ export class Engine {
     }
 
     return providerId;
+  }
+
+  private async handlePermissionDecision(
+    source: string,
+    decision: PermissionDecision,
+    context: MessageContext
+  ): Promise<void> {
+    const connector = this.connectorRegistry.get(source);
+    const permissionTag = formatPermissionTag(decision);
+    if (!decision.approved) {
+      logger.info(
+        { source, permission: permissionTag, sessionId: context.sessionId },
+        "Permission denied"
+      );
+      if (connector) {
+        await connector.sendMessage(context.channelId, {
+          text: `Permission denied: ${permissionTag}`,
+          replyToMessageId: context.messageId
+        });
+      }
+      return;
+    }
+
+    if (!context.sessionId) {
+      logger.warn({ source, permission: permissionTag }, "Permission granted without session id");
+      if (connector) {
+        await connector.sendMessage(context.channelId, {
+          text: `Permission granted: ${permissionTag}`,
+          replyToMessageId: context.messageId
+        });
+      }
+      return;
+    }
+
+    const session = this.sessionManager.getById(context.sessionId);
+    if (!session) {
+      logger.warn({ source, sessionId: context.sessionId }, "Session not found for permission grant");
+      if (connector) {
+        await connector.sendMessage(context.channelId, {
+          text: `Permission granted: ${permissionTag}`,
+          replyToMessageId: context.messageId
+        });
+      }
+      return;
+    }
+
+    if ((decision.kind === "read" || decision.kind === "write") && decision.path) {
+      if (!path.isAbsolute(decision.path)) {
+        logger.warn({ sessionId: session.id, permission: permissionTag }, "Permission path not absolute");
+        if (connector) {
+          await connector.sendMessage(context.channelId, {
+            text: `Permission ignored (path must be absolute): ${permissionTag}`,
+            replyToMessageId: context.messageId
+          });
+        }
+        return;
+      }
+    }
+
+    applyPermission(session.context.state.permissions, decision);
+    try {
+      await this.sessionStore.recordState(session);
+    } catch (error) {
+      logger.warn({ sessionId: session.id, error }, "Permission persistence failed");
+    }
+
+    this.eventBus.emit("permission.granted", {
+      sessionId: session.id,
+      source,
+      decision
+    });
+
+    if (connector) {
+      await connector.sendMessage(context.channelId, {
+        text: `Permission granted: ${permissionTag}`,
+        replyToMessageId: context.messageId
+      });
+    }
   }
 
   private async restoreSessions(): Promise<void> {
@@ -765,14 +733,6 @@ export class Engine {
     }
     logger.debug(`Connector found source=${source}`);
 
-    const command = resolveIncomingCommand(entry);
-    if (command) {
-      const handled = await this.handleSlashCommand(command, entry, session, source, connector);
-      if (handled) {
-        return;
-      }
-    }
-
     const sessionContext = session.context.state.context;
     const providerId = this.resolveSessionProvider(session, entry.context);
     logger.debug(`Building context sessionId=${session.id} existingMessageCount=${sessionContext.messages.length}`);
@@ -793,11 +753,7 @@ export class Engine {
       fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
       channelId: entry.context.channelId,
       channelType,
-      channelIsPrivate,
-      userId: entry.context.userId,
-      userFirstName: entry.context.userFirstName,
-      userLastName: entry.context.userLastName,
-      username: entry.context.username
+      channelIsPrivate
     });
     const context: Context = {
       ...sessionContext,
@@ -873,6 +829,9 @@ export class Engine {
         for (const toolCall of toolCalls) {
           const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 200);
           logger.debug(`Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`);
+          const toolMessageContext = entry.context.sessionId
+            ? entry.context
+            : { ...entry.context, sessionId: session.id };
           const toolResult = await this.toolResolver.execute(toolCall, {
             connectorRegistry: this.connectorRegistry,
             fileStore: this.fileStore,
@@ -882,7 +841,7 @@ export class Engine {
             permissions: session.context.state.permissions,
             session,
             source,
-            messageContext: entry.context
+            messageContext: toolMessageContext
           });
           logger.debug(`Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError} fileCount=${toolResult.files?.length ?? 0}`);
           context.messages.push(toolResult.toolMessage);
@@ -1126,46 +1085,7 @@ function formatIncomingMessage(
     : "";
   return {
     ...message,
-    rawText: message.rawText ?? message.text,
     text: `<time>${time}</time>${messageIdTag}<message>${text}</message>`
-  };
-}
-
-type ResolvedCommand = {
-  name: string;
-  raw: string;
-  args?: string;
-};
-
-function resolveIncomingCommand(entry: SessionMessage): ResolvedCommand | null {
-  const contextCommands = entry.context.commands ?? [];
-  if (contextCommands.length > 0) {
-    const first = contextCommands[0]!;
-    return {
-      name: first.name,
-      raw: first.raw,
-      args: first.args
-    };
-  }
-
-  const rawText = entry.message.rawText ?? entry.message.text ?? "";
-  const trimmed = rawText.trim();
-  if (!trimmed.startsWith("/")) {
-    return null;
-  }
-  const [head, ...rest] = trimmed.split(/\s+/);
-  if (!head) {
-    return null;
-  }
-  const name = head.slice(1).split("@")[0] ?? "";
-  if (!name) {
-    return null;
-  }
-  const args = rest.join(" ").trim();
-  return {
-    name,
-    raw: head,
-    args: args.length > 0 ? args : undefined
   };
 }
 
@@ -1198,4 +1118,43 @@ function normalizeSessionState(
     return { ...fallback, permissions };
   }
   return fallback;
+}
+
+function applyPermission(
+  permissions: SessionPermissions,
+  decision: PermissionDecision
+): void {
+  if (!decision.approved) {
+    return;
+  }
+  if (decision.kind === "web") {
+    permissions.web = true;
+    return;
+  }
+  if (!decision.path) {
+    return;
+  }
+  if (!path.isAbsolute(decision.path)) {
+    return;
+  }
+  const resolved = path.resolve(decision.path);
+  if (decision.kind === "write") {
+    const next = new Set(permissions.writeDirs);
+    next.add(resolved);
+    permissions.writeDirs = Array.from(next.values());
+    return;
+  }
+  if (decision.kind === "read") {
+    const next = new Set(permissions.readDirs);
+    next.add(resolved);
+    permissions.readDirs = Array.from(next.values());
+  }
+}
+
+function formatPermissionTag(decision: PermissionDecision): string {
+  if (decision.kind === "web") {
+    return "@web";
+  }
+  const pathPart = decision.path ?? "";
+  return `@${decision.kind}:${pathPart}`;
 }

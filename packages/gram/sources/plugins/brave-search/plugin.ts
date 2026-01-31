@@ -59,7 +59,10 @@ export const plugin = definePlugin({
             description: "Search the web using Brave Search and return concise results.",
             parameters: searchSchema
           },
-          execute: async (args, _toolContext, toolCall) => {
+          execute: async (args, toolContext, toolCall) => {
+            if (!toolContext.permissions.web) {
+              throw new Error("Web access not granted. Request @web permission.");
+            }
             const payload = args as SearchArgs;
             const apiKey = await api.auth.getApiKey(instanceId);
             if (!apiKey) {
