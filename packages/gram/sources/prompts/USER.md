@@ -1,4 +1,4 @@
-# User Profile
+# USER.md
 
 - Name:
 - Preferred name:
