@@ -952,6 +952,8 @@ export class Engine {
     const cronTaskIds = this.cronStore
       ? (await this.cronStore.listTasks()).map((task) => task.id)
       : this.cron?.listTasks().map((task) => task.id) ?? [];
+    const pluginPrompts = await this.pluginManager.getSystemPrompts();
+    const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
     const systemPrompt = await createSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
@@ -973,7 +975,8 @@ export class Engine {
       cronFilesPath: cronContext?.filesPath,
       cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : "",
       soulPath: DEFAULT_SOUL_PATH,
-      userPath: DEFAULT_USER_PATH
+      userPath: DEFAULT_USER_PATH,
+      pluginPrompt
     });
     const context: Context = {
       ...sessionContext,

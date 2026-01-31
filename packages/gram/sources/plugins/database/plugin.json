@@ -1,0 +1,6 @@
+{
+  "id": "database",
+  "name": "Database",
+  "description": "SQLite-backed database with markdown context.",
+  "entry": "./plugin.js"
+}

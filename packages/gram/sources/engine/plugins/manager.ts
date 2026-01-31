@@ -81,6 +81,26 @@ export class PluginManager {
     return Array.from(this.pluginCatalog.keys());
   }
 
+  async getSystemPrompts(): Promise<string[]> {
+    const prompts: string[] = [];
+    for (const entry of this.loaded.values()) {
+      const candidate = entry.instance.systemPrompt;
+      if (!candidate) {
+        continue;
+      }
+      try {
+        const value =
+          typeof candidate === "function" ? await candidate() : candidate;
+        if (typeof value === "string" && value.trim().length > 0) {
+          prompts.push(value.trim());
+        }
+      } catch (error) {
+        this.logger.warn({ error }, "Plugin system prompt failed");
+      }
+    }
+    return prompts;
+  }
+
   updateSettings(settings: SettingsConfig): void {
     this.settings = settings;
   }

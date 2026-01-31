@@ -27,6 +27,7 @@ export type SystemPromptContext = {
   cronTaskIds?: string;
   soulPath?: string;
   userPath?: string;
+  pluginPrompt?: string;
 };
 
 export async function createSystemPrompt(context: SystemPromptContext = {}): Promise<string> {
@@ -60,6 +61,7 @@ export async function createSystemPrompt(context: SystemPromptContext = {}): Pro
     cronTaskIds: context.cronTaskIds ?? "",
     soulPath: context.soulPath ?? DEFAULT_SOUL_PATH,
     userPath: context.userPath ?? DEFAULT_USER_PATH,
+    pluginPrompt: context.pluginPrompt ?? "",
     soul,
     user
   });

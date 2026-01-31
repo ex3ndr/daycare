@@ -27,6 +27,7 @@ export type PluginApi<TSettings = unknown> = {
 export type PluginInstance = {
   load?: () => Promise<void>;
   unload?: () => Promise<void>;
+  systemPrompt?: (() => Promise<string | null> | string | null) | string | null;
 };
 
 export type PromptChoice<TValue extends string> = {
