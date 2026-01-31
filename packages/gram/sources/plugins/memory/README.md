@@ -4,7 +4,7 @@
 The Memory plugin stores structured entities as Markdown files. Each entity is a lowercase English word (a-z only, no underscores) and lives in its own `*.md` file. An `INDEX.md` file lists all known entities.
 
 ## Storage layout
-- Base folder (default: `${dataDir}/memory`)
+- Base folder (default: `<workspace>/memory`)
   - `INDEX.md` — list of entity types
   - `<entity>.md` — Markdown records for that entity
 
@@ -35,4 +35,4 @@ Pioneer of computing.
   - Adds or updates a `## <record>` section with the given Markdown content.
 
 ## Settings
-- `basePath` (optional): override memory storage directory. Defaults to `${dataDir}/memory`.
+- `basePath` (optional): override memory storage directory. Resolved inside the workspace.

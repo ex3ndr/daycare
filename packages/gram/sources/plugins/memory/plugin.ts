@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
+import { resolveWorkspaceDir, resolveWorkspacePath } from "../../engine/permissions.js";
 import { MemoryStore } from "./store.js";
 import {
   buildMemoryCreateEntityTool,
@@ -21,9 +22,11 @@ export const plugin = definePlugin({
   settingsSchema,
   create: (api) => {
     const settings = api.settings as MemorySettings;
-    const basePath =
-      resolvePluginPath(api.dataDir, settings.basePath) ??
-      path.join(api.dataDir, "memory");
+    const configDir = path.resolve(api.engineSettings.engine?.dataDir ?? ".scout");
+    const workspaceDir = resolveWorkspaceDir(configDir, api.engineSettings.assistant ?? null);
+    const basePath = settings.basePath
+      ? resolveWorkspacePath(workspaceDir, settings.basePath)
+      : path.join(workspaceDir, "memory");
     const store = new MemoryStore(basePath);
 
     return {
@@ -39,10 +42,3 @@ export const plugin = definePlugin({
     };
   }
 });
-
-function resolvePluginPath(baseDir: string, target?: string): string | undefined {
-  if (!target) {
-    return undefined;
-  }
-  return path.isAbsolute(target) ? target : path.join(baseDir, target);
-}

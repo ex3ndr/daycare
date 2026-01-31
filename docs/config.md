@@ -27,7 +27,7 @@ flowchart TD
   "plugins": [
     { "instanceId": "telegram", "pluginId": "telegram", "enabled": true, "settings": { "polling": true } },
     { "instanceId": "brave-search", "pluginId": "brave-search", "enabled": true },
-    { "instanceId": "memory", "pluginId": "memory", "enabled": true, "settings": { "basePath": ".scout/memory" } }
+    { "instanceId": "memory", "pluginId": "memory", "enabled": true }
   ],
   "providers": [
     { "id": "openai", "enabled": true, "model": "gpt-4o-mini" },
