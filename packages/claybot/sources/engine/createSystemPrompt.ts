@@ -9,6 +9,8 @@ export type SystemPromptContext = {
   model?: string;
   provider?: string;
   workspace?: string;
+  writeDirs?: string[];
+  web?: boolean;
   connector?: string;
   canSendFiles?: boolean;
   fileSendModes?: string;
@@ -39,6 +41,13 @@ export async function createSystemPrompt(context: SystemPromptContext = {}): Pro
   const systemTemplate = await readSystemTemplate(
     context.agentKind === "background" ? "SYSTEM_BACKGROUND.md" : "SYSTEM.md"
   );
+  const permissions = await readPermissions();
+  const additionalWriteDirs = resolveAdditionalWriteDirs(
+    context.writeDirs ?? [],
+    context.workspace ?? "",
+    context.soulPath ?? DEFAULT_SOUL_PATH,
+    context.userPath ?? DEFAULT_USER_PATH
+  );
 
   const template = Handlebars.compile(systemTemplate);
   const rendered = template({
@@ -48,6 +57,7 @@ export async function createSystemPrompt(context: SystemPromptContext = {}): Pro
     model: context.model ?? "unknown",
     provider: context.provider ?? "unknown",
     workspace: context.workspace ?? "unknown",
+    web: context.web ?? false,
     connector: context.connector ?? "unknown",
     canSendFiles: context.canSendFiles ?? false,
     fileSendModes: context.fileSendModes ?? "",
@@ -70,7 +80,9 @@ export async function createSystemPrompt(context: SystemPromptContext = {}): Pro
     parentSessionId: context.parentSessionId ?? "",
     configDir: context.configDir ?? "",
     soul,
-    user
+    user,
+    permissions,
+    additionalWriteDirs
   });
 
   return rendered.trim();
@@ -82,6 +94,29 @@ async function readSoul(): Promise<string> {
 
 async function readSystemTemplate(filename: string): Promise<string> {
   return readBundledPrompt(filename);
+}
+
+async function readPermissions(): Promise<string> {
+  const permissions = await readBundledPrompt("PERMISSIONS.md");
+  return permissions.trim();
+}
+
+function resolveAdditionalWriteDirs(
+  writeDirs: string[],
+  workspace: string,
+  soulPath: string,
+  userPath: string
+): string[] {
+  const excluded = new Set(
+    [workspace, soulPath, userPath]
+      .filter((entry) => entry && entry.trim().length > 0)
+      .map((entry) => path.resolve(entry))
+  );
+  const filtered = writeDirs
+    .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+    .map((entry) => path.resolve(entry))
+    .filter((entry) => !excluded.has(entry));
+  return Array.from(new Set(filtered)).sort();
 }
 
 async function readUser(): Promise<string> {

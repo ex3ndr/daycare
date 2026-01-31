@@ -1156,6 +1156,8 @@ export class Engine {
       provider: providerSettings?.id,
       model: providerSettings?.model,
       workspace: session.context.state.permissions.workingDir,
+      writeDirs: session.context.state.permissions.writeDirs,
+      web: session.context.state.permissions.web,
       connector: source,
       canSendFiles: fileSendModes.length > 0,
       fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
