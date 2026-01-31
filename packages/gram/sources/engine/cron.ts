@@ -33,6 +33,8 @@ type ScheduledTask = {
   timer: NodeJS.Timeout | null;
 };
 
+const MAX_TIMEOUT_MS = 0x7fffffff;
+
 export class CronScheduler {
   private store: CronStore;
   private tasks = new Map<string, ScheduledTask>();
@@ -171,6 +173,10 @@ export class CronScheduler {
       return;
     }
 
+    this.scheduleAt(task, nextRun);
+  }
+
+  private scheduleAt(task: CronTaskWithPaths, nextRun: Date): void {
     const now = new Date();
     const delay = nextRun.getTime() - now.getTime();
 
@@ -181,9 +187,23 @@ export class CronScheduler {
       delayMs: delay
     }, "Scheduling task");
 
-    const timer = setTimeout(() => {
+    if (delay <= 0) {
+      this.tasks.set(task.id, { task, nextRun, timer: null });
       void this.executeTask(task);
-    }, Math.max(delay, 0));
+      return;
+    }
+
+    const timeout = Math.min(delay, MAX_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      if (this.stopped) {
+        return;
+      }
+      if (delay > MAX_TIMEOUT_MS) {
+        this.scheduleAt(task, nextRun);
+        return;
+      }
+      void this.executeTask(task);
+    }, timeout);
 
     this.tasks.set(task.id, { task, nextRun, timer });
   }
