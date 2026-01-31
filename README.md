@@ -2,7 +2,7 @@
   <img src="logo.png" alt="ClayBot" width="200" />
 </p>
 
-<h1 align="center">claybot</h1>
+<h1 align="center">ClayBot</h1>
 
 <p align="center">
   A minimal, composable AI agent framework with plugin-driven architecture.
