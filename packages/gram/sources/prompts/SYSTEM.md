@@ -66,6 +66,12 @@ Evolve both files carefully and incrementally; do not add speculation.
 
 {{{soul}}}
 
+## Memory Files
+
+You can edit these files directly to update long-term memory:
+- SOUL: {{soulPath}}
+- USER: {{userPath}}
+
 ## Message Metadata
 
 Incoming user messages are wrapped as `<time>...</time><message_id>...</message_id><message>...</message>`.

@@ -971,7 +971,9 @@ export class Engine {
       cronTaskName: cronContext?.taskName,
       cronMemoryPath: cronContext?.memoryPath,
       cronFilesPath: cronContext?.filesPath,
-      cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : ""
+      cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : "",
+      soulPath: DEFAULT_SOUL_PATH,
+      userPath: DEFAULT_USER_PATH
     });
     const context: Context = {
       ...sessionContext,
