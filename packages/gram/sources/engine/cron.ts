@@ -1,5 +1,3 @@
-import { createId } from "@paralleldrive/cuid2";
-
 import type { MessageContext } from "./connectors/types.js";
 import { getLogger } from "../log.js";
 import {
@@ -124,12 +122,14 @@ export class CronScheduler {
   async addTask(
     definition: Omit<CronTaskDefinition, "id"> & { id?: string }
   ): Promise<CronTaskWithPaths> {
-    const taskId = definition.id ?? createId();
+    const taskId = definition.id ?? await this.store.generateTaskIdFromName(definition.name);
     const task = await this.store.createTask(taskId, {
       name: definition.name,
+      description: definition.description,
       schedule: definition.schedule,
       prompt: definition.prompt,
-      enabled: definition.enabled
+      enabled: definition.enabled,
+      deleteAfterRun: definition.deleteAfterRun
     });
 
     if (task.enabled !== false && this.started && !this.stopped) {
@@ -138,6 +138,16 @@ export class CronScheduler {
     }
 
     return task;
+  }
+
+  async deleteTask(taskId: string): Promise<boolean> {
+    this.tasks.delete(taskId);
+    this.runningTasks.delete(taskId);
+    const deleted = await this.store.deleteTask(taskId);
+    if (this.started && !this.stopped) {
+      this.scheduleNextTick();
+    }
+    return deleted;
   }
 
   getTaskContext(taskId: string): CronTaskContext | null {
@@ -240,11 +250,24 @@ export class CronScheduler {
           continue;
         }
 
+        if (scheduled.task.deleteAfterRun) {
+          this.tasks.delete(scheduled.task.id);
+        }
+
         this.runningTasks.add(scheduled.task.id);
         void this.executeTask(scheduled.task)
           .catch(() => {})
           .finally(() => {
             this.runningTasks.delete(scheduled.task.id);
+            if (scheduled.task.deleteAfterRun) {
+              this.tasks.delete(scheduled.task.id);
+              void this.store.deleteTask(scheduled.task.id).catch((error) => {
+                logger.warn(
+                  { taskId: scheduled.task.id, error },
+                  "Failed to delete cron task"
+                );
+              });
+            }
           });
       }
 

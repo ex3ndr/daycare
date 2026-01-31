@@ -9,6 +9,9 @@ Current date: {{date}}
 - Model: {{model}}
 - Provider: {{provider}}
 - Workspace: {{workspace}}
+{{#if cronTaskIds}}
+- Cron tasks: {{cronTaskIds}}
+{{/if}}
 
 ## Channel
 

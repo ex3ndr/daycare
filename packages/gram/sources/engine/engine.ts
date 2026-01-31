@@ -35,6 +35,8 @@ import { Session } from "./sessions/session.js";
 import type { SessionMessage } from "./sessions/types.js";
 import { AuthStore } from "../auth/store.js";
 import {
+  buildCronDeleteTaskTool,
+  buildCronReadTaskTool,
   buildCronReadMemoryTool,
   buildCronTool,
   buildCronWriteMemoryTool
@@ -324,9 +326,11 @@ export class Engine {
       })
     );
     if (this.cronStore) {
+      this.toolResolver.register("core", buildCronReadTaskTool(this.cronStore));
       this.toolResolver.register("core", buildCronReadMemoryTool(this.cronStore));
       this.toolResolver.register("core", buildCronWriteMemoryTool(this.cronStore));
     }
+    this.toolResolver.register("core", buildCronDeleteTaskTool(this.cron));
     this.toolResolver.register("core", buildImageGenerationTool(this.imageRegistry));
     this.toolResolver.register("core", buildReactionTool());
     this.toolResolver.register("core", buildSendFileTool());
@@ -803,6 +807,9 @@ export class Engine {
     const channelType = entry.context.channelType;
     const channelIsPrivate = channelType ? channelType === "private" : null;
     const cronContext = entry.context.cron;
+    const cronTaskIds = this.cronStore
+      ? (await this.cronStore.listTasks()).map((task) => task.id)
+      : this.cron?.listTasks().map((task) => task.id) ?? [];
     const systemPrompt = await createSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
@@ -820,7 +827,8 @@ export class Engine {
       cronTaskId: cronContext?.taskId,
       cronTaskName: cronContext?.taskName,
       cronMemoryPath: cronContext?.memoryPath,
-      cronFilesPath: cronContext?.filesPath
+      cronFilesPath: cronContext?.filesPath,
+      cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : ""
     });
     const context: Context = {
       ...sessionContext,

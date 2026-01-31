@@ -10,9 +10,18 @@ const addCronSchema = Type.Object(
   {
     id: Type.Optional(Type.String({ minLength: 1 })),
     name: Type.String({ minLength: 1 }),
+    description: Type.Optional(Type.String({ minLength: 1 })),
     schedule: Type.String({ minLength: 1 }),
     prompt: Type.String({ minLength: 1 }),
-    enabled: Type.Optional(Type.Boolean())
+    enabled: Type.Optional(Type.Boolean()),
+    deleteAfterRun: Type.Optional(Type.Boolean())
+  },
+  { additionalProperties: false }
+);
+
+const readCronTaskSchema = Type.Object(
+  {
+    taskId: Type.Optional(Type.String({ minLength: 1 }))
   },
   { additionalProperties: false }
 );
@@ -33,9 +42,18 @@ const writeCronMemorySchema = Type.Object(
   { additionalProperties: false }
 );
 
+const deleteCronTaskSchema = Type.Object(
+  {
+    taskId: Type.Optional(Type.String({ minLength: 1 }))
+  },
+  { additionalProperties: false }
+);
+
 type AddCronToolArgs = Static<typeof addCronSchema>;
+type CronReadTaskArgs = Static<typeof readCronTaskSchema>;
 type CronReadMemoryArgs = Static<typeof readCronMemorySchema>;
 type CronWriteMemoryArgs = Static<typeof writeCronMemorySchema>;
+type CronDeleteTaskArgs = Static<typeof deleteCronTaskSchema>;
 
 export function buildCronTool(
   cron: CronScheduler | null,
@@ -65,9 +83,11 @@ export function buildCronTool(
       const task = await cron.addTask({
         id: payload.id,
         name: payload.name,
+        description: payload.description,
         schedule: payload.schedule,
         prompt: payload.prompt,
-        enabled: payload.enabled
+        enabled: payload.enabled,
+        deleteAfterRun: payload.deleteAfterRun
       });
       onTaskAdded?.(task);
 
@@ -85,6 +105,53 @@ export function buildCronTool(
           taskId: task.id,
           name: task.name,
           schedule: task.schedule
+        },
+        isError: false,
+        timestamp: Date.now()
+      };
+
+      return { toolMessage };
+    }
+  };
+}
+
+export function buildCronReadTaskTool(store: CronStore): ToolDefinition {
+  return {
+    tool: {
+      name: "cron_read_task",
+      description: "Read a cron task's description and prompt.",
+      parameters: readCronTaskSchema
+    },
+    execute: async (args, context, toolCall) => {
+      const payload = args as CronReadTaskArgs;
+      const taskId = resolveTaskId(payload.taskId, context);
+      const task = await store.loadTask(taskId);
+      if (!task) {
+        throw new Error(`Cron task not found: ${taskId}`);
+      }
+
+      const toolMessage: ToolResultMessage = {
+        role: "toolResult",
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: [
+          {
+            type: "text",
+            text: task.description ?? ""
+          },
+          {
+            type: "text",
+            text: task.prompt
+          }
+        ],
+        details: {
+          taskId: task.id,
+          name: task.name,
+          description: task.description ?? null,
+          schedule: task.schedule,
+          enabled: task.enabled !== false,
+          deleteAfterRun: task.deleteAfterRun === true,
+          prompt: task.prompt
         },
         isError: false,
         timestamp: Date.now()
@@ -153,6 +220,43 @@ export function buildCronWriteMemoryTool(store: CronStore): ToolDefinition {
           }
         ],
         details: { taskId, bytes: content.length },
+        isError: false,
+        timestamp: Date.now()
+      };
+
+      return { toolMessage };
+    }
+  };
+}
+
+export function buildCronDeleteTaskTool(
+  cron: CronScheduler | null
+): ToolDefinition {
+  return {
+    tool: {
+      name: "cron_delete_task",
+      description: "Delete a cron task from disk and scheduler.",
+      parameters: deleteCronTaskSchema
+    },
+    execute: async (args, context, toolCall) => {
+      const payload = args as CronDeleteTaskArgs;
+      if (!cron) {
+        throw new Error("Cron scheduler unavailable");
+      }
+      const taskId = resolveTaskId(payload.taskId, context);
+      const deleted = await cron.deleteTask(taskId);
+
+      const toolMessage: ToolResultMessage = {
+        role: "toolResult",
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: [
+          {
+            type: "text",
+            text: deleted ? `Deleted cron task ${taskId}.` : `Cron task not found: ${taskId}.`
+          }
+        ],
+        details: { taskId, deleted },
         isError: false,
         timestamp: Date.now()
       };

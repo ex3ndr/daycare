@@ -27,8 +27,10 @@ flowchart LR
 ## Tools
 Tools are registered dynamically by plugins and core runtime:
 - `add_cron` creates a cron task stored in `<config>/cron/`.
+- `cron_read_task` reads a cron task description and prompt.
 - `cron_read_memory` reads memory for the current cron task.
 - `cron_write_memory` updates memory for the current cron task.
+- `cron_delete_task` deletes a cron task.
 - `memory_search` queries the memory plugin.
 - `web_search` (Brave) performs web search.
 - `generate_image` uses registered image providers and is only added when one is available.

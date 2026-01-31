@@ -25,6 +25,10 @@ Frontmatter fields:
 - `name` (required) - human-readable task name
 - `schedule` (required) - 5-field cron expression (`minute hour day month weekday`)
 - `enabled` (optional) - set to `false` to disable a task
+- `description` (optional) - short description used by `cron_read_task`
+- `deleteAfterRun` (optional) - when `true`, delete the task after it runs once
+
+Task ids should be human-friendly slugs (e.g. `create-image-in-morning`).
 
 ## Execution model
 
@@ -36,5 +40,7 @@ Frontmatter fields:
 ## Tools
 
 - `add_cron` creates a new task on disk under `<config>/cron/`.
+- `cron_read_task` reads a task's description and prompt.
 - `cron_read_memory` reads a task's `MEMORY.md`.
 - `cron_write_memory` overwrites (or appends to) a task's `MEMORY.md`.
+- `cron_delete_task` deletes a task from disk and scheduler.

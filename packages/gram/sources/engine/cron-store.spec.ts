@@ -101,19 +101,25 @@ describe("CronStore", () => {
   it("creates and loads a task", async () => {
     const created = await store.createTask("daily-report", {
       name: "Daily Report",
+      description: "Send the daily status report.",
       schedule: "0 9 * * *",
-      prompt: "Generate a daily status report."
+      prompt: "Generate a daily status report.",
+      deleteAfterRun: true
     });
 
     expect(created.id).toBe("daily-report");
     expect(created.name).toBe("Daily Report");
+    expect(created.description).toBe("Send the daily status report.");
     expect(created.schedule).toBe("0 9 * * *");
     expect(created.enabled).toBe(true);
+    expect(created.deleteAfterRun).toBe(true);
 
     const loaded = await store.loadTask("daily-report");
     expect(loaded).not.toBeNull();
     expect(loaded!.name).toBe("Daily Report");
+    expect(loaded!.description).toBe("Send the daily status report.");
     expect(loaded!.prompt).toBe("Generate a daily status report.");
+    expect(loaded!.deleteAfterRun).toBe(true);
   });
 
   it("lists all tasks", async () => {
@@ -137,19 +143,24 @@ describe("CronStore", () => {
   it("updates a task", async () => {
     await store.createTask("test-task", {
       name: "Original",
+      description: "Original description",
       schedule: "* * * * *",
       prompt: "Original prompt"
     });
 
     const updated = await store.updateTask("test-task", {
       name: "Updated",
-      prompt: "Updated prompt"
+      description: "Updated description",
+      prompt: "Updated prompt",
+      deleteAfterRun: true
     });
 
     expect(updated).not.toBeNull();
     expect(updated!.name).toBe("Updated");
+    expect(updated!.description).toBe("Updated description");
     expect(updated!.prompt).toBe("Updated prompt");
     expect(updated!.schedule).toBe("* * * * *");
+    expect(updated!.deleteAfterRun).toBe(true);
   });
 
   it("deletes a task", async () => {
@@ -196,5 +207,10 @@ describe("CronStore", () => {
   it("returns null for non-existent task", async () => {
     const task = await store.loadTask("does-not-exist");
     expect(task).toBeNull();
+  });
+
+  it("generates a slug id from name", async () => {
+    const id = await store.generateTaskIdFromName("Create Image in Morning");
+    expect(id).toBe("create-image-in-morning");
   });
 });

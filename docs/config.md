@@ -58,6 +58,8 @@ Summarize the weekly updates.
 
 Each task directory also contains `MEMORY.md` and a `files/` workspace.
 
+Supported frontmatter fields include `description` and `deleteAfterRun` for one-off tasks.
+
 ## `.scout/auth.json`
 Credentials are stored per plugin or provider id:
 

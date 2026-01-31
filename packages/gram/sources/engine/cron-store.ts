@@ -8,9 +8,11 @@ const logger = getLogger("cron.store");
 export type CronTaskDefinition = {
   id: string;
   name: string;
+  description?: string;
   schedule: string;
   prompt: string;
   enabled?: boolean;
+  deleteAfterRun?: boolean;
 };
 
 export type CronTaskWithPaths = CronTaskDefinition & {
@@ -78,6 +80,12 @@ export class CronStore {
 
       const schedule =
         parsed.frontmatter.schedule ?? parsed.frontmatter.cron;
+      const deleteAfterRun =
+        parsed.frontmatter.deleteAfterRun ??
+        parsed.frontmatter.delete_after_run ??
+        parsed.frontmatter.oneOff ??
+        parsed.frontmatter.one_off ??
+        parsed.frontmatter.once;
       if (!parsed.frontmatter.name || !schedule) {
         logger.warn({ taskId }, "Cron task missing required frontmatter fields");
         return null;
@@ -86,9 +94,13 @@ export class CronStore {
       return {
         id: taskId,
         name: String(parsed.frontmatter.name),
+        description: parsed.frontmatter.description
+          ? String(parsed.frontmatter.description)
+          : undefined,
         schedule: String(schedule),
         prompt: parsed.body.trim(),
         enabled: parsed.frontmatter.enabled !== false,
+        deleteAfterRun: deleteAfterRun === true,
         taskPath,
         memoryPath,
         filesPath
@@ -115,14 +127,18 @@ export class CronStore {
     await fs.mkdir(filesPath, { recursive: true });
 
     // Write TASK.md
-    const content = serializeFrontmatter(
-      {
-        name: definition.name,
-        schedule: definition.schedule,
-        enabled: definition.enabled ?? true
-      },
-      definition.prompt
-    );
+    const frontmatter: Frontmatter = {
+      name: definition.name,
+      schedule: definition.schedule,
+      enabled: definition.enabled ?? true
+    };
+    if (definition.description) {
+      frontmatter.description = definition.description;
+    }
+    if (definition.deleteAfterRun) {
+      frontmatter.deleteAfterRun = true;
+    }
+    const content = serializeFrontmatter(frontmatter, definition.prompt);
     await fs.writeFile(taskPath, content, "utf8");
 
     // Write initial MEMORY.md
@@ -134,6 +150,7 @@ export class CronStore {
       id: taskId,
       ...definition,
       enabled: definition.enabled ?? true,
+      deleteAfterRun: definition.deleteAfterRun ?? false,
       taskPath,
       memoryPath,
       filesPath
@@ -152,19 +169,25 @@ export class CronStore {
     const updated: CronTaskDefinition = {
       id: taskId,
       name: updates.name ?? existing.name,
+      description: updates.description ?? existing.description,
       schedule: updates.schedule ?? existing.schedule,
       prompt: updates.prompt ?? existing.prompt,
-      enabled: updates.enabled ?? existing.enabled
+      enabled: updates.enabled ?? existing.enabled,
+      deleteAfterRun: updates.deleteAfterRun ?? existing.deleteAfterRun
     };
 
-    const content = serializeFrontmatter(
-      {
-        name: updated.name,
-        schedule: updated.schedule,
-        enabled: updated.enabled
-      },
-      updated.prompt
-    );
+    const frontmatter: Frontmatter = {
+      name: updated.name,
+      schedule: updated.schedule,
+      enabled: updated.enabled
+    };
+    if (updated.description) {
+      frontmatter.description = updated.description;
+    }
+    if (updated.deleteAfterRun) {
+      frontmatter.deleteAfterRun = true;
+    }
+    const content = serializeFrontmatter(frontmatter, updated.prompt);
     await fs.writeFile(existing.taskPath, content, "utf8");
 
     logger.info({ taskId }, "Cron task updated");
@@ -222,6 +245,38 @@ export class CronStore {
       filesPath: path.join(taskDir, "files")
     };
   }
+
+  async generateTaskIdFromName(name: string): Promise<string> {
+    const base = slugify(name) || "cron-task";
+    let candidate = base;
+    let suffix = 2;
+    while (!(await this.isTaskIdAvailable(candidate))) {
+      candidate = `${base}-${suffix}`;
+      suffix += 1;
+    }
+    return candidate;
+  }
+
+  private async isTaskIdAvailable(taskId: string): Promise<boolean> {
+    const taskDir = path.join(this.basePath, taskId);
+    try {
+      const stat = await fs.stat(taskDir);
+      return !stat.isDirectory();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return true;
+      }
+      throw error;
+    }
+  }
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 type Frontmatter = Record<string, string | number | boolean>;

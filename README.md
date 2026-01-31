@@ -85,8 +85,10 @@ Grambot uses two configuration files in `.scout/`:
 The AI agent has access to these tools:
 
 - `add_cron` - Schedule recurring tasks
+- `cron_read_task` - Read cron task description + prompt
 - `cron_read_memory` - Read cron task memory
 - `cron_write_memory` - Update cron task memory
+- `cron_delete_task` - Delete a cron task
 - `memory_search` - Query conversation history (memory plugin)
 - `web_search` - Search the web (Brave)
 - `generate_image` - Create images
