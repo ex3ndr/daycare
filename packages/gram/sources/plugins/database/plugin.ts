@@ -1,11 +1,11 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { PGlite } from "@electric-sql/pglite";
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
-import type { DatabaseSync } from "node:sqlite";
 
 const settingsSchema = z.object({}).passthrough();
 
@@ -29,7 +29,7 @@ type QueryArgs = Static<typeof querySchema>;
 
 const DB_TEMPLATE = `# Database Memory
 
-This file describes the SQLite database used by the database plugin.
+This file describes the Postgres (PGlite) database used by the database plugin.
 
 ## Schema
 <!-- schema:start -->
@@ -50,22 +50,15 @@ const CHANGES_END = "<!-- changes:end -->";
 export const plugin = definePlugin({
   settingsSchema,
   create: (api) => {
-    const dbPath = path.join(api.dataDir, "db.sqlite");
+    const dbPath = path.join(api.dataDir, "db.pglite");
     const docPath = path.join(api.dataDir, "db.md");
-    let sqliteModule: typeof import("node:sqlite") | null = null;
-    let db: DatabaseSync | null = null;
-
-    const loadSqlite = async () => {
-      if (!sqliteModule) {
-        sqliteModule = await import("node:sqlite");
-      }
-      return sqliteModule;
-    };
+    let db: PGlite | null = null;
 
     const openDb = async () => {
       if (!db) {
-        const { DatabaseSync } = await loadSqlite();
-        db = new DatabaseSync(dbPath);
+        await fs.mkdir(dbPath, { recursive: true });
+        db = new PGlite(dbPath);
+        await db.waitReady;
       }
       return db;
     };
@@ -126,27 +119,28 @@ export const plugin = definePlugin({
           tool: {
             name: "db_sql",
             description:
-              "Execute SQL against the plugin SQLite database. Provide an optional description to document the change.",
+              "Execute SQL against the plugin Postgres (PGlite) database. Provide an optional description to document the change.",
             parameters: querySchema
           },
           execute: async (args, _context, toolCall) => {
             const payload = args as QueryArgs;
-            const statement = (await openDb()).prepare(payload.sql);
+            const dbInstance = await openDb();
             const params = payload.params ?? [];
             let text = "";
             let details: Record<string, unknown> = {};
 
             if (isReadSql(payload.sql)) {
-              const rows = statement.all(...params);
+              const result = await dbInstance.query(payload.sql, params);
+              const rows = result.rows ?? [];
               text = rows.length === 0 ? "No rows returned." : JSON.stringify(rows, null, 2);
               details = { rows: rows.length };
             } else {
-              const result = statement.run(...params);
+              const result = await dbInstance.query(payload.sql, params);
+              const affectedRows = result.affectedRows ?? 0;
               await updateDoc(payload.description ?? summarizeSql(payload.sql));
-              text = `OK. changes=${result.changes ?? 0} lastInsertRowid=${String(result.lastInsertRowid ?? "")}`.trim();
+              text = `OK. affectedRows=${affectedRows}`;
               details = {
-                changes: result.changes ?? 0,
-                lastInsertRowid: result.lastInsertRowid ?? null
+                affectedRows
               };
             }
 
@@ -167,7 +161,7 @@ export const plugin = definePlugin({
       unload: async () => {
         api.registrar.unregisterTool("db_sql");
         try {
-          db?.close();
+          await db?.close();
         } catch {
           // ignore close errors
         }
@@ -177,7 +171,7 @@ export const plugin = definePlugin({
         const doc = await loadDoc();
         return [
           "Database plugin is active.",
-          `SQLite file: ${dbPath}`,
+          `PGlite data directory: ${dbPath}`,
           "The db.md file is a living description of the database.",
           "When you create or modify schema, update db.md with a detailed explanation of tables, fields, types, and expectations.",
           "",
@@ -248,12 +242,16 @@ function isReadSql(sql: string): boolean {
   );
 }
 
-async function renderSchema(db: DatabaseSync): Promise<string> {
-  const tables = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
-    )
-    .all() as Array<{ name: string }>;
+async function renderSchema(db: PGlite): Promise<string> {
+  const tablesResult = await db.query<{ table_name: string }>(
+    `
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+    ORDER BY table_name
+    `
+  );
+  const tables = tablesResult.rows ?? [];
 
   if (tables.length === 0) {
     return "No tables yet.";
@@ -261,16 +259,37 @@ async function renderSchema(db: DatabaseSync): Promise<string> {
 
   const parts: string[] = [];
   for (const table of tables) {
-    const tableName = table.name;
-    const columns = db
-      .prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`)
-      .all() as Array<{
-      name: string;
-      type: string;
-      notnull: number;
-      dflt_value: unknown;
-      pk: number;
-    }>;
+    const tableName = table.table_name;
+    const columnsResult = await db.query<{
+      column_name: string;
+      data_type: string;
+      is_nullable: string;
+      column_default: string | null;
+    }>(
+      `
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1
+      ORDER BY ordinal_position
+      `,
+      [tableName]
+    );
+    const columns = columnsResult.rows ?? [];
+    const pkResult = await db.query<{ column_name: string }>(
+      `
+      SELECT kcu.column_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+       AND tc.table_schema = kcu.table_schema
+      WHERE tc.constraint_type = 'PRIMARY KEY'
+        AND tc.table_schema = 'public'
+        AND tc.table_name = $1
+      ORDER BY kcu.ordinal_position
+      `,
+      [tableName]
+    );
+    const pkColumns = new Set(pkResult.rows?.map((row) => row.column_name) ?? []);
     parts.push(`### ${tableName}`);
     if (columns.length === 0) {
       parts.push("- (no columns found)");
@@ -279,23 +298,19 @@ async function renderSchema(db: DatabaseSync): Promise<string> {
     }
     for (const column of columns) {
       const flags: string[] = [];
-      if (column.notnull) {
+      if (column.is_nullable === "NO") {
         flags.push("not null");
       }
-      if (column.pk) {
+      if (pkColumns.has(column.column_name)) {
         flags.push("primary key");
       }
-      if (column.dflt_value !== null && column.dflt_value !== undefined) {
-        flags.push(`default ${String(column.dflt_value)}`);
+      if (column.column_default !== null && column.column_default !== undefined) {
+        flags.push(`default ${String(column.column_default)}`);
       }
       const detail = flags.length > 0 ? ` (${flags.join(", ")})` : "";
-      parts.push(`- ${column.name}: ${column.type || "unknown"}${detail}`);
+      parts.push(`- ${column.column_name}: ${column.data_type || "unknown"}${detail}`);
     }
     parts.push("");
   }
   return parts.join("\n").trim();
-}
-
-function quoteIdentifier(value: string): string {
-  return `"${value.replace(/"/g, "\"\"")}"`;
 }

@@ -22,11 +22,6 @@ describe("database plugin", () => {
   });
 
   it("creates db files, runs SQL, and updates db.md", async () => {
-    const sqliteAvailable = await canImportSqlite();
-    if (!sqliteAvailable) {
-      return;
-    }
-
     const auth = new AuthStore(path.join(baseDir, "auth.json"));
     const fileStore = new FileStore({ basePath: path.join(baseDir, "files") });
     const connectorRegistry = new ConnectorRegistry({ onMessage: async () => undefined });
@@ -76,7 +71,7 @@ describe("database plugin", () => {
     const instance = await plugin.create(api);
     await instance.load?.();
 
-    const dbPath = path.join(baseDir, "db.sqlite");
+    const dbPath = path.join(baseDir, "db.pglite");
     const docPath = path.join(baseDir, "db.md");
     await expect(fs.stat(dbPath)).resolves.toBeTruthy();
     await expect(fs.stat(docPath)).resolves.toBeTruthy();
@@ -107,8 +102,8 @@ describe("database plugin", () => {
 
     const doc = await fs.readFile(docPath, "utf8");
     expect(doc).toContain("### users");
-    expect(doc).toContain("id: INTEGER");
-    expect(doc).toContain("name: TEXT");
+    expect(doc).toContain("id: integer");
+    expect(doc).toContain("name: text");
     expect(doc).toContain("Create users table");
 
     const prompt = await instance.systemPrompt?.();
@@ -118,12 +113,3 @@ describe("database plugin", () => {
     await instance.unload?.();
   });
 });
-
-async function canImportSqlite(): Promise<boolean> {
-  try {
-    await import("node:sqlite");
-    return true;
-  } catch {
-    return false;
-  }
-}
