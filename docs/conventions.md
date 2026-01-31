@@ -1,6 +1,6 @@
 # Conventions
 
-Grambot keeps module boundaries explicit, avoids barrel `index.ts` files, and skips internal compatibility shims.
+Claybot keeps module boundaries explicit, avoids barrel `index.ts` files, and skips internal compatibility shims.
 
 - Import modules directly (e.g., `./log.js`, `./plugins/telegram/connector.js`).
 - Avoid internal compatibility shims between modules.

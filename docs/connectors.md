@@ -1,6 +1,6 @@
 # Connectors
 
-Connectors are plugin modules that bridge Grambot to external systems.
+Connectors are plugin modules that bridge Claybot to external systems.
 They emit messages (text + files) into sessions and send responses back.
 
 ## Connector interface
@@ -37,7 +37,7 @@ classDiagram
 ## Telegram connector
 - Implemented as the `telegram` plugin.
 - Uses long polling by default.
-- Persists `lastUpdateId` to `.scout/telegram-offset.json`.
+- Persists `lastUpdateId` to `.claybot/telegram-offset.json`.
 - Downloads incoming files into the shared file store.
 - Sends images/documents when tool results include files.
 - Supports chat actions (typing) and reactions.

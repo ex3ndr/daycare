@@ -1,14 +1,14 @@
 {
-  "name": "grambot",
+  "name": "claybot",
   "private": true,
   "packageManager": "yarn@1.22.22",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspace gram run build",
-    "dashboard": "yarn workspace gram-dashboard dev",
-    "dev": "SCOUT_ROOT_DIR=~/.dev yarn workspace gram run dev",
+    "build": "yarn workspace claybot run build",
+    "dashboard": "yarn workspace claybot-dashboard dev",
+    "dev": "CLAYBOT_ROOT_DIR=~/.dev yarn workspace claybot run dev",
     "test": "yarn workspaces run test",
     "test:watch": "yarn workspaces run test:watch",
     "typecheck": "yarn workspaces run typecheck"

@@ -1,28 +1,28 @@
 # Configuration
 
-Grambot now reads from a single settings file plus the auth store.
+Claybot now reads from a single settings file plus the auth store.
 
-- `.scout/settings.json` (or the path passed to `gram start --settings`)
-- `.scout/auth.json` for credentials
-- `.scout/SOUL.md` for the system prompt (optional)
+- `.claybot/settings.json` (or the path passed to `claybot start --settings`)
+- `.claybot/auth.json` for credentials
+- `.claybot/SOUL.md` for the system prompt (optional)
 
 ```mermaid
 flowchart TD
-  Start[gram start] --> Settings[.scout/settings.json]
-  Start --> Auth[.scout/auth.json]
-  Start --> Soul[.scout/SOUL.md]
-  Start --> Cron[.scout/cron/*]
+  Start[claybot start] --> Settings[.claybot/settings.json]
+  Start --> Auth[.claybot/auth.json]
+  Start --> Soul[.claybot/SOUL.md]
+  Start --> Cron[.claybot/cron/*]
   Settings --> Plugins
   Settings --> Inference
   Soul --> SystemPrompt[Session System Prompt]
 ```
 
-## Sample `.scout/settings.json`
+## Sample `.claybot/settings.json`
 ```json
 {
   "engine": {
-    "socketPath": ".scout/scout.sock",
-    "dataDir": ".scout"
+    "socketPath": ".claybot/claybot.sock",
+    "dataDir": ".claybot"
   },
   "plugins": [
     { "instanceId": "telegram", "pluginId": "telegram", "enabled": true, "settings": { "polling": true } },
@@ -56,7 +56,7 @@ Each task directory also contains `MEMORY.md` and a `files/` workspace.
 
 Supported frontmatter fields include `description` and `deleteAfterRun` for one-off tasks.
 
-## `.scout/auth.json`
+## `.claybot/auth.json`
 Credentials are stored per plugin or provider id:
 
 ```json
@@ -69,7 +69,7 @@ Credentials are stored per plugin or provider id:
 }
 ```
 
-## `.scout/SOUL.md`
+## `.claybot/SOUL.md`
 The soul file defines the assistant's personality. A default is created on first run:
 
 ```markdown

@@ -1,9 +1,9 @@
 # Engine updates
 
-Grambot updates engine settings using a three-step strategy:
+Claybot updates engine settings using a three-step strategy:
 
 1. **Local server running**: send a mutation request over the local HTTP socket
-   at `.scout/scout.sock`.
+   at `.claybot/claybot.sock`.
 2. **Local server not running**: write directly to local files
    (settings + auth).
 3. **Remote server configured**: reserved for future use.

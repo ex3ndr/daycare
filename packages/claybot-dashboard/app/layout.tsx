@@ -1,0 +1,17 @@
+import type { ReactNode } from "react";
+import "./globals.css";
+
+export const metadata = {
+  title: "Claybot Dashboard",
+  description: "Live status for plugins, sessions, and cron tasks from the local engine socket."
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body className="font-sans text-foreground antialiased">
+        {children}
+      </body>
+    </html>
+  );
+}

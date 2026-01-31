@@ -25,7 +25,7 @@ The plugin API surface is intentionally narrow:
 - `api.fileStore`: shared file store
 - `api.inference.complete({ systemPrompt, messages, providerId?, strategy? })`: run a single inference without tools
 - `api.logger`: per-plugin logger
-- `api.mode`: `"runtime"` or `"validate"` (used during `gram add` validation)
+- `api.mode`: `"runtime"` or `"validate"` (used during `claybot add` validation)
 - `api.engineEvents`: engine event bus (optional)
 - `api.events.emit({ type, payload })`: enqueue plugin events
 
@@ -36,7 +36,7 @@ Inference strategies:
 - `large`: prefer the newest large model; fall back to normal, then small.
 
 Load/unload is internal: the plugin manager reconciles enabled instances from
-`.scout/settings.json` and loads or unloads instances to match.
+`.claybot/settings.json` and loads or unloads instances to match.
 
 ### Descriptor format
 ```json
@@ -77,9 +77,9 @@ memory with metadata for later routing:
 
 ## Data & secrets
 Each instance gets a dedicated data directory:
-- `.scout/plugins/<instanceId>`
+- `.claybot/plugins/<instanceId>`
 
-Credentials are stored in `.scout/auth.json` and keyed by the identifier the plugin uses.
+Credentials are stored in `.claybot/auth.json` and keyed by the identifier the plugin uses.
 Provider plugins store credentials under the provider id (same as `pluginId`), not the random instance id.
 
 ```mermaid
@@ -104,4 +104,4 @@ flowchart TD
 
 ## Providers
 Providers are built-in modules (not plugins). They register inference and/or image
-generation capabilities and are configured in `.scout/settings.json`.
+generation capabilities and are configured in `.claybot/settings.json`.

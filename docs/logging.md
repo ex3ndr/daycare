@@ -4,10 +4,10 @@ Logging is centralized in `sources/log.ts` and uses Pino.
 
 ## Configuration
 Environment variables:
-- `SCOUT_LOG_LEVEL` / `LOG_LEVEL`
-- `SCOUT_LOG_FORMAT` / `LOG_FORMAT` (`pretty` or `json`)
-- `SCOUT_LOG_DEST` / `LOG_DEST` (`stdout`, `stderr`, or file path)
-- `SCOUT_LOG_REDACT` (comma-separated paths)
+- `CLAYBOT_LOG_LEVEL` / `LOG_LEVEL`
+- `CLAYBOT_LOG_FORMAT` / `LOG_FORMAT` (`pretty` or `json`)
+- `CLAYBOT_LOG_DEST` / `LOG_DEST` (`stdout`, `stderr`, or file path)
+- `CLAYBOT_LOG_REDACT` (comma-separated paths)
 
 Defaults:
 - `debug` level in development, `info` in production
@@ -29,7 +29,7 @@ The codebase includes extensive verbose logging at the `debug` level. Debug logg
 
 To disable verbose logging in dev mode:
 ```bash
-SCOUT_LOG_LEVEL=info yarn dev
+CLAYBOT_LOG_LEVEL=info yarn dev
 ```
 
 ### Verbose Log Components
@@ -83,10 +83,10 @@ handleSessionMessage completed successfully
 
 To filter by component scope:
 ```bash
-SCOUT_LOG_LEVEL=debug yarn dev 2>&1 | grep "inference.router"
+CLAYBOT_LOG_LEVEL=debug yarn dev 2>&1 | grep "inference.router"
 ```
 
 To filter by specific key:
 ```bash
-SCOUT_LOG_LEVEL=debug yarn dev 2>&1 | grep "sessionId="
+CLAYBOT_LOG_LEVEL=debug yarn dev 2>&1 | grep "sessionId="
 ```

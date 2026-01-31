@@ -1,6 +1,6 @@
 # Auth Store
 
-Grambot stores credentials in `.scout/auth.json`.
+Claybot stores credentials in `.claybot/auth.json`.
 The file is read by the engine on startup and on demand by plugins.
 
 ## Structure
@@ -18,11 +18,11 @@ Auth entries are keyed by the identifier used by the plugin or provider. Provide
 the provider id.
 
 ## CLI helpers
-- `gram auth set <id> <key> <value>` updates the auth store.
+- `claybot auth set <id> <key> <value>` updates the auth store.
 
 ```mermaid
 flowchart TD
-  CLI[gram auth set] --> Auth[.scout/auth.json]
+  CLI[claybot auth set] --> Auth[.claybot/auth.json]
   Auth --> Plugins
 ```
 

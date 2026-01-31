@@ -21,7 +21,7 @@ sequenceDiagram
 - Messages (and files) are queued and processed in order.
 
 ## Session persistence
-- Sessions are written to `.scout/sessions/<cuid2>.jsonl` as append-only logs.
+- Sessions are written to `.claybot/sessions/<cuid2>.jsonl` as append-only logs.
 - Entries include `session_created`, `incoming`, `outgoing`, and `state` snapshots.
 - `incoming`/`outgoing` entries now store `files` when present.
 

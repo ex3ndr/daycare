@@ -1,25 +1,25 @@
 # Architecture
 
-Grambot is a plugin-driven engine that routes connector traffic through sessions, inference, tools, and memory.
+Claybot is a plugin-driven engine that routes connector traffic through sessions, inference, tools, and memory.
 
 Key pieces:
 - **CLI** (`sources/main.ts`) starts the engine and manages plugins/auth.
 - **Plugins** register connectors and tools.
 - **Providers** register inference and image generation capabilities.
-- **Auth store** (`.scout/auth.json`) holds provider credentials.
+- **Auth store** (`.claybot/auth.json`) holds provider credentials.
 - **File store** persists attachments for connectors and tools.
 - **Session manager** serializes handling per session and persists state.
 - **Memory plugin** records session updates and supports queries.
 - **Cron scheduler** emits timed messages into sessions.
 - **Inference router** picks providers from settings.
 - **Engine server** exposes a local HTTP socket + SSE for status/events.
-- **Dashboard** (`gram-dashboard`) proxies `/api` to the engine socket.
+- **Dashboard** (`claybot-dashboard`) proxies `/api` to the engine socket.
 
 ```mermaid
 flowchart LR
-  CLI[CLI: gram] --> Start[start command]
-  Start --> Settings[.scout/settings.json]
-  Start --> Auth[.scout/auth.json]
+  CLI[CLI: claybot] --> Start[start command]
+  Start --> Settings[.claybot/settings.json]
+  Start --> Auth[.claybot/auth.json]
   Start --> Providers[ProviderManager]
   Start --> Plugins[PluginManager]
   Providers --> Inference[InferenceRegistry]
@@ -33,7 +33,7 @@ flowchart LR
   Tools --> Connectors
   Sessions --> Memory[Memory plugin]
   Start --> Engine[Engine server]
-  Engine --> Dashboard[gram-dashboard /api proxy]
+  Engine --> Dashboard[claybot-dashboard /api proxy]
 ```
 
 ## Message lifecycle

@@ -1,13 +1,13 @@
-# Grambot documentation
+# Claybot documentation
 
-This folder documents the current Grambot CLI, plugins, sessions, and runtime.
+This folder documents the current Claybot CLI, plugins, sessions, and runtime.
 
 ## Index
 - `architecture.md` - system overview and message flow
 - `cli.md` - CLI commands and runtime behavior
 - `connectors.md` - connector abstraction and telegram connector
 - `plugins.md` - plugin system and built-in plugins
-- `dashboard.md` - gram-dashboard SPA + proxy
+- `dashboard.md` - claybot-dashboard SPA + proxy
 - `memory.md` - memory plugin and entities
 - `cron.md` - cron scheduler tasks and actions
 - `auth.md` - auth store and helper commands

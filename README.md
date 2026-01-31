@@ -1,4 +1,4 @@
-# grambot
+# claybot
 
 A minimal, composable AI agent framework with plugin-driven architecture.
 
@@ -15,7 +15,7 @@ A minimal, composable AI agent framework with plugin-driven architecture.
 
 ```mermaid
 flowchart LR
-  CLI[gram CLI] --> Engine[Engine]
+  CLI[claybot CLI] --> Engine[Engine]
   Engine --> Plugins[Plugin Manager]
   Plugins --> Connectors[Connectors]
   Plugins --> Inference[Inference Providers]
@@ -26,7 +26,7 @@ flowchart LR
   InferenceRouter --> Tools
   Sessions --> Memory[Memory Plugin]
   Engine --> Socket[HTTP Socket API]
-  Socket --> Dashboard[gram-dashboard]
+  Socket --> Dashboard[claybot-dashboard]
 ```
 
 ## Quick Start
@@ -39,17 +39,17 @@ yarn install
 yarn build
 
 # Start the engine
-yarn gram start
+yarn claybot start
 ```
 
 ## Configuration
 
-Grambot uses two configuration files in `.scout/`:
+Claybot uses two configuration files in `.claybot/`:
 
 **settings.json** - Engine and plugin configuration
 ```json
 {
-  "engine": { "socketPath": ".scout/scout.sock", "dataDir": ".scout" },
+  "engine": { "socketPath": ".claybot/claybot.sock", "dataDir": ".claybot" },
   "plugins": [
     { "instanceId": "telegram", "pluginId": "telegram", "enabled": true },
     { "instanceId": "anthropic", "pluginId": "anthropic", "enabled": true },
@@ -97,12 +97,12 @@ The AI agent has access to these tools:
 ## CLI Commands
 
 ```sh
-gram start                    # Launch the engine
-gram status                   # Check engine status
-gram add                      # Add a provider or plugin
-gram plugins load <id>        # Load a plugin
-gram plugins unload <id>      # Unload a plugin
-gram auth set <id> <key> <value>         # Store a credential
+claybot start                    # Launch the engine
+claybot status                   # Check engine status
+claybot add                      # Add a provider or plugin
+claybot plugins load <id>        # Load a plugin
+claybot plugins unload <id>      # Unload a plugin
+claybot auth set <id> <key> <value>         # Store a credential
 ```
 
 ## Development
@@ -117,8 +117,8 @@ yarn dev          # Run with tsx (no build)
 
 ## Workspace
 
-- `packages/gram` - Core engine, plugins, and tools
-- `packages/gram-dashboard` - React dashboard + API proxy
+- `packages/claybot` - Core engine, plugins, and tools
+- `packages/claybot-dashboard` - React dashboard + API proxy
 
 ## Documentation
 

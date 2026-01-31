@@ -1,7 +1,7 @@
 # Inference runtime
 
 Inference is provided by built-in providers. They register with the `InferenceRegistry`,
-and the `InferenceRouter` selects them based on `.scout/settings.json`.
+and the `InferenceRouter` selects them based on `.claybot/settings.json`.
 
 ## Providers
 Configured in settings (in priority order):
@@ -13,13 +13,13 @@ Configured in settings (in priority order):
 }
 ```
 
-`gram add` stores providers in priority order; disabled providers are skipped.
-`gram providers` moves the selected provider to the top of the priority list.
+`claybot add` stores providers in priority order; disabled providers are skipped.
+`claybot providers` moves the selected provider to the top of the priority list.
 
 ```mermaid
 flowchart LR
-  CLI[gram add] --> Auth[.scout/auth.json]
-  CLI --> Settings[.scout/settings.json]
+  CLI[claybot add] --> Auth[.claybot/auth.json]
+  CLI --> Settings[.claybot/settings.json]
   Settings --> Inference[InferenceRouter]
   Auth --> Inference
 ```
