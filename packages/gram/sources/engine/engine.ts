@@ -91,6 +91,7 @@ export class Engine {
   private cronStore: CronStore | null = null;
   private inferenceRouter: InferenceRouter;
   private eventBus: EngineEventBus;
+  private sessionKeyMap = new Map<string, string>();
 
   constructor(options: EngineOptions) {
     logger.debug(`Engine constructor starting, dataDir=${options.dataDir}`);
@@ -168,9 +169,18 @@ export class Engine {
         permissions: { ...this.defaultPermissions }
       }),
       sessionIdFor: (source, context) => {
-        const channelId = context.channelId;
-        const userId = context.userId ?? "anonymous";
-        return `${source}:${channelId}:${userId}`;
+        if (context.sessionId) {
+          const key = this.buildSessionKey(source, context, true);
+          if (key) {
+            this.sessionKeyMap.set(key, context.sessionId);
+          }
+          return context.sessionId;
+        }
+        const key = this.buildSessionKey(source, context, source === "cron");
+        if (!key) {
+          throw new Error("userId is required to map sessions for connectors.");
+        }
+        return this.getOrCreateSessionId(key);
       },
       storageIdFactory: () => this.sessionStore.createStorageId(),
       messageTransform: (message, context, receivedAt) => {
@@ -718,6 +728,10 @@ export class Engine {
         { sessionId: session.id, source: restored.source },
         "Session restored"
       );
+      const sessionKey = this.buildSessionKey(restored.source, restored.context, true);
+      if (sessionKey) {
+        this.sessionKeyMap.set(sessionKey, restored.sessionId);
+      }
       if (restored.lastEntryType === "incoming") {
         pendingInternalErrors.push({
           sessionId: session.id,
@@ -1032,6 +1046,34 @@ export class Engine {
       await recordSessionState(this.sessionStore, session, source);
       logger.debug("handleSessionMessage completed successfully");
     }
+  }
+
+  private getOrCreateSessionId(key: string): string {
+    const existing = this.sessionKeyMap.get(key);
+    if (existing) {
+      return existing;
+    }
+    const id = createId();
+    this.sessionKeyMap.set(key, id);
+    return id;
+  }
+
+  private buildSessionKey(
+    source: string,
+    context: MessageContext,
+    allowMissingUser: boolean
+  ): string | null {
+    if (!context.userId) {
+      if (allowMissingUser) {
+        logger.warn(
+          { source, channelId: context.channelId },
+          "Missing userId for session mapping"
+        );
+        return `${source}:${context.channelId}`;
+      }
+      return null;
+    }
+    return `${source}:${context.channelId}:${context.userId}`;
   }
 }
 
