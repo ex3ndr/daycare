@@ -76,28 +76,28 @@ export async function startEngineServer(
 
   app.get("/v1/engine/cron/tasks", async (_request, reply) => {
     logger.debug("GET /v1/engine/cron/tasks");
-    const tasks = options.runtime.getCronTasks();
+    const tasks = options.runtime.cron.listTasks();
     logger.debug(`Cron tasks retrieved taskCount=${tasks.length}`);
     return reply.send({ ok: true, tasks });
   });
 
   app.get("/v1/engine/heartbeat/tasks", async (_request, reply) => {
     logger.debug("GET /v1/engine/heartbeat/tasks");
-    const tasks = await options.runtime.getHeartbeatTasks();
+    const tasks = await options.runtime.heartbeat.listTasks();
     logger.debug(`Heartbeat tasks retrieved taskCount=${tasks.length}`);
     return reply.send({ ok: true, tasks });
   });
 
   app.get("/v1/engine/agents/background", async (_request, reply) => {
     logger.debug("GET /v1/engine/agents/background");
-    const agents = options.runtime.getBackgroundAgents();
+    const agents = options.runtime.agentSystem.getBackgroundAgents();
     logger.debug(`Background agents retrieved agentCount=${agents.length}`);
     return reply.send({ ok: true, agents });
   });
 
   app.get("/v1/engine/sessions", async (_request, reply) => {
     logger.debug("GET /v1/engine/sessions");
-    const sessions = await options.runtime.getSessionStore().listSessions();
+    const sessions = await options.runtime.agentSystem.sessionStore.listSessions();
     logger.debug(`Sessions retrieved sessionCount=${sessions.length}`);
     return reply.send({ ok: true, sessions });
   });
@@ -105,7 +105,7 @@ export async function startEngineServer(
   app.get("/v1/engine/sessions/:storageId", async (request, reply) => {
     const storageId = (request.params as { storageId: string }).storageId;
     logger.debug(`GET /v1/engine/sessions/:storageId storageId=${storageId}`);
-    const entries = await options.runtime.getSessionStore().readSessionEntries(storageId);
+    const entries = await options.runtime.agentSystem.sessionStore.readSessionEntries(storageId);
     logger.debug(`Session entries retrieved storageId=${storageId} entryCount=${entries?.length ?? 0}`);
     return reply.send({ ok: true, entries });
   });
@@ -125,7 +125,7 @@ export async function startEngineServer(
   app.get("/v1/engine/plugins", async (_request, reply) => {
     logger.debug("GET /v1/engine/plugins");
     const settings = await readSettingsFile(options.settingsPath);
-    const loaded = options.runtime.getPluginManager().listLoaded();
+    const loaded = options.runtime.pluginManager.listLoaded();
     const configured = listPlugins(settings);
     logger.debug(`Plugin list retrieved loadedCount=${loaded.length} configuredCount=${configured.length}`);
     return reply.send({
@@ -281,7 +281,7 @@ export async function startEngineServer(
       return;
     }
     logger.debug(`Setting auth field id=${payload.id} key=${payload.key}`);
-    await options.runtime.getAuthStore().setField(payload.id, payload.key, payload.value);
+    await options.runtime.authStore.setField(payload.id, payload.key, payload.value);
     logger.debug("Auth field set");
     return reply.send({ ok: true });
   });
@@ -310,9 +310,9 @@ export async function startEngineServer(
       type: "init",
       payload: {
         status: options.runtime.getStatus(),
-        cron: options.runtime.getCronTasks(),
-        heartbeat: await options.runtime.getHeartbeatTasks(),
-        backgroundAgents: options.runtime.getBackgroundAgents()
+        cron: options.runtime.cron.listTasks(),
+        heartbeat: await options.runtime.heartbeat.listTasks(),
+        backgroundAgents: options.runtime.agentSystem.getBackgroundAgents()
       },
       timestamp: new Date().toISOString()
     });

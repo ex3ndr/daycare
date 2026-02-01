@@ -21,6 +21,7 @@ This folder documents the current ClayBot CLI, plugins, sessions, and runtime.
 - `engine.md` - engine socket updates and control plane
 - `testing.md` - current test coverage
 - `skills.md` - agent skills and loading workflow
+- `agent-system.md` - agent system lifecycle and session ownership
 
 ```mermaid
 flowchart TD
@@ -41,4 +42,5 @@ flowchart TD
   Docs --> Conv[conventions.md]
   Docs --> Infer[inference.md]
   Docs --> Skills[skills.md]
+  Docs --> AgentSystem[agent-system.md]
 ```

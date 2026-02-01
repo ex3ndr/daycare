@@ -3,16 +3,9 @@ import type { ToolCall } from "@mariozechner/pi-ai";
 import path from "node:path";
 
 import { getLogger } from "../log.js";
-import { Agent } from "./agents/agent.js";
+import { AgentSystem } from "./agents/agentSystem.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
-import type { ConnectorRegistry } from "./modules/connectorRegistry.js";
-import type { ImageGenerationRegistry } from "./modules/imageGenerationRegistry.js";
-import type { ToolResolver } from "./modules/toolResolver.js";
-import type {
-  ConnectorMessage,
-  MessageContext,
-  PermissionDecision
-} from "./modules/connectors/types.js";
+import type { MessageContext, PermissionDecision } from "./modules/connectors/types.js";
 import { FileStore } from "../files/store.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -27,23 +20,12 @@ import {
   type SessionPermissions
 } from "./permissions.js";
 import { permissionApply } from "./permissions/permissionApply.js";
-import { permissionBuildCron } from "./permissions/permissionBuildCron.js";
 import { permissionBuildDefault } from "./permissions/permissionBuildDefault.js";
+import { permissionClone } from "./permissions/permissionClone.js";
 import { permissionDescribeDecision } from "./permissions/permissionDescribeDecision.js";
-import { permissionEnsureDefaultFile } from "./permissions/permissionEnsureDefaultFile.js";
 import { permissionFormatTag } from "./permissions/permissionFormatTag.js";
-import { permissionMergeDefault } from "./permissions/permissionMergeDefault.js";
 import { getProviderDefinition, listActiveInferenceProviders } from "../providers/catalog.js";
-import { SessionManager } from "./sessions/manager.js";
-import { SessionStore } from "./sessions/store.js";
-import {
-  normalizeSessionDescriptor,
-  sessionDescriptorMatchesStrategy,
-  type SessionDescriptor,
-  type SessionFetchStrategy
-} from "./sessions/descriptor.js";
 import { Session } from "./sessions/session.js";
-import type { SessionMessage } from "./sessions/types.js";
 import { AuthStore } from "../auth/store.js";
 import {
   buildCronDeleteTaskTool,
@@ -75,16 +57,7 @@ import { CronStore } from "./cron/cronStore.js";
 import { HeartbeatScheduler } from "./heartbeat/heartbeatScheduler.js";
 import { heartbeatPromptBuildBatch } from "./heartbeat/heartbeatPromptBuildBatch.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
-import { messageBuildSystemText } from "./messages/messageBuildSystemText.js";
-import { messageFormatIncoming } from "./messages/messageFormatIncoming.js";
-import { messageIsSystemText } from "./messages/messageIsSystemText.js";
-import { sessionContextIsHeartbeat } from "./sessions/sessionContextIsHeartbeat.js";
 import { sessionDescriptorBuild } from "./sessions/sessionDescriptorBuild.js";
-import { sessionKeyBuild } from "./sessions/sessionKeyBuild.js";
-import { sessionKeyResolve } from "./sessions/sessionKeyResolve.js";
-import { sessionRoutingSanitize } from "./sessions/sessionRoutingSanitize.js";
-import { sessionStateNormalize } from "./sessions/sessionStateNormalize.js";
-import { sessionTimestampGet } from "./sessions/sessionTimestampGet.js";
 import type { SessionState } from "./sessions/sessionStateTypes.js";
 import { HeartbeatStore } from "./heartbeat/heartbeatStore.js";
 import type { HeartbeatDefinition } from "./heartbeat/heartbeatTypes.js";
@@ -92,16 +65,6 @@ import { EngineEventBus } from "./ipc/events.js";
 import { ProviderManager } from "../providers/manager.js";
 
 const logger = getLogger("engine.runtime");
-
-type BackgroundAgentState = {
-  sessionId: string;
-  storageId: string;
-  name?: string;
-  parentSessionId?: string;
-  status: "running" | "queued" | "idle";
-  pending: number;
-  updatedAt?: string;
-};
 
 export type EngineOptions = {
   settings: SettingsConfig;
@@ -113,29 +76,27 @@ export type EngineOptions = {
 };
 
 export class Engine {
-  private settings: SettingsConfig;
-  private dataDir: string;
-  private configDir: string;
-  private workspaceDir: string;
-  private defaultPermissions: SessionPermissions;
-  private authStore: AuthStore;
-  private fileStore: FileStore;
+  readonly settings: SettingsConfig;
+  readonly dataDir: string;
+  readonly configDir: string;
+  readonly defaultPermissions: SessionPermissions;
+  readonly authStore: AuthStore;
+  readonly fileStore: FileStore;
   readonly modules: ModuleRegistry;
-  private pluginRegistry: PluginRegistry;
-  private pluginManager: PluginManager;
-  private pluginEventQueue: PluginEventQueue;
-  private pluginEventEngine: PluginEventEngine;
-  private providerManager: ProviderManager;
-  private sessionStore: SessionStore<SessionState>;
-  private sessionManager: SessionManager<SessionState>;
-  private cron: CronScheduler | null = null;
-  private cronStore: CronStore | null = null;
-  private heartbeat: HeartbeatScheduler | null = null;
-  private heartbeatStore: HeartbeatStore | null = null;
-  private inferenceRouter: InferenceRouter;
-  private eventBus: EngineEventBus;
-  private sessionKeyMap = new Map<string, string>();
-  private verbose: boolean;
+  readonly pluginRegistry: PluginRegistry;
+  readonly pluginManager: PluginManager;
+  readonly pluginEventQueue: PluginEventQueue;
+  readonly pluginEventEngine: PluginEventEngine;
+  readonly providerManager: ProviderManager;
+  readonly agentSystem: AgentSystem;
+  readonly agentRuntime: AgentRuntime;
+  readonly cron: CronScheduler;
+  readonly cronStore: CronStore;
+  readonly heartbeat: HeartbeatScheduler;
+  readonly heartbeatStore: HeartbeatStore;
+  readonly inferenceRouter: InferenceRouter;
+  readonly eventBus: EngineEventBus;
+  readonly verbose: boolean;
 
   constructor(options: EngineOptions) {
     logger.debug(`Engine constructor starting, dataDir=${options.dataDir}`);
@@ -143,8 +104,8 @@ export class Engine {
     this.dataDir = options.dataDir;
     this.configDir = options.configDir;
     this.verbose = options.verbose ?? false;
-    this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
-    this.defaultPermissions = permissionBuildDefault(this.workspaceDir, this.configDir);
+    const workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
+    this.defaultPermissions = permissionBuildDefault(workspaceDir, this.configDir);
     this.eventBus = options.eventBus;
     this.authStore = new AuthStore(options.authPath);
     this.fileStore = new FileStore({ basePath: `${this.dataDir}/files` });
@@ -162,17 +123,8 @@ export class Engine {
           );
           return;
         }
-        const providerId = this.resolveProviderId(context);
-        const messageContext =
-          providerId && context.providerId !== providerId
-            ? { ...context, providerId }
-            : context;
-        logger.debug(`Connector message received: source=${source} channel=${messageContext.channelId} text=${message.text?.length ?? 0}chars files=${message.files?.length ?? 0}`);
-        this.pluginEventQueue.emit(
-          { pluginId: source, instanceId: source },
-          { type: "connector.message", payload: { source, message, context: messageContext } }
-        );
-        logger.debug(`Connector message emitted to event queue: source=${source}`);
+        logger.debug(`Connector message received: source=${source} channel=${context.channelId} text=${message.text?.length ?? 0}chars files=${message.files?.length ?? 0}`);
+        void this.agentSystem.scheduleMessage(source, message, context);
       },
       onPermission: (source, decision, context) => {
         void this.handlePermissionDecision(source, decision, context);
@@ -215,175 +167,42 @@ export class Engine {
       imageRegistry: this.modules.images
     });
 
-    this.sessionStore = new SessionStore<SessionState>({
-      basePath: `${this.dataDir}/sessions`
+    this.cronStore = new CronStore(path.join(this.configDir, "cron"));
+    this.heartbeatStore = new HeartbeatStore(path.join(this.configDir, "heartbeat"));
+
+    let agentSystem: AgentSystem;
+    const agentRuntime: AgentRuntime = {
+      startBackgroundAgent: (args) => agentSystem.startBackgroundAgent(args),
+      sendSessionMessage: (args) => agentSystem.sendSessionMessage(args),
+      runHeartbeatNow: (args) => this.runHeartbeatNow(args),
+      addHeartbeatTask: (args) => this.addHeartbeatTask(args),
+      listHeartbeatTasks: () => this.listHeartbeatTasks(),
+      removeHeartbeatTask: (args) => this.removeHeartbeatTask(args)
+    };
+    agentSystem = new AgentSystem({
+      settings: this.settings,
+      dataDir: this.dataDir,
+      configDir: this.configDir,
+      defaultPermissions: this.defaultPermissions,
+      eventBus: this.eventBus,
+      connectorRegistry: this.modules.connectors,
+      imageRegistry: this.modules.images,
+      toolResolver: this.modules.tools,
+      pluginManager: this.pluginManager,
+      inferenceRouter: this.inferenceRouter,
+      fileStore: this.fileStore,
+      authStore: this.authStore,
+      cronStore: this.cronStore,
+      agentRuntime,
+      verbose: this.verbose
     });
+    this.agentSystem = agentSystem;
+    this.agentRuntime = agentRuntime;
 
-    this.sessionManager = new SessionManager<SessionState>({
-      createState: () => ({
-        context: { messages: [] },
-        providerId: undefined,
-        permissions: { ...this.defaultPermissions },
-        session: undefined
-      }),
-      sessionIdFor: (source, context) => {
-        const key = sessionKeyResolve(source, context, logger);
-        const cronTaskUid = cuid2Is(context.cron?.taskUid ?? null)
-          ? context.cron!.taskUid
-          : null;
-        // Session ids are always cuid2; ignore non-cuid2 ids from connectors.
-        const explicitId = cuid2Is(context.sessionId ?? null)
-          ? context.sessionId!
-          : cronTaskUid;
-        if (explicitId) {
-          if (key) {
-            this.sessionKeyMap.set(key, explicitId);
-          }
-          return explicitId;
-        }
-        if (key) {
-          return this.getOrCreateSessionId(key);
-        }
-        if (source && source !== "system" && source !== "cron" && source !== "background") {
-          throw new Error("userId is required to map sessions for connectors.");
-        }
-        return createId();
-      },
-      storageIdFactory: () => this.sessionStore.createStorageId(),
-      messageTransform: (message, context, receivedAt) => {
-        return messageFormatIncoming(message, context, receivedAt);
-      },
-      onSessionCreated: (session, source, context) => {
-        this.captureRouting(session, source, context);
-        this.captureAgent(session, context);
-        const providerId = this.resolveProviderId(context);
-        if (providerId) {
-          session.context.state.providerId = providerId;
-        }
-        session.context.state.session = sessionDescriptorBuild(source, context, session.id);
-        if (context.cron?.filesPath) {
-          session.context.state.permissions = permissionBuildCron(
-            this.defaultPermissions,
-            context.cron.filesPath
-          );
-        } else if (sessionContextIsHeartbeat(context, session.context.state.session)) {
-          session.context.state.permissions = permissionMergeDefault(
-            session.context.state.permissions,
-            this.defaultPermissions
-          );
-          permissionEnsureDefaultFile(
-            session.context.state.permissions,
-            this.defaultPermissions
-          );
-        }
-        logger.info(
-          {
-            sessionId: session.id,
-            source,
-            channelId: context.channelId,
-            userId: context.userId
-          },
-          "Session created"
-        );
-        void this.sessionStore
-          .recordSessionCreated(session, source, context, session.context.state.session)
-          .catch((error) => {
-            logger.warn({ sessionId: session.id, source, error }, "Session persistence failed");
-          });
-        this.eventBus.emit("session.created", {
-          sessionId: session.id,
-          source,
-          context
-        });
-      },
-      onSessionUpdated: (session, entry, source) => {
-        this.captureRouting(session, source, entry.context);
-        this.captureAgent(session, entry.context);
-        logger.info(
-          {
-            sessionId: session.id,
-            source,
-            messageId: entry.id,
-            pending: session.size
-          },
-          "Session updated"
-        );
-        const rawText = entry.message.rawText ?? entry.message.text ?? "";
-        if (!messageIsSystemText(rawText)) {
-          void this.sessionStore.recordIncoming(session, entry, source).catch((error) => {
-            logger.warn(
-              { sessionId: session.id, source, messageId: entry.id, error },
-              "Session persistence failed"
-            );
-          });
-        }
-        this.eventBus.emit("session.updated", {
-          sessionId: session.id,
-          source,
-          messageId: entry.id,
-          entry: {
-            id: entry.id,
-            message: entry.message,
-            context: entry.context,
-            receivedAt: entry.receivedAt
-          }
-        });
-      },
-      onMessageStart: (session, entry, source) => {
-        logger.info({ sessionId: session.id, source, messageId: entry.id }, "Session processing started");
-      },
-      onMessageEnd: (session, entry, source) => {
-        logger.info({ sessionId: session.id, source, messageId: entry.id }, "Session processing completed");
-      },
-      onError: (error, session, entry) => {
-        logger.warn({ sessionId: session.id, messageId: entry.id, error }, "Session handler failed");
-      }
-    });
-
-    this.pluginEventEngine.register("connector.message", async (event) => {
-      logger.debug(`Handling connector.message event`);
-      const payload = event.payload as {
-        source: string;
-        message: ConnectorMessage;
-        context: MessageContext;
-      };
-      if (!payload) {
-        logger.debug(`connector.message event has no payload, skipping`);
-        return;
-      }
-      const messageContext = this.withProviderContext(payload.context);
-      logger.debug(`Dispatching to session manager: source=${payload.source} channel=${messageContext.channelId}`);
-      await this.sessionManager.handleMessage(
-        payload.source,
-        payload.message,
-        messageContext,
-        (session, entry) => this.handleSessionMessage(entry, session, payload.source)
-      );
-      logger.debug(`Session manager completed: source=${payload.source}`);
-    });
-
-  }
-
-  async start(): Promise<void> {
-    logger.debug("Engine.start() beginning");
-    await ensureWorkspaceDir(this.workspaceDir);
-    logger.debug("Syncing provider manager with settings");
-    await this.providerManager.sync(this.settings);
-    logger.debug("Provider manager sync complete");
-    logger.debug("Loading enabled plugins");
-    await this.pluginManager.loadEnabled(this.settings);
-    logger.debug("Plugins loaded, starting plugin event engine");
-    this.pluginEventEngine.start();
-    logger.debug("Plugin event engine started");
-
-    const cronPath = path.join(this.configDir, "cron");
-    logger.debug(`Initializing CronScheduler cronPath=${cronPath}`);
-    this.cronStore = new CronStore(cronPath);
-    await this.cronStore.ensureDir();
     this.cron = new CronScheduler({
       store: this.cronStore,
       onTask: (task, context) => {
-        const messageContext = this.withProviderContext({
+        const messageContext = this.agentSystem.withProviderContext({
           ...context,
           cron: {
             taskId: task.taskId,
@@ -394,7 +213,7 @@ export class Engine {
           }
         });
         logger.debug(`CronScheduler.onTask triggered channelId=${messageContext.channelId} sessionId=${messageContext.sessionId}`);
-        void this.startBackgroundAgent({
+        void this.agentSystem.startBackgroundAgent({
           prompt: task.prompt,
           sessionId: messageContext.sessionId,
           name: task.taskName,
@@ -415,19 +234,15 @@ export class Engine {
       }
     });
 
-    const heartbeatPath = path.join(this.configDir, "heartbeat");
-    logger.debug(`Initializing HeartbeatScheduler heartbeatPath=${heartbeatPath}`);
-    this.heartbeatStore = new HeartbeatStore(heartbeatPath);
-    await this.heartbeatStore.ensureDir();
     this.heartbeat = new HeartbeatScheduler({
       store: this.heartbeatStore,
       intervalMs: 30 * 60 * 1000,
       onRun: async (tasks) => {
-        const heartbeatKey = sessionKeyBuild({ type: "heartbeat" });
-        const resolved = this.resolveSessionId("heartbeat");
-        const sessionId = resolved ?? (heartbeatKey ? this.getOrCreateSessionId(heartbeatKey) : createId());
+        const resolved = this.agentSystem.resolveSessionId("heartbeat");
+        const sessionId =
+          resolved ?? this.agentSystem.getOrCreateSessionIdForDescriptor({ type: "heartbeat" });
         const batch = heartbeatPromptBuildBatch(tasks);
-        await this.startBackgroundAgent({
+        await this.agentSystem.startBackgroundAgent({
           prompt: batch.prompt,
           sessionId,
           context: {
@@ -444,6 +259,29 @@ export class Engine {
       }
     });
 
+  }
+
+  async start(): Promise<void> {
+    logger.debug("Engine.start() beginning");
+    await ensureWorkspaceDir(this.defaultPermissions.workingDir);
+
+    logger.debug("Loading agent sessions");
+    await this.agentSystem.load();
+    this.agentSystem.enableScheduling();
+    logger.debug("Agent sessions loaded");
+
+    logger.debug("Syncing provider manager with settings");
+    await this.providerManager.sync(this.settings);
+    logger.debug("Provider manager sync complete");
+    logger.debug("Loading enabled plugins");
+    await this.pluginManager.loadEnabled(this.settings);
+    logger.debug("Plugins loaded, starting plugin event engine");
+    this.pluginEventEngine.start();
+    logger.debug("Plugin event engine started");
+
+    await this.cronStore.ensureDir();
+    await this.heartbeatStore.ensureDir();
+
     logger.debug("Registering core tools");
     this.modules.tools.register(
       "core",
@@ -452,11 +290,9 @@ export class Engine {
         this.eventBus.emit("cron.task.added", { task });
       })
     );
-    if (this.cronStore) {
-      this.modules.tools.register("core", buildCronReadTaskTool(this.cronStore));
-      this.modules.tools.register("core", buildCronReadMemoryTool(this.cronStore));
-      this.modules.tools.register("core", buildCronWriteMemoryTool(this.cronStore));
-    }
+    this.modules.tools.register("core", buildCronReadTaskTool(this.cronStore));
+    this.modules.tools.register("core", buildCronReadMemoryTool(this.cronStore));
+    this.modules.tools.register("core", buildCronWriteMemoryTool(this.cronStore));
     this.modules.tools.register("core", buildCronDeleteTaskTool(this.cron));
     this.modules.tools.register("core", buildHeartbeatRunTool());
     this.modules.tools.register("core", buildHeartbeatAddTool());
@@ -472,68 +308,62 @@ export class Engine {
       "Core tools registered: cron, cron_memory, heartbeat, background, image_generation, reaction, send_file, request_permission"
     );
 
-    logger.debug("Restoring sessions from disk");
-    await this.restoreSessions();
-    logger.debug("Sessions restored");
+    logger.debug("Starting agent system");
+    await this.agentSystem.start();
+    logger.debug("Agent system started");
 
     logger.debug("Starting cron scheduler");
     await this.cron.start();
     this.eventBus.emit("cron.started", { tasks: this.cron.listTasks() });
-    if (this.heartbeat) {
-      logger.debug("Starting heartbeat scheduler");
-      await this.heartbeat.start();
-      const heartbeatTasks = await this.heartbeat.listTasks();
-      this.eventBus.emit("heartbeat.started", { tasks: heartbeatTasks });
-      if (heartbeatTasks.length === 0) {
-        logger.info("No heartbeat tasks found on boot.");
-      } else {
-        const withLastRun = heartbeatTasks.filter((task) => !!task.lastRunAt);
-        const missingLastRun = heartbeatTasks.filter((task) => !task.lastRunAt);
-        if (withLastRun.length > 0) {
-          const mostRecent = withLastRun
-            .map((task) => task.lastRunAt as string)
-            .sort()
-            .at(-1);
-          logger.info(
-            {
-              taskCount: heartbeatTasks.length,
-              mostRecentRunAt: mostRecent
-            },
-            "Heartbeat last run loaded on boot"
-          );
-        }
-        if (missingLastRun.length > 0) {
-          logger.info(
-            {
-              taskCount: missingLastRun.length,
-              taskIds: missingLastRun.map((task) => task.id)
-            },
-            "Heartbeat missing last run info; running now"
-          );
-          await this.heartbeat.runNow(missingLastRun.map((task) => task.id));
-        }
-        const nextRunAt =
-          this.heartbeat.getNextRunAt() ??
-          new Date(Date.now() + this.heartbeat.getIntervalMs());
+    logger.debug("Starting heartbeat scheduler");
+    await this.heartbeat.start();
+    const heartbeatTasks = await this.heartbeat.listTasks();
+    this.eventBus.emit("heartbeat.started", { tasks: heartbeatTasks });
+    if (heartbeatTasks.length === 0) {
+      logger.info("No heartbeat tasks found on boot.");
+    } else {
+      const withLastRun = heartbeatTasks.filter((task) => !!task.lastRunAt);
+      const missingLastRun = heartbeatTasks.filter((task) => !task.lastRunAt);
+      if (withLastRun.length > 0) {
+        const mostRecent = withLastRun
+          .map((task) => task.lastRunAt as string)
+          .sort()
+          .at(-1);
         logger.info(
           {
-            nextRunAt: nextRunAt.toISOString()
+            taskCount: heartbeatTasks.length,
+            mostRecentRunAt: mostRecent
           },
-          "Next heartbeat run scheduled"
+          "Heartbeat last run loaded on boot"
         );
       }
+      if (missingLastRun.length > 0) {
+        logger.info(
+          {
+            taskCount: missingLastRun.length,
+            taskIds: missingLastRun.map((task) => task.id)
+          },
+          "Heartbeat missing last run info; running now"
+        );
+        await this.heartbeat.runNow(missingLastRun.map((task) => task.id));
+      }
+      const nextRunAt =
+        this.heartbeat.getNextRunAt() ??
+        new Date(Date.now() + this.heartbeat.getIntervalMs());
+      logger.info(
+        {
+          nextRunAt: nextRunAt.toISOString()
+        },
+        "Next heartbeat run scheduled"
+      );
     }
     logger.debug("Engine.start() complete");
   }
 
   async shutdown(): Promise<void> {
     await this.modules.connectors.unregisterAll("shutdown");
-    if (this.cron) {
-      this.cron.stop();
-    }
-    if (this.heartbeat) {
-      this.heartbeat.stop();
-    }
+    this.cron.stop();
+    this.heartbeat.stop();
     this.pluginEventEngine.stop();
     await this.pluginManager.unloadAll();
   }
@@ -574,147 +404,12 @@ export class Engine {
     };
   }
 
-  getCronTasks() {
-    return this.cron?.listTasks() ?? [];
-  }
-
-  async getHeartbeatTasks(): Promise<HeartbeatDefinition[]> {
-    if (this.heartbeat) {
-      return this.heartbeat.listTasks();
-    }
-    if (this.heartbeatStore) {
-      return this.heartbeatStore.listTasks();
-    }
-    return [];
-  }
-
-  getBackgroundAgents(): BackgroundAgentState[] {
-    return this.sessionManager
-      .listSessions()
-      .filter((session) => session.context.state.agent?.kind === "background")
-      .map((session) => {
-        const pending = session.size;
-        const processing = session.isProcessing();
-        const status = processing ? "running" : pending > 0 ? "queued" : "idle";
-        return {
-          sessionId: session.id,
-          storageId: session.storageId,
-          name: session.context.state.agent?.name,
-          parentSessionId: session.context.state.agent?.parentSessionId,
-          status,
-          pending,
-          updatedAt: session.context.updatedAt?.toISOString()
-        };
-      });
-  }
-
-  getSessionStore(): SessionStore<SessionState> {
-    return this.sessionStore;
-  }
-
   resetSessionByStorageId(storageId: string): boolean {
-    const session = this.sessionManager.getByStorageId(storageId);
-    if (!session) {
-      return false;
-    }
-    session.resetContext(new Date());
-    void this.sessionStore.recordState(session).catch((error) => {
-      logger.warn({ sessionId: session.id, error }, "Session reset persistence failed");
-    });
-    this.eventBus.emit("session.reset", {
-      sessionId: session.id,
-      source: "system",
-      context: { channelId: session.id, userId: "system", sessionId: session.id }
-    });
-    return true;
+    return this.agentSystem.resetSessionByStorageId(storageId);
   }
 
   resetSession(sessionId: string): boolean {
-    const ok = this.sessionManager.resetSession(sessionId);
-    if (!ok) {
-      return false;
-    }
-    const session = this.sessionManager.getById(sessionId);
-    if (!session) {
-      return false;
-    }
-    void this.sessionStore.recordState(session).catch((error) => {
-      logger.warn({ sessionId: session.id, error }, "Session reset persistence failed");
-    });
-    this.eventBus.emit("session.reset", {
-      sessionId: session.id,
-      source: "system",
-      context: { channelId: session.id, userId: "system", sessionId }
-    });
-    return true;
-  }
-
-  getPluginManager(): PluginManager {
-    return this.pluginManager;
-  }
-
-  getSettings(): SettingsConfig {
-    return this.settings;
-  }
-
-  getAuthStore(): AuthStore {
-    return this.authStore;
-  }
-
-  getFileStore(): FileStore {
-    return this.fileStore;
-  }
-
-  getConnectorRegistry(): ConnectorRegistry {
-    return this.modules.connectors;
-  }
-
-  getInferenceRouter(): InferenceRouter {
-    return this.inferenceRouter;
-  }
-
-  getToolResolver(): ToolResolver {
-    return this.modules.tools;
-  }
-
-  getImageRegistry(): ImageGenerationRegistry {
-    return this.modules.images;
-  }
-
-  getEventBus(): EngineEventBus {
-    return this.eventBus;
-  }
-
-  getCronStore(): CronStore | null {
-    return this.cronStore;
-  }
-
-  getCronScheduler(): CronScheduler | null {
-    return this.cron;
-  }
-
-  getConfigDir(): string {
-    return this.configDir;
-  }
-
-  getAgentRuntime(): AgentRuntime {
-    return this.buildAgentRuntime();
-  }
-
-  isVerbose(): boolean {
-    return this.verbose;
-  }
-
-  /**
-   * Returns a cloned default permissions object for new sessions.
-   * Expects: callers treat the return value as mutable session-scoped state.
-   */
-  getDefaultPermissions(): SessionPermissions {
-    return {
-      ...this.defaultPermissions,
-      writeDirs: [...this.defaultPermissions.writeDirs],
-      readDirs: [...this.defaultPermissions.readDirs]
-    };
+    return this.agentSystem.resetSession(sessionId);
   }
 
   private listContextTools(
@@ -755,7 +450,7 @@ export class Engine {
         state: {
           context: { messages: [] },
           providerId: undefined,
-          permissions: { ...this.defaultPermissions },
+          permissions: permissionClone(this.defaultPermissions),
           session: undefined
         }
       },
@@ -779,131 +474,15 @@ export class Engine {
       session,
       source: "system",
       messageContext: context,
-      agentRuntime: this.buildAgentRuntime()
+      agentRuntime: this.agentRuntime
     });
-  }
-
-  private buildAgentRuntime(): AgentRuntime {
-    return {
-      startBackgroundAgent: (args) => this.startBackgroundAgent(args),
-      sendSessionMessage: (args) => this.sendSessionMessage(args),
-      runHeartbeatNow: (args) => this.runHeartbeatNow(args),
-      addHeartbeatTask: (args) => this.addHeartbeatTask(args),
-      listHeartbeatTasks: () => this.listHeartbeatTasks(),
-      removeHeartbeatTask: (args) => this.removeHeartbeatTask(args)
-    };
-  }
-
-  private async startBackgroundAgent(args: {
-    prompt: string;
-    sessionId?: string;
-    name?: string;
-    parentSessionId?: string;
-    context?: Partial<MessageContext>;
-  }): Promise<{ sessionId: string }> {
-    const prompt = args.prompt.trim();
-    if (!prompt) {
-      throw new Error("Background agent prompt is required");
-    }
-    const sessionId = cuid2Is(args.sessionId ?? null) ? args.sessionId! : createId();
-    const isSubagent = !args.context?.cron && !args.context?.heartbeat;
-    const agentParent = args.parentSessionId ?? args.context?.agent?.parentSessionId;
-    const agentName = args.name ?? args.context?.agent?.name ?? (isSubagent ? "subagent" : undefined);
-    if (isSubagent && !agentParent) {
-      throw new Error("Subagent parent session is required");
-    }
-    const agentContext = {
-      kind: "background" as const,
-      parentSessionId: agentParent,
-      name: agentName
-    };
-    const messageContext: MessageContext = {
-      channelId: sessionId,
-      userId: "system",
-      sessionId,
-      agent: agentContext,
-      ...(args.context ?? {})
-    };
-    messageContext.channelId = sessionId;
-    messageContext.sessionId = sessionId;
-    messageContext.agent = { ...agentContext, ...(args.context?.agent ?? {}) };
-    const message: ConnectorMessage = { text: prompt };
-    const startPromise = this.sessionManager.handleMessage(
-      "system",
-      message,
-      messageContext,
-      (session, entry) => this.handleSessionMessage(entry, session, "system")
-    );
-    startPromise.catch((error) => {
-      logger.warn({ sessionId, error }, "Background agent start failed");
-    });
-    return { sessionId };
-  }
-
-  private async sendSessionMessage(args: {
-    sessionId?: string;
-    text: string;
-    origin?: "background" | "system";
-  }): Promise<void> {
-    const targetSessionId = args.sessionId ?? this.resolveSessionId("most-recent-foreground");
-    if (!targetSessionId) {
-      throw new Error("No recent foreground session found.");
-    }
-    const session = this.sessionManager.getById(targetSessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${targetSessionId}`);
-    }
-    const routing = session.context.state.routing;
-    if (!routing) {
-      throw new Error(`Session routing unavailable: ${targetSessionId}`);
-    }
-    const source = routing.source;
-    if (!this.modules.connectors.get(source)) {
-      throw new Error(`Connector unavailable for session: ${source}`);
-    }
-    const context = { ...routing.context, messageId: undefined, commands: undefined };
-    const message: ConnectorMessage = {
-      text: messageBuildSystemText(args.text, args.origin)
-    };
-    await this.sessionManager.handleMessage(
-      source,
-      message,
-      context,
-      (sessionToHandle, entry) => this.handleSessionMessage(entry, sessionToHandle, source)
-    );
-  }
-
-  private resolveSessionId(strategy: SessionFetchStrategy): string | null {
-    const sessions = this.sessionManager.listSessions();
-    const candidates = sessions.filter((session) => {
-      const sessionDescriptor = session.context.state.session;
-      if (!sessionDescriptor) {
-        return false;
-      }
-      return sessionDescriptorMatchesStrategy(sessionDescriptor, strategy);
-    });
-    if (candidates.length === 0) {
-      return null;
-    }
-    candidates.sort((a, b) => {
-      const aTime = sessionTimestampGet(a.context.updatedAt ?? a.context.createdAt);
-      const bTime = sessionTimestampGet(b.context.updatedAt ?? b.context.createdAt);
-      return bTime - aTime;
-    });
-    return candidates[0]?.id ?? null;
   }
 
   private async runHeartbeatNow(args?: { ids?: string[] }): Promise<{ ran: number; taskIds: string[] }> {
-    if (!this.heartbeat) {
-      throw new Error("Heartbeat scheduler unavailable");
-    }
     return this.heartbeat.runNow(args?.ids);
   }
 
   private async addHeartbeatTask(args: HeartbeatAddArgs): Promise<HeartbeatDefinition> {
-    if (!this.heartbeatStore) {
-      throw new Error("Heartbeat store unavailable");
-    }
     return this.heartbeatStore.createTask({
       id: args.id,
       title: args.title,
@@ -913,68 +492,35 @@ export class Engine {
   }
 
   private async listHeartbeatTasks(): Promise<HeartbeatDefinition[]> {
-    return this.getHeartbeatTasks();
+    return this.heartbeat.listTasks();
   }
 
   private async removeHeartbeatTask(
     args: HeartbeatRemoveArgs
   ): Promise<{ removed: boolean }> {
-    if (!this.heartbeatStore) {
-      throw new Error("Heartbeat store unavailable");
-    }
     const removed = await this.heartbeatStore.deleteTask(args.id);
     return { removed };
   }
 
 
   async updateSettings(settings: SettingsConfig): Promise<void> {
-    this.settings = settings;
-    this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
-    this.defaultPermissions = permissionBuildDefault(this.workspaceDir, this.configDir);
-    await ensureWorkspaceDir(this.workspaceDir);
+    const mutableSettings = this.settings as Record<string, unknown>;
+    for (const key of Object.keys(mutableSettings)) {
+      delete mutableSettings[key];
+    }
+    Object.assign(mutableSettings, settings);
+
+    const workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
+    const nextPermissions = permissionBuildDefault(workspaceDir, this.configDir);
+    this.defaultPermissions.workingDir = nextPermissions.workingDir;
+    this.defaultPermissions.writeDirs = [...nextPermissions.writeDirs];
+    this.defaultPermissions.readDirs = [...nextPermissions.readDirs];
+    this.defaultPermissions.web = nextPermissions.web;
+
+    await ensureWorkspaceDir(this.defaultPermissions.workingDir);
     await this.providerManager.sync(settings);
     await this.pluginManager.syncWithSettings(settings);
     this.inferenceRouter.updateProviders(listActiveInferenceProviders(settings));
-  }
-
-  private withProviderContext(context: MessageContext): MessageContext {
-    const providerId = this.resolveProviderId(context);
-    if (!providerId || context.providerId === providerId) {
-      return context;
-    }
-    return { ...context, providerId };
-  }
-
-  private resolveProviderId(context: MessageContext): string | undefined {
-    if (context.providerId) {
-      return context.providerId;
-    }
-    const providers = listActiveInferenceProviders(this.settings);
-    return providers[0]?.id;
-  }
-
-  private captureRouting(
-    session: Session<SessionState>,
-    source: string,
-    context: MessageContext
-  ): void {
-    session.context.state.routing = {
-      source,
-      context: sessionRoutingSanitize(context)
-    };
-  }
-
-  private captureAgent(
-    session: Session<SessionState>,
-    context: MessageContext
-  ): void {
-    if (context.agent?.kind === "background") {
-      session.context.state.agent = {
-        kind: "background",
-        parentSessionId: context.agent.parentSessionId,
-        name: context.agent.name
-      };
-    }
   }
 
   private async handlePermissionDecision(
@@ -998,13 +544,7 @@ export class Engine {
     const connector = this.modules.connectors.get(source);
     const permissionTag = permissionFormatTag(decision.access);
     const permissionLabel = permissionDescribeDecision(decision.access);
-    let sessionId = cuid2Is(context.sessionId ?? null) ? context.sessionId! : null;
-    if (!sessionId) {
-      const key = sessionKeyResolve(source, context, logger);
-      if (key) {
-        sessionId = this.sessionKeyMap.get(key) ?? null;
-      }
-    }
+    const sessionId = this.agentSystem.resolveSessionIdForContext(source, context);
 
     if (!decision.approved) {
       logger.info(
@@ -1024,7 +564,7 @@ export class Engine {
       return;
     }
 
-    const session = this.sessionManager.getById(sessionId);
+    const session = this.agentSystem.getSessionById(sessionId);
     if (!session) {
       logger.warn(
         { source, sessionId },
@@ -1055,7 +595,7 @@ export class Engine {
     if (decision.approved) {
       permissionApply(session.context.state.permissions, decision);
       try {
-        await this.sessionStore.recordState(session);
+        await this.agentSystem.sessionStore.recordState(session);
       } catch (error) {
         logger.warn({ sessionId: session.id, error }, "Permission persistence failed");
       }
@@ -1070,131 +610,11 @@ export class Engine {
     const resumeText = decision.approved
       ? `Permission granted for ${permissionLabel}. Please continue with the previous request.`
       : `Permission denied for ${permissionLabel}. Please continue without that permission.`;
-    await this.sessionManager.handleMessage(
+    await this.agentSystem.scheduleMessage(
       source,
       { text: resumeText },
-      { ...context, sessionId: session.id },
-      (sessionToHandle, entry) => this.handleSessionMessage(entry, sessionToHandle, source)
+      { ...context, sessionId: session.id }
     );
   }
 
-  private async restoreSessions(): Promise<void> {
-    const restoredSessions = await this.sessionStore.loadSessions();
-    const pendingInternalErrors: Array<{
-      sessionId: string;
-      source: string;
-      context: MessageContext;
-    }> = [];
-    const pendingSubagentFailures: Session<SessionState>[] = [];
-
-    for (const restored of restoredSessions) {
-      const restoredSessionId = cuid2Is(restored.sessionId ?? null)
-        ? restored.sessionId
-        : createId();
-      const session = this.sessionManager.restoreSession(
-        restoredSessionId,
-        restored.storageId,
-        sessionStateNormalize(restored.state, this.defaultPermissions),
-        restored.createdAt,
-        restored.updatedAt
-      );
-      const restoredDescriptor = restored.descriptor
-        ? normalizeSessionDescriptor(restored.descriptor)
-        : undefined;
-      if (restoredDescriptor) {
-        session.context.state.session = restoredDescriptor;
-      }
-      if (!session.context.state.providerId) {
-        const providerId = this.resolveProviderId(restored.context);
-        if (providerId) {
-          session.context.state.providerId = providerId;
-        }
-      }
-      logger.info(
-        { sessionId: session.id, source: restored.source },
-        "Session restored"
-      );
-      const sessionKey = session.context.state.session
-        ? sessionKeyBuild(session.context.state.session)
-        : null;
-      if (sessionKey) {
-        this.sessionKeyMap.set(sessionKey, session.id);
-      }
-      if (restoredSessionId !== restored.sessionId) {
-        void this.sessionStore.recordState(session).catch((error) => {
-          logger.warn({ sessionId: session.id, error }, "Session id migration failed");
-        });
-      }
-      if (restored.lastEntryType === "incoming") {
-        if (session.context.state.session?.type === "subagent") {
-          pendingSubagentFailures.push(session);
-        } else {
-          pendingInternalErrors.push({
-            sessionId: session.id,
-            source: restored.source,
-            context: restored.context
-          });
-        }
-      }
-    }
-
-    if (pendingSubagentFailures.length > 0) {
-      await this.notifyPendingSubagentFailures(pendingSubagentFailures);
-    }
-    if (pendingInternalErrors.length > 0) {
-      await this.sendPendingInternalErrors(pendingInternalErrors);
-    }
-  }
-
-  private async notifyPendingSubagentFailures(
-    pending: Session<SessionState>[]
-  ): Promise<void> {
-    for (const session of pending) {
-      const agent = Agent.fromSession(session, this);
-      await agent.notifySubagentFailure("Restored with pending work");
-    }
-  }
-
-  private async sendPendingInternalErrors(
-    pending: Array<{
-      sessionId: string;
-      source: string;
-      context: MessageContext;
-    }>
-  ): Promise<void> {
-    const message = "Internal error.";
-    for (const entry of pending) {
-      const connector = this.modules.connectors.get(entry.source);
-      if (!connector) {
-        continue;
-      }
-      try {
-        await connector.sendMessage(entry.context.channelId, {
-          text: message,
-          replyToMessageId: entry.context.messageId
-        });
-      } catch (error) {
-        logger.warn({ sessionId: entry.sessionId, source: entry.source, error }, "Pending reply failed");
-      }
-    }
-  }
-
-  private async handleSessionMessage(
-    entry: SessionMessage,
-    session: Session<SessionState>,
-    source: string
-  ): Promise<void> {
-    const agent = Agent.fromMessage(session, source, entry.context, this);
-    await agent.handleMessage(entry, source);
-  }
-
-  private getOrCreateSessionId(key: string): string {
-    const existing = this.sessionKeyMap.get(key);
-    if (existing) {
-      return existing;
-    }
-    const id = createId();
-    this.sessionKeyMap.set(key, id);
-    return id;
-  }
 }

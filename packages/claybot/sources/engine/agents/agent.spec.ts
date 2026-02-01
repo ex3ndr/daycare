@@ -5,12 +5,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { Agent } from "./agent.js";
-import type { Engine } from "../engine.js";
 import type { AgentRuntime } from "../modules/tools/types.js";
 import { SessionStore } from "../sessions/store.js";
 import type { SessionPermissions } from "../permissions.js";
 import type { SessionDescriptor } from "../sessions/descriptor.js";
 import type { SessionState } from "../sessions/sessionStateTypes.js";
+import type { AgentSystemContext } from "./agentTypes.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
@@ -20,7 +20,6 @@ import type { AuthStore } from "../../auth/store.js";
 import type { PluginManager } from "../plugins/manager.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { CronStore } from "../cron/cronStore.js";
-import type { CronScheduler } from "../cron/cronScheduler.js";
 
 const defaultPermissions: SessionPermissions = {
   workingDir: "/tmp/work",
@@ -46,38 +45,37 @@ const stubRuntime = (): AgentRuntime =>
 
 const stub = <T>(): T => ({} as unknown as T);
 
-async function createEngine(): Promise<{
-  engine: Engine;
+async function createAgentSystem(): Promise<{
+  agentSystem: AgentSystemContext;
   store: SessionStore;
   dir: string;
   cleanup: () => Promise<void>;
 }> {
   const dir = await mkdtemp(path.join(tmpdir(), "claybot-agent-"));
   const store = new SessionStore<SessionState>({ basePath: dir });
-  const engine = {
-    getSessionStore: () => store,
-    getDefaultPermissions: () => ({
+  const agentSystem = {
+    sessionStore: store,
+    defaultPermissions: {
       ...defaultPermissions,
       writeDirs: [...defaultPermissions.writeDirs],
       readDirs: [...defaultPermissions.readDirs]
-    }),
-    getSettings: () => ({}),
-    getConfigDir: () => "/tmp",
-    getConnectorRegistry: () => stub<ConnectorRegistry>(),
-    getImageRegistry: () => stub<ImageGenerationRegistry>(),
-    getToolResolver: () => stub<ToolResolver>(),
-    getInferenceRouter: () => stub<InferenceRouter>(),
-    getFileStore: () => stub<FileStore>(),
-    getAuthStore: () => stub<AuthStore>(),
-    getPluginManager: () => stub<PluginManager>(),
-    getEventBus: () => stub<EngineEventBus>(),
-    getCronStore: () => null as CronStore | null,
-    getCronScheduler: () => null as CronScheduler | null,
-    getAgentRuntime: () => stubRuntime(),
-    isVerbose: () => false
-  } as unknown as Engine;
+    },
+    settings: {},
+    configDir: "/tmp",
+    connectorRegistry: stub<ConnectorRegistry>(),
+    imageRegistry: stub<ImageGenerationRegistry>(),
+    toolResolver: stub<ToolResolver>(),
+    inferenceRouter: stub<InferenceRouter>(),
+    fileStore: stub<FileStore>(),
+    authStore: stub<AuthStore>(),
+    pluginManager: stub<PluginManager>(),
+    eventBus: stub<EngineEventBus>(),
+    cronStore: stub<CronStore>(),
+    agentRuntime: stubRuntime(),
+    verbose: false
+  } satisfies AgentSystemContext;
   return {
-    engine,
+    agentSystem,
     store,
     dir,
     cleanup: async () => {
@@ -88,7 +86,7 @@ async function createEngine(): Promise<{
 
 describe("Agent", () => {
   it("creates and loads an agent by session id", async () => {
-    const { engine, cleanup } = await createEngine();
+    const { agentSystem, cleanup } = await createAgentSystem();
     try {
       const descriptor: SessionDescriptor = {
         type: "user",
@@ -97,10 +95,10 @@ describe("Agent", () => {
         userId: "user-1"
       };
       const sessionId = "a".repeat(24);
-      const created = await Agent.create(descriptor, sessionId, engine);
+      const created = await Agent.create(descriptor, sessionId, agentSystem);
       expect(created.session.id).toBe(sessionId);
 
-      const loaded = await Agent.load(descriptor, sessionId, engine);
+      const loaded = await Agent.load(descriptor, sessionId, agentSystem);
       expect(loaded.descriptor).toEqual(descriptor);
     } finally {
       await cleanup();
@@ -108,7 +106,7 @@ describe("Agent", () => {
   });
 
   it("rejects loads when the descriptor does not match", async () => {
-    const { engine, cleanup } = await createEngine();
+    const { agentSystem, cleanup } = await createAgentSystem();
     try {
       const descriptor: SessionDescriptor = {
         type: "user",
@@ -117,7 +115,7 @@ describe("Agent", () => {
         userId: "user-1"
       };
       const sessionId = "b".repeat(24);
-      await Agent.create(descriptor, sessionId, engine);
+      await Agent.create(descriptor, sessionId, agentSystem);
 
       const mismatch: SessionDescriptor = {
         type: "user",
@@ -126,7 +124,7 @@ describe("Agent", () => {
         userId: "user-1"
       };
 
-      await expect(Agent.load(mismatch, sessionId, engine)).rejects.toThrow(
+      await expect(Agent.load(mismatch, sessionId, agentSystem)).rejects.toThrow(
         "Agent descriptor mismatch"
       );
     } finally {
@@ -135,7 +133,7 @@ describe("Agent", () => {
   });
 
   it("enqueues messages and persists incoming entries", async () => {
-    const { engine, store, dir, cleanup } = await createEngine();
+    const { agentSystem, store, dir, cleanup } = await createAgentSystem();
     try {
       const descriptor: SessionDescriptor = {
         type: "user",
@@ -144,7 +142,7 @@ describe("Agent", () => {
         userId: "user-1"
       };
       const sessionId = "c".repeat(24);
-      const agent = await Agent.create(descriptor, sessionId, engine);
+      const agent = await Agent.create(descriptor, sessionId, agentSystem);
 
       const entry = agent.receive({
         source: "slack",

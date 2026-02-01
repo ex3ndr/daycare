@@ -7,9 +7,9 @@ import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { assumeWorkspace, createSystemPrompt } from "../createSystemPrompt.js";
 import type { MessageContext } from "../modules/connectors/types.js";
-import type { Engine } from "../engine.js";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
+import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
 import { skillListCore } from "../skills/skillListCore.js";
@@ -29,7 +29,8 @@ import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import type {
   AgentDescriptor,
   AgentInboundMessage,
-  AgentReceiveResult
+  AgentReceiveResult,
+  AgentSystemContext
 } from "./agentTypes.js";
 import { agentLoopRun } from "./agentLoopRun.js";
 
@@ -38,18 +39,18 @@ const logger = getLogger("engine.agent");
 export class Agent {
   readonly session: Session<SessionState>;
   readonly descriptor: SessionDescriptor;
-  private engine: Engine;
-  private sessionStore: ReturnType<Engine["getSessionStore"]>;
+  private agentSystem: AgentSystemContext;
+  private sessionStore: AgentSystemContext["sessionStore"];
 
   private constructor(
     session: Session<SessionState>,
     descriptor: SessionDescriptor,
-    engine: Engine
+    agentSystem: AgentSystemContext
   ) {
     this.session = session;
     this.descriptor = descriptor;
-    this.engine = engine;
-    this.sessionStore = engine.getSessionStore();
+    this.agentSystem = agentSystem;
+    this.sessionStore = agentSystem.sessionStore;
   }
 
   /**
@@ -59,12 +60,12 @@ export class Agent {
   static async load(
     descriptor: AgentDescriptor,
     id: string,
-    engine: Engine
+    agentSystem: AgentSystemContext
   ): Promise<Agent> {
     if (!cuid2Is(id)) {
       throw new Error("Agent session id must be a cuid2 value.");
     }
-    const store = engine.getSessionStore();
+    const store = agentSystem.sessionStore;
     const restoredSessions = await store.loadSessions();
     const restored = restoredSessions.find((candidate) => candidate.sessionId === id);
     if (!restored) {
@@ -77,7 +78,7 @@ export class Agent {
       throw new Error(`Agent descriptor mismatch for session: ${id}`);
     }
 
-    const state = sessionStateNormalize(restored.state, engine.getDefaultPermissions());
+    const state = sessionStateNormalize(restored.state, agentSystem.defaultPermissions);
     state.session = restored.descriptor;
 
     const now = new Date();
@@ -92,7 +93,7 @@ export class Agent {
       restored.storageId
     );
 
-    return new Agent(session, restored.descriptor, engine);
+    return new Agent(session, restored.descriptor, agentSystem);
   }
 
   /**
@@ -102,18 +103,18 @@ export class Agent {
   static async create(
     descriptor: AgentDescriptor,
     id: string,
-    engine: Engine
+    agentSystem: AgentSystemContext
   ): Promise<Agent> {
     if (!cuid2Is(id)) {
       throw new Error("Agent session id must be a cuid2 value.");
     }
-    const store = engine.getSessionStore();
+    const store = agentSystem.sessionStore;
     const storageId = store.createStorageId();
     const now = new Date();
     const state: SessionState = {
       context: { messages: [] },
       providerId: undefined,
-      permissions: engine.getDefaultPermissions(),
+      permissions: permissionClone(agentSystem.defaultPermissions),
       session: descriptor
     };
     const session = new Session<SessionState>(
@@ -131,7 +132,7 @@ export class Agent {
     await store.recordSessionCreated(session, "agent", context, descriptor);
     await store.recordState(session);
 
-    return new Agent(session, descriptor, engine);
+    return new Agent(session, descriptor, agentSystem);
   }
 
   /**
@@ -142,26 +143,26 @@ export class Agent {
     session: Session<SessionState>,
     source: string,
     context: MessageContext,
-    engine: Engine
+    agentSystem: AgentSystemContext
   ): Agent {
     const descriptor =
       session.context.state.session ?? sessionDescriptorBuild(source, context, session.id);
     if (!session.context.state.session) {
       session.context.state.session = descriptor;
     }
-    return new Agent(session, descriptor, engine);
+    return new Agent(session, descriptor, agentSystem);
   }
 
   /**
    * Wraps an existing session that already has a descriptor.
    * Expects: session context includes a session descriptor.
    */
-  static fromSession(session: Session<SessionState>, engine: Engine): Agent {
+  static fromSession(session: Session<SessionState>, agentSystem: AgentSystemContext): Agent {
     const descriptor = session.context.state.session;
     if (!descriptor) {
       throw new Error(`Agent session missing descriptor: ${session.id}`);
     }
-    return new Agent(session, descriptor, engine);
+    return new Agent(session, descriptor, agentSystem);
   }
 
   /**
@@ -193,8 +194,8 @@ export class Agent {
    */
   async handleMessage(entry: SessionMessage, source: string): Promise<void> {
     const session = this.session;
-    const engine = this.engine;
-    const connectorRegistry = engine.getConnectorRegistry();
+    const agentSystem = this.agentSystem;
+    const connectorRegistry = agentSystem.connectorRegistry;
     const connector = connectorRegistry.get(source);
 
     const textLen = entry.message.text?.length ?? 0;
@@ -227,7 +228,7 @@ export class Agent {
       session.context.state.session = this.descriptor;
     }
 
-    const defaultPermissions = engine.getDefaultPermissions();
+    const defaultPermissions = agentSystem.defaultPermissions;
     if (entry.context.cron?.filesPath) {
       session.context.state.permissions = permissionBuildCron(
         defaultPermissions,
@@ -244,7 +245,7 @@ export class Agent {
     await assumeWorkspace();
 
     const sessionContext = session.context.state.context;
-    const providers = listActiveInferenceProviders(engine.getSettings());
+    const providers = listActiveInferenceProviders(agentSystem.settings);
     const providerId = this.resolveSessionProvider(session, entry.context, providers);
     logger.debug(
       `Building context sessionId=${session.id} existingMessageCount=${sessionContext.messages.length}`
@@ -258,12 +259,8 @@ export class Agent {
     const channelType = entry.context.channelType;
     const channelIsPrivate = channelType ? channelType === "private" : null;
     const cronContext = entry.context.cron;
-    const cronStore = engine.getCronStore();
-    const cron = engine.getCronScheduler();
-    const cronTaskIds = cronStore
-      ? (await cronStore.listTasks()).map((task) => task.id)
-      : cron?.listTasks().map((task) => task.id) ?? [];
-    const pluginManager = engine.getPluginManager();
+    const cronTaskIds = (await agentSystem.cronStore.listTasks()).map((task) => task.id);
+    const pluginManager = agentSystem.pluginManager;
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
     const coreSkills = await skillListCore();
@@ -301,7 +298,7 @@ export class Agent {
       agentKind,
       parentSessionId:
         session.context.state.agent?.parentSessionId ?? entry.context.agent?.parentSessionId,
-      configDir: engine.getConfigDir()
+      configDir: agentSystem.configDir
     });
     const context: Context = {
       ...sessionContext,
@@ -334,16 +331,16 @@ export class Agent {
       context,
       connector,
       connectorRegistry,
-      inferenceRouter: engine.getInferenceRouter(),
-      toolResolver: engine.getToolResolver(),
-      fileStore: engine.getFileStore(),
-      authStore: engine.getAuthStore(),
+      inferenceRouter: agentSystem.inferenceRouter,
+      toolResolver: agentSystem.toolResolver,
+      fileStore: agentSystem.fileStore,
+      authStore: agentSystem.authStore,
       sessionStore: this.sessionStore,
-      eventBus: engine.getEventBus(),
-      assistant: engine.getSettings().assistant ?? null,
-      agentRuntime: engine.getAgentRuntime(),
+      eventBus: agentSystem.eventBus,
+      assistant: agentSystem.settings.assistant ?? null,
+      agentRuntime: agentSystem.agentRuntime,
       providersForSession,
-      verbose: engine.isVerbose(),
+      verbose: agentSystem.verbose,
       logger,
       notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error)
     });
@@ -368,7 +365,7 @@ export class Agent {
     const errorText = error instanceof Error ? error.message : error ? String(error) : "";
     const detail = errorText ? `${reason} (${errorText})` : reason;
     try {
-      await this.engine.getAgentRuntime().sendSessionMessage({
+      await this.agentSystem.agentRuntime.sendSessionMessage({
         sessionId: parentSessionId,
         text: `Subagent ${name} (${this.session.id}) failed: ${detail}.`,
         origin: "background"
@@ -386,12 +383,12 @@ export class Agent {
     options?: { agentKind?: "background" | "foreground"; allowCronTools?: boolean }
   ) {
     return toolListContextBuild({
-      tools: this.engine.getToolResolver().listTools(),
+      tools: this.agentSystem.toolResolver.listTools(),
       source,
       agentKind: options?.agentKind,
       allowCronTools: options?.allowCronTools,
-      connectorRegistry: this.engine.getConnectorRegistry(),
-      imageRegistry: this.engine.getImageRegistry()
+      connectorRegistry: this.agentSystem.connectorRegistry,
+      imageRegistry: this.agentSystem.imageRegistry
     });
   }
 
