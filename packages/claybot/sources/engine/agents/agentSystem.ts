@@ -40,7 +40,7 @@ import { sessionStateNormalize } from "../sessions/sessionStateNormalize.js";
 import { sessionTimestampGet } from "../sessions/sessionTimestampGet.js";
 import type { Session } from "../sessions/session.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
-import type { CronStore } from "../cron/cronStore.js";
+import type { Crons } from "../cron/crons.js";
 import { Agent } from "./agent.js";
 import type { AgentSystemContext, BackgroundAgentState } from "./agentTypes.js";
 
@@ -59,7 +59,7 @@ export type AgentSystemOptions = {
   inferenceRouter: InferenceRouter;
   fileStore: FileStore;
   authStore: AuthStore;
-  cronStore: CronStore;
+  crons: Crons;
   agentRuntime: AgentRuntime;
   verbose?: boolean;
 };
@@ -89,7 +89,7 @@ export class AgentSystem implements AgentSystemContext {
   readonly fileStore: FileStore;
   readonly authStore: AuthStore;
   readonly sessionStore: SessionStore<SessionState>;
-  readonly cronStore: CronStore;
+  readonly crons: Crons;
   readonly agentRuntime: AgentRuntime;
   readonly verbose: boolean;
   private sessionManager: SessionManager<SessionState>;
@@ -112,7 +112,7 @@ export class AgentSystem implements AgentSystemContext {
     this.inferenceRouter = options.inferenceRouter;
     this.fileStore = options.fileStore;
     this.authStore = options.authStore;
-    this.cronStore = options.cronStore;
+    this.crons = options.crons;
     this.agentRuntime = options.agentRuntime;
     this.verbose = options.verbose ?? false;
     this.sessionStore = new SessionStore<SessionState>({

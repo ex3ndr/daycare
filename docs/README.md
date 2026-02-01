@@ -22,6 +22,7 @@ This folder documents the current ClayBot CLI, plugins, sessions, and runtime.
 - `testing.md` - current test coverage
 - `skills.md` - agent skills and loading workflow
 - `agent-system.md` - agent system lifecycle and session ownership
+- `heartbeat.md` - heartbeat scheduler and storage
 
 ```mermaid
 flowchart TD
@@ -43,4 +44,5 @@ flowchart TD
   Docs --> Infer[inference.md]
   Docs --> Skills[skills.md]
   Docs --> AgentSystem[agent-system.md]
+  Docs --> Heartbeat[heartbeat.md]
 ```

@@ -76,14 +76,14 @@ export async function startEngineServer(
 
   app.get("/v1/engine/cron/tasks", async (_request, reply) => {
     logger.debug("GET /v1/engine/cron/tasks");
-    const tasks = options.runtime.cron.listTasks();
+    const tasks = options.runtime.crons.listScheduledTasks();
     logger.debug(`Cron tasks retrieved taskCount=${tasks.length}`);
     return reply.send({ ok: true, tasks });
   });
 
   app.get("/v1/engine/heartbeat/tasks", async (_request, reply) => {
     logger.debug("GET /v1/engine/heartbeat/tasks");
-    const tasks = await options.runtime.heartbeat.listTasks();
+    const tasks = await options.runtime.heartbeats.listTasks();
     logger.debug(`Heartbeat tasks retrieved taskCount=${tasks.length}`);
     return reply.send({ ok: true, tasks });
   });
@@ -310,8 +310,8 @@ export async function startEngineServer(
       type: "init",
       payload: {
         status: options.runtime.getStatus(),
-        cron: options.runtime.cron.listTasks(),
-        heartbeat: await options.runtime.heartbeat.listTasks(),
+        cron: options.runtime.crons.listScheduledTasks(),
+        heartbeat: await options.runtime.heartbeats.listTasks(),
         backgroundAgents: options.runtime.agentSystem.getBackgroundAgents()
       },
       timestamp: new Date().toISOString()

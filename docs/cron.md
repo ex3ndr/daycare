@@ -34,10 +34,19 @@ Task directory ids should be human-friendly slugs (e.g. `create-image-in-morning
 
 ## Execution model
 
+- `Crons` owns storage + scheduling (`CronStore` + `CronScheduler`).
 - `CronScheduler` reads tasks from disk and schedules the next run.
 - Each task runs in its own session id (the `taskId` cuid2 from frontmatter).
 - When a schedule triggers, the task prompt is sent as a message to that session.
 - The system prompt includes the cron task metadata and the memory file location.
+
+```mermaid
+flowchart TD
+  Engine[engine.ts] --> Crons[cron/crons.ts]
+  Crons --> Store[cron/cronStore.ts]
+  Crons --> Scheduler[cron/cronScheduler.ts]
+  Scheduler --> AgentSystem[agents/agentSystem.ts]
+```
 
 ## Tools
 

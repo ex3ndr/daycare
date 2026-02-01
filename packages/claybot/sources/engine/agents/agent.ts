@@ -259,7 +259,7 @@ export class Agent {
     const channelType = entry.context.channelType;
     const channelIsPrivate = channelType ? channelType === "private" : null;
     const cronContext = entry.context.cron;
-    const cronTaskIds = (await agentSystem.cronStore.listTasks()).map((task) => task.id);
+    const cronTaskIds = (await agentSystem.crons.listTasks()).map((task) => task.id);
     const pluginManager = agentSystem.pluginManager;
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";

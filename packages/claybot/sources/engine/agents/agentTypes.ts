@@ -9,7 +9,7 @@ import type { ConnectorMessage, MessageContext } from "../modules/connectors/typ
 import type { AgentRuntime } from "../modules/tools/types.js";
 import type { SessionPermissions } from "../permissions.js";
 import type { PluginManager } from "../plugins/manager.js";
-import type { CronStore } from "../cron/cronStore.js";
+import type { Crons } from "../cron/crons.js";
 import type { SessionDescriptor } from "../sessions/descriptor.js";
 import type { SessionMessage } from "../sessions/types.js";
 import type { SessionState } from "../sessions/sessionStateTypes.js";
@@ -49,7 +49,7 @@ export type AgentSystemContext = {
   readonly authStore: AuthStore;
   readonly pluginManager: PluginManager;
   readonly eventBus: EngineEventBus;
-  readonly cronStore: CronStore;
+  readonly crons: Crons;
   readonly agentRuntime: AgentRuntime;
   readonly verbose: boolean;
 };

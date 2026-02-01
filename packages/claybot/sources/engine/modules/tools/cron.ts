@@ -3,8 +3,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { cronExpressionParse as parseCronExpression } from "../../cron/cronExpressionParse.js";
-import type { CronScheduler } from "../../cron/cronScheduler.js";
-import type { CronStore } from "../../cron/cronStore.js";
+import type { Crons } from "../../cron/crons.js";
 import type { ToolDefinition, ToolExecutionContext } from "./types.js";
 
 const addCronSchema = Type.Object(
@@ -56,10 +55,7 @@ type CronReadMemoryArgs = Static<typeof readCronMemorySchema>;
 type CronWriteMemoryArgs = Static<typeof writeCronMemorySchema>;
 type CronDeleteTaskArgs = Static<typeof deleteCronTaskSchema>;
 
-export function buildCronTool(
-  cron: CronScheduler | null,
-  onTaskAdded?: (task: Awaited<ReturnType<CronScheduler["addTask"]>>) => void
-): ToolDefinition {
+export function buildCronTool(crons: Crons): ToolDefinition {
   return {
     tool: {
       name: "add_cron",
@@ -69,9 +65,6 @@ export function buildCronTool(
     },
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as AddCronToolArgs;
-      if (!cron) {
-        throw new Error("Cron scheduler unavailable");
-      }
 
       if (!parseCronExpression(payload.schedule)) {
         throw new Error(`Invalid cron schedule: ${payload.schedule}`);
@@ -81,7 +74,7 @@ export function buildCronTool(
         throw new Error("Cron task id contains invalid characters.");
       }
 
-      const task = await cron.addTask({
+      const task = await crons.addTask({
         id: payload.id,
         name: payload.name,
         description: payload.description,
@@ -90,7 +83,6 @@ export function buildCronTool(
         enabled: payload.enabled,
         deleteAfterRun: payload.deleteAfterRun
       });
-      onTaskAdded?.(task);
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -116,7 +108,7 @@ export function buildCronTool(
   };
 }
 
-export function buildCronReadTaskTool(store: CronStore): ToolDefinition {
+export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
   return {
     tool: {
       name: "cron_read_task",
@@ -126,7 +118,7 @@ export function buildCronReadTaskTool(store: CronStore): ToolDefinition {
     execute: async (args, context, toolCall) => {
       const payload = args as CronReadTaskArgs;
       const taskId = resolveTaskId(payload.taskId, context);
-      const task = await store.loadTask(taskId);
+      const task = await crons.loadTask(taskId);
       if (!task) {
         throw new Error(`Cron task not found: ${taskId}`);
       }
@@ -163,7 +155,7 @@ export function buildCronReadTaskTool(store: CronStore): ToolDefinition {
   };
 }
 
-export function buildCronReadMemoryTool(store: CronStore): ToolDefinition {
+export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
   return {
     tool: {
       name: "cron_read_memory",
@@ -173,7 +165,7 @@ export function buildCronReadMemoryTool(store: CronStore): ToolDefinition {
     execute: async (args, context, toolCall) => {
       const payload = args as CronReadMemoryArgs;
       const taskId = resolveTaskId(payload.taskId, context);
-      const memory = await store.readMemory(taskId);
+      const memory = await crons.readMemory(taskId);
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -195,7 +187,7 @@ export function buildCronReadMemoryTool(store: CronStore): ToolDefinition {
   };
 }
 
-export function buildCronWriteMemoryTool(store: CronStore): ToolDefinition {
+export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
   return {
     tool: {
       name: "cron_write_memory",
@@ -206,9 +198,9 @@ export function buildCronWriteMemoryTool(store: CronStore): ToolDefinition {
       const payload = args as CronWriteMemoryArgs;
       const taskId = resolveTaskId(payload.taskId, context);
       const content = payload.append
-        ? appendMemory(await store.readMemory(taskId), payload.content)
+        ? appendMemory(await crons.readMemory(taskId), payload.content)
         : payload.content;
-      await store.writeMemory(taskId, content);
+      await crons.writeMemory(taskId, content);
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -230,9 +222,7 @@ export function buildCronWriteMemoryTool(store: CronStore): ToolDefinition {
   };
 }
 
-export function buildCronDeleteTaskTool(
-  cron: CronScheduler | null
-): ToolDefinition {
+export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
   return {
     tool: {
       name: "cron_delete_task",
@@ -241,11 +231,8 @@ export function buildCronDeleteTaskTool(
     },
     execute: async (args, context, toolCall) => {
       const payload = args as CronDeleteTaskArgs;
-      if (!cron) {
-        throw new Error("Cron scheduler unavailable");
-      }
       const taskId = resolveTaskId(payload.taskId, context);
-      const deleted = await cron.deleteTask(taskId);
+      const deleted = await crons.deleteTask(taskId);
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",

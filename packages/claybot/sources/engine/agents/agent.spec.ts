@@ -19,7 +19,7 @@ import type { FileStore } from "../../files/store.js";
 import type { AuthStore } from "../../auth/store.js";
 import type { PluginManager } from "../plugins/manager.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import type { CronStore } from "../cron/cronStore.js";
+import type { Crons } from "../cron/crons.js";
 
 const defaultPermissions: SessionPermissions = {
   workingDir: "/tmp/work",
@@ -70,7 +70,7 @@ async function createAgentSystem(): Promise<{
     authStore: stub<AuthStore>(),
     pluginManager: stub<PluginManager>(),
     eventBus: stub<EngineEventBus>(),
-    cronStore: stub<CronStore>(),
+    crons: stub<Crons>(),
     agentRuntime: stubRuntime(),
     verbose: false
   } satisfies AgentSystemContext;

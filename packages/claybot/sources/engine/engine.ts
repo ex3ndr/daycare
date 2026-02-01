@@ -46,21 +46,12 @@ import {
 } from "./modules/tools/heartbeat.js";
 import { buildSendSessionMessageTool, buildStartBackgroundAgentTool } from "./modules/tools/background.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
-import type {
-  AgentRuntime,
-  HeartbeatAddArgs,
-  HeartbeatRemoveArgs,
-  ToolExecutionResult
-} from "./modules/tools/types.js";
-import { CronScheduler } from "./cron/cronScheduler.js";
-import { CronStore } from "./cron/cronStore.js";
-import { HeartbeatScheduler } from "./heartbeat/heartbeatScheduler.js";
-import { heartbeatPromptBuildBatch } from "./heartbeat/heartbeatPromptBuildBatch.js";
+import type { AgentRuntime, ToolExecutionResult } from "./modules/tools/types.js";
+import { Crons } from "./cron/crons.js";
+import { Heartbeats } from "./heartbeat/heartbeats.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
 import { sessionDescriptorBuild } from "./sessions/sessionDescriptorBuild.js";
 import type { SessionState } from "./sessions/sessionStateTypes.js";
-import { HeartbeatStore } from "./heartbeat/heartbeatStore.js";
-import type { HeartbeatDefinition } from "./heartbeat/heartbeatTypes.js";
 import { EngineEventBus } from "./ipc/events.js";
 import { ProviderManager } from "../providers/manager.js";
 
@@ -90,10 +81,8 @@ export class Engine {
   readonly providerManager: ProviderManager;
   readonly agentSystem: AgentSystem;
   readonly agentRuntime: AgentRuntime;
-  readonly cron: CronScheduler;
-  readonly cronStore: CronStore;
-  readonly heartbeat: HeartbeatScheduler;
-  readonly heartbeatStore: HeartbeatStore;
+  readonly crons: Crons;
+  readonly heartbeats: Heartbeats;
   readonly inferenceRouter: InferenceRouter;
   readonly eventBus: EngineEventBus;
   readonly verbose: boolean;
@@ -167,17 +156,59 @@ export class Engine {
       imageRegistry: this.modules.images
     });
 
-    this.cronStore = new CronStore(path.join(this.configDir, "cron"));
-    this.heartbeatStore = new HeartbeatStore(path.join(this.configDir, "heartbeat"));
+    let agentSystem!: AgentSystem;
+    this.crons = new Crons({
+      basePath: path.join(this.configDir, "cron"),
+      eventBus: this.eventBus,
+      onTask: async (task, context) => {
+        const messageContext = agentSystem.withProviderContext({
+          ...context,
+          cron: {
+            taskId: task.taskId,
+            taskUid: task.taskUid,
+            taskName: task.taskName,
+            memoryPath: task.memoryPath,
+            filesPath: task.filesPath
+          }
+        });
+        logger.debug(
+          `CronScheduler.onTask triggered channelId=${messageContext.channelId} sessionId=${messageContext.sessionId}`
+        );
+        await agentSystem.startBackgroundAgent({
+          prompt: task.prompt,
+          sessionId: messageContext.sessionId,
+          name: task.taskName,
+          context: {
+            userId: "cron",
+            cron: messageContext.cron,
+            providerId: messageContext.providerId,
+            channelType: messageContext.channelType,
+            channelId: messageContext.channelId
+          }
+        });
+      }
+    });
+    this.heartbeats = new Heartbeats({
+      basePath: path.join(this.configDir, "heartbeat"),
+      eventBus: this.eventBus,
+      intervalMs: 30 * 60 * 1000,
+      runtime: {
+        resolveSessionId: () =>
+          agentSystem.resolveSessionId("heartbeat") ??
+          agentSystem.getOrCreateSessionIdForDescriptor({ type: "heartbeat" }),
+        startBackgroundAgent: (args) => agentSystem.startBackgroundAgent(args)
+      }
+    });
 
-    let agentSystem: AgentSystem;
     const agentRuntime: AgentRuntime = {
       startBackgroundAgent: (args) => agentSystem.startBackgroundAgent(args),
       sendSessionMessage: (args) => agentSystem.sendSessionMessage(args),
-      runHeartbeatNow: (args) => this.runHeartbeatNow(args),
-      addHeartbeatTask: (args) => this.addHeartbeatTask(args),
-      listHeartbeatTasks: () => this.listHeartbeatTasks(),
-      removeHeartbeatTask: (args) => this.removeHeartbeatTask(args)
+      runHeartbeatNow: (args) => this.heartbeats.runNow(args),
+      addHeartbeatTask: (args) => this.heartbeats.addTask(args),
+      listHeartbeatTasks: () => this.heartbeats.listTasks(),
+      removeHeartbeatTask: async (args) => ({
+        removed: await this.heartbeats.removeTask(args.id)
+      })
     };
     agentSystem = new AgentSystem({
       settings: this.settings,
@@ -192,72 +223,12 @@ export class Engine {
       inferenceRouter: this.inferenceRouter,
       fileStore: this.fileStore,
       authStore: this.authStore,
-      cronStore: this.cronStore,
+      crons: this.crons,
       agentRuntime,
       verbose: this.verbose
     });
     this.agentSystem = agentSystem;
     this.agentRuntime = agentRuntime;
-
-    this.cron = new CronScheduler({
-      store: this.cronStore,
-      onTask: (task, context) => {
-        const messageContext = this.agentSystem.withProviderContext({
-          ...context,
-          cron: {
-            taskId: task.taskId,
-            taskUid: task.taskUid,
-            taskName: task.taskName,
-            memoryPath: task.memoryPath,
-            filesPath: task.filesPath
-          }
-        });
-        logger.debug(`CronScheduler.onTask triggered channelId=${messageContext.channelId} sessionId=${messageContext.sessionId}`);
-        void this.agentSystem.startBackgroundAgent({
-          prompt: task.prompt,
-          sessionId: messageContext.sessionId,
-          name: task.taskName,
-          context: {
-            userId: "cron",
-            cron: messageContext.cron,
-            providerId: messageContext.providerId,
-            channelType: messageContext.channelType,
-            channelId: messageContext.channelId
-          }
-        });
-      },
-      onError: (error, taskId) => {
-        logger.warn({ taskId, error }, "Cron task failed");
-      },
-      onTaskComplete: (task, runAt) => {
-        this.eventBus.emit("cron.task.ran", { taskId: task.id, runAt: runAt.toISOString() });
-      }
-    });
-
-    this.heartbeat = new HeartbeatScheduler({
-      store: this.heartbeatStore,
-      intervalMs: 30 * 60 * 1000,
-      onRun: async (tasks) => {
-        const resolved = this.agentSystem.resolveSessionId("heartbeat");
-        const sessionId =
-          resolved ?? this.agentSystem.getOrCreateSessionIdForDescriptor({ type: "heartbeat" });
-        const batch = heartbeatPromptBuildBatch(tasks);
-        await this.agentSystem.startBackgroundAgent({
-          prompt: batch.prompt,
-          sessionId,
-          context: {
-            userId: "heartbeat",
-            heartbeat: {}
-          }
-        });
-      },
-      onError: (error, taskIds) => {
-        logger.warn({ taskIds, error }, "Heartbeat task failed");
-      },
-      onTaskComplete: (task, runAt) => {
-        this.eventBus.emit("heartbeat.task.ran", { taskId: task.id, runAt: runAt.toISOString() });
-      }
-    });
 
   }
 
@@ -279,21 +250,15 @@ export class Engine {
     this.pluginEventEngine.start();
     logger.debug("Plugin event engine started");
 
-    await this.cronStore.ensureDir();
-    await this.heartbeatStore.ensureDir();
+    await this.crons.ensureDir();
+    await this.heartbeats.ensureDir();
 
     logger.debug("Registering core tools");
-    this.modules.tools.register(
-      "core",
-      buildCronTool(this.cron, (task) => {
-        logger.debug(`Cron task added via tool taskId=${task.id}`);
-        this.eventBus.emit("cron.task.added", { task });
-      })
-    );
-    this.modules.tools.register("core", buildCronReadTaskTool(this.cronStore));
-    this.modules.tools.register("core", buildCronReadMemoryTool(this.cronStore));
-    this.modules.tools.register("core", buildCronWriteMemoryTool(this.cronStore));
-    this.modules.tools.register("core", buildCronDeleteTaskTool(this.cron));
+    this.modules.tools.register("core", buildCronTool(this.crons));
+    this.modules.tools.register("core", buildCronReadTaskTool(this.crons));
+    this.modules.tools.register("core", buildCronReadMemoryTool(this.crons));
+    this.modules.tools.register("core", buildCronWriteMemoryTool(this.crons));
+    this.modules.tools.register("core", buildCronDeleteTaskTool(this.crons));
     this.modules.tools.register("core", buildHeartbeatRunTool());
     this.modules.tools.register("core", buildHeartbeatAddTool());
     this.modules.tools.register("core", buildHeartbeatListTool());
@@ -313,57 +278,16 @@ export class Engine {
     logger.debug("Agent system started");
 
     logger.debug("Starting cron scheduler");
-    await this.cron.start();
-    this.eventBus.emit("cron.started", { tasks: this.cron.listTasks() });
+    await this.crons.start();
     logger.debug("Starting heartbeat scheduler");
-    await this.heartbeat.start();
-    const heartbeatTasks = await this.heartbeat.listTasks();
-    this.eventBus.emit("heartbeat.started", { tasks: heartbeatTasks });
-    if (heartbeatTasks.length === 0) {
-      logger.info("No heartbeat tasks found on boot.");
-    } else {
-      const withLastRun = heartbeatTasks.filter((task) => !!task.lastRunAt);
-      const missingLastRun = heartbeatTasks.filter((task) => !task.lastRunAt);
-      if (withLastRun.length > 0) {
-        const mostRecent = withLastRun
-          .map((task) => task.lastRunAt as string)
-          .sort()
-          .at(-1);
-        logger.info(
-          {
-            taskCount: heartbeatTasks.length,
-            mostRecentRunAt: mostRecent
-          },
-          "Heartbeat last run loaded on boot"
-        );
-      }
-      if (missingLastRun.length > 0) {
-        logger.info(
-          {
-            taskCount: missingLastRun.length,
-            taskIds: missingLastRun.map((task) => task.id)
-          },
-          "Heartbeat missing last run info; running now"
-        );
-        await this.heartbeat.runNow(missingLastRun.map((task) => task.id));
-      }
-      const nextRunAt =
-        this.heartbeat.getNextRunAt() ??
-        new Date(Date.now() + this.heartbeat.getIntervalMs());
-      logger.info(
-        {
-          nextRunAt: nextRunAt.toISOString()
-        },
-        "Next heartbeat run scheduled"
-      );
-    }
+    await this.heartbeats.start();
     logger.debug("Engine.start() complete");
   }
 
   async shutdown(): Promise<void> {
     await this.modules.connectors.unregisterAll("shutdown");
-    this.cron.stop();
-    this.heartbeat.stop();
+    this.crons.stop();
+    this.heartbeats.stop();
     this.pluginEventEngine.stop();
     await this.pluginManager.unloadAll();
   }
@@ -477,31 +401,6 @@ export class Engine {
       agentRuntime: this.agentRuntime
     });
   }
-
-  private async runHeartbeatNow(args?: { ids?: string[] }): Promise<{ ran: number; taskIds: string[] }> {
-    return this.heartbeat.runNow(args?.ids);
-  }
-
-  private async addHeartbeatTask(args: HeartbeatAddArgs): Promise<HeartbeatDefinition> {
-    return this.heartbeatStore.createTask({
-      id: args.id,
-      title: args.title,
-      prompt: args.prompt,
-      overwrite: args.overwrite
-    });
-  }
-
-  private async listHeartbeatTasks(): Promise<HeartbeatDefinition[]> {
-    return this.heartbeat.listTasks();
-  }
-
-  private async removeHeartbeatTask(
-    args: HeartbeatRemoveArgs
-  ): Promise<{ removed: boolean }> {
-    const removed = await this.heartbeatStore.deleteTask(args.id);
-    return { removed };
-  }
-
 
   async updateSettings(settings: SettingsConfig): Promise<void> {
     const mutableSettings = this.settings as Record<string, unknown>;
