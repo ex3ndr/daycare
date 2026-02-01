@@ -69,6 +69,8 @@ import {
 } from "./tools/heartbeat.js";
 import { buildSendSessionMessageTool, buildStartBackgroundAgentTool } from "./tools/background.js";
 import { formatTimeAI } from "../util/timeFormat.js";
+import { cuid2Is } from "../utils/cuid2Is.js";
+import { stringTruncate } from "../utils/stringTruncate.js";
 import type {
   AgentRuntime,
   HeartbeatAddArgs,
@@ -78,6 +80,7 @@ import type {
 import { CronScheduler } from "./cron.js";
 import { CronStore } from "./cron-store.js";
 import { HeartbeatScheduler } from "./heartbeat.js";
+import { heartbeatPromptBuildBatch } from "./heartbeatPromptBuildBatch.js";
 import { HeartbeatStore, type HeartbeatDefinition } from "./heartbeat-store.js";
 import { EngineEventBus } from "./ipc/events.js";
 import { ProviderManager } from "../providers/manager.js";
@@ -249,11 +252,11 @@ export class Engine {
       }),
       sessionIdFor: (source, context) => {
         const key = this.buildSessionKey(source, context);
-        const cronTaskUid = isCuid2(context.cron?.taskUid ?? null)
+        const cronTaskUid = cuid2Is(context.cron?.taskUid ?? null)
           ? context.cron!.taskUid
           : null;
         // Session ids are always cuid2; ignore non-cuid2 ids from connectors.
-        const explicitId = isCuid2(context.sessionId ?? null)
+        const explicitId = cuid2Is(context.sessionId ?? null)
           ? context.sessionId!
           : cronTaskUid;
         if (explicitId) {
@@ -447,7 +450,7 @@ export class Engine {
         const heartbeatKey = buildSessionKeyFromDescriptor({ type: "heartbeat" });
         const resolved = this.resolveSessionId("heartbeat");
         const sessionId = resolved ?? (heartbeatKey ? this.getOrCreateSessionId(heartbeatKey) : createId());
-        const batch = buildHeartbeatBatchPrompt(tasks);
+        const batch = heartbeatPromptBuildBatch(tasks);
         await this.startBackgroundAgent({
           prompt: batch.prompt,
           sessionId,
@@ -742,7 +745,7 @@ export class Engine {
       arguments: args
     };
     const now = new Date();
-    const sessionId = isCuid2(messageContext?.sessionId ?? null)
+    const sessionId = cuid2Is(messageContext?.sessionId ?? null)
       ? messageContext!.sessionId!
       : createId();
     const session = new Session<SessionState>(
@@ -804,7 +807,7 @@ export class Engine {
     if (!prompt) {
       throw new Error("Background agent prompt is required");
     }
-    const sessionId = isCuid2(args.sessionId ?? null) ? args.sessionId! : createId();
+    const sessionId = cuid2Is(args.sessionId ?? null) ? args.sessionId! : createId();
     const isSubagent = !args.context?.cron && !args.context?.heartbeat;
     const agentParent = args.parentSessionId ?? args.context?.agent?.parentSessionId;
     const agentName = args.name ?? args.context?.agent?.name ?? (isSubagent ? "subagent" : undefined);
@@ -1053,7 +1056,7 @@ export class Engine {
     const connector = this.connectorRegistry.get(source);
     const permissionTag = permissionFormatTag(decision.access);
     const permissionLabel = permissionDescribeDecision(decision.access);
-    let sessionId = isCuid2(context.sessionId ?? null) ? context.sessionId! : null;
+    let sessionId = cuid2Is(context.sessionId ?? null) ? context.sessionId! : null;
     if (!sessionId) {
       const key = this.buildSessionKey(source, context);
       if (key) {
@@ -1143,7 +1146,7 @@ export class Engine {
     const pendingSubagentFailures: Session<SessionState>[] = [];
 
     for (const restored of restoredSessions) {
-      const restoredSessionId = isCuid2(restored.sessionId ?? null)
+      const restoredSessionId = cuid2Is(restored.sessionId ?? null)
         ? restored.sessionId
         : createId();
       const session = this.sessionManager.restoreSession(
@@ -1659,7 +1662,7 @@ export class Engine {
 
   private buildSessionKey(source: string, context: MessageContext): string | null {
     if (context.cron) {
-      if (isCuid2(context.cron.taskUid)) {
+      if (cuid2Is(context.cron.taskUid)) {
         return `cron:${context.cron.taskUid}`;
       }
       return null;
@@ -1968,7 +1971,7 @@ function buildSessionDescriptor(
   sessionId: string
 ): SessionDescriptor {
   if (context.cron) {
-    const taskUid = isCuid2(context.cron.taskUid ?? null) ? context.cron.taskUid! : null;
+    const taskUid = cuid2Is(context.cron.taskUid ?? null) ? context.cron.taskUid! : null;
     if (taskUid) {
       return { type: "cron", id: taskUid };
     }
@@ -2027,45 +2030,11 @@ function buildSessionKeyFromDescriptor(descriptor: SessionDescriptor): string | 
 }
 
 function isCronContext(context: MessageContext, session?: SessionDescriptor): boolean {
-  return isCuid2(context.cron?.taskUid ?? null) || session?.type === "cron";
+  return cuid2Is(context.cron?.taskUid ?? null) || session?.type === "cron";
 }
 
 function isHeartbeatContext(context: MessageContext, session?: SessionDescriptor): boolean {
   return !!context.heartbeat || session?.type === "heartbeat";
-}
-
-function buildHeartbeatBatchPrompt(
-  tasks: HeartbeatDefinition[]
-): { title: string; prompt: string } {
-  const sorted = [...tasks].sort((a, b) => {
-    const titleCompare = a.title.localeCompare(b.title);
-    return titleCompare !== 0 ? titleCompare : a.id.localeCompare(b.id);
-  });
-  if (sorted.length === 1) {
-    return {
-      title: `Heartbeat: ${sorted[0]!.title}`,
-      prompt: sorted[0]!.prompt
-    };
-  }
-  const title = `Heartbeat batch (${sorted.length})`;
-  const sections = sorted.map((task, index) => {
-    const heading = `## ${index + 1}. ${task.title}`;
-    const idLine = `id: ${task.id}`;
-    const body = task.prompt.trim();
-    return [heading, idLine, "", body].filter(Boolean).join("\n");
-  });
-  const prompt = [
-    "# Heartbeat run",
-    "",
-    `Run all ${sorted.length} heartbeat tasks together. Keep results grouped by task.`,
-    "",
-    ...sections
-  ].join("\n");
-  return { title, prompt };
-}
-
-function isCuid2(value: string | null | undefined): value is string {
-  return typeof value === "string" && /^[a-z0-9]{24,32}$/.test(value);
 }
 
 function formatVerboseArgs(args: Record<string, unknown>): string {
@@ -2075,7 +2044,7 @@ function formatVerboseArgs(args: Record<string, unknown>): string {
   }
   const formatted = entries.map(([key, value]) => {
     const valueStr = typeof value === "string"
-      ? truncateString(value, 100)
+      ? stringTruncate(value, 100)
       : JSON.stringify(value);
     return `${key}=${valueStr}`;
   });
@@ -2086,24 +2055,17 @@ function formatVerboseToolResult(result: ToolExecutionResult): string {
   if (result.toolMessage.isError) {
     const errorContent = result.toolMessage.content;
     const errorText = typeof errorContent === "string"
-      ? truncateString(errorContent, 200)
-      : truncateString(JSON.stringify(errorContent), 200);
+      ? stringTruncate(errorContent, 200)
+      : stringTruncate(JSON.stringify(errorContent), 200);
     return `[error] ${errorText}`;
   }
   const content = result.toolMessage.content;
   const contentText = typeof content === "string"
     ? content
     : JSON.stringify(content);
-  const truncated = truncateString(contentText, 300);
+  const truncated = stringTruncate(contentText, 300);
   const fileInfo = result.files?.length
     ? ` (${result.files.length} file${result.files.length > 1 ? "s" : ""})`
     : "";
   return `[result]${fileInfo} ${truncated}`;
-}
-
-function truncateString(str: string, maxLength: number): string {
-  if (str.length <= maxLength) {
-    return str;
-  }
-  return str.slice(0, maxLength) + "...";
 }
