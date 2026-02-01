@@ -16,6 +16,8 @@ Each skill is a folder containing a `SKILL.md` file. The folder name becomes
 the skill name shown to the agent. The system prompt includes the **absolute
 path** to each skill so the agent can read it directly.
 
+The system prompt lists skills in XML tags to make parsing explicit.
+
 ## SKILL.md format (Agent Skills spec)
 
 `SKILL.md` must start with YAML frontmatter followed by Markdown content.

@@ -7,6 +7,7 @@ import { getLogger } from "../../log.js";
 export type AgentSkill = {
   id: string;
   name: string;
+  description?: string | null;
   path: string;
   source: "core" | "plugin";
   pluginId?: string;
@@ -20,6 +21,11 @@ export type PluginSkillRegistration = {
 type SkillSource =
   | { source: "core"; root?: string }
   | { source: "plugin"; pluginId: string };
+
+type SkillFrontmatter = {
+  name?: string;
+  description?: string;
+};
 
 const logger = getLogger("engine.skills");
 const SKILL_FILENAME = "skill.md";
@@ -68,18 +74,32 @@ export function formatSkillsPrompt(skills: AgentSkill[]): string {
   }
 
   const lines = [
-    "## Skills",
-    "Skills live on disk and are not loaded automatically.",
-    "Load a skill by reading its file. Reload by reading the file again. Unload by explicitly ignoring its guidance.",
-    "",
-    "Available skills:"
+    "<skills>",
+    "  <instructions>",
+    "    <load>Read the skill file to load it.</load>",
+    "    <reload>Read the skill file again to reload it.</reload>",
+    "    <unload>Explicitly ignore the skill guidance to unload it.</unload>",
+    "  </instructions>",
+    "  <available>"
   ];
 
   for (const skill of ordered) {
     const sourceLabel =
       skill.source === "plugin" ? `plugin:${skill.pluginId ?? "unknown"}` : "core";
-    lines.push(`- ${skill.name} (${sourceLabel}) -> ${skill.path}`);
+    const name = escapeXml(skill.name);
+    const description = skill.description ? escapeXml(skill.description) : "";
+    lines.push("    <skill>");
+    lines.push(`      <name>${name}</name>`);
+    if (description.length > 0) {
+      lines.push(`      <description>${description}</description>`);
+    }
+    lines.push(`      <source>${escapeXml(sourceLabel)}</source>`);
+    lines.push(`      <path>${escapeXml(skill.path)}</path>`);
+    lines.push("    </skill>");
   }
+
+  lines.push("  </available>");
+  lines.push("</skills>");
 
   return lines.join("\n");
 }
@@ -146,12 +166,23 @@ async function resolveSkill(
     return null;
   }
 
-  const name = formatSkillName(resolvedPath);
+  let content = "";
+  try {
+    content = await fs.readFile(resolvedPath, "utf8");
+  } catch (error) {
+    logger.warn({ path: resolvedPath, error }, "Skill file not readable; skipping");
+    return null;
+  }
+
+  const metadata = parseSkillFrontmatter(content);
+  const name = metadata.name?.trim().length ? metadata.name.trim() : formatSkillName(resolvedPath);
+  const description = metadata.description?.trim().length ? metadata.description.trim() : null;
   const id = buildSkillId(resolvedPath, source, root);
 
   return {
     id,
     name,
+    description,
     path: resolvedPath,
     source: source.source,
     pluginId: source.source === "plugin" ? source.pluginId : undefined
@@ -173,6 +204,128 @@ async function isReadableFile(filePath: string): Promise<boolean> {
     }
     throw error;
   }
+}
+
+function parseSkillFrontmatter(content: string): SkillFrontmatter {
+  const lines = content.split(/\r?\n/);
+  const firstLine = lines[0] ?? "";
+  if (lines.length === 0 || firstLine.trim() !== "---") {
+    return {};
+  }
+
+  const frontmatter: string[] = [];
+  for (let i = 1; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    if (line.trim() === "---" || line.trim() === "...") {
+      break;
+    }
+    frontmatter.push(line);
+  }
+
+  if (frontmatter.length === 0) {
+    return {};
+  }
+
+  return parseYamlFrontmatter(frontmatter);
+}
+
+function parseYamlFrontmatter(lines: string[]): SkillFrontmatter {
+  const result: SkillFrontmatter = {};
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    if (!line || line.trim().length === 0 || line.trim().startsWith("#")) {
+      continue;
+    }
+
+    const match = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+
+    const key = match[1];
+    let value = match[2] ?? "";
+
+    if (value === "|" || value === ">" || value.trim().length === 0) {
+      const block = collectBlockScalar(lines, i + 1);
+      i = block.nextIndex - 1;
+      value = value === ">" ? block.value.replace(/\n/g, " ") : block.value;
+    } else {
+      value = value.trim();
+    }
+
+    const normalized = normalizeYamlValue(value);
+    if (key === "name") {
+      result.name = normalized;
+    }
+    if (key === "description") {
+      result.description = normalized;
+    }
+  }
+
+  return result;
+}
+
+function collectBlockScalar(lines: string[], startIndex: number): { value: string; nextIndex: number } {
+  const blockLines: string[] = [];
+  let minIndent: number | null = null;
+  let index = startIndex;
+
+  for (; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.trim().length === 0) {
+      blockLines.push("");
+      continue;
+    }
+    const match = line.match(/^(\s+)/);
+    if (!match) {
+      break;
+    }
+    const indentMatch = match[1];
+    if (!indentMatch) {
+      break;
+    }
+    const indent = indentMatch.length;
+    if (minIndent === null || indent < minIndent) {
+      minIndent = indent;
+    }
+    blockLines.push(line);
+  }
+
+  if (blockLines.length === 0) {
+    return { value: "", nextIndex: index };
+  }
+
+  const trimmed = blockLines.map((line) => {
+    if (minIndent && line.length >= minIndent) {
+      return line.slice(minIndent);
+    }
+    return line.trim();
+  });
+
+  return { value: trimmed.join("\n").trimEnd(), nextIndex: index };
+}
+
+function normalizeYamlValue(value: string): string {
+  if (value.length === 0) {
+    return value;
+  }
+  if (value.startsWith("\"") && value.endsWith("\"")) {
+    return unescapeYamlDouble(value.slice(1, -1));
+  }
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replace(/''/g, "'");
+  }
+  return value;
+}
+
+function unescapeYamlDouble(value: string): string {
+  return value
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\r/g, "\r")
+    .replace(/\\"/g, "\"")
+    .replace(/\\\\/g, "\\");
 }
 
 function buildSkillId(filePath: string, source: SkillSource, root?: string): string {
@@ -206,6 +359,15 @@ function formatSkillName(filePath: string): string {
 
 function normalizeName(value: string): string {
   return value.replace(/[-_]+/g, " ").trim();
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 function sortSkills(skills: AgentSkill[]): AgentSkill[] {
