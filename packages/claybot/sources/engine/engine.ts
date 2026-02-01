@@ -1,6 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
 import type { Context, ToolCall } from "@mariozechner/pi-ai";
-import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { getLogger } from "../log.js";
@@ -26,7 +25,6 @@ import { buildPluginCatalog } from "./plugins/catalog.js";
 import type { SettingsConfig } from "../settings.js";
 import {
   ensureWorkspaceDir,
-  normalizePermissions,
   resolveWorkspaceDir,
   type SessionPermissions
 } from "./permissions.js";
@@ -68,7 +66,6 @@ import {
   buildHeartbeatRunTool
 } from "./tools/heartbeat.js";
 import { buildSendSessionMessageTool, buildStartBackgroundAgentTool } from "./tools/background.js";
-import { formatTimeAI } from "../util/timeFormat.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
 import { stringTruncate } from "../utils/stringTruncate.js";
 import type {
@@ -81,6 +78,20 @@ import { CronScheduler } from "./cron.js";
 import { CronStore } from "./cron-store.js";
 import { HeartbeatScheduler } from "./heartbeat.js";
 import { heartbeatPromptBuildBatch } from "./heartbeatPromptBuildBatch.js";
+import { messageBuildSystemText } from "./messages/messageBuildSystemText.js";
+import { messageBuildUser } from "./messages/messageBuildUser.js";
+import { messageExtractText } from "./messages/messageExtractText.js";
+import { messageExtractToolCalls } from "./messages/messageExtractToolCalls.js";
+import { messageFormatIncoming } from "./messages/messageFormatIncoming.js";
+import { messageIsSystemText } from "./messages/messageIsSystemText.js";
+import { sessionContextIsCron } from "./sessions/sessionContextIsCron.js";
+import { sessionContextIsHeartbeat } from "./sessions/sessionContextIsHeartbeat.js";
+import { sessionDescriptorBuild } from "./sessions/sessionDescriptorBuild.js";
+import { sessionKeyBuild } from "./sessions/sessionKeyBuild.js";
+import { sessionRoutingSanitize } from "./sessions/sessionRoutingSanitize.js";
+import { sessionStateNormalize } from "./sessions/sessionStateNormalize.js";
+import { sessionTimestampGet } from "./sessions/sessionTimestampGet.js";
+import type { SessionState } from "./sessions/sessionStateTypes.js";
 import { HeartbeatStore, type HeartbeatDefinition } from "./heartbeat-store.js";
 import { EngineEventBus } from "./ipc/events.js";
 import { ProviderManager } from "../providers/manager.js";
@@ -94,22 +105,6 @@ const BACKGROUND_TOOL_DENYLIST = new Set([
   "set_reaction",
   "send_file"
 ]);
-
-type SessionState = {
-  context: Context;
-  providerId?: string;
-  permissions: SessionPermissions;
-  session?: SessionDescriptor;
-  routing?: {
-    source: string;
-    context: MessageContext;
-  };
-  agent?: {
-    kind: "background";
-    parentSessionId?: string;
-    name?: string;
-  };
-};
 
 type BackgroundAgentState = {
   sessionId: string;
@@ -275,7 +270,7 @@ export class Engine {
       },
       storageIdFactory: () => this.sessionStore.createStorageId(),
       messageTransform: (message, context, receivedAt) => {
-        return formatIncomingMessage(message, context, receivedAt);
+        return messageFormatIncoming(message, context, receivedAt);
       },
       onSessionCreated: (session, source, context) => {
         this.captureRouting(session, source, context);
@@ -284,13 +279,13 @@ export class Engine {
         if (providerId) {
           session.context.state.providerId = providerId;
         }
-        session.context.state.session = buildSessionDescriptor(source, context, session.id);
+        session.context.state.session = sessionDescriptorBuild(source, context, session.id);
         if (context.cron?.filesPath) {
           session.context.state.permissions = permissionBuildCron(
             this.defaultPermissions,
             context.cron.filesPath
           );
-        } else if (isHeartbeatContext(context, session.context.state.session)) {
+        } else if (sessionContextIsHeartbeat(context, session.context.state.session)) {
           session.context.state.permissions = permissionMergeDefault(
             session.context.state.permissions,
             this.defaultPermissions
@@ -333,7 +328,7 @@ export class Engine {
           "Session updated"
         );
         const rawText = entry.message.rawText ?? entry.message.text ?? "";
-        if (!isSystemMessageText(rawText)) {
+        if (!messageIsSystemText(rawText)) {
           void this.sessionStore.recordIncoming(session, entry, source).catch((error) => {
             logger.warn(
               { sessionId: session.id, source, messageId: entry.id, error },
@@ -447,7 +442,7 @@ export class Engine {
       store: this.heartbeatStore,
       intervalMs: 30 * 60 * 1000,
       onRun: async (tasks) => {
-        const heartbeatKey = buildSessionKeyFromDescriptor({ type: "heartbeat" });
+        const heartbeatKey = sessionKeyBuild({ type: "heartbeat" });
         const resolved = this.resolveSessionId("heartbeat");
         const sessionId = resolved ?? (heartbeatKey ? this.getOrCreateSessionId(heartbeatKey) : createId());
         const batch = heartbeatPromptBuildBatch(tasks);
@@ -769,7 +764,7 @@ export class Engine {
         userId: "system",
         sessionId
       };
-    session.context.state.session = buildSessionDescriptor("system", context, sessionId);
+    session.context.state.session = sessionDescriptorBuild("system", context, sessionId);
 
     return this.toolResolver.execute(toolCall, {
       connectorRegistry: this.connectorRegistry,
@@ -865,7 +860,7 @@ export class Engine {
     }
     const context = { ...routing.context, messageId: undefined, commands: undefined };
     const message: ConnectorMessage = {
-      text: buildSystemMessageText(args.text, args.origin)
+      text: messageBuildSystemText(args.text, args.origin)
     };
     await this.sessionManager.handleMessage(
       source,
@@ -921,8 +916,8 @@ export class Engine {
       return null;
     }
     candidates.sort((a, b) => {
-      const aTime = getSessionTimestamp(a.context.updatedAt ?? a.context.createdAt);
-      const bTime = getSessionTimestamp(b.context.updatedAt ?? b.context.createdAt);
+      const aTime = sessionTimestampGet(a.context.updatedAt ?? a.context.createdAt);
+      const bTime = sessionTimestampGet(b.context.updatedAt ?? b.context.createdAt);
       return bTime - aTime;
     });
     return candidates[0]?.id ?? null;
@@ -995,7 +990,7 @@ export class Engine {
   ): void {
     session.context.state.routing = {
       source,
-      context: sanitizeRoutingContext(context)
+      context: sessionRoutingSanitize(context)
     };
   }
 
@@ -1152,7 +1147,7 @@ export class Engine {
       const session = this.sessionManager.restoreSession(
         restoredSessionId,
         restored.storageId,
-        normalizeSessionState(restored.state, this.defaultPermissions),
+        sessionStateNormalize(restored.state, this.defaultPermissions),
         restored.createdAt,
         restored.updatedAt
       );
@@ -1173,7 +1168,7 @@ export class Engine {
         "Session restored"
       );
       const sessionKey = session.context.state.session
-        ? buildSessionKeyFromDescriptor(session.context.state.session)
+        ? sessionKeyBuild(session.context.state.session)
         : null;
       if (sessionKey) {
         this.sessionKeyMap.set(sessionKey, session.id);
@@ -1263,14 +1258,14 @@ export class Engine {
     );
 
     if (!session.context.state.session) {
-      session.context.state.session = buildSessionDescriptor(source, entry.context, session.id);
+      session.context.state.session = sessionDescriptorBuild(source, entry.context, session.id);
     }
     if (entry.context.cron?.filesPath) {
       session.context.state.permissions = permissionBuildCron(
         this.defaultPermissions,
         entry.context.cron.filesPath
       );
-    } else if (isHeartbeatContext(entry.context, session.context.state.session)) {
+    } else if (sessionContextIsHeartbeat(entry.context, session.context.state.session)) {
       session.context.state.permissions = permissionMergeDefault(
         session.context.state.permissions,
         this.defaultPermissions
@@ -1302,7 +1297,7 @@ export class Engine {
     const skills = [...coreSkills, ...pluginSkills];
     const skillsPrompt = formatSkillsPrompt(skills);
     const agentKind = session.context.state.agent?.kind ?? entry.context.agent?.kind;
-    const allowCronTools = isCronContext(entry.context, session.context.state.session);
+    const allowCronTools = sessionContextIsCron(entry.context, session.context.state.session);
     const systemPrompt = await createSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
@@ -1346,7 +1341,7 @@ export class Engine {
     );
 
     logger.debug("Building user message from entry");
-    const userMessage = await buildUserMessage(entry);
+    const userMessage = await messageBuildUser(entry);
     context.messages.push(userMessage);
     logger.debug(`User message added to context totalMessages=${context.messages.length}`);
 
@@ -1409,7 +1404,7 @@ export class Engine {
         logger.debug(`Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`);
         context.messages.push(response.message);
 
-        const responseText = extractAssistantText(response.message);
+        const responseText = messageExtractText(response.message);
         const hasResponseText = !!responseText && responseText.trim().length > 0;
         lastResponseTextSent = false;
         if (hasResponseText && connector) {
@@ -1439,7 +1434,7 @@ export class Engine {
           }
         }
 
-        const toolCalls = extractToolCalls(response.message);
+        const toolCalls = messageExtractToolCalls(response.message);
         logger.debug(`Extracted tool calls from response toolCallCount=${toolCalls.length}`);
         if (toolCalls.length === 0) {
           logger.debug(`No tool calls, breaking inference loop iteration=${iteration}`);
@@ -1570,7 +1565,7 @@ export class Engine {
       return;
     }
 
-    const responseText = extractAssistantText(response.message);
+    const responseText = messageExtractText(response.message);
     const hasResponseText = !!responseText && responseText.trim().length > 0;
     logger.debug(`Extracted assistant text hasText=${hasResponseText} textLength=${responseText?.length ?? 0} generatedFileCount=${generatedFiles.length}`);
 
@@ -1684,47 +1679,6 @@ export class Engine {
   }
 }
 
-async function buildUserMessage(
-  entry: SessionMessage
-): Promise<Context["messages"][number]> {
-  const text = entry.message.text ?? "";
-  const files = entry.message.files ?? [];
-  if (files.length === 0) {
-    return {
-      role: "user",
-      content: text,
-      timestamp: Date.now()
-    };
-  }
-
-  const content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }> = [];
-  if (text) {
-    content.push({ type: "text", text });
-  }
-
-  for (const file of files) {
-    if (file.mimeType.startsWith("image/")) {
-      const data = await fs.readFile(file.path);
-      content.push({
-        type: "image",
-        data: data.toString("base64"),
-        mimeType: file.mimeType
-      });
-    } else {
-      content.push({
-        type: "text",
-        text: `File received: ${file.name} (${file.mimeType}, ${file.size} bytes)`
-      });
-    }
-  }
-
-  return {
-    role: "user",
-    content,
-    timestamp: Date.now()
-  };
-}
-
 async function recordOutgoingEntry(
   sessionStore: SessionStore<SessionState>,
   session: import("./sessions/session.js").Session<SessionState>,
@@ -1754,26 +1708,6 @@ async function recordSessionState(
   }
 }
 
-function extractAssistantText(message: Context["messages"][number]): string | null {
-  if (message.role !== "assistant") {
-    return null;
-  }
-  const parts = message.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .filter((text): text is string => typeof text === "string" && text.length > 0);
-  return parts.join("\n");
-}
-
-function extractToolCalls(message: Context["messages"][number]): ToolCall[] {
-  if (message.role !== "assistant") {
-    return [];
-  }
-  return message.content.filter(
-    (block): block is ToolCall => block.type === "toolCall"
-  );
-}
-
 function filterConnectorTools<T extends { name: string }>(
   tools: T[],
   supportsFiles: boolean,
@@ -1789,42 +1723,6 @@ function filterConnectorTools<T extends { name: string }>(
   return filtered;
 }
 
-function formatIncomingMessage(
-  message: ConnectorMessage,
-  context: MessageContext,
-  receivedAt: Date
-): ConnectorMessage {
-  if (!message.text && (!message.files || message.files.length === 0)) {
-    return message;
-  }
-  const time = formatTimeAI(receivedAt);
-  const text = message.text ?? "";
-  const messageIdTag = context.messageId
-    ? `<message_id>${context.messageId}</message_id>`
-    : "";
-  return {
-    ...message,
-    rawText: message.rawText ?? message.text,
-    text: `<time>${time}</time>${messageIdTag}<message>${text}</message>`
-  };
-}
-
-function sanitizeRoutingContext(context: MessageContext): MessageContext {
-  const { messageId, commands, ...rest } = context;
-  return { ...rest };
-}
-
-function buildSystemMessageText(text: string, origin?: "background" | "system"): string {
-  const trimmed = text.trim();
-  const originTag = origin ? ` origin=\"${origin}\"` : "";
-  return `<system_message${originTag}>${trimmed}</system_message>`;
-}
-
-function isSystemMessageText(text: string): boolean {
-  const trimmed = text.trim();
-  return trimmed.startsWith("<system_message");
-}
-
 function isNonBackgroundSession(source: string, context: MessageContext): boolean {
   const blockedSources = new Set(["system", "cron", "background"]);
   if (blockedSources.has(source)) {
@@ -1838,17 +1736,6 @@ function isNonBackgroundSession(source: string, context: MessageContext): boolea
     return false;
   }
   return true;
-}
-
-function getSessionTimestamp(value?: Date | string): number {
-  if (!value) {
-    return 0;
-  }
-  if (value instanceof Date) {
-    return value.getTime();
-  }
-  const parsed = new Date(value);
-  return Number.isFinite(parsed.getTime()) ? parsed.getTime() : 0;
 }
 
 type ResolvedCommand = {
@@ -1887,154 +1774,6 @@ function resolveIncomingCommand(entry: SessionMessage): ResolvedCommand | null {
     raw: head,
     args: args.length > 0 ? args : undefined
   };
-}
-
-function normalizeSessionState(
-  state: unknown,
-  defaultPermissions: SessionPermissions
-): SessionState {
-  const fallback: SessionState = {
-    context: { messages: [] },
-    providerId: undefined,
-    permissions: { ...defaultPermissions },
-    session: undefined
-  };
-  if (state && typeof state === "object") {
-    const candidate = state as {
-      context?: Context;
-      providerId?: string;
-      permissions?: unknown;
-      session?: unknown;
-      routing?: unknown;
-      agent?: unknown;
-    };
-    const permissions = normalizePermissions(
-      candidate.permissions,
-      defaultPermissions.workingDir
-    );
-    permissionEnsureDefaultFile(permissions, defaultPermissions);
-    const session = normalizeSessionDescriptor(candidate.session);
-    const routing = normalizeRouting(candidate.routing);
-    const agent = normalizeAgent(candidate.agent);
-    if (candidate.context && Array.isArray(candidate.context.messages)) {
-      return {
-        context: candidate.context,
-        providerId: typeof candidate.providerId === "string" ? candidate.providerId : undefined,
-        permissions,
-        session,
-        routing,
-        agent
-      };
-    }
-    return { ...fallback, permissions, session, routing, agent };
-  }
-  return fallback;
-}
-
-function normalizeRouting(value: unknown): SessionState["routing"] | undefined {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-  const candidate = value as { source?: unknown; context?: unknown };
-  if (typeof candidate.source !== "string") {
-    return undefined;
-  }
-  if (!candidate.context || typeof candidate.context !== "object") {
-    return undefined;
-  }
-  const context = candidate.context as MessageContext;
-  if (!context.channelId || !context.userId) {
-    return undefined;
-  }
-  return { source: candidate.source, context };
-}
-
-function normalizeAgent(value: unknown): SessionState["agent"] | undefined {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-  const candidate = value as { kind?: unknown; parentSessionId?: unknown; name?: unknown };
-  if (candidate.kind !== "background") {
-    return undefined;
-  }
-  return {
-    kind: "background",
-    parentSessionId:
-      typeof candidate.parentSessionId === "string" ? candidate.parentSessionId : undefined,
-    name: typeof candidate.name === "string" ? candidate.name : undefined
-  };
-}
-
-function buildSessionDescriptor(
-  source: string,
-  context: MessageContext,
-  sessionId: string
-): SessionDescriptor {
-  if (context.cron) {
-    const taskUid = cuid2Is(context.cron.taskUid ?? null) ? context.cron.taskUid! : null;
-    if (taskUid) {
-      return { type: "cron", id: taskUid };
-    }
-  }
-  if (context.heartbeat) {
-    return { type: "heartbeat" };
-  }
-  if (
-    source &&
-    source !== "system" &&
-    source !== "cron" &&
-    source !== "background" &&
-    context.userId &&
-    context.channelId
-  ) {
-    return {
-      type: "user",
-      connector: source,
-      userId: context.userId,
-      channelId: context.channelId
-    };
-  }
-  if (context.agent?.kind === "background") {
-    if (!context.agent.parentSessionId || !context.agent.name) {
-      throw new Error("Subagent context requires parentSessionId and name");
-    }
-    return {
-      type: "subagent",
-      id: sessionId,
-      parentSessionId: context.agent.parentSessionId,
-      name: context.agent.name
-    };
-  }
-  if (source === "system") {
-    return {
-      type: "subagent",
-      id: sessionId,
-      parentSessionId: "system",
-      name: "system"
-    };
-  }
-  throw new Error("Session descriptor could not be resolved");
-}
-
-function buildSessionKeyFromDescriptor(descriptor: SessionDescriptor): string | null {
-  switch (descriptor.type) {
-    case "cron":
-      return `cron:${descriptor.id}`;
-    case "heartbeat":
-      return "heartbeat";
-    case "user":
-      return `user:${descriptor.connector}:${descriptor.channelId}:${descriptor.userId}`;
-    default:
-      return null;
-  }
-}
-
-function isCronContext(context: MessageContext, session?: SessionDescriptor): boolean {
-  return cuid2Is(context.cron?.taskUid ?? null) || session?.type === "cron";
-}
-
-function isHeartbeatContext(context: MessageContext, session?: SessionDescriptor): boolean {
-  return !!context.heartbeat || session?.type === "heartbeat";
 }
 
 function formatVerboseArgs(args: Record<string, unknown>): string {
