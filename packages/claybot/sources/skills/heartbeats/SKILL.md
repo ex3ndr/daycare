@@ -1,3 +1,8 @@
+---
+name: heartbeats
+description: Manage periodic check-ins with heartbeat tasks. Use when you need recurring reviews, status checks, or lightweight reminders that should be reviewed and updated over time.
+---
+
 # Heartbeats
 
 Use heartbeats for periodic check-ins that should be reviewed or reasoned about.
