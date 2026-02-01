@@ -139,7 +139,7 @@ export class Engine {
     this.configDir = options.configDir;
     this.verbose = options.verbose ?? false;
     this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
-    this.defaultPermissions = buildDefaultPermissions(this.workspaceDir);
+    this.defaultPermissions = buildDefaultPermissions(this.workspaceDir, this.configDir);
     this.eventBus = options.eventBus;
     this.authStore = new AuthStore(options.authPath);
     this.fileStore = new FileStore({ basePath: `${this.dataDir}/files` });
@@ -253,7 +253,10 @@ export class Engine {
             { workingDir: context.cron.filesPath },
             this.defaultPermissions.workingDir
           );
-          ensureDefaultFilePermissions(session.context.state.permissions);
+          ensureDefaultFilePermissions(
+            session.context.state.permissions,
+            this.defaultPermissions
+          );
         }
         logger.info(
           {
@@ -916,7 +919,7 @@ export class Engine {
   async updateSettings(settings: SettingsConfig): Promise<void> {
     this.settings = settings;
     this.workspaceDir = resolveWorkspaceDir(this.configDir, this.settings.assistant ?? null);
-    this.defaultPermissions = buildDefaultPermissions(this.workspaceDir);
+    this.defaultPermissions = buildDefaultPermissions(this.workspaceDir, this.configDir);
     await ensureWorkspaceDir(this.workspaceDir);
     await this.providerManager.sync(settings);
     await this.pluginManager.syncWithSettings(settings);
@@ -1186,7 +1189,7 @@ export class Engine {
         { workingDir: entry.context.cron.filesPath },
         this.defaultPermissions.workingDir
       );
-      ensureDefaultFilePermissions(session.context.state.permissions);
+      ensureDefaultFilePermissions(session.context.state.permissions, this.defaultPermissions);
     }
 
     const command = resolveIncomingCommand(entry);
@@ -1724,7 +1727,7 @@ function normalizeSessionState(
       candidate.permissions,
       defaultPermissions.workingDir
     );
-    ensureDefaultFilePermissions(permissions);
+    ensureDefaultFilePermissions(permissions, defaultPermissions);
     const routing = normalizeRouting(candidate.routing);
     const agent = normalizeAgent(candidate.agent);
     if (candidate.context && Array.isArray(candidate.context.messages)) {
@@ -1775,10 +1778,15 @@ function normalizeAgent(value: unknown): SessionState["agent"] | undefined {
   };
 }
 
-function buildDefaultPermissions(workingDir: string): SessionPermissions {
-  const writeDirs = [DEFAULT_SOUL_PATH, DEFAULT_USER_PATH].map((entry) =>
+function buildDefaultPermissions(
+  workingDir: string,
+  configDir: string
+): SessionPermissions {
+  const heartbeatDir = configDir ? path.resolve(configDir, "heartbeat") : null;
+  const writeDefaults = [DEFAULT_SOUL_PATH, DEFAULT_USER_PATH].map((entry) =>
     path.resolve(entry)
   );
+  const writeDirs = heartbeatDir ? [...writeDefaults, heartbeatDir] : writeDefaults;
   const readDirs = [...writeDirs];
   return {
     workingDir: path.resolve(workingDir),
@@ -1788,12 +1796,12 @@ function buildDefaultPermissions(workingDir: string): SessionPermissions {
   };
 }
 
-function ensureDefaultFilePermissions(permissions: SessionPermissions): void {
-  const defaults = [DEFAULT_SOUL_PATH, DEFAULT_USER_PATH].map((entry) =>
-    path.resolve(entry)
-  );
-  const nextWrite = new Set([...permissions.writeDirs, ...defaults]);
-  const nextRead = new Set([...permissions.readDirs, ...defaults]);
+function ensureDefaultFilePermissions(
+  permissions: SessionPermissions,
+  defaults: Pick<SessionPermissions, "writeDirs" | "readDirs">
+): void {
+  const nextWrite = new Set([...permissions.writeDirs, ...defaults.writeDirs]);
+  const nextRead = new Set([...permissions.readDirs, ...defaults.readDirs]);
   permissions.writeDirs = Array.from(nextWrite.values());
   permissions.readDirs = Array.from(nextRead.values());
 }
