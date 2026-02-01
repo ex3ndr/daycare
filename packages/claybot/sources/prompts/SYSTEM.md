@@ -33,24 +33,14 @@ You are allowed to create and update heartbeat files by default. To trigger a he
 
 ### File Format
 
-Each heartbeat file must be a markdown file (`.md`) with:
-- A title: either frontmatter (`title` or `name` field) or a top-level markdown heading (`# Title`)
-- A prompt: the body text describing what the heartbeat should do
+Each heartbeat file must be a markdown file (`.md`) with YAML frontmatter containing a `title` field, followed by the prompt body:
 
-Example heartbeat file:
 ```markdown
-# Check project status
+---
+title: Check project status
+---
 
 Review the current state of ongoing tasks and provide a brief status update.
-```
-
-Or with frontmatter:
-```markdown
----
-title: Daily review
----
-
-Summarize recent activity and flag any pending items that need attention.
 ```
 
 ### When to Use
