@@ -150,8 +150,8 @@ Per session type:
 - **Heartbeat**: Heartbeat sessions run internally (no connector). Pending
   entries are restored without a user-facing notification; the next heartbeat
   run will proceed on schedule.
-- **Subagent**: Subagents do not have direct connector routing. Pending work is
-  restored silently; subagents will continue from the next incoming message.
+- **Subagent**: Pending inbound work triggers a system message to the parent
+  session indicating the subagent failed while offline.
 
 ## Inference and crash handling
 
@@ -172,8 +172,8 @@ Behavior summary:
 - If the tool loop exceeds the max iterations and no response text is produced,
   the engine sends `Tool execution limit reached.` to connector sessions.
 - Subagents/cron/heartbeat sessions do not have direct connector routing. Errors
-  are logged and state is recorded, but no user-facing message is sent unless a
-  subagent explicitly calls `send_session_message`.
+-  are logged and state is recorded, but subagent failures always notify the
+  parent session via `send_session_message`.
 - Crashes mid-processing are handled on next boot via the restore rules above
   (pending inbound messages trigger `Internal error.` for user sessions).
 

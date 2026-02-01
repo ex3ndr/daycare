@@ -1350,6 +1350,26 @@ export class Engine {
     }
   }
 
+  private async notifyPendingSubagentFailures(
+    pending: Array<{ sessionId: string; parentSessionId: string; name: string }>
+  ): Promise<void> {
+    for (const entry of pending) {
+      const message = `Subagent ${entry.name} (${entry.sessionId}) failed: Internal error.`;
+      try {
+        await this.sendSessionMessage({
+          sessionId: entry.parentSessionId,
+          text: message,
+          origin: "background"
+        });
+      } catch (error) {
+        logger.warn(
+          { sessionId: entry.sessionId, parentSessionId: entry.parentSessionId, error },
+          "Failed to notify subagent parent after restore"
+        );
+      }
+    }
+  }
+
   private async handleSessionMessage(
     entry: SessionMessage,
     session: import("./sessions/session.js").Session<SessionState>,
@@ -1577,6 +1597,7 @@ export class Engine {
     } catch (error) {
       logger.debug(`Inference loop caught error error=${String(error)}`);
       logger.warn({ connector: source, error }, "Inference failed");
+      await this.notifySubagentFailure(session, "Inference failed.");
       const message =
         error instanceof Error && error.message === "No inference provider available"
           ? "No inference provider available."
@@ -1644,6 +1665,7 @@ export class Engine {
       if (toolLoopExceeded) {
         const message = "Tool execution limit reached.";
         logger.debug("Tool loop exceeded, sending error message");
+        await this.notifySubagentFailure(session, message);
         try {
           if (connector) {
             await connector.sendMessage(entry.context.channelId, {
