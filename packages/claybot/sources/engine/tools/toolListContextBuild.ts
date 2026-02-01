@@ -1,6 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 
-import type { ConnectorRegistry, ImageGenerationRegistry } from "../modules/_registry.js";
+import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
+import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 
 type ToolListOptions = {
   tools: Tool[];

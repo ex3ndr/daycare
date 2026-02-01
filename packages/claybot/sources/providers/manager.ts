@@ -1,7 +1,8 @@
 import { listProviders, type ProviderSettings, type SettingsConfig } from "../settings.js";
 import type { AuthStore } from "../auth/store.js";
 import type { FileStore } from "../files/store.js";
-import type { InferenceRegistry, ImageGenerationRegistry } from "../engine/modules/_registry.js";
+import type { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
+import type { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition, listProviderDefinitions } from "./catalog.js";
 import type { ProviderInstance } from "./types.js";

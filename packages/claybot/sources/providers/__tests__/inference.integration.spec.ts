@@ -10,7 +10,8 @@ import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 import { AuthStore } from "../../auth/store.js";
 import { FileStore } from "../../files/store.js";
 import { InferenceRouter } from "../../engine/inference/router.js";
-import { ImageGenerationRegistry, InferenceRegistry } from "../../engine/modules/_registry.js";
+import { ImageGenerationRegistry } from "../../engine/modules/imageGenerationRegistry.js";
+import { InferenceRegistry } from "../../engine/modules/inferenceRegistry.js";
 import { ProviderManager } from "../manager.js";
 import { listActiveInferenceProviders } from "../catalog.js";
 

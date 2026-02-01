@@ -4,12 +4,10 @@ import path from "node:path";
 
 import { getLogger } from "../log.js";
 import { Agent } from "./agents/agent.js";
-import { ModuleRegistry } from "./modules/_registry.js";
-import type {
-  ConnectorRegistry,
-  ImageGenerationRegistry,
-  ToolResolver
-} from "./modules/_registry.js";
+import { ModuleRegistry } from "./modules/moduleRegistry.js";
+import type { ConnectorRegistry } from "./modules/connectorRegistry.js";
+import type { ImageGenerationRegistry } from "./modules/imageGenerationRegistry.js";
+import type { ToolResolver } from "./modules/toolResolver.js";
 import type {
   ConnectorMessage,
   MessageContext,

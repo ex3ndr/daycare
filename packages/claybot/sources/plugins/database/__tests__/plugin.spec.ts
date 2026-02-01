@@ -7,7 +7,10 @@ import type { ToolCall } from "@mariozechner/pi-ai";
 
 import { AuthStore } from "../../../auth/store.js";
 import { FileStore } from "../../../files/store.js";
-import { ConnectorRegistry, ImageGenerationRegistry, InferenceRegistry, ToolResolver } from "../../../engine/modules/_registry.js";
+import { ConnectorRegistry } from "../../../engine/modules/connectorRegistry.js";
+import { ImageGenerationRegistry } from "../../../engine/modules/imageGenerationRegistry.js";
+import { InferenceRegistry } from "../../../engine/modules/inferenceRegistry.js";
+import { ToolResolver } from "../../../engine/modules/toolResolver.js";
 import { PluginRegistry } from "../../../engine/plugins/registry.js";
 import { Session } from "../../../engine/sessions/session.js";
 import type { SessionPermissions } from "../../../engine/permissions.js";

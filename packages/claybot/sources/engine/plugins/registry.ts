@@ -1,7 +1,10 @@
 import path from "node:path";
 
 import type { Connector } from "../connectors/types.js";
-import type { ConnectorRegistry, ImageGenerationRegistry, InferenceRegistry, ToolResolver } from "../modules/_registry.js";
+import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
+import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
+import type { InferenceRegistry } from "../modules/inferenceRegistry.js";
+import type { ToolResolver } from "../modules/toolResolver.js";
 import type { InferenceProvider } from "../inference/types.js";
 import type { ImageGenerationProvider } from "../images/types.js";
 import type { ToolDefinition } from "../tools/types.js";
