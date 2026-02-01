@@ -126,6 +126,33 @@ Routing notes:
 - Subagents default to their `parentSessionId`; other sessions fall back to
   `most-recent-foreground` when no session id is provided.
 
+## Restore behavior for pending sessions
+
+On startup the engine restores sessions from JSONL and checks whether the last
+recorded entry was an inbound message without a subsequent state update. If so,
+it treats the session as "not fully processed."
+
+```mermaid
+flowchart TD
+  Boot[Engine boot] --> Load[Load session log]
+  Load --> Pending{last entry incoming?}
+  Pending -->|yes| Notify[Send "Internal error."]
+  Pending -->|no| Done[Restore session state]
+```
+
+Per session type:
+- **User (foreground)**: If the last entry was `incoming` (no state update), the
+  engine attempts to send `Internal error.` back through the connector to the
+  same channel. The session state is restored but the message is not retried.
+- **Cron**: Cron sessions have no connector routing. If a crash happened mid-run
+  there is no outbound notification; the session is restored and the cron
+  scheduler will run again on its next cadence.
+- **Heartbeat**: Heartbeat sessions run internally (no connector). Pending
+  entries are restored without a user-facing notification; the next heartbeat
+  run will proceed on schedule.
+- **Subagent**: Subagents do not have direct connector routing. Pending work is
+  restored silently; subagents will continue from the next incoming message.
+
 ## Implementation references
 
 - Descriptor type + normalization: `packages/claybot/sources/engine/sessions/descriptor.ts`
