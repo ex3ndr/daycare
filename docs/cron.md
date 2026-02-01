@@ -13,6 +13,7 @@ Tasks live under `<config>/cron/<task-id>/`:
 Example `TASK.md`:
 ```markdown
 ---
+taskId: clx9rk1p20000x5p3j7q1x8z1
 name: Daily Report
 schedule: "0 9 * * *"
 enabled: true
@@ -22,18 +23,19 @@ Generate the daily status report and summarize any blockers.
 ```
 
 Frontmatter fields:
+- `taskId` (required) - cuid2 identifier stored in frontmatter; tasks without a valid `taskId` are ignored
 - `name` (required) - human-readable task name
 - `schedule` (required) - 5-field cron expression (`minute hour day month weekday`)
 - `enabled` (optional) - set to `false` to disable a task
 - `description` (optional) - short description used by `cron_read_task`
 - `deleteAfterRun` (optional) - when `true`, delete the task after it runs once
 
-Task ids should be human-friendly slugs (e.g. `create-image-in-morning`).
+Task directory ids should be human-friendly slugs (e.g. `create-image-in-morning`).
 
 ## Execution model
 
 - `CronScheduler` reads tasks from disk and schedules the next run.
-- Each task runs in its own session id: `cron:<task-id>`.
+- Each task runs in its own session id (the `taskId` cuid2 from frontmatter).
 - When a schedule triggers, the task prompt is sent as a message to that session.
 - The system prompt includes the cron task metadata and the memory file location.
 

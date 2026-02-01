@@ -88,6 +88,7 @@ describe("serializeFrontmatter", () => {
 describe("CronStore", () => {
   let tempDir: string;
   let store: CronStore;
+  const cuidPattern = /^[a-z0-9]{24,32}$/;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "cron-store-test-"));
@@ -108,6 +109,7 @@ describe("CronStore", () => {
     });
 
     expect(created.id).toBe("daily-report");
+    expect(created.taskUid).toMatch(cuidPattern);
     expect(created.name).toBe("Daily Report");
     expect(created.description).toBe("Send the daily status report.");
     expect(created.schedule).toBe("0 9 * * *");
@@ -116,6 +118,7 @@ describe("CronStore", () => {
 
     const loaded = await store.loadTask("daily-report");
     expect(loaded).not.toBeNull();
+    expect(loaded!.taskUid).toBe(created.taskUid);
     expect(loaded!.name).toBe("Daily Report");
     expect(loaded!.description).toBe("Send the daily status report.");
     expect(loaded!.prompt).toBe("Generate a daily status report.");
@@ -161,6 +164,7 @@ describe("CronStore", () => {
     expect(updated!.prompt).toBe("Updated prompt");
     expect(updated!.schedule).toBe("* * * * *");
     expect(updated!.deleteAfterRun).toBe(true);
+    expect(updated!.taskUid).toMatch(cuidPattern);
   });
 
   it("deletes a task", async () => {
@@ -207,6 +211,41 @@ describe("CronStore", () => {
   it("returns null for non-existent task", async () => {
     const task = await store.loadTask("does-not-exist");
     expect(task).toBeNull();
+  });
+
+  it("ignores tasks without a valid taskId", async () => {
+    const taskDir = path.join(tempDir, "invalid-task");
+    await fs.mkdir(taskDir, { recursive: true });
+    const taskPath = path.join(taskDir, "TASK.md");
+    const content = `---
+name: Invalid Task
+schedule: "* * * * *"
+---
+
+Do something.`;
+    await fs.writeFile(taskPath, content, "utf8");
+
+    const loaded = await store.loadTask("invalid-task");
+    expect(loaded).toBeNull();
+
+    const badIdDir = path.join(tempDir, "bad-id-task");
+    await fs.mkdir(badIdDir, { recursive: true });
+    const badIdPath = path.join(badIdDir, "TASK.md");
+    const badIdContent = `---
+taskId: not-a-cuid
+name: Bad Task
+schedule: "* * * * *"
+---
+
+Do something else.`;
+    await fs.writeFile(badIdPath, badIdContent, "utf8");
+
+    const badIdLoaded = await store.loadTask("bad-id-task");
+    expect(badIdLoaded).toBeNull();
+
+    const tasks = await store.listTasks();
+    expect(tasks.find((task) => task.id === "invalid-task")).toBeUndefined();
+    expect(tasks.find((task) => task.id === "bad-id-task")).toBeUndefined();
   });
 
   it("generates a slug id from name", async () => {

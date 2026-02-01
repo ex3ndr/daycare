@@ -1,12 +1,15 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { createId } from "@paralleldrive/cuid2";
+
 import { getLogger } from "../log.js";
 
 const logger = getLogger("cron.store");
 
 export type CronTaskDefinition = {
   id: string;
+  taskUid?: string;
   name: string;
   description?: string;
   schedule: string;
@@ -15,7 +18,8 @@ export type CronTaskDefinition = {
   deleteAfterRun?: boolean;
 };
 
-export type CronTaskWithPaths = CronTaskDefinition & {
+export type CronTaskWithPaths = Omit<CronTaskDefinition, "taskUid"> & {
+  taskUid: string;
   taskPath: string;
   memoryPath: string;
   filesPath: string;
@@ -83,6 +87,12 @@ export class CronStore {
     try {
       const content = await fs.readFile(taskPath, "utf8");
       const parsed = parseFrontmatter(content);
+      // Cron task ids must come from frontmatter; do not guess or backfill missing ids.
+      const taskUid = resolveTaskUid(parsed.frontmatter);
+      if (!taskUid || !isCuid2Like(taskUid)) {
+        logger.warn({ taskId, taskUid }, "Cron task missing valid taskId");
+        return null;
+      }
 
       const schedule =
         parsed.frontmatter.schedule ?? parsed.frontmatter.cron;
@@ -99,6 +109,7 @@ export class CronStore {
 
       return {
         id: taskId,
+        taskUid,
         name: String(parsed.frontmatter.name),
         description: parsed.frontmatter.description
           ? String(parsed.frontmatter.description)
@@ -134,10 +145,12 @@ export class CronStore {
     await fs.mkdir(filesPath, { recursive: true });
 
     // Write TASK.md
+    const taskUid = isCuid2Like(definition.taskUid ?? "") ? definition.taskUid! : createId();
     const frontmatter: Frontmatter = {
       name: definition.name,
       schedule: definition.schedule,
-      enabled: definition.enabled ?? true
+      enabled: definition.enabled ?? true,
+      taskId: taskUid
     };
     if (definition.description) {
       frontmatter.description = definition.description;
@@ -155,7 +168,11 @@ export class CronStore {
 
     return {
       id: taskId,
-      ...definition,
+      taskUid,
+      name: definition.name,
+      description: definition.description,
+      schedule: definition.schedule,
+      prompt: definition.prompt,
       enabled: definition.enabled ?? true,
       deleteAfterRun: definition.deleteAfterRun ?? false,
       taskPath,
@@ -176,6 +193,7 @@ export class CronStore {
 
     const updated: CronTaskDefinition = {
       id: taskId,
+      taskUid: existing.taskUid,
       name: updates.name ?? existing.name,
       description: updates.description ?? existing.description,
       schedule: updates.schedule ?? existing.schedule,
@@ -187,7 +205,8 @@ export class CronStore {
     const frontmatter: Frontmatter = {
       name: updated.name,
       schedule: updated.schedule,
-      enabled: updated.enabled ?? true
+      enabled: updated.enabled ?? true,
+      taskId: existing.taskUid
     };
     if (updated.description) {
       frontmatter.description = updated.description;
@@ -202,6 +221,7 @@ export class CronStore {
 
     return {
       ...updated,
+      taskUid: existing.taskUid,
       taskPath: existing.taskPath,
       memoryPath: existing.memoryPath,
       filesPath: existing.filesPath,
@@ -416,6 +436,18 @@ function serializeFrontmatter(frontmatter: Frontmatter, body: string): string {
   lines.push("");
 
   return lines.join("\n");
+}
+
+function resolveTaskUid(frontmatter: Frontmatter): string | null {
+  const candidate = frontmatter.taskId;
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    return candidate.trim();
+  }
+  return null;
+}
+
+function isCuid2Like(value: string): boolean {
+  return /^[a-z0-9]{24,32}$/.test(value);
 }
 
 export { parseFrontmatter, serializeFrontmatter };

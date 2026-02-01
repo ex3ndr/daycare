@@ -139,7 +139,7 @@ describe("CronScheduler", () => {
     const now = new Date("2024-01-15T10:30:00Z");
     vi.setSystemTime(now);
 
-    await store.createTask("exec-test", {
+    const created = await store.createTask("exec-test", {
       name: "Exec Test",
       schedule: "* * * * *",
       prompt: "Execute me"
@@ -160,6 +160,7 @@ describe("CronScheduler", () => {
     expect(onTask).toHaveBeenCalledWith(
       expect.objectContaining({
         taskId: "exec-test",
+        taskUid: created.taskUid,
         taskName: "Exec Test",
         prompt: "Execute me"
       }),
@@ -215,7 +216,7 @@ describe("CronScheduler", () => {
   });
 
   it("provides task context", async () => {
-    await store.createTask("context-test", {
+    const created = await store.createTask("context-test", {
       name: "Context Test",
       schedule: "0 9 * * *",
       prompt: "Test prompt"
@@ -232,6 +233,7 @@ describe("CronScheduler", () => {
     const context = scheduler.getTaskContext("context-test");
     expect(context).not.toBeNull();
     expect(context!.taskId).toBe("context-test");
+    expect(context!.taskUid).toBe(created.taskUid);
     expect(context!.taskName).toBe("Context Test");
     expect(context!.prompt).toBe("Test prompt");
     expect(context!.memoryPath).toContain("MEMORY.md");

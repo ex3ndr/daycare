@@ -42,9 +42,14 @@ export type MessageContext = {
   };
   cron?: {
     taskId: string;
+    taskUid: string;
     taskName: string;
     memoryPath: string;
     filesPath: string;
+  };
+  heartbeat?: {
+    taskId: string;
+    title: string;
   };
 };
 

@@ -54,18 +54,6 @@ type WriteArgs = Static<typeof writeSchema>;
 type EditArgs = Static<typeof editSchema>;
 type EditSpec = Static<typeof editItemSchema>;
 
-const allowWriteSchema = Type.Object(
-  {
-    paths: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })
-  },
-  { additionalProperties: false }
-);
-
-const resetSchema = Type.Object({}, { additionalProperties: false });
-
-type AllowWriteArgs = Static<typeof allowWriteSchema>;
-type ResetArgs = Static<typeof resetSchema>;
-
 const execSchema = Type.Object(
   {
     command: Type.String({ minLength: 1 }),
@@ -205,72 +193,6 @@ export function buildExecTool(): ToolDefinition {
         });
         return { toolMessage };
       }
-    }
-  };
-}
-
-export function buildAllowWriteTool(): ToolDefinition {
-  return {
-    tool: {
-      name: "allow_write",
-      description:
-        "Expand the set of absolute directories that shell tools may write to. Paths must be absolute and are persisted for the session.",
-      parameters: allowWriteSchema
-    },
-    execute: async (args, toolContext, toolCall) => {
-      const payload = args as AllowWriteArgs;
-      const permissions = toolContext.permissions;
-      const next = new Set(permissions.writeDirs);
-      const added: string[] = [];
-      for (const entry of payload.paths) {
-        ensureAbsolutePath(entry);
-        const resolved = path.resolve(entry);
-        if (!next.has(resolved)) {
-          next.add(resolved);
-          added.push(resolved);
-        }
-      }
-      const updated = Array.from(next.values());
-      permissions.writeDirs = updated;
-      setSessionPermissions(toolContext.session, permissions);
-
-      const toolMessage = buildToolMessage(
-        toolCall,
-        added.length > 0
-          ? `Added ${added.length} writable path(s).`
-          : "No new writable paths added.",
-        false,
-        {
-          added,
-          writeDirs: updated
-        }
-      );
-
-      return { toolMessage };
-    }
-  };
-}
-
-export function buildResetPermissionsTool(): ToolDefinition {
-  return {
-    tool: {
-      name: "reset_permissions",
-      description: "Reset extra read/write/web permissions back to workspace-only defaults.",
-      parameters: resetSchema
-    },
-    execute: async (args, toolContext, toolCall) => {
-      const _payload = args as ResetArgs;
-      toolContext.permissions.writeDirs = [];
-      toolContext.permissions.readDirs = [];
-      toolContext.permissions.web = false;
-      setSessionPermissions(toolContext.session, toolContext.permissions);
-      const toolMessage = buildToolMessage(
-        toolCall,
-        "Reset permissions to workspace defaults.",
-        false,
-        { writeDirs: [], readDirs: [], web: false }
-      );
-      return { toolMessage };
     }
   };
 }
@@ -483,18 +405,5 @@ function buildSandboxConfig(permissions: SessionPermissions) {
       allowedDomains: [],
       deniedDomains: []
     }
-  };
-}
-
-function setSessionPermissions(
-  session: { context: { state: unknown } },
-  permissions: SessionPermissions
-): void {
-  const state = session.context.state as { permissions?: SessionPermissions };
-  state.permissions = {
-    workingDir: permissions.workingDir,
-    writeDirs: [...permissions.writeDirs],
-    readDirs: [...permissions.readDirs],
-    web: permissions.web
   };
 }

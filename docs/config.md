@@ -44,6 +44,7 @@ Cron tasks are stored as markdown files in `<config>/cron/<task-id>/TASK.md` wit
 
 ```markdown
 ---
+taskId: clx9rk1p20000x5p3j7q1x8z1
 name: Weekly Summary
 schedule: "0 9 * * 1"
 enabled: true
@@ -54,7 +55,7 @@ Summarize the weekly updates.
 
 Each task directory also contains `MEMORY.md` and a `files/` workspace.
 
-Supported frontmatter fields include `description` and `deleteAfterRun` for one-off tasks.
+Supported frontmatter fields include `description`, `deleteAfterRun`, and required `taskId` cuid2 for stable task identity (tasks without a valid `taskId` are ignored).
 
 ## `.claybot/auth.json`
 Credentials are stored per plugin or provider id:

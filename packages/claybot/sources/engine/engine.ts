@@ -80,10 +80,17 @@ const BACKGROUND_TOOL_DENYLIST = new Set([
   "send_file"
 ]);
 
+type SessionDescriptor =
+  | { type: "user"; connector: string; userId: string; channelId: string }
+  | { type: "cron"; id: string }
+  | { type: "heartbeat"; id: string }
+  | { type: "background"; id: string; parentSessionId?: string; name?: string };
+
 type SessionState = {
   context: Context;
   providerId?: string;
   permissions: SessionPermissions;
+  session?: SessionDescriptor;
   routing?: {
     source: string;
     context: MessageContext;
@@ -231,21 +238,31 @@ export class Engine {
       createState: () => ({
         context: { messages: [] },
         providerId: undefined,
-        permissions: { ...this.defaultPermissions }
+        permissions: { ...this.defaultPermissions },
+        session: undefined
       }),
       sessionIdFor: (source, context) => {
-        if (context.sessionId) {
-          const key = this.buildSessionKey(source, context);
-          if (key) {
-            this.sessionKeyMap.set(key, context.sessionId);
-          }
-          return context.sessionId;
-        }
         const key = this.buildSessionKey(source, context);
-        if (!key) {
+        const cronTaskUid = isCuid2(context.cron?.taskUid ?? null)
+          ? context.cron!.taskUid
+          : null;
+        // Session ids are always cuid2; ignore non-cuid2 ids from connectors.
+        const explicitId = isCuid2(context.sessionId ?? null)
+          ? context.sessionId!
+          : cronTaskUid;
+        if (explicitId) {
+          if (key) {
+            this.sessionKeyMap.set(key, explicitId);
+          }
+          return explicitId;
+        }
+        if (key) {
+          return this.getOrCreateSessionId(key);
+        }
+        if (source && source !== "system" && source !== "cron" && source !== "background") {
           throw new Error("userId is required to map sessions for connectors.");
         }
-        return this.getOrCreateSessionId(key);
+        return createId();
       },
       storageIdFactory: () => this.sessionStore.createStorageId(),
       messageTransform: (message, context, receivedAt) => {
@@ -258,10 +275,16 @@ export class Engine {
         if (providerId) {
           session.context.state.providerId = providerId;
         }
+        session.context.state.session = buildSessionDescriptor(source, context, session.id);
         if (context.cron?.filesPath) {
-          session.context.state.permissions = normalizePermissions(
-            { workingDir: context.cron.filesPath },
-            this.defaultPermissions.workingDir
+          session.context.state.permissions = buildCronPermissions(
+            this.defaultPermissions,
+            context.cron.filesPath
+          );
+        } else if (isHeartbeatContext(context, session.context.state.session)) {
+          session.context.state.permissions = mergeDefaultPermissions(
+            session.context.state.permissions,
+            this.defaultPermissions
           );
           ensureDefaultFilePermissions(
             session.context.state.permissions,
@@ -376,6 +399,7 @@ export class Engine {
           ...context,
           cron: {
             taskId: task.taskId,
+            taskUid: task.taskUid,
             taskName: task.taskName,
             memoryPath: task.memoryPath,
             filesPath: task.filesPath
@@ -411,10 +435,21 @@ export class Engine {
       store: this.heartbeatStore,
       intervalMs: 30 * 60 * 1000,
       onTask: async (task) => {
+        const heartbeatKey = buildSessionKeyFromDescriptor({
+          type: "heartbeat",
+          id: task.id
+        });
+        const sessionId = heartbeatKey
+          ? this.getOrCreateSessionId(heartbeatKey)
+          : createId();
         await this.startBackgroundAgent({
           prompt: task.prompt,
-          sessionId: `heartbeat:${task.id}`,
-          name: task.title
+          sessionId,
+          name: task.title,
+          context: {
+            userId: "heartbeat",
+            heartbeat: { taskId: task.id, title: task.title }
+          }
         });
       },
       onError: (error, taskId) => {
@@ -791,7 +826,9 @@ export class Engine {
       arguments: args
     };
     const now = new Date();
-    const sessionId = messageContext?.sessionId ?? `system:${name}`;
+    const sessionId = isCuid2(messageContext?.sessionId ?? null)
+      ? messageContext!.sessionId!
+      : createId();
     const session = new Session<SessionState>(
       sessionId,
       {
@@ -801,7 +838,8 @@ export class Engine {
         state: {
           context: { messages: [] },
           providerId: undefined,
-          permissions: { ...this.defaultPermissions }
+          permissions: { ...this.defaultPermissions },
+          session: undefined
         }
       },
       createId()
@@ -812,6 +850,7 @@ export class Engine {
         userId: "system",
         sessionId
       };
+    session.context.state.session = buildSessionDescriptor("system", context, sessionId);
 
     return this.toolResolver.execute(toolCall, {
       connectorRegistry: this.connectorRegistry,
@@ -849,7 +888,7 @@ export class Engine {
     if (!prompt) {
       throw new Error("Background agent prompt is required");
     }
-    const sessionId = args.sessionId ?? `background:${createId()}`;
+    const sessionId = isCuid2(args.sessionId ?? null) ? args.sessionId! : createId();
     const agentContext = {
       kind: "background" as const,
       parentSessionId: args.parentSessionId ?? args.context?.agent?.parentSessionId,
@@ -1052,11 +1091,11 @@ export class Engine {
     const connector = this.connectorRegistry.get(source);
     const permissionTag = formatPermissionTag(decision.access);
     const permissionLabel = describePermissionDecision(decision.access);
-    let sessionId = context.sessionId;
-    if (!sessionId && context.userId) {
+    let sessionId = isCuid2(context.sessionId ?? null) ? context.sessionId! : null;
+    if (!sessionId) {
       const key = this.buildSessionKey(source, context);
       if (key) {
-        sessionId = this.sessionKeyMap.get(key);
+        sessionId = this.sessionKeyMap.get(key) ?? null;
       }
     }
 
@@ -1141,13 +1180,23 @@ export class Engine {
     }> = [];
 
     for (const restored of restoredSessions) {
+      const restoredSessionId = isCuid2(restored.sessionId ?? null)
+        ? restored.sessionId
+        : createId();
       const session = this.sessionManager.restoreSession(
-        restored.sessionId,
+        restoredSessionId,
         restored.storageId,
         normalizeSessionState(restored.state, this.defaultPermissions),
         restored.createdAt,
         restored.updatedAt
       );
+      if (!session.context.state.session) {
+        session.context.state.session = buildSessionDescriptor(
+          restored.source,
+          restored.context,
+          session.id
+        );
+      }
       if (!session.context.state.providerId) {
         const providerId = this.resolveProviderId(restored.context);
         if (providerId) {
@@ -1158,9 +1207,16 @@ export class Engine {
         { sessionId: session.id, source: restored.source },
         "Session restored"
       );
-      const sessionKey = this.buildSessionKey(restored.source, restored.context);
+      const sessionKey = session.context.state.session
+        ? buildSessionKeyFromDescriptor(session.context.state.session)
+        : this.buildSessionKey(restored.source, restored.context);
       if (sessionKey) {
-        this.sessionKeyMap.set(sessionKey, restored.sessionId);
+        this.sessionKeyMap.set(sessionKey, session.id);
+      }
+      if (restoredSessionId !== restored.sessionId) {
+        void this.sessionStore.recordState(session).catch((error) => {
+          logger.warn({ sessionId: session.id, error }, "Session id migration failed");
+        });
       }
       if (restored.lastEntryType === "incoming") {
         pendingInternalErrors.push({
@@ -1226,10 +1282,18 @@ export class Engine {
       `Connector ${connector ? "found" : "not required"} source=${source} internal=${isInternal}`
     );
 
+    if (!session.context.state.session) {
+      session.context.state.session = buildSessionDescriptor(source, entry.context, session.id);
+    }
     if (entry.context.cron?.filesPath) {
-      session.context.state.permissions = normalizePermissions(
-        { workingDir: entry.context.cron.filesPath },
-        this.defaultPermissions.workingDir
+      session.context.state.permissions = buildCronPermissions(
+        this.defaultPermissions,
+        entry.context.cron.filesPath
+      );
+    } else if (isHeartbeatContext(entry.context, session.context.state.session)) {
+      session.context.state.permissions = mergeDefaultPermissions(
+        session.context.state.permissions,
+        this.defaultPermissions
       );
       ensureDefaultFilePermissions(session.context.state.permissions, this.defaultPermissions);
     }
@@ -1262,6 +1326,7 @@ export class Engine {
     const pluginPrompts = await this.pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
     const agentKind = session.context.state.agent?.kind ?? entry.context.agent?.kind;
+    const allowCronTools = isCronContext(entry.context, session.context.state.session);
     const systemPrompt = await createSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
@@ -1295,7 +1360,7 @@ export class Engine {
       ...sessionContext,
       tools: this.listContextTools(source, {
         agentKind,
-        allowCronTools: !!entry.context.cron
+        allowCronTools
       }),
       systemPrompt
     };
@@ -1537,14 +1602,26 @@ export class Engine {
   }
 
   private buildSessionKey(source: string, context: MessageContext): string | null {
-    if (!context.userId) {
+    if (context.cron) {
+      if (isCuid2(context.cron.taskUid)) {
+        return `cron:${context.cron.taskUid}`;
+      }
+      return null;
+    }
+    if (context.heartbeat?.taskId) {
+      return `heartbeat:${context.heartbeat.taskId}`;
+    }
+    if (!context.userId || !context.channelId) {
       logger.warn(
-        { source, channelId: context.channelId },
-        "Missing userId for session mapping"
+        { source, channelId: context.channelId, userId: context.userId },
+        "Missing user or channel id for session mapping"
       );
       return null;
     }
-    return `${source}:${context.channelId}:${context.userId}`;
+    if (!source || source === "system" || source === "cron" || source === "background") {
+      return null;
+    }
+    return `user:${source}:${context.channelId}:${context.userId}`;
   }
 }
 
@@ -1755,13 +1832,15 @@ function normalizeSessionState(
   const fallback: SessionState = {
     context: { messages: [] },
     providerId: undefined,
-    permissions: { ...defaultPermissions }
+    permissions: { ...defaultPermissions },
+    session: undefined
   };
   if (state && typeof state === "object") {
     const candidate = state as {
       context?: Context;
       providerId?: string;
       permissions?: unknown;
+      session?: unknown;
       routing?: unknown;
       agent?: unknown;
     };
@@ -1770,6 +1849,7 @@ function normalizeSessionState(
       defaultPermissions.workingDir
     );
     ensureDefaultFilePermissions(permissions, defaultPermissions);
+    const session = normalizeSessionDescriptor(candidate.session);
     const routing = normalizeRouting(candidate.routing);
     const agent = normalizeAgent(candidate.agent);
     if (candidate.context && Array.isArray(candidate.context.messages)) {
@@ -1777,11 +1857,12 @@ function normalizeSessionState(
         context: candidate.context,
         providerId: typeof candidate.providerId === "string" ? candidate.providerId : undefined,
         permissions,
+        session,
         routing,
         agent
       };
     }
-    return { ...fallback, permissions, routing, agent };
+    return { ...fallback, permissions, session, routing, agent };
   }
   return fallback;
 }
@@ -1820,6 +1901,67 @@ function normalizeAgent(value: unknown): SessionState["agent"] | undefined {
   };
 }
 
+function normalizeSessionDescriptor(value: unknown): SessionDescriptor | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const candidate = value as {
+    type?: unknown;
+    connector?: unknown;
+    userId?: unknown;
+    channelId?: unknown;
+    id?: unknown;
+    parentSessionId?: unknown;
+    name?: unknown;
+  };
+  if (candidate.type === "user") {
+    if (
+      typeof candidate.connector === "string" &&
+      typeof candidate.userId === "string" &&
+      typeof candidate.channelId === "string"
+    ) {
+      return {
+        type: "user",
+        connector: candidate.connector,
+        userId: candidate.userId,
+        channelId: candidate.channelId
+      };
+    }
+    return undefined;
+  }
+  if (candidate.type === "cron") {
+    if (typeof candidate.id === "string") {
+      return { type: "cron", id: candidate.id };
+    }
+    return undefined;
+  }
+  if (candidate.type === "heartbeat") {
+    if (typeof candidate.id === "string") {
+      return { type: "heartbeat", id: candidate.id };
+    }
+    return undefined;
+  }
+  if (candidate.type === "background") {
+    if (typeof candidate.id !== "string") {
+      return undefined;
+    }
+    return {
+      type: "background",
+      id: candidate.id,
+      parentSessionId:
+        typeof candidate.parentSessionId === "string" ? candidate.parentSessionId : undefined,
+      name: typeof candidate.name === "string" ? candidate.name : undefined
+    };
+  }
+  if (candidate.type === "system") {
+    if (typeof candidate.id === "string") {
+      return { type: "background", id: candidate.id };
+    }
+    return undefined;
+  }
+  return undefined;
+}
+
 function buildDefaultPermissions(
   workingDir: string,
   configDir: string
@@ -1838,6 +1980,23 @@ function buildDefaultPermissions(
   };
 }
 
+function buildCronPermissions(
+  defaultPermissions: SessionPermissions,
+  filesPath: string
+): SessionPermissions {
+  const permissions = normalizePermissions(
+    {
+      workingDir: filesPath,
+      writeDirs: defaultPermissions.writeDirs,
+      readDirs: defaultPermissions.readDirs,
+      web: defaultPermissions.web
+    },
+    defaultPermissions.workingDir
+  );
+  ensureDefaultFilePermissions(permissions, defaultPermissions);
+  return permissions;
+}
+
 function ensureDefaultFilePermissions(
   permissions: SessionPermissions,
   defaults: Pick<SessionPermissions, "writeDirs" | "readDirs">
@@ -1846,6 +2005,86 @@ function ensureDefaultFilePermissions(
   const nextRead = new Set([...permissions.readDirs, ...defaults.readDirs]);
   permissions.writeDirs = Array.from(nextWrite.values());
   permissions.readDirs = Array.from(nextRead.values());
+}
+
+function mergeDefaultPermissions(
+  permissions: SessionPermissions,
+  defaultPermissions: SessionPermissions
+): SessionPermissions {
+  const nextWrite = new Set([...defaultPermissions.writeDirs, ...permissions.writeDirs]);
+  const nextRead = new Set([...defaultPermissions.readDirs, ...permissions.readDirs]);
+  return {
+    workingDir: permissions.workingDir || defaultPermissions.workingDir,
+    writeDirs: Array.from(nextWrite.values()),
+    readDirs: Array.from(nextRead.values()),
+    web: permissions.web || defaultPermissions.web
+  };
+}
+
+function buildSessionDescriptor(
+  source: string,
+  context: MessageContext,
+  sessionId: string
+): SessionDescriptor {
+  if (context.cron) {
+    const taskUid = isCuid2(context.cron.taskUid ?? null) ? context.cron.taskUid! : null;
+    if (taskUid) {
+      return { type: "cron", id: taskUid };
+    }
+  }
+  if (context.heartbeat?.taskId) {
+    return { type: "heartbeat", id: context.heartbeat.taskId };
+  }
+  if (
+    source &&
+    source !== "system" &&
+    source !== "cron" &&
+    source !== "background" &&
+    context.userId &&
+    context.channelId
+  ) {
+    return {
+      type: "user",
+      connector: source,
+      userId: context.userId,
+      channelId: context.channelId
+    };
+  }
+  if (context.agent?.kind === "background") {
+    return {
+      type: "background",
+      id: sessionId,
+      parentSessionId: context.agent.parentSessionId,
+      name: context.agent.name
+    };
+  }
+  // No system sessions; internal work still needs a typed session descriptor.
+  return { type: "background", id: sessionId };
+}
+
+function buildSessionKeyFromDescriptor(descriptor: SessionDescriptor): string | null {
+  switch (descriptor.type) {
+    case "cron":
+      return `cron:${descriptor.id}`;
+    case "heartbeat":
+      return `heartbeat:${descriptor.id}`;
+    case "user":
+      return `user:${descriptor.connector}:${descriptor.channelId}:${descriptor.userId}`;
+    default:
+      return null;
+  }
+}
+
+function isCronContext(context: MessageContext, session?: SessionDescriptor): boolean {
+  return isCuid2(context.cron?.taskUid ?? null) || session?.type === "cron";
+}
+
+function isHeartbeatContext(context: MessageContext, session?: SessionDescriptor): boolean {
+  return !!context.heartbeat?.taskId || session?.type === "heartbeat";
+}
+
+function isCuid2(value: string | null | undefined): value is string {
+  return typeof value === "string" && /^[a-z0-9]{24,32}$/.test(value);
 }
 
 function applyPermission(

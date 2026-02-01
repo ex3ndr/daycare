@@ -10,6 +10,7 @@ const logger = getLogger("cron.scheduler");
 
 export type CronTaskContext = {
   taskId: string;
+  taskUid: string;
   taskName: string;
   prompt: string;
   memoryPath: string;
@@ -128,6 +129,7 @@ export class CronScheduler {
     const taskId = definition.id ?? await this.store.generateTaskIdFromName(definition.name);
     const task = await this.store.createTask(taskId, {
       name: definition.name,
+      taskUid: definition.taskUid,
       description: definition.description,
       schedule: definition.schedule,
       prompt: definition.prompt,
@@ -161,6 +163,7 @@ export class CronScheduler {
 
     return {
       taskId: scheduled.task.id,
+      taskUid: scheduled.task.taskUid,
       taskName: scheduled.task.name,
       prompt: scheduled.task.prompt,
       memoryPath: scheduled.task.memoryPath,
@@ -199,11 +202,12 @@ export class CronScheduler {
     const context: MessageContext = {
       channelId: `cron:${task.id}`,
       userId: "cron",
-      sessionId: `cron:${task.id}`
+      sessionId: task.taskUid
     };
 
     const taskContext: CronTaskContext = {
       taskId: task.id,
+      taskUid: task.taskUid,
       taskName: task.name,
       prompt: task.prompt,
       memoryPath: task.memoryPath,
