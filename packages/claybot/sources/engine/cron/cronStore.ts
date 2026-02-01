@@ -4,6 +4,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 
 import { getLogger } from "../../log.js";
+import { cuid2Is } from "../../utils/cuid2Is.js";
 import type {
   CronTaskDefinition,
   CronTaskWithPaths,
@@ -11,7 +12,6 @@ import type {
   Frontmatter
 } from "./cronTypes.js";
 import { cronSlugify } from "./cronSlugify.js";
-import { cronCuid2Validate } from "./cronCuid2Validate.js";
 import { cronTaskUidResolve } from "./cronTaskUidResolve.js";
 import { cronFrontmatterParse } from "./cronFrontmatterParse.js";
 import { cronFrontmatterSerialize } from "./cronFrontmatterSerialize.js";
@@ -75,7 +75,7 @@ export class CronStore {
       const parsed = cronFrontmatterParse(content);
       // Cron task ids must come from frontmatter; do not guess or backfill missing ids.
       const taskUid = cronTaskUidResolve(parsed.frontmatter);
-      if (!taskUid || !cronCuid2Validate(taskUid)) {
+      if (!cuid2Is(taskUid)) {
         logger.warn({ taskId, taskUid }, "Cron task missing valid taskId");
         return null;
       }
@@ -131,7 +131,7 @@ export class CronStore {
     await fs.mkdir(filesPath, { recursive: true });
 
     // Write TASK.md
-    const taskUid = cronCuid2Validate(definition.taskUid ?? "") ? definition.taskUid! : createId();
+    const taskUid = cuid2Is(definition.taskUid) ? definition.taskUid : createId();
     const frontmatter: Frontmatter = {
       name: definition.name,
       schedule: definition.schedule,

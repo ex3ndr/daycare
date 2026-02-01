@@ -8,7 +8,6 @@ Manages scheduled task execution using cron expressions.
 cron/
 ├── cronTypes.ts                 # Type definitions
 ├── cronSlugify.ts               # Slugify strings for task IDs
-├── cronCuid2Validate.ts         # Validate CUID2 identifiers
 ├── cronTaskUidResolve.ts        # Extract taskId from frontmatter
 ├── cronFrontmatterParse.ts      # Parse markdown frontmatter
 ├── cronFrontmatterSerialize.ts  # Serialize to markdown frontmatter
@@ -26,7 +25,6 @@ cron/
 All parsing and validation logic is extracted into pure functions:
 
 - `cronSlugify(value)` - Convert string to URL-safe slug
-- `cronCuid2Validate(value)` - Check if value is valid CUID2
 - `cronTaskUidResolve(frontmatter)` - Extract taskId from frontmatter
 - `cronFrontmatterParse(content)` - Parse YAML frontmatter from markdown
 - `cronFrontmatterSerialize(frontmatter, body)` - Serialize to markdown
@@ -34,6 +32,8 @@ All parsing and validation logic is extracted into pure functions:
 - `cronFieldMatch(field, value)` - Check if value matches cron field
 - `cronExpressionParse(expression)` - Parse 5-field cron expression
 - `cronTimeGetNext(expression, from?)` - Calculate next run time
+
+CUID2 validation uses the shared `cuid2Is` utility from `utils/cuid2Is.js`.
 
 ## Classes
 
