@@ -125,9 +125,9 @@ export class HeartbeatScheduler {
         logger.warn({ taskIds: ids, error }, "Heartbeat run failed");
         await this.onError?.(error, ids);
       } finally {
+        await this.store.recordRun(runAt);
         for (const task of filtered) {
           task.lastRunAt = runAt.toISOString();
-          await this.store.recordRun(task.id, runAt);
           await this.onTaskComplete?.(task, runAt);
         }
       }

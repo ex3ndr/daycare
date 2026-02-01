@@ -51,6 +51,8 @@ describe("HeartbeatScheduler", () => {
 
     const refreshed = await store.listTasks();
     expect(refreshed.every((task) => Boolean(task.lastRunAt))).toBe(true);
+    const [first, ...rest] = refreshed;
+    expect(rest.every((task) => task.lastRunAt === first?.lastRunAt)).toBe(true);
   });
 
   it("filters tasks by id while keeping a single run", async () => {

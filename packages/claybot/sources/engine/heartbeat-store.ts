@@ -14,7 +14,7 @@ export type HeartbeatDefinition = {
   lastRunAt?: string;
 };
 
-type HeartbeatState = Record<string, { lastRunAt?: string }>;
+type HeartbeatState = { lastRunAt?: string };
 
 export class HeartbeatStore {
   private basePath: string;
@@ -104,11 +104,6 @@ export class HeartbeatStore {
       throw error;
     }
 
-    const state = await this.readState();
-    if (state[taskId]) {
-      delete state[taskId];
-      await this.writeState(state);
-    }
     return true;
   }
 
@@ -125,7 +120,7 @@ export class HeartbeatStore {
         return null;
       }
 
-      const lastRunAt = state?.[id]?.lastRunAt;
+      const lastRunAt = state?.lastRunAt;
       return {
         id,
         title,
@@ -142,10 +137,8 @@ export class HeartbeatStore {
     }
   }
 
-  async recordRun(taskId: string, runAt: Date): Promise<void> {
-    const state = await this.readState();
-    state[taskId] = { lastRunAt: runAt.toISOString() };
-    await this.writeState(state);
+  async recordRun(runAt: Date): Promise<void> {
+    await this.writeState({ lastRunAt: runAt.toISOString() });
   }
 
   private getStatePath(): string {
@@ -188,12 +181,7 @@ export class HeartbeatStore {
       if (!parsed || typeof parsed !== "object") {
         return {};
       }
-      return Object.fromEntries(
-        Object.entries(parsed).map(([key, value]) => [
-          key,
-          { lastRunAt: typeof value?.lastRunAt === "string" ? value.lastRunAt : undefined }
-        ])
-      );
+      return { lastRunAt: typeof parsed.lastRunAt === "string" ? parsed.lastRunAt : undefined };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return {};
