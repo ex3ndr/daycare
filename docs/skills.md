@@ -16,6 +16,17 @@ Each skill is a folder containing a `SKILL.md` file. The folder name becomes
 the skill name shown to the agent. The system prompt includes the **absolute
 path** to each skill so the agent can read it directly.
 
+## SKILL.md format (Agent Skills spec)
+
+`SKILL.md` must start with YAML frontmatter followed by Markdown content.
+Required frontmatter fields:
+- `name`: 1-64 chars, lowercase letters/numbers/hyphens only, no leading/trailing
+  hyphen, no consecutive hyphens, and it must match the parent folder name.
+- `description`: 1-1024 chars describing what the skill does and when to use it.
+
+Optional frontmatter fields include `license`, `compatibility`, `metadata`, and
+`allowed-tools`. Follow the Agent Skills specification for full constraints.
+
 ## Loading and unloading
 
 - **Load**: read the skill file from disk.

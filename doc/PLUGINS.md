@@ -203,7 +203,7 @@ type PluginRegistrar = {
   unregisterImageProvider(id: string): void;
 
   // Skills
-  registerSkill(path: string): void;
+  registerSkill(path: string): void; // SKILL.md must follow the Agent Skills specification.
   unregisterSkill(path: string): void;
 
   // Cleanup all registrations

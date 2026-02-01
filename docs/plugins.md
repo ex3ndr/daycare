@@ -41,7 +41,8 @@ Load/unload is internal: the plugin manager reconciles enabled instances from
 ## Skills
 Plugins can register skills by calling `api.registrar.registerSkill(path)`.
 Provide the absolute path to a `SKILL.md` file so it can be surfaced in the
-system prompt for on-demand loading.
+system prompt for on-demand loading. `SKILL.md` must follow the Agent Skills
+specification (required frontmatter, name constraints, etc.).
 
 ### Descriptor format
 ```json
