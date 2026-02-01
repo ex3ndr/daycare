@@ -56,6 +56,19 @@ sequenceDiagram
   Engine->>SessionStore: record_outgoing(text/files, origin="model")
 ```
 
+## Context serialization
+Context messages are serialized for logging and restored without loss.
+
+```mermaid
+flowchart LR
+  InMemory[Context.messages]
+  Serialize[serializeContextMessages]
+  Logged[model_context.messages]
+  Restore[restoreContextMessages]
+  Recovered[Context.messages]
+  InMemory --> Serialize --> Logged --> Restore --> Recovered
+```
+
 ## Resetting sessions
 - Sessions can be reset without changing the session id.
 - Reset clears the stored context messages but keeps the provider binding intact.

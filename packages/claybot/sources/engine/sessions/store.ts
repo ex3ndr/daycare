@@ -10,6 +10,7 @@ import type { Session } from "./session.js";
 import type { SessionMessage, SessionSummary } from "./types.js";
 import { normalizeSessionDescriptor, type SessionDescriptor } from "./descriptor.js";
 import { resolveClaybotPath } from "../../paths.js";
+import { serializeContextMessages } from "./context-log.js";
 
 export type SessionLogEntry<State = Record<string, unknown>> =
   | {
@@ -158,7 +159,7 @@ export class SessionStore<State = Record<string, unknown>> {
     context: Context,
     options: { messageId?: string; iteration?: number } = {}
   ): Promise<void> {
-    const messages = JSON.parse(JSON.stringify(context.messages)) as Context["messages"];
+    const messages = serializeContextMessages(context.messages);
     const entry: SessionLogEntry<State> = {
       type: "model_context",
       sessionId: session.id,
