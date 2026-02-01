@@ -69,6 +69,33 @@
 - do not use barrel `index.ts` files
 - avoid backward-compatibility shims for internal code
 
+## Facade Classes
+When a domain needs coordination logic (scheduling, resolving, registry), create a **plural-named facade class**:
+
+| Domain object | Facade class | Responsibility |
+|---------------|--------------|----------------|
+| `Tool` | `Tools` | resolving, registration, execution |
+| `Heartbeat` | `Heartbeats` | scheduling, lifecycle |
+| `Session` | `Sessions` | lookup, creation, persistence |
+| `Module` | `Modules` | loading, dependency wiring |
+
+The facade owns the collection and coordination logic. Domain objects remain simple data or behavior units.
+
+```typescript
+// Heartbeat is a single heartbeat definition
+interface Heartbeat { id: string; interval: number; action: () => void; }
+
+// Heartbeats is the facade that manages all heartbeats
+class Heartbeats {
+  private items: Map<string, Heartbeat> = new Map();
+  private scheduler: Scheduler;
+
+  register(heartbeat: Heartbeat): void { /* ... */ }
+  start(): void { /* ... */ }
+  stop(): void { /* ... */ }
+}
+```
+
 ## Object Lifecycle
 Do not implement `close()`, `dispose()`, or cleanup methods unless explicitly needed. Assume objects live forever in memory.
 
