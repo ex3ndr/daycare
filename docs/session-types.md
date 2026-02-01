@@ -153,6 +153,30 @@ Per session type:
 - **Subagent**: Subagents do not have direct connector routing. Pending work is
   restored silently; subagents will continue from the next incoming message.
 
+## Inference and crash handling
+
+```mermaid
+flowchart TD
+  Inference[Inference attempt] --> Success[Response ok]
+  Inference -->|fallback| NextProvider[Try next provider]
+  Inference -->|failure| ErrorMsg[Send error message]
+  ErrorMsg --> Persist[Record outgoing + state]
+  Success --> Persist
+```
+
+Behavior summary:
+- The inference router can fall back across providers; each fallback is logged.
+- If inference throws or returns `stopReason=error/aborted`, the engine sends
+  `Inference failed.` (or `No inference provider available.`) to connector
+  sessions and records the outgoing entry.
+- If the tool loop exceeds the max iterations and no response text is produced,
+  the engine sends `Tool execution limit reached.` to connector sessions.
+- Subagents/cron/heartbeat sessions do not have direct connector routing. Errors
+  are logged and state is recorded, but no user-facing message is sent unless a
+  subagent explicitly calls `send_session_message`.
+- Crashes mid-processing are handled on next boot via the restore rules above
+  (pending inbound messages trigger `Internal error.` for user sessions).
+
 ## Implementation references
 
 - Descriptor type + normalization: `packages/claybot/sources/engine/sessions/descriptor.ts`
