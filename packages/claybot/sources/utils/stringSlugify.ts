@@ -2,9 +2,10 @@
  * Converts a string to a URL-safe slug.
  *
  * Expects: any string input.
- * Returns: lowercase string with non-alphanumeric characters replaced by hyphens.
+ * Returns: lowercase string with non-alphanumeric characters replaced by hyphens,
+ *          with leading/trailing hyphens removed.
  */
-export function cronSlugify(value: string): string {
+export function stringSlugify(value: string): string {
   return value
     .toLowerCase()
     .trim()

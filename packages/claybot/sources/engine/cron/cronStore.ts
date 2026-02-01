@@ -5,13 +5,13 @@ import { createId } from "@paralleldrive/cuid2";
 
 import { getLogger } from "../../log.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
+import { stringSlugify } from "../../utils/stringSlugify.js";
 import type {
   CronTaskDefinition,
   CronTaskWithPaths,
   CronTaskState,
   Frontmatter
 } from "./cronTypes.js";
-import { cronSlugify } from "./cronSlugify.js";
 import { cronTaskUidResolve } from "./cronTaskUidResolve.js";
 import { cronFrontmatterParse } from "./cronFrontmatterParse.js";
 import { cronFrontmatterSerialize } from "./cronFrontmatterSerialize.js";
@@ -269,7 +269,7 @@ export class CronStore {
   }
 
   async generateTaskIdFromName(name: string): Promise<string> {
-    const base = cronSlugify(name) || "cron-task";
+    const base = stringSlugify(name) || "cron-task";
     let candidate = base;
     let suffix = 2;
     while (!(await this.isTaskIdAvailable(candidate))) {

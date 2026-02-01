@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { getLogger } from "../log.js";
+import { stringSlugify } from "../utils/stringSlugify.js";
 import { cronFrontmatterParse as parseFrontmatter } from "./cron/cronFrontmatterParse.js";
 import { cronFrontmatterSerialize as serializeFrontmatter } from "./cron/cronFrontmatterSerialize.js";
 
@@ -113,7 +114,7 @@ export class HeartbeatStore {
       const content = await fs.readFile(filePath, "utf8");
       const parsed = parseFrontmatter(content);
       const baseName = path.basename(filePath, path.extname(filePath));
-      const id = slugify(baseName) || baseName;
+      const id = stringSlugify(baseName) || baseName;
 
       const { title, prompt } = parseHeartbeat(parsed.body, parsed.frontmatter, baseName);
       if (!prompt) {
@@ -151,7 +152,7 @@ export class HeartbeatStore {
   }
 
   private async generateTaskIdFromTitle(title: string): Promise<string> {
-    const base = slugify(title) || "heartbeat";
+    const base = stringSlugify(title) || "heartbeat";
     let candidate = base;
     let suffix = 2;
     while (!(await this.isTaskIdAvailable(candidate))) {
@@ -232,13 +233,6 @@ function parseHeartbeat(
     title: fallbackTitle,
     prompt: trimmedBody
   };
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-");
 }
 
 function isSafeTaskId(value: string): boolean {
