@@ -13,6 +13,7 @@ export type ProviderModelInfo = {
   id: string;
   name: string;
   size: ProviderModelSize;
+  deprecated?: boolean;
 };
 
 export type ProviderPromptChoice<TValue extends string> = {

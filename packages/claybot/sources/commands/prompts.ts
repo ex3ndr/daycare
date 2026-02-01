@@ -6,6 +6,7 @@ export type PromptChoice<TValue extends string> = {
   value: TValue;
   name: string;
   description?: string;
+  disabled?: boolean;
 };
 
 export type PromptInputConfig = {
@@ -126,7 +127,8 @@ export async function promptSelect<TValue extends string>(
       name: choice.value,
       message: choice.name,
       value: choice.value,
-      hint: choice.description
+      hint: choice.description,
+      disabled: choice.disabled
     }))
   });
 }

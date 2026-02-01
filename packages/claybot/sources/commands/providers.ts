@@ -87,7 +87,7 @@ export async function setDefaultProviderCommand(
         : []),
       ...definition.models.map((model) => ({
         value: model.id,
-        name: model.name,
+        name: model.deprecated ? `${model.name} (deprecated)` : model.name,
         description:
           model.size === "unknown" ? model.id : `${model.id} · ${model.size}`
       }))
