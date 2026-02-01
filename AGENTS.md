@@ -69,6 +69,62 @@
 - do not use barrel `index.ts` files
 - avoid backward-compatibility shims for internal code
 
+## Async Patterns
+
+### AsyncLock for Exclusive Code Blocks
+Use `AsyncLock` when you need mutual exclusion in async code. Do not use timers, flags, or manual promise chains for this purpose.
+
+```typescript
+import { AsyncLock } from "@/util/lock.js";
+
+const lock = new AsyncLock();
+
+// Multiple callers queue up and execute sequentially
+await lock.inLock(async () => {
+  // Only one caller executes this block at a time
+  await criticalOperation();
+});
+```
+
+### InvalidateSync for Periodic Retry Handlers
+Use `InvalidateSync` for operations that should be retried with backoff and coalesced when triggered multiple times (e.g., saving state to disk, syncing remote data).
+
+```typescript
+import { InvalidateSync } from "@/util/sync.js";
+
+const sync = new InvalidateSync(async () => {
+  await saveStateToDisk();
+});
+
+// Multiple rapid calls coalesce into one execution
+sync.invalidate(); // triggers async command
+sync.invalidate(); // marks for re-run after current completes
+sync.invalidate(); // no-op, already marked
+
+// Wait for completion if needed
+await sync.invalidateAndAwait();
+```
+
+Key behaviors:
+- **Backoff**: automatically retries on failure with exponential backoff
+- **Coalescing**: rapid invalidations merge into at most two runs (current + one pending)
+- **Stoppable**: call `stop()` to cancel pending work during shutdown
+
+### ValueSync for Latest-Value Processing
+Use `ValueSync` when you need to process the latest value asynchronously, dropping intermediate values:
+
+```typescript
+import { ValueSync } from "@/util/sync.js";
+
+const sync = new ValueSync<State>(async (state) => {
+  await persistState(state);
+});
+
+sync.setValue(state1); // starts processing
+sync.setValue(state2); // replaces pending value
+sync.setValue(state3); // replaces again; only state3 persists
+```
+
 ## File Organization: One Function, Prefix Naming
 
 ### Core Principle
