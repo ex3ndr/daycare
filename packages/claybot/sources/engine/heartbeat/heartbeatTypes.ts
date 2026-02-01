@@ -1,0 +1,42 @@
+/**
+ * Central type definitions for the heartbeat module.
+ */
+
+export type HeartbeatDefinition = {
+  id: string;
+  title: string;
+  prompt: string;
+  filePath: string;
+  lastRunAt?: string;
+};
+
+export type HeartbeatState = {
+  lastRunAt?: string;
+};
+
+export type HeartbeatSchedulerOptions = {
+  store: HeartbeatStoreInterface;
+  intervalMs?: number;
+  onRun: (tasks: HeartbeatDefinition[], runAt: Date) => void | Promise<void>;
+  onError?: (error: unknown, taskIds?: string[]) => void | Promise<void>;
+  onTaskComplete?: (task: HeartbeatDefinition, runAt: Date) => void | Promise<void>;
+};
+
+export type HeartbeatCreateTaskArgs = {
+  id?: string;
+  title: string;
+  prompt: string;
+  overwrite?: boolean;
+};
+
+/**
+ * Interface for HeartbeatStore to allow dependency injection.
+ */
+export interface HeartbeatStoreInterface {
+  ensureDir(): Promise<void>;
+  listTasks(): Promise<HeartbeatDefinition[]>;
+  createTask(definition: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition>;
+  deleteTask(taskId: string): Promise<boolean>;
+  loadTask(filePath: string, state?: HeartbeatState): Promise<HeartbeatDefinition | null>;
+  recordRun(runAt: Date): Promise<void>;
+}

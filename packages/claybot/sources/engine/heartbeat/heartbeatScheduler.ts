@@ -1,19 +1,19 @@
-import { getLogger } from "../log.js";
-import type { HeartbeatDefinition } from "./heartbeat-store.js";
-import { HeartbeatStore } from "./heartbeat-store.js";
+import { getLogger } from "../../log.js";
+import type {
+  HeartbeatDefinition,
+  HeartbeatSchedulerOptions,
+  HeartbeatStoreInterface
+} from "./heartbeatTypes.js";
 
 const logger = getLogger("heartbeat.scheduler");
 
-export type HeartbeatSchedulerOptions = {
-  store: HeartbeatStore;
-  intervalMs?: number;
-  onRun: (tasks: HeartbeatDefinition[], runAt: Date) => void | Promise<void>;
-  onError?: (error: unknown, taskIds?: string[]) => void | Promise<void>;
-  onTaskComplete?: (task: HeartbeatDefinition, runAt: Date) => void | Promise<void>;
-};
-
+/**
+ * Manages interval-based heartbeat task execution.
+ *
+ * Runs all heartbeat tasks in a single batch at regular intervals.
+ */
 export class HeartbeatScheduler {
-  private store: HeartbeatStore;
+  private store: HeartbeatStoreInterface;
   private intervalMs: number;
   private onRun: HeartbeatSchedulerOptions["onRun"];
   private onError?: HeartbeatSchedulerOptions["onError"];

@@ -1,6 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
+import { taskIdIsSafe } from "../../utils/taskIdIsSafe.js";
 import { cronExpressionParse as parseCronExpression } from "../cron/cronExpressionParse.js";
 import type { CronScheduler } from "../cron/cronScheduler.js";
 import type { CronStore } from "../cron/cronStore.js";
@@ -76,7 +77,7 @@ export function buildCronTool(
         throw new Error(`Invalid cron schedule: ${payload.schedule}`);
       }
 
-      if (payload.id && !isSafeTaskId(payload.id)) {
+      if (payload.id && !taskIdIsSafe(payload.id)) {
         throw new Error("Cron task id contains invalid characters.");
       }
 
@@ -275,14 +276,10 @@ function resolveTaskId(
   if (!taskId) {
     throw new Error("Cron task id is required.");
   }
-  if (provided && !isSafeTaskId(taskId)) {
+  if (provided && !taskIdIsSafe(taskId)) {
     throw new Error("Cron task id contains invalid characters.");
   }
   return taskId;
-}
-
-function isSafeTaskId(value: string): boolean {
-  return /^[a-zA-Z0-9._-]+$/.test(value);
 }
 
 function appendMemory(existing: string, next: string): string {

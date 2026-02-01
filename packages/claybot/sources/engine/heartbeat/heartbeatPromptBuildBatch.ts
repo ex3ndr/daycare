@@ -1,5 +1,11 @@
-import type { HeartbeatDefinition } from "./heartbeat-store.js";
+import type { HeartbeatDefinition } from "./heartbeatTypes.js";
 
+/**
+ * Builds a prompt for running heartbeat tasks as a batch.
+ *
+ * Expects: array of HeartbeatDefinition tasks.
+ * Returns: { title, prompt } for the batch.
+ */
 export function heartbeatPromptBuildBatch(
   tasks: HeartbeatDefinition[]
 ): { title: string; prompt: string } {

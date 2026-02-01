@@ -1,24 +1,29 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { getLogger } from "../log.js";
-import { stringSlugify } from "../utils/stringSlugify.js";
-import { cronFrontmatterParse as parseFrontmatter } from "./cron/cronFrontmatterParse.js";
-import { cronFrontmatterSerialize as serializeFrontmatter } from "./cron/cronFrontmatterSerialize.js";
+import { getLogger } from "../../log.js";
+import { stringSlugify } from "../../utils/stringSlugify.js";
+import { taskIdIsSafe } from "../../utils/taskIdIsSafe.js";
+import { cronFrontmatterParse } from "../cron/cronFrontmatterParse.js";
+import { cronFrontmatterSerialize } from "../cron/cronFrontmatterSerialize.js";
+import { heartbeatParse } from "./heartbeatParse.js";
+import type {
+  HeartbeatDefinition,
+  HeartbeatState,
+  HeartbeatCreateTaskArgs,
+  HeartbeatStoreInterface
+} from "./heartbeatTypes.js";
 
 const logger = getLogger("heartbeat.store");
 
-export type HeartbeatDefinition = {
-  id: string;
-  title: string;
-  prompt: string;
-  filePath: string;
-  lastRunAt?: string;
-};
-
-type HeartbeatState = { lastRunAt?: string };
-
-export class HeartbeatStore {
+/**
+ * Manages heartbeat tasks stored as markdown files.
+ *
+ * Structure:
+ * - /heartbeat/<task-id>.md - frontmatter (title) + prompt body
+ * - /heartbeat/.heartbeat-state.json - shared state (lastRunAt)
+ */
+export class HeartbeatStore implements HeartbeatStoreInterface {
   private basePath: string;
 
   constructor(basePath: string) {
@@ -50,12 +55,7 @@ export class HeartbeatStore {
     return tasks;
   }
 
-  async createTask(definition: {
-    id?: string;
-    title: string;
-    prompt: string;
-    overwrite?: boolean;
-  }): Promise<HeartbeatDefinition> {
+  async createTask(definition: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition> {
     await this.ensureDir();
     const title = definition.title.trim();
     const prompt = definition.prompt.trim();
@@ -66,7 +66,7 @@ export class HeartbeatStore {
       throw new Error("Heartbeat prompt is required.");
     }
     const providedId = definition.id?.trim();
-    if (providedId && !isSafeTaskId(providedId)) {
+    if (providedId && !taskIdIsSafe(providedId)) {
       throw new Error("Heartbeat id contains invalid characters.");
     }
     const id = providedId ?? await this.generateTaskIdFromTitle(title);
@@ -80,7 +80,7 @@ export class HeartbeatStore {
     }
 
     const frontmatter = { title };
-    const content = serializeFrontmatter(frontmatter, prompt);
+    const content = cronFrontmatterSerialize(frontmatter, prompt);
     await fs.writeFile(filePath, content, "utf8");
 
     return {
@@ -93,7 +93,7 @@ export class HeartbeatStore {
   }
 
   async deleteTask(taskId: string): Promise<boolean> {
-    if (!isSafeTaskId(taskId)) {
+    if (!taskIdIsSafe(taskId)) {
       throw new Error("Heartbeat id contains invalid characters.");
     }
     const filePath = this.getTaskPath(taskId);
@@ -112,11 +112,11 @@ export class HeartbeatStore {
   async loadTask(filePath: string, state?: HeartbeatState): Promise<HeartbeatDefinition | null> {
     try {
       const content = await fs.readFile(filePath, "utf8");
-      const parsed = parseFrontmatter(content);
+      const parsed = cronFrontmatterParse(content);
       const baseName = path.basename(filePath, path.extname(filePath));
       const id = stringSlugify(baseName) || baseName;
 
-      const { title, prompt } = parseHeartbeat(parsed.body, parsed.frontmatter, baseName);
+      const { title, prompt } = heartbeatParse(parsed.body, parsed.frontmatter, baseName);
       if (!prompt) {
         logger.warn({ filePath }, "Heartbeat file missing prompt");
         return null;
@@ -202,39 +202,4 @@ export class HeartbeatStore {
       logger.warn({ error }, "Failed to write heartbeat state");
     }
   }
-}
-
-function parseHeartbeat(
-  body: string,
-  frontmatter: Record<string, unknown>,
-  fallbackTitle: string
-): { title: string; prompt: string } {
-  const trimmedBody = body.trim();
-  const frontmatterTitle = frontmatter.title ?? frontmatter.name;
-  if (frontmatterTitle && typeof frontmatterTitle === "string") {
-    return {
-      title: frontmatterTitle.trim() || fallbackTitle,
-      prompt: trimmedBody
-    };
-  }
-
-  if (trimmedBody.length > 0) {
-    const lines = trimmedBody.split(/\r?\n/);
-    const firstLine = lines[0]?.trim() ?? "";
-    const headingMatch = /^#{1,6}\s+(.*)$/.exec(firstLine);
-    if (headingMatch && headingMatch[1]) {
-      const title = headingMatch[1].trim() || fallbackTitle;
-      const prompt = lines.slice(1).join("\n").trim();
-      return { title, prompt };
-    }
-  }
-
-  return {
-    title: fallbackTitle,
-    prompt: trimmedBody
-  };
-}
-
-function isSafeTaskId(value: string): boolean {
-  return /^[a-zA-Z0-9._-]+$/.test(value);
 }

@@ -10,7 +10,7 @@ import type { AuthStore } from "../../auth/store.js";
 import type { Logger } from "pino";
 import type { AssistantSettings } from "../../settings.js";
 import type { SessionPermissions } from "../permissions.js";
-import type { HeartbeatDefinition } from "../heartbeat-store.js";
+import type { HeartbeatDefinition } from "../heartbeat/heartbeatTypes.js";
 
 export type BackgroundAgentStartArgs = {
   prompt: string;

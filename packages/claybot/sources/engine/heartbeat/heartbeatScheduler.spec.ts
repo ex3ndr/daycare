@@ -3,8 +3,8 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { HeartbeatScheduler } from "./heartbeat.js";
-import { HeartbeatStore } from "./heartbeat-store.js";
+import { HeartbeatScheduler } from "./heartbeatScheduler.js";
+import { HeartbeatStore } from "./heartbeatStore.js";
 
 async function createTempStore() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "claybot-heartbeat-"));
