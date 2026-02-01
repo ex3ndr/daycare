@@ -2020,12 +2020,13 @@ function buildDefaultPermissions(
   const writeDefaults = [DEFAULT_SOUL_PATH, DEFAULT_USER_PATH].map((entry) =>
     path.resolve(entry)
   );
+  const filesystemRoot = path.parse(workingDir).root;
   const writeDirs = [
     ...writeDefaults,
     ...(heartbeatDir ? [heartbeatDir] : []),
     ...(skillsDir ? [skillsDir] : [])
   ];
-  const readDirs = [...writeDirs];
+  const readDirs = [...writeDirs, ...(filesystemRoot ? [filesystemRoot] : [])];
   return {
     workingDir: path.resolve(workingDir),
     writeDirs: Array.from(new Set(writeDirs)),
