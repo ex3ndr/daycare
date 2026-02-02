@@ -95,16 +95,19 @@ flowchart LR
 
 ### Agent inbox failure logs
 
-If an inbox item throws, the loop logs a warn entry before rejecting the pending completion.
+If an inbox item throws, the loop logs a warn entry, rejects the pending completion,
+and attempts to notify the user channel with a short error message.
 
 ```mermaid
 sequenceDiagram
   participant A as Agent
   participant L as Logger
+  participant C as Connector
   A->>A: handleInboxItem()
   A-->>A: throw error
-  A->>L: warn("Agent inbox item failed")
+  A->>L: error("Agent inbox item failed")
   A-->>A: reject completion
+  A->>C: sendMessage("Unexpected error")
 ```
 
 ### Example: Debug Message Flow

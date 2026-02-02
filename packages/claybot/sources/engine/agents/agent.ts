@@ -179,11 +179,14 @@ export class Agent {
           entry.completion?.resolve(result);
         } catch (error) {
           const failure = error instanceof Error ? error : new Error(String(error));
-          logger.warn(
+          logger.error(
             { agentId: this.id, error: failure, itemType: entry.item.type },
             "Agent inbox item failed"
           );
           entry.completion?.reject(failure);
+          if (entry.item.type === "message") {
+            await this.sendUnexpectedError(entry.item);
+          }
         } finally {
           this.processing = false;
         }
@@ -213,6 +216,28 @@ export class Agent {
       }
       default:
         return { type: "restore", ok: false };
+    }
+  }
+
+  private async sendUnexpectedError(item: AgentInboxMessage): Promise<void> {
+    if (this.descriptor.type !== "user") {
+      return;
+    }
+    const connector = this.agentSystem.connectorRegistry.get(this.descriptor.connector);
+    if (!connector?.capabilities.sendText) {
+      return;
+    }
+    try {
+      await connector.sendMessage(this.descriptor.channelId, {
+        text: "Unexpected error",
+        replyToMessageId: item.context.messageId
+      });
+    } catch (error) {
+      const failure = error instanceof Error ? error : new Error(String(error));
+      logger.warn(
+        { agentId: this.id, error: failure },
+        "Failed to send unexpected error message"
+      );
     }
   }
 
