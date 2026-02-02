@@ -224,6 +224,9 @@ export class Agent {
     };
     const source =
       this.descriptor.type === "user" ? this.descriptor.connector : this.descriptor.type;
+    logger.debug(
+      `handleMessage start agentId=${this.id} source=${source} textLength=${entry.message.text?.length ?? 0} fileCount=${entry.message.files?.length ?? 0}`
+    );
 
     this.state.updatedAt = receivedAt;
 
@@ -260,9 +263,12 @@ export class Agent {
           }
         : { connector: source };
     const pluginManager = this.agentSystem.pluginManager;
+    logger.debug(`handleMessage loading plugin prompts agentId=${this.id}`);
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
+    logger.debug(`handleMessage loading core skills agentId=${this.id}`);
     const coreSkills = await skillListCore();
+    logger.debug(`handleMessage loading plugin skills agentId=${this.id}`);
     const pluginSkills = await skillListRegistered(pluginManager.listRegisteredSkills());
     const skills = [...coreSkills, ...pluginSkills];
     const skillsPrompt = skillPromptFormat(skills);
@@ -277,12 +283,14 @@ export class Agent {
       permissionEnsureDefaultFile(this.state.permissions, defaultPermissions);
     }
 
+    logger.debug(`handleMessage ensuring prompt files agentId=${this.id}`);
     await agentPromptFilesEnsure();
 
     const providerSettings = providerId
       ? providers.find((provider) => provider.id === providerId)
       : providers[0];
 
+    logger.debug(`handleMessage building system prompt agentId=${this.id}`);
     const systemPrompt = await this.buildSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
@@ -318,6 +326,7 @@ export class Agent {
       systemPrompt
     };
 
+    logger.debug(`handleMessage building user message agentId=${this.id}`);
     const userMessage = await messageBuildUser(entry);
     contextForRun.messages.push(userMessage);
 
@@ -325,6 +334,7 @@ export class Agent {
       ? providers.filter((provider) => provider.id === providerId)
       : [];
 
+    logger.debug(`handleMessage invoking inference loop agentId=${this.id}`);
     const result = await agentLoopRun({
       entry,
       agent: this,

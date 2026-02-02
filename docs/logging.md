@@ -81,6 +81,18 @@ sequenceDiagram
   AS->>A: start()
 ```
 
+### Agent message checkpoints
+
+Message handling logs include step markers so stalls are visible.
+
+```mermaid
+flowchart LR
+  Start[handleMessage start] --> Prompts[load prompts/skills]
+  Prompts --> SystemPrompt[build system prompt]
+  SystemPrompt --> UserMsg[build user message]
+  UserMsg --> Loop[agentLoopRun]
+```
+
 ### Example: Debug Message Flow
 
 ```bash
