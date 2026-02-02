@@ -74,3 +74,24 @@ request through the most recent foreground agent.
 - Paths must be absolute (e.g., `/Users/alice/data`), not relative (e.g., `./data`).
 - Be specific—request the narrowest path that satisfies your need.
 - Explain why you need the access when requesting.
+
+### Tool payloads
+
+Foreground agents use `request_permission`:
+
+```json
+{
+  "permission": "@read:/absolute/path",
+  "reason": "Need to scan the local dataset for the report."
+}
+```
+
+Background agents use `request_permission_via_parent` with the same payload shape.
+
+### Decision flow
+
+Permission requests return immediately with a tool result confirming the request was sent.
+The approval or denial arrives later as a permission decision that resumes the agent with a message like:
+"Permission granted for ..." or "Permission denied for ...".
+
+If denied, continue without that permission. If approved, proceed with the original step.

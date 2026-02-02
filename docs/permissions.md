@@ -33,6 +33,32 @@ flowchart TD
 - `permissionFormatTag`: format the `@web`/`@read`/`@write` tag used in logs.
 - `permissionDescribeDecision`: human-readable label for permission decisions.
 
+## Foreground permission requests
+
+Foreground agents request permissions directly from users via `request_permission`. The tool returns
+immediately, and the permission decision is delivered later to resume the agent.
+
+```mermaid
+sequenceDiagram
+  participant Foreground as Foreground Agent
+  participant Connector
+  participant User
+  Foreground->>Connector: request_permission(permission, reason)
+  Connector->>User: permission approval UI
+  User->>Connector: approve/deny
+  Connector->>Foreground: onPermission(decision)
+  Foreground->>Foreground: permissionApply + resume message
+```
+
+Tool payload shape:
+
+```json
+{
+  "permission": "@web",
+  "reason": "Need to verify the latest docs."
+}
+```
+
 ## Background agent permission requests
 
 Background agents cannot request permissions directly from users. They use

@@ -53,6 +53,17 @@ sequenceDiagram
   AgentInbox->>Agent: run
 ```
 
+## System message format
+`send_agent_message` wraps the payload in a `<system_message>` tag with an origin attribute so
+agents can distinguish internal updates from user input.
+
+```mermaid
+flowchart LR
+  SendTool[send_agent_message] --> Build[messageBuildSystemText]
+  Build --> Wrapped["<system_message origin='system|background'>text</system_message>"]
+  Wrapped --> Inbox[AgentInbox]
+```
+
 ## Agent persistence
 - Agents are written to `.claybot/agents/<cuid2>/` as discrete files.
 - `descriptor.json` captures the agent type and identity.
@@ -104,6 +115,20 @@ sequenceDiagram
   Foreground->>AgentSystem: post(subagent message)
   AgentSystem->>Subagent: enqueue message
   Foreground-->>Foreground: tool result (new agent id)
+```
+
+## Background agent reporting
+Foreground prompts should instruct subagents to report progress via `send_agent_message`.
+
+```mermaid
+sequenceDiagram
+  participant Foreground
+  participant AgentSystem
+  participant Subagent
+  Foreground->>AgentSystem: start_background_agent(prompt + report back)
+  AgentSystem->>Subagent: enqueue prompt
+  Subagent->>AgentSystem: send_agent_message(status update)
+  AgentSystem->>Foreground: enqueue system_message
 ```
 
 ## Resetting agents

@@ -18,6 +18,17 @@ to request permissions through the foreground agent (for `@web`, `@read:/path`, 
 Permission requests are asynchronous. After calling `request_permission_via_parent`, do not send any user-facing text.
 Exit the current tool loop and wait for the next incoming message that contains the decision.
 
+### request_permission_via_parent
+
+Arguments:
+- `permission`: `@web` | `@read:/absolute/path` | `@write:/absolute/path`
+- `reason`: short, concrete justification
+
+Returns a tool result confirming the request was sent (not the decision).
+The decision arrives later and resumes the agent with a message like
+"Permission granted for ..." or "Permission denied for ...".
+If denied, continue without that permission and report back to the parent agent.
+
 ## Runtime
 
 - OS: {{os}}
@@ -32,6 +43,15 @@ Use `send_agent_message` to send a note to the main agent so it can respond to t
 {{#if parentAgentId}}
 - Parent agent: {{parentAgentId}}
 {{/if}}
+
+### send_agent_message
+
+Arguments:
+- `text`: message content (required)
+- `agentId`: optional target; defaults to the parent agent, otherwise the most recent foreground agent.
+
+Messages are wrapped as `<system_message origin="background">...</system_message>`.
+Treat them as internal updates, not user requests.
 
 ## Heartbeats
 
@@ -57,6 +77,7 @@ Use `cron_read_memory` to read task memory and `cron_write_memory` to update it 
 
 Incoming messages are wrapped as `<time>...</time><message_id>...</message_id><message>...</message>`.
 Messages wrapped in `<system_message ...>...</system_message>` are internal updates from other agents.
+The optional `origin` attribute is `system` or `background`, depending on the sender.
 
 {{#if skillsPrompt}}
 {{{skillsPrompt}}}
