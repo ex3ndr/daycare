@@ -1,4 +1,5 @@
 import type { FileReference } from "../../../files/types.js";
+import type { AgentDescriptor } from "../../agents/ops/agentDescriptorTypes.js";
 
 export type ConnectorFileMode = "document" | "photo" | "video";
 export type ConnectorFileDisposition = ConnectorFileMode | "auto";
@@ -25,14 +26,13 @@ export type ConnectorMessage = {
 };
 
 export type MessageContext = {
-  channelId: string;
-  userId: string;
   messageId?: string;
 };
 
 export type MessageHandler = (
   message: ConnectorMessage,
-  context: MessageContext
+  context: MessageContext,
+  descriptor: AgentDescriptor
 ) => void | Promise<void>;
 
 export type MessageUnsubscribe = () => void;
@@ -61,7 +61,8 @@ export type PermissionDecision = {
 
 export type PermissionHandler = (
   decision: PermissionDecision,
-  context: MessageContext
+  context: MessageContext,
+  descriptor: AgentDescriptor
 ) => void | Promise<void>;
 
 export interface Connector {
@@ -72,7 +73,8 @@ export interface Connector {
   requestPermission?: (
     targetId: string,
     request: PermissionRequest,
-    context: MessageContext
+    context: MessageContext,
+    descriptor: AgentDescriptor
   ) => Promise<void>;
   startTyping?: (targetId: string) => () => void;
   setReaction?: (

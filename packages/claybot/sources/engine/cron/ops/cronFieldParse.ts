@@ -1,4 +1,4 @@
-import type { CronField } from "./cronTypes.js";
+import type { CronField } from "../cronTypes.js";
 
 /**
  * Parses a single cron field (minute, hour, day, month, or weekday).

@@ -9,55 +9,8 @@ import type { AuthStore } from "../../../auth/store.js";
 import type { Logger } from "pino";
 import type { AssistantSettings } from "../../../settings.js";
 import type { SessionPermissions } from "@/types";
-import type { HeartbeatDefinition } from "../../heartbeat/heartbeatTypes.js";
-
-export type BackgroundAgentStartArgs = {
-  prompt: string;
-  parentAgentId: string;
-  agentId?: string;
-  name?: string;
-};
-
-export type BackgroundAgentStartResult = {
-  agentId: string;
-};
-
-export type AgentMessageArgs = {
-  agentId?: string;
-  text: string;
-  origin?: "background" | "system";
-};
-
-export type HeartbeatRunArgs = {
-  ids?: string[];
-};
-
-export type HeartbeatRunResult = {
-  ran: number;
-  taskIds: string[];
-};
-
-export type HeartbeatAddArgs = {
-  id?: string;
-  title: string;
-  prompt: string;
-  overwrite?: boolean;
-};
-
-export type HeartbeatRemoveArgs = {
-  id: string;
-};
-
-export type AgentRuntime = {
-  startBackgroundAgent: (
-    args: BackgroundAgentStartArgs
-  ) => Promise<BackgroundAgentStartResult>;
-  sendAgentMessage: (args: AgentMessageArgs) => Promise<void>;
-  runHeartbeatNow: (args?: HeartbeatRunArgs) => Promise<HeartbeatRunResult>;
-  addHeartbeatTask: (args: HeartbeatAddArgs) => Promise<HeartbeatDefinition>;
-  listHeartbeatTasks: () => Promise<HeartbeatDefinition[]>;
-  removeHeartbeatTask: (args: HeartbeatRemoveArgs) => Promise<{ removed: boolean }>;
-};
+import type { AgentSystem } from "../../agents/agentSystem.js";
+import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 
 export type ToolExecutionContext<State = Record<string, unknown>> = {
   connectorRegistry: ConnectorRegistry;
@@ -69,7 +22,8 @@ export type ToolExecutionContext<State = Record<string, unknown>> = {
   agent: Agent;
   source: string;
   messageContext: MessageContext;
-  agentRuntime: AgentRuntime;
+  agentSystem: AgentSystem;
+  heartbeats: Heartbeats;
 };
 
 export type ToolExecutionResult = {

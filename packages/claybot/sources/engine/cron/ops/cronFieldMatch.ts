@@ -1,4 +1,4 @@
-import type { CronField } from "./cronTypes.js";
+import type { CronField } from "../cronTypes.js";
 
 /**
  * Checks if a value matches a cron field.

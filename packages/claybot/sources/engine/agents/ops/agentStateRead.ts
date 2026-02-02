@@ -9,9 +9,7 @@ import { agentPathBuild } from "./agentPathBuild.js";
 
 const messageContextSchema = z
   .object({
-    channelId: z.string().min(1),
-    userId: z.string().min(1),
-    messageId: z.string().optional()
+    messageId: z.string().min(1).optional()
   })
   .strict();
 

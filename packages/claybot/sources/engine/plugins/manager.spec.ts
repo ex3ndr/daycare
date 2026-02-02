@@ -6,7 +6,7 @@ import path from "node:path";
 import { ModuleRegistry } from "../modules/moduleRegistry.js";
 import { InferenceRouter } from "../modules/inference/router.js";
 import { FileStore } from "../../files/store.js";
-import { PluginEventQueue } from "./events.js";
+import type { PluginEvent } from "./events.js";
 import { PluginManager } from "./manager.js";
 import { PluginRegistry } from "./registry.js";
 import { AuthStore } from "../../auth/store.js";
@@ -31,7 +31,7 @@ function createManager(
   entryPath: string,
   pluginId: string,
   rootDir: string,
-  queue: PluginEventQueue
+  onEvent?: (event: PluginEvent) => void
 ): PluginManager {
   const modules = new ModuleRegistry({ onMessage: () => {} });
   const pluginRegistry = new PluginRegistry(modules);
@@ -65,8 +65,8 @@ function createManager(
     auth,
     fileStore,
     pluginCatalog: catalog,
-    eventQueue: queue,
-    inferenceRouter
+    inferenceRouter,
+    onEvent
   });
 }
 
@@ -102,8 +102,10 @@ export const plugin = {
 };
 `;
     const entryPath = await writePluginFile(dir, pluginSource);
-    const queue = new PluginEventQueue();
-    const manager = createManager(entryPath, "isolated", dir, queue);
+    const events: PluginEvent[] = [];
+    const manager = createManager(entryPath, "isolated", dir, (event) => {
+      events.push(event);
+    });
 
     const alpha: PluginInstanceSettings = {
       instanceId: "alpha",
@@ -121,7 +123,6 @@ export const plugin = {
     await manager.load(alpha);
     await manager.load(beta);
 
-    const events = queue.drain();
     expect(events).toHaveLength(2);
     const counts = events.map((event) => (event.payload as { count: number }).count);
     expect(counts).toEqual([1, 2]);
@@ -140,8 +141,7 @@ export const plugin = {
 };
 `;
     const entryPath = await writePluginFile(dir, pluginSource);
-    const queue = new PluginEventQueue();
-    const manager = createManager(entryPath, "sync", dir, queue);
+    const manager = createManager(entryPath, "sync", dir);
 
     await manager.syncWithConfig(
       configResolve(

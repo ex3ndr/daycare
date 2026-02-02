@@ -4,8 +4,8 @@ Moved the heartbeat batch prompt builder and simple guard helpers into dedicated
 
 ```mermaid
 flowchart TD
-  Engine[engine.ts] --> HeartbeatPrompt[heartbeatPromptBuildBatch.ts]
+  Engine[engine.ts] --> HeartbeatPrompt[heartbeat/ops/heartbeatPromptBuildBatch.ts]
   Engine --> Cuid2Is[utils/cuid2Is.ts]
   Engine --> StringTruncate[utils/stringTruncate.ts]
-  HeartbeatPrompt --> HeartbeatDefinition[heartbeat-store.ts]
+  HeartbeatPrompt --> HeartbeatDefinition[heartbeat/heartbeatTypes.ts]
 ```

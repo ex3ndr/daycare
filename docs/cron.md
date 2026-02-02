@@ -43,8 +43,8 @@ Task directory ids should be human-friendly slugs (e.g. `create-image-in-morning
 ```mermaid
 flowchart TD
   Engine[engine.ts] --> Crons[cron/crons.ts]
-  Crons --> Store[cron/cronStore.ts]
-  Crons --> Scheduler[cron/cronScheduler.ts]
+  Crons --> Store[cron/ops/cronStore.ts]
+  Crons --> Scheduler[cron/ops/cronScheduler.ts]
   Scheduler --> AgentSystem[agents/agentSystem.ts]
 ```
 

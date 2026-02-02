@@ -1,22 +1,19 @@
-import type { MessageContext } from "@/types";
-import { getLogger } from "../../log.js";
+import { getLogger } from "../../../log.js";
 import { CronStore } from "./cronStore.js";
 import type {
   CronTaskDefinition,
   CronTaskWithPaths,
   CronTaskContext,
   ScheduledTask
-} from "./cronTypes.js";
+} from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
+import type { MessageContext } from "@/types";
 
 const logger = getLogger("cron.scheduler");
 
 export type CronSchedulerOptions = {
   store: CronStore;
-  onTask: (
-    context: CronTaskContext,
-    messageContext: MessageContext
-  ) => void | Promise<void>;
+  onTask: (context: CronTaskContext, messageContext: MessageContext) => void | Promise<void>;
   onError?: (error: unknown, taskId: string) => void | Promise<void>;
   onTaskComplete?: (task: CronTaskWithPaths, runAt: Date) => void | Promise<void>;
 };
@@ -190,11 +187,6 @@ export class CronScheduler {
 
     const runAt = new Date();
 
-    const context: MessageContext = {
-      channelId: `cron:${task.taskUid}`,
-      userId: "cron"
-    };
-
     const taskContext: CronTaskContext = {
       taskId: task.id,
       taskUid: task.taskUid,
@@ -204,9 +196,11 @@ export class CronScheduler {
       filesPath: task.filesPath
     };
 
+    const messageContext: MessageContext = {};
+
     try {
       logger.info({ taskId: task.id, name: task.name }, "Executing cron task");
-      await this.onTask(taskContext, context);
+      await this.onTask(taskContext, messageContext);
       logger.debug(`Task execution completed taskId=${task.id}`);
     } catch (error) {
       logger.warn({ taskId: task.id, error }, "Cron task execution failed");

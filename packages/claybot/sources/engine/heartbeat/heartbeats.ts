@@ -2,38 +2,35 @@ import path from "node:path";
 
 import { getLogger } from "../../log.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import { heartbeatPromptBuildBatch } from "./heartbeatPromptBuildBatch.js";
-import { HeartbeatScheduler } from "./heartbeatScheduler.js";
-import { HeartbeatStore } from "./heartbeatStore.js";
+import { heartbeatPromptBuildBatch } from "./ops/heartbeatPromptBuildBatch.js";
+import { HeartbeatScheduler } from "./ops/heartbeatScheduler.js";
+import { HeartbeatStore } from "./ops/heartbeatStore.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition } from "./heartbeatTypes.js";
 import type { Config } from "@/types";
+import type { AgentSystem } from "../agents/agentSystem.js";
 
 const logger = getLogger("heartbeat.facade");
-
-export type HeartbeatRuntime = {
-  postHeartbeat: (args: { prompt: string }) => Promise<void>;
-};
 
 export type HeartbeatsOptions = {
   config: Config;
   eventBus: EngineEventBus;
-  runtime: HeartbeatRuntime;
+  agentSystem: AgentSystem;
   intervalMs?: number;
 };
 
 /**
  * Coordinates heartbeat storage + scheduling for engine runtime.
- * Expects: runtime posts heartbeat prompts to the agent system.
+ * Posts heartbeat prompts directly to the agent system.
  */
 export class Heartbeats {
   private readonly eventBus: EngineEventBus;
-  private readonly runtime: HeartbeatRuntime;
+  private readonly agentSystem: AgentSystem;
   private readonly scheduler: HeartbeatScheduler;
   private readonly store: HeartbeatStore;
 
   constructor(options: HeartbeatsOptions) {
     this.eventBus = options.eventBus;
-    this.runtime = options.runtime;
+    this.agentSystem = options.agentSystem;
     const basePath = path.join(options.config.configDir, "heartbeat");
     this.store = new HeartbeatStore(basePath);
     this.scheduler = new HeartbeatScheduler({
@@ -41,7 +38,15 @@ export class Heartbeats {
       intervalMs: options.intervalMs,
       onRun: async (tasks) => {
         const batch = heartbeatPromptBuildBatch(tasks);
-        await this.runtime.postHeartbeat({ prompt: batch.prompt });
+        await this.agentSystem.postAndAwait(
+          { descriptor: { type: "heartbeat" } },
+          {
+            type: "message",
+            source: "heartbeat",
+            message: { text: batch.prompt },
+            context: {}
+          }
+        );
       },
       onError: (error, taskIds) => {
         logger.warn({ taskIds, error }, "Heartbeat task failed");

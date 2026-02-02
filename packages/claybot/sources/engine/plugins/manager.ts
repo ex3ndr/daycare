@@ -2,6 +2,7 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 
 import { ZodError } from "zod";
+import { createId } from "@paralleldrive/cuid2";
 
 import { getLogger } from "../../log.js";
 import type { FileStore } from "../../files/store.js";
@@ -9,7 +10,7 @@ import type { AuthStore } from "../../auth/store.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
 import { listEnabledPlugins } from "../../settings.js";
 import type { Config } from "@/types";
-import type { PluginEventQueue } from "./events.js";
+import type { PluginEvent, PluginEventInput } from "./events.js";
 import { PluginModuleLoader } from "./loader.js";
 import type { PluginDefinition } from "./catalog.js";
 import type { PluginApi, PluginInstance, PluginModule } from "@/types";
@@ -25,10 +26,10 @@ export type PluginManagerOptions = {
   auth: AuthStore;
   fileStore: FileStore;
   pluginCatalog: Map<string, PluginDefinition>;
-  eventQueue: PluginEventQueue;
   inferenceRouter: InferenceRouter;
   mode?: "runtime" | "validate";
   engineEvents?: EngineEventBus;
+  onEvent?: (event: PluginEvent) => void;
 };
 
 type LoadedPlugin = {
@@ -46,9 +47,9 @@ export class PluginManager {
   private auth: AuthStore;
   private fileStore: FileStore;
   private pluginCatalog: Map<string, PluginDefinition>;
-  private eventQueue: PluginEventQueue;
   private mode: "runtime" | "validate";
   private engineEvents?: EngineEventBus;
+  private onEvent: ((event: PluginEvent) => void) | null;
   private inference: PluginInferenceService;
   private loaded = new Map<string, LoadedPlugin>();
   private logger = getLogger("plugins.manager");
@@ -59,9 +60,9 @@ export class PluginManager {
     this.auth = options.auth;
     this.fileStore = options.fileStore;
     this.pluginCatalog = options.pluginCatalog;
-    this.eventQueue = options.eventQueue;
     this.mode = options.mode ?? "runtime";
     this.engineEvents = options.engineEvents;
+    this.onEvent = options.onEvent ?? null;
     this.inference = new PluginInferenceService({
       router: options.inferenceRouter,
       getSettings: () => this.config.settings
@@ -268,10 +269,7 @@ export class PluginManager {
       events: {
         emit: (event) => {
           this.logger.debug(`Plugin emitting event instanceId=${instanceId} eventType=${event.type}`);
-          this.eventQueue.emit(
-            { pluginId: pluginConfig.pluginId, instanceId },
-            event
-          );
+          this.onEvent?.(buildPluginEvent({ pluginId: pluginConfig.pluginId, instanceId }, event));
         }
       }
     };
@@ -375,4 +373,15 @@ export class PluginManager {
 
 function settingsEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
+}
+
+function buildPluginEvent(source: { pluginId: string; instanceId: string }, event: PluginEventInput): PluginEvent {
+  return {
+    id: createId(),
+    pluginId: source.pluginId,
+    instanceId: source.instanceId,
+    type: event.type,
+    payload: event.payload,
+    createdAt: new Date().toISOString()
+  };
 }

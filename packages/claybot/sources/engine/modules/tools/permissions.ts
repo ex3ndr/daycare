@@ -6,6 +6,7 @@ import path from "node:path";
 
 import type { ToolDefinition } from "@/types";
 import type { PermissionAccess, PermissionRequest } from "@/types";
+import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
 const schema = Type.Object(
   {
@@ -32,7 +33,11 @@ export function buildPermissionRequestTool(): ToolDefinition {
         throw new Error("Connector registry unavailable.");
       }
 
-      const connector = connectorRegistry.get(toolContext.source);
+      const target = agentDescriptorTargetResolve(toolContext.agent.descriptor);
+      if (!target) {
+        throw new Error("Permission requests require a user agent.");
+      }
+      const connector = connectorRegistry.get(target.connector);
       if (!connector) {
         throw new Error("Connector not available for permission requests.");
       }
@@ -55,12 +60,13 @@ export function buildPermissionRequestTool(): ToolDefinition {
 
       if (connector.requestPermission) {
         await connector.requestPermission(
-          toolContext.messageContext.channelId,
+          target.targetId,
           request,
-          toolContext.messageContext
+          toolContext.messageContext,
+          toolContext.agent.descriptor
         );
       } else {
-        await connector.sendMessage(toolContext.messageContext.channelId, {
+        await connector.sendMessage(target.targetId, {
           text,
           replyToMessageId: toolContext.messageContext.messageId
         });

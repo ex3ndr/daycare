@@ -94,13 +94,14 @@ sequenceDiagram
   participant Agent
   participant AgentSystem
   participant Subagent
-  Agent->>AgentSystem: start_background_agent tool
-  AgentSystem->>Subagent: create background agent (parent + name)
-  Subagent->>AgentSystem: run tasks
+  Agent->>AgentSystem: post(subagent message)
+  AgentSystem->>Subagent: create background agent (new id)
+  Subagent->>AgentSystem: process inbox
 ```
 
 Routing notes:
 - Subagents always carry `parentAgentId` and `name`.
+- Each subagent starts with a new cuid2 id; existing ids are not reused.
 - The subagent descriptor is persisted on creation.
 
 ### Subagent back to user
@@ -110,8 +111,9 @@ sequenceDiagram
   participant Subagent
   participant AgentSystem
   participant User
-  Subagent->>AgentSystem: send_agent_message
-  AgentSystem->>AgentSystem: resolve parentAgentId (default)
+  Subagent->>AgentSystem: agentFor("most-recent-foreground")
+  AgentSystem-->>Subagent: agentId
+  Subagent->>AgentSystem: post(system message)
   AgentSystem->>User: system message
 ```
 

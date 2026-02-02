@@ -1,4 +1,4 @@
-import type { ParsedCron } from "./cronTypes.js";
+import type { ParsedCron } from "../cronTypes.js";
 import { cronFieldParse } from "./cronFieldParse.js";
 
 /**

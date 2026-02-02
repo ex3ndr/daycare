@@ -15,24 +15,10 @@ import { EngineEventBus } from "../ipc/events.js";
 import { AuthStore } from "../../auth/store.js";
 import { FileStore } from "../../files/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import type { AgentDescriptor, AgentRuntime } from "@/types";
+import type { AgentDescriptor } from "@/types";
 import type { PluginManager } from "../plugins/manager.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import type { Crons } from "../cron/crons.js";
-
-const stubRuntime = (): AgentRuntime => ({
-  startBackgroundAgent: async (_args) => ({ agentId: createId() }),
-  sendAgentMessage: async () => {},
-  runHeartbeatNow: async () => ({ ran: 0, taskIds: [] }),
-  addHeartbeatTask: async () => ({
-    id: "stub",
-    title: "stub",
-    prompt: "stub",
-    filePath: "/tmp/heartbeat.md"
-  }),
-  listHeartbeatTasks: async () => [],
-  removeHeartbeatTask: async () => ({ removed: false })
-});
 
 describe("Agent", () => {
   it("persists descriptor, state, and history on create", async () => {
@@ -45,16 +31,17 @@ describe("Agent", () => {
       const agentSystem = new AgentSystem({
         config,
         eventBus: new EngineEventBus(),
-        connectorRegistry: new ConnectorRegistry({ onMessage: async () => undefined }),
+        connectorRegistry: new ConnectorRegistry({
+          onMessage: async (_source, _message, _context, _descriptor) => undefined
+        }),
         imageRegistry: new ImageGenerationRegistry(),
         toolResolver: new ToolResolver(),
         pluginManager: {} as unknown as PluginManager,
         inferenceRouter: {} as unknown as InferenceRouter,
         fileStore: new FileStore(config),
-        authStore: new AuthStore(config),
-        crons: {} as unknown as Crons,
-        agentRuntime: stubRuntime()
+        authStore: new AuthStore(config)
       });
+      agentSystem.setCrons({} as unknown as Crons);
 
       const agentId = createId();
       const descriptor: AgentDescriptor = {

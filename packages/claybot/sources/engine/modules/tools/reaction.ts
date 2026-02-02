@@ -2,6 +2,7 @@ import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
+import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
 const schema = Type.Object(
   {
@@ -26,7 +27,14 @@ export function buildReactionTool(): ToolDefinition {
       if (!toolContext.connectorRegistry) {
         throw new Error("Connector registry unavailable");
       }
-      const source = payload.source ?? toolContext.source;
+      const target = agentDescriptorTargetResolve(toolContext.agent.descriptor);
+      if (!target) {
+        throw new Error("Reactions require a user agent.");
+      }
+      const source = payload.source ?? target.connector;
+      if (source !== target.connector) {
+        throw new Error("Reaction source must match the agent connector.");
+      }
       const connector = toolContext.connectorRegistry.get(source);
       if (!connector || !connector.capabilities.reactions || !connector.setReaction) {
         throw new Error(`Connector does not support reactions: ${source}`);
@@ -35,11 +43,7 @@ export function buildReactionTool(): ToolDefinition {
       if (!messageId) {
         throw new Error("Missing message id for reaction");
       }
-      await connector.setReaction(
-        toolContext.messageContext.channelId,
-        String(messageId),
-        payload.reaction
-      );
+      await connector.setReaction(target.targetId, String(messageId), payload.reaction);
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",

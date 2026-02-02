@@ -15,24 +15,25 @@ sequenceDiagram
 ```
 
 ## Agent routing rules
-- Agent ids are cuid2 values mapped to `connector + channelId + userId`, cron task uid, or heartbeat.
-- Connectors must provide `channelId` and `userId` for mapping.
+- Agent ids are cuid2 values mapped to user descriptors (`connector + channelId + userId`), cron task uid, or heartbeat.
+- Connectors provide user descriptors for mapping; `MessageContext` only carries message-level metadata.
 - Messages (and files) are queued and processed in order via `AgentInbox`.
 
 ## System message routing
-When `send_agent_message` omits a target agent id, the engine routes to the most recent
-foreground user agent.
+When `send_agent_message` omits a target agent id, the tool asks for the most recent
+foreground agent and posts a system message using the target agent’s routing context.
 
 ```mermaid
 sequenceDiagram
   participant Subagent
   participant AgentSystem
-  participant AgentIndex
-  participant Connector
-  Subagent->>AgentSystem: send_agent_message(text)
-  AgentSystem->>AgentIndex: resolve most-recent-foreground
-  AgentIndex-->>AgentSystem: agentId
-  AgentSystem->>Connector: sendMessage(<system_message>)
+  participant AgentInbox
+  participant Agent
+  Subagent->>AgentSystem: agentFor("most-recent-foreground")
+  AgentSystem-->>Subagent: agentId
+  Subagent->>AgentSystem: post(message)
+  AgentSystem->>AgentInbox: enqueue(message)
+  AgentInbox->>Agent: run
 ```
 
 ## Agent persistence
@@ -52,28 +53,28 @@ flowchart LR
 ```
 
 ## Subagent failure notifications
-Background agents emit a single failure notification to the parent agent.
+Background agents post a single failure notification to the parent agent.
 
 ```mermaid
 sequenceDiagram
   participant Subagent
   participant AgentSystem
   participant ParentAgent
-  Subagent-->>AgentSystem: notifySubagentFailure()
-  AgentSystem->>ParentAgent: send_agent_message(failure)
+  Subagent-->>AgentSystem: post(system failure message)
+  AgentSystem->>ParentAgent: enqueue message
 ```
 
 ## Background agent start
-Starting a subagent enqueues work and returns immediately; the background agent continues processing asynchronously.
+Starting a subagent posts the first message and returns immediately; each call creates a new background agent.
 
 ```mermaid
 sequenceDiagram
   participant Foreground
   participant AgentSystem
   participant Subagent
-  Foreground->>AgentSystem: start_background_agent(prompt)
+  Foreground->>AgentSystem: post(subagent message)
   AgentSystem->>Subagent: enqueue message
-  AgentSystem-->>Foreground: tool result (agent id)
+  Foreground-->>Foreground: tool result (new agent id)
 ```
 
 ## Resetting agents

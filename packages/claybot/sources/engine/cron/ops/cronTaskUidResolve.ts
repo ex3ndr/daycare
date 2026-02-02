@@ -1,4 +1,4 @@
-import type { Frontmatter } from "./cronTypes.js";
+import type { Frontmatter } from "../cronTypes.js";
 
 /**
  * Extracts the taskId (UID) from frontmatter.

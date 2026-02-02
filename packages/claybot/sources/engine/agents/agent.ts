@@ -16,6 +16,7 @@ import type { MessageContext } from "@/types";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { messageIsSystemText } from "../messages/messageIsSystemText.js";
+import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
@@ -29,6 +30,7 @@ import { skillPromptFormat } from "../skills/skillPromptFormat.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { agentDescriptorIsCron } from "./ops/agentDescriptorIsCron.js";
 import { agentDescriptorIsHeartbeat } from "./ops/agentDescriptorIsHeartbeat.js";
+import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
 import { agentRoutingSanitize } from "./ops/agentRoutingSanitize.js";
 import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
 import type {
@@ -243,6 +245,14 @@ export class Agent {
     const cronTask = agentDescriptorIsCron(descriptor)
       ? cronTasks.find((task) => task.taskUid === descriptor.id) ?? null
       : null;
+    const descriptorContext =
+      descriptor.type === "user"
+        ? {
+            connector: descriptor.connector,
+            channelId: descriptor.channelId,
+            userId: descriptor.userId
+          }
+        : { connector: item.source };
     const pluginManager = this.agentSystem.pluginManager;
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
@@ -273,12 +283,12 @@ export class Agent {
       workspace: this.state.permissions.workingDir,
       writeDirs: this.state.permissions.writeDirs,
       web: this.state.permissions.web,
-      connector: item.source,
+      connector: descriptorContext.connector,
       canSendFiles: fileSendModes.length > 0,
       fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
       messageFormatPrompt: connectorCapabilities?.messageFormatPrompt ?? "",
-      channelId: context.channelId,
-      userId: context.userId,
+      channelId: descriptorContext.channelId,
+      userId: descriptorContext.userId,
       cronTaskId: cronTask?.id,
       cronTaskName: cronTask?.name,
       cronMemoryPath: cronTask?.memoryPath,
@@ -322,7 +332,8 @@ export class Agent {
       authStore: this.agentSystem.authStore,
       eventBus: this.agentSystem.eventBus,
       assistant: this.agentSystem.config.settings.assistant ?? null,
-      agentRuntime: this.agentSystem.agentRuntime,
+      agentSystem: this.agentSystem,
+      heartbeats: this.agentSystem.heartbeats,
       providersForAgent,
       verbose: this.agentSystem.config.verbose,
       logger,
@@ -351,7 +362,7 @@ export class Agent {
     await agentStateWrite(this.agentSystem.config, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.reset", {
       agentId: this.id,
-      context: { channelId: this.id, userId: "system" }
+      context: {}
     });
     return true;
   }
@@ -369,14 +380,15 @@ export class Agent {
   private async handlePermission(item: AgentInboxPermission): Promise<boolean> {
     const context = item.context;
     const decision = item.decision;
-    if (!context.channelId) {
+    const target = agentDescriptorTargetResolve(this.descriptor);
+    if (!target) {
       logger.error(
-        { source: item.source, channelId: context.channelId, userId: context.userId },
-        "Permission decision missing channelId"
+        { source: item.source, agentId: this.id },
+        "Permission decision missing user routing"
       );
       return false;
     }
-    const connector = this.agentSystem.connectorRegistry.get(item.source);
+    const connector = this.agentSystem.connectorRegistry.get(target.connector);
     const permissionTag = permissionFormatTag(decision.access);
     const permissionLabel = permissionDescribeDecision(decision.access);
 
@@ -391,7 +403,7 @@ export class Agent {
       if (!path.isAbsolute(decision.access.path)) {
         logger.warn({ agentId: this.id, permission: permissionTag }, "Permission path not absolute");
         if (connector) {
-          await connector.sendMessage(context.channelId, {
+          await connector.sendMessage(target.targetId, {
             text: `Permission ignored (path must be absolute): ${permissionLabel}.`,
             replyToMessageId: context.messageId
           });
@@ -425,7 +437,7 @@ export class Agent {
 
   /**
    * Notifies a parent agent when a subagent fails.
-   * Expects: agentRuntime can send messages to other agents.
+   * Expects: parent agent routing is available.
    */
   async notifySubagentFailure(reason: string, error?: unknown): Promise<void> {
     if (this.descriptor.type !== "subagent") {
@@ -441,11 +453,19 @@ export class Agent {
     const errorText = error instanceof Error ? error.message : error ? String(error) : "";
     const detail = errorText ? `${reason} (${errorText})` : reason;
     try {
-      await this.agentSystem.agentRuntime.sendAgentMessage({
-        agentId: parentAgentId,
-        text: `Subagent ${name} (${this.id}) failed: ${detail}.`,
-        origin: "background"
-      });
+      const routing = this.agentSystem.agentRoutingFor(parentAgentId);
+      if (!routing) {
+        logger.warn({ agentId: this.id, parentAgentId }, "Subagent parent routing unavailable");
+        return;
+      }
+      const text = messageBuildSystemText(
+        `Subagent ${name} (${this.id}) failed: ${detail}.`,
+        "background"
+      );
+      await this.agentSystem.post(
+        { agentId: parentAgentId },
+        { type: "message", source: routing.source, message: { text }, context: routing.context }
+      );
     } catch (sendError) {
       logger.warn(
         { agentId: this.id, parentAgentId, error: sendError },
@@ -512,10 +532,7 @@ export class Agent {
     const messages: Context["messages"] = [];
     for (const record of records) {
       if (record.type === "user_message") {
-        const context: MessageContext = {
-          channelId: this.id,
-          userId: "system"
-        };
+        const context: MessageContext = {};
         const message = messageFormatIncoming(
           {
             text: record.text,
@@ -698,34 +715,8 @@ async function promptFileRead(filePath: string, fallbackPrompt: string): Promise
   return defaultContent.trim();
 }
 
-function agentContextBuild(descriptor: AgentDescriptor, agentId: string): MessageContext {
-  switch (descriptor.type) {
-    case "user":
-      return {
-        channelId: descriptor.channelId,
-        userId: descriptor.userId
-      };
-    case "cron":
-      return {
-        channelId: `cron:${descriptor.id}`,
-        userId: "cron"
-      };
-    case "heartbeat":
-      return {
-        channelId: "heartbeat",
-        userId: "heartbeat"
-      };
-    case "subagent":
-      return {
-        channelId: agentId,
-        userId: "system"
-      };
-    default:
-      return {
-        channelId: agentId,
-        userId: "system"
-      };
-  }
+function agentContextBuild(_descriptor: AgentDescriptor, _agentId: string): MessageContext {
+  return {};
 }
 
 function toFileReferences(files: Array<{ id: string; name: string; path: string; mimeType: string; size: number }>): Array<{ id: string; name: string; path: string; mimeType: string; size: number }> {

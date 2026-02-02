@@ -42,7 +42,7 @@ export function buildHeartbeatRunTool(): ToolDefinition {
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as RunHeartbeatArgs;
-      const result = await toolContext.agentRuntime.runHeartbeatNow({ ids: payload.ids });
+      const result = await toolContext.heartbeats.runNow({ ids: payload.ids });
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -74,7 +74,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddHeartbeatArgs;
-      const result = await toolContext.agentRuntime.addHeartbeatTask({
+      const result = await toolContext.heartbeats.addTask({
         id: payload.id,
         title: payload.title,
         prompt: payload.prompt,
@@ -113,7 +113,7 @@ export function buildHeartbeatListTool(): ToolDefinition {
       parameters: listSchema
     },
     execute: async (_args, toolContext, toolCall) => {
-      const tasks = await toolContext.agentRuntime.listHeartbeatTasks();
+      const tasks = await toolContext.heartbeats.listTasks();
       const text = tasks.length > 0
         ? tasks
           .map((task) =>
@@ -156,7 +156,7 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as RemoveHeartbeatArgs;
-      const result = await toolContext.agentRuntime.removeHeartbeatTask({ id: payload.id });
+      const removed = await toolContext.heartbeats.removeTask(payload.id);
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -165,12 +165,12 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: result.removed
+            text: removed
               ? `Removed heartbeat ${payload.id}.`
               : `Heartbeat not found: ${payload.id}.`
           }
         ],
-        details: { id: payload.id, removed: result.removed },
+        details: { id: payload.id, removed },
         isError: false,
         timestamp: Date.now()
       };

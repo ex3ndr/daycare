@@ -1,30 +1,14 @@
-import type { MessageContext } from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 
 /**
  * Builds an AgentDescriptor from message source and context.
- * Expects: connector sources include user/channel ids.
+ * Expects: source === "system" for synthetic agents.
  */
 export function agentDescriptorBuild(
   source: string,
-  context: MessageContext,
+  _context: unknown,
   agentId: string
 ): AgentDescriptor {
-  if (
-    source &&
-    source !== "system" &&
-    source !== "cron" &&
-    source !== "background" &&
-    context.userId &&
-    context.channelId
-  ) {
-    return {
-      type: "user",
-      connector: source,
-      userId: context.userId,
-      channelId: context.channelId
-    };
-  }
   if (source === "system") {
     return {
       type: "subagent",
@@ -33,5 +17,5 @@ export function agentDescriptorBuild(
       name: "system"
     };
   }
-  throw new Error("Agent descriptor could not be resolved");
+  throw new Error("Agent descriptor requires explicit routing data for non-system sources");
 }

@@ -1,6 +1,6 @@
 import matter from "gray-matter";
 
-import type { Frontmatter, ParsedDocument } from "./cronTypes.js";
+import type { Frontmatter, ParsedDocument } from "../cronTypes.js";
 
 /**
  * Parses YAML frontmatter from markdown content using gray-matter.

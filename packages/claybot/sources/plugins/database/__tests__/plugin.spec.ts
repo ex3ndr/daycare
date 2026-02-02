@@ -12,7 +12,7 @@ import { PluginRegistry } from "../../../engine/plugins/registry.js";
 import { Agent } from "../../../engine/agents/agent.js";
 import { AgentInbox } from "../../../engine/agents/ops/agentInbox.js";
 import { agentDescriptorBuild } from "../../../engine/agents/ops/agentDescriptorBuild.js";
-import type { AgentRuntime, AgentState, SessionPermissions } from "@/types";
+import type { AgentState, SessionPermissions } from "@/types";
 import { getLogger } from "../../../log.js";
 import { plugin } from "../plugin.js";
 import { configResolve } from "../../../config/configResolve.js";
@@ -41,7 +41,7 @@ describe("database plugin", () => {
       readDirs: [],
       web: false
     };
-    const messageContext = { channelId: "channel-1", userId: "user-1" };
+    const messageContext = {};
     const descriptor = agentDescriptorBuild("system", messageContext, agentId);
     const state: AgentState = {
       context: { messages: [] },
@@ -59,20 +59,6 @@ describe("database plugin", () => {
       new AgentInbox(agentId),
       {} as unknown as Parameters<typeof Agent.restore>[4]
     );
-    const agentRuntime: AgentRuntime = {
-      startBackgroundAgent: async (_args) => ({ agentId: createId() }),
-      sendAgentMessage: async () => {},
-      runHeartbeatNow: async () => ({ ran: 0, taskIds: [] }),
-      addHeartbeatTask: async () => ({
-        id: "stub",
-        title: "stub",
-        prompt: "stub",
-        filePath: "/tmp/heartbeat.md"
-      }),
-      listHeartbeatTasks: async () => [],
-      removeHeartbeatTask: async () => ({ removed: false })
-    };
-
     const api = {
       instance: { instanceId, pluginId: "database" },
       settings: {},
@@ -119,7 +105,8 @@ describe("database plugin", () => {
       agent,
       source: "test",
       messageContext,
-      agentRuntime
+      agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],
+      heartbeats: null as unknown as Parameters<typeof modules.tools.execute>[1]["heartbeats"]
     });
 
     expect(result.toolMessage.isError).toBe(false);

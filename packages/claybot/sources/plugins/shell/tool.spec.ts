@@ -7,7 +7,7 @@ import { buildExecTool } from "./tool.js";
 import { Agent } from "../../engine/agents/agent.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { agentDescriptorBuild } from "../../engine/agents/ops/agentDescriptorBuild.js";
-import type { AgentRuntime, AgentState, ToolExecutionContext } from "@/types";
+import type { AgentState, ToolExecutionContext } from "@/types";
 import { createId } from "@paralleldrive/cuid2";
 
 const toolCall = { id: "tool-call-1", name: "exec" };
@@ -52,7 +52,7 @@ describe("exec tool allowedDomains", () => {
 
 function createContext(workingDir: string, web: boolean): ToolExecutionContext {
   const agentId = createId();
-  const messageContext = { channelId: "test", userId: "test-user" };
+  const messageContext = {};
   const descriptor = agentDescriptorBuild("system", messageContext, agentId);
   const now = Date.now();
   const state: AgentState = {
@@ -76,19 +76,6 @@ function createContext(workingDir: string, web: boolean): ToolExecutionContext {
     new AgentInbox(agentId),
     {} as unknown as Parameters<typeof Agent.restore>[4]
   );
-  const agentRuntime: AgentRuntime = {
-    startBackgroundAgent: async (_args) => ({ agentId: createId() }),
-    sendAgentMessage: async () => {},
-    runHeartbeatNow: async () => ({ ran: 0, taskIds: [] }),
-    addHeartbeatTask: async () => ({
-      id: "stub",
-      title: "stub",
-      prompt: "stub",
-      filePath: "/tmp/heartbeat.md"
-    }),
-    listHeartbeatTasks: async () => [],
-    removeHeartbeatTask: async () => ({ removed: false })
-  };
   return {
     connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
     fileStore: null as unknown as ToolExecutionContext["fileStore"],
@@ -99,6 +86,7 @@ function createContext(workingDir: string, web: boolean): ToolExecutionContext {
     agent,
     source: "test",
     messageContext,
-    agentRuntime
+    agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
+    heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
   };
 }

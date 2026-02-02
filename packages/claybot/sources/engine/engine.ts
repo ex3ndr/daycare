@@ -5,7 +5,6 @@ import { getLogger } from "../log.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import type {
-  AgentRuntime,
   AgentState,
   Config,
   MessageContext,
@@ -14,8 +13,6 @@ import type {
 import { FileStore } from "../files/store.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { PluginRegistry } from "./plugins/registry.js";
-import { PluginEventEngine } from "./plugins/event-engine.js";
-import { PluginEventQueue } from "./plugins/events.js";
 import { PluginManager } from "./plugins/manager.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { ensureWorkspaceDir } from "./permissions.js";
@@ -63,11 +60,8 @@ export class Engine {
   readonly modules: ModuleRegistry;
   readonly pluginRegistry: PluginRegistry;
   readonly pluginManager: PluginManager;
-  readonly pluginEventQueue: PluginEventQueue;
-  readonly pluginEventEngine: PluginEventEngine;
   readonly providerManager: ProviderManager;
   readonly agentSystem: AgentSystem;
-  readonly agentRuntime: AgentRuntime;
   readonly crons: Crons;
   readonly heartbeats: Heartbeats;
   readonly inferenceRouter: InferenceRouter;
@@ -81,23 +75,21 @@ export class Engine {
     this.fileStore = new FileStore(this.config);
     logger.debug(`AuthStore and FileStore initialized`);
 
-    this.pluginEventQueue = new PluginEventQueue();
-    this.pluginEventEngine = new PluginEventEngine(this.pluginEventQueue);
-
     this.modules = new ModuleRegistry({
-      onMessage: (source, message, context) => {
-        if (!context.channelId || !context.userId) {
-          logger.error(
-            { source, channelId: context.channelId, userId: context.userId },
-            "Connector message missing channelId or userId"
-          );
-          return;
-        }
-        logger.debug(`Connector message received: source=${source} channel=${context.channelId} text=${message.text?.length ?? 0}chars files=${message.files?.length ?? 0}`);
-        void this.agentSystem.scheduleMessage(source, message, context);
+      onMessage: (source, message, context, descriptor) => {
+        logger.debug(
+          `Connector message received: source=${source} type=${descriptor.type} text=${message.text?.length ?? 0}chars files=${message.files?.length ?? 0}`
+        );
+        void this.agentSystem.post(
+          { descriptor },
+          { type: "message", source, message, context }
+        );
       },
-      onPermission: (source, decision, context) => {
-        void this.agentSystem.schedulePermissionDecision(source, decision, context);
+      onPermission: (source, decision, context, descriptor) => {
+        void this.agentSystem.post(
+          { descriptor },
+          { type: "permission", source, decision, context }
+        );
       },
       onFatal: (source, reason, error) => {
         logger.warn({ source, reason, error }, "Connector requested shutdown");
@@ -118,9 +110,11 @@ export class Engine {
       auth: this.authStore,
       fileStore: this.fileStore,
       pluginCatalog: buildPluginCatalog(),
-      eventQueue: this.pluginEventQueue,
       inferenceRouter: this.inferenceRouter,
-      engineEvents: this.eventBus
+      engineEvents: this.eventBus,
+      onEvent: (event) => {
+        this.agentSystem.eventBus.emit("plugin.event", event);
+      }
     });
 
     this.providerManager = new ProviderManager({
@@ -131,60 +125,7 @@ export class Engine {
       imageRegistry: this.modules.images
     });
 
-    let agentSystem!: AgentSystem;
-    this.crons = new Crons({
-      config: this.config,
-      eventBus: this.eventBus,
-      onTask: async (task, context) => {
-        const descriptor = { type: "cron" as const, id: task.taskUid };
-        const messageContext: MessageContext = {
-          channelId: context.channelId,
-          userId: context.userId
-        };
-        logger.debug(
-          `CronScheduler.onTask triggered channelId=${messageContext.channelId} taskUid=${task.taskUid}`
-        );
-        await agentSystem.post(
-          { descriptor },
-          {
-            type: "message",
-            source: "cron",
-            message: { text: task.prompt },
-            context: messageContext
-          }
-        );
-      }
-    });
-    this.heartbeats = new Heartbeats({
-      config: this.config,
-      eventBus: this.eventBus,
-      intervalMs: 30 * 60 * 1000,
-      runtime: {
-        postHeartbeat: async ({ prompt }) => {
-          await agentSystem.post(
-            { descriptor: { type: "heartbeat" } },
-            {
-              type: "message",
-              source: "heartbeat",
-              message: { text: prompt },
-              context: { channelId: "heartbeat", userId: "heartbeat" }
-            }
-          );
-        }
-      }
-    });
-
-    const agentRuntime: AgentRuntime = {
-      startBackgroundAgent: (args) => agentSystem.startBackgroundAgent(args),
-      sendAgentMessage: (args) => agentSystem.sendAgentMessage(args),
-      runHeartbeatNow: (args) => this.heartbeats.runNow(args),
-      addHeartbeatTask: (args) => this.heartbeats.addTask(args),
-      listHeartbeatTasks: () => this.heartbeats.listTasks(),
-      removeHeartbeatTask: async (args) => ({
-        removed: await this.heartbeats.removeTask(args.id)
-      })
-    };
-    agentSystem = new AgentSystem({
+    this.agentSystem = new AgentSystem({
       config: this.config,
       eventBus: this.eventBus,
       connectorRegistry: this.modules.connectors,
@@ -193,12 +134,24 @@ export class Engine {
       pluginManager: this.pluginManager,
       inferenceRouter: this.inferenceRouter,
       fileStore: this.fileStore,
-      authStore: this.authStore,
-      crons: this.crons,
-      agentRuntime
+      authStore: this.authStore
     });
-    this.agentSystem = agentSystem;
-    this.agentRuntime = agentRuntime;
+
+    this.crons = new Crons({
+      config: this.config,
+      eventBus: this.eventBus,
+      agentSystem: this.agentSystem
+    });
+    this.agentSystem.setCrons(this.crons);
+
+    const heartbeats = new Heartbeats({
+      config: this.config,
+      eventBus: this.eventBus,
+      intervalMs: 30 * 60 * 1000,
+      agentSystem: this.agentSystem
+    });
+    this.heartbeats = heartbeats;
+    this.agentSystem.setHeartbeats(heartbeats);
 
   }
 
@@ -215,9 +168,7 @@ export class Engine {
     logger.debug("Provider manager sync complete");
     logger.debug("Loading enabled plugins");
     await this.pluginManager.loadEnabled(this.config);
-    logger.debug("Plugins loaded, starting plugin event engine");
-    this.pluginEventEngine.start();
-    logger.debug("Plugin event engine started");
+    logger.debug("Plugins loaded");
 
     await this.crons.ensureDir();
     await this.heartbeats.ensureDir();
@@ -257,7 +208,6 @@ export class Engine {
     await this.modules.connectors.unregisterAll("shutdown");
     this.crons.stop();
     this.heartbeats.stop();
-    this.pluginEventEngine.stop();
     await this.pluginManager.unloadAll();
   }
 
@@ -329,8 +279,6 @@ export class Engine {
     const now = Date.now();
     const agentId = createId();
     const context: MessageContext = {
-      channelId: messageContext?.channelId ?? agentId,
-      userId: messageContext?.userId ?? "system",
       messageId: messageContext?.messageId
     };
     const descriptor = agentDescriptorBuild("system", context, agentId);
@@ -355,7 +303,8 @@ export class Engine {
       agent,
       source: "system",
       messageContext: context,
-      agentRuntime: this.agentRuntime
+      agentSystem: this.agentSystem,
+      heartbeats: this.heartbeats
     });
   }
 

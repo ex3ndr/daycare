@@ -10,6 +10,7 @@ import type {
   ConnectorCapabilities,
   MessageContext,
   MessageHandler,
+  AgentDescriptor,
   PermissionDecision,
   PermissionHandler,
   PermissionRequest,
@@ -73,7 +74,7 @@ export class TelegramConnector implements Connector {
   private allowedUids: Set<string>;
   private pendingPermissions = new Map<
     string,
-    { request: PermissionRequest; context: MessageContext }
+    { request: PermissionRequest; context: MessageContext; descriptor: AgentDescriptor }
   >();
   private shuttingDown = false;
   private retryOptions?: TelegramConnectorOptions["retry"];
@@ -127,17 +128,23 @@ export class TelegramConnector implements Connector {
         files: files.length > 0 ? files : undefined
       };
 
-      const context: MessageContext = {
-        channelId: String(message.chat.id),
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
         userId: String(message.from?.id ?? message.chat.id),
+        channelId: String(message.chat.id)
+      };
+      const context: MessageContext = {
         messageId: message.message_id ? String(message.message_id) : undefined
       };
 
-      logger.debug(`Dispatching to handlers handlerCount=${this.handlers.length} channelId=${context.channelId}`);
+      logger.debug(
+        `Dispatching to handlers handlerCount=${this.handlers.length} channelId=${descriptor.channelId}`
+      );
       for (const handler of this.handlers) {
-        await handler(payload, context);
+        await handler(payload, context, descriptor);
       }
-      logger.debug(`All handlers completed channelId=${context.channelId}`);
+      logger.debug(`All handlers completed channelId=${descriptor.channelId}`);
     });
 
     this.bot.on("callback_query", async (query) => {
@@ -175,7 +182,7 @@ export class TelegramConnector implements Connector {
         access: pending.request.access
       };
       for (const handler of this.permissionHandlers) {
-        await handler(decision, pending.context);
+        await handler(decision, pending.context, pending.descriptor);
       }
       await this.bot.answerCallbackQuery(query.id, {
         text: approved ? "Permission granted." : "Permission denied."
@@ -250,13 +257,14 @@ export class TelegramConnector implements Connector {
   async requestPermission(
     targetId: string,
     request: PermissionRequest,
-    context: MessageContext
+    context: MessageContext,
+    descriptor: AgentDescriptor
   ): Promise<void> {
     if (!this.isAllowedTarget(targetId, "requestPermission")) {
       return;
     }
     const { text, parseMode } = formatPermissionMessage(request, "pending");
-    this.pendingPermissions.set(request.token, { request, context });
+    this.pendingPermissions.set(request.token, { request, context, descriptor });
     await this.bot.sendMessage(targetId, text, {
       parse_mode: parseMode,
       reply_markup: {

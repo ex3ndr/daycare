@@ -1,12 +1,13 @@
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { createId } from "@paralleldrive/cuid2";
 
 import type { ToolDefinition } from "@/types";
+import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js";
 
 const startSchema = Type.Object(
   {
     prompt: Type.String({ minLength: 1 }),
-    agentId: Type.Optional(Type.String({ minLength: 1 })),
     name: Type.Optional(Type.String({ minLength: 1 }))
   },
   { additionalProperties: false }
@@ -27,17 +28,28 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
   return {
     tool: {
       name: "start_background_agent",
-      description: "Start or continue a background agent to work on a task.",
+      description: "Start a background agent to work on a task.",
       parameters: startSchema
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as StartBackgroundArgs;
-      const result = await toolContext.agentRuntime.startBackgroundAgent({
-        prompt: payload.prompt,
-        agentId: payload.agentId,
-        name: payload.name,
-        parentAgentId: toolContext.agent.id
-      });
+      const prompt = payload.prompt.trim();
+      if (!prompt) {
+        throw new Error("Background agent prompt is required");
+      }
+      const agentId = createId();
+      const descriptor = {
+        type: "subagent" as const,
+        id: agentId,
+        parentAgentId: toolContext.agent.id,
+        name: payload.name ?? "subagent"
+      };
+      const parentContext = toolContext.agent.state.routing?.context ?? null;
+      const context = parentContext ? { ...parentContext } : {};
+      await toolContext.agentSystem.post(
+        { descriptor },
+        { type: "message", source: "system", message: { text: prompt }, context }
+      );
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -46,7 +58,7 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Background agent started: ${result.agentId}.`
+            text: `Background agent started: ${agentId}.`
           }
         ],
         isError: false,
@@ -71,11 +83,20 @@ export function buildSendAgentMessageTool(): ToolDefinition {
       const stateAgent = toolContext.agent.state.agent;
       const origin = stateAgent?.kind === "background" ? "background" : "system";
       const targetAgentId = payload.agentId ?? stateAgent?.parentAgentId ?? undefined;
-      await toolContext.agentRuntime.sendAgentMessage({
-        agentId: targetAgentId,
-        text: payload.text,
-        origin
-      });
+      const resolvedTarget =
+        targetAgentId ?? toolContext.agentSystem.agentFor("most-recent-foreground");
+      if (!resolvedTarget) {
+        throw new Error("No recent foreground agent found.");
+      }
+      const routing = toolContext.agentSystem.agentRoutingFor(resolvedTarget);
+      if (!routing) {
+        throw new Error(`Agent routing unavailable: ${resolvedTarget}`);
+      }
+      const text = messageBuildSystemText(payload.text, origin);
+      await toolContext.agentSystem.post(
+        { agentId: resolvedTarget },
+        { type: "message", source: routing.source, message: { text }, context: routing.context }
+      );
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",

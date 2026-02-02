@@ -26,11 +26,11 @@ classDiagram
     +replyToMessageId?: string
   }
   class MessageContext {
-    +channelId: string
-    +userId: string
     +messageId?: string
   }
 ```
+
+Connectors emit a user descriptor alongside `MessageContext` for routing.
 
 ## Telegram connector
 - Implemented as the `telegram` plugin.

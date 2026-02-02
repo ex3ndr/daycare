@@ -12,6 +12,7 @@ flowchart TD
   Engine --> MsgIsSystem[messageIsSystemText.ts]
   Engine --> AgentBuild[agentDescriptorBuild.ts]
   Engine --> AgentKey[agentKeyBuild.ts]
+  Engine --> AgentTarget[agentDescriptorTargetResolve.ts]
   Engine --> AgentCron[agentDescriptorIsCron.ts]
   Engine --> AgentHeartbeat[agentDescriptorIsHeartbeat.ts]
   Engine --> AgentRouting[agentRoutingSanitize.ts]

@@ -27,7 +27,7 @@ The plugin API surface is intentionally narrow:
 - `api.logger`: per-plugin logger
 - `api.mode`: `"runtime"` or `"validate"` (used during `claybot add` validation)
 - `api.engineEvents`: engine event bus (optional)
-- `api.events.emit({ type, payload })`: enqueue plugin events
+- `api.events.emit({ type, payload })`: emit plugin events to the engine event bus
 
 Inference strategies:
 - `default`: use the provider defaults from settings.
@@ -72,8 +72,8 @@ When `exclusive` is true, the engine will only allow that plugin to be enabled b
 ```
 
 ### Event format
-Plugin events are queued and processed sequentially. Each event is persisted in
-memory with metadata for later routing:
+Plugin events are emitted immediately with metadata and forwarded to the engine
+event bus (SSE `plugin.event`):
 - `id` (generated)
 - `pluginId`
 - `instanceId`
@@ -94,12 +94,12 @@ flowchart TD
   Manager --> Loader["PluginModuleLoader"]
   Loader --> Plugin["Plugin instance<br/>load()/unload()"]
   Plugin --> Registrar["PluginRegistrar"]
-  Plugin --> Events["PluginEventQueue"]
+  Plugin --> Events["EngineEventBus<br/>plugin.event"]
   Registrar --> Connectors["ConnectorRegistry"]
   Registrar --> Inference["InferenceRegistry"]
   Registrar --> Tools["ToolResolver"]
   Registrar --> Images["ImageGenerationRegistry"]
-  Events --> Engine["PluginEventEngine"]
+  Events --> Engine["SSE /v1/engine/events"]
 ```
 
 ## Built-in plugins

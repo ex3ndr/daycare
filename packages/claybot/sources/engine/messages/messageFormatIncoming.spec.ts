@@ -5,7 +5,7 @@ import { messageFormatIncoming } from "./messageFormatIncoming.js";
 describe("messageFormatIncoming", () => {
   it("wraps message text with time and ids", () => {
     const message = { text: "hello" };
-    const context = { channelId: "channel", userId: "user", messageId: "msg-1" };
+    const context = { messageId: "msg-1" };
     const result = messageFormatIncoming(message, context, new Date("2024-01-01T00:00:00Z"));
 
     expect(result.rawText).toBe("hello");
@@ -16,7 +16,7 @@ describe("messageFormatIncoming", () => {
 
   it("returns the message when no text or files", () => {
     const message = { text: null, files: [] };
-    const context = { channelId: "channel", userId: "user" };
+    const context = {};
     const result = messageFormatIncoming(message, context, new Date());
 
     expect(result).toEqual(message);

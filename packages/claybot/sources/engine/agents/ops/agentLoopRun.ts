@@ -13,10 +13,12 @@ import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
 import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import { toolResultFormatVerbose } from "../../modules/tools/toolResultFormatVerbose.js";
-import type { AgentRuntime } from "@/types";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Agent } from "../agent.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
+import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
+import type { AgentSystem } from "../agentSystem.js";
+import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 
 const MAX_TOOL_ITERATIONS = 5;
 
@@ -33,7 +35,8 @@ type AgentLoopRunOptions = {
   authStore: AuthStore;
   eventBus: EngineEventBus;
   assistant: AssistantSettings | null;
-  agentRuntime: AgentRuntime;
+  agentSystem: AgentSystem;
+  heartbeats: Heartbeats;
   providersForAgent: ProviderSettings[];
   verbose: boolean;
   logger: Logger;
@@ -60,13 +63,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     inferenceRouter,
     toolResolver,
     fileStore,
-    authStore,
-    eventBus,
-    assistant,
-    agentRuntime,
-    providersForAgent,
-    verbose,
-    logger,
+  authStore,
+  eventBus,
+  assistant,
+  agentSystem,
+  heartbeats,
+  providersForAgent,
+  verbose,
+  logger,
     notifySubagentFailure
   } = options;
 
@@ -76,8 +80,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   let lastResponseTextSent = false;
   let finalResponseText: string | null = null;
   const historyRecords: AgentHistoryRecord[] = [];
-  logger.debug(`Starting typing indicator channelId=${entry.context.channelId}`);
-  const stopTyping = connector?.startTyping?.(entry.context.channelId);
+  const target = agentDescriptorTargetResolve(agent.descriptor);
+  const targetId = target?.targetId ?? null;
+  logger.debug(`Starting typing indicator targetId=${targetId ?? "none"}`);
+  const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
 
   try {
     logger.debug(`Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
@@ -142,9 +148,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       const hasResponseText = trimmedText.length > 0;
       finalResponseText = hasResponseText ? responseText : null;
       lastResponseTextSent = false;
-      if (hasResponseText && connector) {
+      if (hasResponseText && connector && targetId) {
         try {
-          await connector.sendMessage(entry.context.channelId, {
+          await connector.sendMessage(targetId, {
             text: responseText,
             replyToMessageId: entry.context.messageId
           });
@@ -180,9 +186,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           `Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
         );
 
-        if (verbose && connector) {
+        if (verbose && connector && targetId) {
           const argsFormatted = toolArgsFormatVerbose(toolCall.arguments);
-          await connector.sendMessage(entry.context.channelId, {
+          await connector.sendMessage(targetId, {
             text: `[tool] ${toolCall.name}(${argsFormatted})`
           });
         }
@@ -197,15 +203,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           agent,
           source,
           messageContext: entry.context,
-          agentRuntime
+          agentSystem,
+          heartbeats
         });
         logger.debug(
           `Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError} fileCount=${toolResult.files.length}`
         );
 
-        if (verbose && connector) {
+        if (verbose && connector && targetId) {
           const resultText = toolResultFormatVerbose(toolResult);
-          await connector.sendMessage(entry.context.channelId, {
+          await connector.sendMessage(targetId, {
             text: resultText
           });
         }
@@ -238,8 +245,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         : "Inference failed.";
     logger.debug(`Sending error message to user message=${message}`);
     await notifySubagentFailure("Inference failed", error);
-    if (connector) {
-      await connector.sendMessage(entry.context.channelId, {
+    if (connector && targetId) {
+      await connector.sendMessage(targetId, {
         text: message,
         replyToMessageId: entry.context.messageId
       });
@@ -267,8 +274,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     );
     await notifySubagentFailure("Inference failed", response.message.errorMessage);
     try {
-      if (connector) {
-        await connector.sendMessage(entry.context.channelId, {
+      if (connector && targetId) {
+        await connector.sendMessage(targetId, {
           text: message,
           replyToMessageId: entry.context.messageId
         });
@@ -298,8 +305,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       logger.debug("Tool loop exceeded, sending error message");
       await notifySubagentFailure(message);
       try {
-        if (connector) {
-          await connector.sendMessage(entry.context.channelId, {
+        if (connector && targetId) {
+          await connector.sendMessage(targetId, {
             text: message,
             replyToMessageId: entry.context.messageId
           });
@@ -321,11 +328,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         ? "Generated files."
         : null;
   logger.debug(
-    `Sending response to user textLength=${outgoingText?.length ?? 0} fileCount=${generatedFiles.length} channelId=${entry.context.channelId}`
+    `Sending response to user textLength=${outgoingText?.length ?? 0} fileCount=${generatedFiles.length} targetId=${targetId ?? "none"}`
   );
   try {
-    if (connector && (outgoingText || shouldSendFiles)) {
-      await connector.sendMessage(entry.context.channelId, {
+    if (connector && targetId && (outgoingText || shouldSendFiles)) {
+      await connector.sendMessage(targetId, {
         text: outgoingText,
         files: shouldSendFiles ? generatedFiles : undefined,
         replyToMessageId: entry.context.messageId

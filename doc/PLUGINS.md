@@ -165,7 +165,8 @@ api.events.emit({
 });
 ```
 
-Events are queued with metadata (`id`, `pluginId`, `instanceId`, `createdAt`).
+Events are emitted immediately with metadata (`id`, `pluginId`, `instanceId`, `createdAt`)
+and forwarded to the engine event bus.
 
 #### `mode` - Execution Context
 
@@ -624,20 +625,18 @@ flowchart TD
   end
 
   subgraph Events
-    PEQ[PluginEventQueue]
-    PEE[PluginEventEngine]
+    EEB[EngineEventBus]
   end
 
   S --> PM
   PM --> PL
   PL --> PI
   PI --> PR[PluginRegistrar]
-  PI --> PEQ
+  PI --> EEB
   PR --> CR
   PR --> IR
   PR --> TR
   PR --> IMG
-  PEQ --> PEE
 ```
 
 ---
@@ -650,7 +649,7 @@ Core plugin infrastructure:
 - `sources/engine/plugins/loader.ts` - Module loading
 - `sources/engine/plugins/registry.ts` - PluginRegistrar implementation
 - `sources/engine/plugins/catalog.ts` - Plugin discovery
-- `sources/engine/plugins/events.ts` - Event queue
+- `sources/engine/plugins/events.ts` - Event metadata types
 
 Module type definitions:
 - `sources/engine/connectors/types.ts` - Connector interface

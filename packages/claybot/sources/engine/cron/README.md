@@ -7,21 +7,23 @@ Manages scheduled task execution using cron expressions.
 ```
 cron/
 ├── cronTypes.ts                 # Type definitions
-├── cronTaskUidResolve.ts        # Extract taskId from frontmatter
-├── cronFrontmatterParse.ts      # Parse markdown frontmatter
-├── cronFrontmatterSerialize.ts  # Serialize to markdown frontmatter
-├── cronFieldParse.ts            # Parse single cron field
-├── cronFieldMatch.ts            # Match value against cron field
-├── cronExpressionParse.ts       # Parse 5-field cron expression
-├── cronTimeGetNext.ts           # Calculate next run time
-├── cronStore.ts                 # CronStore class (file persistence)
-├── cronScheduler.ts             # CronScheduler class (task execution)
+├── ops/
+│   ├── cronTaskUidResolve.ts        # Extract taskId from frontmatter
+│   ├── cronFrontmatterParse.ts      # Parse markdown frontmatter
+│   ├── cronFrontmatterSerialize.ts  # Serialize to markdown frontmatter
+│   ├── cronFieldParse.ts            # Parse single cron field
+│   ├── cronFieldMatch.ts            # Match value against cron field
+│   ├── cronExpressionParse.ts       # Parse 5-field cron expression
+│   ├── cronTimeGetNext.ts           # Calculate next run time
+│   ├── cronStore.ts                 # CronStore class (file persistence)
+│   └── cronScheduler.ts             # CronScheduler class (task execution)
+├── crons.ts                     # Cron facade (storage + scheduling)
 └── README.md
 ```
 
 ## Pure Functions
 
-All parsing and validation logic is extracted into pure functions:
+All parsing and validation logic lives in `ops/` as pure functions:
 
 - `cronTaskUidResolve(frontmatter)` - Extract taskId from frontmatter
 - `cronFrontmatterParse(content)` - Parse YAML frontmatter from markdown
@@ -56,8 +58,8 @@ Schedules and executes cron tasks based on their cron expressions.
 ## Usage
 
 ```typescript
-import { CronStore } from "./cron/cronStore.js";
-import { CronScheduler } from "./cron/cronScheduler.js";
+import { CronStore } from "./cron/ops/cronStore.js";
+import { CronScheduler } from "./cron/ops/cronScheduler.js";
 
 const store = new CronStore("/path/to/cron");
 const scheduler = new CronScheduler({

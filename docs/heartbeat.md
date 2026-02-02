@@ -17,8 +17,8 @@ Heartbeat prompts live under `<config>/heartbeat/`:
 ```mermaid
 flowchart TD
   Engine[engine.ts] --> Heartbeats[heartbeat/heartbeats.ts]
-  Heartbeats --> Store[heartbeat/heartbeatStore.ts]
-  Heartbeats --> Scheduler[heartbeat/heartbeatScheduler.ts]
+  Heartbeats --> Store[heartbeat/ops/heartbeatStore.ts]
+  Heartbeats --> Scheduler[heartbeat/ops/heartbeatScheduler.ts]
   Scheduler --> AgentSystem[agents/agentSystem.ts]
 ```
 

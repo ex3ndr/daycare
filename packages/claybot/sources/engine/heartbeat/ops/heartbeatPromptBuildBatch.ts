@@ -1,4 +1,4 @@
-import type { HeartbeatDefinition } from "./heartbeatTypes.js";
+import type { HeartbeatDefinition } from "../heartbeatTypes.js";
 
 /**
  * Builds a prompt for running heartbeat tasks as a batch.

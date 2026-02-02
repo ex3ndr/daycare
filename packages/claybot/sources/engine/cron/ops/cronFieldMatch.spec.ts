@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { cronFieldMatch } from "./cronFieldMatch.js";
-import type { CronField } from "./cronTypes.js";
+import type { CronField } from "../cronTypes.js";
 
 describe("cronFieldMatch", () => {
   it("matches any field with any value", () => {

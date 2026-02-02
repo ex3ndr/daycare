@@ -8,6 +8,7 @@ import type {
   PermissionDecision,
   PermissionHandler
 } from "./connectors/types.js";
+import type { AgentDescriptor } from "@/types";
 
 export type ConnectorActionResult =
   | { ok: true; status: "loaded" | "already-loaded" | "unloaded" | "not-loaded" }
@@ -17,12 +18,14 @@ export type ConnectorRegistryOptions = {
   onMessage: (
     source: string,
     message: ConnectorMessage,
-    context: MessageContext
+    context: MessageContext,
+    descriptor: AgentDescriptor
   ) => void | Promise<void>;
   onPermission?: (
     source: string,
     decision: PermissionDecision,
-    context: MessageContext
+    context: MessageContext,
+    descriptor: AgentDescriptor
   ) => void | Promise<void>;
   onFatal?: (source: string, reason: string, error?: unknown) => void;
 };
@@ -126,8 +129,8 @@ export class ConnectorRegistry {
   }
 
   private attach(id: string, connector: Connector): MessageUnsubscribe {
-    const handler: MessageHandler = (message, context) => {
-      return this.onMessage(id, message, context);
+    const handler: MessageHandler = (message, context, descriptor) => {
+      return this.onMessage(id, message, context, descriptor);
     };
     return connector.onMessage(handler);
   }
@@ -136,8 +139,8 @@ export class ConnectorRegistry {
     if (!this.onPermission || !connector.onPermission) {
       return undefined;
     }
-    const handler: PermissionHandler = (decision, context) => {
-      return this.onPermission?.(id, decision, context);
+    const handler: PermissionHandler = (decision, context, descriptor) => {
+      return this.onPermission?.(id, decision, context, descriptor);
     };
     return connector.onPermission(handler);
   }

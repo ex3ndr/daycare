@@ -25,6 +25,9 @@ Current endpoints:
 - `POST /v1/engine/auth`
 - `GET /v1/engine/events` (SSE)
 
+Note: `/v1/engine/agents/background` is derived from persisted agent state and does not
+include live inbox status.
+
 Plugin mutations accept:
 - `POST /v1/engine/plugins/load` payload `{ "pluginId": "...", "instanceId": "...", "settings": { ... } }`
 - `POST /v1/engine/plugins/unload` payload `{ "instanceId": "..." }`

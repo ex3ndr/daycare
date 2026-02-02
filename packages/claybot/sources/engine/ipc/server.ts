@@ -21,6 +21,9 @@ import { PluginModuleLoader } from "../plugins/loader.js";
 import { resolveExclusivePlugins } from "../plugins/exclusive.js";
 import type { EngineEventBus } from "./events.js";
 import { requestShutdown } from "../../util/shutdown.js";
+import { agentBackgroundList } from "../agents/ops/agentBackgroundList.js";
+import { agentList } from "../agents/ops/agentList.js";
+import { agentHistoryLoad } from "../agents/ops/agentHistoryLoad.js";
 
 export type EngineServerOptions = {
   socketPath?: string;
@@ -91,14 +94,14 @@ export async function startEngineServer(
 
   app.get("/v1/engine/agents/background", async (_request, reply) => {
     logger.debug("GET /v1/engine/agents/background");
-    const agents = options.runtime.agentSystem.getBackgroundAgents();
+    const agents = await agentBackgroundList(options.runtime.config);
     logger.debug(`Background agents retrieved agentCount=${agents.length}`);
     return reply.send({ ok: true, agents });
   });
 
   app.get("/v1/engine/agents", async (_request, reply) => {
     logger.debug("GET /v1/engine/agents");
-    const agents = options.runtime.agentSystem.listAgents();
+    const agents = await agentList(options.runtime.config);
     logger.debug(`Agents retrieved agentCount=${agents.length}`);
     return reply.send({ ok: true, agents });
   });
@@ -106,7 +109,7 @@ export async function startEngineServer(
   app.get("/v1/engine/agents/:agentId/history", async (request, reply) => {
     const agentId = (request.params as { agentId: string }).agentId;
     logger.debug(`GET /v1/engine/agents/:agentId/history agentId=${agentId}`);
-    const records = await options.runtime.agentSystem.loadHistory(agentId);
+    const records = await agentHistoryLoad(options.runtime.config, agentId);
     logger.debug(`Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
     return reply.send({ ok: true, records });
   });
@@ -334,7 +337,7 @@ export async function startEngineServer(
         status: options.runtime.getStatus(),
         cron: options.runtime.crons.listScheduledTasks(),
         heartbeat: await options.runtime.heartbeats.listTasks(),
-        backgroundAgents: options.runtime.agentSystem.getBackgroundAgents()
+        backgroundAgents: await agentBackgroundList(options.runtime.config)
       },
       timestamp: new Date().toISOString()
     });

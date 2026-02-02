@@ -10,6 +10,7 @@ import type {
   ToolExecutionContext
 } from "@/types";
 import { pathResolveSecure, openSecure } from "../../permissions/pathResolveSecure.js";
+import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
 const schema = Type.Object(
   {
@@ -57,7 +58,11 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         throw new Error("Connector registry unavailable");
       }
 
-      const source = payload.source ?? context.source;
+      const target = agentDescriptorTargetResolve(context.agent.descriptor);
+      if (payload.source && target && payload.source !== target.connector && !payload.channelId) {
+        throw new Error("Override source requires an explicit channelId.");
+      }
+      const source = payload.source ?? target?.connector ?? context.source;
       const connector = context.connectorRegistry.get(source);
       if (!connector) {
         throw new Error(`Connector not loaded: ${source}`);
@@ -79,7 +84,11 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
           ? payload.text
           : null;
 
-      await connector.sendMessage(payload.channelId ?? context.messageContext.channelId, {
+      const targetId = payload.channelId ?? target?.targetId;
+      if (!targetId) {
+        throw new Error("Send file requires a user agent or explicit channelId.");
+      }
+      await connector.sendMessage(targetId, {
         text: messageText,
         files: [{ ...file, sendAs }]
       });

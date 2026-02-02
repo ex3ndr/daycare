@@ -45,28 +45,7 @@ export type FileReference = {
 };
 
 export type MessageContext = {
-  channelId: string;
-  channelType?: "private" | "group" | "supergroup" | "channel" | "unknown";
-  userId: string;
-  userFirstName?: string;
-  userLastName?: string;
-  username?: string;
-  agentId?: string;
   messageId?: string;
-  providerId?: string;
-  agent?: {
-    kind: "background";
-    parentAgentId?: string;
-    name?: string;
-  };
-  cron?: {
-    taskId: string;
-    taskUid: string;
-    taskName: string;
-    memoryPath: string;
-    filesPath: string;
-  };
-  heartbeat?: Record<string, never>;
 };
 
 export type AgentDescriptor =

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { FileStore } from "../../files/store.js";
-import type { MessageContext, PermissionRequest } from "@/types";
+import type { AgentDescriptor, MessageContext, PermissionRequest } from "@/types";
 
 type Handler = (payload: unknown) => void | Promise<void>;
 type MockFn = ReturnType<typeof vi.fn>;
@@ -68,9 +68,15 @@ describe("TelegramConnector permissions", () => {
       permission: "@read:/tmp",
       access: { kind: "read", path: "/tmp" }
     };
-    const context: MessageContext = { channelId: "123", userId: "123" };
+    const context: MessageContext = { messageId: "msg-1" };
+    const descriptor: AgentDescriptor = {
+      type: "user",
+      connector: "telegram",
+      userId: "123",
+      channelId: "123"
+    };
 
-    await connector.requestPermission("123", request, context);
+    await connector.requestPermission("123", request, context, descriptor);
 
     const bot = telegramInstances[0];
     expect(bot).toBeTruthy();

@@ -2,35 +2,50 @@ import path from "node:path";
 
 import { getLogger } from "../../log.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import type { Config, MessageContext } from "@/types";
-import { CronScheduler } from "./cronScheduler.js";
-import { CronStore } from "./cronStore.js";
-import type { CronTaskContext, CronTaskDefinition, CronTaskWithPaths } from "./cronTypes.js";
+import type { Config } from "@/types";
+import { CronScheduler } from "./ops/cronScheduler.js";
+import { CronStore } from "./ops/cronStore.js";
+import type { CronTaskDefinition, CronTaskWithPaths } from "./cronTypes.js";
+import type { AgentSystem } from "../agents/agentSystem.js";
 
 const logger = getLogger("cron.facade");
 
 export type CronsOptions = {
   config: Config;
   eventBus: EngineEventBus;
-  onTask: (task: CronTaskContext, context: MessageContext) => void | Promise<void>;
+  agentSystem: AgentSystem;
 };
 
 /**
  * Coordinates cron storage + scheduling for engine runtime.
- * Expects: onTask handles routing to the agent system.
+ * Posts cron task prompts directly to the agent system.
  */
 export class Crons {
   private readonly eventBus: EngineEventBus;
+  private readonly agentSystem: AgentSystem;
   private readonly scheduler: CronScheduler;
   private readonly store: CronStore;
 
   constructor(options: CronsOptions) {
     this.eventBus = options.eventBus;
+    this.agentSystem = options.agentSystem;
     const basePath = path.join(options.config.configDir, "cron");
     this.store = new CronStore(basePath);
     this.scheduler = new CronScheduler({
       store: this.store,
-      onTask: options.onTask,
+      onTask: async (task) => {
+        const descriptor = { type: "cron" as const, id: task.taskUid };
+        logger.debug(`CronScheduler.onTask triggered taskUid=${task.taskUid}`);
+        await this.agentSystem.postAndAwait(
+          { descriptor },
+          {
+            type: "message",
+            source: "cron",
+            message: { text: task.prompt },
+            context: {}
+          }
+        );
+      },
       onError: (error, taskId) => {
         logger.warn({ taskId, error }, "Cron task failed");
       },

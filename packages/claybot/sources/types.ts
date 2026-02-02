@@ -58,7 +58,6 @@ export type { ImageGenerationProvider } from "./engine/modules/images/types.js";
 
 // Tools
 export type {
-  AgentRuntime,
   ToolDefinition,
   ToolExecutionContext,
   ToolExecutionResult

@@ -9,7 +9,6 @@ import { FileStore } from "../files/store.js";
 import { InferenceRouter } from "../engine/modules/inference/router.js";
 import { PluginManager } from "../engine/plugins/manager.js";
 import { buildPluginCatalog, type PluginDefinition } from "../engine/plugins/catalog.js";
-import { PluginEventQueue } from "../engine/plugins/events.js";
 import { PluginRegistry } from "../engine/plugins/registry.js";
 import { PluginModuleLoader } from "../engine/plugins/loader.js";
 import {
@@ -265,7 +264,6 @@ async function validatePluginLoad(
     onFatal: () => undefined
   });
   const pluginRegistry = new PluginRegistry(modules);
-  const pluginEventQueue = new PluginEventQueue();
   const fileStore = new FileStore(config);
   const inferenceRouter = new InferenceRouter({
     providers: listActiveInferenceProviders(config.settings),
@@ -278,7 +276,6 @@ async function validatePluginLoad(
     auth: authStore,
     fileStore,
     pluginCatalog: buildPluginCatalog(),
-    eventQueue: pluginEventQueue,
     inferenceRouter,
     mode: "validate"
   });

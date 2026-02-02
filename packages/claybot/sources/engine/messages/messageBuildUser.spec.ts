@@ -6,10 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { messageBuildUser } from "./messageBuildUser.js";
 
-const baseContext = {
-  channelId: "channel-1",
-  userId: "user-1"
-};
+const baseContext = {};
 
 describe("messageBuildUser", () => {
   it("returns a user message with text when no files", async () => {

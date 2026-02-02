@@ -1,9 +1,9 @@
-import { getLogger } from "../../log.js";
+import { getLogger } from "../../../log.js";
 import type {
   HeartbeatDefinition,
   HeartbeatSchedulerOptions,
   HeartbeatStoreInterface
-} from "./heartbeatTypes.js";
+} from "../heartbeatTypes.js";
 
 const logger = getLogger("heartbeat.scheduler");
 
