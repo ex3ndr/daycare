@@ -5,6 +5,7 @@ import type {
   HeartbeatStoreInterface
 } from "../heartbeatTypes.js";
 import { execGateCheck } from "../../scheduling/execGateCheck.js";
+import { execGateOutputAppend } from "../../scheduling/execGateOutputAppend.js";
 
 const logger = getLogger("heartbeat.scheduler");
 
@@ -185,7 +186,8 @@ export class HeartbeatScheduler {
         );
         continue;
       }
-      eligible.push(task);
+      const prompt = execGateOutputAppend(task.prompt, result);
+      eligible.push(prompt === task.prompt ? task : { ...task, prompt });
     }
     return eligible;
   }

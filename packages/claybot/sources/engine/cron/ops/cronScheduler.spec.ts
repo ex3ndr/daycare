@@ -225,4 +225,42 @@ describe("CronScheduler", () => {
 
     scheduler.stop();
   });
+
+  it("appends gate output to the prompt", async () => {
+    vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+
+    await store.createTask("gate-output", {
+      name: "Gate Output",
+      schedule: "* * * * *",
+      prompt: "Base prompt",
+      gate: { command: "echo gate" }
+    });
+
+    const onTask = vi.fn();
+    const gateCheck = vi.fn().mockResolvedValue({
+      shouldRun: true,
+      exitCode: 0,
+      stdout: " ok ",
+      stderr: " warn "
+    });
+    const scheduler = new CronScheduler({
+      store,
+      onTask,
+      gateCheck,
+      defaultPermissions: defaultPermissions(tempDir)
+    });
+
+    await scheduler.start();
+    await vi.advanceTimersByTimeAsync(60 * 1000);
+
+    expect(onTask).toHaveBeenCalledTimes(1);
+    expect(onTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "Base prompt\n\n[Gate output]\nok\nwarn"
+      }),
+      expect.any(Object)
+    );
+
+    scheduler.stop();
+  });
 });

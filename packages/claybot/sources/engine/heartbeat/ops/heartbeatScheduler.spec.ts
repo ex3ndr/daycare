@@ -120,4 +120,36 @@ describe("HeartbeatScheduler", () => {
     expect(Array.isArray(runTasks)).toBe(true);
     expect((runTasks as { id: string }[]).map((task) => task.id)).toEqual(["beta"]);
   });
+
+  it("appends gate output to the prompt", async () => {
+    const { dir, store } = await createTempStore();
+    temps.push(dir);
+    await store.createTask({
+      title: "Alpha",
+      prompt: "Base prompt",
+      gate: { command: "echo gate" }
+    });
+    const onRun = vi.fn();
+    const gateCheck = vi.fn().mockResolvedValue({
+      shouldRun: true,
+      exitCode: 0,
+      stdout: " ok ",
+      stderr: ""
+    });
+
+    const scheduler = new HeartbeatScheduler({
+      store,
+      onRun,
+      gateCheck,
+      defaultPermissions: defaultPermissions(dir)
+    });
+
+    const result = await scheduler.runNow();
+
+    expect(result.ran).toBe(1);
+    const [runTasks] = onRun.mock.calls[0] as [unknown];
+    expect(Array.isArray(runTasks)).toBe(true);
+    const task = (runTasks as { prompt: string }[])[0];
+    expect(task?.prompt).toBe("Base prompt\n\n[Gate output]\nok");
+  });
 });

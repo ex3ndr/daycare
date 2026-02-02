@@ -13,11 +13,11 @@ Example heartbeat file:
 ---
 title: Check internet
 gate:
-  command: "ping -c 1 1.1.1.1 >/dev/null 2>&1"
+  command: "curl -fsS https://api.example.com/healthz >/dev/null"
   permissions:
     - "@web"
   allowedDomains:
-    - 1.1.1.1
+    - api.example.com
 ---
 
 If the gate command fails, notify that the internet is down.
@@ -43,9 +43,10 @@ flowchart TD
 ## Exec Gate
 
 Use `gate` to run a shell command before the LLM and skip work when the check
-fails. Exit code `0` means "run"; non-zero means "skip." Use `gate.permissions`
-for extra permissions (`@web`, `@read:/path`, `@write:/path`). Network access
-requires `@web` plus `gate.allowedDomains` to allowlist hosts.
+fails. Exit code `0` means "run"; non-zero means "skip." Trimmed gate output is
+appended to the prompt under `[Gate output]`. Use `gate.permissions` for extra
+permissions (`@web`, `@read:/path`, `@write:/path`). Network access requires
+`@web` plus `gate.allowedDomains` to allowlist hosts.
 
 ## Tools
 

@@ -37,13 +37,33 @@ Use heartbeats when:
 
 Both cron and heartbeat tasks can define an optional `gate` command to decide
 whether to run the LLM. The command runs first; exit code `0` means "run" and
-non-zero means "skip." This keeps checks cheap (ex: ping before notifying).
+non-zero means "skip." This keeps checks cheap (ex: HTTP health check before notifying).
+Trimmed gate output is appended to the prompt under `[Gate output]`.
 
 `gate` supports:
 - `command` (required)
 - `cwd`, `timeoutMs`, `env`
 - `permissions` (extra permissions, use tags like `@web`, `@read:/path`, `@write:/path`)
 - `allowedDomains` (network allowlist; requires `@web`)
+
+## Examples
+
+**Cron with routing + gate (`TASK.md` frontmatter):**
+
+```yaml
+---
+name: API health
+schedule: "*/10 * * * *"
+agentId: cu3ql2p5q0000x5p3g7q1l8a9
+gate:
+  command: "curl -fsS https://api.example.com/healthz >/dev/null"
+  permissions:
+    - "@web"
+  allowedDomains:
+    - api.example.com
+---
+If the API is down, notify me with a short summary.
+```
 
 ## Selection Examples
 

@@ -104,7 +104,7 @@ Review the current state of ongoing tasks and provide a brief status update.
 
 Cron and heartbeat tasks can include a `gate` command that runs before the LLM.
 If the command exits `0`, the task runs; any non-zero exit skips it. Use this
-for cheap checks (ex: ping before notifying). `gate.permissions` accepts extra
+for cheap checks (ex: HTTP health check before notifying). `gate.permissions` accepts extra
 permission tags like `@web`, `@read:/path`, `@write:/path`; `gate.allowedDomains`
 is a network allowlist and requires `@web`.
 

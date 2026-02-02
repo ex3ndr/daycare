@@ -19,11 +19,11 @@ schedule: "0 9 * * *"
 enabled: true
 agentId: cu3ql2p5q0000x5p3g7q1l8a9
 gate:
-  command: "ping -c 1 1.1.1.1 >/dev/null 2>&1"
+  command: "curl -fsS https://api.example.com/healthz >/dev/null"
   permissions:
     - "@web"
   allowedDomains:
-    - 1.1.1.1
+    - api.example.com
 ---
 
 Generate the daily status report and summarize any blockers.
@@ -63,7 +63,8 @@ flowchart TD
 ## Exec Gate
 
 `gate` runs a shell command before the LLM to decide if the cron should run.
-Exit code `0` means "run"; non-zero means "skip." Use `gate.permissions` for
+Exit code `0` means "run"; non-zero means "skip." Trimmed gate output is appended
+to the prompt under `[Gate output]`. Use `gate.permissions` for
 extra permissions (`@web`, `@read:/path`, `@write:/path`). Network access requires
 `@web` plus `gate.allowedDomains` to allowlist hosts.
 
