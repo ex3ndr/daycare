@@ -69,6 +69,18 @@ flowchart LR
   Reset --> Notify[connector.sendMessage (foreground only)]
 ```
 
+## Reset System Messages
+
+Reset markers can carry an optional message that is injected as a system-level
+note at the beginning of the next context so models understand why a reset happened.
+
+```mermaid
+flowchart LR
+  ResetRecord[history.jsonl reset + message] --> Build[buildHistoryContext]
+  Build --> SystemMsg[<system_message origin=\"system\">...]
+  SystemMsg --> Context[context messages]
+```
+
 ## State vs History
 
 `state.json` only stores durable metadata (permissions, timestamps).

@@ -391,13 +391,21 @@ export class Agent {
     return result.responseText ?? null;
   }
 
-  private async handleReset(_item: AgentInboxReset): Promise<boolean> {
+  private async handleReset(item: AgentInboxReset): Promise<boolean> {
     const now = Date.now();
-    this.state.context = { messages: [] };
+    const resetMessage = item.message?.trim() ?? "";
+    if (resetMessage.length > 0) {
+      this.state.context = {
+        messages: [buildResetSystemMessage(resetMessage, now)]
+      };
+    } else {
+      this.state.context = { messages: [] };
+    }
     this.state.updatedAt = now;
     await agentHistoryAppend(this.agentSystem.config, this.id, {
       type: "reset",
-      at: now
+      at: now,
+      ...(resetMessage.length > 0 ? { message: resetMessage } : {})
     });
     await agentStateWrite(this.agentSystem.config, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.reset", {
@@ -415,7 +423,10 @@ export class Agent {
     entry: AgentMessage,
     source: string
   ): Promise<void> {
-    const reset: AgentInboxReset = { type: "reset" };
+    const reset: AgentInboxReset = {
+      type: "reset",
+      message: "Emergency reset: context overflow detected. Previous session context was cleared."
+    };
     await this.handleReset(reset);
 
     if (this.resolveAgentKind() !== "foreground") {
@@ -601,6 +612,9 @@ export class Agent {
   ): Promise<Context["messages"]> {
     const messages: Context["messages"] = [];
     for (const record of records) {
+      if (record.type === "reset" && record.message && record.message.trim().length > 0) {
+        messages.push(buildResetSystemMessage(record.message, record.at));
+      }
       if (record.type === "user_message") {
         const context: MessageContext = {};
         const message = messageFormatIncoming(
@@ -799,4 +813,15 @@ function toFileReferences(files: Array<{ id: string; name: string; path: string;
     mimeType: file.mimeType,
     size: file.size
   }));
+}
+
+function buildResetSystemMessage(
+  text: string,
+  at: number
+): Context["messages"][number] {
+  return {
+    role: "user",
+    content: messageBuildSystemText(text, "system"),
+    timestamp: at
+  };
 }

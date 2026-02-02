@@ -92,7 +92,7 @@ export class Engine {
           );
           void this.agentSystem.post(
             { descriptor },
-            { type: "reset" }
+            { type: "reset", message: "Manual reset requested by the user." }
           );
           return;
         }

@@ -35,7 +35,8 @@ const historyRecordSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("reset"),
-      at: z.number().int()
+      at: z.number().int(),
+      message: z.string().optional()
     })
     .strict(),
   z
@@ -123,5 +124,10 @@ export async function agentHistoryLoad(config: Config, agentId: string): Promise
   if (lastMarkerIndex < 0) {
     return records;
   }
-  return records.slice(lastMarkerIndex + 1);
+  const tail = records.slice(lastMarkerIndex + 1);
+  const marker = records[lastMarkerIndex];
+  if (marker?.type === "reset" && marker.message && marker.message.trim().length > 0) {
+    return [marker, ...tail];
+  }
+  return tail;
 }

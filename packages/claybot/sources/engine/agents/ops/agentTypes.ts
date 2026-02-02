@@ -26,7 +26,7 @@ export type AgentState = {
 
 export type AgentHistoryRecord =
   | { type: "start"; at: number }
-  | { type: "reset"; at: number }
+  | { type: "reset"; at: number; message?: string }
   | {
       type: "user_message";
       at: number;
@@ -56,6 +56,7 @@ export type AgentInboxItem =
     }
   | {
       type: "reset";
+      message?: string;
     }
   | {
       type: "permission";
