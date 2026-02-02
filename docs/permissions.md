@@ -32,7 +32,6 @@ flowchart TD
 - `permissionApply`: apply an approved permission decision to an agent.
 - `permissionFormatTag`: format the `@web`/`@read`/`@write` tag used in logs.
 - `permissionDescribeDecision`: human-readable label for permission decisions.
-- `PendingPermissionProxy`: tracks proxied permission requests from background agents.
 
 ## Background agent permission requests
 
@@ -43,17 +42,13 @@ foreground agent.
 ```mermaid
 sequenceDiagram
   participant Background as Background Agent
-  participant Proxy as PendingPermissionProxy
-  participant Foreground as Foreground Agent
+  participant Engine
   participant User as User
 
-  Background->>Proxy: register(token, backgroundAgentId)
-  Background->>Foreground: request permission via connector
-  Foreground->>User: permission request UI
-  User->>Foreground: approve/deny
-  Foreground->>Proxy: resolve(token)
-  Proxy-->>Foreground: backgroundAgentId
-  Foreground->>Background: route decision
+  Background->>Engine: request_permission_via_parent (agentId)
+  Engine->>User: permission request UI (most recent foreground target)
+  User->>Engine: approve/deny
+  Engine->>Background: route decision (agentId)
   Background->>Background: permissionApply
 ```
 

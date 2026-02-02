@@ -109,23 +109,19 @@ sequenceDiagram
 ## Permission requests
 
 Permission requests are asynchronous. Foreground agents call `request_permission`. Background agents
-call `request_permission_via_parent`, which targets the most recent foreground agent and routes the
-decision back to the background agent via the proxy registry.
+call `request_permission_via_parent`, which targets the most recent foreground agent and includes the
+requesting agent id so the decision can be routed directly.
 
 ```mermaid
 sequenceDiagram
   participant Background
   participant Engine
-  participant Proxy as PendingPermissionProxy
   participant Connector
   participant User
-  Background->>Engine: request_permission_via_parent tool call
-  Engine->>Proxy: register(token, backgroundAgentId)
+  Background->>Engine: request_permission_via_parent (agentId)
   Engine->>Connector: requestPermission prompt (most recent foreground target)
   Connector->>User: approval UI
   User->>Connector: allow/deny
-  Connector->>Engine: permission decision
-  Engine->>Proxy: resolve(token)
-  Proxy-->>Engine: backgroundAgentId
+  Connector->>Engine: permission decision (agentId)
   Engine->>Background: incoming decision message
 ```

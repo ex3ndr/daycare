@@ -6,7 +6,6 @@ import path from "node:path";
 
 import type { ToolDefinition } from "@/types";
 import type { PermissionAccess, PermissionRequest } from "@/types";
-import type { PendingPermissionProxy } from "../../permissions/pendingPermissionProxy.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
 const schema = Type.Object(
@@ -22,11 +21,9 @@ type PermissionProxyArgs = Static<typeof schema>;
 /**
  * Builds the permission request proxy tool for background agents.
  * This tool allows background agents to request permissions via a foreground agent.
- * Expects: proxy registry is available for tracking requests.
+ * Expects: background agent context with an active foreground target.
  */
-export function buildPermissionRequestProxyTool(
-  proxy: PendingPermissionProxy
-): ToolDefinition {
+export function buildPermissionRequestProxyTool(): ToolDefinition {
   return {
     tool: {
       name: "request_permission_via_parent",
@@ -80,14 +77,12 @@ export function buildPermissionRequestProxyTool(
 
       const request: PermissionRequest = {
         token,
+        agentId: toolContext.agent.id,
         reason: payload.reason,
         message: text,
         permission,
         access
       };
-
-      // Register the proxy mapping so the decision routes back to this agent
-      proxy.register(token, toolContext.agent.id);
 
       if (connector.requestPermission) {
         await connector.requestPermission(

@@ -423,6 +423,7 @@ export class WhatsAppConnector implements Connector {
 
           const decision: PermissionDecision = {
             token,
+            agentId: pending.request.agentId,
             approved,
             permission: pending.request.permission,
             access: pending.request.access

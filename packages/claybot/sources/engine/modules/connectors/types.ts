@@ -53,6 +53,7 @@ export type PermissionAccess =
 
 export type PermissionRequest = {
   token: string;
+  agentId: string;
   reason: string;
   message: string;
   permission: string;
@@ -61,6 +62,7 @@ export type PermissionRequest = {
 
 export type PermissionDecision = {
   token: string;
+  agentId: string;
   approved: boolean;
   permission: string;
   access: PermissionAccess;

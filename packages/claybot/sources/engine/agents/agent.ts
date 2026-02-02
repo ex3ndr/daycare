@@ -539,15 +539,10 @@ export class Agent {
     const context = item.context;
     const decision = item.decision;
     const target = agentDescriptorTargetResolve(this.descriptor);
-    if (!target) {
-      logger.error(
-        { agentId: this.id },
-        "Permission decision missing user target"
-      );
-      return false;
-    }
-    const source = target.connector;
-    const connector = this.agentSystem.connectorRegistry.get(target.connector);
+    const source = target?.connector ?? this.descriptor.type;
+    const connector = target
+      ? this.agentSystem.connectorRegistry.get(target.connector)
+      : null;
     const permissionTag = permissionFormatTag(decision.access);
     const permissionLabel = permissionDescribeDecision(decision.access);
 
@@ -561,7 +556,7 @@ export class Agent {
     if (decision.approved && (decision.access.kind === "read" || decision.access.kind === "write")) {
       if (!path.isAbsolute(decision.access.path)) {
         logger.warn({ agentId: this.id, permission: permissionTag }, "Permission path not absolute");
-        if (connector) {
+        if (connector && target) {
           await connector.sendMessage(target.targetId, {
             text: `Permission ignored (path must be absolute): ${permissionLabel}.`,
             replyToMessageId: context.messageId

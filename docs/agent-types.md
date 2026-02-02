@@ -131,23 +131,21 @@ foreground agent.
 ```mermaid
 sequenceDiagram
   participant Subagent
-  participant Proxy as PendingPermissionProxy
+  participant Engine
   participant Connector
   participant User
-  Subagent->>Proxy: register(token, subagentId)
-  Subagent->>Connector: requestPermission (via foreground target)
+  Subagent->>Engine: request_permission_via_parent (agentId)
+  Engine->>Connector: requestPermission (via foreground target)
   Connector->>User: permission request
   User->>Connector: approve/deny
-  Connector->>Proxy: resolve(token)
-  Proxy-->>Connector: subagentId
-  Connector->>Subagent: permission decision
+  Connector->>Engine: permission decision (agentId)
+  Engine->>Subagent: permission decision
   Subagent->>Subagent: permissionApply
 ```
 
 Delivery notes:
-- The proxy registry (`PendingPermissionProxy`) maps tokens to background agent IDs.
-- When a decision arrives, the engine checks the proxy registry first.
-- If the token maps to a background agent, the decision is routed there instead of the foreground agent.
+- Permission requests include the requesting agent id.
+- When a decision arrives, the engine routes it directly to that agent.
 
 ## Restore behavior
 

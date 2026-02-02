@@ -52,6 +52,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
       const text = `Permission request:\n${friendly}\nReason: ${payload.reason}`;
       const request: PermissionRequest = {
         token: createId(),
+        agentId: toolContext.agent.id,
         reason: payload.reason,
         message: text,
         permission,

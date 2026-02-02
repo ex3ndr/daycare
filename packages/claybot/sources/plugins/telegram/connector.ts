@@ -195,6 +195,7 @@ export class TelegramConnector implements Connector {
       await this.updatePermissionMessage(query, pending.request, approved ? "approved" : "denied");
       const decision: PermissionDecision = {
         token,
+        agentId: pending.request.agentId,
         approved,
         permission: pending.request.permission,
         access: pending.request.access

@@ -63,6 +63,7 @@ describe("TelegramConnector permissions", () => {
 
     const request: PermissionRequest = {
       token: "perm-1",
+      agentId: "agent-1",
       reason: "Need read access",
       message: "Permission request",
       permission: "@read:/tmp",

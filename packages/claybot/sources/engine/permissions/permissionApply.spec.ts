@@ -18,6 +18,7 @@ describe("permissionApply", () => {
     const permissions = basePermissions();
     const decision: PermissionDecision = {
       token: "token-1",
+      agentId: "agent-1",
       approved: false,
       permission: "@web",
       access: { kind: "web" }
@@ -33,6 +34,7 @@ describe("permissionApply", () => {
     const target = path.resolve("tmp", "write");
     const decision: PermissionDecision = {
       token: "token-2",
+      agentId: "agent-1",
       approved: true,
       permission: `@write:${target}`,
       access: { kind: "write", path: target }
@@ -47,6 +49,7 @@ describe("permissionApply", () => {
     const permissions = basePermissions();
     const decision: PermissionDecision = {
       token: "token-3",
+      agentId: "agent-1",
       approved: true,
       permission: "@read:relative/path",
       access: { kind: "read", path: "relative/path" }
@@ -61,6 +64,7 @@ describe("permissionApply", () => {
     const permissions = basePermissions();
     const decision: PermissionDecision = {
       token: "token-4",
+      agentId: "agent-1",
       approved: true,
       permission: "@read:/etc/passwd\x00.txt",
       access: { kind: "read", path: "/etc/passwd\x00.txt" }
@@ -76,6 +80,7 @@ describe("permissionApply", () => {
     const permissions = basePermissions();
     const decision: PermissionDecision = {
       token: "token-5",
+      agentId: "agent-1",
       approved: true,
       permission: "@write:/home/user\x01file",
       access: { kind: "write", path: "/home/user\x01file" }
@@ -91,6 +96,7 @@ describe("permissionApply", () => {
     const longPath = "/" + "a".repeat(5000);
     const decision: PermissionDecision = {
       token: "token-6",
+      agentId: "agent-1",
       approved: true,
       permission: `@read:${longPath}`,
       access: { kind: "read", path: longPath }
