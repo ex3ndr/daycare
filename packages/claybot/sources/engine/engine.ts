@@ -1,14 +1,8 @@
-import { createId } from "@paralleldrive/cuid2";
-import type { ToolCall } from "@mariozechner/pi-ai";
-
 import { getLogger } from "../log.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import type {
-  AgentState,
   Config,
-  MessageContext,
-  ToolExecutionResult
 } from "@/types";
 import { FileStore } from "../files/store.js";
 import { InferenceRouter } from "./modules/inference/router.js";
@@ -16,10 +10,7 @@ import { PluginRegistry } from "./plugins/registry.js";
 import { PluginManager } from "./plugins/manager.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { ensureWorkspaceDir } from "./permissions.js";
-import { permissionClone } from "./permissions/permissionClone.js";
 import { getProviderDefinition, listActiveInferenceProviders } from "../providers/catalog.js";
-import { Agent } from "./agents/agent.js";
-import { AgentInbox } from "./agents/ops/agentInbox.js";
 import { AuthStore } from "../auth/store.js";
 import {
   buildCronDeleteTaskTool,
@@ -42,7 +33,6 @@ import { buildSendAgentMessageTool, buildStartBackgroundAgentTool } from "./modu
 import { Crons } from "./cron/crons.js";
 import { Heartbeats } from "./heartbeat/heartbeats.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
-import { agentDescriptorBuild } from "./agents/ops/agentDescriptorBuild.js";
 import { EngineEventBus } from "./ipc/events.js";
 import { ProviderManager } from "../providers/manager.js";
 
@@ -247,10 +237,6 @@ export class Engine {
     };
   }
 
-  resetAgent(agentId: string): boolean {
-    return this.agentSystem.resetAgent(agentId);
-  }
-
   private listContextTools(
     source?: string,
     options?: { agentKind?: "background" | "foreground"; allowCronTools?: boolean }
@@ -262,49 +248,6 @@ export class Engine {
       allowCronTools: options?.allowCronTools,
       connectorRegistry: this.modules.connectors,
       imageRegistry: this.modules.images
-    });
-  }
-
-  async executeTool(
-    name: string,
-    args: Record<string, unknown>,
-    messageContext?: MessageContext
-  ): Promise<ToolExecutionResult> {
-    const toolCall: ToolCall = {
-      id: createId(),
-      name,
-      type: "toolCall",
-      arguments: args
-    };
-    const now = Date.now();
-    const agentId = createId();
-    const context: MessageContext = {
-      messageId: messageContext?.messageId
-    };
-    const descriptor = agentDescriptorBuild("system", context, agentId);
-    const state: AgentState = {
-      context: { messages: [] },
-      providerId: null,
-      permissions: permissionClone(this.agentSystem.config.defaultPermissions),
-      routing: null,
-      agent: null,
-      createdAt: now,
-      updatedAt: now
-    };
-    const agent = Agent.restore(agentId, descriptor, state, new AgentInbox(agentId), this.agentSystem);
-
-    return this.modules.tools.execute(toolCall, {
-      connectorRegistry: this.modules.connectors,
-      fileStore: this.fileStore,
-      auth: this.authStore,
-      logger,
-      assistant: this.agentSystem.config.settings.assistant ?? null,
-      permissions: agent.state.permissions,
-      agent,
-      source: "system",
-      messageContext: context,
-      agentSystem: this.agentSystem,
-      heartbeats: this.heartbeats
     });
   }
 

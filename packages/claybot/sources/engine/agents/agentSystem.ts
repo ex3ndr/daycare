@@ -21,7 +21,7 @@ import { AgentInbox } from "./ops/agentInbox.js";
 import type { AgentInboxItem, AgentInboxResult, AgentPostTarget } from "./ops/agentTypes.js";
 import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
 import { agentDescriptorMatchesStrategy } from "./ops/agentDescriptorMatchesStrategy.js";
-import { agentKeyBuild } from "./ops/agentKeyBuild.js";
+import { agentPathForDescriptor } from "./ops/agentPathForDescriptor.js";
 import { agentTimestampGet } from "./ops/agentTimestampGet.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
@@ -229,7 +229,7 @@ export class AgentSystem {
     }
 
     const descriptor = target.descriptor;
-    const key = agentKeyBuild(descriptor);
+    const key = agentPathForDescriptor(descriptor);
     if (key) {
       const agentId = this.keyMap.get(key);
       if (agentId) {
@@ -280,7 +280,7 @@ export class AgentSystem {
       running: false
     };
     this.entries.set(input.agentId, entry);
-    const key = agentKeyBuild(input.descriptor);
+    const key = agentPathForDescriptor(input.descriptor);
     if (key) {
       this.keyMap.set(key, input.agentId);
     }
