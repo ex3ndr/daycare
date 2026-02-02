@@ -1,0 +1,6 @@
+{
+  "id": "gemini-search",
+  "name": "Gemini Search",
+  "description": "Web search tool powered by Google Gemini with Search Grounding.",
+  "entry": "./plugin.js"
+}
