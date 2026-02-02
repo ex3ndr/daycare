@@ -1,0 +1,6 @@
+{
+  "id": "firecrawl",
+  "name": "Firecrawl",
+  "description": "Web fetch tool powered by Firecrawl.",
+  "entry": "./plugin.js"
+}
