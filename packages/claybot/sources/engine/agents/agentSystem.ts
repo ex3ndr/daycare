@@ -161,6 +161,9 @@ export class AgentSystem {
     logger.debug(`post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
     const entry = await this.resolveEntry(target, item);
     entry.inbox.post(item);
+    logger.debug(
+      `post() queued item agentId=${entry.agentId} inboxSize=${entry.inbox.size()}`
+    );
     this.startEntryIfRunning(entry);
   }
 
@@ -177,6 +180,16 @@ export class AgentSystem {
 
   reload(config: Config): void {
     this.config = config;
+  }
+
+  markStopped(agentId: string, error?: unknown): void {
+    const entry = this.entries.get(agentId);
+    if (!entry) {
+      logger.warn({ agentId }, "Agent stop reported for unknown agent");
+      return;
+    }
+    entry.running = false;
+    logger.debug({ agentId, error }, "Agent marked stopped");
   }
 
   agentFor(strategy: AgentFetchStrategy): string | null {

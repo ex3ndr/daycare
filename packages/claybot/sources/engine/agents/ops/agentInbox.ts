@@ -23,6 +23,10 @@ export class AgentInbox {
     this.attached = true;
   }
 
+  detach(): void {
+    this.attached = false;
+  }
+
   post(
     item: AgentInboxItem,
     completion: AgentInboxCompletion | null = null

@@ -25,4 +25,11 @@ describe("AgentInbox", () => {
 
     expect(entry.id).toBe(posted.id);
   });
+
+  it("allows reattach after detach", () => {
+    const inbox = new AgentInbox("agent-3");
+    inbox.attach();
+    inbox.detach();
+    expect(() => inbox.attach()).not.toThrow();
+  });
 });

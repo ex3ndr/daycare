@@ -156,6 +156,7 @@ export class Agent {
     );
     void this.runLoop().catch((error) => {
       this.started = false;
+      this.agentSystem.markStopped(this.id, error);
       logger.warn({ agentId: this.id, error }, "Agent loop exited unexpectedly");
     });
   }
@@ -166,18 +167,25 @@ export class Agent {
 
   private async runLoop(): Promise<void> {
     this.inbox.attach();
-    for (;;) {
-      const entry = await this.inbox.next();
-      this.processing = true;
-      try {
-        const result = await this.handleInboxItem(entry.item);
-        entry.completion?.resolve(result);
-      } catch (error) {
-        const failure = error instanceof Error ? error : new Error(String(error));
-        entry.completion?.reject(failure);
-      } finally {
-        this.processing = false;
+    try {
+      for (;;) {
+        const entry = await this.inbox.next();
+        logger.debug(
+          `Agent inbox item dequeued agentId=${this.id} type=${entry.item.type}`
+        );
+        this.processing = true;
+        try {
+          const result = await this.handleInboxItem(entry.item);
+          entry.completion?.resolve(result);
+        } catch (error) {
+          const failure = error instanceof Error ? error : new Error(String(error));
+          entry.completion?.reject(failure);
+        } finally {
+          this.processing = false;
+        }
       }
+    } finally {
+      this.inbox.detach();
     }
   }
 
