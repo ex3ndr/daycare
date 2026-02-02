@@ -1,0 +1,8 @@
+{
+  "name": "whatsapp",
+  "displayName": "WhatsApp",
+  "description": "Connect to WhatsApp using Baileys (WhatsApp Web API)",
+  "version": "1.0.0",
+  "type": "connector",
+  "entrypoint": "plugin.js"
+}
