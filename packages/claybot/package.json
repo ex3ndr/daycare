@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/skills dist/skills",
-    "dev": "tsx sources/main.ts start --verbose",
+    "dev": "tsx sources/main.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
