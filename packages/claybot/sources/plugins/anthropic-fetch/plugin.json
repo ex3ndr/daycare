@@ -1,0 +1,6 @@
+{
+  "id": "anthropic-fetch",
+  "name": "Anthropic Fetch",
+  "description": "Web fetch tool powered by Claude with URL content extraction.",
+  "entry": "./plugin.js"
+}
