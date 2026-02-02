@@ -318,14 +318,18 @@ type ToolExecutionContext = {
   agent: Agent;
   source: string;
   messageContext: MessageContext;
-  agentRuntime: AgentRuntime;
+  agentSystem: AgentSystem;
+  heartbeats: Heartbeats;
 };
 ```
 
-The `agentRuntime` provides:
-- `startBackgroundAgent({ prompt, agentId?, name?, parentAgentId? })` - Spawn background agents
-- `sendAgentMessage({ agentId?, text, origin? })` - Send messages to agents
-- `runHeartbeatNow({ ids? })` - Trigger heartbeat tasks
+The `agentSystem` provides:
+- `post(target, item)` and `postAndAwait(target, item)` for agent messaging
+- `agentFor(strategy)` for selecting a target agent id
+
+The `heartbeats` facade provides:
+- `runNow({ ids? })` to trigger heartbeat tasks
+- `addTask(...)`, `listTasks()`, and `removeTask(...)` for task management
 
 ### Inference Providers
 
