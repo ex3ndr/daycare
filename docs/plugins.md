@@ -113,6 +113,7 @@ ClayBot ships optional plugins that register web search and fetch tools. All req
 - `perplexity-search` -> `perplexity_search`
 - `exa-ai` -> `exa_search`
 - `firecrawl` -> `firecrawl_fetch`
+- `web-fetch` -> `web_fetch`
 
 ```mermaid
 sequenceDiagram
@@ -125,6 +126,15 @@ sequenceDiagram
   Provider->>Web: search or fetch
   Provider-->>Tool: response + sources
   Tool-->>Agent: toolResult text
+```
+
+`web_fetch` performs a plain HTTP GET without JavaScript execution.
+
+```mermaid
+flowchart TD
+  WebFetch["web_fetch tool"] --> Http["HTTP GET (no JS)"]
+  Http --> Content["Status + headers + body"]
+  Content --> Agent["toolResult"]
 ```
 
 ## Built-in plugins

@@ -1,0 +1,6 @@
+{
+  "id": "web-fetch",
+  "name": "Web Fetch",
+  "description": "Minimal web fetch tool that downloads URL content without JavaScript.",
+  "entry": "./plugin.js"
+}
