@@ -1,30 +1,22 @@
 # Context compaction
 
-ClayBot uses a warning-stage compaction flow to avoid hard context overflows. The agent estimates
-context usage from recent history plus the current system prompt and injects a compaction notice when
-thresholds are crossed.
+ClayBot runs automatic compaction to avoid hard context overflows. The agent estimates context usage
+from recent history plus the current system prompt and compacts when thresholds are crossed.
 
 ## Strategy
 
 - Warning threshold: 75% of `settings.agents.emergencyContextLimit`.
 - Critical threshold: 90% of `settings.agents.emergencyContextLimit`.
 - Estimates include the system prompt tokens (length / 4 heuristic).
-- When warning/critical, a `<system_message>` notice is injected with the compaction prompt and
-  instructions to call the `compact` tool.
-- If the model responds without a `compact` tool call while the notice is active, the response is
-  suppressed and the notice is re-injected for another attempt.
+- When warning/critical, the agent notifies the user that compaction is starting, runs compaction
+  immediately, and resumes inference with the compacted context.
 
-## `compact` tool
+## Compaction summary handling
 
-Arguments:
-- `summary`: Compaction prompt output (short, structured summary).
-- `persist`: List of durable items to keep (paths, ids, TODOs, constraints, commands, URLs).
-
-When the tool runs, the agent records a reset marker with the summary and rebuilds the active
-context as:
-1) the compaction summary system message
-2) a guard system message preventing repeat compaction in the same loop
-3) the latest user message (so the next inference can resume)
+When compaction runs, the agent:
+1) records a reset marker in history
+2) appends the compaction summary as a user message with an instruction to continue
+3) resumes with the latest user message appended after the summary
 
 ## Flow
 
@@ -32,9 +24,8 @@ context as:
 flowchart TD
   A[Incoming user message] --> B[Estimate history + system prompt tokens]
   B -->|Below warning| C[Run inference normally]
-  B -->|Warning/critical| D[Inject compaction notice]
-  D --> E[Inference response]
-  E -->|compact tool call| F[Apply reset + summary]
-  E -->|no compact tool call| D
+  B -->|Warning/critical| D[Send compaction start notice]
+  D --> E[Run compaction summary]
+  E --> F[Reset history + insert summary]
   F --> G[Resume inference with compacted context]
 ```

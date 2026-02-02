@@ -17,7 +17,8 @@ import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { messageIsSystemText } from "../messages/messageIsSystemText.js";
 import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
-import { contextCompactionNoticeBuild } from "./ops/contextCompactionNoticeBuild.js";
+import { messageExtractText } from "../messages/messageExtractText.js";
+import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild.js";
 import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
 import { permissionClone } from "../permissions/permissionClone.js";
@@ -250,16 +251,16 @@ export class Agent {
 
     const rawText = entry.message.rawText ?? entry.message.text ?? "";
     const files = toFileReferences(entry.message.files ?? []);
-    if (!messageIsSystemText(rawText)) {
-      await agentHistoryAppend(this.agentSystem.config, this.id, {
-        type: "user_message",
-        at: receivedAt,
-        text: rawText,
-        files
-      });
-    }
+    let compactionAt: number | null = null;
+    let pendingUserRecord: AgentHistoryRecord | null = messageIsSystemText(rawText)
+      ? null
+      : {
+          type: "user_message",
+          at: receivedAt,
+          text: rawText,
+          files
+        };
 
-    const agentContext = this.state.context;
     const providers = listActiveInferenceProviders(this.agentSystem.config.settings);
     const providerId = this.resolveAgentProvider(providers);
 
@@ -337,6 +338,70 @@ export class Agent {
       configDir: this.agentSystem.config.configDir
     });
 
+    const history = await agentHistoryLoad(this.agentSystem.config, this.id);
+    const extraTokens = Math.ceil((systemPrompt.length + rawText.length) / 4);
+    const compactionStatus = contextCompactionStatusBuild(
+      history,
+      this.agentSystem.config.settings.agents.emergencyContextLimit,
+      { extraTokens }
+    );
+    if (compactionStatus.severity !== "ok") {
+      const target = agentDescriptorTargetResolve(this.descriptor);
+      const targetId = target?.targetId ?? null;
+      if (agentKind === "foreground" && connector?.capabilities.sendText && targetId) {
+        await connector.sendMessage(targetId, {
+          text: "Compacting session context. I'll continue shortly.",
+          replyToMessageId: entry.context.messageId
+        });
+      }
+      try {
+        const compacted = await contextCompact({
+          context: this.state.context,
+          inferenceRouter: this.agentSystem.inferenceRouter,
+          providers,
+          providerId: providerId ?? undefined,
+          agentId: `${this.id}:compaction`
+        });
+        const summaryMessage = compacted.messages?.[0];
+        const summaryText = summaryMessage
+          ? messageExtractText(summaryMessage)?.trim() ?? ""
+          : "";
+        if (summaryText) {
+          const summaryWithContinue = `${summaryText}\n\nPlease continue with the user's latest request.`;
+          compactionAt = Date.now();
+          this.state.context = {
+            messages: [
+              {
+                role: "user",
+                content: summaryWithContinue,
+                timestamp: compactionAt
+              }
+            ]
+          };
+          await agentHistoryAppend(this.agentSystem.config, this.id, {
+            type: "reset",
+            at: compactionAt
+          });
+          await agentHistoryAppend(this.agentSystem.config, this.id, {
+            type: "user_message",
+            at: compactionAt,
+            text: summaryWithContinue,
+            files: []
+          });
+        }
+      } catch (error) {
+        logger.warn({ agentId: this.id, error }, "Context compaction failed; continuing with full context");
+      }
+    }
+
+    if (pendingUserRecord) {
+      if (compactionAt !== null) {
+        pendingUserRecord = { ...pendingUserRecord, at: compactionAt + 1 };
+      }
+      await agentHistoryAppend(this.agentSystem.config, this.id, pendingUserRecord);
+    }
+
+    const agentContext = this.state.context;
     const contextForRun: Context = {
       ...agentContext,
       tools: this.listContextTools(source, {
@@ -348,22 +413,6 @@ export class Agent {
 
     if (!contextForRun.messages) {
       contextForRun.messages = [];
-    }
-
-    const history = await agentHistoryLoad(this.agentSystem.config, this.id);
-    const extraTokens = Math.ceil(systemPrompt.length / 4);
-    const compactionStatus = contextCompactionStatusBuild(
-      history,
-      this.agentSystem.config.settings.agents.emergencyContextLimit,
-      { extraTokens }
-    );
-    if (compactionStatus.severity !== "ok") {
-      const notice = await contextCompactionNoticeBuild(compactionStatus);
-      contextForRun.messages.push({
-        role: "user",
-        content: messageBuildSystemText(notice, "system"),
-        timestamp: receivedAt
-      });
     }
 
     logger.debug(`handleMessage building user message agentId=${this.id}`);

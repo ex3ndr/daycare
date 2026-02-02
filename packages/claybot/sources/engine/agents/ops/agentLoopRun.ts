@@ -1,4 +1,4 @@
-import type { Context, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
+import type { Context } from "@mariozechner/pi-ai";
 import type { Logger } from "pino";
 
 import type { FileStore } from "../../../files/store.js";
@@ -11,8 +11,6 @@ import type { ToolResolver } from "../../modules/toolResolver.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
-import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js";
-import { messageIsSystemText } from "../../messages/messageIsSystemText.js";
 import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import { toolResultFormatVerbose } from "../../modules/tools/toolResultFormatVerbose.js";
 import type { EngineEventBus } from "../../ipc/events.js";
@@ -21,7 +19,6 @@ import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
-import { contextCompactionSummaryBuild } from "./contextCompactionSummaryBuild.js";
 
 const MAX_TOOL_ITERATIONS = 5;
 
@@ -83,15 +80,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   const generatedFiles: FileReference[] = [];
   let lastResponseTextSent = false;
   let finalResponseText: string | null = null;
-  let compactionLocked = false;
-  let compactionExtraIterationUsed = false;
-  let compactionRequired = false;
   const historyRecords: AgentHistoryRecord[] = [];
   const target = agentDescriptorTargetResolve(agent.descriptor);
   const targetId = target?.targetId ?? null;
   logger.debug(`Starting typing indicator targetId=${targetId ?? "none"}`);
   const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
-  const userMessageForCompaction = findLatestUserMessage(context.messages);
 
   try {
     logger.debug(`Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
@@ -153,17 +146,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
       const responseText = messageExtractText(response.message);
       const toolCalls = messageExtractToolCalls(response.message);
-      const compactionNotice = findCompactionNotice(context.messages);
-      const compactionNoticeActive = compactionNotice !== null;
-      if (compactionNoticeActive) {
-        compactionRequired = true;
-      }
-      const hasCompactionCall = toolCalls.some((toolCall) => toolCall.name === "compact");
       const trimmedText = responseText?.trim() ?? "";
       const hasResponseText = trimmedText.length > 0;
       finalResponseText = hasResponseText ? responseText : null;
       lastResponseTextSent = false;
-      if (hasResponseText && connector && targetId && !hasCompactionCall && !compactionNoticeActive) {
+      if (hasResponseText && connector && targetId) {
         try {
           await connector.sendMessage(targetId, {
             text: responseText,
@@ -181,26 +168,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         }
       }
 
-      if (compactionNoticeActive && toolCalls.length === 0) {
-        logger.warn(
-          { agentId: agent.id },
-          "Compaction notice ignored; retrying without sending response"
-        );
-        context.messages.pop();
-        if (compactionNotice) {
-          context.messages.push({
-            role: "user",
-            content: compactionNotice,
-            timestamp: Date.now()
-          });
-        }
-        if (iteration === MAX_TOOL_ITERATIONS - 1) {
-          logger.warn({ agentId: agent.id }, "Compaction notice ignored; stopping inference loop");
-          break;
-        }
-        continue;
-      }
-
       logger.debug(`Extracted tool calls from response toolCallCount=${toolCalls.length}`);
       historyRecords.push({
         type: "assistant_message",
@@ -214,28 +181,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         break;
       }
 
-      let compactionApplied = false;
       for (const toolCall of toolCalls) {
         const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 200);
         logger.debug(
           `Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
         );
-
-        if (toolCall.name === "compact" && compactionLocked) {
-          logger.warn({ agentId: agent.id }, "Compaction already applied; ignoring compact tool call");
-          const toolMessage = buildToolErrorMessage(
-            toolCall,
-            "Compaction already applied for this request."
-          );
-          context.messages.push(toolMessage);
-          historyRecords.push({
-            type: "tool_result",
-            at: Date.now(),
-            toolCallId: toolCall.id,
-            output: { toolMessage, files: [] }
-          });
-          continue;
-        }
 
         if (verbose && connector && targetId) {
           const argsFormatted = toolArgsFormatVerbose(toolCall.arguments);
@@ -279,52 +229,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           generatedFiles.push(...toolResult.files);
           logger.debug(`Tool generated files count=${toolResult.files.length}`);
         }
-
-        if (toolCall.name === "compact" && !toolResult.toolMessage.isError) {
-          const details = compactionDetailsExtract(toolResult.toolMessage, toolCall);
-          if (details) {
-            const summary = contextCompactionSummaryBuild(details.summary, details.persist);
-            const compactionAt = Date.now();
-            const compactionMessage = {
-              role: "user" as const,
-              content: messageBuildSystemText(summary, "system"),
-              timestamp: compactionAt
-            };
-            const compactionGuard = {
-              role: "user" as const,
-              content: messageBuildSystemText(
-                "Compaction complete for this request. Do not call compact again.",
-                "system"
-              ),
-              timestamp: compactionAt
-            };
-            context.messages.length = 0;
-            context.messages.push(compactionMessage, compactionGuard);
-            if (userMessageForCompaction) {
-              context.messages.push(userMessageForCompaction);
-            }
-            historyRecords.push({
-              type: "reset",
-              at: compactionAt,
-              message: summary
-            });
-            compactionApplied = true;
-            compactionLocked = true;
-            disableCompactionTool(context);
-            compactionRequired = false;
-            break;
-          }
-        }
-      }
-
-      if (compactionApplied) {
-        logger.info({ agentId: agent.id }, "Compaction applied; resuming inference with compacted context");
-        if (!compactionExtraIterationUsed && iteration === MAX_TOOL_ITERATIONS - 1) {
-          // Allow a follow-up inference pass after compaction.
-          iteration -= 1;
-          compactionExtraIterationUsed = true;
-        }
-        continue;
       }
 
       if (iteration === MAX_TOOL_ITERATIONS - 1) {
@@ -361,11 +265,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
   if (!response) {
     logger.debug("No response received, returning without completion");
-    return { responseText: finalResponseText, historyRecords };
-  }
-
-  if (compactionRequired) {
-    logger.debug("Compaction required; skipping final response send");
     return { responseText: finalResponseText, historyRecords };
   }
 
@@ -534,97 +433,4 @@ function isContextOverflowError(error: unknown): boolean {
     }
   }
   return false;
-}
-
-type CompactionDetails = {
-  summary: string;
-  persist: string[];
-};
-
-function compactionDetailsExtract(
-  toolMessage: ToolResultMessage,
-  toolCall: ToolCall
-): CompactionDetails | null {
-  const fromDetails = parseCompactionDetails(toolMessage.details);
-  if (fromDetails) {
-    return fromDetails;
-  }
-  return parseCompactionDetails(toolCall.arguments);
-}
-
-function parseCompactionDetails(value: unknown): CompactionDetails | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const record = value as { summary?: unknown; persist?: unknown };
-  if (typeof record.summary !== "string") {
-    return null;
-  }
-  const summary = record.summary.trim();
-  if (!summary) {
-    return null;
-  }
-  const persist = Array.isArray(record.persist)
-    ? record.persist
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0)
-    : [];
-  return { summary, persist };
-}
-
-function findLatestUserMessage(
-  messages: Context["messages"]
-): Context["messages"][number] | null {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (!message) {
-      continue;
-    }
-    if (message.role !== "user") {
-      continue;
-    }
-    if (typeof message.content === "string" && messageIsSystemText(message.content)) {
-      continue;
-    }
-    return message;
-  }
-  return null;
-}
-
-function disableCompactionTool(context: Context): void {
-  if (!context.tools) {
-    return;
-  }
-  context.tools = context.tools.filter((tool) => tool.name !== "compact");
-}
-
-function findCompactionNotice(messages: Context["messages"]): string | null {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (!message) {
-      continue;
-    }
-    if (typeof message.content !== "string") {
-      continue;
-    }
-    if (!messageIsSystemText(message.content)) {
-      continue;
-    }
-    if (message.content.includes("[compaction-warning]")) {
-      return message.content;
-    }
-  }
-  return null;
-}
-
-function buildToolErrorMessage(toolCall: ToolCall, text: string): ToolResultMessage {
-  return {
-    role: "toolResult",
-    toolCallId: toolCall.id,
-    toolName: toolCall.name,
-    content: [{ type: "text", text }],
-    isError: true,
-    timestamp: Date.now()
-  };
 }
