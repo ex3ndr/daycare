@@ -1,0 +1,6 @@
+{
+  "id": "openai-search",
+  "name": "OpenAI Search",
+  "description": "Web search tool powered by GPT with web search.",
+  "entry": "./plugin.js"
+}
