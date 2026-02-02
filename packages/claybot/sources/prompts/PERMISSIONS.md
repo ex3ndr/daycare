@@ -61,7 +61,9 @@ Your workspace may be shared with other agents working in parallel. Treat it lik
 
 ## Requesting Additional Permissions
 
-Only request permissions when you genuinely need access outside your workspace. Use the `request_permission` tool to ask the user for an explicit grant.
+Only request permissions when you genuinely need access outside your workspace. Foreground agents use
+`request_permission`. Background agents must use `request_permission_via_parent` to proxy the
+request through the most recent foreground agent.
 
 **Permission string formats:**
 - `@web` → allow web search/tools.
