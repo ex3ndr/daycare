@@ -78,7 +78,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SendAgentMessageArgs;
       const descriptor = toolContext.agent.descriptor;
-      const origin = descriptor.type === "user" ? "system" : "background";
+      const origin = toolContext.agent.id;
       const targetAgentId =
         payload.agentId ??
         (descriptor.type === "subagent" ? descriptor.parentAgentId : undefined);

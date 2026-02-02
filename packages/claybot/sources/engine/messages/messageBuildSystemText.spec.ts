@@ -8,8 +8,8 @@ describe("messageBuildSystemText", () => {
   });
 
   it("adds origin metadata when provided", () => {
-    expect(messageBuildSystemText("ping", "background")).toBe(
-      "<system_message origin=\"background\">ping</system_message>"
+    expect(messageBuildSystemText("ping", "agent-123")).toBe(
+      "<system_message origin=\"agent-123\">ping</system_message>"
     );
   });
 });

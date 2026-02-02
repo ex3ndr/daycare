@@ -121,7 +121,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
         ].join("\n");
         await toolContext.agentSystem.post(
           { agentId: foregroundAgentId },
-          { type: "system_message", text: notice, origin: "background" }
+          { type: "system_message", text: notice, origin: requestedAgentId }
         );
       }
 

@@ -77,7 +77,7 @@ note at the beginning of the next context so models understand why a reset happe
 ```mermaid
 flowchart LR
   ResetRecord[history.jsonl reset + message] --> Build[buildHistoryContext]
-  Build --> SystemMsg[<system_message origin=\"system\">...]
+  Build --> SystemMsg[<system_message origin=\"<agentId>\">...]
   SystemMsg --> Context[context messages]
 ```
 

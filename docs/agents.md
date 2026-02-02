@@ -54,13 +54,13 @@ sequenceDiagram
 ```
 
 ## System message format
-Agents wrap system message text in a `<system_message>` tag with an origin attribute so
-they can distinguish internal updates from user input.
+Agents wrap system message text in a `<system_message>` tag with an origin attribute set to the
+sender’s agent id so they can distinguish internal updates from user input.
 
 ```mermaid
 flowchart LR
   SystemItem[system_message item] --> Build[messageBuildSystemText]
-  Build --> Wrapped["<system_message origin='system|background'>text</system_message>"]
+  Build --> Wrapped["<system_message origin='<agentId>'>text</system_message>"]
   Wrapped --> Inbox[AgentInbox]
 ```
 

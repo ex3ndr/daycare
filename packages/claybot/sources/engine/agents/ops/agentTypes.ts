@@ -60,7 +60,7 @@ export type AgentInboxItem =
   | {
       type: "system_message";
       text: string;
-      origin?: "system" | "background";
+      origin?: string;
       context?: MessageContext;
     }
   | {

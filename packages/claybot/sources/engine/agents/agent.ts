@@ -515,7 +515,7 @@ export class Agent {
     const resetMessage = item.message?.trim() ?? "";
     if (resetMessage.length > 0) {
       this.state.context = {
-        messages: [buildResetSystemMessage(resetMessage, now)]
+        messages: [buildResetSystemMessage(resetMessage, now, this.id)]
       };
     } else {
       this.state.context = { messages: [] };
@@ -658,7 +658,7 @@ export class Agent {
         {
           type: "system_message",
           text: `Subagent ${name} (${this.id}) failed: ${detail}.`,
-          origin: "background"
+          origin: this.id
         }
       );
     } catch (sendError) {
@@ -727,7 +727,7 @@ export class Agent {
     const messages: Context["messages"] = [];
     for (const record of records) {
       if (record.type === "reset" && record.message && record.message.trim().length > 0) {
-        messages.push(buildResetSystemMessage(record.message, record.at));
+        messages.push(buildResetSystemMessage(record.message, record.at, this.id));
       }
       if (record.type === "user_message") {
         const context: MessageContext = {};
@@ -935,11 +935,12 @@ function toFileReferences(files: Array<{ id: string; name: string; path: string;
 
 function buildResetSystemMessage(
   text: string,
-  at: number
+  at: number,
+  origin: string
 ): Context["messages"][number] {
   return {
     role: "user",
-    content: messageBuildSystemText(text, "system"),
+    content: messageBuildSystemText(text, origin),
     timestamp: at
   };
 }

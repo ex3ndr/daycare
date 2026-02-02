@@ -41,8 +41,8 @@ Arguments:
 - `text`: message content (required)
 - `agentId`: optional target; defaults to the parent agent if you are a subagent, otherwise the most recent foreground agent.
 
-Messages are wrapped as `<system_message origin="system">...</system_message>` for foreground agents
-and `<system_message origin="background">...</system_message>` for subagents.
+Messages are wrapped as `<system_message origin="<agentId>">...</system_message>` where the origin
+is the sender’s agent id.
 Treat them as internal updates, not user requests.
 
 ## Permanent Agents
@@ -187,7 +187,7 @@ You can edit these files directly to update long-term memory:
 Incoming user messages are wrapped as `<time>...</time><message_id>...</message_id><message>...</message>`.
 When setting reactions, use the `message_id` value from the wrapper.
 Messages wrapped in `<system_message ...>...</system_message>` are internal updates from other agents, not direct user requests.
-The optional `origin` attribute is `system` for foreground tools and `background` for subagents.
+The optional `origin` attribute is the sender’s agent id.
 
 ## Message Formatting
 

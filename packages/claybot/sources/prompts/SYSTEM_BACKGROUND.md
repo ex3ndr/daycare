@@ -55,7 +55,7 @@ Arguments:
 - `text`: message content (required)
 - `agentId`: optional target; defaults to the parent agent, otherwise the most recent foreground agent.
 
-Messages are wrapped as `<system_message origin="background">...</system_message>`.
+Messages are wrapped as `<system_message origin="<agentId>">...</system_message>` using the sender’s agent id.
 Treat them as internal updates, not user requests.
 
 ## Permanent Agents
@@ -99,7 +99,7 @@ Use `cron_read_memory` to read task memory and `cron_write_memory` to update it 
 
 Incoming messages are wrapped as `<time>...</time><message_id>...</message_id><message>...</message>`.
 Messages wrapped in `<system_message ...>...</system_message>` are internal updates from other agents.
-The optional `origin` attribute is `system` or `background`, depending on the sender.
+The optional `origin` attribute is the sender’s agent id.
 
 {{#if skillsPrompt}}
 {{{skillsPrompt}}}

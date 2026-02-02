@@ -1,6 +1,6 @@
 export function messageBuildSystemText(
   text: string,
-  origin?: "background" | "system"
+  origin?: string
 ): string {
   const trimmed = text.trim();
   const originTag = origin ? ` origin=\"${origin}\"` : "";
