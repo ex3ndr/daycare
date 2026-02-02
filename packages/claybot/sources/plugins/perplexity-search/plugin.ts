@@ -56,6 +56,17 @@ async function validateApiKey(apiKey: string): Promise<void> {
 export const plugin = definePlugin({
   settingsSchema,
   onboarding: async (api) => {
+    const existingKey = await api.auth.getApiKey(api.instanceId);
+    if (existingKey) {
+      try {
+        await validateApiKey(existingKey);
+        api.note("Using existing Perplexity credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note("Existing Perplexity key failed validation, prompting for a new key.", "Setup");
+      }
+    }
+
     const apiKey = await api.prompt.input({
       message: "Perplexity API key"
     });

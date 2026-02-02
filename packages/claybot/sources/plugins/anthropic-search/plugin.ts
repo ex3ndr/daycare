@@ -73,13 +73,36 @@ async function validateApiKey(apiKey: string): Promise<void> {
 export const plugin = definePlugin({
   settingsSchema,
   onboarding: async (api) => {
-    // Reuses existing Anthropic provider credentials
-    const existingKey = await api.auth.getApiKey("anthropic");
-    if (existingKey) {
-      api.note("Using existing Anthropic provider credentials.", "Setup");
-      return { settings: {} };
+    const instanceKey = await api.auth.getApiKey(api.instanceId);
+    if (instanceKey) {
+      try {
+        await validateApiKey(instanceKey);
+        api.note("Using existing Anthropic instance credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note(
+          "Existing Anthropic instance key failed validation, prompting for a new key.",
+          "Setup"
+        );
+      }
     }
-    // Fallback: prompt for API key if Anthropic provider not configured
+
+    // Reuses existing Anthropic provider credentials
+    const providerKey = await api.auth.getApiKey("anthropic");
+    if (providerKey) {
+      try {
+        await validateApiKey(providerKey);
+        api.note("Using existing Anthropic provider credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note(
+          "Existing Anthropic provider key failed validation, prompting for a new key.",
+          "Setup"
+        );
+      }
+    }
+
+    // Fallback: prompt for API key if Anthropic provider not configured or invalid
     const apiKey = await api.prompt.input({
       message: "Anthropic API key (or configure 'anthropic' provider first)"
     });

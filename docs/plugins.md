@@ -137,7 +137,7 @@ flowchart TD
   Content --> Agent["toolResult"]
 ```
 
-During onboarding, plugins that request API keys validate the credential with a lightweight request before saving.
+During onboarding, plugins validate existing credentials (instance or provider) with a lightweight request and prompt for a new key if validation fails.
 
 ```mermaid
 sequenceDiagram

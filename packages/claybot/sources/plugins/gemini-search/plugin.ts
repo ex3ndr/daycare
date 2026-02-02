@@ -76,13 +76,30 @@ async function validateApiKey(apiKey: string): Promise<void> {
 export const plugin = definePlugin({
   settingsSchema,
   onboarding: async (api) => {
-    // Reuses existing Google provider credentials
-    const existingKey = await api.auth.getApiKey("google");
-    if (existingKey) {
-      api.note("Using existing Google provider credentials.", "Setup");
-      return { settings: {} };
+    const instanceKey = await api.auth.getApiKey(api.instanceId);
+    if (instanceKey) {
+      try {
+        await validateApiKey(instanceKey);
+        api.note("Using existing Google instance credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note("Existing Google instance key failed validation, prompting for a new key.", "Setup");
+      }
     }
-    // Fallback: prompt for API key if Google provider not configured
+
+    // Reuses existing Google provider credentials
+    const providerKey = await api.auth.getApiKey("google");
+    if (providerKey) {
+      try {
+        await validateApiKey(providerKey);
+        api.note("Using existing Google provider credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note("Existing Google provider key failed validation, prompting for a new key.", "Setup");
+      }
+    }
+
+    // Fallback: prompt for API key if Google provider not configured or invalid
     const apiKey = await api.prompt.input({
       message: "Google AI API key (or configure 'google' provider first)"
     });

@@ -70,13 +70,29 @@ async function validateApiKey(apiKey: string): Promise<void> {
 export const plugin = definePlugin({
   settingsSchema,
   onboarding: async (api) => {
-    // Reuses existing OpenAI provider credentials
-    const existingKey = await api.auth.getApiKey("openai");
-    if (existingKey) {
-      api.note("Using existing OpenAI provider credentials.", "Setup");
-      return { settings: {} };
+    const instanceKey = await api.auth.getApiKey(api.instanceId);
+    if (instanceKey) {
+      try {
+        await validateApiKey(instanceKey);
+        api.note("Using existing OpenAI instance credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note("Existing OpenAI instance key failed validation, prompting for a new key.", "Setup");
+      }
     }
-    // Fallback: prompt for API key if OpenAI provider not configured
+
+    const providerKey = await api.auth.getApiKey("openai");
+    if (providerKey) {
+      try {
+        await validateApiKey(providerKey);
+        api.note("Using existing OpenAI provider credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note("Existing OpenAI provider key failed validation, prompting for a new key.", "Setup");
+      }
+    }
+
+    // Fallback: prompt for API key if OpenAI provider not configured or invalid
     const apiKey = await api.prompt.input({
       message: "OpenAI API key (or configure 'openai' provider first)"
     });

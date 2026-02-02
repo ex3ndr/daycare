@@ -56,6 +56,17 @@ async function validateApiKey(apiKey: string): Promise<void> {
 export const plugin = definePlugin({
   settingsSchema,
   onboarding: async (api) => {
+    const existingKey = await api.auth.getApiKey(api.instanceId);
+    if (existingKey) {
+      try {
+        await validateApiKey(existingKey);
+        api.note("Using existing Brave Search credentials.", "Setup");
+        return { settings: {} };
+      } catch (error) {
+        api.note("Existing Brave Search key failed validation, prompting for a new key.", "Setup");
+      }
+    }
+
     const apiKey = await api.prompt.input({
       message: "Brave Search API key"
     });
