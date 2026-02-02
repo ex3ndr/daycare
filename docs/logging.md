@@ -95,8 +95,9 @@ flowchart LR
 
 ### Agent inbox failure logs
 
-If an inbox item throws, the loop logs a warn entry, rejects the pending completion,
-and attempts to notify the user channel with a short error message.
+If an inbox item throws, the loop logs an error entry (including message + stack fields),
+rejects the pending completion, and attempts to notify the user channel with a short
+error message.
 
 ```mermaid
 sequenceDiagram

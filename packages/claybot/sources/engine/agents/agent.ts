@@ -180,8 +180,14 @@ export class Agent {
         } catch (error) {
           const failure = error instanceof Error ? error : new Error(String(error));
           logger.error(
-            { agentId: this.id, error: failure, itemType: entry.item.type },
-            "Agent inbox item failed"
+            {
+              agentId: this.id,
+              itemType: entry.item.type,
+              errorName: failure.name,
+              errorMessage: failure.message,
+              errorStack: failure.stack
+            },
+            `Agent inbox item failed: ${failure.message}`
           );
           entry.completion?.reject(failure);
           if (entry.item.type === "message") {
