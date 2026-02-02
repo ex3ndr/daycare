@@ -21,6 +21,7 @@ This folder documents the current ClayBot CLI, plugins, agents, and runtime.
 - `config.md` - config files and resolution order
 - `logging.md` - logging configuration and output
 - `engine.md` - engine socket updates and control plane
+- `context-compaction.md` - compaction thresholds and compact tool flow
 - `testing.md` - current test coverage
 - `skills.md` - agent skills and loading workflow
 - `agent-system.md` - agent system lifecycle and ownership
@@ -42,6 +43,7 @@ flowchart TD
   Docs --> Auth[auth.md]
   Docs --> Log[logging.md]
   Docs --> Engine[engine.md]
+  Docs --> Compaction[context-compaction.md]
   Docs --> Test[testing.md]
   Docs --> Util[util.md]
   Docs --> Conv[conventions.md]

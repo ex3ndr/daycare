@@ -17,6 +17,8 @@ import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { messageIsSystemText } from "../messages/messageIsSystemText.js";
 import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
+import { contextCompactionNoticeBuild } from "./ops/contextCompactionNoticeBuild.js";
+import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild.js";
 import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
@@ -343,6 +345,26 @@ export class Agent {
       }),
       systemPrompt
     };
+
+    if (!contextForRun.messages) {
+      contextForRun.messages = [];
+    }
+
+    const history = await agentHistoryLoad(this.agentSystem.config, this.id);
+    const extraTokens = Math.ceil(systemPrompt.length / 4);
+    const compactionStatus = contextCompactionStatusBuild(
+      history,
+      this.agentSystem.config.settings.agents.emergencyContextLimit,
+      { extraTokens }
+    );
+    if (compactionStatus.severity !== "ok") {
+      const notice = await contextCompactionNoticeBuild(compactionStatus);
+      contextForRun.messages.push({
+        role: "user",
+        content: messageBuildSystemText(notice, "system"),
+        timestamp: receivedAt
+      });
+    }
 
     logger.debug(`handleMessage building user message agentId=${this.id}`);
     const userMessage = await messageBuildUser(entry);

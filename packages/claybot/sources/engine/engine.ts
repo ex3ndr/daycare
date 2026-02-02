@@ -23,6 +23,7 @@ import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { buildReactionTool } from "./modules/tools/reaction.js";
 import { buildPermissionRequestTool } from "./modules/tools/permissions.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
+import { compactToolBuild } from "./modules/tools/compactToolBuild.js";
 import {
   buildHeartbeatAddTool,
   buildHeartbeatListTool,
@@ -202,8 +203,9 @@ export class Engine {
     this.modules.tools.register("core", buildReactionTool());
     this.modules.tools.register("core", buildSendFileTool());
     this.modules.tools.register("core", buildPermissionRequestTool());
+    this.modules.tools.register("core", compactToolBuild());
     logger.debug(
-      "Core tools registered: cron, cron_memory, heartbeat, background, image_generation, reaction, send_file, request_permission"
+      "Core tools registered: cron, cron_memory, heartbeat, background, image_generation, reaction, send_file, request_permission, compact"
     );
 
     logger.debug("Starting agent system");
