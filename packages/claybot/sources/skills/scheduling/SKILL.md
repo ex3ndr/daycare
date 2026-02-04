@@ -39,11 +39,13 @@ Both cron and heartbeat tasks can define an optional `gate` command to decide
 whether to run the LLM. The command runs first; exit code `0` means "run" and
 non-zero means "skip." This keeps checks cheap (ex: HTTP health check before notifying).
 Trimmed gate output is appended to the prompt under `[Gate output]`.
-Gates run within the target agent permissions.
+Gates run within the target agent permissions. If `gate.permissions` are not already
+allowed, the gate check is skipped and the target agent receives a system message.
 
 `gate` supports:
 - `command` (required)
 - `cwd`, `timeoutMs`, `env`
+- `permissions` (required tags; must already be allowed by the target agent)
 - `allowedDomains` (network allowlist; requires `@web`)
 
 ## Examples

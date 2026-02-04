@@ -111,7 +111,9 @@ Cron and heartbeat tasks can include a `gate` command that runs before the LLM.
 If the command exits `0`, the task runs; any non-zero exit skips it. Use this
 for cheap checks (ex: HTTP health check before notifying). `gate.allowedDomains`
 is a network allowlist and requires `@web`.
-Gates run within the target agent permissions.
+Gates run within the target agent permissions. `gate.permissions` may list required
+permission tags, but they must already be allowed by the target agent or the gate
+check fails and a system message is posted.
 
 ### Cron Routing
 

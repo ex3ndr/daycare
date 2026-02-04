@@ -8,6 +8,7 @@ import { CronStore } from "./ops/cronStore.js";
 import type { CronTaskDefinition, CronTaskWithPaths } from "./cronTypes.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
+import { gatePermissionErrorIs } from "../scheduling/gatePermissionErrorIs.js";
 
 const logger = getLogger("cron.facade");
 
@@ -61,8 +62,27 @@ export class Crons {
           }
         );
       },
-      onError: (error, taskId) => {
+      onError: async (error, taskId) => {
         logger.warn({ taskId, error }, "Cron task failed");
+        if (!gatePermissionErrorIs(error)) {
+          return;
+        }
+        const task = await this.store.loadTask(taskId);
+        if (!task) {
+          return;
+        }
+        const missing = error.missing.join(", ");
+        const label = task.name ? `"${task.name}" (${task.id})` : task.id;
+        const notice = `Cron gate skipped for ${label} because required gate permissions are not allowed: ${missing}.`;
+        const target = task.agentId
+          ? { agentId: task.agentId }
+          : { descriptor: { type: "cron" as const, id: task.taskUid } };
+        await this.agentSystem.post(target, {
+          type: "system_message",
+          text: notice,
+          origin: "system",
+          silent: true
+        });
       },
       onTaskComplete: (task, runAt) => {
         this.eventBus.emit("cron.task.ran", { taskId: task.id, runAt: runAt.toISOString() });

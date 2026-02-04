@@ -5,9 +5,11 @@ import { promisify } from "node:util";
 import type { ExecGateDefinition, SessionPermissions } from "@/types";
 import { wrapWithSandbox } from "../../sandbox/runtime.js";
 import { permissionClone } from "../permissions/permissionClone.js";
+import { permissionAccessAllows } from "../permissions/permissionAccessAllows.js";
 import { permissionAccessApply } from "../permissions/permissionAccessApply.js";
 import { permissionAccessParse } from "../permissions/permissionAccessParse.js";
 import { pathResolveSecure } from "../permissions/pathResolveSecure.js";
+import { gatePermissionErrorBuild } from "./gatePermissionErrorBuild.js";
 
 const exec = promisify(execCallback);
 
@@ -52,18 +54,33 @@ export async function execGateCheck(
   permissions.workingDir = path.resolve(input.workingDir);
 
   if (input.gate.permissions) {
+    const denied: string[] = [];
     for (const entry of input.gate.permissions) {
+      const trimmed = entry.trim();
       try {
-        const access = permissionAccessParse(entry);
+        const access = permissionAccessParse(trimmed);
+        const allowed = await permissionAccessAllows(permissions, access);
+        if (!allowed) {
+          denied.push(trimmed);
+          continue;
+        }
         const applied = permissionAccessApply(permissions, access);
         if (!applied) {
-          return gateError(`Invalid gate permission: ${entry}`);
+          denied.push(trimmed);
         }
       } catch (error) {
-        return gateError(
-          error instanceof Error ? error.message : "Invalid gate permission."
-        );
+        const detail = error instanceof Error ? error.message : "Invalid gate permission.";
+        denied.push(`${trimmed} (${detail})`);
       }
+    }
+    if (denied.length > 0) {
+      return {
+        shouldRun: false,
+        exitCode: null,
+        stdout: "",
+        stderr: "",
+        error: gatePermissionErrorBuild(denied)
+      };
     }
   }
 

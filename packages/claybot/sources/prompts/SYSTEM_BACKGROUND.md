@@ -88,7 +88,8 @@ All heartbeat tasks run together as a single batch prompt in one inference call.
 Cron and heartbeat tasks can include a `gate` command that runs before the LLM.
 Exit code `0` means "run"; non-zero means "skip." `gate.allowedDomains`
 is a network allowlist and requires `@web`. Gates run within the target
-agent permissions.
+agent permissions. `gate.permissions` may list required tags, but they must
+already be allowed or the gate check fails with a system message.
 
 {{#if cronTaskId}}
 ## Cron Task

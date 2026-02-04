@@ -87,15 +87,19 @@ flowchart TD
 
 ## Scheduled tasks (cron/heartbeat)
 
-Cron and heartbeat tasks do not carry permission tags. Task prompts and gates
-run with the target agent's existing permissions only. Any `permissions` or
-`gate.permissions` entries in task files are ignored.
+Cron and heartbeat tasks do not carry permission tags. Task prompts run with
+the target agent's existing permissions only. Any `permissions` entries in task
+files are ignored. `gate.permissions` are validated against the target agent's
+permissions and rejected if they are not already allowed, with a system message
+posted to the target agent when a gate check is skipped.
 
 ```mermaid
 flowchart TD
   Task[cron/heartbeat file] --> Scheduler[Scheduler]
+  Scheduler --> Gate[execGateCheck]
   Scheduler --> Agent[Target agent]
   Task -. permission tags ignored .-> Ignore[No task permission grants]
+  Gate -->|permissions missing| Notify[Notify agent]
 ```
 
 ## Path security utilities
@@ -180,4 +184,4 @@ flowchart LR
 | Control character injection | Path validation | `pathSanitize` |
 | Path length DoS | 4096 char limit | `pathSanitize` |
 | Empty workingDir bypass | Nullish coalescing | `permissionMergeDefault` |
-| Scheduled task permission escalation | Task permission tags ignored at load/run | `cronStore`, `heartbeatStore`, schedulers |
+| Scheduled task permission escalation | Task permission tags ignored; gate permissions validated | `cronStore`, `heartbeatStore`, `execGateCheck` |

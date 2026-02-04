@@ -80,7 +80,7 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       }
     }
 
-    const gate = stripGatePermissions(execGateNormalize(definition.gate));
+    const gate = execGateNormalize(definition.gate);
     const frontmatter: Record<string, unknown> = { title };
     if (gate) {
       frontmatter.gate = gate;
@@ -129,7 +129,7 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       }
 
       const lastRunAt = state?.lastRunAt;
-      const gate = stripGatePermissions(execGateNormalize(parsed.frontmatter.gate));
+      const gate = execGateNormalize(parsed.frontmatter.gate);
 
       return {
         id,
@@ -211,17 +211,4 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       logger.warn({ error }, "Failed to write heartbeat state");
     }
   }
-}
-
-function stripGatePermissions(
-  gate?: ReturnType<typeof execGateNormalize>
-): ReturnType<typeof execGateNormalize> | undefined {
-  if (!gate) {
-    return undefined;
-  }
-  if (!gate.permissions) {
-    return gate;
-  }
-  const { permissions: _permissions, ...rest } = gate;
-  return rest;
 }

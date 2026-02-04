@@ -94,7 +94,7 @@ export class CronStore {
         return null;
       }
 
-      const gate = stripGatePermissions(execGateNormalize(parsed.frontmatter.gate));
+      const gate = execGateNormalize(parsed.frontmatter.gate);
 
       return {
         id: taskId,
@@ -137,7 +137,7 @@ export class CronStore {
 
     // Write TASK.md
     const taskUid = cuid2Is(definition.taskUid) ? definition.taskUid : createId();
-    const gate = stripGatePermissions(execGateNormalize(definition.gate));
+    const gate = execGateNormalize(definition.gate);
     const frontmatter: Frontmatter = {
       name: definition.name,
       schedule: definition.schedule,
@@ -192,7 +192,7 @@ export class CronStore {
     }
 
     const gate = updates.gate !== undefined
-      ? stripGatePermissions(execGateNormalize(updates.gate))
+      ? execGateNormalize(updates.gate)
       : existing.gate;
     const updated: CronTaskDefinition = {
       id: taskId,
@@ -358,17 +358,4 @@ function resolveAgentId(frontmatter: Frontmatter): string | undefined {
   }
   const trimmed = raw.trim();
   return trimmed ? trimmed : undefined;
-}
-
-function stripGatePermissions(
-  gate?: ReturnType<typeof execGateNormalize>
-): ReturnType<typeof execGateNormalize> | undefined {
-  if (!gate) {
-    return undefined;
-  }
-  if (!gate.permissions) {
-    return gate;
-  }
-  const { permissions: _permissions, ...rest } = gate;
-  return rest;
 }

@@ -20,7 +20,7 @@ describe("HeartbeatStore", () => {
     temps.length = 0;
   });
 
-  it("strips gate permissions on create", async () => {
+  it("persists gate permissions on create", async () => {
     const { dir, store } = await createTempStore();
     temps.push(dir);
 
@@ -31,6 +31,6 @@ describe("HeartbeatStore", () => {
     });
 
     const tasks = await store.listTasks();
-    expect(tasks[0]?.gate?.permissions).toBeUndefined();
+    expect(tasks[0]?.gate?.permissions).toEqual(["@web"]);
   });
 });

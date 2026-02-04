@@ -35,7 +35,7 @@ Frontmatter fields:
 - `description` (optional) - short description used by `cron_read_task`
 - `deleteAfterRun` (optional) - when `true`, delete the task after it runs once
 - `agentId` (optional) - route the cron prompt to an existing agent id (defaults to the cron agent)
-- `gate` (optional) - exec gate config (command + allowlist) that must succeed to run
+- `gate` (optional) - exec gate config (command + permissions + allowlist) that must succeed to run
 
 Task directory ids should be human-friendly slugs (e.g. `create-image-in-morning`).
 
@@ -63,13 +63,17 @@ flowchart TD
 `gate` runs a shell command before the LLM to decide if the cron should run.
 Exit code `0` means "run"; non-zero means "skip." Trimmed gate output is appended
 to the prompt under `[Gate output]`. Gates run with the target agent permissions.
-Network access requires `@web` plus `gate.allowedDomains` to allowlist hosts.
+`gate.permissions` may declare required permission tags, but they must already
+be allowed by the target agent or the gate check fails. Network access requires
+`@web` plus `gate.allowedDomains` to allowlist hosts.
 
 ## Permissions
 
-Cron tasks do not carry permission tags. Task prompts and gates run with the
-target agent's existing permissions only. Any `permissions` or `gate.permissions`
-entries in task files are ignored.
+Cron tasks do not carry permission tags. Task prompts run with the
+target agent's existing permissions only. Any `permissions` entries in
+task files are ignored. `gate.permissions` are validated against the
+target agent's permissions and rejected if they are not already allowed,
+and the target agent receives a system message when a gate check is skipped.
 
 ```mermaid
 flowchart TD

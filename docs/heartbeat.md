@@ -23,7 +23,7 @@ If the gate command fails, notify that the internet is down.
 
 Frontmatter fields:
 - `title` (required) - task title
-- `gate` (optional) - exec gate config (command + allowlist) that must succeed to run
+- `gate` (optional) - exec gate config (command + permissions + allowlist) that must succeed to run
 
 ## Execution model
 
@@ -47,13 +47,17 @@ flowchart TD
 Use `gate` to run a shell command before the LLM and skip work when the check
 fails. Exit code `0` means "run"; non-zero means "skip." Trimmed gate output is
 appended to the prompt under `[Gate output]`. Gates run with the heartbeat agent
-permissions. Network access requires `@web` plus `gate.allowedDomains` to allowlist hosts.
+permissions. `gate.permissions` may declare required permission tags, but they must
+already be allowed by the heartbeat agent or the gate check fails. Network access
+requires `@web` plus `gate.allowedDomains` to allowlist hosts.
 
 ## Permissions
 
-Heartbeat tasks do not carry permission tags. Prompts and gates run with the
-heartbeat agent's existing permissions only. Any `permissions` or `gate.permissions`
-entries in heartbeat files are ignored.
+Heartbeat tasks do not carry permission tags. Prompts run with the
+heartbeat agent's existing permissions only. Any `permissions` entries
+in heartbeat files are ignored. `gate.permissions` are validated against
+the heartbeat agent's permissions and rejected if they are not already allowed,
+and the heartbeat agent receives a system message when a gate check is skipped.
 
 ```mermaid
 flowchart TD

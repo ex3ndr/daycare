@@ -20,6 +20,7 @@ const addCronSchema = Type.Object(
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
         env: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
         allowedDomains: Type.Optional(
           Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })
         )
