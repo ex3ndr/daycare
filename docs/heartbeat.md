@@ -12,12 +12,8 @@ Example heartbeat file:
 ```markdown
 ---
 title: Check internet
-permissions:
-  - "@web"
 gate:
   command: "curl -fsS https://api.example.com/healthz >/dev/null"
-  permissions:
-    - "@web"
   allowedDomains:
     - api.example.com
 ---
@@ -27,8 +23,7 @@ If the gate command fails, notify that the internet is down.
 
 Frontmatter fields:
 - `title` (required) - task title
-- `permissions` (optional) - permission tags to expand the heartbeat agent; overwrites only expand (no reductions)
-- `gate` (optional) - exec gate config (command + permissions) that must succeed to run
+- `gate` (optional) - exec gate config (command + allowlist) that must succeed to run
 
 ## Execution model
 
@@ -52,9 +47,21 @@ flowchart TD
 Use `gate` to run a shell command before the LLM and skip work when the check
 fails. Exit code `0` means "run"; non-zero means "skip." Trimmed gate output is
 appended to the prompt under `[Gate output]`. Gates run with the heartbeat agent
-permissions plus any task `permissions`. Use `gate.permissions` for extra
-permissions (`@web`, `@read:/path`, `@write:/path`). Network access requires
-`@web` plus `gate.allowedDomains` to allowlist hosts.
+permissions. Network access requires `@web` plus `gate.allowedDomains` to allowlist hosts.
+
+## Permissions
+
+Heartbeat tasks do not carry permission tags. Prompts and gates run with the
+heartbeat agent's existing permissions only. Any `permissions` or `gate.permissions`
+entries in heartbeat files are ignored.
+
+```mermaid
+flowchart TD
+  Task[heartbeat.md] --> Scheduler[HeartbeatScheduler]
+  Scheduler --> Gate[execGateCheck]
+  Scheduler --> Agent[Heartbeat agent]
+  Task -. permission tags ignored .-> Ignore[No task permission grants]
+```
 
 ## Tools
 

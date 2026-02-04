@@ -20,40 +20,17 @@ describe("HeartbeatStore", () => {
     temps.length = 0;
   });
 
-  it("persists permissions", async () => {
+  it("strips gate permissions on create", async () => {
     const { dir, store } = await createTempStore();
     temps.push(dir);
 
     await store.createTask({
-      title: "Perm Task",
+      title: "Gate Task",
       prompt: "Prompt",
-      permissions: ["@web"]
+      gate: { command: "echo gate", permissions: ["@web"] }
     });
 
     const tasks = await store.listTasks();
-    expect(tasks[0]?.permissions).toEqual(["@web"]);
-  });
-
-  it("merges permissions on overwrite", async () => {
-    const { dir, store } = await createTempStore();
-    temps.push(dir);
-
-    await store.createTask({
-      id: "perm-task",
-      title: "Perm Task",
-      prompt: "Prompt",
-      permissions: ["@web"]
-    });
-
-    await store.createTask({
-      id: "perm-task",
-      title: "Perm Task",
-      prompt: "Prompt updated",
-      permissions: ["@read:/tmp"],
-      overwrite: true
-    });
-
-    const tasks = await store.listTasks();
-    expect(tasks[0]?.permissions).toEqual(["@web", "@read:/tmp"]);
+    expect(tasks[0]?.gate?.permissions).toBeUndefined();
   });
 });

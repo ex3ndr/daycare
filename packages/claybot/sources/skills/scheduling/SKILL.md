@@ -39,19 +39,12 @@ Both cron and heartbeat tasks can define an optional `gate` command to decide
 whether to run the LLM. The command runs first; exit code `0` means "run" and
 non-zero means "skip." This keeps checks cheap (ex: HTTP health check before notifying).
 Trimmed gate output is appended to the prompt under `[Gate output]`.
-Gates run within the target agent permissions plus any task `permissions`.
+Gates run within the target agent permissions.
 
 `gate` supports:
 - `command` (required)
 - `cwd`, `timeoutMs`, `env`
-- `permissions` (extra permissions, use tags like `@web`, `@read:/path`, `@write:/path`)
 - `allowedDomains` (network allowlist; requires `@web`)
-
-## Task Permissions
-
-Cron and heartbeat tasks can include `permissions` to expand the target agent's
-session permissions. These are carried with the task, apply to the target agent,
-and only expand (never reduce) the agent's capabilities even when a task is updated.
 
 ## Examples
 
@@ -62,12 +55,8 @@ and only expand (never reduce) the agent's capabilities even when a task is upda
 name: API health
 schedule: "*/10 * * * *"
 agentId: cu3ql2p5q0000x5p3g7q1l8a9
-permissions:
-  - "@web"
 gate:
   command: "curl -fsS https://api.example.com/healthz >/dev/null"
-  permissions:
-    - "@web"
   allowedDomains:
     - api.example.com
 ---

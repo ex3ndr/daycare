@@ -87,21 +87,23 @@ describe("CronStore", () => {
     expect(updated!.taskUid).toMatch(cuidPattern);
   });
 
-  it("persists permissions", async () => {
-    await store.createTask("perm-task", {
-      name: "Perm Task",
+  it("strips gate permissions on create and update", async () => {
+    await store.createTask("gate-task", {
+      name: "Gate Task",
       schedule: "* * * * *",
       prompt: "Prompt",
-      permissions: ["@web"]
+      gate: { command: "echo gate", permissions: ["@web"] }
     });
 
-    const loaded = await store.loadTask("perm-task");
-    expect(loaded?.permissions).toEqual(["@web"]);
+    const loaded = await store.loadTask("gate-task");
+    expect(loaded?.gate?.permissions).toBeUndefined();
 
-    const updated = await store.updateTask("perm-task", {
-      permissions: ["@read:/tmp"]
+    await store.updateTask("gate-task", {
+      gate: { command: "echo update", permissions: ["@read:/tmp"] }
     });
-    expect(updated?.permissions).toEqual(["@web", "@read:/tmp"]);
+
+    const updated = await store.loadTask("gate-task");
+    expect(updated?.gate?.permissions).toBeUndefined();
   });
 
   it("deletes a task", async () => {

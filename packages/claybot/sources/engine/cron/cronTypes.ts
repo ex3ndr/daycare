@@ -11,7 +11,6 @@ export type CronTaskDefinition = {
   schedule: string;
   prompt: string;
   agentId?: string;
-  permissions?: string[];
   gate?: ExecGateDefinition;
   enabled?: boolean;
   deleteAfterRun?: boolean;

@@ -337,10 +337,7 @@ export class Agent {
       this.state.permissions = permissionMergeDefault(this.state.permissions, defaultPermissions);
       permissionEnsureDefaultFile(this.state.permissions, defaultPermissions);
     }
-    const permissionTags = [
-      ...(cronTask?.permissions ?? []),
-      ...(entry.context.permissionTags ?? [])
-    ];
+    const permissionTags = [...(entry.context.permissionTags ?? [])];
     if (permissionTags.length > 0) {
       try {
         permissionTagsApply(this.state.permissions, permissionTags);

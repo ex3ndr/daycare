@@ -14,7 +14,6 @@ import type {
   HeartbeatStoreInterface
 } from "../heartbeatTypes.js";
 import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
-import { permissionTagsNormalize } from "../../permissions/permissionTagsNormalize.js";
 
 const logger = getLogger("heartbeat.store");
 
@@ -81,16 +80,8 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       }
     }
 
-    const gate = execGateNormalize(definition.gate);
-    const existing = definition.overwrite ? await this.loadTask(filePath) : null;
-    const permissions = permissionTagsNormalize([
-      ...(existing?.permissions ?? []),
-      ...(definition.permissions ?? [])
-    ]);
+    const gate = stripGatePermissions(execGateNormalize(definition.gate));
     const frontmatter: Record<string, unknown> = { title };
-    if (permissions.length > 0) {
-      frontmatter.permissions = permissions;
-    }
     if (gate) {
       frontmatter.gate = gate;
     }
@@ -102,7 +93,6 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       title,
       prompt,
       filePath,
-      permissions: permissions.length > 0 ? permissions : undefined,
       gate,
       lastRunAt: undefined
     };
@@ -139,17 +129,14 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       }
 
       const lastRunAt = state?.lastRunAt;
-      const permissions = permissionTagsNormalize(
-        parsed.frontmatter.permissions ?? parsed.frontmatter.permission
-      );
+      const gate = stripGatePermissions(execGateNormalize(parsed.frontmatter.gate));
 
       return {
         id,
         title,
         prompt,
         filePath,
-        permissions: permissions.length > 0 ? permissions : undefined,
-        gate: execGateNormalize(parsed.frontmatter.gate),
+        gate,
         lastRunAt: typeof lastRunAt === "string" ? lastRunAt : undefined
       };
     } catch (error) {
@@ -224,4 +211,17 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       logger.warn({ error }, "Failed to write heartbeat state");
     }
   }
+}
+
+function stripGatePermissions(
+  gate?: ReturnType<typeof execGateNormalize>
+): ReturnType<typeof execGateNormalize> | undefined {
+  if (!gate) {
+    return undefined;
+  }
+  if (!gate.permissions) {
+    return gate;
+  }
+  const { permissions: _permissions, ...rest } = gate;
+  return rest;
 }

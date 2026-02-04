@@ -10,7 +10,6 @@ export type HeartbeatDefinition = {
   title: string;
   prompt: string;
   filePath: string;
-  permissions?: string[];
   gate?: ExecGateDefinition;
   lastRunAt?: string;
 };
@@ -34,7 +33,6 @@ export type HeartbeatCreateTaskArgs = {
   id?: string;
   title: string;
   prompt: string;
-  permissions?: string[];
   gate?: ExecGateDefinition;
   overwrite?: boolean;
 };

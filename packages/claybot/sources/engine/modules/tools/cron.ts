@@ -5,7 +5,6 @@ import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { cronExpressionParse as parseCronExpression } from "../../cron/ops/cronExpressionParse.js";
 import type { Crons } from "../../cron/crons.js";
 import type { ToolDefinition, ToolExecutionContext } from "@/types";
-import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 
 const addCronSchema = Type.Object(
   {
@@ -15,14 +14,12 @@ const addCronSchema = Type.Object(
     schedule: Type.String({ minLength: 1 }),
     prompt: Type.String({ minLength: 1 }),
     agentId: Type.Optional(Type.String({ minLength: 1 })),
-    permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
     gate: Type.Optional(Type.Object(
       {
         command: Type.String({ minLength: 1 }),
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
         env: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
-        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
         allowedDomains: Type.Optional(
           Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })
         )
@@ -76,7 +73,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
     tool: {
       name: "add_cron",
       description:
-        "Create a scheduled cron task from a prompt stored in config/cron (optional agentId + permissions + gate).",
+        "Create a scheduled cron task from a prompt stored in config/cron (optional agentId + gate).",
       parameters: addCronSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -90,14 +87,6 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         throw new Error("Cron task id contains invalid characters.");
       }
 
-      // Validate that the caller has all permissions they want to attach
-      if (payload.permissions && payload.permissions.length > 0) {
-        await permissionTagsValidate(toolContext.permissions, payload.permissions);
-      }
-      if (payload.gate?.permissions && payload.gate.permissions.length > 0) {
-        await permissionTagsValidate(toolContext.permissions, payload.gate.permissions);
-      }
-
       const task = await crons.addTask({
         id: payload.id,
         name: payload.name,
@@ -105,7 +94,6 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         schedule: payload.schedule,
         prompt: payload.prompt,
         agentId: payload.agentId,
-        permissions: payload.permissions,
         gate: payload.gate,
         enabled: payload.enabled,
         deleteAfterRun: payload.deleteAfterRun
@@ -126,7 +114,6 @@ export function buildCronTool(crons: Crons): ToolDefinition {
           name: task.name,
           schedule: task.schedule,
           agentId: task.agentId ?? null,
-          permissions: task.permissions ?? null,
           gate: task.gate ?? null
         },
         isError: false,
@@ -173,7 +160,6 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
           description: task.description ?? null,
           schedule: task.schedule,
           agentId: task.agentId ?? null,
-          permissions: task.permissions ?? null,
           gate: task.gate ?? null,
           enabled: task.enabled !== false,
           deleteAfterRun: task.deleteAfterRun === true,

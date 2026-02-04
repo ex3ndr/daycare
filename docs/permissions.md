@@ -85,37 +85,17 @@ flowchart TD
   Check -->|denied| Block[Reject grant]
 ```
 
-## Task permissions (cron/heartbeat)
+## Scheduled tasks (cron/heartbeat)
 
-Cron and heartbeat tasks can carry permissions that are applied when the task runs.
-To prevent privilege escalation, the `add_cron` and `heartbeat_add` tools validate
-that the creating agent already holds all permissions being attached to the task.
+Cron and heartbeat tasks do not carry permission tags. Task prompts and gates
+run with the target agent's existing permissions only. Any `permissions` or
+`gate.permissions` entries in task files are ignored.
 
 ```mermaid
 flowchart TD
-  Agent[Creating agent] --> AddCron[add_cron / heartbeat_add]
-  AddCron --> Validate[permissionTagsValidate]
-  Validate -->|all held| Store[Store task with permissions]
-  Validate -->|missing| Reject[Reject task creation]
-
-  Scheduler[Scheduler runs task] --> ApplyPerms[permissionTagsApply]
-  ApplyPerms --> TaskAgent[Task agent with permissions]
-```
-
-Gate commands can also specify permissions. These are validated the same way:
-
-```typescript
-// This will fail if the agent doesn't have @write:/etc
-await addCron({
-  name: "task",
-  schedule: "* * * * *",
-  prompt: "...",
-  permissions: ["@write:/etc"],      // validated
-  gate: {
-    command: "echo ok",
-    permissions: ["@read:/secrets"]  // also validated
-  }
-});
+  Task[cron/heartbeat file] --> Scheduler[Scheduler]
+  Scheduler --> Agent[Target agent]
+  Task -. permission tags ignored .-> Ignore[No task permission grants]
 ```
 
 ## Path security utilities
@@ -200,4 +180,4 @@ flowchart LR
 | Control character injection | Path validation | `pathSanitize` |
 | Path length DoS | 4096 char limit | `pathSanitize` |
 | Empty workingDir bypass | Nullish coalescing | `permissionMergeDefault` |
-| Task permission escalation | Validate caller holds permissions | `permissionTagsValidate` |
+| Scheduled task permission escalation | Task permission tags ignored at load/run | `cronStore`, `heartbeatStore`, schedulers |

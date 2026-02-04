@@ -2,7 +2,6 @@ import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
-import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 
 const runSchema = Type.Object(
   {
@@ -16,14 +15,12 @@ const addSchema = Type.Object(
     id: Type.Optional(Type.String({ minLength: 1 })),
     title: Type.String({ minLength: 1 }),
     prompt: Type.String({ minLength: 1 }),
-    permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
     gate: Type.Optional(Type.Object(
       {
         command: Type.String({ minLength: 1 }),
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
         env: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
-        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
         allowedDomains: Type.Optional(
           Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })
         )
@@ -84,25 +81,16 @@ export function buildHeartbeatAddTool(): ToolDefinition {
   return {
     tool: {
       name: "heartbeat_add",
-      description: "Create or update a heartbeat prompt stored in config/heartbeat (optional permissions + gate).",
+      description: "Create or update a heartbeat prompt stored in config/heartbeat (optional gate).",
       parameters: addSchema
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddHeartbeatArgs;
 
-      // Validate that the caller has all permissions they want to attach
-      if (payload.permissions && payload.permissions.length > 0) {
-        await permissionTagsValidate(toolContext.permissions, payload.permissions);
-      }
-      if (payload.gate?.permissions && payload.gate.permissions.length > 0) {
-        await permissionTagsValidate(toolContext.permissions, payload.gate.permissions);
-      }
-
       const result = await toolContext.heartbeats.addTask({
         id: payload.id,
         title: payload.title,
         prompt: payload.prompt,
-        permissions: payload.permissions,
         gate: payload.gate,
         overwrite: payload.overwrite
       });
@@ -121,7 +109,6 @@ export function buildHeartbeatAddTool(): ToolDefinition {
           id: result.id,
           title: result.title,
           filePath: result.filePath,
-          permissions: result.permissions ?? null,
           gate: result.gate ?? null
         },
         isError: false,
@@ -163,7 +150,6 @@ export function buildHeartbeatListTool(): ToolDefinition {
             title: task.title,
             prompt: task.prompt,
             filePath: task.filePath,
-            permissions: task.permissions ?? null,
             gate: task.gate ?? null,
             lastRunAt: task.lastRunAt ?? null
           }))

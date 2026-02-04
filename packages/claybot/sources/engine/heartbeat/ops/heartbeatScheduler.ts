@@ -7,7 +7,6 @@ import type {
 import { execGateCheck } from "../../scheduling/execGateCheck.js";
 import { execGateOutputAppend } from "../../scheduling/execGateOutputAppend.js";
 import { permissionClone } from "../../permissions/permissionClone.js";
-import { permissionTagsApply } from "../../permissions/permissionTagsApply.js";
 
 const logger = getLogger("heartbeat.scheduler");
 
@@ -174,15 +173,6 @@ export class HeartbeatScheduler {
         continue;
       }
       const permissions = permissionClone(basePermissions);
-      if (task.permissions && task.permissions.length > 0) {
-        try {
-          permissionTagsApply(permissions, task.permissions);
-        } catch (error) {
-          logger.warn({ taskId: task.id, error }, "Heartbeat task permissions invalid");
-          await this.onError?.(error, [task.id]);
-          continue;
-        }
-      }
       const result = await this.gateCheck?.({
         gate: task.gate,
         permissions,

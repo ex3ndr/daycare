@@ -109,16 +109,9 @@ Review the current state of ongoing tasks and provide a brief status update.
 
 Cron and heartbeat tasks can include a `gate` command that runs before the LLM.
 If the command exits `0`, the task runs; any non-zero exit skips it. Use this
-for cheap checks (ex: HTTP health check before notifying). `gate.permissions` accepts extra
-permission tags like `@web`, `@read:/path`, `@write:/path`; `gate.allowedDomains`
+for cheap checks (ex: HTTP health check before notifying). `gate.allowedDomains`
 is a network allowlist and requires `@web`.
-Gates run within the target agent permissions plus any task `permissions`.
-
-### Task Permissions
-
-Cron and heartbeat tasks can include `permissions` to expand the target agent's
-session permissions. These are applied when the task runs and only expand (never reduce).
-When tasks are updated, permissions are merged and reductions are not supported.
+Gates run within the target agent permissions.
 
 ### Cron Routing
 
