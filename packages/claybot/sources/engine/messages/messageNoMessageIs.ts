@@ -31,7 +31,8 @@ function unwrapOnce(value: string): string {
 
   const fencedMatch = trimmed.match(/^```[^\n]*\n([\s\S]*?)\n```$/);
   if (fencedMatch) {
-    return fencedMatch[1].trim();
+    const fencedBody = fencedMatch[1] ?? "";
+    return fencedBody.trim();
   }
 
   if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
