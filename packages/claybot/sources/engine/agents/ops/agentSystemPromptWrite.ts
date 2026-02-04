@@ -22,7 +22,7 @@ export async function agentSystemPromptWrite(
 
   const basePath = agentPathBuild(config, sessionId);
   await fs.mkdir(basePath, { recursive: true });
-  const filePath = path.join(basePath, `${sessionId}_system.md`);
+  const filePath = path.join(basePath, "SYSTEM.md");
   const payload = prompt.endsWith("\n") ? prompt : `${prompt}\n`;
   await atomicWrite(filePath, payload);
   systemPromptCache.set(sessionId, prompt);

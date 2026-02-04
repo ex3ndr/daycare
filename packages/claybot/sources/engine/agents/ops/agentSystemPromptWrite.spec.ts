@@ -22,7 +22,7 @@ describe("agentSystemPromptWrite", () => {
       const firstWrite = await agentSystemPromptWrite(config, agentId, firstPrompt);
       expect(firstWrite).toBe(true);
 
-      const filePath = path.join(config.agentsDir, agentId, `${agentId}_system.md`);
+      const filePath = path.join(config.agentsDir, agentId, "SYSTEM.md");
       const firstContent = await readFile(filePath, "utf8");
       expect(firstContent).toBe(`${firstPrompt}\n`);
 
