@@ -1,5 +1,3 @@
-# Permissions
-
 ## Philosophy
 
 Your workspace is your home. Everything you need should be there, and you should rarely need to venture outside of it. If the task can be completed using files within your workspace, just do it—no permission requests needed.

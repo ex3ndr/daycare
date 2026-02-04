@@ -851,7 +851,7 @@ export class Agent {
     logger.debug(`buildSystemPrompt reading system template name=${templateName}`);
     const systemTemplate = await agentPromptBundledRead(templateName);
     logger.debug("buildSystemPrompt reading permissions template");
-    const permissions = (await agentPromptBundledRead("PERMISSIONS.md")).trim();
+    const permissionsTemplate = (await agentPromptBundledRead("PERMISSIONS.md")).trim();
     const additionalWriteDirs = resolveAdditionalWriteDirs(
       context.writeDirs ?? [],
       context.workspace ?? "",
@@ -863,10 +863,8 @@ export class Agent {
     const skillsPath =
       context.skillsPath ?? (context.configDir ? `${context.configDir}/skills` : "");
 
-    logger.debug("buildSystemPrompt compiling template");
-    const template = Handlebars.compile(systemTemplate);
-    logger.debug("buildSystemPrompt rendering template");
-    const rendered = template({
+    // Build shared context for both permissions and main templates
+    const templateContext = {
       date: new Date().toISOString().split("T")[0],
       os: `${os.type()} ${os.release()}`,
       arch: os.arch(),
@@ -895,10 +893,21 @@ export class Agent {
       isForeground,
       soul,
       user,
-      permissions,
       additionalWriteDirs,
       permanentAgentsPrompt: context.permanentAgentsPrompt ?? "",
       agentPrompt: context.agentPrompt ?? ""
+    };
+
+    // Render permissions template first (it contains Handlebars expressions)
+    logger.debug("buildSystemPrompt compiling permissions template");
+    const permissions = Handlebars.compile(permissionsTemplate)(templateContext);
+
+    logger.debug("buildSystemPrompt compiling main template");
+    const template = Handlebars.compile(systemTemplate);
+    logger.debug("buildSystemPrompt rendering template");
+    const rendered = template({
+      ...templateContext,
+      permissions
     });
 
     return rendered.trim();
