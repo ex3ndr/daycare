@@ -88,6 +88,16 @@ flowchart LR
   Context --> Next[used on next inference]
 ```
 
+## Image token estimation
+Image payloads are treated as non-text during token estimation. Inline image data is
+sanitized to a `"<image>"` placeholder so token counts do not scale with base64 size.
+
+```mermaid
+flowchart LR
+  Image[image content/data] --> Sanitize[replace data with "<image>"]
+  Sanitize --> Estimate[estimate symbols/tokens]
+```
+
 ## Permission request forwarding
 Background agents use `request_permission`. The engine shows the request to the user and also
 notifies the most recent foreground agent via silent system messages (request presented + decision).

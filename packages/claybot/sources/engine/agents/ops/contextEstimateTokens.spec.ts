@@ -48,4 +48,39 @@ describe("contextEstimateTokens", () => {
 
     expect(contextEstimateTokens(history)).toBe(expected);
   });
+
+  it("does not scale image estimates with inline data size", () => {
+    const smallImage = "x".repeat(8);
+    const largeImage = "x".repeat(8000);
+    const smallResult: ToolExecutionResult = {
+      toolMessage: {
+        role: "toolResult",
+        toolCallId: "tool-1",
+        toolName: "image_generation",
+        content: [{ type: "image", data: smallImage, mimeType: "image/png" }],
+        isError: false,
+        timestamp: Date.now()
+      },
+      files: []
+    };
+    const largeResult: ToolExecutionResult = {
+      toolMessage: {
+        role: "toolResult",
+        toolCallId: "tool-1",
+        toolName: "image_generation",
+        content: [{ type: "image", data: largeImage, mimeType: "image/png" }],
+        isError: false,
+        timestamp: Date.now()
+      },
+      files: []
+    };
+    const smallHistory: AgentHistoryRecord[] = [
+      { type: "tool_result", at: 1, toolCallId: "tool-1", output: smallResult }
+    ];
+    const largeHistory: AgentHistoryRecord[] = [
+      { type: "tool_result", at: 1, toolCallId: "tool-1", output: largeResult }
+    ];
+
+    expect(contextEstimateTokens(largeHistory)).toBe(contextEstimateTokens(smallHistory));
+  });
 });
