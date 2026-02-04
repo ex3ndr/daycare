@@ -2,6 +2,7 @@ import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
+import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 
 const runSchema = Type.Object(
   {
@@ -88,6 +89,15 @@ export function buildHeartbeatAddTool(): ToolDefinition {
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddHeartbeatArgs;
+
+      // Validate that the caller has all permissions they want to attach
+      if (payload.permissions && payload.permissions.length > 0) {
+        await permissionTagsValidate(toolContext.permissions, payload.permissions);
+      }
+      if (payload.gate?.permissions && payload.gate.permissions.length > 0) {
+        await permissionTagsValidate(toolContext.permissions, payload.gate.permissions);
+      }
+
       const result = await toolContext.heartbeats.addTask({
         id: payload.id,
         title: payload.title,

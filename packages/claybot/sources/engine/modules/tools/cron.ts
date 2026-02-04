@@ -5,6 +5,7 @@ import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { cronExpressionParse as parseCronExpression } from "../../cron/ops/cronExpressionParse.js";
 import type { Crons } from "../../cron/crons.js";
 import type { ToolDefinition, ToolExecutionContext } from "@/types";
+import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 
 const addCronSchema = Type.Object(
   {
@@ -78,7 +79,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         "Create a scheduled cron task from a prompt stored in config/cron (optional agentId + permissions + gate).",
       parameters: addCronSchema
     },
-    execute: async (args, _toolContext, toolCall) => {
+    execute: async (args, toolContext, toolCall) => {
       const payload = args as AddCronToolArgs;
 
       if (!parseCronExpression(payload.schedule)) {
@@ -87,6 +88,14 @@ export function buildCronTool(crons: Crons): ToolDefinition {
 
       if (payload.id && !taskIdIsSafe(payload.id)) {
         throw new Error("Cron task id contains invalid characters.");
+      }
+
+      // Validate that the caller has all permissions they want to attach
+      if (payload.permissions && payload.permissions.length > 0) {
+        await permissionTagsValidate(toolContext.permissions, payload.permissions);
+      }
+      if (payload.gate?.permissions && payload.gate.permissions.length > 0) {
+        await permissionTagsValidate(toolContext.permissions, payload.gate.permissions);
       }
 
       const task = await crons.addTask({

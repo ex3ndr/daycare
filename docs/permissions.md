@@ -34,6 +34,7 @@ flowchart TD
 - `permissionMergeDefault`: combine existing agent permissions with defaults.
 - `permissionApply`: apply an approved permission decision to an agent.
 - `permissionAccessAllows`: verify an agent already holds a permission before sharing it.
+- `permissionTagsValidate`: validate that all permission tags are already held by the caller.
 - `permissionFormatTag`: format the `@web`/`@read`/`@write` tag used in logs.
 - `permissionDescribeDecision`: human-readable label for permission decisions.
 
@@ -83,6 +84,40 @@ flowchart TD
   Check -->|allowed| Apply[permissionApply]
   Check -->|denied| Block[Reject grant]
 ```
+
+## Task permissions (cron/heartbeat)
+
+Cron and heartbeat tasks can carry permissions that are applied when the task runs.
+To prevent privilege escalation, the `add_cron` and `heartbeat_add` tools validate
+that the creating agent already holds all permissions being attached to the task.
+
+```mermaid
+flowchart TD
+  Agent[Creating agent] --> AddCron[add_cron / heartbeat_add]
+  AddCron --> Validate[permissionTagsValidate]
+  Validate -->|all held| Store[Store task with permissions]
+  Validate -->|missing| Reject[Reject task creation]
+
+  Scheduler[Scheduler runs task] --> ApplyPerms[permissionTagsApply]
+  ApplyPerms --> TaskAgent[Task agent with permissions]
+```
+
+Gate commands can also specify permissions. These are validated the same way:
+
+```typescript
+// This will fail if the agent doesn't have @write:/etc
+await addCron({
+  name: "task",
+  schedule: "* * * * *",
+  prompt: "...",
+  permissions: ["@write:/etc"],      // validated
+  gate: {
+    command: "echo ok",
+    permissions: ["@read:/secrets"]  // also validated
+  }
+});
+```
+
 ## Path security utilities
 
 The permissions system includes security hardening against path-based attacks:
@@ -165,3 +200,4 @@ flowchart LR
 | Control character injection | Path validation | `pathSanitize` |
 | Path length DoS | 4096 char limit | `pathSanitize` |
 | Empty workingDir bypass | Nullish coalescing | `permissionMergeDefault` |
+| Task permission escalation | Validate caller holds permissions | `permissionTagsValidate` |
