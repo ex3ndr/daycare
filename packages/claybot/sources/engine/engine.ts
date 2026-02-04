@@ -116,7 +116,13 @@ export class Engine {
             ].join("\n");
             void this.agentSystem.post(
               { descriptor },
-              { type: "system_message", text: notice, origin: decision.agentId, context }
+              {
+                type: "system_message",
+                text: notice,
+                origin: decision.agentId,
+                context,
+                silent: true
+              }
             );
           }
           return;

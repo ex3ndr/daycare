@@ -61,6 +61,7 @@ export type AgentInboxItem =
       type: "system_message";
       text: string;
       origin?: string;
+      silent?: boolean;
       context?: MessageContext;
     }
   | {

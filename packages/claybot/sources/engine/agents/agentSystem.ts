@@ -213,7 +213,7 @@ export class AgentSystem {
 
   async sleepIfIdle(
     agentId: string,
-    reason: "message" | "reset" | "permission" | "restore"
+    reason: "message" | "system_message" | "reset" | "permission" | "restore"
   ): Promise<void> {
     const entry = this.entries.get(agentId);
     if (!entry) {

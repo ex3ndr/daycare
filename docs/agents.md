@@ -77,9 +77,20 @@ flowchart LR
   Context --> Inference[agent loop]
 ```
 
+## Silent system messages
+Silent system messages are recorded in history and added to the runtime context,
+but they do not trigger an inference step.
+
+```mermaid
+flowchart LR
+  Silent[system_message silent=true] --> Append[history.jsonl user_message]
+  Append --> Context[agent.state.context]
+  Context --> Next[used on next inference]
+```
+
 ## Permission request forwarding
 Background agents use `request_permission`. The engine shows the request to the user and also
-notifies the most recent foreground agent via system messages (request presented + decision).
+notifies the most recent foreground agent via silent system messages (request presented + decision).
 
 ```mermaid
 sequenceDiagram
@@ -96,6 +107,18 @@ sequenceDiagram
   Connector->>AgentSystem: permission decision
   AgentSystem->>Background: permission decision
   AgentSystem->>Foreground: system_message (decision)
+```
+
+## Tool loop exhaustion warnings
+Tool execution limit notices are only emitted when the last response actually contained tool calls.
+
+```mermaid
+flowchart LR
+  Response[assistant response] --> Exceeded{tool loop exceeded?}
+  Exceeded -->|no| Done[no warning]
+  Exceeded -->|yes| ToolCalls{last response had tool calls?}
+  ToolCalls -->|yes| Notify[send tool limit warning]
+  ToolCalls -->|no| Done
 ```
 
 ## Agent persistence

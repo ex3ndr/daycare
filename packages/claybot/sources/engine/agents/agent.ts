@@ -198,6 +198,7 @@ export class Agent {
   private async sleepAfterItem(item: AgentInboxItem): Promise<void> {
     if (
       item.type !== "message" &&
+      item.type !== "system_message" &&
       item.type !== "reset" &&
       item.type !== "permission" &&
       item.type !== "restore"
@@ -502,6 +503,33 @@ export class Agent {
     item: AgentInboxSystemMessage
   ): Promise<string | null> {
     const text = messageBuildSystemText(item.text, item.origin);
+    if (item.silent) {
+      const receivedAt = Date.now();
+      await agentHistoryAppend(this.agentSystem.config, this.id, {
+        type: "user_message",
+        at: receivedAt,
+        text,
+        files: []
+      });
+
+      const context: MessageContext = {};
+      const message = messageFormatIncoming({ text, files: [] }, context, new Date(receivedAt));
+      const entry: AgentMessage = {
+        id: createId(),
+        message,
+        context,
+        receivedAt
+      };
+      const userMessage = await messageBuildUser(entry);
+      if (!this.state.context.messages) {
+        this.state.context.messages = [];
+      }
+      this.state.context.messages.push(userMessage);
+      this.state.updatedAt = receivedAt;
+      await agentStateWrite(this.agentSystem.config, this.id, this.state);
+      return null;
+    }
+
     const messageItem: AgentInboxMessage = {
       type: "message",
       message: { text },
