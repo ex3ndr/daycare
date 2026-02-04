@@ -64,7 +64,7 @@ export type AgentSummary = {
 
 export type AgentHistoryRecord =
   | { type: "start"; at: number }
-  | { type: "reset"; at: number }
+  | { type: "reset"; at: number; message?: string }
   | { type: "user_message"; at: number; text: string; files: FileReference[] }
   | {
       type: "assistant_message";

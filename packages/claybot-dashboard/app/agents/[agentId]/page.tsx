@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Clock, MessageSquare, RefreshCw } from "lucide-react";
 
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   fetchAgentHistory,
   fetchAgents,
@@ -251,41 +250,32 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           </CardHeader>
           <CardContent className="pt-0">
             {orderedRecords.length ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orderedRecords.map((record, index) => {
-                    const fileNames = getRecordFileNames(record);
-                    return (
-                      <TableRow key={`${record.type}-${recordTimestamp(record)}-${index}`} className="hover:bg-muted/50">
-                        <TableCell className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatDateTime(recordTimestamp(record))}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{formatRecordType(record)}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm font-medium text-foreground">
-                            {formatRecordSummary(record)}
-                          </div>
-                          {fileNames ? (
-                            <div className="text-xs text-muted-foreground">Files: {fileNames.join(", ")}</div>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="space-y-4">
+                {orderedRecords.map((record, index) => (
+                  <div
+                    key={`${record.type}-${recordTimestamp(record)}-${index}`}
+                    className={`rounded-lg border bg-background p-4 shadow-sm ${recordAccent(record)}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDateTime(recordTimestamp(record))}</span>
+                        </div>
+                        <Badge variant="outline" className={recordBadge(record)}>
+                          {formatRecordType(record)}
+                        </Badge>
+                      </div>
+                      <div className="max-w-xl text-xs text-muted-foreground">
+                        {formatRecordSummary(record)}
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3">
+                      {renderRecordDetails(record)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
                 No history recorded yet.
@@ -326,12 +316,16 @@ function formatRecordSummary(record: AgentHistoryRecord) {
     case "start":
       return "Agent started";
     case "reset":
-      return "Agent reset";
+      return record.message ? truncateText(record.message, 140) : "Agent reset";
     case "user_message":
-      return record.text || (record.files.length ? `${record.files.length} file(s)` : "User message");
+      return record.text
+        ? truncateText(record.text, 140)
+        : record.files.length
+          ? `${record.files.length} file(s)`
+          : "User message";
     case "assistant_message":
       if (record.text) {
-        return record.text;
+        return truncateText(record.text, 140);
       }
       if (record.toolCalls.length) {
         return `${record.toolCalls.length} tool call${record.toolCalls.length === 1 ? "" : "s"}`;
@@ -340,23 +334,252 @@ function formatRecordSummary(record: AgentHistoryRecord) {
     case "tool_result":
       return `Tool result ${record.toolCallId}`;
     case "note":
-      return record.text;
+      return truncateText(record.text, 140);
     default:
       return "Agent event";
   }
 }
 
-function getRecordFileNames(record: AgentHistoryRecord) {
+function renderRecordDetails(record: AgentHistoryRecord) {
   switch (record.type) {
+    case "start":
+      return <RecordSection title="Status">Agent started.</RecordSection>;
+    case "reset":
+      return (
+        <>
+          <RecordSection title="Status">Agent reset.</RecordSection>
+          {record.message ? <RecordSection title="Reason">{record.message}</RecordSection> : null}
+        </>
+      );
     case "user_message":
-      return record.files.map((file) => file.name);
+      return (
+        <>
+          <RecordSection title="Message">
+            {record.text ? (
+              <p className="whitespace-pre-wrap text-sm text-foreground">{record.text}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No text provided.</p>
+            )}
+          </RecordSection>
+          {renderFilesSection(record.files)}
+        </>
+      );
     case "assistant_message":
-      return record.files.map((file) => file.name);
+      return (
+        <>
+          <RecordSection title="Response">
+            {record.text ? (
+              <p className="whitespace-pre-wrap text-sm text-foreground">{record.text}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No assistant text captured.</p>
+            )}
+          </RecordSection>
+          {renderToolCallsSection(record.toolCalls)}
+          {renderFilesSection(record.files)}
+        </>
+      );
     case "tool_result":
-      return record.output.files.map((file) => file.name);
+      return (
+        <>
+          <RecordSection title="Tool result">
+            <KeyValueList
+              items={buildToolResultMeta(record)}
+              emptyLabel="No tool metadata captured."
+            />
+          </RecordSection>
+          <RecordSection title="Tool output">
+            <JsonBlock value={record.output.toolMessage} />
+          </RecordSection>
+          {renderFilesSection(record.output.files)}
+        </>
+      );
+    case "note":
+      return <RecordSection title="Note">{record.text}</RecordSection>;
     default:
-      return null;
+      return <RecordSection title="Event">Recorded agent activity.</RecordSection>;
   }
+}
+
+function renderFilesSection(files: Array<{ name: string; path: string; mimeType: string; size: number }>) {
+  if (!files.length) {
+    return null;
+  }
+  return (
+    <RecordSection title={`Files (${files.length})`}>
+      <div className="grid gap-2">
+        {files.map((file) => (
+          <div key={file.path} className="rounded-md border bg-muted/40 p-2 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium text-foreground">{file.name}</span>
+              <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
+              <span>{file.mimeType}</span>
+              <span className="font-mono">{file.path}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </RecordSection>
+  );
+}
+
+function renderToolCallsSection(toolCalls: Record<string, unknown>[]) {
+  if (!toolCalls.length) {
+    return null;
+  }
+  return (
+    <RecordSection title={`Tool calls (${toolCalls.length})`}>
+      <div className="grid gap-3">
+        {toolCalls.map((toolCall, index) => {
+          const meta = parseToolCall(toolCall);
+          return (
+            <div key={meta.id ?? `${meta.name ?? "tool"}-${index}`} className="rounded-md border bg-muted/40 p-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge variant="secondary" className="font-mono">
+                  {meta.name ?? "unknown"}
+                </Badge>
+                {meta.id ? <span className="text-muted-foreground">id: {meta.id}</span> : null}
+                {meta.type ? <span className="text-muted-foreground">type: {meta.type}</span> : null}
+              </div>
+              <div className="mt-2">
+                <JsonBlock value={meta.arguments ?? {}} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </RecordSection>
+  );
+}
+
+function buildToolResultMeta(record: Extract<AgentHistoryRecord, { type: "tool_result" }>) {
+  const toolMessageMeta = parseToolMessage(record.output.toolMessage);
+  const items = [
+    { label: "Tool call id", value: record.toolCallId },
+    ...(toolMessageMeta.name ? [{ label: "Tool name", value: toolMessageMeta.name }] : []),
+    ...(toolMessageMeta.status ? [{ label: "Status", value: toolMessageMeta.status }] : []),
+    ...(toolMessageMeta.role ? [{ label: "Role", value: toolMessageMeta.role }] : []),
+    ...(toolMessageMeta.type ? [{ label: "Type", value: toolMessageMeta.type }] : [])
+  ];
+  return items;
+}
+
+function parseToolCall(toolCall: Record<string, unknown>) {
+  const id = typeof toolCall.id === "string" ? toolCall.id : null;
+  const name = typeof toolCall.name === "string" ? toolCall.name : null;
+  const type = typeof toolCall.type === "string" ? toolCall.type : null;
+  const args = Object.prototype.hasOwnProperty.call(toolCall, "arguments")
+    ? (toolCall as { arguments?: unknown }).arguments
+    : null;
+  return { id, name, type, arguments: args };
+}
+
+function parseToolMessage(message: Record<string, unknown>) {
+  const name = typeof message.name === "string" ? message.name : null;
+  const status = typeof message.status === "string" ? message.status : null;
+  const role = typeof message.role === "string" ? message.role : null;
+  const type = typeof message.type === "string" ? message.type : null;
+  return { name, status, role, type };
+}
+
+function RecordSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-md border border-dashed bg-muted/30 p-3">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
+      <div className="mt-2 text-sm text-foreground">{children}</div>
+    </section>
+  );
+}
+
+function KeyValueList({ items, emptyLabel }: { items: Array<{ label: string; value: ReactNode }>; emptyLabel: string }) {
+  if (!items.length) {
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
+  }
+  return (
+    <dl className="grid gap-2 text-sm md:grid-cols-2">
+      {items.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <dt className="text-[11px] uppercase text-muted-foreground">{item.label}</dt>
+          <dd className="font-medium text-foreground">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function JsonBlock({ value }: { value: unknown }) {
+  return (
+    <pre className="max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 text-xs leading-relaxed text-foreground">
+      {formatJson(value)}
+    </pre>
+  );
+}
+
+function formatJson(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(value);
+  }
+}
+
+function formatFileSize(size: number) {
+  if (!Number.isFinite(size)) {
+    return "Unknown size";
+  }
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function recordBadge(record: AgentHistoryRecord) {
+  switch (record.type) {
+    case "start":
+      return "border-emerald-200 text-emerald-700";
+    case "reset":
+      return "border-rose-200 text-rose-700";
+    case "user_message":
+      return "border-sky-200 text-sky-700";
+    case "assistant_message":
+      return "border-indigo-200 text-indigo-700";
+    case "tool_result":
+      return "border-amber-200 text-amber-700";
+    case "note":
+      return "border-slate-200 text-slate-700";
+    default:
+      return "border-muted-foreground/30 text-muted-foreground";
+  }
+}
+
+function recordAccent(record: AgentHistoryRecord) {
+  switch (record.type) {
+    case "start":
+      return "border-l-4 border-l-emerald-400";
+    case "reset":
+      return "border-l-4 border-l-rose-400";
+    case "user_message":
+      return "border-l-4 border-l-sky-400";
+    case "assistant_message":
+      return "border-l-4 border-l-indigo-400";
+    case "tool_result":
+      return "border-l-4 border-l-amber-400";
+    case "note":
+      return "border-l-4 border-l-slate-400";
+    default:
+      return "border-l-4 border-l-muted";
+  }
+}
+
+function truncateText(text: string, maxLength: number) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 function formatAgentDescriptor(descriptor: AgentDescriptor) {
