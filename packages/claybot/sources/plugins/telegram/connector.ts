@@ -20,6 +20,7 @@ import type {
 import { getLogger } from "../../log.js";
 import type { FileStore } from "../../files/store.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
+import { telegramMessageSplit } from "./telegramMessageSplit.js";
 
 export type TelegramConnectorOptions = {
   token: string;
@@ -50,6 +51,9 @@ const TELEGRAM_MESSAGE_FORMAT_PROMPT = [
   "Do NOT use raw HTML tags; they will be escaped.",
   "Keep formatting simple and well-nested."
 ].join(" ");
+
+const TELEGRAM_MESSAGE_MAX_LENGTH = 4096;
+const TELEGRAM_CAPTION_MAX_LENGTH = 1024;
 
 export class TelegramConnector implements Connector {
   capabilities: ConnectorCapabilities = {
@@ -272,11 +276,19 @@ export class TelegramConnector implements Connector {
     }
     const rest = files.slice(1);
     const caption = message.text ?? undefined;
-    logger.debug(`Sending first file targetId=${targetId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!caption}`);
-    await this.sendFile(targetId, first, caption);
+    const captionChunks = caption ? telegramMessageSplit(caption, TELEGRAM_CAPTION_MAX_LENGTH) : [];
+    const sendCaption = captionChunks.length === 1 ? captionChunks[0] : undefined;
+    if (!sendCaption && caption) {
+      logger.debug(`Caption too long for Telegram; sending as separate message targetId=${targetId} captionLength=${caption.length}`);
+    }
+    logger.debug(`Sending first file targetId=${targetId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`);
+    await this.sendFile(targetId, first, sendCaption);
     for (const file of rest) {
       logger.debug(`Sending additional file targetId=${targetId} fileName=${file.name} mimeType=${file.mimeType}`);
       await this.sendFile(targetId, file);
+    }
+    if (!sendCaption && caption) {
+      await this.sendTextWithFallback(targetId, caption);
     }
     logger.debug(`All files sent targetId=${targetId} totalFiles=${files.length}`);
   }
@@ -351,14 +363,17 @@ export class TelegramConnector implements Connector {
     caption?: string
   ): Promise<void> {
     const htmlCaption = caption ? markdownToTelegramHtml(caption) : undefined;
-    const options = htmlCaption
+    const useHtmlCaption = !!htmlCaption && htmlCaption.length <= TELEGRAM_CAPTION_MAX_LENGTH;
+    const options = useHtmlCaption
       ? { caption: htmlCaption, parse_mode: "HTML" as TelegramBot.ParseMode }
-      : undefined;
+      : caption
+        ? { caption }
+        : undefined;
     const sendAs = file.sendAs ?? "auto";
     try {
       await this.sendFileWithOptions(targetId, file, sendAs, options);
     } catch (error) {
-      if (!caption || !isTelegramParseError(error)) {
+      if (!caption || !useHtmlCaption || !isTelegramParseError(error)) {
         throw error;
       }
       logger.warn({ error }, "Telegram HTML caption parse error; retrying without parse_mode");
@@ -367,13 +382,25 @@ export class TelegramConnector implements Connector {
   }
 
   private async sendTextWithFallback(targetId: string, text: string): Promise<void> {
+    const chunks = telegramMessageSplit(text, TELEGRAM_MESSAGE_MAX_LENGTH);
+    for (const chunk of chunks) {
+      await this.sendTextChunk(targetId, chunk);
+    }
+  }
+
+  private async sendTextChunk(targetId: string, text: string): Promise<void> {
     const html = markdownToTelegramHtml(text);
+    const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
     try {
-      await this.bot.sendMessage(targetId, html, {
-        parse_mode: "HTML"
-      });
+      if (useHtml) {
+        await this.bot.sendMessage(targetId, html, {
+          parse_mode: "HTML"
+        });
+        return;
+      }
+      await this.bot.sendMessage(targetId, text);
     } catch (error) {
-      if (!isTelegramParseError(error)) {
+      if (!useHtml || !isTelegramParseError(error)) {
         throw error;
       }
       logger.warn({ error }, "Telegram HTML parse error; retrying without parse_mode");
