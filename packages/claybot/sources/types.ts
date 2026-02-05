@@ -43,7 +43,7 @@ export type {
 export type {
   AgentMessage,
   AgentState,
-  AgentSessionTokens,
+  AgentTokens,
   AgentLifecycleState,
   AgentHistoryRecord,
   AgentInboxItem,

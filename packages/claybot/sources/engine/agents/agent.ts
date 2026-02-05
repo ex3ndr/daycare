@@ -101,7 +101,7 @@ export class Agent {
     const state: AgentState = {
       context: { messages: [] },
       permissions: permissionClone(agentSystem.config.defaultPermissions),
-      sessionTokens: { input: 0, output: 0, total: 0 },
+      tokens: { input: 0, output: 0, total: 0 },
       createdAt: now,
       updatedAt: now,
       state: "active"
@@ -516,9 +516,9 @@ export class Agent {
       if (record.type !== "assistant_message") {
         continue;
       }
-      this.state.sessionTokens.input += record.contextTokens.input;
-      this.state.sessionTokens.output += record.contextTokens.output;
-      this.state.sessionTokens.total += record.contextTokens.total;
+      this.state.tokens.input += record.contextTokens.input;
+      this.state.tokens.output += record.contextTokens.output;
+      this.state.tokens.total += record.contextTokens.total;
     }
 
     this.state.context = { messages: contextForRun.messages };
@@ -577,7 +577,7 @@ export class Agent {
     } else {
       this.state.context = { messages: [] };
     }
-    this.state.sessionTokens = { input: 0, output: 0, total: 0 };
+    this.state.tokens = { input: 0, output: 0, total: 0 };
     this.state.updatedAt = now;
     await agentHistoryAppend(this.agentSystem.config, this.id, {
       type: "reset",

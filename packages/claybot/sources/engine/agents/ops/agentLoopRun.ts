@@ -20,7 +20,7 @@ import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
-import { sessionTokensResolve } from "./sessionTokensResolve.js";
+import { tokensResolve } from "./tokensResolve.js";
 
 const MAX_TOOL_ITERATIONS = 5;
 
@@ -143,7 +143,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         }
       });
 
-      const tokenUsage = sessionTokensResolve(context, response.message);
+      const tokenUsage = tokensResolve(context, response.message);
 
       logger.debug(
         `Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`

@@ -4,7 +4,7 @@ const SYMBOLS_PER_TOKEN = 4;
 const IMAGE_SYMBOLS_ESTIMATE = 512;
 const IMAGE_DATA_PLACEHOLDER = "<image>";
 
-type SessionTokenDelta = {
+type TokenDelta = {
   input: number;
   output: number;
   total: number;
@@ -15,10 +15,10 @@ type SessionTokenDelta = {
  * Resolves token usage from inference output, falling back to estimates when missing.
  * Expects: context is the request context prior to appending the assistant message.
  */
-export function sessionTokensResolve(
+export function tokensResolve(
   context: Context,
   message: AssistantMessage
-): SessionTokenDelta {
+): TokenDelta {
   const usage = resolveUsageDelta(message);
   if (usage) {
     return usage;
@@ -34,7 +34,7 @@ export function sessionTokensResolve(
   };
 }
 
-function resolveUsageDelta(message: AssistantMessage): SessionTokenDelta | null {
+function resolveUsageDelta(message: AssistantMessage): TokenDelta | null {
   const usage = message.usage;
   if (!usage) {
     return null;

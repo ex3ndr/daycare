@@ -4,7 +4,7 @@ ClayBot tracks per-session token counts for each agent. After every inference re
 
 ## State + History
 
-- `state.json` includes `sessionTokens` with `input`, `output`, and `total` counts.
+- `state.json` includes `tokens` with `input`, `output`, and `total` counts.
 - `history.jsonl` stores token sizes inside each `assistant_message` record under `contextTokens`.
 - Session counters reset to zero on session reset.
 
@@ -19,5 +19,5 @@ sequenceDiagram
   Inference-->>Agent: AssistantMessage (+ usage?)
   Agent->>Agent: resolve usage or estimate
   Agent->>History: append assistant_message (provider/model/contextTokens)
-  Agent->>State: increment sessionTokens
+  Agent->>State: increment tokens
 ```

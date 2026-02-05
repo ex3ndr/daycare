@@ -17,7 +17,7 @@ export type AgentMessage = {
   receivedAt: number;
 };
 
-export type AgentSessionTokens = {
+export type AgentTokens = {
   input: number;
   output: number;
   total: number;
@@ -26,7 +26,7 @@ export type AgentSessionTokens = {
 export type AgentState = {
   context: Context;
   permissions: SessionPermissions;
-  sessionTokens: AgentSessionTokens;
+  tokens: AgentTokens;
   createdAt: number;
   updatedAt: number;
   state: AgentLifecycleState;

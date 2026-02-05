@@ -1,9 +1,9 @@
 import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 
-import { sessionTokensResolve } from "./sessionTokensResolve.js";
+import { tokensResolve } from "./tokensResolve.js";
 
-describe("sessionTokensResolve", () => {
+describe("tokensResolve", () => {
   it("uses usage values when available", () => {
     const context: Context = {
       systemPrompt: "System",
@@ -33,7 +33,7 @@ describe("sessionTokensResolve", () => {
       timestamp: Date.now()
     };
 
-    expect(sessionTokensResolve(context, message)).toEqual({
+    expect(tokensResolve(context, message)).toEqual({
       input: 12,
       output: 3,
       total: 15,
@@ -70,7 +70,7 @@ describe("sessionTokensResolve", () => {
       timestamp: Date.now()
     };
 
-    expect(sessionTokensResolve(context, message)).toEqual({
+    expect(tokensResolve(context, message)).toEqual({
       input: 3,
       output: 1,
       total: 4,
