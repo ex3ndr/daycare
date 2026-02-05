@@ -1,52 +1,73 @@
-import type { ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
-
-import type { AgentHistoryRecord, FileReference } from "@/types";
+import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 
 const SYMBOLS_PER_TOKEN = 4;
 const IMAGE_SYMBOLS_ESTIMATE = 512;
 const IMAGE_DATA_PLACEHOLDER = "<image>";
 
+type SessionTokenDelta = {
+  input: number;
+  output: number;
+  total: number;
+  source: "usage" | "estimate";
+};
+
 /**
- * Estimates token usage from history records using a symbols/4 heuristic.
- * Expects: records are ordered and contain valid user/assistant/tool entries.
+ * Resolves token usage from inference output, falling back to estimates when missing.
+ * Expects: context is the request context prior to appending the assistant message.
  */
-export function contextEstimateTokens(records: AgentHistoryRecord[]): number {
-  const symbols = records.reduce((total, record) => total + estimateRecordSymbols(record), 0);
-  if (symbols <= 0) {
-    return 0;
+export function sessionTokensResolve(
+  context: Context,
+  message: AssistantMessage
+): SessionTokenDelta {
+  const usage = resolveUsageDelta(message);
+  if (usage) {
+    return usage;
   }
-  return Math.ceil(symbols / SYMBOLS_PER_TOKEN);
+
+  const input = symbolsToTokens(estimateContextSymbols(context));
+  const output = symbolsToTokens(estimateMessageSymbols(message));
+  return {
+    input,
+    output,
+    total: input + output,
+    source: "estimate"
+  };
 }
 
-function estimateRecordSymbols(record: AgentHistoryRecord): number {
-  if (record.type === "user_message") {
-    return record.text.length + estimateFileSymbols(record.files);
+function resolveUsageDelta(message: AssistantMessage): SessionTokenDelta | null {
+  const usage = message.usage;
+  if (!usage) {
+    return null;
   }
-  if (record.type === "assistant_message") {
-    return (
-      record.text.length +
-      estimateFileSymbols(record.files) +
-      estimateToolCallsSymbols(record.toolCalls)
-    );
+  const input = normalizeTokenValue(usage.input);
+  const output = normalizeTokenValue(usage.output);
+  const total = normalizeTokenValue(usage.totalTokens);
+  if (input <= 0 && output <= 0 && total <= 0) {
+    return null;
   }
-  if (record.type === "tool_result") {
-    return estimateToolMessageSymbols(record.output.toolMessage);
-  }
-  if (record.type === "session_tokens") {
-    return 0;
-  }
-  return 0;
+  return {
+    input,
+    output,
+    total: total > 0 ? total : input + output,
+    source: "usage"
+  };
 }
 
-function estimateToolCallsSymbols(toolCalls: ToolCall[]): number {
-  return toolCalls.reduce((total, toolCall) => total + safeStringLength(toolCall), 0);
+function estimateContextSymbols(context: Context): number {
+  const messages = context.messages ?? [];
+  const messageSymbols = messages.reduce(
+    (total, message) => total + estimateMessageSymbols(message),
+    0
+  );
+  const systemPromptSymbols = context.systemPrompt ? context.systemPrompt.length : 0;
+  return messageSymbols + systemPromptSymbols;
 }
 
-function estimateToolMessageSymbols(message: ToolResultMessage): number {
-  return estimateToolMessageContentSymbols(message.content);
+function estimateMessageSymbols(message: Context["messages"][number]): number {
+  return estimateContentSymbols(message.content);
 }
 
-function estimateToolMessageContentSymbols(content: unknown): number {
+function estimateContentSymbols(content: unknown): number {
   if (typeof content === "string") {
     return content.length;
   }
@@ -67,17 +88,6 @@ function estimateContentItemSymbols(item: unknown): number {
     }
   }
   return safeStringLength(item);
-}
-
-function estimateFileSymbols(files: FileReference[]): number {
-  return files.reduce((total, file) => total + estimateFileSymbol(file), 0);
-}
-
-function estimateFileSymbol(file: FileReference): number {
-  if (file.mimeType.startsWith("image/")) {
-    return IMAGE_SYMBOLS_ESTIMATE;
-  }
-  return 0;
 }
 
 function safeStringLength(value: unknown): number {
@@ -135,4 +145,18 @@ function isImageLike(value: unknown): boolean {
     record.mimeType.startsWith("image/") &&
     typeof record.data === "string"
   );
+}
+
+function symbolsToTokens(symbols: number): number {
+  if (symbols <= 0) {
+    return 0;
+  }
+  return Math.ceil(symbols / SYMBOLS_PER_TOKEN);
+}
+
+function normalizeTokenValue(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.trunc(value));
 }

@@ -97,6 +97,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
         const state: AgentState = {
           context: { messages: [] },
           permissions,
+          sessionTokens: { input: 0, output: 0, total: 0 },
           createdAt: now,
           updatedAt: now,
           state: "active"

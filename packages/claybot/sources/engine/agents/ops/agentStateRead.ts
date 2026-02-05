@@ -16,9 +16,18 @@ const permissionsSchema = z
   })
   .strict();
 
+const sessionTokensSchema = z
+  .object({
+    input: z.number().int().nonnegative(),
+    output: z.number().int().nonnegative(),
+    total: z.number().int().nonnegative()
+  })
+  .strict();
+
 const agentStateSchema = z
   .object({
     permissions: permissionsSchema,
+    sessionTokens: sessionTokensSchema,
     createdAt: z.number().int(),
     updatedAt: z.number().int(),
     state: z.enum(["active", "sleeping"]).optional(),
@@ -48,6 +57,7 @@ export async function agentStateRead(config: Config, agentId: string): Promise<A
   return {
     context: { messages: [] },
     permissions: persisted.permissions,
+    sessionTokens: persisted.sessionTokens,
     createdAt: persisted.createdAt,
     updatedAt: persisted.updatedAt,
     state: lifecycle

@@ -101,6 +101,7 @@ export class Agent {
     const state: AgentState = {
       context: { messages: [] },
       permissions: permissionClone(agentSystem.config.defaultPermissions),
+      sessionTokens: { input: 0, output: 0, total: 0 },
       createdAt: now,
       updatedAt: now,
       state: "active"
@@ -511,6 +512,15 @@ export class Agent {
       await agentHistoryAppend(this.agentSystem.config, this.id, record);
     }
 
+    for (const record of result.historyRecords) {
+      if (record.type !== "session_tokens") {
+        continue;
+      }
+      this.state.sessionTokens.input += record.input;
+      this.state.sessionTokens.output += record.output;
+      this.state.sessionTokens.total += record.total;
+    }
+
     this.state.context = { messages: contextForRun.messages };
     this.state.updatedAt = Date.now();
     await agentStateWrite(this.agentSystem.config, this.id, this.state);
@@ -567,6 +577,7 @@ export class Agent {
     } else {
       this.state.context = { messages: [] };
     }
+    this.state.sessionTokens = { input: 0, output: 0, total: 0 };
     this.state.updatedAt = now;
     await agentHistoryAppend(this.agentSystem.config, this.id, {
       type: "reset",
@@ -828,6 +839,9 @@ export class Agent {
       }
       if (record.type === "tool_result") {
         messages.push(record.output.toolMessage);
+      }
+      if (record.type === "session_tokens") {
+        continue;
       }
     }
     return messages;

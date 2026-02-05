@@ -20,6 +20,7 @@ import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
+import { sessionTokensResolve } from "./sessionTokensResolve.js";
 
 const MAX_TOOL_ITERATIONS = 5;
 
@@ -142,6 +143,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         }
       });
 
+      const tokenUsage = sessionTokensResolve(context, response.message);
+
       logger.debug(
         `Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`
       );
@@ -186,6 +189,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         text: effectiveResponseText ?? "",
         files: [],
         toolCalls
+      });
+      historyRecords.push({
+        type: "session_tokens",
+        at: Date.now(),
+        input: tokenUsage.input,
+        output: tokenUsage.output,
+        total: tokenUsage.total,
+        source: tokenUsage.source
       });
       if (toolCalls.length === 0) {
         logger.debug(`No tool calls, breaking inference loop iteration=${iteration}`);

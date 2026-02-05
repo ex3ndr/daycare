@@ -17,9 +17,16 @@ export type AgentMessage = {
   receivedAt: number;
 };
 
+export type AgentSessionTokens = {
+  input: number;
+  output: number;
+  total: number;
+};
+
 export type AgentState = {
   context: Context;
   permissions: SessionPermissions;
+  sessionTokens: AgentSessionTokens;
   createdAt: number;
   updatedAt: number;
   state: AgentLifecycleState;
@@ -48,6 +55,14 @@ export type AgentHistoryRecord =
       at: number;
       toolCallId: string;
       output: ToolExecutionResult;
+    }
+  | {
+      type: "session_tokens";
+      at: number;
+      input: number;
+      output: number;
+      total: number;
+      source: "usage" | "estimate";
     }
   | { type: "note"; at: number; text: string };
 

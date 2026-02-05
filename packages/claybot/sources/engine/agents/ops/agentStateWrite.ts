@@ -21,6 +21,7 @@ export async function agentStateWrite(
   const payload = `${JSON.stringify(
     {
       permissions: state.permissions,
+      sessionTokens: state.sessionTokens,
       createdAt: state.createdAt,
       updatedAt: state.updatedAt,
       state: state.state

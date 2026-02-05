@@ -66,6 +66,16 @@ const historyRecordSchema = z.discriminatedUnion("type", [
     .strict(),
   z
     .object({
+      type: z.literal("session_tokens"),
+      at: z.number().int(),
+      input: z.number().int().nonnegative(),
+      output: z.number().int().nonnegative(),
+      total: z.number().int().nonnegative(),
+      source: z.enum(["usage", "estimate"])
+    })
+    .strict(),
+  z
+    .object({
       type: z.literal("note"),
       at: z.number().int(),
       text: z.string()
