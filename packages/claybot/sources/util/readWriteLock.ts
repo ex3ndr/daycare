@@ -8,6 +8,7 @@ type LockScope = {
 /**
  * Runs async work under reader/writer exclusion with writer priority.
  * Expects: write lock is never acquired while already holding a read lock.
+ * Note: queued writers block newly arriving readers to reduce reload latency.
  */
 export class ReadWriteLock {
   private activeReaders = 0;

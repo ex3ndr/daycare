@@ -311,11 +311,19 @@ export class CronScheduler {
   private runTick(): void {
     if (this.runWithReadLock) {
       void this.runWithReadLock(async () => {
+        // Tick only computes due work and schedules async task execution; each task
+        // independently acquires a read lock in executeTask().
         this.runTickUnlocked();
+      }).catch((error) => {
+        logger.warn({ error }, "Cron tick failed under read lock");
       });
       return;
     }
-    this.runTickUnlocked();
+    try {
+      this.runTickUnlocked();
+    } catch (error) {
+      logger.warn({ error }, "Cron tick failed");
+    }
   }
 
   private runTickUnlocked(): void {

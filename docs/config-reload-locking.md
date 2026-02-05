@@ -10,6 +10,9 @@ Read-locked runtime paths now include:
 - cron scheduler task execution/tick
 - heartbeat scheduler runs
 
+This currently favors strict quiescence over reload latency: a config write lock
+waits for in-flight inference calls to finish before applying changes.
+
 Plugin/provider reload behavior during apply:
 - providers: deep-equal settings are no-op; changed settings unload/load; unload always removes registry entries bound to the provider id
 - plugins: deep-equal settings are no-op; changed settings unload/load; unload calls plugin `unload` first, then unregisters all registrar-owned modules

@@ -63,6 +63,8 @@ export class Engine {
   readonly eventBus: EngineEventBus;
   private readonly runtimeLock: ReadWriteLock;
   private readonly reloadSync: InvalidateSync;
+  // Latest config requested for reload; InvalidateSync coalesces requests and guarantees
+  // an additional apply run after any invalidate that happens during an in-flight apply.
   private pendingConfig: Config | null = null;
 
   constructor(options: EngineOptions) {
@@ -163,6 +165,8 @@ export class Engine {
       providers: listActiveInferenceProviders(this.config.settings),
       registry: this.modules.inference,
       auth: this.authStore,
+      // Hold read lock for the full inference lifecycle so write-locked reload reaches
+      // a strict quiescent point with no active model calls.
       runWithReadLock: async (operation) => this.inReadLock(operation)
     });
 
@@ -361,9 +365,6 @@ export class Engine {
   }
 
   async reload(config: Config): Promise<void> {
-    if (!this.isReloadable(config)) {
-      throw new Error("Config reload requires restart (paths changed).");
-    }
     this.pendingConfig = config;
     await this.reloadSync.invalidateAndAwait();
   }

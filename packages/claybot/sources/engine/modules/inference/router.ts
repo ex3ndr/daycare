@@ -106,6 +106,7 @@ export class InferenceRouter {
     if (!this.runWithReadLock) {
       return execute();
     }
+    // Intentionally lock the full provider call to keep reload quiescence strict.
     return this.runWithReadLock(execute);
   }
 }
