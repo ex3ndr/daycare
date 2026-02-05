@@ -37,6 +37,9 @@ import { ProviderManager } from "../providers/manager.js";
 import { agentDescriptorLabel } from "./agents/ops/agentDescriptorLabel.js";
 import { agentDescriptorTargetResolve } from "./agents/ops/agentDescriptorTargetResolve.js";
 import { permissionDescribeDecision } from "./permissions/permissionDescribeDecision.js";
+import { InvalidateSync } from "../util/sync.js";
+import { ReadWriteLock } from "../util/readWriteLock.js";
+import { valueDeepEqual } from "../util/valueDeepEqual.js";
 
 const logger = getLogger("engine.runtime");
 
@@ -58,27 +61,34 @@ export class Engine {
   readonly heartbeats: Heartbeats;
   readonly inferenceRouter: InferenceRouter;
   readonly eventBus: EngineEventBus;
+  private readonly runtimeLock: ReadWriteLock;
+  private readonly reloadSync: InvalidateSync;
+  private pendingConfig: Config | null = null;
 
   constructor(options: EngineOptions) {
     logger.debug(`Engine constructor starting, dataDir=${options.config.dataDir}`);
     this.config = options.config;
     this.eventBus = options.eventBus;
+    this.runtimeLock = new ReadWriteLock();
+    this.reloadSync = new InvalidateSync(async () => {
+      await this.reloadApplyPending();
+    });
     this.authStore = new AuthStore(this.config);
     this.fileStore = new FileStore(this.config);
     logger.debug(`AuthStore and FileStore initialized`);
 
     this.modules = new ModuleRegistry({
-      onMessage: (message, context, descriptor) => {
+      onMessage: async (message, context, descriptor) => this.inReadLock(async () => {
         const connector = descriptor.type === "user" ? descriptor.connector : "unknown";
         logger.debug(
           `Connector message received: connector=${connector} type=${descriptor.type} text=${message.text?.length ?? 0}chars files=${message.files?.length ?? 0}`
         );
-        void this.agentSystem.post(
+        await this.agentSystem.post(
           { descriptor },
           { type: "message", message, context }
         );
-      },
-      onCommand: async (command, context, descriptor) => {
+      }),
+      onCommand: async (command, context, descriptor) => this.inReadLock(async () => {
         const connector = descriptor.type === "user" ? descriptor.connector : "unknown";
         const parsed = parseCommand(command);
         if (!parsed) {
@@ -92,7 +102,7 @@ export class Engine {
             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
             "Reset command received"
           );
-          void this.agentSystem.post(
+          await this.agentSystem.post(
             { descriptor },
             { type: "reset", message: "Manual reset requested by the user." }
           );
@@ -110,10 +120,10 @@ export class Engine {
           return;
         }
         logger.debug({ connector, command: parsed.name }, "Unknown command ignored");
-      },
-      onPermission: (decision, context, descriptor) => {
+      }),
+      onPermission: async (decision, context, descriptor) => this.inReadLock(async () => {
         if (decision.agentId) {
-          void this.agentSystem.post(
+          await this.agentSystem.post(
             { agentId: decision.agentId },
             { type: "permission", decision, context }
           );
@@ -126,7 +136,7 @@ export class Engine {
               `User ${status} ${permissionLabel} for background agent "${agentLabel}" (${decision.agentId}).`,
               "Decision delivered to background agent."
             ].join("\n");
-            void this.agentSystem.post(
+            await this.agentSystem.post(
               { descriptor },
               {
                 type: "system_message",
@@ -139,11 +149,11 @@ export class Engine {
           }
           return;
         }
-        void this.agentSystem.post(
+        await this.agentSystem.post(
           { descriptor },
           { type: "permission", decision, context }
         );
-      },
+      }),
       onFatal: (source, reason, error) => {
         logger.warn({ source, reason, error }, "Connector requested shutdown");
       }
@@ -152,7 +162,8 @@ export class Engine {
     this.inferenceRouter = new InferenceRouter({
       providers: listActiveInferenceProviders(this.config.settings),
       registry: this.modules.inference,
-      auth: this.authStore
+      auth: this.authStore,
+      runWithReadLock: async (operation) => this.inReadLock(operation)
     });
 
     this.pluginRegistry = new PluginRegistry(this.modules);
@@ -187,13 +198,15 @@ export class Engine {
       pluginManager: this.pluginManager,
       inferenceRouter: this.inferenceRouter,
       fileStore: this.fileStore,
-      authStore: this.authStore
+      authStore: this.authStore,
+      runWithReadLock: async (operation) => this.inReadLock(operation)
     });
 
     this.crons = new Crons({
       config: this.config,
       eventBus: this.eventBus,
-      agentSystem: this.agentSystem
+      agentSystem: this.agentSystem,
+      runWithReadLock: async (operation) => this.inReadLock(operation)
     });
     this.agentSystem.setCrons(this.crons);
 
@@ -201,7 +214,8 @@ export class Engine {
       config: this.config,
       eventBus: this.eventBus,
       intervalMs: 30 * 60 * 1000,
-      agentSystem: this.agentSystem
+      agentSystem: this.agentSystem,
+      runWithReadLock: async (operation) => this.inReadLock(operation)
     });
     this.heartbeats = heartbeats;
     this.agentSystem.setHeartbeats(heartbeats);
@@ -260,6 +274,7 @@ export class Engine {
   }
 
   async shutdown(): Promise<void> {
+    this.reloadSync.stop();
     await this.modules.connectors.unregisterAll("shutdown");
     this.crons.stop();
     this.heartbeats.stop();
@@ -349,14 +364,8 @@ export class Engine {
     if (!this.isReloadable(config)) {
       throw new Error("Config reload requires restart (paths changed).");
     }
-    this.config = config;
-    this.agentSystem.reload(config);
-    this.pluginManager.reload(config);
-    await ensureWorkspaceDir(this.config.defaultPermissions.workingDir);
-    this.providerManager.reload(config);
-    await this.providerManager.sync();
-    await this.pluginManager.syncWithConfig(this.config);
-    this.inferenceRouter.updateProviders(listActiveInferenceProviders(this.config.settings));
+    this.pendingConfig = config;
+    await this.reloadSync.invalidateAndAwait();
   }
 
   private isReloadable(next: Config): boolean {
@@ -367,6 +376,36 @@ export class Engine {
       this.config.authPath === next.authPath &&
       this.config.socketPath === next.socketPath
     );
+  }
+
+  private async inReadLock<T>(operation: () => Promise<T>): Promise<T> {
+    return this.runtimeLock.inReadLock(operation);
+  }
+
+  private async reloadApplyPending(): Promise<void> {
+    const config = this.pendingConfig;
+    if (!config) {
+      return;
+    }
+    this.pendingConfig = null;
+    await this.runtimeLock.inWriteLock(async () => {
+      if (!this.isReloadable(config)) {
+        throw new Error("Config reload requires restart (paths changed).");
+      }
+      if (configReloadEqual(this.config, config)) {
+        logger.debug("Reload requested but config is unchanged.");
+        return;
+      }
+      this.config = config;
+      this.agentSystem.reload(config);
+      this.pluginManager.reload(config);
+      await ensureWorkspaceDir(this.config.defaultPermissions.workingDir);
+      this.providerManager.reload(config);
+      await this.providerManager.sync();
+      await this.pluginManager.syncWithConfig(this.config);
+      this.inferenceRouter.updateProviders(listActiveInferenceProviders(this.config.settings));
+      logger.info("Runtime configuration reloaded");
+    });
   }
 
 }
@@ -402,4 +441,20 @@ function contextCommandTextBuild(tokens: AgentTokenEntry | null): string {
     `cache read: ${size.cacheRead} tokens`,
     `cache write: ${size.cacheWrite} tokens`
   ].join("\n");
+}
+
+function configReloadEqual(left: Config, right: Config): boolean {
+  return (
+    left.settingsPath === right.settingsPath &&
+    left.configDir === right.configDir &&
+    left.dataDir === right.dataDir &&
+    left.agentsDir === right.agentsDir &&
+    left.filesDir === right.filesDir &&
+    left.authPath === right.authPath &&
+    left.socketPath === right.socketPath &&
+    left.workspaceDir === right.workspaceDir &&
+    left.verbose === right.verbose &&
+    valueDeepEqual(left.settings, right.settings) &&
+    valueDeepEqual(left.defaultPermissions, right.defaultPermissions)
+  );
 }

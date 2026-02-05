@@ -16,6 +16,7 @@ export type HeartbeatsOptions = {
   eventBus: EngineEventBus;
   agentSystem: AgentSystem;
   intervalMs?: number;
+  runWithReadLock?: <T>(operation: () => Promise<T>) => Promise<T>;
 };
 
 /**
@@ -37,6 +38,7 @@ export class Heartbeats {
       store: this.store,
       intervalMs: options.intervalMs,
       defaultPermissions: options.config.defaultPermissions,
+      runWithReadLock: options.runWithReadLock,
       resolvePermissions: async () =>
         this.agentSystem.permissionsForTarget({ descriptor: { type: "heartbeat" } }),
       onRun: async (tasks) => {

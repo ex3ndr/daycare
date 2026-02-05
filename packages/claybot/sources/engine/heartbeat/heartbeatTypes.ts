@@ -22,6 +22,7 @@ export type HeartbeatSchedulerOptions = {
   store: HeartbeatStoreInterface;
   intervalMs?: number;
   defaultPermissions: SessionPermissions;
+  runWithReadLock?: <T>(operation: () => Promise<T>) => Promise<T>;
   resolvePermissions?: () => Promise<SessionPermissions> | SessionPermissions;
   onRun: (tasks: HeartbeatDefinition[], runAt: Date) => void | Promise<void>;
   onError?: (error: unknown, taskIds?: string[]) => void | Promise<void>;

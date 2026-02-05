@@ -27,6 +27,7 @@ This folder documents the current ClayBot CLI, plugins, agents, and runtime.
 - `skills.md` - agent skills and loading workflow
 - `agent-system.md` - agent system lifecycle and ownership
 - `heartbeat.md` - heartbeat scheduler and storage
+- `config-reload-locking.md` - online config reload lock model and plugin/provider apply flow
 
 ```mermaid
 flowchart TD
@@ -53,4 +54,5 @@ flowchart TD
   Docs --> Skills[skills.md]
   Docs --> AgentSystem[agent-system.md]
   Docs --> Heartbeat[heartbeat.md]
+  Docs --> ConfigReload[config-reload-locking.md]
 ```

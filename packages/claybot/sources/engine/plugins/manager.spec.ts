@@ -32,7 +32,7 @@ function createManager(
   pluginId: string,
   rootDir: string,
   onEvent?: (event: PluginEvent) => void
-): PluginManager {
+): { manager: PluginManager; modules: ModuleRegistry } {
   const modules = new ModuleRegistry({ onMessage: () => {} });
   const pluginRegistry = new PluginRegistry(modules);
   const config = configResolve({ engine: { dataDir: rootDir } }, path.join(rootDir, "settings.json"));
@@ -59,7 +59,9 @@ function createManager(
       }
     ]
   ]);
-  return new PluginManager({
+  return {
+    modules,
+    manager: new PluginManager({
     config,
     registry: pluginRegistry,
     auth,
@@ -67,7 +69,8 @@ function createManager(
     pluginCatalog: catalog,
     inferenceRouter,
     onEvent
-  });
+    })
+  };
 }
 
 describe("PluginManager", () => {
@@ -103,7 +106,7 @@ export const plugin = {
 `;
     const entryPath = await writePluginFile(dir, pluginSource);
     const events: PluginEvent[] = [];
-    const manager = createManager(entryPath, "isolated", dir, (event) => {
+    const { manager } = createManager(entryPath, "isolated", dir, (event) => {
       events.push(event);
     });
 
@@ -141,7 +144,7 @@ export const plugin = {
 };
 `;
     const entryPath = await writePluginFile(dir, pluginSource);
-    const manager = createManager(entryPath, "sync", dir);
+    const { manager } = createManager(entryPath, "sync", dir);
 
     await manager.syncWithConfig(
       configResolve(
@@ -177,5 +180,159 @@ export const plugin = {
       )
     );
     expect(manager.listLoaded()).toEqual([]);
+  });
+
+  it("does not reload when plugin settings are deep-equal", async () => {
+    const dir = await createTempDir();
+    const pluginSource = `import { z } from "zod";
+
+export const plugin = {
+  settingsSchema: z.object({
+    nested: z.object({
+      alpha: z.number(),
+      bravo: z.number()
+    })
+  }),
+  create: (api) => ({
+    load: async () => {
+      api.events.emit({ type: "loaded", payload: { settings: api.settings } });
+    },
+    unload: async () => {
+      api.events.emit({ type: "unloaded", payload: {} });
+    }
+  })
+};
+`;
+    const entryPath = await writePluginFile(dir, pluginSource);
+    const events: PluginEvent[] = [];
+    const { manager } = createManager(entryPath, "equal", dir, (event) => {
+      events.push(event);
+    });
+
+    await manager.syncWithConfig(
+      configResolve(
+        {
+          engine: { dataDir: dir },
+          plugins: [
+            {
+              instanceId: "equal-one",
+              pluginId: "equal",
+              enabled: true,
+              settings: {
+                nested: {
+                  alpha: 1,
+                  bravo: 2
+                }
+              }
+            }
+          ]
+        },
+        path.join(dir, "settings.json")
+      )
+    );
+
+    await manager.syncWithConfig(
+      configResolve(
+        {
+          engine: { dataDir: dir },
+          plugins: [
+            {
+              instanceId: "equal-one",
+              pluginId: "equal",
+              enabled: true,
+              settings: {
+                nested: {
+                  bravo: 2,
+                  alpha: 1
+                }
+              }
+            }
+          ]
+        },
+        path.join(dir, "settings.json")
+      )
+    );
+
+    expect(events.map((event) => event.type)).toEqual(["loaded"]);
+
+    await manager.syncWithConfig(
+      configResolve(
+        {
+          engine: { dataDir: dir },
+          plugins: [
+            {
+              instanceId: "equal-one",
+              pluginId: "equal",
+              enabled: true,
+              settings: {
+                nested: {
+                  alpha: 1,
+                  bravo: 3
+                }
+              }
+            }
+          ]
+        },
+        path.join(dir, "settings.json")
+      )
+    );
+
+    expect(events.map((event) => event.type)).toEqual([
+      "loaded",
+      "unloaded",
+      "loaded"
+    ]);
+  });
+
+  it("calls unload before registrar cleanup and removes registrations automatically", async () => {
+    const dir = await createTempDir();
+    const pluginSource = `import { z } from "zod";
+
+let connectorShutdownCalled = false;
+const connector = {
+  capabilities: { sendText: true },
+  onMessage: () => () => {},
+  sendMessage: async () => {},
+  shutdown: async () => {
+    connectorShutdownCalled = true;
+  }
+};
+
+export const plugin = {
+  settingsSchema: z.object({}).passthrough(),
+  create: (api) => ({
+    load: async () => {
+      api.registrar.registerConnector("probe-connector", connector);
+    },
+    unload: async () => {
+      api.events.emit({
+        type: "unload-order",
+        payload: { connectorShutdownCalled }
+      });
+    }
+  })
+};
+`;
+    const entryPath = await writePluginFile(dir, pluginSource);
+    const events: PluginEvent[] = [];
+    const { manager, modules } = createManager(entryPath, "probe", dir, (event) => {
+      events.push(event);
+    });
+
+    await manager.load({
+      instanceId: "probe",
+      pluginId: "probe",
+      enabled: true,
+      settings: {}
+    });
+
+    expect(modules.connectors.has("probe-connector")).toBe(true);
+
+    await manager.unload("probe");
+
+    expect(
+      events.find((event) => event.type === "unload-order")?.payload
+    ).toEqual({ connectorShutdownCalled: false });
+    expect(modules.connectors.has("probe-connector")).toBe(false);
   });
 });

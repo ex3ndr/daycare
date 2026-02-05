@@ -31,6 +31,7 @@ export type CronSchedulerOptions = {
     task: CronTaskWithPaths,
     missing: string[]
   ) => void | Promise<void>;
+  runWithReadLock?: <T>(operation: () => Promise<T>) => Promise<T>;
   onTaskComplete?: (task: CronTaskWithPaths, runAt: Date) => void | Promise<void>;
   gateCheck?: (input: ExecGateCheckInput) => Promise<ExecGateCheckResult>;
 };
@@ -46,6 +47,7 @@ export class CronScheduler {
   private onTask: CronSchedulerOptions["onTask"];
   private onError?: CronSchedulerOptions["onError"];
   private onGatePermissionSkip?: CronSchedulerOptions["onGatePermissionSkip"];
+  private runWithReadLock?: CronSchedulerOptions["runWithReadLock"];
   private onTaskComplete?: CronSchedulerOptions["onTaskComplete"];
   private defaultPermissions: SessionPermissions;
   private resolvePermissions?: CronSchedulerOptions["resolvePermissions"];
@@ -58,6 +60,7 @@ export class CronScheduler {
     this.onTask = options.onTask;
     this.onError = options.onError;
     this.onGatePermissionSkip = options.onGatePermissionSkip;
+    this.runWithReadLock = options.runWithReadLock;
     this.onTaskComplete = options.onTaskComplete;
     this.defaultPermissions = options.defaultPermissions;
     this.resolvePermissions = options.resolvePermissions;
@@ -206,6 +209,14 @@ export class CronScheduler {
   }
 
   private async executeTask(task: CronTaskWithPaths): Promise<void> {
+    if (this.runWithReadLock) {
+      await this.runWithReadLock(async () => this.executeTaskUnlocked(task));
+      return;
+    }
+    await this.executeTaskUnlocked(task);
+  }
+
+  private async executeTaskUnlocked(task: CronTaskWithPaths): Promise<void> {
     logger.debug(`executeTask() called taskId=${task.id}`);
 
     if (this.stopped) {
@@ -298,6 +309,16 @@ export class CronScheduler {
   }
 
   private runTick(): void {
+    if (this.runWithReadLock) {
+      void this.runWithReadLock(async () => {
+        this.runTickUnlocked();
+      });
+      return;
+    }
+    this.runTickUnlocked();
+  }
+
+  private runTickUnlocked(): void {
     if (this.stopped) {
       return;
     }

@@ -24,6 +24,7 @@ export class HeartbeatScheduler {
   private onGatePermissionSkip?: HeartbeatSchedulerOptions["onGatePermissionSkip"];
   private onTaskComplete?: HeartbeatSchedulerOptions["onTaskComplete"];
   private defaultPermissions: HeartbeatSchedulerOptions["defaultPermissions"];
+  private runWithReadLock?: HeartbeatSchedulerOptions["runWithReadLock"];
   private resolvePermissions?: HeartbeatSchedulerOptions["resolvePermissions"];
   private gateCheck: HeartbeatSchedulerOptions["gateCheck"];
   private timer: NodeJS.Timeout | null = null;
@@ -40,6 +41,7 @@ export class HeartbeatScheduler {
     this.onGatePermissionSkip = options.onGatePermissionSkip;
     this.onTaskComplete = options.onTaskComplete;
     this.defaultPermissions = options.defaultPermissions;
+    this.runWithReadLock = options.runWithReadLock;
     this.resolvePermissions = options.resolvePermissions;
     this.gateCheck = options.gateCheck ?? execGateCheck;
     logger.debug("HeartbeatScheduler initialized");
@@ -109,6 +111,13 @@ export class HeartbeatScheduler {
   }
 
   private async runOnce(taskIds?: string[]): Promise<{ ran: number; taskIds: string[] }> {
+    if (this.runWithReadLock) {
+      return this.runWithReadLock(async () => this.runOnceUnlocked(taskIds));
+    }
+    return this.runOnceUnlocked(taskIds);
+  }
+
+  private async runOnceUnlocked(taskIds?: string[]): Promise<{ ran: number; taskIds: string[] }> {
     if (this.running) {
       logger.debug("HeartbeatScheduler run skipped (already running)");
       return { ran: 0, taskIds: [] };

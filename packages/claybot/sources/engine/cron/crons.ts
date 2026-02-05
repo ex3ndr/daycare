@@ -15,6 +15,7 @@ export type CronsOptions = {
   config: Config;
   eventBus: EngineEventBus;
   agentSystem: AgentSystem;
+  runWithReadLock?: <T>(operation: () => Promise<T>) => Promise<T>;
 };
 
 /**
@@ -35,6 +36,7 @@ export class Crons {
     this.scheduler = new CronScheduler({
       store: this.store,
       defaultPermissions: options.config.defaultPermissions,
+      runWithReadLock: options.runWithReadLock,
       resolvePermissions: async (task) => {
         if (task.agentId) {
           return this.agentSystem.permissionsForTarget({ agentId: task.agentId });

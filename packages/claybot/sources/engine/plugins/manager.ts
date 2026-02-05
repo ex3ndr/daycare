@@ -19,6 +19,7 @@ import type { EngineEventBus } from "../ipc/events.js";
 import { resolveExclusivePlugins } from "./exclusive.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import { PluginInferenceService } from "./inference.js";
+import { valueDeepEqual } from "../../util/valueDeepEqual.js";
 
 export type PluginManagerOptions = {
   config: Config;
@@ -149,7 +150,7 @@ export class PluginManager {
       }
       if (
         next.pluginId !== entry.config.pluginId ||
-        !settingsEqual(next.settings, entry.config.settings)
+        !valueDeepEqual(next.settings ?? {}, entry.config.settings ?? {})
       ) {
         this.logger.debug(`Plugin settings changed, reloading instanceId=${instanceId} oldPluginId=${entry.config.pluginId} newPluginId=${next.pluginId}`);
         this.logger.info(
@@ -274,11 +275,10 @@ export class PluginManager {
       }
     };
 
-    this.logger.debug("Creating plugin instance");
-    const instance = await module.create(api);
-    this.logger.debug("Plugin instance created");
-
     try {
+      this.logger.debug("Creating plugin instance");
+      const instance = await module.create(api);
+      this.logger.debug("Plugin instance created");
       this.logger.debug("Calling plugin.load()");
       await instance.load?.();
       this.loaded.set(instanceId, {
@@ -369,10 +369,6 @@ export class PluginManager {
     }
     return resolution.allowed;
   }
-}
-
-function settingsEqual(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 }
 
 function buildPluginEvent(source: { pluginId: string; instanceId: string }, event: PluginEventInput): PluginEvent {

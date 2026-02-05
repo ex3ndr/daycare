@@ -56,6 +56,7 @@ export type AgentSystemOptions = {
   inferenceRouter: InferenceRouter;
   fileStore: FileStore;
   authStore: AuthStore;
+  runWithReadLock?: <T>(operation: () => Promise<T>) => Promise<T>;
 };
 
 export class AgentSystem {
@@ -68,6 +69,7 @@ export class AgentSystem {
   readonly inferenceRouter: InferenceRouter;
   readonly fileStore: FileStore;
   readonly authStore: AuthStore;
+  private runWithReadLock?: <T>(operation: () => Promise<T>) => Promise<T>;
   private _crons: Crons | null = null;
   private _heartbeats: Heartbeats | null = null;
   private entries = new Map<string, AgentEntry>();
@@ -84,6 +86,7 @@ export class AgentSystem {
     this.inferenceRouter = options.inferenceRouter;
     this.fileStore = options.fileStore;
     this.authStore = options.authStore;
+    this.runWithReadLock = options.runWithReadLock;
   }
 
   get crons(): Crons {
@@ -337,6 +340,13 @@ export class AgentSystem {
     }
     entry.agent.state.permissions = permissions;
     entry.agent.state.updatedAt = updatedAt;
+  }
+
+  async inReadLock<T>(operation: () => Promise<T>): Promise<T> {
+    if (!this.runWithReadLock) {
+      return operation();
+    }
+    return this.runWithReadLock(operation);
   }
 
   private async resolveEntry(
