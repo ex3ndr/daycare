@@ -32,9 +32,6 @@ function estimateRecordSymbols(record: AgentHistoryRecord): number {
   if (record.type === "tool_result") {
     return estimateToolMessageSymbols(record.output.toolMessage);
   }
-  if (record.type === "session_tokens") {
-    return 0;
-  }
   return 0;
 }
 

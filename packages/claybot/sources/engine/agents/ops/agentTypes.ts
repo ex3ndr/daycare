@@ -49,20 +49,19 @@ export type AgentHistoryRecord =
       text: string;
       files: FileReference[];
       toolCalls: ToolCall[];
+      providerId: string;
+      modelId: string;
+      contextTokens: {
+        input: number;
+        output: number;
+        total: number;
+      };
     }
   | {
       type: "tool_result";
       at: number;
       toolCallId: string;
       output: ToolExecutionResult;
-    }
-  | {
-      type: "session_tokens";
-      at: number;
-      input: number;
-      output: number;
-      total: number;
-      source: "usage" | "estimate";
     }
   | { type: "note"; at: number; text: string };
 

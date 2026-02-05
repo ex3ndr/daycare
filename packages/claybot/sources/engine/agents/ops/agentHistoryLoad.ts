@@ -53,7 +53,16 @@ const historyRecordSchema = z.discriminatedUnion("type", [
       at: z.number().int(),
       text: z.string(),
       files: z.array(fileReferenceSchema),
-      toolCalls: z.array(z.unknown())
+      toolCalls: z.array(z.unknown()),
+      providerId: z.string().min(1),
+      modelId: z.string().min(1),
+      contextTokens: z
+        .object({
+          input: z.number().int().nonnegative(),
+          output: z.number().int().nonnegative(),
+          total: z.number().int().nonnegative()
+        })
+        .strict()
     })
     .strict(),
   z
@@ -62,16 +71,6 @@ const historyRecordSchema = z.discriminatedUnion("type", [
       at: z.number().int(),
       toolCallId: z.string().min(1),
       output: toolExecutionResultSchema
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal("session_tokens"),
-      at: z.number().int(),
-      input: z.number().int().nonnegative(),
-      output: z.number().int().nonnegative(),
-      total: z.number().int().nonnegative(),
-      source: z.enum(["usage", "estimate"])
     })
     .strict(),
   z

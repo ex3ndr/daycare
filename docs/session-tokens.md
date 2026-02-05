@@ -1,11 +1,11 @@
 # Session Tokens Counter
 
-ClayBot now tracks a per-session token counter for each agent. The counter updates after every inference response. When providers return usage data, those values are used directly. If usage is missing, ClayBot estimates tokens with a symbols-per-token heuristic across the request context and the assistant response.
+ClayBot tracks per-session token counts for each agent. After every inference response, ClayBot records the provider id, model id, and context token sizes (input/output/total). When providers return usage data, those values are used directly. If usage is missing, ClayBot estimates tokens with a symbols-per-token heuristic across the request context and assistant response.
 
 ## State + History
 
 - `state.json` includes `sessionTokens` with `input`, `output`, and `total` counts.
-- `history.jsonl` records a new `session_tokens` entry after each assistant message.
+- `history.jsonl` stores token sizes inside each `assistant_message` record under `contextTokens`.
 - Session counters reset to zero on session reset.
 
 ```mermaid
@@ -18,7 +18,6 @@ sequenceDiagram
   Agent->>Inference: complete(context)
   Inference-->>Agent: AssistantMessage (+ usage?)
   Agent->>Agent: resolve usage or estimate
-  Agent->>History: append assistant_message
-  Agent->>History: append session_tokens
+  Agent->>History: append assistant_message (provider/model/contextTokens)
   Agent->>State: increment sessionTokens
 ```

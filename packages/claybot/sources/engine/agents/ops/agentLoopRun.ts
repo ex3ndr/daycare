@@ -188,15 +188,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         at: Date.now(),
         text: effectiveResponseText ?? "",
         files: [],
-        toolCalls
-      });
-      historyRecords.push({
-        type: "session_tokens",
-        at: Date.now(),
-        input: tokenUsage.input,
-        output: tokenUsage.output,
-        total: tokenUsage.total,
-        source: tokenUsage.source
+        toolCalls,
+        providerId: response.providerId,
+        modelId: response.modelId,
+        contextTokens: {
+          input: tokenUsage.input,
+          output: tokenUsage.output,
+          total: tokenUsage.total
+        }
       });
       if (toolCalls.length === 0) {
         logger.debug(`No tool calls, breaking inference loop iteration=${iteration}`);

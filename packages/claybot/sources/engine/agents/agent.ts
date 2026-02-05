@@ -513,12 +513,12 @@ export class Agent {
     }
 
     for (const record of result.historyRecords) {
-      if (record.type !== "session_tokens") {
+      if (record.type !== "assistant_message") {
         continue;
       }
-      this.state.sessionTokens.input += record.input;
-      this.state.sessionTokens.output += record.output;
-      this.state.sessionTokens.total += record.total;
+      this.state.sessionTokens.input += record.contextTokens.input;
+      this.state.sessionTokens.output += record.contextTokens.output;
+      this.state.sessionTokens.total += record.contextTokens.total;
     }
 
     this.state.context = { messages: contextForRun.messages };
@@ -839,9 +839,6 @@ export class Agent {
       }
       if (record.type === "tool_result") {
         messages.push(record.output.toolMessage);
-      }
-      if (record.type === "session_tokens") {
-        continue;
       }
     }
     return messages;
