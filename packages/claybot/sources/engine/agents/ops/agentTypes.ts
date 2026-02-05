@@ -22,11 +22,10 @@ export type AgentTokenSize = {
   output: number;
   cacheRead: number;
   cacheWrite: number;
-};
-
-export type AgentTokenSnapshotSize = AgentTokenSize & {
   total: number;
 };
+
+export type AgentTokenSnapshotSize = AgentTokenSize;
 
 export type AgentTokenEntry = {
   provider: string;

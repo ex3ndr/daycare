@@ -57,6 +57,7 @@ type AgentLoopResult = {
       output: number;
       cacheRead: number;
       cacheWrite: number;
+      total: number;
     };
   }>;
 };
@@ -175,7 +176,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             input: tokensEntry.size.input,
             output: tokensEntry.size.output,
             cacheRead: tokensEntry.size.cacheRead,
-            cacheWrite: tokensEntry.size.cacheWrite
+            cacheWrite: tokensEntry.size.cacheWrite,
+            total: tokensEntry.size.total
           }
         });
       }

@@ -521,12 +521,14 @@ export class Agent {
           input: 0,
           output: 0,
           cacheRead: 0,
-          cacheWrite: 0
+          cacheWrite: 0,
+          total: 0
         };
         modelStats.input += update.size.input;
         modelStats.output += update.size.output;
         modelStats.cacheRead += update.size.cacheRead;
         modelStats.cacheWrite += update.size.cacheWrite;
+        modelStats.total += update.size.total;
         providerStats[update.model] = modelStats;
         this.state.stats[update.provider] = providerStats;
       }

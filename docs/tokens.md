@@ -5,7 +5,7 @@ ClayBot tracks current token sizes for each agent and aggregates real usage by p
 ## State + History
 
 - `state.json` includes `tokens` (nullable) with the latest provider/model/size (including `total`) for the current session.
-- `state.json` includes `stats` as `{ [provider]: { [model]: { input, output, cacheRead, cacheWrite } } }` from real usage only.
+- `state.json` includes `stats` as `{ [provider]: { [model]: { input, output, cacheRead, cacheWrite, total } } }` from real usage only.
 - `history.jsonl` stores token sizes inside each `assistant_message` record under `tokens`.
 - Session resets/compactions clear `tokens` but leave `stats` intact.
 

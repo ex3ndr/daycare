@@ -21,15 +21,12 @@ const tokenSizeSchema = z
     input: z.number().int().nonnegative(),
     output: z.number().int().nonnegative(),
     cacheRead: z.number().int().nonnegative(),
-    cacheWrite: z.number().int().nonnegative()
-  })
-  .strict();
-
-const tokenSnapshotSizeSchema = tokenSizeSchema
-  .extend({
+    cacheWrite: z.number().int().nonnegative(),
     total: z.number().int().nonnegative()
   })
   .strict();
+
+const tokenSnapshotSizeSchema = tokenSizeSchema;
 
 const tokensSchema = z
   .object({
