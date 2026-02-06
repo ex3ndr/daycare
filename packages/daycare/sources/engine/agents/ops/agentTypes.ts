@@ -88,6 +88,7 @@ export type AgentInboxItem =
   | {
       type: "reset";
       message?: string;
+      context?: MessageContext;
     }
   | {
       type: "permission";

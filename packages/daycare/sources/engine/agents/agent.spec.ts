@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createId } from "@paralleldrive/cuid2";
 
 import { Agent } from "./agent.js";
@@ -15,7 +15,7 @@ import { EngineEventBus } from "../ipc/events.js";
 import { AuthStore } from "../../auth/store.js";
 import { FileStore } from "../../files/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import type { AgentDescriptor } from "@/types";
+import type { AgentDescriptor, Connector } from "@/types";
 import type { PluginManager } from "../plugins/manager.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import type { Crons } from "../cron/crons.js";
@@ -66,6 +66,67 @@ describe("Agent", () => {
 
       const historyRaw = await readFile(historyPath, "utf8");
       expect(historyRaw).toContain("\"type\":\"start\"");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("sends reset confirmation from agent for user resets with context", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const connectorRegistry = new ConnectorRegistry({
+        onMessage: async () => undefined
+      });
+      const sendMessage = vi.fn(async () => undefined);
+      const connector: Connector = {
+        capabilities: { sendText: true },
+        onMessage: () => () => undefined,
+        sendMessage
+      };
+      const registerResult = connectorRegistry.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+
+      const agentSystem = new AgentSystem({
+        config: new ConfigModule(config),
+        eventBus: new EngineEventBus(),
+        connectorRegistry,
+        imageRegistry: new ImageGenerationRegistry(),
+        toolResolver: new ToolResolver(),
+        pluginManager: {} as unknown as PluginManager,
+        inferenceRouter: {} as unknown as InferenceRouter,
+        fileStore: new FileStore(config),
+        authStore: new AuthStore(config)
+      });
+      agentSystem.setCrons({} as unknown as Crons);
+      await agentSystem.load();
+      await agentSystem.start();
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "channel-1",
+        userId: "user-1"
+      };
+      const result = await agentSystem.postAndAwait(
+        { descriptor },
+        {
+          type: "reset",
+          message: "Manual reset requested by the user.",
+          context: { messageId: "42" }
+        }
+      );
+
+      expect(result).toEqual({ type: "reset", ok: true });
+      expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+        text: "Session reset.",
+        replyToMessageId: "42"
+      });
+
+      await connectorRegistry.unregisterAll("test");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

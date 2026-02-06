@@ -609,8 +609,29 @@ export class Agent {
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.reset", {
       agentId: this.id,
-      context: {}
+      context: item.context ?? {}
     });
+
+    if (this.descriptor.type !== "user") {
+      return true;
+    }
+    if (!item.context) {
+      return true;
+    }
+
+    const connector = this.agentSystem.connectorRegistry.get(this.descriptor.connector);
+    if (!connector?.capabilities.sendText) {
+      return true;
+    }
+
+    try {
+      await connector.sendMessage(this.descriptor.channelId, {
+        text: "Session reset.",
+        replyToMessageId: item.context?.messageId
+      });
+    } catch (error) {
+      logger.warn({ agentId: this.id, error }, "Reset confirmation send failed");
+    }
     return true;
   }
 

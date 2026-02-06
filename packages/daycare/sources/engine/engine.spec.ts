@@ -10,7 +10,7 @@ import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
 
 describe("Engine reset command", () => {
-  it("sends a session reset confirmation for user commands", async () => {
+  it("posts reset with message context for user commands", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
     try {
       const config = configResolve(
@@ -54,12 +54,9 @@ describe("Engine reset command", () => {
 
       expect(postSpy).toHaveBeenCalledWith(
         { descriptor },
-        { type: "reset", message: "Manual reset requested by the user." }
+        { type: "reset", message: "Manual reset requested by the user.", context }
       );
-      expect(sendMessage).toHaveBeenCalledWith("123", {
-        text: "Session reset.",
-        replyToMessageId: "55"
-      });
+      expect(sendMessage).not.toHaveBeenCalled();
 
       await engine.modules.connectors.unregisterAll("test");
       await engine.shutdown();

@@ -359,26 +359,8 @@ export class Engine {
   ): Promise<void> {
     await this.agentSystem.post(
       { descriptor },
-      { type: "reset", message: "Manual reset requested by the user." }
+      { type: "reset", message: "Manual reset requested by the user.", context }
     );
-
-    const target = agentDescriptorTargetResolve(descriptor);
-    if (!target) {
-      return;
-    }
-    const connector = this.modules.connectors.get(target.connector);
-    if (!connector?.capabilities.sendText) {
-      return;
-    }
-
-    try {
-      await connector.sendMessage(target.targetId, {
-        text: "Session reset.",
-        replyToMessageId: context.messageId
-      });
-    } catch (error) {
-      logger.warn({ connector: target.connector, error }, "Reset command failed to send response");
-    }
   }
 
   async reload(): Promise<void> {
