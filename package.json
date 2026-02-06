@@ -1,14 +1,14 @@
 {
-  "name": "claybot",
+  "name": "daycare",
   "private": true,
   "packageManager": "yarn@1.22.22",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspace claybot run build",
-    "dashboard": "yarn workspace claybot-dashboard dev",
-    "dev": "CLAYBOT_ROOT_DIR=~/.dev yarn workspace claybot run dev",
+    "build": "yarn workspace daycare run build",
+    "dashboard": "yarn workspace daycare-dashboard dev",
+    "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare run dev",
     "test": "yarn workspaces run test",
     "test:watch": "yarn workspaces run test:watch",
     "typecheck": "yarn workspaces run typecheck"

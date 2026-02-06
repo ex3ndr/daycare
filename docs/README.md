@@ -1,13 +1,13 @@
-# ClayBot documentation
+# Daycare documentation
 
-This folder documents the current ClayBot CLI, plugins, agents, and runtime.
+This folder documents the current Daycare CLI, plugins, agents, and runtime.
 
 ## Index
 - `architecture.md` - system overview and message flow
 - `cli.md` - CLI commands and runtime behavior
 - `connectors.md` - connector abstraction and telegram connector
 - `plugins.md` - plugin system and built-in plugins
-- `dashboard.md` - claybot-dashboard SPA + proxy
+- `dashboard.md` - daycare-dashboard SPA + proxy
 - `memory.md` - memory plugin and entities
 - `cron.md` - cron scheduler tasks and actions
 - `auth.md` - auth store and helper commands

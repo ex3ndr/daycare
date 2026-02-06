@@ -1,4 +1,4 @@
-# ClayBot Dashboard History Detail
+# Daycare Dashboard History Detail
 
 The agent detail page now renders a structured history stream, expanding each record into a readable, inspectable layout. Each record shows timestamp, type, and a summary line, plus dedicated sections for messages, tool calls, tool outputs, and files.
 

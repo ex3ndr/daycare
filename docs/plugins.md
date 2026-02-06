@@ -25,7 +25,7 @@ The plugin API surface is intentionally narrow:
 - `api.fileStore`: shared file store
 - `api.inference.complete({ systemPrompt, messages, providerId?, strategy? })`: run a single inference without tools
 - `api.logger`: per-plugin logger
-- `api.mode`: `"runtime"` or `"validate"` (used during `claybot add` validation)
+- `api.mode`: `"runtime"` or `"validate"` (used during `daycare add` validation)
 - `api.engineEvents`: engine event bus (optional)
 - `api.events.emit({ type, payload })`: emit plugin events to the engine event bus
 
@@ -36,7 +36,7 @@ Inference strategies:
 - `large`: prefer the newest large model; fall back to normal, then small.
 
 Load/unload is internal: the plugin manager reconciles enabled instances from
-`.claybot/settings.json` and loads or unloads instances to match.
+`.daycare/settings.json` and loads or unloads instances to match.
 
 ## Skills
 Plugins can register skills by calling `api.registrar.registerSkill(path)`.
@@ -85,9 +85,9 @@ event bus (SSE `plugin.event`):
 
 ## Data & secrets
 Each instance gets a dedicated data directory:
-- `.claybot/plugins/<instanceId>`
+- `.daycare/plugins/<instanceId>`
 
-Credentials are stored in `.claybot/auth.json` and keyed by the identifier the plugin uses.
+Credentials are stored in `.daycare/auth.json` and keyed by the identifier the plugin uses.
 Provider plugins store credentials under the provider id (same as `pluginId`), not the random instance id.
 
 ```mermaid
@@ -105,7 +105,7 @@ flowchart TD
 ```
 
 ## Web search + fetch plugins
-ClayBot ships optional plugins that register web search and fetch tools. All require `@web` permission:
+Daycare ships optional plugins that register web search and fetch tools. All require `@web` permission:
 - `openai-search` -> `openai_search`
 - `gemini-search` -> `gemini_search`
 - `anthropic-search` -> `anthropic_search`
@@ -174,4 +174,4 @@ flowchart TD
 
 ## Providers
 Providers are built-in modules (not plugins). They register inference and/or image
-generation capabilities and are configured in `.claybot/settings.json`.
+generation capabilities and are configured in `.daycare/settings.json`.

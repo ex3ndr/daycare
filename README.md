@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="logo.png" alt="ClayBot" width="200" />
+  <img src="logo.png" alt="Daycare" width="200" />
 </p>
 
-<h1 align="center">ClayBot</h1>
+<h1 align="center">Daycare</h1>
 
 <p align="center">
   A minimal, composable AI agent framework with plugin-driven architecture.
@@ -21,7 +21,7 @@
 
 ```mermaid
 flowchart LR
-  CLI[claybot CLI] --> Engine[Engine]
+  CLI[daycare CLI] --> Engine[Engine]
   Engine --> Plugins[Plugin Manager]
   Plugins --> Connectors[Connectors]
   Plugins --> Inference[Inference Providers]
@@ -32,7 +32,7 @@ flowchart LR
   InferenceRouter --> Tools
   Agents --> Memory[Memory Plugin]
   Engine --> Socket[HTTP Socket API]
-  Socket --> Dashboard[claybot-dashboard]
+  Socket --> Dashboard[daycare-dashboard]
 ```
 
 ## Quick Start
@@ -45,17 +45,17 @@ yarn install
 yarn build
 
 # Start the engine
-yarn claybot start
+yarn daycare start
 ```
 
 ## Configuration
 
-ClayBot uses two configuration files in `.claybot/`:
+Daycare uses two configuration files in `.daycare/`:
 
 **settings.json** - Engine and plugin configuration
 ```json
 {
-  "engine": { "socketPath": ".claybot/claybot.sock", "dataDir": ".claybot" },
+  "engine": { "socketPath": ".daycare/daycare.sock", "dataDir": ".daycare" },
   "plugins": [
     { "instanceId": "telegram", "pluginId": "telegram", "enabled": true },
     { "instanceId": "anthropic", "pluginId": "anthropic", "enabled": true },
@@ -103,12 +103,12 @@ The AI agent has access to these tools:
 ## CLI Commands
 
 ```sh
-claybot start                    # Launch the engine
-claybot status                   # Check engine status
-claybot add                      # Add a provider or plugin
-claybot plugins load <id>        # Load a plugin
-claybot plugins unload <id>      # Unload a plugin
-claybot auth set <id> <key> <value>         # Store a credential
+daycare start                    # Launch the engine
+daycare status                   # Check engine status
+daycare add                      # Add a provider or plugin
+daycare plugins load <id>        # Load a plugin
+daycare plugins unload <id>      # Unload a plugin
+daycare auth set <id> <key> <value>         # Store a credential
 ```
 
 ## Development
@@ -123,8 +123,8 @@ yarn dev          # Run with tsx (no build)
 
 ## Workspace
 
-- `packages/claybot` - Core engine, plugins, and tools
-- `packages/claybot-dashboard` - React dashboard + API proxy
+- `packages/daycare` - Core engine, plugins, and tools
+- `packages/daycare-dashboard` - React dashboard + API proxy
 
 ## Documentation
 

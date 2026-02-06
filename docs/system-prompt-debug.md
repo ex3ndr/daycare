@@ -1,6 +1,6 @@
 # System Prompt Debug Snapshots
 
-ClayBot writes a debug snapshot of the rendered system prompt each time inference starts.
+Daycare writes a debug snapshot of the rendered system prompt each time inference starts.
 The snapshot lives next to the session history file so operators can compare the prompt with
 the exact conversation state on disk.
 

@@ -1,6 +1,6 @@
 # Auth Store
 
-ClayBot stores credentials in `.claybot/auth.json`.
+Daycare stores credentials in `.daycare/auth.json`.
 The file is read by the engine on startup and on demand by plugins.
 
 ## Structure
@@ -18,11 +18,11 @@ Auth entries are keyed by the identifier used by the plugin or provider. Provide
 the provider id.
 
 ## CLI helpers
-- `claybot auth set <id> <key> <value>` updates the auth store.
+- `daycare auth set <id> <key> <value>` updates the auth store.
 
 ```mermaid
 flowchart TD
-  CLI[claybot auth set] --> Auth[.claybot/auth.json]
+  CLI[daycare auth set] --> Auth[.daycare/auth.json]
   Auth --> Plugins
 ```
 

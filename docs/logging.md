@@ -4,10 +4,10 @@ Logging is centralized in `sources/log.ts` and uses Pino.
 
 ## Configuration
 Environment variables:
-- `CLAYBOT_LOG_LEVEL` / `LOG_LEVEL`
-- `CLAYBOT_LOG_FORMAT` / `LOG_FORMAT` (`pretty` or `json`)
-- `CLAYBOT_LOG_DEST` / `LOG_DEST` (`stdout`, `stderr`, or file path)
-- `CLAYBOT_LOG_REDACT` (comma-separated paths)
+- `DAYCARE_LOG_LEVEL` / `LOG_LEVEL`
+- `DAYCARE_LOG_FORMAT` / `LOG_FORMAT` (`pretty` or `json`)
+- `DAYCARE_LOG_DEST` / `LOG_DEST` (`stdout`, `stderr`, or file path)
+- `DAYCARE_LOG_REDACT` (comma-separated paths)
 
 Defaults:
 - `debug` level in development, `info` in production
@@ -42,7 +42,7 @@ The codebase includes extensive verbose logging at the `debug` level. Debug logg
 
 To disable verbose logging in dev mode:
 ```bash
-CLAYBOT_LOG_LEVEL=info yarn dev
+DAYCARE_LOG_LEVEL=info yarn dev
 ```
 
 ### Verbose Log Components
@@ -141,10 +141,10 @@ Example output tracing a message:
 
 To filter by module label:
 ```bash
-CLAYBOT_LOG_LEVEL=debug yarn dev 2>&1 | grep -F "[inference.router"
+DAYCARE_LOG_LEVEL=debug yarn dev 2>&1 | grep -F "[inference.router"
 ```
 
 To filter by specific key:
 ```bash
-CLAYBOT_LOG_LEVEL=debug yarn dev 2>&1 | grep "agentId="
+DAYCARE_LOG_LEVEL=debug yarn dev 2>&1 | grep "agentId="
 ```

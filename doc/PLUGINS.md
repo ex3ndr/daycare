@@ -1,10 +1,10 @@
-# Claybot Plugin Development Guide
+# Daycare Plugin Development Guide
 
-This guide explains how to write plugins for Claybot and how the plugin system works.
+This guide explains how to write plugins for Daycare and how the plugin system works.
 
 ## Overview
 
-Plugins are first-class runtime modules that extend Claybot's functionality. They execute in the same Node.js process as the engine (no VM isolation), so module caches and globals are shared. Treat plugins as trusted code.
+Plugins are first-class runtime modules that extend Daycare's functionality. They execute in the same Node.js process as the engine (no VM isolation), so module caches and globals are shared. Treat plugins as trusted code.
 
 Plugins can register:
 - **Connectors** - Bridge messaging platforms (Telegram, Discord, etc.)
@@ -131,11 +131,11 @@ await api.auth.setToken(id, token);
 const token = await api.auth.getToken(id);
 ```
 
-Credentials are stored in `.claybot/auth.json` (mode `0o600`).
+Credentials are stored in `.daycare/auth.json` (mode `0o600`).
 
 #### `dataDir` - Plugin Data Directory
 
-Each plugin instance gets exclusive storage at `.claybot/plugins/<instanceId>/`. Use this for databases, state files, or any persistent data.
+Each plugin instance gets exclusive storage at `.daycare/plugins/<instanceId>/`. Use this for databases, state files, or any persistent data.
 
 #### `inference` - LLM Inference
 
@@ -171,7 +171,7 @@ and forwarded to the engine event bus.
 #### `mode` - Execution Context
 
 - `"runtime"` - Normal operation
-- `"validate"` - Testing/validation (during `claybot add`)
+- `"validate"` - Testing/validation (during `daycare add`)
 
 Skip expensive operations in validate mode:
 
@@ -418,7 +418,7 @@ Return `null` to cancel onboarding.
 
 ## Plugin Configuration
 
-Plugins are configured in `.claybot/settings.json`:
+Plugins are configured in `.daycare/settings.json`:
 
 ```json
 {

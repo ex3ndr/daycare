@@ -132,7 +132,7 @@ flowchart LR
 ```
 
 ## Agent persistence
-- Agents are written to `.claybot/agents/<cuid2>/` as discrete files.
+- Agents are written to `.daycare/agents/<cuid2>/` as discrete files.
 - `descriptor.json` captures the agent type and identity.
 - `state.json` stores provider selection, permissions, and timestamps.
 - `history.jsonl` stores minimal user/assistant/tool records.

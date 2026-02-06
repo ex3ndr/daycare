@@ -1,9 +1,9 @@
 # Engine updates
 
-ClayBot updates engine settings using a three-step strategy:
+Daycare updates engine settings using a three-step strategy:
 
 1. **Local server running**: send a mutation request over the local HTTP socket
-   at `.claybot/claybot.sock`.
+   at `.daycare/daycare.sock`.
 2. **Local server not running**: write directly to local files
    (settings + auth).
 3. **Remote server configured**: reserved for future use.

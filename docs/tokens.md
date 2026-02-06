@@ -1,6 +1,6 @@
 # Tokens Tracking
 
-ClayBot tracks current token sizes for each agent and aggregates real usage by provider/model. After every inference response, ClayBot records the provider, model, and token sizes on the assistant history entry. If the provider does not return usage data, ClayBot writes an estimated size to the history entry, but **does not** increment stats.
+Daycare tracks current token sizes for each agent and aggregates real usage by provider/model. After every inference response, Daycare records the provider, model, and token sizes on the assistant history entry. If the provider does not return usage data, Daycare writes an estimated size to the history entry, but **does not** increment stats.
 
 ## State + History
 

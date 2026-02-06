@@ -1,6 +1,6 @@
 # Connectors
 
-Connectors are plugin modules that bridge ClayBot to external systems.
+Connectors are plugin modules that bridge Daycare to external systems.
 They emit messages (text + files) into agents and send responses back.
 
 ## Connector interface
@@ -37,7 +37,7 @@ Connectors emit a user descriptor alongside `MessageContext` for agent targeting
 ## Telegram connector
 - Implemented as the `telegram` plugin.
 - Uses long polling by default.
-- Persists `lastUpdateId` to `.claybot/telegram-offset.json`.
+- Persists `lastUpdateId` to `.daycare/telegram-offset.json`.
 - Downloads incoming files into the shared file store.
 - Sends images/documents when tool results include files.
 - Supports chat actions (typing) and reactions.

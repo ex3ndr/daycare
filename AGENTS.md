@@ -1,11 +1,11 @@
-# claybot agent notes
+# daycare agent notes
 
 ## Goals
 - keep the core minimal and composable
 - add integrations incrementally
 
 ## Conventions
-- single workspace package at `packages/claybot`
+- single workspace package at `packages/daycare`
 - typescript only, esm output
 - sources live in `sources/`
 - tests use `*.spec.ts`
@@ -24,7 +24,7 @@
 - Add brief code comments for tricky or non-obvious logic.
 - Keep files concise; extract helpers instead of "V2" copies.
 - Aim to keep files under ~700 LOC; guideline only (not a hard guardrail). Split/refactor when it improves clarity or testability.
-- Naming: use **ClayBot** for product/app/docs headings; use `claybot` for CLI command, package/binary, paths, and config keys.
+- Naming: use **Daycare** for product/app/docs headings; use `daycare` for CLI command, package/binary, paths, and config keys.
 - Use `@/types` for shared types whenever available instead of deep module imports.
 
 ## Logging

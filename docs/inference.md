@@ -1,7 +1,7 @@
 # Inference runtime
 
 Inference is provided by built-in providers. They register with the `InferenceRegistry`,
-and the `InferenceRouter` selects them based on `.claybot/settings.json`.
+and the `InferenceRouter` selects them based on `.daycare/settings.json`.
 
 ## Providers
 Configured in settings (in priority order):
@@ -13,13 +13,13 @@ Configured in settings (in priority order):
 }
 ```
 
-`claybot add` stores providers in priority order; disabled providers are skipped.
-`claybot providers` moves the selected provider to the top of the priority list.
+`daycare add` stores providers in priority order; disabled providers are skipped.
+`daycare providers` moves the selected provider to the top of the priority list.
 
 ```mermaid
 flowchart LR
-  CLI[claybot add] --> Auth[.claybot/auth.json]
-  CLI --> Settings[.claybot/settings.json]
+  CLI[daycare add] --> Auth[.daycare/auth.json]
+  CLI --> Settings[.daycare/settings.json]
   Settings --> Inference[InferenceRouter]
   Auth --> Inference
 ```

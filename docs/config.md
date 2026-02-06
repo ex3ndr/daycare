@@ -1,6 +1,6 @@
 # Config
 
-ClayBot uses an immutable Config snapshot that resolves paths, defaults, and settings
+Daycare uses an immutable Config snapshot that resolves paths, defaults, and settings
 from the JSON settings file. The engine reloads by rebuilding a new Config snapshot.
 
 ## Snapshot fields

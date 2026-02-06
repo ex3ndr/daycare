@@ -1,6 +1,6 @@
 # Context compaction
 
-ClayBot runs automatic compaction to avoid hard context overflows. The agent estimates context usage
+Daycare runs automatic compaction to avoid hard context overflows. The agent estimates context usage
 from recent history plus the current system prompt and compacts when thresholds are crossed.
 
 ## Strategy

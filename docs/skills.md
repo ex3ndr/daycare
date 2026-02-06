@@ -6,13 +6,13 @@ the file path listed in the system prompt.
 
 ## Where skills live
 
-ClayBot always includes core skills from:
-- `packages/claybot/sources/skills/`
+Daycare always includes core skills from:
+- `packages/daycare/sources/skills/`
 
 Plugins can register additional skills via `registerSkill(path)` with an absolute
 path to a `SKILL.md` file.
 
-Skills can also live in the config folder at `.claybot/skills/`. They are loaded
+Skills can also live in the config folder at `.daycare/skills/`. They are loaded
 fresh each time the system prompt is built.
 
 Each skill is a folder containing a `SKILL.md` file. The folder name becomes
@@ -23,7 +23,7 @@ The system prompt lists skills in XML tags to make parsing explicit.
 
 ## Skills catalog flow (code)
 
-ClayBot's skills catalog is composed from small helpers that focus on one task
+Daycare's skills catalog is composed from small helpers that focus on one task
 each, keeping listing and formatting composable.
 
 ```mermaid

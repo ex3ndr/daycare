@@ -1,6 +1,6 @@
-# ClayBot dashboard
+# Daycare dashboard
 
-`claybot-dashboard` is a Next.js app router UI styled with shadcn components.
+`daycare-dashboard` is a Next.js app router UI styled with shadcn components.
 API route handlers proxy `/api/*` requests to the local engine socket.
 
 Default port: `7331` (set via `PORT` in the workspace scripts).
@@ -9,7 +9,7 @@ Default port: `7331` (set via `PORT` in the workspace scripts).
 flowchart LR
   Browser[Browser] --> NextApp[Next.js App Router]
   NextApp -->|/api/* route handler| Proxy[API Proxy]
-  Proxy --> Socket[claybot.sock]
+  Proxy --> Socket[daycare.sock]
   Socket --> Engine[Engine server]
   NextApp -->|Server-rendered UI + client data| UI[Dashboard]
 ```
@@ -21,7 +21,7 @@ The agents views subscribe to the engine event stream and refresh agent data whe
 ```mermaid
 flowchart LR
   UI[Agents UI] -->|EventSource /api/v1/engine/events| Proxy[API Proxy]
-  Proxy --> Socket[claybot.sock]
+  Proxy --> Socket[daycare.sock]
   Socket --> Engine[Engine SSE]
   Engine -->|agent.created / agent.reset / agent.restored| UI
   UI -->|fetch /api/v1/engine/agents| Proxy
@@ -66,7 +66,7 @@ Agent rows link to a dedicated detail page that loads the history for that agent
 flowchart LR
   List[Agents list] -->|select agent id| Detail[Agent detail]
   Detail -->|fetch /api/v1/engine/agents/:agentId/history| Proxy[API Proxy]
-  Proxy --> Socket[claybot.sock]
+  Proxy --> Socket[daycare.sock]
   Socket --> Engine[Engine agent store]
 ```
 
@@ -112,27 +112,27 @@ flowchart LR
 ## Engine socket resolution
 
 The dashboard proxy prefers an explicit socket override. If none is set, it resolves a default
-claybot root (CLAYBOT_ROOT_DIR, or `~/.dev` in development, or `~/.claybot` otherwise) and then
+daycare root (DAYCARE_ROOT_DIR, or `~/.dev` in development, or `~/.daycare` otherwise) and then
 falls back to common workspace locations.
 
 ```mermaid
 flowchart TD
-  Start[Incoming /api request] --> Env{CLAYBOT_ENGINE_SOCKET set?}
+  Start[Incoming /api request] --> Env{DAYCARE_ENGINE_SOCKET set?}
   Env -->|yes| EnvPath[Use resolved env path]
-  Env -->|no| Root{CLAYBOT_ROOT_DIR set?}
-  Root -->|yes| RootPath[Use CLAYBOT_ROOT_DIR/claybot.sock]
+  Env -->|no| Root{DAYCARE_ROOT_DIR set?}
+  Root -->|yes| RootPath[Use DAYCARE_ROOT_DIR/daycare.sock]
   Root -->|no| Dev{NODE_ENV=development?}
-  Dev -->|yes| DevPath[Use ~/.dev/claybot.sock]
-  Dev -->|no| ProdPath[Use ~/.claybot/claybot.sock]
+  Dev -->|yes| DevPath[Use ~/.dev/daycare.sock]
+  Dev -->|no| ProdPath[Use ~/.daycare/daycare.sock]
   RootPath --> Exists{Socket exists?}
   DevPath --> Exists
   ProdPath --> Exists
   Exists -->|yes| UseDefault[Use default socket]
-  Exists -->|no| Cwd[Check .claybot/claybot.sock in cwd]
+  Exists -->|no| Cwd[Check .daycare/daycare.sock in cwd]
   Cwd -->|found| UseCwd[Use cwd socket]
-  Cwd -->|missing| RootFallback[Check workspace root .claybot/claybot.sock]
+  Cwd -->|missing| RootFallback[Check workspace root .daycare/daycare.sock]
   RootFallback -->|found| UseRootFallback[Use workspace socket]
-  RootFallback -->|missing| ClaybotPkg[Check packages/claybot/.claybot/claybot.sock]
-  ClaybotPkg -->|found| UseclayBot[Use claybot package socket]
-  ClaybotPkg -->|missing| Fallback[Fallback to default socket path]
+  RootFallback -->|missing| DaycarePkg[Check packages/daycare/.daycare/daycare.sock]
+  DaycarePkg -->|found| Usedaycare[Use daycare package socket]
+  DaycarePkg -->|missing| Fallback[Fallback to default socket path]
 ```

@@ -180,6 +180,6 @@ marker; it does not retry pending inbound messages.
 
 ## Implementation references
 
-- Descriptor type + normalization: `packages/claybot/sources/engine/agents/agentDescriptorTypes.ts`
-- Persistence ops: `packages/claybot/sources/engine/agents/ops/`
-- Resolver + usage: `packages/claybot/sources/engine/agents/agentSystem.ts`
+- Descriptor type + normalization: `packages/daycare/sources/engine/agents/agentDescriptorTypes.ts`
+- Persistence ops: `packages/daycare/sources/engine/agents/ops/`
+- Resolver + usage: `packages/daycare/sources/engine/agents/agentSystem.ts`
