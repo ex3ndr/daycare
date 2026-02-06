@@ -82,7 +82,7 @@ Daycare uses two configuration files in `.daycare/`:
 
 Built-in tools available to the agent:
 
-- `add_cron` / `cron_read_task` / `cron_read_memory` / `cron_write_memory` / `cron_delete_task` - Cron scheduling
+- `cron_add` / `cron_read_task` / `cron_read_memory` / `cron_write_memory` / `cron_delete_task` - Cron scheduling
 - `heartbeat_add` / `heartbeat_run` / `heartbeat_list` / `heartbeat_remove` - Heartbeat scheduling
 - `create_permanent_agent` / `start_background_agent` / `send_agent_message` - Multi-agent coordination
 - `generate_image` - Image generation via configured providers

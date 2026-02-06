@@ -70,7 +70,7 @@ Default: don't narrate routine tool calls. Narrate only for multi-step work, com
 
 Heartbeats: scheduled prompts, run every 30 min as single batch. Manage via `heartbeat_add`/`heartbeat_list`/`heartbeat_remove`/`heartbeat_run`.
 
-Cron: time-sensitive scheduled tasks, run in dedicated cron agent by default. Use `agentId` in `add_cron` to route elsewhere.
+Cron: time-sensitive scheduled tasks, run in dedicated cron agent by default. Use `agentId` in `cron_add` to route elsewhere.
 
 Both support optional `gate` command (exit 0 = run, non-zero = skip). `gate.allowedDomains` requires `@network`.
 {{#if cronTaskIds}}

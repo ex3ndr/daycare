@@ -15,13 +15,13 @@ Use cron when:
 - One-off scheduled tasks (with `deleteAfterRun`)
 - Tasks that produce artifacts in a dedicated workspace
 
-**Cron tools:** `add_cron`, `cron_read_task`, `cron_read_memory`, `cron_write_memory`, `cron_delete_task`
+**Cron tools:** `cron_add`, `cron_read_task`, `cron_read_memory`, `cron_write_memory`, `cron_delete_task`
 
 ### Cron Routing
 
 Cron tasks run in their own dedicated cron agent by default. If you want the cron
 notification to land in an existing agent (e.g. a user chat), include `agentId`
-in `add_cron` to route the prompt to that agent instead.
+in `cron_add` to route the prompt to that agent instead.
 
 ## When to Use Heartbeats
 
@@ -107,7 +107,7 @@ If the API is down, notify me with a short summary.
 
 **For cron tasks:**
 1. Determine the schedule (cron expression: `minute hour day month weekday`)
-2. Use `add_cron` with name, schedule, and prompt (optional `agentId` + `gate`)
+2. Use `cron_add` with name, schedule, and prompt (optional `agentId` + `gate`)
 3. Each task gets isolated agent, memory file, and workspace
 
 **For heartbeats:**

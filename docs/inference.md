@@ -26,7 +26,7 @@ flowchart LR
 
 ## Tools
 Tools are registered dynamically by plugins and core runtime:
-- `add_cron` creates a cron task stored in `<config>/cron/`.
+- `cron_add` creates a cron task stored in `<config>/cron/`.
 - `cron_read_task` reads a cron task description and prompt.
 - `cron_read_memory` reads memory for the current cron task.
 - `cron_write_memory` updates memory for the current cron task.

@@ -88,7 +88,7 @@ flowchart TD
 
 ## Tools
 
-- `add_cron` creates a new task on disk under `<config>/cron/`.
+- `cron_add` creates a new task on disk under `<config>/cron/`.
 - `cron_read_task` reads a task's description and prompt.
 - `cron_read_memory` reads a task's `MEMORY.md`.
 - `cron_write_memory` overwrites (or appends to) a task's `MEMORY.md`.

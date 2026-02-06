@@ -78,7 +78,7 @@ type CronDeleteTaskArgs = Static<typeof deleteCronTaskSchema>;
 export function buildCronTool(crons: Crons): ToolDefinition {
   return {
     tool: {
-      name: "add_cron",
+      name: "cron_add",
       description:
         "Create a scheduled cron task from a prompt stored in config/cron (optional agentId + gate).",
       parameters: addCronSchema
