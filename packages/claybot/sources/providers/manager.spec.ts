@@ -85,8 +85,9 @@ describe("ProviderManager", () => {
       })
     };
 
+    const configModule = new ConfigModule(baseConfig);
     const manager = new ProviderManager({
-      config: new ConfigModule(baseConfig),
+      config: configModule,
       auth: new AuthStore(baseConfig),
       fileStore: new FileStore(baseConfig),
       inferenceRegistry,
@@ -104,7 +105,7 @@ describe("ProviderManager", () => {
         alpha: 1
       }
     });
-    manager.reload(equalByValueConfig);
+    configModule.configSet(equalByValueConfig);
     await manager.sync();
     expect(inferenceRegistry.list().map((item) => item.id)).toEqual(["fake-provider-1"]);
 
@@ -114,12 +115,12 @@ describe("ProviderManager", () => {
         nested: { bravo: 2 }
       }
     });
-    manager.reload(changedConfig);
+    configModule.configSet(changedConfig);
     await manager.sync();
     expect(inferenceRegistry.list().map((item) => item.id)).toEqual(["fake-provider-2"]);
 
     const disabledConfig = configWithProvider(root, { enabled: false });
-    manager.reload(disabledConfig);
+    configModule.configSet(disabledConfig);
     await manager.sync();
     expect(inferenceRegistry.list()).toEqual([]);
     expect(manager.listLoaded()).toEqual([]);

@@ -33,10 +33,11 @@ function createManager(
   pluginId: string,
   rootDir: string,
   onEvent?: (event: PluginEvent) => void
-): { manager: PluginManager; modules: ModuleRegistry } {
+): { manager: PluginManager; modules: ModuleRegistry; config: ConfigModule } {
   const modules = new ModuleRegistry({ onMessage: () => {} });
   const pluginRegistry = new PluginRegistry(modules);
   const config = configResolve({ engine: { dataDir: rootDir } }, path.join(rootDir, "settings.json"));
+  const configModule = new ConfigModule(config);
   const auth = new AuthStore(config);
   const fileStore = new FileStore(config);
   const inferenceRouter = new InferenceRouter({
@@ -62,8 +63,9 @@ function createManager(
   ]);
   return {
     modules,
+    config: configModule,
     manager: new PluginManager({
-      config: new ConfigModule(config),
+      config: configModule,
       registry: pluginRegistry,
       auth,
       fileStore,
@@ -145,9 +147,9 @@ export const plugin = {
 };
 `;
     const entryPath = await writePluginFile(dir, pluginSource);
-    const { manager } = createManager(entryPath, "sync", dir);
+    const { manager, config } = createManager(entryPath, "sync", dir);
 
-    await manager.syncWithConfig(
+    config.configSet(
       configResolve(
         {
           engine: { dataDir: dir },
@@ -163,9 +165,10 @@ export const plugin = {
         path.join(dir, "settings.json")
       )
     );
+    await manager.syncWithConfig();
     expect(manager.listLoaded()).toEqual(["sync-one"]);
 
-    await manager.syncWithConfig(
+    config.configSet(
       configResolve(
         {
           engine: { dataDir: dir },
@@ -180,6 +183,7 @@ export const plugin = {
         path.join(dir, "settings.json")
       )
     );
+    await manager.syncWithConfig();
     expect(manager.listLoaded()).toEqual([]);
   });
 
@@ -206,11 +210,11 @@ export const plugin = {
 `;
     const entryPath = await writePluginFile(dir, pluginSource);
     const events: PluginEvent[] = [];
-    const { manager } = createManager(entryPath, "equal", dir, (event) => {
+    const { manager, config } = createManager(entryPath, "equal", dir, (event) => {
       events.push(event);
     });
 
-    await manager.syncWithConfig(
+    config.configSet(
       configResolve(
         {
           engine: { dataDir: dir },
@@ -231,8 +235,9 @@ export const plugin = {
         path.join(dir, "settings.json")
       )
     );
+    await manager.syncWithConfig();
 
-    await manager.syncWithConfig(
+    config.configSet(
       configResolve(
         {
           engine: { dataDir: dir },
@@ -253,10 +258,11 @@ export const plugin = {
         path.join(dir, "settings.json")
       )
     );
+    await manager.syncWithConfig();
 
     expect(events.map((event) => event.type)).toEqual(["loaded"]);
 
-    await manager.syncWithConfig(
+    config.configSet(
       configResolve(
         {
           engine: { dataDir: dir },
@@ -277,6 +283,7 @@ export const plugin = {
         path.join(dir, "settings.json")
       )
     );
+    await manager.syncWithConfig();
 
     expect(events.map((event) => event.type)).toEqual([
       "loaded",

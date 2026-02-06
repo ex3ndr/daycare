@@ -8,6 +8,8 @@ Modules now receive that shared module as `config` and call `config.inReadLock(.
 instead of callback-style lock plumbing.
 `AgentSystem` no longer exposes a `reload` method; config mutation is centralized in
 `Engine.reloadApplyLatest()` via `ConfigModule.configSet(...)` under write lock.
+Subsystem sync paths (`ProviderManager`, `PluginManager`) now refresh from `config.current`
+without receiving config payloads or calling `configSet(...)`.
 
 Read-locked runtime paths now include:
 - connector message/command/permission handlers
@@ -52,9 +54,10 @@ sequenceDiagram
 ```mermaid
 flowchart TD
   Engine --> ConfigModule
-  ConfigModule -->|current/configSet| AgentSystem
-  ConfigModule -->|current/configSet| ProviderManager
-  ConfigModule -->|current/configSet| PluginManager
+  ConfigModule -->|current| AgentSystem
+  ConfigModule -->|current| ProviderManager
+  ConfigModule -->|current| PluginManager
+  Engine -->|configSet under write lock| ConfigModule
   ConfigModule -->|inReadLock/inWriteLock| RuntimePaths
 ```
 

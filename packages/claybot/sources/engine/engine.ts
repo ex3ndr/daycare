@@ -231,7 +231,7 @@ export class Engine {
     await this.providerManager.sync();
     logger.debug("Provider manager sync complete");
     logger.debug("Loading enabled plugins");
-    await this.pluginManager.loadEnabled(this.config.current);
+    await this.pluginManager.loadEnabled();
     logger.debug("Plugins loaded");
 
     await this.crons.ensureDir();
@@ -393,7 +393,7 @@ export class Engine {
       this.config.configSet(config);
       await ensureWorkspaceDir(this.config.current.defaultPermissions.workingDir);
       await this.providerManager.sync();
-      await this.pluginManager.syncWithConfig(config);
+      await this.pluginManager.syncWithConfig();
       this.inferenceRouter.updateProviders(listActiveInferenceProviders(this.config.current.settings));
       logger.info("Runtime configuration reloaded");
     });

@@ -6,7 +6,6 @@ import type { ImageGenerationRegistry } from "../engine/modules/imageGenerationR
 import { getLogger } from "../log.js";
 import { getProviderDefinition, listProviderDefinitions } from "./catalog.js";
 import type { ProviderDefinition, ProviderInstance } from "./types.js";
-import type { Config } from "@/types";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import type { ConfigModule } from "../engine/config/configModule.js";
 
@@ -56,10 +55,6 @@ export class ProviderManager {
         name: definition?.name ?? id
       };
     });
-  }
-
-  reload(config: Config): void {
-    this.config.configSet(config);
   }
 
   async sync(): Promise<void> {

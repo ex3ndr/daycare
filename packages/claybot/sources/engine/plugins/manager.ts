@@ -9,7 +9,6 @@ import type { FileStore } from "../../files/store.js";
 import type { AuthStore } from "../../auth/store.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
 import { listEnabledPlugins } from "../../settings.js";
-import type { Config } from "@/types";
 import type { PluginEvent, PluginEventInput } from "./events.js";
 import { PluginModuleLoader } from "./loader.js";
 import type { PluginDefinition } from "./catalog.js";
@@ -128,14 +127,9 @@ export class PluginManager {
     return prompts;
   }
 
-  reload(config: Config): void {
-    this.config.configSet(config);
-  }
-
-  async syncWithConfig(config: Config): Promise<void> {
+  async syncWithConfig(): Promise<void> {
     this.logger.debug(`syncWithSettings starting loadedCount=${this.loaded.size}`);
-    this.config.configSet(config);
-    const settings = config.settings;
+    const settings = this.config.current.settings;
     const desired = this.resolveEnabledPlugins(settings);
     const desiredMap = new Map(desired.map((plugin) => [plugin.instanceId, plugin]));
     const desiredIds = desired.map(p => p.instanceId).join(",");
@@ -328,9 +322,8 @@ export class PluginManager {
     }
   }
 
-  async loadEnabled(config: Config): Promise<void> {
-    this.config.configSet(config);
-    const enabled = this.resolveEnabledPlugins(config.settings);
+  async loadEnabled(): Promise<void> {
+    const enabled = this.resolveEnabledPlugins(this.config.current.settings);
     const enabledIds = enabled.map(p => p.instanceId).join(",");
     this.logger.debug(`loadEnabled() starting enabledCount=${enabled.length} enabledIds=${enabledIds}`);
     for (const plugin of enabled) {
