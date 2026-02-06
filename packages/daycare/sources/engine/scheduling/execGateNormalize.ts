@@ -15,6 +15,7 @@ export function execGateNormalize(value: unknown): ExecGateDefinition | undefine
     cwd?: unknown;
     timeoutMs?: unknown;
     env?: unknown;
+    redefineHome?: unknown;
     permissions?: unknown;
     packageManagers?: unknown;
     allowedDomains?: unknown;
@@ -43,6 +44,9 @@ export function execGateNormalize(value: unknown): ExecGateDefinition | undefine
   const env = envNormalize(candidate.env);
   if (env) {
     next.env = env;
+  }
+  if (typeof candidate.redefineHome === "boolean") {
+    next.redefineHome = candidate.redefineHome;
   }
 
   const permissions = normalizeStringArray(candidate.permissions);

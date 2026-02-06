@@ -71,6 +71,8 @@ allowed by the target agent, a system message is posted and the gate is treated
 as allowed (the task still runs). Network access requires `@network` plus
 `gate.allowedDomains` to allowlist hosts. You can also use
 `gate.packageManagers` (`dart`, `dotnet`, `go`, `java`, `node`, `php`, `python`, `ruby`, `rust`) to auto-allow language ecosystem hosts.
+Set `gate.redefineHome: true` to remap HOME-related environment variables into
+`<task workspace>/.daycare-home` before running the gate command.
 
 ## Permissions
 

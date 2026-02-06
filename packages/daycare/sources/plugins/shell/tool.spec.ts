@@ -98,6 +98,26 @@ describe("exec tool allowedDomains", () => {
     expect(blockedResult.toolMessage.isError).toBe(true);
     expect(blockedText).toContain("CONNECT tunnel failed");
   });
+
+  it("redefines HOME to an isolated workspace directory when enabled", async () => {
+    const tool = buildExecTool();
+    const context = createContext(workingDir, false);
+
+    const result = await tool.execute(
+      {
+        command: "printf '%s' \"$HOME\"",
+        redefineHome: true
+      },
+      context,
+      toolCall
+    );
+    const text = result.toolMessage.content
+      .filter((item) => item.type === "text")
+      .map((item) => item.text)
+      .join("\n");
+    expect(result.toolMessage.isError).toBe(false);
+    expect(text).toContain(`stdout:\n${path.join(workingDir, ".daycare-home")}`);
+  });
 });
 
 function createContext(workingDir: string, network: boolean): ToolExecutionContext {

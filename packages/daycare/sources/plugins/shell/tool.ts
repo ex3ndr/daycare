@@ -11,6 +11,7 @@ import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomain
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { runInSandbox } from "../../sandbox/runtime.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
+import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import {
   pathResolveSecure,
@@ -71,6 +72,7 @@ const execSchema = Type.Object(
     cwd: Type.Optional(Type.String({ minLength: 1 })),
     timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
     env: Type.Optional(envSchema),
+    redefineHome: Type.Optional(Type.Boolean()),
     packageManagers: Type.Optional(
       Type.Array(
         Type.Union([
@@ -170,7 +172,7 @@ export function buildExecTool(): ToolDefinition {
     tool: {
       name: "exec",
       description:
-        "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Writes are sandboxed to the allowed write directories. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+        "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Writes are sandboxed to the allowed write directories. Optional redefineHome remaps HOME and related env vars to an isolated workspace home. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
       parameters: execSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -197,7 +199,12 @@ export function buildExecTool(): ToolDefinition {
         throw new Error(domainIssues.join(" "));
       }
       const envOverrides = envNormalize(payload.env);
-      const env = envOverrides ? { ...process.env, ...envOverrides } : process.env;
+      const baseEnv = envOverrides ? { ...process.env, ...envOverrides } : process.env;
+      const { env } = await sandboxHomeRedefine({
+        env: baseEnv,
+        workingDir,
+        redefineHome: payload.redefineHome ?? false
+      });
       const timeout = payload.timeoutMs ?? DEFAULT_EXEC_TIMEOUT;
       const sandboxConfig = buildSandboxConfig(toolContext.permissions, allowedDomains);
 

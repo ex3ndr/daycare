@@ -14,6 +14,7 @@ describe("execGateNormalize", () => {
       cwd: " /tmp ",
       timeoutMs: 1500,
       env: { FOO: "bar", SKIP: 3, FLAG: true },
+      redefineHome: true,
       permissions: ["@network", "  @read:/tmp  ", "", "@network"],
       packageManagers: [
         "node",
@@ -33,6 +34,7 @@ describe("execGateNormalize", () => {
       cwd: "/tmp",
       timeoutMs: 1500,
       env: { FOO: "bar", SKIP: "3", FLAG: "true" },
+      redefineHome: true,
       permissions: ["@network", "@read:/tmp"],
       packageManagers: ["node", "java", "rust", "dotnet", "python", "ruby", "php", "dart"],
       allowedDomains: ["example.com"]
