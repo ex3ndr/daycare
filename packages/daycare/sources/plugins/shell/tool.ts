@@ -11,7 +11,6 @@ import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomain
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { runInSandbox } from "../../sandbox/runtime.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
-import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import {
   pathResolveSecure,
@@ -199,12 +198,7 @@ export function buildExecTool(): ToolDefinition {
         throw new Error(domainIssues.join(" "));
       }
       const envOverrides = envNormalize(payload.env);
-      const baseEnv = envOverrides ? { ...process.env, ...envOverrides } : process.env;
-      const { env } = await sandboxHomeRedefine({
-        env: baseEnv,
-        workingDir,
-        redefineHome: payload.redefineHome ?? false
-      });
+      const env = envOverrides ? { ...process.env, ...envOverrides } : process.env;
       const timeout = payload.timeoutMs ?? DEFAULT_EXEC_TIMEOUT;
       const sandboxConfig = buildSandboxConfig(toolContext.permissions, allowedDomains);
 
@@ -212,6 +206,7 @@ export function buildExecTool(): ToolDefinition {
         const result = await runInSandbox(payload.command, sandboxConfig, {
           cwd,
           env,
+          home: payload.redefineHome ? workingDir : undefined,
           timeoutMs: timeout,
           maxBufferBytes: MAX_EXEC_BUFFER
         });

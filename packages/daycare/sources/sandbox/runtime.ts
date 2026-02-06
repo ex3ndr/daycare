@@ -7,6 +7,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { getLogger } from "../log.js";
+import { sandboxHomeRedefine } from "./sandboxHomeRedefine.js";
 
 const logger = getLogger("sandbox.runtime");
 const nodeRequire = createRequire(import.meta.url);
@@ -25,6 +26,7 @@ export async function runInSandbox(
   options: {
     cwd?: string;
     env?: NodeJS.ProcessEnv;
+    home?: string;
     timeoutMs?: number;
     maxBufferBytes?: number;
   } = {}
@@ -36,6 +38,11 @@ export async function runInSandbox(
   await fs.writeFile(settingsPath, JSON.stringify(config), "utf8");
   logger.debug("Executing command with sandbox config");
   try {
+    const baseEnv = options.env ?? process.env;
+    const { env } = await sandboxHomeRedefine({
+      env: baseEnv,
+      home: options.home
+    });
     const result = await execFile(process.execPath, [
       srtCliPath,
       "--settings",
@@ -44,7 +51,7 @@ export async function runInSandbox(
       command
     ], {
       cwd: options.cwd,
-      env: options.env,
+      env,
       timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       maxBuffer: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES,
       encoding: "utf8"

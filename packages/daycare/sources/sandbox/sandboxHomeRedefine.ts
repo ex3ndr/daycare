@@ -3,8 +3,7 @@ import path from "node:path";
 
 type SandboxHomeRedefineInput = {
   env: NodeJS.ProcessEnv;
-  workingDir: string;
-  redefineHome: boolean;
+  home?: string;
 };
 
 type SandboxHomeRedefineResult = {
@@ -14,16 +13,16 @@ type SandboxHomeRedefineResult = {
 
 /**
  * Redefines home-related environment variables inside the workspace.
- * Expects: workingDir is absolute and writable when redefineHome is true.
+ * Expects: home is absolute and writable when provided.
  */
 export async function sandboxHomeRedefine(
   input: SandboxHomeRedefineInput
 ): Promise<SandboxHomeRedefineResult> {
-  if (!input.redefineHome) {
+  if (!input.home) {
     return { env: input.env };
   }
 
-  const homeDir = path.resolve(input.workingDir, ".daycare-home");
+  const homeDir = path.resolve(input.home, ".daycare-home");
   const xdgConfig = path.join(homeDir, ".config");
   const xdgCache = path.join(homeDir, ".cache");
   const xdgData = path.join(homeDir, ".local", "share");

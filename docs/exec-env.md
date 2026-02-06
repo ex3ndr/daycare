@@ -7,7 +7,8 @@ is built by merging the normalized overrides onto `process.env`.
 
 They also accept `redefineHome: true` to remap home-related environment variables into an
 isolated workspace directory (`<workingDir>/.daycare-home`). This helps package managers
-and CLI tools avoid reading or writing the real user home.
+and CLI tools avoid reading or writing the real user home. Internally this is forwarded
+to sandbox runtime as the `home` option.
 
 Example:
 ```json

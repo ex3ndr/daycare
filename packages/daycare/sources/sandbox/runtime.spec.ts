@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ExecException } from "node:child_process";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { runInSandbox } from "./runtime.js";
 
@@ -87,5 +90,26 @@ describe("runInSandbox integration", () => {
     const result = await runCurlWithDomains("http://microsoft.com", ["google.com"]);
 
     expect(result.stdout).toContain("X-Proxy-Error: blocked-by-allowlist");
+  });
+
+  it("maps HOME when home option is provided", async () => {
+    const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-srt-home-"));
+    try {
+      const result = await runInSandbox(
+        "printf '%s' \"$HOME\"",
+        {
+          filesystem: baseFilesystem,
+          network: {
+            allowedDomains: [],
+            deniedDomains: []
+          }
+        },
+        { home: workspace }
+      );
+
+      expect(result.stdout).toBe(path.join(workspace, ".daycare-home"));
+    } finally {
+      await fs.rm(workspace, { recursive: true, force: true });
+    }
   });
 });

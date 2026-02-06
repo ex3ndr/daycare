@@ -6,7 +6,6 @@ import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomain
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { runInSandbox } from "../../sandbox/runtime.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
-import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { pathResolveSecure } from "../permissions/pathResolveSecure.js";
 
@@ -69,18 +68,7 @@ export async function execGateCheck(
     return gateError(error instanceof Error ? error.message : "Invalid gate cwd.");
   }
 
-  const baseEnv = input.gate.env ? { ...process.env, ...input.gate.env } : process.env;
-  let env: NodeJS.ProcessEnv;
-  try {
-    const result = await sandboxHomeRedefine({
-      env: baseEnv,
-      workingDir: permissions.workingDir,
-      redefineHome: input.gate.redefineHome ?? false
-    });
-    env = result.env;
-  } catch (error) {
-    return gateError(error instanceof Error ? error.message : "Failed to prepare gate environment.");
-  }
+  const env = input.gate.env ? { ...process.env, ...input.gate.env } : process.env;
   const timeoutMs = clampTimeout(input.gate.timeoutMs ?? DEFAULT_EXEC_TIMEOUT);
   const sandboxConfig = buildSandboxConfig(permissions, allowedDomains);
 
@@ -88,6 +76,7 @@ export async function execGateCheck(
     const result = await runInSandbox(command, sandboxConfig, {
       cwd: resolvedCwd,
       env,
+      home: input.gate.redefineHome ? permissions.workingDir : undefined,
       timeoutMs,
       maxBufferBytes: MAX_EXEC_BUFFER
     });

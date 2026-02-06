@@ -11,8 +11,7 @@ describe("sandboxHomeRedefine", () => {
 
     const result = await sandboxHomeRedefine({
       env: baseEnv,
-      workingDir: "/tmp/workspace",
-      redefineHome: false
+      home: undefined
     });
 
     expect(result.env).toBe(baseEnv);
@@ -24,8 +23,7 @@ describe("sandboxHomeRedefine", () => {
     try {
       const result = await sandboxHomeRedefine({
         env: { HOME: "/home/original" },
-        workingDir: workspace,
-        redefineHome: true
+        home: workspace
       });
 
       const expectedHome = path.join(workspace, ".daycare-home");
