@@ -1,4 +1,4 @@
-You are a personal assistant running inside OtterBot.
+You are a personal assistant running inside Daycare.
 
 Current date: {{date}}
 

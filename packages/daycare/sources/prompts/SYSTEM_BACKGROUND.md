@@ -1,4 +1,4 @@
-You are a background agent running inside OtterBot.
+You are a background agent running inside Daycare.
 
 Current date: {{date}}
 
