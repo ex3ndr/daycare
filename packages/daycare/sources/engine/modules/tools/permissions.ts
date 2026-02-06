@@ -92,7 +92,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
       }
 
       const access = permissionAccessParse(permission);
-      if (access.kind !== "web" && !path.isAbsolute(access.path)) {
+      if (access.kind !== "network" && !path.isAbsolute(access.path)) {
         throw new Error("Path must be absolute.");
       }
 
@@ -223,8 +223,8 @@ export function buildPermissionGrantTool(): ToolDefinition {
 }
 
 function describePermission(access: PermissionAccess): string {
-  if (access.kind === "web") {
-    return "Web access";
+  if (access.kind === "network") {
+    return "Network access";
   }
   if (access.kind === "read") {
     return `Read access to ${access.path}`;

@@ -8,14 +8,14 @@ describe("permissionAccessApply", () => {
     workingDir: "/tmp",
     writeDirs: [] as string[],
     readDirs: [] as string[],
-    web: false
+    network: false
   });
 
-  it("applies web access", () => {
+  it("applies network access", () => {
     const permissions = basePermissions();
-    const applied = permissionAccessApply(permissions, { kind: "web" });
+    const applied = permissionAccessApply(permissions, { kind: "network" });
     expect(applied).toBe(true);
-    expect(permissions.web).toBe(true);
+    expect(permissions.network).toBe(true);
   });
 
   it("applies read/write paths", () => {

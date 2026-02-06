@@ -50,7 +50,7 @@ fails. Exit code `0` means "run"; non-zero means "skip." Trimmed gate output is
 appended to the prompt under `[Gate output]`. Gates run with the heartbeat agent
 permissions. `gate.permissions` may declare required permission tags. If they are
 not already allowed by the heartbeat agent, a system message is posted and the gate
-is treated as allowed (the task still runs). Network access requires `@web` plus
+is treated as allowed (the task still runs). Network access requires `@network` plus
 `gate.allowedDomains` to allowlist hosts.
 
 ## Permissions

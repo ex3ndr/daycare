@@ -604,7 +604,7 @@ function formatPermissionMessage(
   status: PermissionStatus
 ): string {
   const access = describePermissionKind(request.access);
-  const pathStr = request.access.kind === "web" ? null : request.access.path;
+  const pathStr = request.access.kind === "network" ? null : request.access.path;
 
   const heading =
     status === "approved"
@@ -640,5 +640,5 @@ function describePermissionKind(access: PermissionRequest["access"]): string {
   if (access.kind === "write") {
     return "Write/edit files";
   }
-  return "Web browsing";
+  return "Network access";
 }

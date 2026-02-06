@@ -801,7 +801,7 @@ function formatPermissionMessage(
   const escapedAccess = escapeHtml(access);
   const escapedReason = escapeHtml(request.reason);
   const escapedPath =
-    request.access.kind === "web" ? null : escapeHtml(request.access.path);
+    request.access.kind === "network" ? null : escapeHtml(request.access.path);
   const heading =
     status === "approved"
       ? "✅ <b>Permission granted</b>"
@@ -839,7 +839,7 @@ function describePermissionKind(access: PermissionRequest["access"]): string {
   if (access.kind === "write") {
     return "Write/edit files";
   }
-  return "Web browsing";
+  return "Network access";
 }
 
 function escapeHtml(text: string): string {

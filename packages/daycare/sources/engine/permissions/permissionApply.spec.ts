@@ -11,7 +11,7 @@ describe("permissionApply", () => {
     workingDir: "/workspace",
     writeDirs: [],
     readDirs: [],
-    web: false
+    network: false
   });
 
   it("ignores unapproved decisions", () => {
@@ -20,13 +20,13 @@ describe("permissionApply", () => {
       token: "token-1",
       agentId: "agent-1",
       approved: false,
-      permission: "@web",
-      access: { kind: "web" }
+      permission: "@network",
+      access: { kind: "network" }
     };
 
     permissionApply(permissions, decision);
 
-    expect(permissions.web).toBe(false);
+    expect(permissions.network).toBe(false);
   });
 
   it("adds approved write paths", () => {

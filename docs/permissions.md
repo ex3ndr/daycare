@@ -35,7 +35,7 @@ flowchart TD
 - `permissionApply`: apply an approved permission decision to an agent.
 - `permissionAccessAllows`: verify an agent already holds a permission before sharing it.
 - `permissionTagsValidate`: validate that all permission tags are already held by the caller.
-- `permissionFormatTag`: format the `@web`/`@read`/`@write` tag used in logs.
+- `permissionFormatTag`: format the `@network`/`@read`/`@write` tag used in logs.
 - `permissionDescribeDecision`: human-readable label for permission decisions.
 
 ## Permission requests
@@ -61,7 +61,7 @@ Tool payload shape:
 
 ```json
 {
-  "permission": "@web",
+  "permission": "@network",
   "reason": "Need to verify the latest docs."
 }
 ```

@@ -3,8 +3,8 @@ import { describe, it, expect } from "vitest";
 import { permissionAccessParse } from "./permissionAccessParse.js";
 
 describe("permissionAccessParse", () => {
-  it("parses @web", () => {
-    expect(permissionAccessParse("@web")).toEqual({ kind: "web" });
+  it("parses @network", () => {
+    expect(permissionAccessParse("@network")).toEqual({ kind: "network" });
   });
 
   it("parses @read and @write paths", () => {

@@ -7,7 +7,7 @@ export type SessionPermissions = {
   workingDir: string;
   writeDirs: string[];
   readDirs: string[];
-  web: boolean;
+  network: boolean;
 };
 
 export function resolveWorkspaceDir(
@@ -33,13 +33,13 @@ export function normalizePermissions(
 ): SessionPermissions {
   let writeDirs: string[] = [];
   let readDirs: string[] = [];
-  let web = false;
+  let network = false;
   if (value && typeof value === "object") {
     const candidate = value as {
       workingDir?: unknown;
       writeDirs?: unknown;
       readDirs?: unknown;
-      web?: unknown;
+      network?: unknown;
     };
     if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {
       if (path.isAbsolute(candidate.workingDir)) {
@@ -57,14 +57,14 @@ export function normalizePermissions(
             .filter((entry) => path.isAbsolute(entry))
             .map((entry) => path.resolve(entry));
         }
-        if (typeof candidate.web === "boolean") {
-          web = candidate.web;
+        if (typeof candidate.network === "boolean") {
+          network = candidate.network;
         }
         return {
           workingDir: path.resolve(candidate.workingDir),
           writeDirs: dedupe(writeDirs),
           readDirs: dedupe(readDirs),
-          web
+          network
         };
       }
     }
@@ -73,7 +73,7 @@ export function normalizePermissions(
     workingDir: path.resolve(defaultWorkingDir),
     writeDirs: [],
     readDirs: [],
-    web: false
+    network: false
   };
 }
 

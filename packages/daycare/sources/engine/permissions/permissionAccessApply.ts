@@ -11,8 +11,8 @@ export function permissionAccessApply(
   permissions: SessionPermissions,
   access: PermissionAccess
 ): boolean {
-  if (access.kind === "web") {
-    permissions.web = true;
+  if (access.kind === "network") {
+    permissions.network = true;
     return true;
   }
 

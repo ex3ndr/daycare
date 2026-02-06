@@ -105,7 +105,7 @@ flowchart TD
 ```
 
 ## Web search + fetch plugins
-Daycare ships optional plugins that register web search and fetch tools. All require `@web` permission:
+Daycare ships optional plugins that register web search and fetch tools. All require `@network` permission:
 - `openai-search` -> `openai_search`
 - `gemini-search` -> `gemini_search`
 - `anthropic-search` -> `anthropic_search`

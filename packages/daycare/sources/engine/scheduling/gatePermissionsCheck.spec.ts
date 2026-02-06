@@ -7,7 +7,7 @@ const basePermissions: SessionPermissions = {
   workingDir: "/tmp",
   readDirs: ["/tmp"],
   writeDirs: ["/tmp"],
-  web: false
+  network: false
 };
 
 describe("gatePermissionsCheck", () => {
@@ -16,15 +16,15 @@ describe("gatePermissionsCheck", () => {
     expect(result).toEqual({ allowed: true, missing: [] });
   });
 
-  it("denies web when not allowed", async () => {
-    const result = await gatePermissionsCheck(basePermissions, ["@web"]);
+  it("denies network when not allowed", async () => {
+    const result = await gatePermissionsCheck(basePermissions, ["@network"]);
     expect(result.allowed).toBe(false);
-    expect(result.missing).toEqual(["@web"]);
+    expect(result.missing).toEqual(["@network"]);
   });
 
-  it("allows web when permitted", async () => {
-    const permissions: SessionPermissions = { ...basePermissions, web: true };
-    const result = await gatePermissionsCheck(permissions, ["@web"]);
+  it("allows network when permitted", async () => {
+    const permissions: SessionPermissions = { ...basePermissions, network: true };
+    const result = await gatePermissionsCheck(permissions, ["@network"]);
     expect(result).toEqual({ allowed: true, missing: [] });
   });
 
@@ -38,7 +38,7 @@ describe("gatePermissionsCheck", () => {
     const result = await gatePermissionsCheck(basePermissions, ["@banana"]);
     expect(result.allowed).toBe(false);
     expect(result.missing).toEqual([
-      "@banana (Permission must be @web, @read:<path>, or @write:<path>.)"
+      "@banana (Permission must be @network, @read:<path>, or @write:<path>.)"
     ]);
   });
 });

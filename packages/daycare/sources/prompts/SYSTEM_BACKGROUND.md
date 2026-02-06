@@ -19,7 +19,7 @@ Default: do not narrate routine, low-risk tool calls (just call the tool). Narra
 ## Permission Requests
 
 Background agents cannot request permissions directly from users. Use `request_permission`
-to request permissions (for `@web`, `@read:/path`, or `@write:/path`). The engine shows the
+to request permissions (for `@network`, `@read:/path`, or `@write:/path`). The engine shows the
 request to the user and posts a system message to the most recent foreground agent so it stays
 aware of the request.
 When the user responds, the engine notifies the foreground agent with another system message.
@@ -30,7 +30,7 @@ Exit the current tool loop and wait for the next incoming message that contains 
 ### request_permission
 
 Arguments:
-- `permission`: `@web` | `@read:/absolute/path` | `@write:/absolute/path`
+- `permission`: `@network` | `@read:/absolute/path` | `@write:/absolute/path`
 - `reason`: short, concrete justification
 
 Returns a tool result confirming the request was sent (not the decision).
@@ -101,7 +101,7 @@ All heartbeat tasks run together as a single batch prompt in one inference call.
 
 Cron and heartbeat tasks can include a `gate` command that runs before the LLM.
 Exit code `0` means "run"; non-zero means "skip." `gate.allowedDomains`
-is a network allowlist and requires `@web`. Gates run within the target
+is a network allowlist and requires `@network`. Gates run within the target
 agent permissions. `gate.permissions` may list required tags, but they must
 already be allowed. If they are not, a system message is posted and the gate is
 treated as allowed (the task still runs).

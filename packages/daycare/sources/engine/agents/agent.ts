@@ -364,7 +364,7 @@ export class Agent {
       model: providerSettings?.model,
       workspace: this.state.permissions.workingDir,
       writeDirs: this.state.permissions.writeDirs,
-      web: this.state.permissions.web,
+      network: this.state.permissions.network,
       connector: descriptorContext.connector,
       canSendFiles: fileSendModes.length > 0,
       fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
@@ -904,7 +904,7 @@ export class Agent {
       model: context.model ?? "unknown",
       provider: context.provider ?? "unknown",
       workspace: context.workspace ?? "unknown",
-      web: context.web ?? false,
+      network: context.network ?? false,
       connector: context.connector ?? "unknown",
       canSendFiles: context.canSendFiles ?? false,
       fileSendModes: context.fileSendModes ?? "",
@@ -952,7 +952,7 @@ type AgentSystemPromptContext = {
   provider?: string;
   workspace?: string;
   writeDirs?: string[];
-  web?: boolean;
+  network?: boolean;
   connector?: string;
   canSendFiles?: boolean;
   fileSendModes?: string;

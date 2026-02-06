@@ -22,13 +22,13 @@ Do not proactively try to read or write files outside your workspace. The user g
     - `{{this}}`
 {{/each}}
 {{/if}}
-- **Web search**: {{#if web}}enabled{{else}}not enabled{{/if}}.
+- **Network access**: {{#if network}}enabled{{else}}not enabled{{/if}}.
 
 ## Running `exec` with Network Access
 
 Use the `exec` tool's `allowedDomains` argument only when you need outbound network access from a command. It is an allowlist, not an "allow all."
 
-1. Ensure `@web` permission is enabled. If it is not enabled, request it before running `exec` with `allowedDomains`.
+1. Ensure `@network` permission is enabled. If it is not enabled, request it before running `exec` with `allowedDomains`.
 2. Provide `allowedDomains` as a non-empty list of domains. Subdomain wildcards are allowed (for example, `*.example.com`), but a global wildcard (`*`) is rejected.
 3. List every domain you need explicitly. If you discover new domains later, request permission and rerun the command with the updated list.
 
@@ -64,7 +64,7 @@ Only request permissions when you genuinely need access outside your workspace. 
 user and posts a system message to the most recent foreground agent so it stays aware.
 
 **Permission string formats:**
-- `@web` → allow web search/tools.
+- `@network` → allow networked tools (search/fetch plugins and `exec` outbound HTTP with `allowedDomains`).
 - `@read:/absolute/path` → allow reads under the absolute path (recursive).
 - `@write:/absolute/path` → allow writes under the absolute path (recursive).
 
@@ -88,7 +88,7 @@ Foreground agents can request on behalf of a background agent by including `agen
 
 ```json
 {
-  "permission": "@web",
+  "permission": "@network",
   "reason": "Need to check if the vendor endpoint is reachable.",
   "agentId": "ckv8x0o4t0000h1l7c7y2q3p9"
 }

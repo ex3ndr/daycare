@@ -92,11 +92,11 @@ describe("CronStore", () => {
       name: "Gate Task",
       schedule: "* * * * *",
       prompt: "Prompt",
-      gate: { command: "echo gate", permissions: ["@web"] }
+      gate: { command: "echo gate", permissions: ["@network"] }
     });
 
     const loaded = await store.loadTask("gate-task");
-    expect(loaded?.gate?.permissions).toEqual(["@web"]);
+    expect(loaded?.gate?.permissions).toEqual(["@network"]);
 
     await store.updateTask("gate-task", {
       gate: { command: "echo update", permissions: ["@read:/tmp"] }

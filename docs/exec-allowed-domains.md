@@ -9,7 +9,7 @@ flowchart TD
   B -- yes --> D[trim + dedupe]
   D --> E{contains "*"?}
   E -- yes --> F[error: wildcard not allowed]
-  E -- no --> G{web permission enabled?}
-  G -- no --> H[error: web permission required]
+  E -- no --> G{network permission enabled?}
+  G -- no --> H[error: network permission required]
   G -- yes --> I[build sandbox config with allowedDomains]
 ```

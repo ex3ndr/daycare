@@ -9,19 +9,19 @@ describe("permissionMergeDefault", () => {
       workingDir: "",
       writeDirs: ["/custom-write"],
       readDirs: [],
-      web: false
+      network: false
     };
     const defaults: SessionPermissions = {
       workingDir: "/workspace",
       writeDirs: ["/base-write"],
       readDirs: ["/base-read"],
-      web: true
+      network: true
     };
 
     const merged = permissionMergeDefault(permissions, defaults);
 
     expect(merged.workingDir).toBe("/workspace");
-    expect(merged.web).toBe(true);
+    expect(merged.network).toBe(true);
     expect(merged.writeDirs).toEqual(
       expect.arrayContaining(["/base-write", "/custom-write"])
     );
@@ -33,13 +33,13 @@ describe("permissionMergeDefault", () => {
       workingDir: "   ",
       writeDirs: [],
       readDirs: [],
-      web: false
+      network: false
     };
     const defaults: SessionPermissions = {
       workingDir: "/workspace",
       writeDirs: [],
       readDirs: [],
-      web: false
+      network: false
     };
 
     const merged = permissionMergeDefault(permissions, defaults);
@@ -52,13 +52,13 @@ describe("permissionMergeDefault", () => {
       workingDir: "/custom-workspace",
       writeDirs: [],
       readDirs: [],
-      web: false
+      network: false
     };
     const defaults: SessionPermissions = {
       workingDir: "/workspace",
       writeDirs: [],
       readDirs: [],
-      web: false
+      network: false
     };
 
     const merged = permissionMergeDefault(permissions, defaults);

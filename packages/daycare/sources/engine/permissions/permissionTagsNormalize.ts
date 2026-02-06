@@ -3,7 +3,7 @@ import { permissionAccessParse } from "./permissionAccessParse.js";
 
 /**
  * Normalizes an unknown permissions list into unique permission tags.
- * Expects: entries are @web, @read:<path>, or @write:<path>.
+ * Expects: entries are @network, @read:<path>, or @write:<path>.
  */
 export function permissionTagsNormalize(value: unknown): string[] {
   if (!value) {
@@ -22,8 +22,8 @@ export function permissionTagsNormalize(value: unknown): string[] {
       continue;
     }
     const access: PermissionAccess = permissionAccessParse(trimmed);
-    const tag = access.kind === "web"
-      ? "@web"
+    const tag = access.kind === "network"
+      ? "@network"
       : `${access.kind === "read" ? "@read" : "@write"}:${access.path}`;
     if (seen.has(tag)) {
       continue;

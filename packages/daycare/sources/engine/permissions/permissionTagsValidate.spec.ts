@@ -23,23 +23,23 @@ describe("permissionTagsValidate", () => {
       workingDir: dir,
       writeDirs: [dir],
       readDirs: [dir],
-      web: true
+      network: true
     };
 
     // Should not throw
-    await permissionTagsValidate(permissions, ["@web", `@read:${target}`, `@write:${dir}`]);
+    await permissionTagsValidate(permissions, ["@network", `@read:${target}`, `@write:${dir}`]);
   });
 
-  it("rejects web permission when caller lacks it", async () => {
+  it("rejects network permission when caller lacks it", async () => {
     const permissions = {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: [],
-      web: false
+      network: false
     };
 
-    await expect(permissionTagsValidate(permissions, ["@web"]))
-      .rejects.toThrow("Cannot attach permission '@web' - you don't have it.");
+    await expect(permissionTagsValidate(permissions, ["@network"]))
+      .rejects.toThrow("Cannot attach permission '@network' - you don't have it.");
   });
 
   it("rejects write permission outside allowed directories", async () => {
@@ -47,7 +47,7 @@ describe("permissionTagsValidate", () => {
       workingDir: "/tmp",
       writeDirs: ["/tmp"],
       readDirs: [],
-      web: false
+      network: false
     };
 
     await expect(permissionTagsValidate(permissions, ["@write:/etc"]))
@@ -59,7 +59,7 @@ describe("permissionTagsValidate", () => {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: ["/tmp"],
-      web: false
+      network: false
     };
 
     await expect(permissionTagsValidate(permissions, ["@read:/etc"]))

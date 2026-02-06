@@ -47,7 +47,7 @@ export async function execGateCheck(
   permissions.workingDir = path.resolve(input.workingDir);
 
   const allowedDomains = normalizeAllowedDomains(input.gate.allowedDomains);
-  const domainIssues = validateAllowedDomains(allowedDomains, permissions.web);
+  const domainIssues = validateAllowedDomains(allowedDomains, permissions.network);
   if (domainIssues.length > 0) {
     return gateError(domainIssues.join(" "));
   }
@@ -135,13 +135,13 @@ function normalizeAllowedDomains(entries?: string[]): string[] {
   return next;
 }
 
-function validateAllowedDomains(allowedDomains: string[], webAllowed: boolean): string[] {
+function validateAllowedDomains(allowedDomains: string[], networkAllowed: boolean): string[] {
   const issues: string[] = [];
   if (allowedDomains.includes("*")) {
     issues.push("Wildcard \"*\" is not allowed in allowedDomains.");
   }
-  if (allowedDomains.length > 0 && !webAllowed) {
-    issues.push("Web permission is required to set allowedDomains.");
+  if (allowedDomains.length > 0 && !networkAllowed) {
+    issues.push("Network permission is required to set allowedDomains.");
   }
   return issues;
 }

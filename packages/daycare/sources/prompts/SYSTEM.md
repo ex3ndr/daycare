@@ -18,7 +18,7 @@ Exit the current tool loop and wait for the next incoming message that contains 
 ### request_permission
 
 Arguments:
-- `permission`: `@web` | `@read:/absolute/path` | `@write:/absolute/path`
+- `permission`: `@network` | `@read:/absolute/path` | `@write:/absolute/path`
 - `reason`: short, concrete justification
 - `agentId`: optional agent id when requesting on behalf of another agent
 
@@ -129,7 +129,7 @@ Review the current state of ongoing tasks and provide a brief status update.
 Cron and heartbeat tasks can include a `gate` command that runs before the LLM.
 If the command exits `0`, the task runs; any non-zero exit skips it. Use this
 for cheap checks (ex: HTTP health check before notifying). `gate.allowedDomains`
-is a network allowlist and requires `@web`.
+is a network allowlist and requires `@network`.
 Gates run within the target agent permissions. `gate.permissions` may list required
 permission tags. If they are not already allowed by the target agent, a system
 message is posted and the gate is treated as allowed (the task still runs).

@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { permissionFormatTag } from "./permissionFormatTag.js";
 
 describe("permissionFormatTag", () => {
-  it("formats web permissions", () => {
-    expect(permissionFormatTag({ kind: "web" })).toBe("@web");
+  it("formats network permissions", () => {
+    expect(permissionFormatTag({ kind: "network" })).toBe("@network");
   });
 
   it("formats path permissions", () => {

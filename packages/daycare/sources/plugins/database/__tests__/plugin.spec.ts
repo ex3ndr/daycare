@@ -39,7 +39,7 @@ describe("database plugin", () => {
       workingDir: baseDir,
       writeDirs: [],
       readDirs: [],
-      web: false
+      network: false
     };
     const messageContext = {};
     const descriptor = agentDescriptorBuild("system", messageContext, agentId);

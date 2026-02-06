@@ -9,7 +9,7 @@ describe("permissionEnsureDefaultFile", () => {
       workingDir: "/workspace",
       writeDirs: ["/write"],
       readDirs: ["/read"],
-      web: false
+      network: false
     };
 
     permissionEnsureDefaultFile(permissions, {

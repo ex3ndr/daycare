@@ -27,10 +27,10 @@ describe("HeartbeatStore", () => {
     await store.createTask({
       title: "Gate Task",
       prompt: "Prompt",
-      gate: { command: "echo gate", permissions: ["@web"] }
+      gate: { command: "echo gate", permissions: ["@network"] }
     });
 
     const tasks = await store.listTasks();
-    expect(tasks[0]?.gate?.permissions).toEqual(["@web"]);
+    expect(tasks[0]?.gate?.permissions).toEqual(["@network"]);
   });
 });

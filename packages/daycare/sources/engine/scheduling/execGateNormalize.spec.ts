@@ -14,7 +14,7 @@ describe("execGateNormalize", () => {
       cwd: " /tmp ",
       timeoutMs: 1500,
       env: { FOO: "bar", SKIP: 3, FLAG: true },
-      permissions: ["@web", "  @read:/tmp  ", "", "@web"],
+      permissions: ["@network", "  @read:/tmp  ", "", "@network"],
       allowedDomains: ["example.com", " example.com "]
     });
     expect(result).toEqual({
@@ -22,7 +22,7 @@ describe("execGateNormalize", () => {
       cwd: "/tmp",
       timeoutMs: 1500,
       env: { FOO: "bar", SKIP: "3", FLAG: "true" },
-      permissions: ["@web", "@read:/tmp"],
+      permissions: ["@network", "@read:/tmp"],
       allowedDomains: ["example.com"]
     });
   });

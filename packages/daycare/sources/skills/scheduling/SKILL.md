@@ -47,7 +47,7 @@ successful).
 - `command` (required)
 - `cwd`, `timeoutMs`, `env`
 - `permissions` (required tags; must already be allowed by the target agent)
-- `allowedDomains` (network allowlist; requires `@web`)
+- `allowedDomains` (network allowlist; requires `@network`)
 
 ## Examples
 

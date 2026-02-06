@@ -8,7 +8,7 @@ export type GatePermissionsCheckResult = {
 
 /**
  * Checks gate permission tags against the current permissions.
- * Expects: tags are @web, @read:<path>, or @write:<path>.
+ * Expects: tags are @network, @read:<path>, or @write:<path>.
  */
 export async function gatePermissionsCheck(
   permissions: SessionPermissions,
@@ -42,8 +42,8 @@ export async function gatePermissionsCheck(
 function parsePermissionAccess(
   tag: string
 ): { access: PermissionAccess | null; error?: string } {
-  if (tag === "@web") {
-    return { access: { kind: "web" } };
+  if (tag === "@network") {
+    return { access: { kind: "network" } };
   }
 
   if (tag.startsWith("@read:")) {
@@ -64,6 +64,6 @@ function parsePermissionAccess(
 
   return {
     access: null,
-    error: "Permission must be @web, @read:<path>, or @write:<path>."
+    error: "Permission must be @network, @read:<path>, or @write:<path>."
   };
 }

@@ -107,8 +107,8 @@ export const plugin = definePlugin({
             parameters: searchSchema
           },
           execute: async (args, toolContext, toolCall) => {
-            if (!toolContext.permissions.web) {
-              throw new Error("Web access not granted. Request web access permission.");
+            if (!toolContext.permissions.network) {
+              throw new Error("Network access not granted. Request @network permission.");
             }
             const payload = args as SearchArgs;
             const apiKey = await api.auth.getApiKey(instanceId);

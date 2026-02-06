@@ -26,7 +26,7 @@ describe("HeartbeatScheduler", () => {
     workingDir,
     writeDirs: [],
     readDirs: [],
-    web: false
+    network: false
   });
   const configModule = (workingDir: string): ConfigModule =>
     new ConfigModule(

@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { permissionDescribeDecision } from "./permissionDescribeDecision.js";
 
 describe("permissionDescribeDecision", () => {
-  it("describes web access", () => {
-    expect(permissionDescribeDecision({ kind: "web" })).toBe("web access");
+  it("describes network access", () => {
+    expect(permissionDescribeDecision({ kind: "network" })).toBe("network access");
   });
 
   it("describes read access", () => {

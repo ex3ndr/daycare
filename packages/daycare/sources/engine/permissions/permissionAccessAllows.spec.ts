@@ -13,10 +13,10 @@ describe("permissionAccessAllows", () => {
     tempDirs.length = 0;
   });
 
-  it("allows web access when enabled", async () => {
+  it("allows network access when enabled", async () => {
     const allowed = await permissionAccessAllows(
-      { workingDir: "/tmp", writeDirs: [], readDirs: [], web: true },
-      { kind: "web" }
+      { workingDir: "/tmp", writeDirs: [], readDirs: [], network: true },
+      { kind: "network" }
     );
     expect(allowed).toBe(true);
   });
@@ -27,7 +27,7 @@ describe("permissionAccessAllows", () => {
     const target = path.join(dir, "file.txt");
     await fs.writeFile(target, "ok", "utf8");
     const allowed = await permissionAccessAllows(
-      { workingDir: dir, writeDirs: [], readDirs: [dir], web: false },
+      { workingDir: dir, writeDirs: [], readDirs: [dir], network: false },
       { kind: "read", path: target }
     );
     expect(allowed).toBe(true);
@@ -38,7 +38,7 @@ describe("permissionAccessAllows", () => {
     tempDirs.push(dir);
     const target = path.join(dir, "elsewhere", "file.txt");
     const allowed = await permissionAccessAllows(
-      { workingDir: "/tmp", writeDirs: ["/tmp"], readDirs: [], web: false },
+      { workingDir: "/tmp", writeDirs: ["/tmp"], readDirs: [], network: false },
       { kind: "write", path: target }
     );
     expect(allowed).toBe(false);

@@ -246,8 +246,8 @@ export class AgentSystem {
       decision: {
         token: "direct",
         approved: true,
-        permission: access.kind === "web"
-          ? "@web"
+        permission: access.kind === "network"
+          ? "@network"
           : `@${access.kind}:${access.path}`,
         access
       }

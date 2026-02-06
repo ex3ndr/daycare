@@ -23,7 +23,7 @@ describe("exec tool allowedDomains", () => {
     await fs.rm(workingDir, { recursive: true, force: true });
   });
 
-  it("throws when allowedDomains provided without web permission", async () => {
+  it("throws when allowedDomains provided without network permission", async () => {
     const tool = buildExecTool();
     const context = createContext(workingDir, false);
 
@@ -33,7 +33,7 @@ describe("exec tool allowedDomains", () => {
         context,
         toolCall
       )
-    ).rejects.toThrow("Web permission is required");
+    ).rejects.toThrow("Network permission is required");
   });
 
   it("throws when allowedDomains includes '*'", async () => {
@@ -87,7 +87,7 @@ describe("exec tool allowedDomains", () => {
   });
 });
 
-function createContext(workingDir: string, web: boolean): ToolExecutionContext {
+function createContext(workingDir: string, network: boolean): ToolExecutionContext {
   const agentId = createId();
   const messageContext = {};
   const descriptor = agentDescriptorBuild("system", messageContext, agentId);
@@ -98,7 +98,7 @@ function createContext(workingDir: string, web: boolean): ToolExecutionContext {
       workingDir,
       writeDirs: [],
       readDirs: [],
-      web
+      network
     },
     tokens: null,
     stats: {},
