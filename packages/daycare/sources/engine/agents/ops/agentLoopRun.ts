@@ -22,7 +22,7 @@ import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import { tokensResolve } from "./tokensResolve.js";
 
-const MAX_TOOL_ITERATIONS = 5;
+const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
 
 type AgentLoopRunOptions = {
   entry: AgentMessage;
