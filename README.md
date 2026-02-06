@@ -14,26 +14,10 @@
 - **Agent management** - Per-channel message sequencing with persistent state
 - **Memory plugin** - Searchable conversation history across agents
 - **Cron scheduler** - Timed message dispatch and scheduled actions
-- **Multi-provider inference** - Anthropic Claude, OpenAI, and more
-- **Dashboard** - React SPA for monitoring and control
-
-## Architecture
-
-```mermaid
-flowchart LR
-  CLI[daycare CLI] --> Engine[Engine]
-  Engine --> Plugins[Plugin Manager]
-  Plugins --> Connectors[Connectors]
-  Plugins --> Inference[Inference Providers]
-  Plugins --> Tools[Tool Resolver]
-  Connectors -->|message| Agents[Agent System]
-  Cron[Cron Scheduler] -->|message| Agents
-  Agents --> InferenceRouter[Inference Router]
-  InferenceRouter --> Tools
-  Agents --> Memory[Memory Plugin]
-  Engine --> Socket[HTTP Socket API]
-  Socket --> Dashboard[daycare-dashboard]
-```
+- **Multi-provider inference** - Anthropic, OpenAI, Google Gemini, Groq, Mistral, xAI, and more
+- **Heartbeat scheduler** - Periodic agent actions on configurable intervals
+- **Skills** - Composable agent skills for scheduling, agent creation, and more
+- **Dashboard** - Next.js app for monitoring and control
 
 ## Quick Start
 
@@ -80,35 +64,50 @@ Daycare uses two configuration files in `.daycare/`:
 | Plugin | Type | Description |
 |--------|------|-------------|
 | telegram | Connector | Telegram bot with long polling |
-| openai | Inference | GPT models via OpenAI API |
-| brave-search | Tool | Web search integration |
-| gpt-image | Image | OpenAI image generation |
-| nanobanana | Image | Alternative image provider |
-| memory | Tool | Conversation memory and search |
+| whatsapp | Connector | WhatsApp via Baileys with QR auth |
+| anthropic-fetch | Web Fetch | URL content extraction via Claude |
+| anthropic-search | Web Search | Search powered by Claude |
+| brave-search | Web Search | Brave Search API integration |
+| exa-ai | Web Search | Neural search via Exa AI |
+| firecrawl | Web Fetch | Clean content extraction via Firecrawl |
+| gemini-search | Web Search | Google Gemini with Search Grounding |
+| openai-search | Web Search | GPT-powered web search |
+| perplexity-search | Web Search | Perplexity Sonar search |
+| web-fetch | Web Fetch | Minimal URL content download |
+| memory | System | Structured entity storage as Markdown |
+| database | System | Local PGlite (Postgres) with schema docs |
+| shell | Tool | File read/write/edit and command execution |
 
 ## Tools
 
-The AI agent has access to these tools:
+Built-in tools available to the agent:
 
-- `add_cron` - Schedule recurring tasks
-- `cron_read_task` - Read cron task description + prompt
-- `cron_read_memory` - Read cron task memory
-- `cron_write_memory` - Update cron task memory
-- `cron_delete_task` - Delete a cron task
-- `memory_search` - Query conversation history (memory plugin)
-- `web_search` - Search the web (Brave)
-- `generate_image` - Create images
+- `add_cron` / `cron_read_task` / `cron_read_memory` / `cron_write_memory` / `cron_delete_task` - Cron scheduling
+- `heartbeat_add` / `heartbeat_run` / `heartbeat_list` / `heartbeat_remove` - Heartbeat scheduling
+- `create_permanent_agent` / `start_background_agent` / `send_agent_message` - Multi-agent coordination
+- `generate_image` - Image generation via configured providers
 - `set_reaction` - React to messages
+- `send_file` - Send files via connectors
+- `request_permission` / `grant_permission` - Runtime permission management
+
+Plugin-provided tools:
+
+- `read` / `write` / `edit` / `exec` - File system and shell (shell plugin)
+- `memory_create_entity` / `memory_upsert_record` / `memory_list_entities` - Entity memory (memory plugin)
+- Web search / fetch tools from search and fetch plugins
 
 ## CLI Commands
 
 ```sh
-daycare start                    # Launch the engine
-daycare status                   # Check engine status
-daycare add                      # Add a provider or plugin
-daycare plugins load <id>        # Load a plugin
-daycare plugins unload <id>      # Unload a plugin
-daycare auth set <id> <key> <value>         # Store a credential
+daycare start                              # Launch the engine
+daycare status                             # Check engine status
+daycare add                                # Add a provider or plugin
+daycare remove                             # Remove a provider or plugin
+daycare providers                          # Select default provider
+daycare plugins load <pluginId>            # Load a plugin
+daycare plugins unload <instanceId>        # Unload a plugin
+daycare auth set <id> <key> <value>        # Store a credential
+daycare doctor                             # Run inference health checks
 ```
 
 ## Development
@@ -124,7 +123,7 @@ yarn dev          # Run with tsx (no build)
 ## Workspace
 
 - `packages/daycare` - Core engine, plugins, and tools
-- `packages/daycare-dashboard` - React dashboard + API proxy
+- `packages/daycare-dashboard` - Next.js dashboard
 
 ## Documentation
 
@@ -132,11 +131,16 @@ See [docs/](./docs/) for detailed documentation:
 
 - [Architecture](./docs/architecture.md) - System overview
 - [Plugins](./docs/plugins.md) - Plugin system
-- [Agents](./docs/agents.md) - Agent management
+- [Agents](./docs/agents.md) - Agent management and queueing
+- [Agent System](./docs/agent-system.md) - Agent lifecycle and ownership
 - [Memory](./docs/memory.md) - Memory plugin
 - [Cron](./docs/cron.md) - Scheduled tasks
+- [Heartbeat](./docs/heartbeat.md) - Heartbeat scheduler
+- [Skills](./docs/skills.md) - Agent skills
 - [Config](./docs/config.md) - Configuration reference
+- [Permissions](./docs/permissions.md) - Permission system
 - [CLI](./docs/cli.md) - Command reference
+- [Inference](./docs/inference.md) - Inference providers
 
 ## License
 

@@ -7,52 +7,36 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `cli.md` - CLI commands and runtime behavior
 - `connectors.md` - connector abstraction and telegram connector
 - `plugins.md` - plugin system and built-in plugins
-- `dashboard.md` - daycare-dashboard SPA + proxy
+- `dashboard.md` - daycare-dashboard app and pages
+- `dashboard-history.md` - dashboard conversation history view
 - `memory.md` - memory plugin and entities
 - `cron.md` - cron scheduler tasks and actions
+- `heartbeat.md` - heartbeat scheduler and storage
 - `auth.md` - auth store and helper commands
-- `inference.md` - inference runtime helpers
-- `util.md` - shared utility helpers
-- `conventions.md` - import and compatibility rules
+- `inference.md` - inference runtime and provider catalog
+- `permissions.md` - permission system and resolution
+- `skills.md` - agent skills and loading workflow
 - `agents.md` - agent queueing and sequencing
 - `agent-types.md` - agent descriptors and resolution
+- `agent-system.md` - agent system lifecycle and ownership
+- `engine.md` - engine socket updates and control plane
+- `engine-agent.md` - engine agent helpers
+- `engine-heartbeat-utils.md` - engine heartbeat utilities
 - `engine-message-agent-helpers.md` - extracted message + agent helpers
+- `engine-modules-registry.md` - engine modules registry
 - `engine-tool-agent-extractions.md` - extracted tool + agent persistence helpers
 - `config.md` - config files and resolution order
-- `logging.md` - logging configuration and output
-- `engine.md` - engine socket updates and control plane
-- `context-compaction.md` - compaction thresholds and auto-compaction flow
-- `system-prompt-debug.md` - system prompt snapshot storage for inference
-- `testing.md` - current test coverage
-- `skills.md` - agent skills and loading workflow
-- `agent-system.md` - agent system lifecycle and ownership
-- `heartbeat.md` - heartbeat scheduler and storage
 - `config-reload-locking.md` - online config reload lock model and plugin/provider apply flow
-
-```mermaid
-flowchart TD
-  Docs[Documentation] --> Arch[architecture.md]
-  Docs --> CLI[cli.md]
-  Docs --> Conn[connectors.md]
-  Docs --> Plugins[plugins.md]
-  Docs --> Dash[dashboard.md]
-  Docs --> Memory[memory.md]
-  Docs --> Agents[agents.md]
-  Docs --> AgentTypes[agent-types.md]
-  Docs --> MsgHelpers[engine-message-agent-helpers.md]
-  Docs --> ToolHelpers[engine-tool-agent-extractions.md]
-  Docs --> Config[config.md]
-  Docs --> Auth[auth.md]
-  Docs --> Log[logging.md]
-  Docs --> Engine[engine.md]
-  Docs --> Compaction[context-compaction.md]
-  Docs --> PromptDebug[system-prompt-debug.md]
-  Docs --> Test[testing.md]
-  Docs --> Util[util.md]
-  Docs --> Conv[conventions.md]
-  Docs --> Infer[inference.md]
-  Docs --> Skills[skills.md]
-  Docs --> AgentSystem[agent-system.md]
-  Docs --> Heartbeat[heartbeat.md]
-  Docs --> ConfigReload[config-reload-locking.md]
-```
+- `context-compaction.md` - compaction thresholds and auto-compaction flow
+- `exec-env.md` - execution environment setup
+- `exec-allowed-domains.md` - allowed domain configuration
+- `logging.md` - logging configuration and output
+- `system-prompt-debug.md` - system prompt snapshot storage for inference
+- `tokens.md` - token counting and limits
+- `testing.md` - current test coverage
+- `util.md` - shared utility helpers
+- `conventions.md` - import and compatibility rules
+- `telegram-message-splitting.md` - telegram message splitting logic
+- `telegram-polling-retry.md` - telegram polling retry behavior
+- `network-permission-rename.md` - @web to @network rename notes
+- `rebrand-daycare.md` - otterbot to daycare rebrand notes
