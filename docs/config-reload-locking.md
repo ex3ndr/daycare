@@ -22,6 +22,7 @@ waits for in-flight inference calls to finish before applying changes.
 Plugin/provider reload behavior during apply:
 - providers: deep-equal settings are no-op; changed settings unload/load; unload always removes registry entries bound to the provider id
 - plugins: deep-equal settings are no-op; changed settings unload/load; unload calls plugin `unload` first, then unregisters all registrar-owned modules
+- plugin manager `load()` now unloads an already-loaded instance id before loading again, preventing stale tool/module registrations across restart-style reloads
 
 Operational notes:
 - connector callbacks catch and log failures so connector event loops do not produce unhandled promise rejections

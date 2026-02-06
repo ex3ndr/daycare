@@ -207,8 +207,8 @@ export class PluginManager {
     this.logger.debug(`load() called pluginId=${pluginConfig.pluginId} instanceId=${instanceId}`);
 
     if (this.loaded.has(instanceId)) {
-      this.logger.debug(`Plugin already loaded, skipping instanceId=${instanceId}`);
-      return;
+      this.logger.info({ instance: instanceId }, "Plugin already loaded, reloading instance");
+      await this.unload(instanceId);
     }
 
     const definition = this.pluginCatalog.get(pluginConfig.pluginId);

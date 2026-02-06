@@ -336,4 +336,59 @@ export const plugin = {
     ).toEqual({ connectorShutdownCalled: false });
     expect(modules.connectors.has("probe-connector")).toBe(false);
   });
+
+  it("unloads previous registrations when reloading the same instance id", async () => {
+    const dir = await createTempDir();
+    const pluginSource = `import { z } from "zod";
+
+export const plugin = {
+  settingsSchema: z.object({
+    toolName: z.string()
+  }),
+  create: (api) => ({
+    load: async () => {
+      api.registrar.registerTool({
+        tool: {
+          name: api.settings.toolName,
+          description: "dynamic tool",
+          parameters: z.object({})
+        },
+        execute: async () => ({
+          toolMessage: {
+            role: "toolResult",
+            toolCallId: "test-call",
+            toolName: api.settings.toolName,
+            content: [{ type: "text", text: "ok" }],
+            isError: false,
+            timestamp: Date.now()
+          },
+          files: []
+        })
+      });
+    }
+  })
+};
+`;
+    const entryPath = await writePluginFile(dir, pluginSource);
+    const { manager, modules } = createManager(entryPath, "reload", dir);
+
+    await manager.load({
+      instanceId: "reload-one",
+      pluginId: "reload",
+      enabled: true,
+      settings: { toolName: "reload_tool_a" }
+    });
+    expect(modules.tools.listTools().map((tool) => tool.name)).toEqual(["reload_tool_a"]);
+
+    await manager.load({
+      instanceId: "reload-one",
+      pluginId: "reload",
+      enabled: true,
+      settings: { toolName: "reload_tool_b" }
+    });
+    expect(modules.tools.listTools().map((tool) => tool.name)).toEqual(["reload_tool_b"]);
+
+    await manager.unload("reload-one");
+    expect(modules.tools.listTools()).toEqual([]);
+  });
 });
