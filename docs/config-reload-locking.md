@@ -11,6 +11,8 @@ instead of callback-style lock plumbing.
 `Engine.reloadApplyLatest()` via `ConfigModule.configSet(...)` under write lock.
 Subsystem reload paths (`ProviderManager`, `PluginManager`) now refresh from `config.current`
 without receiving config payloads or calling `configSet(...)`.
+`InferenceRouter` also owns a shared `ConfigModule` reference and exposes `reload()`
+to rebuild active provider preferences from `config.current.settings`.
 
 Read-locked runtime paths now include:
 - connector message/command/permission handlers
@@ -49,6 +51,7 @@ sequenceDiagram
   Engine->>Engine: load config + compare again
   Engine->>Providers: reload()
   Engine->>Plugins: reload()
+  Engine->>Engine: inferenceRouter.reload()
   Engine-->>Lock: apply complete
   Lock-->>Sync: release write lock
   Sync-->>API: reload resolved
@@ -60,6 +63,7 @@ flowchart TD
   ConfigModule -->|current| AgentSystem
   ConfigModule -->|current| ProviderManager
   ConfigModule -->|current| PluginManager
+  ConfigModule -->|current| InferenceRouter
   Engine -->|configSet under write lock| ConfigModule
   ConfigModule -->|inReadLock/inWriteLock| RuntimePaths
 ```

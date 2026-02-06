@@ -41,9 +41,9 @@ function createManager(
   const auth = new AuthStore(config);
   const fileStore = new FileStore(config);
   const inferenceRouter = new InferenceRouter({
-    providers: [],
     registry: modules.inference,
-    auth
+    auth,
+    config: configModule
   });
   const catalog = new Map([
     [

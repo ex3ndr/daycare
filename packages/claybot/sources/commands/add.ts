@@ -22,7 +22,7 @@ import {
   type PluginInstanceSettings,
   type ProviderSettings
 } from "../settings.js";
-import { listActiveInferenceProviders, listProviderDefinitions, getProviderDefinition } from "../providers/catalog.js";
+import { listProviderDefinitions, getProviderDefinition } from "../providers/catalog.js";
 import type { ProviderDefinition } from "../providers/types.js";
 import { getLogger } from "../log.js";
 import { resolveExclusivePlugins } from "../engine/plugins/exclusive.js";
@@ -268,13 +268,14 @@ async function validatePluginLoad(
   });
   const pluginRegistry = new PluginRegistry(modules);
   const fileStore = new FileStore(config);
+  const configModule = new ConfigModule(config);
   const inferenceRouter = new InferenceRouter({
-    providers: listActiveInferenceProviders(config.settings),
     registry: modules.inference,
-    auth: authStore
+    auth: authStore,
+    config: configModule
   });
   const pluginManager = new PluginManager({
-    config: new ConfigModule(config),
+    config: configModule,
     registry: pluginRegistry,
     auth: authStore,
     fileStore,

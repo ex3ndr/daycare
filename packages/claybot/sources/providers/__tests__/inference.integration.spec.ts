@@ -13,7 +13,6 @@ import { InferenceRouter } from "../../engine/modules/inference/router.js";
 import { ImageGenerationRegistry } from "../../engine/modules/imageGenerationRegistry.js";
 import { InferenceRegistry } from "../../engine/modules/inferenceRegistry.js";
 import { ProviderManager } from "../manager.js";
-import { listActiveInferenceProviders } from "../catalog.js";
 import { configResolve } from "../../config/configResolve.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
 
@@ -214,9 +213,10 @@ async function setupProvider(providerId: string, config: ProviderConfig) {
 
   const inferenceRegistry = new InferenceRegistry();
   const imageRegistry = new ImageGenerationRegistry();
+  const configModule = new ConfigModule(resolvedConfig);
 
   const providerManager = new ProviderManager({
-    config: new ConfigModule(resolvedConfig),
+    config: configModule,
     auth,
     fileStore: new FileStore(resolvedConfig),
     inferenceRegistry,
@@ -226,9 +226,9 @@ async function setupProvider(providerId: string, config: ProviderConfig) {
   await providerManager.reload();
 
   const router = new InferenceRouter({
-    providers: listActiveInferenceProviders(resolvedConfig.settings),
     registry: inferenceRegistry,
-    auth
+    auth,
+    config: configModule
   });
 
   return {

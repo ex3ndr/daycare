@@ -5,6 +5,7 @@ import type { ProviderSettings } from "../../../settings.js";
 import type { AuthStore } from "../../../auth/store.js";
 import { getLogger } from "../../../log.js";
 import type { ConfigModule } from "../../config/configModule.js";
+import { listActiveInferenceProviders } from "../../../providers/catalog.js";
 
 export type InferenceResult = {
   message: AssistantMessage;
@@ -13,10 +14,12 @@ export type InferenceResult = {
 };
 
 export type InferenceRouterOptions = {
-  providers: ProviderSettings[];
   registry: InferenceRegistry;
   auth: AuthStore;
-  config?: ConfigModule;
+  config: ConfigModule;
+};
+
+export type InferenceCompleteOptions = {
   onAttempt?: (providerId: string, modelId: string) => void;
   onFallback?: (providerId: string, error: unknown) => void;
   onSuccess?: (providerId: string, modelId: string, message: AssistantMessage) => void;
@@ -28,18 +31,20 @@ export class InferenceRouter {
   private providers: ProviderSettings[];
   private registry: InferenceRegistry;
   private auth: AuthStore;
-  private config?: ConfigModule;
+  private config: ConfigModule;
   private logger = getLogger("inference.router");
 
   constructor(options: InferenceRouterOptions) {
-    this.providers = options.providers;
+    this.providers = [];
     this.registry = options.registry;
     this.auth = options.auth;
     this.config = options.config;
-    this.logger.debug(`InferenceRouter initialized providerCount=${options.providers.length}`);
+    this.reload();
+    this.logger.debug(`InferenceRouter initialized providerCount=${this.providers.length}`);
   }
 
-  reload(providers: ProviderSettings[]): void {
+  reload(): void {
+    const providers = listActiveInferenceProviders(this.config.current.settings);
     const providerIds = providers.map(p => p.id).join(",");
     this.logger.debug(`Updating providers oldCount=${this.providers.length} newCount=${providers.length} providerIds=${providerIds}`);
     this.providers = providers;
@@ -48,7 +53,7 @@ export class InferenceRouter {
   async complete(
     context: Context,
     agentId: string,
-    options?: Omit<InferenceRouterOptions, "providers" | "registry" | "auth">
+    options?: InferenceCompleteOptions
   ): Promise<InferenceResult> {
     const execute = async (): Promise<InferenceResult> => {
       const providers = options?.providersOverride ?? this.providers;
@@ -104,9 +109,6 @@ export class InferenceRouter {
       throw new Error("No inference provider available");
     };
 
-    if (!this.config) {
-      return execute();
-    }
     // Intentionally lock the full provider call to keep reload quiescence strict.
     return this.config.inReadLock(execute);
   }

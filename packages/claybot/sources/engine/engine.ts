@@ -8,7 +8,7 @@ import { PluginRegistry } from "./plugins/registry.js";
 import { PluginManager } from "./plugins/manager.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { ensureWorkspaceDir } from "./permissions.js";
-import { getProviderDefinition, listActiveInferenceProviders } from "../providers/catalog.js";
+import { getProviderDefinition } from "../providers/catalog.js";
 import { AuthStore } from "../auth/store.js";
 import {
   buildCronDeleteTaskTool,
@@ -158,7 +158,6 @@ export class Engine {
     });
 
     this.inferenceRouter = new InferenceRouter({
-      providers: listActiveInferenceProviders(this.config.current.settings),
       registry: this.modules.inference,
       auth: this.authStore,
       // Hold read lock for the full inference lifecycle so write-locked reload reaches
@@ -403,7 +402,7 @@ export class Engine {
       await ensureWorkspaceDir(this.config.current.defaultPermissions.workingDir);
       await this.providerManager.reload();
       await this.pluginManager.reload();
-      this.inferenceRouter.reload(listActiveInferenceProviders(this.config.current.settings));
+      this.inferenceRouter.reload();
       logger.info("Runtime configuration reloaded");
     });
   }

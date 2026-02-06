@@ -15,6 +15,8 @@ import {
 import { getProviderDefinition } from "../providers/catalog.js";
 import { getLogger } from "../log.js";
 import { configLoad } from "../config/configLoad.js";
+import { configResolve } from "../config/configResolve.js";
+import { ConfigModule } from "../engine/config/configModule.js";
 
 export type DoctorOptions = {
   settings?: string;
@@ -104,9 +106,17 @@ async function checkProvider(
     }
 
     const router = new InferenceRouter({
-      providers: [providerSettings],
       registry: inferenceRegistry,
-      auth
+      auth,
+      config: new ConfigModule(
+        configResolve(
+          {
+            engine: { dataDir: path.join(process.cwd(), ".claybot-doctor") },
+            providers: [providerSettings]
+          },
+          path.join(process.cwd(), ".claybot-doctor-settings.json")
+        )
+      )
     });
 
     const result = await router.complete(buildContext(), "doctor");
