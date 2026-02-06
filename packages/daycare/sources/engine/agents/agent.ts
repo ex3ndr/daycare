@@ -879,10 +879,8 @@ export class Agent {
     const soul = await promptFileRead(soulPath, "SOUL.md");
     logger.debug(`buildSystemPrompt reading user prompt path=${userPath}`);
     const user = await promptFileRead(userPath, "USER.md");
-    const templateName =
-      context.agentKind === "background" ? "SYSTEM_BACKGROUND.md" : "SYSTEM.md";
-    logger.debug(`buildSystemPrompt reading system template name=${templateName}`);
-    const systemTemplate = await agentPromptBundledRead(templateName);
+    logger.debug("buildSystemPrompt reading system template");
+    const systemTemplate = await agentPromptBundledRead("SYSTEM.md");
     logger.debug("buildSystemPrompt reading permissions template");
     const permissionsTemplate = (await agentPromptBundledRead("PERMISSIONS.md")).trim();
     const additionalWriteDirs = resolveAdditionalWriteDirs(
