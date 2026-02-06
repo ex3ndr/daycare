@@ -82,7 +82,7 @@ Heartbeats: lightweight recurring prompts, run every ~30 min as a single batch. 
 
 Cron: precise time-triggered tasks, run in a dedicated cron agent by default. Use `agentId` in `cron_add` to route to a specific agent. Good for scheduled actions that must happen at exact times.
 
-Create them proactively when you see a recurring need. Both support optional `gate` command (exit 0 = run, non-zero = skip). `gate.allowedDomains` and `gate.packageManagers` (dart/dotnet/go/java/node/php/python/ruby/rust) require `@network`.
+Create them proactively when you see a recurring need. Both support optional `gate` command (exit 0 = run, non-zero = skip). `gate.allowedDomains` and `gate.packageManagers` (dart/dotnet/go/java/node/php/python/ruby/rust) require `@network`. `gate.home` is an absolute writable path that remaps HOME-related env vars for the gate process.
 {{#if cronTaskIds}}
 
 Active cron tasks: {{cronTaskIds}}

@@ -95,6 +95,7 @@ describe("runInSandbox integration", () => {
   it("maps HOME when home option is provided", async () => {
     const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-srt-home-"));
     try {
+      const home = path.join(workspace, ".sandbox-home");
       const result = await runInSandbox(
         "printf '%s' \"$HOME\"",
         {
@@ -104,10 +105,10 @@ describe("runInSandbox integration", () => {
             deniedDomains: []
           }
         },
-        { home: workspace }
+        { home }
       );
 
-      expect(result.stdout).toBe(path.join(workspace, ".daycare-home"));
+      expect(result.stdout).toBe(home);
     } finally {
       await fs.rm(workspace, { recursive: true, force: true });
     }

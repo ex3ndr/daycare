@@ -22,7 +22,7 @@ export async function sandboxHomeRedefine(
     return { env: input.env };
   }
 
-  const homeDir = path.resolve(input.home, ".daycare-home");
+  const homeDir = path.resolve(input.home);
   const xdgConfig = path.join(homeDir, ".config");
   const xdgCache = path.join(homeDir, ".cache");
   const xdgData = path.join(homeDir, ".local", "share");

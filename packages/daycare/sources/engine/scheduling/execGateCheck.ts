@@ -67,6 +67,14 @@ export async function execGateCheck(
   } catch (error) {
     return gateError(error instanceof Error ? error.message : "Invalid gate cwd.");
   }
+  let resolvedHome: string | undefined;
+  if (input.gate.home) {
+    try {
+      resolvedHome = await resolveGateHome(permissions, input.gate.home);
+    } catch (error) {
+      return gateError(error instanceof Error ? error.message : "Invalid gate home.");
+    }
+  }
 
   const env = input.gate.env ? { ...process.env, ...input.gate.env } : process.env;
   const timeoutMs = clampTimeout(input.gate.timeoutMs ?? DEFAULT_EXEC_TIMEOUT);
@@ -76,7 +84,7 @@ export async function execGateCheck(
     const result = await runInSandbox(command, sandboxConfig, {
       cwd: resolvedCwd,
       env,
-      home: input.gate.redefineHome ? permissions.workingDir : undefined,
+      home: resolvedHome,
       timeoutMs,
       maxBufferBytes: MAX_EXEC_BUFFER
     });
@@ -142,6 +150,15 @@ async function resolveGateCwd(
     new Set([permissions.workingDir, ...permissions.readDirs, ...permissions.writeDirs])
   );
   const resolved = await pathResolveSecure(allowedDirs, cwd);
+  return resolved.realPath;
+}
+
+async function resolveGateHome(
+  permissions: SessionPermissions,
+  home: string
+): Promise<string> {
+  const allowedDirs = Array.from(new Set([permissions.workingDir, ...permissions.writeDirs]));
+  const resolved = await pathResolveSecure(allowedDirs, home);
   return resolved.realPath;
 }
 

@@ -29,6 +29,10 @@ Bias toward action. If you can do it, do it. If you need permission, request it 
 
 `exec` requires `allowedDomains` for outbound HTTP. `packageManagers` language presets (`dart`, `dotnet`, `go`, `java`, `node`, `php`, `python`, `ruby`, `rust`) can auto-add ecosystem hosts. `node` covers npm/pnpm/yarn/bun. Needs `@network` permission first. No global wildcard (`*`). No raw TCP or local port binding.
 
+## Exec Home
+
+`exec.home` and `gate.home` are absolute paths used to remap HOME-related env vars (`HOME`, `USERPROFILE`, `XDG_*`, temp/cache vars) for that process. Use this for isolated package-manager state. Keep it inside writable dirs (typically under `{{workspace}}`).
+
 ## Multi-Agent Workspace
 
 Workspace is shared with other agents. Use dedicated folders, check before overwriting, maintain a root `README.md` with folder structure. Reuse existing directories.

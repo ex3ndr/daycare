@@ -26,7 +26,7 @@ const addCronSchema = Type.Object(
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
         env: Type.Optional(envSchema),
-        redefineHome: Type.Optional(Type.Boolean()),
+        home: Type.Optional(Type.String({ minLength: 1 })),
         permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
         packageManagers: Type.Optional(
           Type.Array(

@@ -21,12 +21,13 @@ describe("sandboxHomeRedefine", () => {
   it("overrides home-related env vars and ensures directories", async () => {
     const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-home-"));
     try {
+      const homeDir = path.join(workspace, ".sandbox-home");
       const result = await sandboxHomeRedefine({
         env: { HOME: "/home/original" },
-        home: workspace
+        home: homeDir
       });
 
-      const expectedHome = path.join(workspace, ".daycare-home");
+      const expectedHome = homeDir;
       expect(result.homeDir).toBe(expectedHome);
       expect(result.env.HOME).toBe(expectedHome);
       expect(result.env.USERPROFILE).toBe(expectedHome);

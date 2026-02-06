@@ -8,7 +8,7 @@ export type ExecGateDefinition = {
   cwd?: string;
   timeoutMs?: number;
   env?: Record<string, string>;
-  redefineHome?: boolean;
+  home?: string;
   permissions?: string[];
   packageManagers?: SandboxPackageManager[];
   allowedDomains?: string[];

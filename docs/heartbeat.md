@@ -55,8 +55,8 @@ not already allowed by the heartbeat agent, a system message is posted and the g
 is treated as allowed (the task still runs). Network access requires `@network` plus
 `gate.allowedDomains` to allowlist hosts. You can also use
 `gate.packageManagers` (`dart`, `dotnet`, `go`, `java`, `node`, `php`, `python`, `ruby`, `rust`) to auto-allow language ecosystem hosts.
-Set `gate.redefineHome: true` to remap HOME-related environment variables into
-`<heartbeat workspace>/.daycare-home` before running the gate command.
+Set `gate.home` (absolute path in writable dirs) to remap HOME-related environment
+variables for the gate command.
 
 ## Permissions
 

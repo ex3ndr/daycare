@@ -71,7 +71,7 @@ const execSchema = Type.Object(
     cwd: Type.Optional(Type.String({ minLength: 1 })),
     timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
     env: Type.Optional(envSchema),
-    redefineHome: Type.Optional(Type.Boolean()),
+    home: Type.Optional(Type.String({ minLength: 1 })),
     packageManagers: Type.Optional(
       Type.Array(
         Type.Union([
@@ -171,7 +171,7 @@ export function buildExecTool(): ToolDefinition {
     tool: {
       name: "exec",
       description:
-        "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Writes are sandboxed to the allowed write directories. Optional redefineHome remaps HOME and related env vars to an isolated workspace home. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+        "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Writes are sandboxed to the allowed write directories. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
       parameters: execSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -183,9 +183,15 @@ export function buildExecTool(): ToolDefinition {
       if (payload.cwd) {
         ensureAbsolutePath(payload.cwd);
       }
+      if (payload.home) {
+        ensureAbsolutePath(payload.home);
+      }
       const cwd = payload.cwd
         ? resolveWorkspacePath(workingDir, payload.cwd)
         : workingDir;
+      const home = payload.home
+        ? await resolveWritePathSecure(toolContext.permissions, payload.home)
+        : undefined;
       const allowedDomains = sandboxAllowedDomainsResolve(
         payload.allowedDomains,
         payload.packageManagers
@@ -206,7 +212,7 @@ export function buildExecTool(): ToolDefinition {
         const result = await runInSandbox(payload.command, sandboxConfig, {
           cwd,
           env,
-          home: payload.redefineHome ? workingDir : undefined,
+          home,
           timeoutMs: timeout,
           maxBufferBytes: MAX_EXEC_BUFFER
         });

@@ -99,14 +99,15 @@ describe("exec tool allowedDomains", () => {
     expect(blockedText).toContain("CONNECT tunnel failed");
   });
 
-  it("redefines HOME to an isolated workspace directory when enabled", async () => {
+  it("maps HOME to provided home path", async () => {
     const tool = buildExecTool();
     const context = createContext(workingDir, false);
+    const home = path.join(workingDir, ".daycare-home");
 
     const result = await tool.execute(
       {
         command: "printf '%s' \"$HOME\"",
-        redefineHome: true
+        home
       },
       context,
       toolCall
@@ -115,8 +116,9 @@ describe("exec tool allowedDomains", () => {
       .filter((item) => item.type === "text")
       .map((item) => item.text)
       .join("\n");
+    const expectedHome = await fs.realpath(home);
     expect(result.toolMessage.isError).toBe(false);
-    expect(text).toContain(`stdout:\n${path.join(workingDir, ".daycare-home")}`);
+    expect(text).toContain(`stdout:\n${expectedHome}`);
   });
 });
 
