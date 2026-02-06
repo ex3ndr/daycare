@@ -30,6 +30,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `context-compaction.md` - compaction thresholds and auto-compaction flow
 - `exec-env.md` - execution environment setup
 - `exec-allowed-domains.md` - allowed domain configuration
+- `exec-filesystem-denylist.md` - sandbox default deny read/write paths for sensitive files
 - `logging.md` - logging configuration and output
 - `system-prompt-debug.md` - system prompt snapshot storage for inference
 - `tokens.md` - token counting and limits

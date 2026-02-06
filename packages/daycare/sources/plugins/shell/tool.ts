@@ -8,6 +8,7 @@ import type { ToolDefinition, ToolExecutionResult } from "@/types";
 import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../../engine/permissions.js";
 import { runInSandbox } from "../../sandbox/runtime.js";
+import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import {
   pathResolveSecure,
@@ -456,15 +457,9 @@ function formatDisplayPath(workingDir: string, target: string): string {
 }
 
 function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[]) {
-  const allowWrite = Array.from(
-    new Set([permissions.workingDir, ...permissions.writeDirs])
-  );
+  const filesystem = sandboxFilesystemPolicyBuild({ permissions });
   return {
-    filesystem: {
-      denyRead: [],
-      allowWrite,
-      denyWrite: []
-    },
+    filesystem,
     network: {
       allowedDomains,
       deniedDomains: []

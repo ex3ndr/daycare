@@ -3,6 +3,7 @@ import type { ExecException } from "node:child_process";
 
 import type { ExecGateDefinition, SessionPermissions } from "@/types";
 import { runInSandbox } from "../../sandbox/runtime.js";
+import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { pathResolveSecure } from "../permissions/pathResolveSecure.js";
 
@@ -147,15 +148,9 @@ function validateAllowedDomains(allowedDomains: string[], networkAllowed: boolea
 }
 
 function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[]) {
-  const allowWrite = Array.from(
-    new Set([permissions.workingDir, ...permissions.writeDirs])
-  );
+  const filesystem = sandboxFilesystemPolicyBuild({ permissions });
   return {
-    filesystem: {
-      denyRead: [],
-      allowWrite,
-      denyWrite: []
-    },
+    filesystem,
     network: {
       allowedDomains,
       deniedDomains: []
