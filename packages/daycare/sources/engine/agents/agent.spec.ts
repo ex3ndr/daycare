@@ -241,6 +241,78 @@ describe("Agent", () => {
     }
   });
 
+  it("does not deliver agent-sourced signals back to the same agent", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const eventBus = new EngineEventBus();
+      const agentSystem = new AgentSystem({
+        config: new ConfigModule(config),
+        eventBus,
+        connectorRegistry: new ConnectorRegistry({
+          onMessage: async () => undefined
+        }),
+        imageRegistry: new ImageGenerationRegistry(),
+        toolResolver: new ToolResolver(),
+        pluginManager: {} as unknown as PluginManager,
+        inferenceRouter: {} as unknown as InferenceRouter,
+        fileStore: new FileStore(config),
+        authStore: new AuthStore(config)
+      });
+      agentSystem.setCrons({} as unknown as Crons);
+      const signals = new Signals({
+        eventBus,
+        configDir: config.configDir,
+        onDeliver: async (signal, subscriptions) => {
+          await agentSystem.signalDeliver(signal, subscriptions);
+        }
+      });
+      agentSystem.setSignals(signals);
+      await agentSystem.load();
+
+      const sourceAgentId = createId();
+      const peerAgentId = createId();
+      await agentSystem.post(
+        { descriptor: { type: "cron", id: sourceAgentId, name: "Source agent" } },
+        { type: "reset", message: "init source" }
+      );
+      await agentSystem.post(
+        { descriptor: { type: "cron", id: peerAgentId, name: "Peer agent" } },
+        { type: "reset", message: "init peer" }
+      );
+
+      signals.subscribe({ agentId: sourceAgentId, pattern: "build:*:done", silent: true });
+      signals.subscribe({ agentId: peerAgentId, pattern: "build:*:done", silent: true });
+      await signals.generate({
+        type: "build:alpha:done",
+        source: { type: "agent", id: sourceAgentId }
+      });
+
+      await agentSystem.start();
+      await agentSystem.postAndAwait(
+        { agentId: sourceAgentId },
+        { type: "reset", message: "flush source queue" }
+      );
+      await agentSystem.postAndAwait(
+        { agentId: peerAgentId },
+        { type: "reset", message: "flush peer queue" }
+      );
+
+      const sourceHistoryPath = path.join(config.agentsDir, sourceAgentId, "history.jsonl");
+      const sourceHistoryRaw = await readFile(sourceHistoryPath, "utf8");
+      expect(sourceHistoryRaw.includes("[signal]")).toBe(false);
+
+      const peerHistoryPath = path.join(config.agentsDir, peerAgentId, "history.jsonl");
+      const peerHistoryRaw = await readFile(peerHistoryPath, "utf8");
+      expect(peerHistoryRaw.includes("[signal]")).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("emits wake and sleep lifecycle signals", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
     try {

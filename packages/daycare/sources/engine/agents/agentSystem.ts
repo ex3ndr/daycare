@@ -272,6 +272,9 @@ export class AgentSystem {
   async signalDeliver(signal: Signal, subscriptions: SignalSubscription[]): Promise<void> {
     await Promise.all(
       subscriptions.map(async (subscription) => {
+        if (signal.source.type === "agent" && signal.source.id === subscription.agentId) {
+          return;
+        }
         try {
           await this.post(
             { agentId: subscription.agentId },
@@ -584,7 +587,7 @@ export class AgentSystem {
       await this.delayedSignals.schedule({
         type,
         deliverAt,
-        source: { type: "system" },
+        source: { type: "agent", id: agentId },
         data: { agentId, state: "idle" },
         repeatKey: AGENT_IDLE_REPEAT_KEY
       });
@@ -614,7 +617,7 @@ export class AgentSystem {
     try {
       await this._signals.generate({
         type: lifecycleSignalTypeBuild(agentId, state),
-        source: { type: "system" },
+        source: { type: "agent", id: agentId },
         data: { agentId, state }
       });
     } catch (error) {

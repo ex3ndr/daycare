@@ -102,9 +102,11 @@ Signals are broadcast events for decoupled, multi-agent coordination. Unlike `se
 
 **Subscribing:** `signal_subscribe` — specify a `pattern` with `*` wildcards for individual segments (e.g. `build:*:done` matches `build:project-x:done`). Matching signals arrive as system messages. Set `silent=true` (default) to receive them without waking a sleeping agent; `silent=false` to wake on delivery. You can subscribe other agents by passing their `agentId`.
 
+Signals with `source.type=agent` are **not** delivered back to the same `source.id` agent to avoid feedback loops.
+
 **Unsubscribing:** `signal_unsubscribe` — pass the exact pattern to remove.
 
-**Lifecycle signals:** The system automatically emits `agent:<agentId>:wake`, `agent:<agentId>:sleep`, and `agent:<agentId>:idle` (after 1 minute asleep) when agents change state. Subscribe to these to coordinate handoffs or monitor agent activity.
+**Lifecycle signals:** The system automatically emits `agent:<agentId>:wake`, `agent:<agentId>:sleep`, and `agent:<agentId>:idle` (after 1 minute asleep) when agents change state. These lifecycle signals use `source={ type: "agent", id: <agentId> }`. Subscribe to these to coordinate handoffs or monitor agent activity.
 
 Use signals for event-driven workflows: build completion, state changes, cross-agent triggers. Prefer direct messaging for request/response or directed tasks.
 
