@@ -1,16 +1,23 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { DEFAULT_SOUL_PATH, DEFAULT_USER_PATH } from "../../../paths.js";
+import {
+  DEFAULT_ACTORS_PATH,
+  DEFAULT_SOUL_PATH,
+  DEFAULT_TOOLS_PATH,
+  DEFAULT_USER_PATH
+} from "../../../paths.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 
 /**
- * Ensures the default SOUL.md and USER.md prompt files exist on disk.
+ * Ensures the default prompt files (SOUL, USER, ACTORS, TOOLS) exist on disk.
  * Expects: caller wants bundled defaults written when missing.
  */
 export async function agentPromptFilesEnsure(): Promise<void> {
   await promptFileEnsure(DEFAULT_SOUL_PATH, "SOUL.md");
   await promptFileEnsure(DEFAULT_USER_PATH, "USER.md");
+  await promptFileEnsure(DEFAULT_ACTORS_PATH, "ACTORS.md");
+  await promptFileEnsure(DEFAULT_TOOLS_PATH, "TOOLS.md");
 }
 
 async function promptFileEnsure(filePath: string, bundledName: string): Promise<void> {

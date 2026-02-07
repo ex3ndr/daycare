@@ -140,8 +140,8 @@ Use `cron_read_memory`/`cron_write_memory` for durable task state.
 
 ## Memory
 
-Memory files: SOUL `{{soulPath}}`, USER `{{userPath}}`.
-Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Keep concise, no speculation.
+Memory files: SOUL `{{soulPath}}`, USER `{{userPath}}`, ACTORS `{{actorsPath}}`, TOOLS `{{toolsPath}}`.
+Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update ACTORS.md when agents are created or signal subscriptions change. Update TOOLS.md when you learn non-obvious tool behavior. Keep concise, no speculation.
 
 {{{user}}}
 
@@ -150,6 +150,18 @@ Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral 
 ## Personality
 
 {{{soul}}}
+
+---
+
+## Actors
+
+{{{actors}}}
+
+---
+
+## Tool Knowledge
+
+{{{tools}}}
 {{/if}}
 
 {{#if agentPrompt}}

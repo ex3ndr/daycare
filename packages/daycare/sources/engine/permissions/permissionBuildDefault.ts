@@ -1,6 +1,11 @@
 import path from "node:path";
 
-import { DEFAULT_SOUL_PATH, DEFAULT_USER_PATH } from "../../paths.js";
+import {
+  DEFAULT_ACTORS_PATH,
+  DEFAULT_SOUL_PATH,
+  DEFAULT_TOOLS_PATH,
+  DEFAULT_USER_PATH
+} from "../../paths.js";
 import type { SessionPermissions } from "../permissions.js";
 
 export function permissionBuildDefault(
@@ -9,9 +14,12 @@ export function permissionBuildDefault(
 ): SessionPermissions {
   const heartbeatDir = configDir ? path.resolve(configDir, "heartbeat") : null;
   const skillsDir = configDir ? path.resolve(configDir, "skills") : null;
-  const writeDefaults = [DEFAULT_SOUL_PATH, DEFAULT_USER_PATH].map((entry) =>
-    path.resolve(entry)
-  );
+  const writeDefaults = [
+    DEFAULT_SOUL_PATH,
+    DEFAULT_USER_PATH,
+    DEFAULT_ACTORS_PATH,
+    DEFAULT_TOOLS_PATH
+  ].map((entry) => path.resolve(entry));
   const writeDirs = [
     ...writeDefaults,
     ...(heartbeatDir ? [heartbeatDir] : []),

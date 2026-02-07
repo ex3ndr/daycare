@@ -7,7 +7,12 @@ import { createId } from "@paralleldrive/cuid2";
 import Handlebars from "handlebars";
 
 import { getLogger } from "../../log.js";
-import { DEFAULT_SOUL_PATH, DEFAULT_USER_PATH } from "../../paths.js";
+import {
+  DEFAULT_ACTORS_PATH,
+  DEFAULT_SOUL_PATH,
+  DEFAULT_TOOLS_PATH,
+  DEFAULT_USER_PATH
+} from "../../paths.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { agentPromptBundledRead } from "./ops/agentPromptBundledRead.js";
@@ -413,6 +418,8 @@ export class Agent {
       cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : "",
       soulPath: DEFAULT_SOUL_PATH,
       userPath: DEFAULT_USER_PATH,
+      actorsPath: DEFAULT_ACTORS_PATH,
+      toolsPath: DEFAULT_TOOLS_PATH,
       pluginPrompt,
       skillsPrompt,
       permanentAgentsPrompt,
@@ -971,10 +978,16 @@ export class Agent {
 
     const soulPath = context.soulPath ?? DEFAULT_SOUL_PATH;
     const userPath = context.userPath ?? DEFAULT_USER_PATH;
+    const actorsPath = context.actorsPath ?? DEFAULT_ACTORS_PATH;
+    const toolsPath = context.toolsPath ?? DEFAULT_TOOLS_PATH;
     logger.debug(`buildSystemPrompt reading soul prompt path=${soulPath}`);
     const soul = await promptFileRead(soulPath, "SOUL.md");
     logger.debug(`buildSystemPrompt reading user prompt path=${userPath}`);
     const user = await promptFileRead(userPath, "USER.md");
+    logger.debug(`buildSystemPrompt reading actors prompt path=${actorsPath}`);
+    const actors = await promptFileRead(actorsPath, "ACTORS.md");
+    logger.debug(`buildSystemPrompt reading tools prompt path=${toolsPath}`);
+    const tools = await promptFileRead(toolsPath, "TOOLS.md");
     logger.debug("buildSystemPrompt reading system template");
     const systemTemplate = await agentPromptBundledRead("SYSTEM.md");
     logger.debug("buildSystemPrompt reading permissions template");
@@ -985,7 +998,9 @@ export class Agent {
       context.writeDirs ?? [],
       context.workspace ?? "",
       soulPath,
-      userPath
+      userPath,
+      actorsPath,
+      toolsPath
     );
 
     const isForeground = context.agentKind !== "background";
@@ -1014,6 +1029,8 @@ export class Agent {
       cronTaskIds: context.cronTaskIds ?? "",
       soulPath,
       userPath,
+      actorsPath,
+      toolsPath,
       pluginPrompt: context.pluginPrompt ?? "",
       skillsPrompt: context.skillsPrompt ?? "",
       parentAgentId: context.parentAgentId ?? "",
@@ -1022,6 +1039,8 @@ export class Agent {
       isForeground,
       soul,
       user,
+      actors,
+      tools,
       additionalWriteDirs,
       permanentAgentsPrompt: context.permanentAgentsPrompt ?? "",
       agentPrompt: context.agentPrompt ?? ""
@@ -1066,6 +1085,8 @@ type AgentSystemPromptContext = {
   cronTaskIds?: string;
   soulPath?: string;
   userPath?: string;
+  actorsPath?: string;
+  toolsPath?: string;
   pluginPrompt?: string;
   skillsPrompt?: string;
   permanentAgentsPrompt?: string;
@@ -1081,10 +1102,12 @@ function resolveAdditionalWriteDirs(
   writeDirs: string[],
   workspace: string,
   soulPath: string,
-  userPath: string
+  userPath: string,
+  actorsPath: string,
+  toolsPath: string
 ): string[] {
   const excluded = new Set(
-    [workspace, soulPath, userPath]
+    [workspace, soulPath, userPath, actorsPath, toolsPath]
       .filter((entry) => entry && entry.trim().length > 0)
       .map((entry) => path.resolve(entry))
   );
