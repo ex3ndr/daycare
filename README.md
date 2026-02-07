@@ -120,6 +120,7 @@ yarn build        # Compile TypeScript
 yarn test         # Run tests
 yarn typecheck    # Type check without emit
 yarn dev          # Run with tsx (no build)
+yarn docs:mermaid # Render Mermaid code fences in docs/ to PNG files
 ```
 
 ## Workspace
@@ -143,6 +144,7 @@ See [docs/](./docs/) for detailed documentation:
 - [Permissions](./docs/permissions.md) - Permission system
 - [CLI](./docs/cli.md) - Command reference
 - [Inference](./docs/inference.md) - Inference providers
+- [Mermaid Rendering](./docs/mermaid-rendering.md) - Generate PNG diagrams from Mermaid docs
 
 ## License
 
