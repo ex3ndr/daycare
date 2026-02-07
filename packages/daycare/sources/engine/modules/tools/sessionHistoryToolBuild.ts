@@ -1,11 +1,22 @@
+import { createId } from "@paralleldrive/cuid2";
+import type { Context } from "@mariozechner/pi-ai";
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
-import type { AgentHistoryRecord, ToolDefinition } from "@/types";
+import type {
+  AgentHistoryRecord,
+  ToolDefinition,
+  ToolExecutionContext
+} from "@/types";
+import { listActiveInferenceProviders, getProviderDefinition } from "../../../providers/catalog.js";
+import { providerModelSelectBySize } from "../../../providers/providerModelSelectBySize.js";
 import { stringTruncate } from "../../../utils/stringTruncate.js";
 import { agentDescriptorRead } from "../../agents/ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "../../agents/ops/agentHistoryLoad.js";
 import { agentHistorySummaryBuild } from "../../agents/ops/agentHistorySummaryBuild.js";
+import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.js";
+import { messageExtractText } from "../../messages/messageExtractText.js";
+import { toolResultFormatVerbose } from "./toolResultFormatVerbose.js";
 
 const schema = Type.Object(
   {
@@ -16,6 +27,9 @@ const schema = Type.Object(
 );
 
 type SessionHistoryArgs = Static<typeof schema>;
+
+const MAX_SUMMARY_RECORDS = 400;
+const MAX_SUMMARY_INPUT_CHARS = 120_000;
 
 /**
  * Builds the read_session_history tool for cross-session visibility.
@@ -48,7 +62,7 @@ export function sessionHistoryToolBuild(): ToolDefinition {
       const records = await agentHistoryLoad(config, sessionId);
       const summarized = payload.summarized ?? true;
       const text = summarized
-        ? summaryTextBuild(sessionId, records)
+        ? await summaryTextGenerate(sessionId, records, toolContext)
         : rawHistoryTextBuild(sessionId, records);
 
       const toolMessage: ToolResultMessage = {
@@ -70,40 +84,48 @@ export function sessionHistoryToolBuild(): ToolDefinition {
   };
 }
 
-function summaryTextBuild(sessionId: string, records: AgentHistoryRecord[]): string {
+async function summaryTextGenerate(
+  sessionId: string,
+  records: AgentHistoryRecord[],
+  toolContext: ToolExecutionContext
+): Promise<string> {
   if (records.length === 0) {
     return `No history records found for session ${sessionId}.`;
   }
+  const providers = listActiveInferenceProviders(
+    toolContext.agentSystem.config.current.settings
+  );
+  if (providers.length === 0) {
+    throw new Error("No inference provider available.");
+  }
+  const providersOverride = providers.map((provider) => {
+    const definition = getProviderDefinition(provider.id);
+    const normalModel = providerModelSelectBySize(definition?.models ?? [], "normal");
+    return normalModel ? { ...provider, model: normalModel } : { ...provider };
+  });
 
-  const summary = agentHistorySummaryBuild(records);
-  const lines = [
-    `Session ${sessionId} summary:`,
-    `records: ${summary.recordCount}`,
-    `range: ${formatTimestamp(summary.firstAt)} -> ${formatTimestamp(summary.lastAt)}`,
-    [
-      `types: start=${summary.counts.start}`,
-      `reset=${summary.counts.reset}`,
-      `user=${summary.counts.user_message}`,
-      `assistant=${summary.counts.assistant_message}`,
-      `tool_result=${summary.counts.tool_result}`,
-      `note=${summary.counts.note}`
-    ].join(" ")
-  ];
+  const summaryPrompt = (await agentPromptBundledRead("COMPACTION.md")).trim();
+  const summaryContext: Context = {
+    systemPrompt: summaryPrompt,
+    messages: [
+      {
+        role: "user",
+        content: summaryInputBuild(sessionId, records),
+        timestamp: Date.now()
+      }
+    ]
+  };
 
-  if (summary.lastUserMessage && summary.lastUserMessage.trim().length > 0) {
-    lines.push(`last_user: ${stringTruncate(summary.lastUserMessage, 280)}`);
+  const response = await toolContext.agentSystem.inferenceRouter.complete(
+    summaryContext,
+    `session-history-summary:${createId()}`,
+    { providersOverride }
+  );
+  const summaryText = messageExtractText(response.message)?.trim();
+  if (!summaryText) {
+    throw new Error("Summarization model returned empty output.");
   }
-  if (summary.lastAssistantMessage && summary.lastAssistantMessage.trim().length > 0) {
-    lines.push(`last_assistant: ${stringTruncate(summary.lastAssistantMessage, 280)}`);
-  }
-  if (summary.lastNote && summary.lastNote.trim().length > 0) {
-    lines.push(`last_note: ${stringTruncate(summary.lastNote, 200)}`);
-  }
-  if (summary.lastToolName) {
-    lines.push(`last_tool: ${summary.lastToolName}`);
-  }
-
-  return lines.join("\n");
+  return [`Session ${sessionId} summary:`, summaryText].join("\n");
 }
 
 function rawHistoryTextBuild(sessionId: string, records: AgentHistoryRecord[]): string {
@@ -114,6 +136,58 @@ function rawHistoryTextBuild(sessionId: string, records: AgentHistoryRecord[]): 
     `Session ${sessionId} full history (${records.length} records):`,
     JSON.stringify(records, null, 2)
   ].join("\n");
+}
+
+function summaryInputBuild(sessionId: string, records: AgentHistoryRecord[]): string {
+  const summary = agentHistorySummaryBuild(records);
+  const tail = records.slice(-MAX_SUMMARY_RECORDS);
+  const omittedCount = records.length - tail.length;
+  const lines = [
+    `Summarize this session history: ${sessionId}`,
+    `record_count: ${summary.recordCount}`,
+    `range: ${formatTimestamp(summary.firstAt)} -> ${formatTimestamp(summary.lastAt)}`,
+    [
+      `types: start=${summary.counts.start}`,
+      `reset=${summary.counts.reset}`,
+      `user=${summary.counts.user_message}`,
+      `assistant=${summary.counts.assistant_message}`,
+      `tool_result=${summary.counts.tool_result}`,
+      `note=${summary.counts.note}`
+    ].join(" "),
+    omittedCount > 0
+      ? `Only last ${tail.length} records are included below (${omittedCount} earlier records omitted).`
+      : "All records are included below.",
+    "History:"
+  ];
+
+  for (const record of tail) {
+    lines.push(recordSummaryLineBuild(record));
+  }
+  return stringTruncate(lines.join("\n"), MAX_SUMMARY_INPUT_CHARS);
+}
+
+function recordSummaryLineBuild(record: AgentHistoryRecord): string {
+  const prefix = `[${formatTimestamp(record.at)}]`;
+  if (record.type === "start") {
+    return `${prefix} start`;
+  }
+  if (record.type === "reset") {
+    return `${prefix} reset ${record.message ? `message="${singleLine(record.message)}"` : ""}`.trim();
+  }
+  if (record.type === "user_message") {
+    return `${prefix} user_message text="${singleLine(stringTruncate(record.text, 700))}"`;
+  }
+  if (record.type === "assistant_message") {
+    return `${prefix} assistant_message text="${singleLine(stringTruncate(record.text, 700))}"`;
+  }
+  if (record.type === "note") {
+    return `${prefix} note text="${singleLine(stringTruncate(record.text, 400))}"`;
+  }
+  return `${prefix} tool_result toolCallId=${record.toolCallId} ${singleLine(toolResultFormatVerbose(record.output))}`;
+}
+
+function singleLine(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function formatTimestamp(at: number | null): string {

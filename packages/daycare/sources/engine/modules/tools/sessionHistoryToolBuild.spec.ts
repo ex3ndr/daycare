@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
-import { describe, expect, it } from "vitest";
+import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
@@ -18,7 +19,11 @@ describe("sessionHistoryToolBuild", () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-session-history-tool-"));
     try {
       const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        {
+          engine: { dataDir: dir },
+          assistant: { workspaceDir: dir },
+          providers: [{ id: "openai", model: "gpt-4o-mini", enabled: true }]
+        },
         path.join(dir, "settings.json")
       );
       const currentAgentId = createId();
@@ -38,14 +43,23 @@ describe("sessionHistoryToolBuild", () => {
       });
 
       const tool = sessionHistoryToolBuild();
-      const context = buildContext(currentAgentId, config);
+      const completeMock = vi.fn(async (..._args: unknown[]) => ({
+        message: summaryAssistantMessageBuild("Summary:\n- reviewed history"),
+        providerId: "openai",
+        modelId: "gpt-test"
+      }));
+      const context = buildContext(currentAgentId, config, completeMock);
       const result = await tool.execute({ sessionId: targetSessionId }, context, toolCall);
 
       const text = contentText(result.toolMessage.content);
       expect(result.toolMessage.isError).toBe(false);
-      expect(text).toContain("summary:");
-      expect(text).toContain("records: 1");
-      expect(text).not.toContain("full history");
+      expect(text).toContain("Session");
+      expect(text).toContain("Summary:");
+      expect(text).toContain("reviewed history");
+      expect(completeMock).toHaveBeenCalledTimes(1);
+      const summaryContext = completeMock.mock.calls[0]?.[0] as Context | undefined;
+      expect(summaryContext).toBeDefined();
+      expect(summaryContext?.messages).toHaveLength(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -55,7 +69,11 @@ describe("sessionHistoryToolBuild", () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-session-history-tool-"));
     try {
       const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        {
+          engine: { dataDir: dir },
+          assistant: { workspaceDir: dir },
+          providers: [{ id: "openai", model: "gpt-4o-mini", enabled: true }]
+        },
         path.join(dir, "settings.json")
       );
       const currentAgentId = createId();
@@ -74,7 +92,12 @@ describe("sessionHistoryToolBuild", () => {
       });
 
       const tool = sessionHistoryToolBuild();
-      const context = buildContext(currentAgentId, config);
+      const completeMock = vi.fn(async (..._args: unknown[]) => ({
+        message: summaryAssistantMessageBuild("unused"),
+        providerId: "openai",
+        modelId: "gpt-test"
+      }));
+      const context = buildContext(currentAgentId, config, completeMock);
       const result = await tool.execute(
         { sessionId: targetSessionId, summarized: false },
         context,
@@ -85,6 +108,7 @@ describe("sessionHistoryToolBuild", () => {
       expect(result.toolMessage.isError).toBe(false);
       expect(text).toContain("full history");
       expect(text).toContain("\"type\": \"note\"");
+      expect(completeMock).not.toHaveBeenCalled();
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -93,7 +117,12 @@ describe("sessionHistoryToolBuild", () => {
 
 function buildContext(
   agentId: string,
-  config: ReturnType<typeof configResolve>
+  config: ReturnType<typeof configResolve>,
+  completeMock: (context: Context) => Promise<{
+    message: AssistantMessage;
+    providerId: string;
+    modelId: string;
+  }>
 ): ToolExecutionContext {
   return {
     connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -105,7 +134,12 @@ function buildContext(
     agent: { id: agentId } as unknown as ToolExecutionContext["agent"],
     source: "test",
     messageContext: {},
-    agentSystem: { config: { current: config } } as unknown as ToolExecutionContext["agentSystem"],
+    agentSystem: {
+      config: { current: config },
+      inferenceRouter: {
+        complete: completeMock
+      }
+    } as unknown as ToolExecutionContext["agentSystem"],
     heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
   };
 }
@@ -124,4 +158,19 @@ function contentText(content: unknown): string {
     .map((item) => (item as { text?: unknown }).text)
     .filter((value): value is string => typeof value === "string")
     .join("\n");
+}
+
+function summaryAssistantMessageBuild(text: string): AssistantMessage {
+  return {
+    role: "assistant",
+    content: [{ type: "text", text }],
+    stopReason: "complete",
+    usage: {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      total: 0
+    }
+  } as unknown as AssistantMessage;
 }
