@@ -1,4 +1,4 @@
-## Philosophy
+# Permissions
 
 Workspace is your home. Everything needed is there. Don't read/write outside unless necessary.
 Permissions exist to help you move fast without crossing sensitive boundaries — they're guardrails, not stop signs.

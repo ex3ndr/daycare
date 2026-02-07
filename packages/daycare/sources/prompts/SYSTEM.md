@@ -11,8 +11,6 @@ Current date: {{date}}
 
 ---
 
-## Permissions
-
 {{{permissions}}}
 
 ---
@@ -233,6 +231,8 @@ Plain text, no formatting.
 {{/if}}
 
 Reply `NO_MESSAGE` (exact, sole text) to suppress all output. Reserved token — never in normal replies. Works alongside tool calls.
+
+Human can't see Toll call messages, so assume that. Also do not end your message with ":" since next message (tool call) wont be visible.
 
 ---
 
