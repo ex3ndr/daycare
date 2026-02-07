@@ -8,6 +8,8 @@ import type { FileStore } from "../../files/store.js";
 import type { AuthStore } from "../../auth/store.js";
 import type {
   AgentTokenEntry,
+  DelayedSignalCancelRepeatKeyInput,
+  DelayedSignalScheduleInput,
   PermissionAccess,
   SessionPermissions,
   Signal,
@@ -45,6 +47,12 @@ import type { Signals } from "../signals/signals.js";
 
 const logger = getLogger("engine.agent-system");
 const AGENT_IDLE_DELAY_MS = 60_000;
+const AGENT_IDLE_REPEAT_KEY = "lifecycle-idle";
+
+type DelayedSignalsFacade = {
+  schedule: (input: DelayedSignalScheduleInput) => Promise<unknown>;
+  cancelByRepeatKey: (input: DelayedSignalCancelRepeatKeyInput) => Promise<number>;
+};
 
 type AgentEntry = {
   agentId: string;
@@ -65,6 +73,7 @@ export type AgentSystemOptions = {
   inferenceRouter: InferenceRouter;
   fileStore: FileStore;
   authStore: AuthStore;
+  delayedSignals?: DelayedSignalsFacade;
 };
 
 export class AgentSystem {
@@ -77,12 +86,12 @@ export class AgentSystem {
   readonly inferenceRouter: InferenceRouter;
   readonly fileStore: FileStore;
   readonly authStore: AuthStore;
+  private readonly delayedSignals: DelayedSignalsFacade | null;
   private _crons: Crons | null = null;
   private _heartbeats: Heartbeats | null = null;
   private _signals: Signals | null = null;
   private entries = new Map<string, AgentEntry>();
   private keyMap = new Map<string, string>();
-  private idleTimers = new Map<string, NodeJS.Timeout>();
   private stage: "idle" | "loaded" | "running" = "idle";
 
   constructor(options: AgentSystemOptions) {
@@ -95,6 +104,23 @@ export class AgentSystem {
     this.inferenceRouter = options.inferenceRouter;
     this.fileStore = options.fileStore;
     this.authStore = options.authStore;
+    this.delayedSignals = options.delayedSignals ?? null;
+
+    this.eventBus.onEvent((event) => {
+      if (event.type !== "signal.generated") {
+        return;
+      }
+      const signal = event.payload as Signal;
+      const agentId = idleLifecycleAgentIdResolve(signal);
+      if (!agentId) {
+        return;
+      }
+      this.eventBus.emit("agent.idle", {
+        agentId,
+        delayMs: AGENT_IDLE_DELAY_MS
+      });
+      logger.debug({ agentId, delayMs: AGENT_IDLE_DELAY_MS }, "Agent idle event emitted");
+    });
   }
 
   get crons(): Crons {
@@ -362,7 +388,7 @@ export class AgentSystem {
       slept = true;
     });
     if (slept) {
-      this.scheduleIdleEvent(agentId);
+      await this.scheduleIdleSignal(agentId);
       await this.signalLifecycle(agentId, "sleep");
     }
   }
@@ -554,7 +580,7 @@ export class AgentSystem {
     if (entry.agent.state.state !== "sleeping") {
       return false;
     }
-    this.cancelIdleEvent(entry.agentId);
+    await this.cancelIdleSignal(entry.agentId);
     entry.agent.state.state = "active";
     await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
     this.eventBus.emit("agent.woke", { agentId: entry.agentId });
@@ -562,64 +588,46 @@ export class AgentSystem {
     return true;
   }
 
-  private scheduleIdleEvent(agentId: string): void {
-    this.cancelIdleEvent(agentId);
-    let timer: NodeJS.Timeout;
-    timer = setTimeout(() => {
-      void this.emitIdleIfStillSleeping(agentId, timer);
-    }, AGENT_IDLE_DELAY_MS);
-    this.idleTimers.set(agentId, timer);
+  private async scheduleIdleSignal(agentId: string): Promise<void> {
+    if (!this.delayedSignals) {
+      return;
+    }
+    const deliverAt = Date.now() + AGENT_IDLE_DELAY_MS;
+    const type = lifecycleSignalTypeBuild(agentId, "idle");
+    try {
+      await this.delayedSignals.schedule({
+        type,
+        deliverAt,
+        source: { type: "system" },
+        data: { agentId, state: "idle" },
+        repeatKey: AGENT_IDLE_REPEAT_KEY
+      });
+    } catch (error) {
+      logger.warn({ agentId, error }, "Failed to schedule idle lifecycle signal");
+    }
   }
 
-  private cancelIdleEvent(agentId: string): void {
-    const timer = this.idleTimers.get(agentId);
-    if (!timer) {
+  private async cancelIdleSignal(agentId: string): Promise<void> {
+    if (!this.delayedSignals) {
       return;
     }
-    clearTimeout(timer);
-    this.idleTimers.delete(agentId);
+    try {
+      await this.delayedSignals.cancelByRepeatKey({
+        type: lifecycleSignalTypeBuild(agentId, "idle"),
+        repeatKey: AGENT_IDLE_REPEAT_KEY
+      });
+    } catch (error) {
+      logger.warn({ agentId, error }, "Failed to cancel idle lifecycle signal");
+    }
   }
 
-  private async emitIdleIfStillSleeping(agentId: string, timer: NodeJS.Timeout): Promise<void> {
-    if (this.idleTimers.get(agentId) !== timer) {
-      return;
-    }
-    this.idleTimers.delete(agentId);
-
-    const entry = this.entries.get(agentId);
-    if (!entry) {
-      return;
-    }
-
-    let shouldEmit = false;
-    await entry.lock.inLock(async () => {
-      if (entry.agent.state.state !== "sleeping") {
-        return;
-      }
-      if (entry.inbox.size() > 0) {
-        return;
-      }
-      shouldEmit = true;
-    });
-    if (!shouldEmit) {
-      return;
-    }
-
-    this.eventBus.emit("agent.idle", {
-      agentId,
-      delayMs: AGENT_IDLE_DELAY_MS
-    });
-    logger.debug({ agentId, delayMs: AGENT_IDLE_DELAY_MS }, "Agent idle event emitted");
-    await this.signalLifecycle(agentId, "idle");
-  }
-
-  private async signalLifecycle(agentId: string, state: "wake" | "sleep" | "idle"): Promise<void> {
+  private async signalLifecycle(agentId: string, state: "wake" | "sleep"): Promise<void> {
     if (!this._signals) {
       return;
     }
     try {
       await this._signals.generate({
-        type: `agent:${agentId}:${state}`,
+        type: lifecycleSignalTypeBuild(agentId, state),
         source: { type: "system" },
         data: { agentId, state }
       });
@@ -676,4 +684,33 @@ export class AgentSystem {
       }
     };
   }
+}
+
+function lifecycleSignalTypeBuild(agentId: string, state: "wake" | "sleep" | "idle"): string {
+  return `agent:${agentId}:${state}`;
+}
+
+function idleLifecycleAgentIdResolve(signal: Signal): string | null {
+  if (signal.source.type !== "system") {
+    return null;
+  }
+  if (!signal.type.startsWith("agent:") || !signal.type.endsWith(":idle")) {
+    return null;
+  }
+  const parts = signal.type.split(":");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const agentId = parts[1]?.trim();
+  if (!agentId) {
+    return null;
+  }
+  if (typeof signal.data !== "object" || !signal.data) {
+    return null;
+  }
+  const data = signal.data as { agentId?: unknown; state?: unknown };
+  if (data.agentId !== agentId || data.state !== "idle") {
+    return null;
+  }
+  return agentId;
 }

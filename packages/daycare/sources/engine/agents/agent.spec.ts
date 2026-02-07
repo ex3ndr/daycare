@@ -21,6 +21,7 @@ import type { InferenceRouter } from "../modules/inference/router.js";
 import type { Crons } from "../cron/crons.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Signals } from "../signals/signals.js";
+import { DelayedSignals } from "../signals/delayedSignals.js";
 
 describe("Agent", () => {
   it("persists descriptor, state, and history on create", async () => {
@@ -303,14 +304,18 @@ describe("Agent", () => {
   it("emits idle lifecycle signal one minute after sleeping", async () => {
     vi.useFakeTimers();
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    let delayedSignals: DelayedSignals | null = null;
     try {
       const config = configResolve(
         { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
         path.join(dir, "settings.json")
       );
       const eventBus = new EngineEventBus();
+      const configModule = new ConfigModule(config);
+      const signals = new Signals({ eventBus, configDir: config.configDir });
+      delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
       const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
+        config: configModule,
         eventBus,
         connectorRegistry: new ConnectorRegistry({
           onMessage: async () => undefined
@@ -320,11 +325,12 @@ describe("Agent", () => {
         pluginManager: {} as unknown as PluginManager,
         inferenceRouter: {} as unknown as InferenceRouter,
         fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
+        authStore: new AuthStore(config),
+        delayedSignals
       });
       agentSystem.setCrons({} as unknown as Crons);
-      const signals = new Signals({ eventBus, configDir: config.configDir });
       agentSystem.setSignals(signals);
+      await delayedSignals.start();
       await agentSystem.load();
       await agentSystem.start();
 
@@ -363,6 +369,7 @@ describe("Agent", () => {
 
       expect(idleAgentIds).toContain(agentId);
     } finally {
+      delayedSignals?.stop();
       vi.useRealTimers();
       await rm(dir, { recursive: true, force: true });
     }
@@ -371,14 +378,18 @@ describe("Agent", () => {
   it("cancels pending idle lifecycle signal when agent wakes", async () => {
     vi.useFakeTimers();
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    let delayedSignals: DelayedSignals | null = null;
     try {
       const config = configResolve(
         { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
         path.join(dir, "settings.json")
       );
       const eventBus = new EngineEventBus();
+      const configModule = new ConfigModule(config);
+      const signals = new Signals({ eventBus, configDir: config.configDir });
+      delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
       const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
+        config: configModule,
         eventBus,
         connectorRegistry: new ConnectorRegistry({
           onMessage: async () => undefined
@@ -388,11 +399,12 @@ describe("Agent", () => {
         pluginManager: {} as unknown as PluginManager,
         inferenceRouter: {} as unknown as InferenceRouter,
         fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
+        authStore: new AuthStore(config),
+        delayedSignals
       });
       agentSystem.setCrons({} as unknown as Crons);
-      const signals = new Signals({ eventBus, configDir: config.configDir });
       agentSystem.setSignals(signals);
+      await delayedSignals.start();
       await agentSystem.load();
       await agentSystem.start();
 
@@ -437,6 +449,7 @@ describe("Agent", () => {
 
       expect(idleAgentIds).toEqual([agentId]);
     } finally {
+      delayedSignals?.stop();
       vi.useRealTimers();
       await rm(dir, { recursive: true, force: true });
     }

@@ -226,7 +226,8 @@ export class Engine {
       pluginManager: this.pluginManager,
       inferenceRouter: this.inferenceRouter,
       fileStore: this.fileStore,
-      authStore: this.authStore
+      authStore: this.authStore,
+      delayedSignals: this.delayedSignals
     });
 
     this.crons = new Crons({
