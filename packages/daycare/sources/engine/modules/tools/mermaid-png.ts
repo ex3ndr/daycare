@@ -24,14 +24,14 @@ type MermaidPngArgs = {
 
 /**
  * Builds a tool that renders Mermaid diagram source into a PNG file.
- * Expects: args.mermaid contains Mermaid source (raw or ```mermaid fenced), optional theme exists in THEMES.
+ * Expects: args.mermaid contains raw Mermaid source without markdown fences.
  */
 export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
   return {
     tool: {
       name: "generate_mermaid_png",
       description:
-        "Render Mermaid diagram source into a PNG file and return it as a generated artifact.",
+        "Render raw Mermaid diagram source into a PNG file and return it as a generated artifact.",
       parameters: schema
     },
     execute: async (args, context, toolCall) => {
@@ -43,9 +43,12 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         throw new Error(`Unknown Mermaid theme: ${themeName}. Available themes: ${available}`);
       }
 
-      const diagram = mermaidSourceResolve(payload.mermaid);
+      const diagram = payload.mermaid.trim();
       if (diagram.length === 0) {
         throw new Error("Mermaid source is empty.");
+      }
+      if (diagram.includes("```")) {
+        throw new Error("Provide raw Mermaid source without ``` fences.");
       }
 
       const svg = await renderMermaid(diagram, theme);
@@ -97,19 +100,6 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
       };
     }
   };
-}
-
-function mermaidSourceResolve(input: string): string {
-  const trimmed = input.trim();
-  if (trimmed.length === 0) {
-    return "";
-  }
-
-  const fencedMatch = trimmed.match(/```mermaid[^\n]*\n([\s\S]*?)```/i);
-  if (fencedMatch?.[1]) {
-    return fencedMatch[1].trim();
-  }
-  return trimmed;
 }
 
 function mermaidPngNameResolve(requestedName?: string): string {

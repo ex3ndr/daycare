@@ -4,7 +4,7 @@ Daycare provides a built-in tool named `generate_mermaid_png` for agents to rend
 
 ## Parameters
 
-- `mermaid` (required): Mermaid source string. Supports raw Mermaid text or a fenced block.
+- `mermaid` (required): Raw Mermaid source string (no markdown fences).
 - `name` (optional): Output file name. `.png` is appended if missing.
 - `theme` (optional): Mermaid theme name from `beautiful-mermaid` (default: `github-light`).
 - `width` (optional): Output image width in pixels, range `256..4096` (default: `1600`).

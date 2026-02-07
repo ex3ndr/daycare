@@ -23,7 +23,7 @@ describe("buildMermaidPngTool", () => {
     const tool = buildMermaidPngTool();
     const result = await tool.execute(
       {
-        mermaid: "```mermaid\ngraph LR\n  A --> B\n```",
+        mermaid: "graph LR\n  A --> B",
         name: "pipeline"
       },
       contextBuild(saveBuffer),
@@ -46,6 +46,23 @@ describe("buildMermaidPngTool", () => {
       }
     ]);
     expect(result.toolMessage.isError).toBe(false);
+  });
+
+  it("rejects fenced markdown input", async () => {
+    const saveBuffer = vi.fn();
+    const tool = buildMermaidPngTool();
+
+    await expect(
+      tool.execute(
+        {
+          mermaid: "```mermaid\ngraph LR\n  A --> B\n```"
+        },
+        contextBuild(saveBuffer),
+        { id: "call-1", name: "generate_mermaid_png" }
+      )
+    ).rejects.toThrow("raw Mermaid source without ``` fences");
+
+    expect(saveBuffer).not.toHaveBeenCalled();
   });
 
   it("rejects unknown theme", async () => {
