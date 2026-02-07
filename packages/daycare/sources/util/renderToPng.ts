@@ -23,7 +23,7 @@ export async function renderToPng(
     });
 
     await page.setContent(
-      `<!doctype html><html><body style="margin:0;padding:0;">${svg}</body></html>`,
+      `<!doctype html><html><body style="margin:0;padding:0;line-height:0;">${svg}</body></html>`,
       { waitUntil: "load" }
     );
 
@@ -39,12 +39,23 @@ export async function renderToPng(
       await globalObject.document?.fonts?.ready;
     });
 
-    if (typeof options.width === "number") {
-      await svgLocator.evaluate((node, width) => {
-        node.style.width = `${width}px`;
-        node.style.height = "auto";
-      }, options.width);
-    }
+    await svgLocator.evaluate((node, width) => {
+      node.style.display = "block";
+      node.style.verticalAlign = "top";
+      node.style.margin = "0";
+      node.style.overflow = "hidden";
+      if (typeof width === "number") {
+        const nextWidth = Math.max(1, Math.round(width));
+        node.style.width = `${nextWidth}px`;
+        const viewBox = node.viewBox?.baseVal;
+        if (viewBox && Number.isFinite(viewBox.width) && Number.isFinite(viewBox.height) && viewBox.width > 0) {
+          const nextHeight = Math.max(1, Math.round((nextWidth * viewBox.height) / viewBox.width));
+          node.style.height = `${nextHeight}px`;
+        } else {
+          node.style.height = "auto";
+        }
+      }
+    }, options.width);
 
     const screenshot = await svgLocator.screenshot({
       type: "png",
