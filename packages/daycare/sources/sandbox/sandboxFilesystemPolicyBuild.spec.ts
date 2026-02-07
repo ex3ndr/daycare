@@ -7,7 +7,7 @@ import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js"
 function basePermissions(): SessionPermissions {
   return {
     workingDir: path.resolve("/workspace"),
-    writeDirs: [path.resolve("/workspace"), path.resolve("/workspace/tmp")],
+    writeDirs: [path.resolve("/workspace/tmp"), path.resolve("/workspace/tmp")],
     readDirs: [],
     network: false
   };
@@ -21,10 +21,7 @@ describe("sandboxFilesystemPolicyBuild", () => {
       homeDir: "/home/alice"
     });
 
-    expect(result.allowWrite).toEqual([
-      path.resolve("/workspace"),
-      path.resolve("/workspace/tmp")
-    ]);
+    expect(result.allowWrite).toEqual([path.resolve("/workspace/tmp")]);
   });
 
   it("adds linux sensitive deny paths to read and write", () => {

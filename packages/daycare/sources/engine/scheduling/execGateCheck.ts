@@ -157,7 +157,7 @@ async function resolveGateHome(
   permissions: SessionPermissions,
   home: string
 ): Promise<string> {
-  const allowedDirs = Array.from(new Set([permissions.workingDir, ...permissions.writeDirs]));
+  const allowedDirs = Array.from(new Set([...permissions.writeDirs]));
   const resolved = await pathResolveSecure(allowedDirs, home);
   return resolved.realPath;
 }

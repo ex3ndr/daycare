@@ -28,7 +28,7 @@ export async function permissionAccessAllows(
   }
 
   const allowedDirs = access.kind === "write"
-    ? [permissions.workingDir, ...permissions.writeDirs]
+    ? [...permissions.writeDirs]
     : [permissions.workingDir, ...permissions.readDirs, ...permissions.writeDirs];
 
   try {

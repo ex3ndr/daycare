@@ -43,4 +43,26 @@ describe("permissionAccessAllows", () => {
     );
     expect(allowed).toBe(false);
   });
+
+  it("does not imply write access from workingDir", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "perm-working-dir-"));
+    tempDirs.push(dir);
+    const target = path.join(dir, "file.txt");
+    const allowed = await permissionAccessAllows(
+      { workingDir: dir, writeDirs: [], readDirs: [], network: false },
+      { kind: "write", path: target }
+    );
+    expect(allowed).toBe(false);
+  });
+
+  it("allows write access when path is explicitly in writeDirs", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "perm-write-dir-"));
+    tempDirs.push(dir);
+    const target = path.join(dir, "file.txt");
+    const allowed = await permissionAccessAllows(
+      { workingDir: "/tmp", writeDirs: [dir], readDirs: [], network: false },
+      { kind: "write", path: target }
+    );
+    expect(allowed).toBe(true);
+  });
 });

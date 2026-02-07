@@ -20,13 +20,13 @@ describe("sandboxCanWrite", () => {
     await fs.rm(outsideDir, { recursive: true, force: true });
   });
 
-  it("allows writing within the workspace", async () => {
+  it("rejects writing within the workspace when not explicitly granted", async () => {
     const permissions = buildPermissions(workingDir, []);
     const target = path.join(workingDir, "nested", "output.txt");
 
-    const result = await sandboxCanWrite(permissions, target);
-
-    expect(result).toBe(path.join(await fs.realpath(workingDir), "nested", "output.txt"));
+    await expect(sandboxCanWrite(permissions, target))
+      .rejects
+      .toThrow("Path is outside the allowed directories.");
   });
 
   it("allows writing within explicitly granted write directories", async () => {
@@ -36,6 +36,15 @@ describe("sandboxCanWrite", () => {
     const result = await sandboxCanWrite(permissions, target);
 
     expect(result).toBe(path.join(await fs.realpath(outsideDir), "output.txt"));
+  });
+
+  it("allows writing in workspace when workspace is explicitly granted", async () => {
+    const permissions = buildPermissions(workingDir, [workingDir]);
+    const target = path.join(workingDir, "nested", "output.txt");
+
+    const result = await sandboxCanWrite(permissions, target);
+
+    expect(result).toBe(path.join(await fs.realpath(workingDir), "nested", "output.txt"));
   });
 
   it("rejects paths outside the write allowlist", async () => {

@@ -157,7 +157,7 @@ describe("exec tool allowedDomains", () => {
 
   it("maps HOME to provided home path", async () => {
     const tool = buildExecTool();
-    const context = createContext(workingDir, false);
+    const context = createContext(workingDir, false, [], [workingDir]);
     const home = path.join(workingDir, ".daycare-home");
 
     const result = await tool.execute(
@@ -175,6 +175,23 @@ describe("exec tool allowedDomains", () => {
     const expectedHome = await fs.realpath(home);
     expect(result.toolMessage.isError).toBe(false);
     expect(text).toContain(`stdout:\n${expectedHome}`);
+  });
+
+  it("rejects HOME path when not write-granted", async () => {
+    const tool = buildExecTool();
+    const context = createContext(workingDir, false);
+    const home = path.join(workingDir, ".daycare-home");
+
+    await expect(
+      tool.execute(
+        {
+          command: "echo ok",
+          home
+        },
+        context,
+        execToolCall
+      )
+    ).rejects.toThrow("Path is outside the allowed directories.");
   });
 });
 

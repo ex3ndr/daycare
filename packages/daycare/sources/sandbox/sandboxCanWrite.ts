@@ -9,7 +9,7 @@ export async function sandboxCanWrite(
   permissions: SessionPermissions,
   target: string
 ): Promise<string> {
-  const allowedDirs = [permissions.workingDir, ...permissions.writeDirs];
+  const allowedDirs = [...permissions.writeDirs];
   const result = await pathResolveSecure(allowedDirs, target);
   return result.realPath;
 }

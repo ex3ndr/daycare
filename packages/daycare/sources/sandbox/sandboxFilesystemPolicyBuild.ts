@@ -68,7 +68,6 @@ export function sandboxFilesystemPolicyBuild(
   const homeDir = path.resolve(input.homeDir ?? os.homedir());
 
   const allowWrite = dedupeResolvedPaths([
-    input.permissions.workingDir,
     ...input.permissions.writeDirs
   ]);
 

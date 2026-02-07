@@ -9,6 +9,8 @@ These functions receive `SessionPermissions` and return the resolved real path w
 
 `sandboxCanRead` supports default read behavior: when `readDirs` is empty, any absolute path is allowed. When `readDirs` is configured, it also includes `writeDirs` so file-level write grants remain readable.
 
+`sandboxCanWrite` only allows writes within explicitly granted `writeDirs` (it does not implicitly allow `workingDir`).
+
 ```mermaid
 flowchart LR
   A["Shell read/write/edit tools"] --> B["sandboxCanRead / sandboxCanWrite"]

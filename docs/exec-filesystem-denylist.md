@@ -4,7 +4,7 @@
 This is a defense-in-depth layer for sensitive host paths (for example `~/.ssh`) on Linux and macOS.
 
 Policy shape:
-- `allowWrite`: agent `workingDir` + granted `writeDirs`
+- `allowWrite`: granted `writeDirs` only
 - `denyRead`: default sensitive paths
 - `denyWrite`: same as `denyRead`
 
@@ -16,7 +16,7 @@ Default sensitive paths include:
 ```mermaid
 flowchart TD
   A[SessionPermissions] --> B[sandboxFilesystemPolicyBuild]
-  B --> C[allowWrite = workingDir + writeDirs]
+  B --> C[allowWrite = writeDirs only]
   B --> D[denyRead = default sensitive paths]
   B --> E[denyWrite = denyRead]
   C --> F[SandboxRuntime filesystem config]
