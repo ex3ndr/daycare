@@ -6,6 +6,9 @@
 - `summarized`: when omitted, defaults to `true`
   - `true`: runs a summarization model and returns model-generated summary text
   - `false`: return full JSON history payload
+- `fromAt`: optional lower bound (inclusive) for record timestamp, unix milliseconds
+- `toAt`: optional upper bound (inclusive) for record timestamp, unix milliseconds
+- when both `fromAt` and `toAt` are provided, `fromAt` must be `<= toAt`
 - summarized mode selects the normal-sized model when provider metadata is available
 
 ```mermaid
@@ -18,6 +21,7 @@ sequenceDiagram
   Agent->>Tool: agentId + summarized?
   Tool->>Disk: read descriptor.json
   Tool->>Disk: read history.jsonl
+  Tool->>Tool: filter by fromAt/toAt (if provided)
   alt summarized=true (default)
     Tool->>Router: complete(summary context)
     Router->>Model: summarize history payload

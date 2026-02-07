@@ -60,6 +60,12 @@ describe("sessionHistoryToolBuild", () => {
       const summaryContext = completeMock.mock.calls[0]?.[0] as Context | undefined;
       expect(summaryContext).toBeDefined();
       expect(summaryContext?.messages).toHaveLength(1);
+      const details = result.toolMessage.details as {
+        fromAt?: number | null;
+        toAt?: number | null;
+      };
+      expect(details.fromAt).toBe(null);
+      expect(details.toAt).toBe(null);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -90,6 +96,11 @@ describe("sessionHistoryToolBuild", () => {
         at: 30,
         text: "done"
       });
+      await agentHistoryAppend(config, targetAgentId, {
+        type: "note",
+        at: 50,
+        text: "late"
+      });
 
       const tool = sessionHistoryToolBuild();
       const completeMock = vi.fn(async (..._args: unknown[]) => ({
@@ -99,7 +110,7 @@ describe("sessionHistoryToolBuild", () => {
       }));
       const context = buildContext(currentAgentId, config, completeMock);
       const result = await tool.execute(
-        { agentId: targetAgentId, summarized: false },
+        { agentId: targetAgentId, summarized: false, fromAt: 20, toAt: 40 },
         context,
         toolCall
       );
@@ -108,6 +119,59 @@ describe("sessionHistoryToolBuild", () => {
       expect(result.toolMessage.isError).toBe(false);
       expect(text).toContain("full session history");
       expect(text).toContain("\"type\": \"note\"");
+      expect(text).toContain("\"at\": 30");
+      expect(text).not.toContain("\"at\": 10");
+      expect(text).not.toContain("\"at\": 50");
+      expect(completeMock).not.toHaveBeenCalled();
+      const details = result.toolMessage.details as {
+        recordCount: number;
+        fromAt?: number | null;
+        toAt?: number | null;
+      };
+      expect(details.recordCount).toBe(1);
+      expect(details.fromAt).toBe(20);
+      expect(details.toAt).toBe(40);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid time range", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-session-history-tool-"));
+    try {
+      const config = configResolve(
+        {
+          engine: { dataDir: dir },
+          assistant: { workspaceDir: dir },
+          providers: [{ id: "openai", model: "gpt-4o-mini", enabled: true }]
+        },
+        path.join(dir, "settings.json")
+      );
+      const currentAgentId = createId();
+      const targetAgentId = createId();
+      await agentDescriptorWrite(config, targetAgentId, {
+        type: "subagent",
+        id: targetAgentId,
+        parentAgentId: currentAgentId,
+        name: "worker"
+      });
+      await agentHistoryAppend(config, targetAgentId, { type: "start", at: 10 });
+
+      const tool = sessionHistoryToolBuild();
+      const completeMock = vi.fn(async (..._args: unknown[]) => ({
+        message: summaryAssistantMessageBuild("unused"),
+        providerId: "openai",
+        modelId: "gpt-test"
+      }));
+      const context = buildContext(currentAgentId, config, completeMock);
+
+      await expect(
+        tool.execute(
+          { agentId: targetAgentId, summarized: false, fromAt: 41, toAt: 40 },
+          context,
+          toolCall
+        )
+      ).rejects.toThrow("fromAt must be less than or equal to toAt.");
       expect(completeMock).not.toHaveBeenCalled();
     } finally {
       await rm(dir, { recursive: true, force: true });

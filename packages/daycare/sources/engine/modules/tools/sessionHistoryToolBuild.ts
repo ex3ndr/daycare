@@ -21,12 +21,18 @@ import { toolResultFormatVerbose } from "./toolResultFormatVerbose.js";
 const schema = Type.Object(
   {
     agentId: Type.String({ minLength: 1 }),
-    summarized: Type.Optional(Type.Boolean())
+    summarized: Type.Optional(Type.Boolean()),
+    fromAt: Type.Optional(Type.Integer({ minimum: 0 })),
+    toAt: Type.Optional(Type.Integer({ minimum: 0 }))
   },
   { additionalProperties: false }
 );
 
 type SessionHistoryArgs = Static<typeof schema>;
+type SessionHistoryTimeRange = {
+  fromAt: number | null;
+  toAt: number | null;
+};
 
 const MAX_SUMMARY_RECORDS = 400;
 const MAX_SUMMARY_INPUT_CHARS = 120_000;
@@ -40,7 +46,7 @@ export function sessionHistoryToolBuild(): ToolDefinition {
     tool: {
       name: "read_session_history",
       description:
-        "Read another session's history by agentId. Returns a summary by default (summarized=true).",
+        "Read another session's history by agentId. Returns a summary by default (summarized=true). Optional fromAt/toAt filters by record timestamp (unix ms).",
       parameters: schema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -59,7 +65,11 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         throw new Error(`Agent session not found: ${agentId}`);
       }
 
-      const records = await agentHistoryLoad(config, agentId);
+      const timeRange = sessionHistoryTimeRangeNormalize(payload.fromAt, payload.toAt);
+      const records = agentHistoryFilterByTime(
+        await agentHistoryLoad(config, agentId),
+        timeRange
+      );
       const summarized = payload.summarized ?? true;
       const text = summarized
         ? await summaryTextGenerate(agentId, records, toolContext)
@@ -73,7 +83,9 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         details: {
           agentId,
           summarized,
-          recordCount: records.length
+          recordCount: records.length,
+          fromAt: timeRange.fromAt,
+          toAt: timeRange.toAt
         },
         isError: false,
         timestamp: Date.now()
@@ -164,6 +176,39 @@ function summaryInputBuild(agentId: string, records: AgentHistoryRecord[]): stri
     lines.push(recordSummaryLineBuild(record));
   }
   return stringTruncate(lines.join("\n"), MAX_SUMMARY_INPUT_CHARS);
+}
+
+function sessionHistoryTimeRangeNormalize(
+  fromAt: number | undefined,
+  toAt: number | undefined
+): SessionHistoryTimeRange {
+  const normalized: SessionHistoryTimeRange = {
+    fromAt: fromAt ?? null,
+    toAt: toAt ?? null
+  };
+  if (
+    normalized.fromAt !== null &&
+    normalized.toAt !== null &&
+    normalized.fromAt > normalized.toAt
+  ) {
+    throw new Error("fromAt must be less than or equal to toAt.");
+  }
+  return normalized;
+}
+
+function agentHistoryFilterByTime(
+  records: AgentHistoryRecord[],
+  timeRange: SessionHistoryTimeRange
+): AgentHistoryRecord[] {
+  return records.filter((record) => {
+    if (timeRange.fromAt !== null && record.at < timeRange.fromAt) {
+      return false;
+    }
+    if (timeRange.toAt !== null && record.at > timeRange.toAt) {
+      return false;
+    }
+    return true;
+  });
 }
 
 function recordSummaryLineBuild(record: AgentHistoryRecord): string {
