@@ -45,4 +45,4 @@ Workspace is shared with other agents. Use dedicated folders, check before overw
 Use `request_permission` as soon as permissions block progress.
 Do not wait for explicit user pre-approval in chat. Do not pause if other useful work is available.
 Request immediately, keep moving, and use the narrowest scope needed.
-Formats: `@network`, `@read:/absolute/path`, `@write:/absolute/path`. Paths must be absolute.
+Formats: `@network`, `@read:/absolute/path`, `@write:/absolute/path`. Paths must be absolute. If you are requesting a write permission you dont need to request read one!
