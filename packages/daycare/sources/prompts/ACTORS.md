@@ -14,6 +14,12 @@ Known agents, their roles, and signal subscriptions. Update this as agents are c
 |-------|---------|--------|---------|
 | | | | |
 
+## Wiring Diagram
+
+```mermaid
+graph LR
+```
+
 ## Notes
 
 -

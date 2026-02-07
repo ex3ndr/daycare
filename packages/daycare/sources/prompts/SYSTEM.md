@@ -143,7 +143,20 @@ Use `cron_read_memory`/`cron_write_memory` for durable task state.
 ## Memory
 
 Memory files: SOUL `{{soulPath}}`, USER `{{userPath}}`, ACTORS `{{actorsPath}}`, TOOLS `{{toolsPath}}`.
-Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update ACTORS.md when agents are created or signal subscriptions change. Update TOOLS.md when you learn non-obvious tool behavior. Keep concise, no speculation.
+Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update TOOLS.md when you learn non-obvious tool behavior. Keep concise, no speculation.
+
+**ACTORS.md — update before any system change.** Any change to the actor topology must be documented in ACTORS.md **before** implementing it. This includes:
+- Adding or removing a **permanent agent**
+- Adding or removing a **signal subscription**
+- Introducing a **new event/signal type** that any agent emits or consumes
+- Changing an agent's **role, kind, or wiring**
+
+ACTORS.md must contain:
+1. A table of all known agents (name, kind, role).
+2. A table of all signal subscriptions (agent, pattern, silent flag, purpose).
+3. A **mermaid diagram** showing how agents, signals, and subscriptions connect.
+
+Update the mermaid diagram whenever the wiring changes so it stays in sync with the tables. Document first, then implement.
 
 {{{user}}}
 

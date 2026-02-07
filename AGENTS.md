@@ -40,6 +40,27 @@
 - Add cross-cutting/public types to `sources/types.ts` and re-export there.
 - Keep domain-internal types in their local modules.
 
+## ACTORS.md — System Architecture Documentation
+Any change that affects the system's actor topology **must** update [`packages/daycare/sources/prompts/ACTORS.md`](packages/daycare/sources/prompts/ACTORS.md) **before** the implementation change is made. This includes:
+- Adding or removing a **permanent agent**
+- Adding or removing a **signal subscription**
+- Introducing a **new event/signal type** that any agent emits or consumes
+- Changing an agent's **role, kind, or wiring**
+
+The ACTORS.md file must contain:
+1. A table of all known agents with their name, kind, and role.
+2. A table of all signal subscriptions (agent, pattern, silent flag, purpose).
+3. A **mermaid diagram** showing how agents, signals, and subscriptions connect.
+
+Update the mermaid diagram whenever the wiring changes so it stays in sync with the tables. Example:
+```mermaid
+graph LR
+  AgentA -->|signal.foo| AgentB
+  AgentA -->|signal.bar| AgentC
+```
+
+**Workflow**: document first in ACTORS.md, then implement the code change. This ensures the architecture is reviewed before code is written.
+
 ## Plugin vs monolith
 - If it is something contained - new inference provider, new API, memory engine. It should be a plugin.
 - If it is requiring for coordinating multiple plugins or agents - it is part of the monilith. Cron is needed to everyone. Heartbeat too. Some event bus. Working with file system, sandboxing - it is part of the monolith code.
