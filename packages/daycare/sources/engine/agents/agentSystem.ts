@@ -105,22 +105,6 @@ export class AgentSystem {
     this.fileStore = options.fileStore;
     this.authStore = options.authStore;
     this.delayedSignals = options.delayedSignals ?? null;
-
-    this.eventBus.onEvent((event) => {
-      if (event.type !== "signal.generated") {
-        return;
-      }
-      const signal = event.payload as Signal;
-      const agentId = idleLifecycleAgentIdResolve(signal);
-      if (!agentId) {
-        return;
-      }
-      this.eventBus.emit("agent.idle", {
-        agentId,
-        delayMs: AGENT_IDLE_DELAY_MS
-      });
-      logger.debug({ agentId, delayMs: AGENT_IDLE_DELAY_MS }, "Agent idle event emitted");
-    });
   }
 
   get crons(): Crons {
@@ -688,29 +672,4 @@ export class AgentSystem {
 
 function lifecycleSignalTypeBuild(agentId: string, state: "wake" | "sleep" | "idle"): string {
   return `agent:${agentId}:${state}`;
-}
-
-function idleLifecycleAgentIdResolve(signal: Signal): string | null {
-  if (signal.source.type !== "system") {
-    return null;
-  }
-  if (!signal.type.startsWith("agent:") || !signal.type.endsWith(":idle")) {
-    return null;
-  }
-  const parts = signal.type.split(":");
-  if (parts.length !== 3) {
-    return null;
-  }
-  const agentId = parts[1]?.trim();
-  if (!agentId) {
-    return null;
-  }
-  if (typeof signal.data !== "object" || !signal.data) {
-    return null;
-  }
-  const data = signal.data as { agentId?: unknown; state?: unknown };
-  if (data.agentId !== agentId || data.state !== "idle") {
-    return null;
-  }
-  return agentId;
 }

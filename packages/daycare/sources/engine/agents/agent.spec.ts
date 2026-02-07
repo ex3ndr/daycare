@@ -335,17 +335,12 @@ describe("Agent", () => {
       await agentSystem.start();
 
       const lifecycleTypes: string[] = [];
-      const idleAgentIds: string[] = [];
       const unsubscribe = eventBus.onEvent((event) => {
-        if (event.type === "signal.generated") {
-          const payload = event.payload as Signal;
-          lifecycleTypes.push(payload.type);
+        if (event.type !== "signal.generated") {
           return;
         }
-        if (event.type === "agent.idle") {
-          const payload = event.payload as { agentId: string };
-          idleAgentIds.push(payload.agentId);
-        }
+        const payload = event.payload as Signal;
+        lifecycleTypes.push(payload.type);
       });
 
       const agentId = createId();
@@ -357,7 +352,6 @@ describe("Agent", () => {
       );
 
       await vi.advanceTimersByTimeAsync(59_000);
-      expect(idleAgentIds).toEqual([]);
       expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
 
       await vi.advanceTimersByTimeAsync(1_000);
@@ -366,8 +360,6 @@ describe("Agent", () => {
       });
 
       unsubscribe();
-
-      expect(idleAgentIds).toContain(agentId);
     } finally {
       delayedSignals?.stop();
       vi.useRealTimers();
@@ -409,17 +401,12 @@ describe("Agent", () => {
       await agentSystem.start();
 
       const lifecycleTypes: string[] = [];
-      const idleAgentIds: string[] = [];
       const unsubscribe = eventBus.onEvent((event) => {
-        if (event.type === "signal.generated") {
-          const payload = event.payload as Signal;
-          lifecycleTypes.push(payload.type);
+        if (event.type !== "signal.generated") {
           return;
         }
-        if (event.type === "agent.idle") {
-          const payload = event.payload as { agentId: string };
-          idleAgentIds.push(payload.agentId);
-        }
+        const payload = event.payload as Signal;
+        lifecycleTypes.push(payload.type);
       });
 
       const agentId = createId();
@@ -438,7 +425,6 @@ describe("Agent", () => {
       );
 
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(idleAgentIds).toEqual([]);
       expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
 
       await vi.advanceTimersByTimeAsync(30_000);
@@ -446,8 +432,6 @@ describe("Agent", () => {
         expect(lifecycleTypes).toContain(`agent:${agentId}:idle`);
       });
       unsubscribe();
-
-      expect(idleAgentIds).toEqual([agentId]);
     } finally {
       delayedSignals?.stop();
       vi.useRealTimers();
