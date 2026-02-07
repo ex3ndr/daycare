@@ -369,10 +369,12 @@ export class AgentSystem {
       await agentStateWrite(this.config.current, agentId, entry.agent.state);
       this.eventBus.emit("agent.sleep", { agentId, reason });
       logger.debug({ agentId, reason }, "Agent entered sleep mode");
+      // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
+      // interleaving that could leave stale idle lifecycle signals behind.
+      await this.scheduleIdleSignal(agentId);
       slept = true;
     });
     if (slept) {
-      await this.scheduleIdleSignal(agentId);
       await this.signalLifecycle(agentId, "sleep");
     }
   }
