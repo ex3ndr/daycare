@@ -87,6 +87,49 @@ flowchart LR
   Signals --> Jsonl["<config>/signals/events.jsonl"]
 ```
 
+## Delayed signals
+
+`Engine` also owns a `DelayedSignals` facade (`sources/engine/signals/delayedSignals.ts`)
+for wall-time scheduling.
+
+Storage:
+- `<config>/signals/delayed.json`
+- persistent queue of delayed signal entries
+
+Delivery model:
+- `deliverAt` is a wall-time unix timestamp (milliseconds)
+- entries are dispatched via `Signals.generate(...)` once due
+- removal happens only after successful generation
+- on generation failure, entry stays in queue and is retried
+- semantics are **at least once**
+
+Repeat key behavior:
+- each delayed entry may set `repeatKey`
+- `repeatKey` is scoped by `type`
+- scheduling `(type, repeatKey)` replaces older queued entry with same pair
+- queued entries for `(type, repeatKey)` can be removed explicitly via `cancelByRepeatKey`
+
+```mermaid
+flowchart TD
+  Producer[Schedule delayed signal] --> Queue[delayed.json queue]
+  Queue --> Timer[DelayedSignals timer]
+  Timer --> Due{deliverAt <= now}
+  Due -->|no| Wait[wait until due]
+  Due -->|yes| Generate[Signals.generate]
+  Generate -->|success| Remove[remove from queue]
+  Generate -->|error| Retry[keep in queue and retry]
+```
+
+```mermaid
+flowchart LR
+  New[Schedule type+repeatKey] --> Match{Existing same type+repeatKey?}
+  Match -->|yes| Replace[delete old queued entry]
+  Match -->|no| Keep[keep current queue]
+  Replace --> Insert[insert new queued entry]
+  Keep --> Insert
+  Insert --> Queue[(delayed.json)]
+```
+
 ```mermaid
 flowchart TD
   AgentA[agent A] -->|signal_subscribe| Signals[Signals facade]

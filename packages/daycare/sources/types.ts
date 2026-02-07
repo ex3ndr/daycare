@@ -80,6 +80,9 @@ export type { Config } from "./config/configTypes.js";
 // Signals
 export type {
   Signal,
+  DelayedSignal,
+  DelayedSignalCancelRepeatKeyInput,
+  DelayedSignalScheduleInput,
   SignalGenerateInput,
   SignalSource,
   SignalSubscription,

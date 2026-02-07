@@ -36,3 +36,27 @@ export type SignalUnsubscribeInput = {
   agentId: string;
   pattern: string;
 };
+
+export type DelayedSignalScheduleInput = {
+  type: string;
+  deliverAt: number;
+  source?: SignalSource;
+  data?: unknown;
+  repeatKey?: string;
+};
+
+export type DelayedSignalCancelRepeatKeyInput = {
+  type: string;
+  repeatKey: string;
+};
+
+export type DelayedSignal = {
+  id: string;
+  type: string;
+  deliverAt: number;
+  source: SignalSource;
+  data?: unknown;
+  repeatKey?: string;
+  createdAt: number;
+  updatedAt: number;
+};

@@ -47,6 +47,7 @@ import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { configLoad } from "../config/configLoad.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Signals } from "./signals/signals.js";
+import { DelayedSignals } from "./signals/delayedSignals.js";
 
 const logger = getLogger("engine.runtime");
 
@@ -67,6 +68,7 @@ export class Engine {
   readonly crons: Crons;
   readonly heartbeats: Heartbeats;
   readonly signals: Signals;
+  readonly delayedSignals: DelayedSignals;
   readonly inferenceRouter: InferenceRouter;
   readonly eventBus: EngineEventBus;
   private readonly reloadSync: InvalidateSync;
@@ -81,6 +83,11 @@ export class Engine {
       onDeliver: async (signal, subscriptions) => {
         await this.agentSystem.signalDeliver(signal, subscriptions);
       }
+    });
+    this.delayedSignals = new DelayedSignals({
+      config: this.config,
+      eventBus: this.eventBus,
+      signals: this.signals
     });
     this.reloadSync = new InvalidateSync(async () => {
       await this.reloadApplyLatest();
@@ -259,6 +266,7 @@ export class Engine {
     await this.crons.ensureDir();
     await this.heartbeats.ensureDir();
     await this.signals.ensureDir();
+    await this.delayedSignals.ensureDir();
 
     logger.debug("Registering core tools");
     this.modules.tools.register("core", buildCronTool(this.crons));
@@ -295,6 +303,8 @@ export class Engine {
     await this.crons.start();
     logger.debug("Starting heartbeat scheduler");
     await this.heartbeats.start();
+    logger.debug("Starting delayed signal scheduler");
+    await this.delayedSignals.start();
     logger.debug("Engine.start() complete");
   }
 
@@ -303,6 +313,7 @@ export class Engine {
     await this.modules.connectors.unregisterAll("shutdown");
     this.crons.stop();
     this.heartbeats.stop();
+    this.delayedSignals.stop();
     await this.pluginManager.unloadAll();
   }
 
