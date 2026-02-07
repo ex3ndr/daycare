@@ -22,7 +22,6 @@ import { buildReactionTool } from "./modules/tools/reaction.js";
 import { buildPermissionGrantTool, buildPermissionRequestTool } from "./modules/tools/permissions.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { agentListToolBuild } from "./modules/tools/agentListToolBuild.js";
-import { agentBackgroundListToolBuild } from "./modules/tools/agentBackgroundListToolBuild.js";
 import { sessionHistoryToolBuild } from "./modules/tools/sessionHistoryToolBuild.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
 import {
@@ -260,7 +259,6 @@ export class Engine {
     this.modules.tools.register("core", buildStartBackgroundAgentTool());
     this.modules.tools.register("core", buildSendAgentMessageTool());
     this.modules.tools.register("core", agentListToolBuild());
-    this.modules.tools.register("core", agentBackgroundListToolBuild());
     this.modules.tools.register("core", sessionHistoryToolBuild());
     this.modules.tools.register("core", permanentAgentToolBuild());
     this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));

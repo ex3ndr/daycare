@@ -1,19 +1,15 @@
 # Agent List Tools
 
-Daycare now includes two listing tools for session/agent discovery:
+Daycare includes one listing tool for session/agent discovery:
 
-- `list_agents`: all persisted agents (user + background) with ids, type, name/label, and lifecycle.
-- `list_background_agents`: persisted non-user agents with ids, names, lifecycle, status, queue count, and parent linkage.
+- `list_agents`: all persisted agents (user + background) with ids, type, name/label, lifecycle, and descriptor-specific metadata.
 
-Both tools return machine-readable `details` payloads with a `count` and `agents` array.
+The tool returns a machine-readable `details` payload with `count` and `agents`.
 
 ```mermaid
 flowchart TD
-  A[Tool call] --> B{Tool name}
-  B -->|list_agents| C[agentList]
-  B -->|list_background_agents| D[agentBackgroundList]
-  C --> E[descriptor + state from disk]
-  D --> E
-  E --> F[sorted agent summaries]
-  F --> G[text output + details.count + details.agents]
+  A[Tool call list_agents] --> B[agentList]
+  B --> C[descriptor + state from disk]
+  C --> D[sorted agent summaries]
+  D --> E[text output + details.count + details.agents]
 ```
