@@ -5,6 +5,7 @@ import type {
   FileReference,
   MessageContext,
   PermissionDecision,
+  Signal,
   SessionPermissions,
   ToolExecutionResult
 } from "@/types";
@@ -86,6 +87,11 @@ export type AgentInboxItem =
       context?: MessageContext;
     }
   | {
+      type: "signal";
+      signal: Signal;
+      subscriptionPattern: string;
+    }
+  | {
       type: "reset";
       message?: string;
       context?: MessageContext;
@@ -104,6 +110,7 @@ export type AgentInboxSystemMessage = Extract<
   AgentInboxItem,
   { type: "system_message" }
 >;
+export type AgentInboxSignal = Extract<AgentInboxItem, { type: "signal" }>;
 
 export type AgentInboxReset = Extract<AgentInboxItem, { type: "reset" }>;
 export type AgentInboxRestore = Extract<AgentInboxItem, { type: "restore" }>;
@@ -116,6 +123,11 @@ export type AgentInboxResult =
     }
   | {
       type: "system_message";
+      responseText: string | null;
+    }
+  | {
+      type: "signal";
+      delivered: boolean;
       responseText: string | null;
     }
   | {

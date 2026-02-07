@@ -41,6 +41,7 @@ import type {
   AgentHistoryRecord,
   AgentInboxItem,
   AgentInboxMessage,
+  AgentInboxSignal,
   AgentInboxSystemMessage,
   AgentInboxPermission,
   AgentInboxReset,
@@ -56,6 +57,7 @@ import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
+import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
 
 const logger = getLogger("engine.agent");
@@ -219,6 +221,7 @@ export class Agent {
     if (
       item.type !== "message" &&
       item.type !== "system_message" &&
+      item.type !== "signal" &&
       item.type !== "reset" &&
       item.type !== "permission" &&
       item.type !== "restore"
@@ -232,6 +235,7 @@ export class Agent {
     item:
       | AgentInboxMessage
       | AgentInboxSystemMessage
+      | AgentInboxSignal
       | AgentInboxReset
       | AgentInboxRestore
       | AgentInboxPermission
@@ -244,6 +248,10 @@ export class Agent {
       case "system_message": {
         const responseText = await this.handleSystemMessage(item);
         return { type: "system_message", responseText };
+      }
+      case "signal": {
+        const signalResult = await this.handleSignal(item);
+        return { type: "signal", ...signalResult };
       }
       case "reset": {
         const ok = await this.handleReset(item);
@@ -612,6 +620,30 @@ export class Agent {
       context: item.context ?? {}
     };
     return this.handleMessage(messageItem);
+  }
+
+  private async handleSignal(
+    item: AgentInboxSignal
+  ): Promise<{ delivered: boolean; responseText: string | null }> {
+    const subscription = this.agentSystem.signals.subscriptionGet({
+      agentId: this.id,
+      pattern: item.subscriptionPattern
+    });
+    if (!subscription) {
+      return { delivered: false, responseText: null };
+    }
+    // Skip stale queued signals when a subscription was recreated after signal generation.
+    if (item.signal.createdAt < subscription.createdAt) {
+      return { delivered: false, responseText: null };
+    }
+    const responseText = await this.handleSystemMessage({
+      type: "system_message",
+      text: signalMessageBuild(item.signal),
+      origin: `signal:${item.signal.id}`,
+      silent: subscription.silent,
+      context: {}
+    });
+    return { delivered: true, responseText };
   }
 
   private async handleReset(item: AgentInboxReset): Promise<boolean> {

@@ -108,6 +108,17 @@ export class Signals {
   }
 
   /**
+   * Returns a subscription for an exact agent + pattern pair when present.
+   * Returns: null when no subscription exists.
+   */
+  subscriptionGet(input: SignalUnsubscribeInput): SignalSubscription | null {
+    const { pattern, agentId } = signalSubscriptionInputNormalize(input);
+    const key = signalSubscriptionKeyBuild(agentId, pattern);
+    const subscription = this.subscriptions.get(key);
+    return subscription ? { ...subscription } : null;
+  }
+
+  /**
    * Removes an existing signal subscription for agent + pattern.
    * Returns: true when a subscription existed and was removed.
    */

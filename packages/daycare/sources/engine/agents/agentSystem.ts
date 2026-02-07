@@ -41,7 +41,6 @@ import { AsyncLock } from "../../util/lock.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionAccessApply } from "../permissions/permissionAccessApply.js";
 import type { ConfigModule } from "../config/configModule.js";
-import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import type { Signals } from "../signals/signals.js";
 
 const logger = getLogger("engine.agent-system");
@@ -259,18 +258,15 @@ export class AgentSystem {
   }
 
   async signalDeliver(signal: Signal, subscriptions: SignalSubscription[]): Promise<void> {
-    const text = signalMessageBuild(signal);
     await Promise.all(
       subscriptions.map(async (subscription) => {
         try {
           await this.post(
             { agentId: subscription.agentId },
             {
-              type: "system_message",
-              text,
-              origin: `signal:${signal.id}`,
-              silent: subscription.silent,
-              context: {}
+              type: "signal",
+              signal,
+              subscriptionPattern: subscription.pattern
             }
           );
         } catch (error) {
@@ -343,7 +339,7 @@ export class AgentSystem {
 
   async sleepIfIdle(
     agentId: string,
-    reason: "message" | "system_message" | "reset" | "permission" | "restore"
+    reason: "message" | "system_message" | "signal" | "reset" | "permission" | "restore"
   ): Promise<void> {
     const entry = this.entries.get(agentId);
     if (!entry) {

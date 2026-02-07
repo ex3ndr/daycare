@@ -56,6 +56,7 @@ When a signal is generated, matching subscriptions are delivered immediately to 
 - `silent=true` -> delivered as silent system messages
 - `silent=false` -> delivered as regular system messages
 - subscribing another agent requires that agent to exist; otherwise tool call fails
+- delivery is handled as a dedicated `signal` inbox item and re-validated against current subscription state inside the agent loop (prevents unsubscribe races)
 
 `signal_unsubscribe` is also registered for agent contexts.
 
@@ -91,8 +92,9 @@ flowchart TD
   AgentB[agent B] -->|signal_subscribe agentId=B| Signals
   Generator[generate_signal] --> Signals
   Signals --> Match["pattern match (* segments)"]
-  Match --> Deliver[AgentSystem.post to inbox]
-  Deliver --> Silent[silent system message]
-  Deliver --> NonSilent[non-silent system message]
+  Match --> Deliver[AgentSystem.post signal item]
+  Deliver --> Validate[Agent re-checks subscription]
+  Validate --> Silent[silent system message]
+  Validate --> NonSilent[non-silent system message]
   AgentA -->|signal_unsubscribe| Signals
 ```
