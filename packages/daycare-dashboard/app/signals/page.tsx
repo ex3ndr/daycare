@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
+  Bell,
+  BellOff,
   Bot,
   Check,
   ChevronDown,
@@ -10,6 +12,7 @@ import {
   Clock,
   Filter,
   Globe,
+  Link,
   Monitor,
   Plus,
   Radio,
@@ -26,10 +29,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { fetchSignalEvents, generateSignal, type SignalEvent, type SignalSource } from "@/lib/engine-client";
+import {
+  fetchSignalEvents,
+  fetchSignalSubscriptions,
+  generateSignal,
+  type SignalEvent,
+  type SignalSource,
+  type SignalSubscription
+} from "@/lib/engine-client";
 
 export default function SignalsPage() {
   const [events, setEvents] = useState<SignalEvent[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SignalSubscription[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -41,8 +52,12 @@ export default function SignalsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchSignalEvents(500);
-      setEvents(data);
+      const [eventsData, subsData] = await Promise.all([
+        fetchSignalEvents(500),
+        fetchSignalSubscriptions()
+      ]);
+      setEvents(eventsData);
+      setSubscriptions(subsData);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load signals");
@@ -202,6 +217,9 @@ export default function SignalsPage() {
 
         {/* Send signal */}
         <SendSignalForm />
+
+        {/* Subscriptions */}
+        <SubscriptionsPanel subscriptions={subscriptions} />
 
         {/* Event timeline */}
         {sorted.length ? (
@@ -488,6 +506,88 @@ function SendSignalForm() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/* ── Subscriptions panel ──────────────────────────────────────────────── */
+
+function SubscriptionsPanel({ subscriptions }: { subscriptions: SignalSubscription[] }) {
+  const [expanded, setExpanded] = useState(true);
+
+  if (subscriptions.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div
+          className="flex items-center justify-between cursor-pointer select-none"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <Link className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-base">
+                Active subscriptions
+                <Badge variant="secondary" className="ml-2 text-[10px]">
+                  {subscriptions.length}
+                </Badge>
+              </CardTitle>
+              <CardDescription>Agents listening for signal patterns.</CardDescription>
+            </div>
+          </div>
+          <button className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted">
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent className="pt-0">
+          <div className="space-y-2">
+            {subscriptions.map((sub) => (
+              <SubscriptionRow key={`${sub.agentId}::${sub.pattern}`} subscription={sub} />
+            ))}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function SubscriptionRow({ subscription }: { subscription: SignalSubscription }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
+      {/* Pattern */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-sm font-medium text-foreground">{subscription.pattern}</span>
+          {subscription.silent ? (
+            <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground">
+              <BellOff className="h-2.5 w-2.5" />
+              silent
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] gap-1 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700">
+              <Bell className="h-2.5 w-2.5" />
+              notify
+            </Badge>
+          )}
+        </div>
+        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Bot className="h-3 w-3" />
+            {subscription.agentId}
+          </span>
+          <span>subscribed {formatRelativeTime(subscription.createdAt)}</span>
+          {subscription.updatedAt !== subscription.createdAt && (
+            <span>updated {formatRelativeTime(subscription.updatedAt)}</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -128,6 +128,13 @@ export class Signals {
     return this.subscriptions.delete(key);
   }
 
+  /**
+   * Returns all active signal subscriptions as a snapshot array.
+   */
+  listSubscriptions(): SignalSubscription[] {
+    return Array.from(this.subscriptions.values());
+  }
+
   async listRecent(limit = 200): Promise<Signal[]> {
     const normalizedLimit = signalLimitNormalize(limit);
     return this.appendLock.inLock(async () => {

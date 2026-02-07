@@ -132,6 +132,14 @@ type HeartbeatResponse = {
   tasks?: HeartbeatTask[];
 };
 
+export type SignalSubscription = {
+  agentId: string;
+  pattern: string;
+  silent: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type SignalGenerateInput = {
   type: string;
   source?: SignalSource;
@@ -140,6 +148,10 @@ export type SignalGenerateInput = {
 
 type SignalEventsResponse = {
   events?: SignalEvent[];
+};
+
+type SignalSubscriptionsResponse = {
+  subscriptions?: SignalSubscription[];
 };
 
 type SignalGenerateResponse = {
@@ -194,6 +206,11 @@ export async function generateSignal(input: SignalGenerateInput): Promise<Signal
     throw new Error(data.error ?? `Request failed: ${response.status}`);
   }
   return data.signal!;
+}
+
+export async function fetchSignalSubscriptions() {
+  const data = await fetchJSON<SignalSubscriptionsResponse>("/api/v1/engine/signals/subscriptions");
+  return data.subscriptions ?? [];
 }
 
 export async function fetchSignalEvents(limit = 200) {

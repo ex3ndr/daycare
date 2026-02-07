@@ -138,6 +138,13 @@ export async function startEngineServer(
     }
   });
 
+  app.get("/v1/engine/signals/subscriptions", async (_request, reply) => {
+    logger.debug("GET /v1/engine/signals/subscriptions");
+    const subscriptions = options.runtime.signals.listSubscriptions();
+    logger.debug(`Signal subscriptions retrieved count=${subscriptions.length}`);
+    return reply.send({ ok: true, subscriptions });
+  });
+
   app.get("/v1/engine/agents/background", async (_request, reply) => {
     logger.debug("GET /v1/engine/agents/background");
     const agents = await agentBackgroundList(options.runtime.config.current);
