@@ -57,6 +57,7 @@ When a signal is generated, matching subscriptions are delivered immediately to 
 - `silent=false` -> delivered as regular system messages
 - subscribing another agent requires that agent to exist; otherwise tool call fails
 - delivery is handled as a dedicated `signal` inbox item and re-validated against current subscription state inside the agent loop (prevents unsubscribe races)
+- delivery does not compare local timestamps; only current subscription presence is checked
 
 `signal_unsubscribe` is also registered for agent contexts.
 

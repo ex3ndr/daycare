@@ -632,10 +632,6 @@ export class Agent {
     if (!subscription) {
       return { delivered: false, responseText: null };
     }
-    // Skip stale queued signals when a subscription was recreated after signal generation.
-    if (item.signal.createdAt < subscription.createdAt) {
-      return { delivered: false, responseText: null };
-    }
     const responseText = await this.handleSystemMessage({
       type: "system_message",
       text: signalMessageBuild(item.signal),

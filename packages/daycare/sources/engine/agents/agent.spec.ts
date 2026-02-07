@@ -185,4 +185,58 @@ describe("Agent", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("delivers queued signal when subscribed at handling time", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const eventBus = new EngineEventBus();
+      const agentSystem = new AgentSystem({
+        config: new ConfigModule(config),
+        eventBus,
+        connectorRegistry: new ConnectorRegistry({
+          onMessage: async () => undefined
+        }),
+        imageRegistry: new ImageGenerationRegistry(),
+        toolResolver: new ToolResolver(),
+        pluginManager: {} as unknown as PluginManager,
+        inferenceRouter: {} as unknown as InferenceRouter,
+        fileStore: new FileStore(config),
+        authStore: new AuthStore(config)
+      });
+      agentSystem.setCrons({} as unknown as Crons);
+      const signals = new Signals({
+        eventBus,
+        configDir: config.configDir,
+        onDeliver: async (signal, subscriptions) => {
+          await agentSystem.signalDeliver(signal, subscriptions);
+        }
+      });
+      agentSystem.setSignals(signals);
+      await agentSystem.load();
+
+      const agentId = createId();
+      const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+      await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
+      signals.subscribe({ agentId, pattern: "build:*:done", silent: true });
+      await signals.generate({ type: "build:alpha:done", source: { type: "system" } });
+      signals.unsubscribe({ agentId, pattern: "build:*:done" });
+      signals.subscribe({ agentId, pattern: "build:*:done", silent: true });
+
+      await agentSystem.start();
+      await agentSystem.postAndAwait(
+        { agentId },
+        { type: "reset", message: "flush queue" }
+      );
+
+      const historyPath = path.join(config.agentsDir, agentId, "history.jsonl");
+      const historyRaw = await readFile(historyPath, "utf8");
+      expect(historyRaw.includes("[signal]")).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
