@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Plug,
+  Radio,
   Settings,
   Sparkles,
   Wrench
@@ -64,6 +65,11 @@ const data = {
       title: "Tools",
       url: "/tools",
       icon: Wrench
+    },
+    {
+      title: "Signals",
+      url: "/signals",
+      icon: Radio
     },
     {
       title: "Telemetry",

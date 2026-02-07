@@ -54,6 +54,18 @@ const authSchema = z.object({
 const signalEventsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(1000).optional()
 });
+const signalGenerateSchema = z.object({
+  type: z.string().min(1),
+  source: z
+    .discriminatedUnion("type", [
+      z.object({ type: z.literal("system") }),
+      z.object({ type: z.literal("agent"), id: z.string().min(1) }),
+      z.object({ type: z.literal("webhook"), id: z.string().optional() }),
+      z.object({ type: z.literal("process"), id: z.string().optional() })
+    ])
+    .optional(),
+  data: z.unknown().optional()
+});
 
 export async function startEngineServer(
   options: EngineServerOptions
@@ -104,6 +116,26 @@ export async function startEngineServer(
     const events = await options.runtime.signals.listRecent(limit);
     logger.debug(`Signal events retrieved eventCount=${events.length} limit=${limit}`);
     return reply.send({ ok: true, events });
+  });
+
+  app.post("/v1/engine/signals/generate", async (request, reply) => {
+    logger.debug("POST /v1/engine/signals/generate");
+    const payload = parseBody(signalGenerateSchema, request.body, reply);
+    if (!payload) {
+      return;
+    }
+    try {
+      const signal = await options.runtime.signals.generate({
+        type: payload.type,
+        source: payload.source,
+        data: payload.data
+      });
+      logger.info({ signalId: signal.id, type: signal.type }, "Signal generated via API");
+      return reply.send({ ok: true, signal });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Signal generation failed";
+      return reply.status(400).send({ ok: false, error: message });
+    }
   });
 
   app.get("/v1/engine/agents/background", async (_request, reply) => {

@@ -7,13 +7,18 @@ import {
   Activity,
   AlarmClock,
   ArrowUpRight,
+  Bot,
   Boxes,
   Cable,
   Cpu,
+  Globe,
   MessageSquare,
+  Monitor,
   Moon,
   Plug,
+  Radio,
   RefreshCw,
+  Server,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -36,13 +41,16 @@ import {
   fetchEngineStatus,
   fetchHeartbeatTasks,
   fetchAgents,
+  fetchSignalEvents,
   type BackgroundAgentState,
   type CronTask,
   type EngineEvent,
   type EngineStatus,
   type HeartbeatTask,
   type AgentSummary,
-  type AgentDescriptor
+  type AgentDescriptor,
+  type SignalEvent,
+  type SignalSource
 } from "@/lib/engine-client";
 import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
 import type { LucideIcon } from "lucide-react";
@@ -58,6 +66,7 @@ export default function Dashboard() {
   const [heartbeats, setHeartbeats] = useState<HeartbeatTask[]>([]);
   const [backgroundAgents, setBackgroundAgents] = useState<BackgroundAgentState[]>([]);
   const [agents, setAgents] = useState<AgentSummary[]>([]);
+  const [signals, setSignals] = useState<SignalEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,11 +97,16 @@ export default function Dashboard() {
     setAgents(data);
   }, []);
 
+  const fetchSignals = useCallback(async () => {
+    const data = await fetchSignalEvents(50);
+    setSignals(data);
+  }, []);
+
   const refreshAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      await Promise.all([fetchStatus(), fetchCron(), fetchHeartbeats(), fetchBackgroundAgentsData(), fetchAgentsData()]);
+      await Promise.all([fetchStatus(), fetchCron(), fetchHeartbeats(), fetchBackgroundAgentsData(), fetchAgentsData(), fetchSignals()]);
       setLastUpdated(new Date());
     } catch (err) {
       const message = err instanceof Error ? err.message : "Refresh failed";
@@ -100,7 +114,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchStatus]);
+  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchSignals, fetchStatus]);
 
   useEffect(() => {
     void refreshAll();
@@ -148,6 +162,9 @@ export default function Dashboard() {
         case "plugin.unloaded":
           void fetchStatus();
           break;
+        case "signal.generated":
+          void fetchSignals();
+          break;
         default:
           break;
       }
@@ -156,7 +173,7 @@ export default function Dashboard() {
     return () => {
       source.close();
     };
-  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchStatus]);
+  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchSignals, fetchStatus]);
 
   const pluginCount = status?.plugins?.length ?? 0;
   const agentCount = agents.length;
@@ -167,6 +184,7 @@ export default function Dashboard() {
   const providerCount = status?.inferenceProviders?.length ?? 0;
   const imageProviderCount = status?.imageProviders?.length ?? 0;
   const toolCount = status?.tools?.length ?? 0;
+  const signalCount = signals.length;
   const orderedAgents = useMemo(() => sortAgentsByActivity(agents), [agents]);
 
   const connectorTiles = useMemo(
@@ -326,6 +344,13 @@ export default function Dashboard() {
                 icon: Plug
               },
               {
+                label: "Signals",
+                description: "View signal event stream",
+                href: "/signals",
+                value: `${signalCount} recent`,
+                icon: Radio
+              },
+              {
                 label: "Providers",
                 description: "Model and image providers",
                 href: "/providers",
@@ -376,6 +401,7 @@ export default function Dashboard() {
               />
               <CronPanel cron={cron} />
               <HeartbeatPanel heartbeats={heartbeats} />
+              <SignalsPanel signals={signals} />
               <BackgroundAgentsPanel agents={backgroundAgents} />
             </div>
           </div>
@@ -774,6 +800,76 @@ function HeartbeatPanel({ heartbeats }: { heartbeats: HeartbeatTask[] }) {
       </CardContent>
     </Card>
   );
+}
+
+function SignalsPanel({ signals }: { signals: SignalEvent[] }) {
+  const recent = useMemo(() => [...signals].reverse().slice(0, 8), [signals]);
+
+  return (
+    <Card className="animate-in fade-in-0 slide-in-from-bottom-2">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
+              <Radio className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Signals</CardTitle>
+              <CardDescription>Recent event stream activity.</CardDescription>
+            </div>
+          </div>
+          <Link
+            href="/signals"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            View all
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {recent.length ? (
+          recent.map((event) => (
+            <div key={event.id} className="rounded-lg border bg-background/60 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <SignalSourceIcon source={event.source} className="h-3 w-3 text-muted-foreground" />
+                <span className="font-mono text-xs font-medium text-foreground truncate">{event.type}</span>
+                <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">
+                  {event.source.type}
+                </Badge>
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {formatSignalTime(event.createdAt)}
+              </div>
+            </div>
+          ))
+        ) : (
+          <EmptyState label="No signals recorded." />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SignalSourceIcon({ source, className }: { source: SignalSource; className?: string }) {
+  switch (source.type) {
+    case "system": return <Server className={className} />;
+    case "agent": return <Bot className={className} />;
+    case "webhook": return <Globe className={className} />;
+    case "process": return <Monitor className={className} />;
+  }
+}
+
+function formatSignalTime(ts: number): string {
+  const diffMs = Date.now() - ts;
+  if (diffMs < 0) return "just now";
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return formatShortDate(ts);
 }
 
 function BackgroundAgentsPanel({ agents }: { agents: BackgroundAgentState[] }) {

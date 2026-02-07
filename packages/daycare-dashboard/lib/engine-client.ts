@@ -132,8 +132,20 @@ type HeartbeatResponse = {
   tasks?: HeartbeatTask[];
 };
 
+export type SignalGenerateInput = {
+  type: string;
+  source?: SignalSource;
+  data?: unknown;
+};
+
 type SignalEventsResponse = {
   events?: SignalEvent[];
+};
+
+type SignalGenerateResponse = {
+  ok: boolean;
+  signal?: SignalEvent;
+  error?: string;
 };
 
 type BackgroundAgentsResponse = {
@@ -169,6 +181,19 @@ export async function fetchCronTasks() {
 export async function fetchHeartbeatTasks() {
   const data = await fetchJSON<HeartbeatResponse>("/api/v1/engine/heartbeat/tasks");
   return data.tasks ?? [];
+}
+
+export async function generateSignal(input: SignalGenerateInput): Promise<SignalEvent> {
+  const response = await fetch("/api/v1/engine/signals/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  const data = (await response.json()) as SignalGenerateResponse;
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error ?? `Request failed: ${response.status}`);
+  }
+  return data.signal!;
 }
 
 export async function fetchSignalEvents(limit = 200) {
