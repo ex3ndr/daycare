@@ -24,7 +24,7 @@ export const RECIPE_FILES: readonly RecipeFile[] = [
   {
     id: "pyrepl",
     path: "sources/recipe/recipePyrepl.ts",
-    description: "Sequential inference loop with JSON actions and persistent Python execution.",
+    description: "Sequential inference loop with tool-only Python REPL execution.",
     main: recipePyreplMain
   }
 ];

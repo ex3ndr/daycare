@@ -16,6 +16,8 @@ export type RecipeAnthropicReply = {
 export type RecipeAnthropicReplyOptions = {
   sessionId?: string;
   systemPrompt?: string;
+  tools?: Context["tools"];
+  requireText?: boolean;
 };
 
 /**
@@ -30,9 +32,13 @@ export async function recipeAnthropicReplyGet(
 ): Promise<RecipeAnthropicReply> {
   const response = await complete(
     model,
-    { messages, tools: [], systemPrompt: options?.systemPrompt },
     {
-    apiKey,
+      messages,
+      tools: options?.tools ?? [],
+      systemPrompt: options?.systemPrompt
+    },
+    {
+      apiKey,
       sessionId: options?.sessionId ?? "recipe"
     }
   );
@@ -42,9 +48,9 @@ export async function recipeAnthropicReplyGet(
   }
 
   const text = recipeAssistantTextExtract(response);
-  if (!text) {
+  if (!text && options?.requireText !== false) {
     throw new Error("Anthropic response did not include text content.");
   }
 
-  return { text, message: response };
+  return { text: text ?? "", message: response };
 }

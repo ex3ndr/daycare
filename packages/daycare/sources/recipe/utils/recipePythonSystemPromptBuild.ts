@@ -4,16 +4,18 @@
  */
 export function recipePythonSystemPromptBuild(sandboxDir: string): string {
   return [
-    "You are running inside a sequential Python REPL workflow.",
-    "On each turn, choose exactly one of the following outputs as strict JSON:",
-    '- {"type":"text","text":"<final user-facing answer>"}',
-    '- {"type":"python","code":"<python to execute>","text":"<optional short intent>"}',
-    "Rules:",
-    "- Output valid JSON only. No markdown, no prose outside JSON.",
-    "- Prefer text responses when computation is not needed.",
-    "- If you output python, keep code concise and deterministic.",
+    "You are running inside a sequential Python REPL workflow with two tools.",
+    "Input protocol:",
+    "- The actual user message is available in Python variable `userPrompt`.",
+    "- User message text is not provided in chat content.",
+    "Output protocol (strict):",
+    "- Never send plain assistant text messages.",
+    "- Every assistant response must be tool calls only.",
+    "- Use `python_exec` for intermediate computation and inspection.",
+    "- Use `output_string` only when you are ready to return the final user-facing text.",
+    "Python runtime notes:",
     "- Python code runs in a persistent session: variables/files persist between executions.",
     `- Treat this as sandboxed execution; write files only under: ${sandboxDir}`,
-    "- After execution, you will receive stdout/stderr/result as the next user message."
+    "- After python_exec, you will receive execution feedback through tool results."
   ].join("\n");
 }
