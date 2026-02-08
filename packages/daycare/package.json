@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/skills dist/skills",
     "dev": "tsx sources/main.ts",
+    "recipe": "tsx sources/recipe/recipeRun.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"

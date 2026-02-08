@@ -1,17 +1,23 @@
+import { main as recipeRlmMain } from "./recipeRlm.js";
+
+export type RecipeMain = (args: string[]) => Promise<void>;
+
 export type RecipeFile = {
   id: string;
   path: string;
   description: string;
+  main: RecipeMain;
 };
 
 /**
- * Lists runnable TypeScript recipe entry files.
- * Expects: each path can be executed directly with `tsx`.
+ * Lists runnable TypeScript recipe entries.
+ * Expects: each entry exports `main(args)` and maps to a source file path.
  */
 export const RECIPE_FILES: readonly RecipeFile[] = [
   {
-    id: "anthropic-manual-loop",
-    path: "sources/recipe/recipeAnthropicManualLoop.ts",
-    description: "Manual agent loop using Anthropic OAuth credentials from ~/.dev/auth.json."
+    id: "rlm",
+    path: "sources/recipe/recipeRlm.ts",
+    description: "Dead-simple Anthropic recipe loop with prompts and pi-ai inference.",
+    main: recipeRlmMain
   }
 ];
