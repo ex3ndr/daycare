@@ -92,7 +92,7 @@ graph LR
 - Permissions: parse permission strings (e.g. `@read:/path`) into a discriminated union; do not use optional path fields.
 - commit after each ready-to-use change using Angular-style commits
 - build before each commit and run tests
-- document every change in `/docs/` with mermaid diagrams
+- document every change in `/doc/` with mermaid diagrams
 - do not use barrel `index.ts` files
 - avoid backward-compatibility shims for internal code
 

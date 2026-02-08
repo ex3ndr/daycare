@@ -130,21 +130,27 @@ yarn dev          # Run with tsx (no build)
 
 ## Documentation
 
-See [docs/](./docs/) for detailed documentation:
+See [doc/](./doc/) for documentation:
 
-- [Architecture](./docs/architecture.md) - System overview
-- [Plugins](./docs/plugins.md) - Plugin system
-- [Agents](./docs/agents.md) - Agent management and queueing
-- [Agent System](./docs/agent-system.md) - Agent lifecycle and ownership
-- [Memory](./docs/memory.md) - Memory plugin
-- [Cron](./docs/cron.md) - Scheduled tasks
-- [Heartbeat](./docs/heartbeat.md) - Heartbeat scheduler
-- [Skills](./docs/skills.md) - Agent skills
-- [Config](./docs/config.md) - Configuration reference
-- [Permissions](./docs/permissions.md) - Permission system
-- [CLI](./docs/cli.md) - Command reference
-- [Inference](./docs/inference.md) - Inference providers
-- [Mermaid PNG Tool](./docs/mermaid-png-tool.md) - Built-in tool for rendering Mermaid diagrams
+### Concepts
+- [Agents](./doc/concepts/agents.md) - Agent types, persistence, message flow
+- [Cron](./doc/concepts/cron.md) - Scheduled task execution
+- [Heartbeats](./doc/concepts/heartbeats.md) - Batch-executed periodic prompts
+- [Signals](./doc/concepts/signals.md) - Broadcast event system
+- [Sandboxes](./doc/concepts/sandboxes.md) - Filesystem/network sandboxing, durable processes
+- [Networking & Permissions](./doc/concepts/networking.md) - Permission system, web search/fetch
+- [Memory](./doc/concepts/memory.md) - Structured entity storage
+- [Skills](./doc/concepts/skills.md) - Opt-in agent capabilities
+
+### Providers
+- [Providers Overview](./doc/providers/README.md) - All inference and image providers
+
+### Connectors
+- [Telegram](./doc/connectors/telegram.md) - Bot API with long polling
+- [WhatsApp](./doc/connectors/whatsapp.md) - Baileys WebSocket integration
+
+### Internals
+- [Implementation details](./doc/internals/) - Low-level implementation docs
 
 ## License
 
