@@ -2,7 +2,12 @@ import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
+import type { SessionPermissions } from "@/types";
 import type { Processes } from "../../engine/processes/processes.js";
+import { permissionClone } from "../../engine/permissions/permissionClone.js";
+import { permissionTagsApply } from "../../engine/permissions/permissionTagsApply.js";
+import { permissionTagsNormalize } from "../../engine/permissions/permissionTagsNormalize.js";
+import { permissionTagsValidate } from "../../engine/permissions/permissionTagsValidate.js";
 
 const envSchema = Type.Record(
   Type.String({ minLength: 1 }),
@@ -35,6 +40,7 @@ const processStartSchema = Type.Object(
     cwd: Type.Optional(Type.String({ minLength: 1 })),
     home: Type.Optional(Type.String({ minLength: 1 })),
     env: Type.Optional(envSchema),
+    permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
     keepAlive: Type.Optional(Type.Boolean()),
     packageManagers: Type.Optional(Type.Array(packageManagerSchema, { minItems: 1 })),
     allowedDomains: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
@@ -79,7 +85,11 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
     },
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ProcessStartArgs;
-      const processInfo = await processes.create(payload, toolContext.permissions);
+      const permissions = await resolveProcessPermissions(
+        toolContext.permissions,
+        payload.permissions
+      );
+      const processInfo = await processes.create(payload, permissions);
       const text = [
         `Process started: ${processInfo.id}`,
         `name: ${processInfo.name}`,
@@ -239,4 +249,24 @@ function buildToolMessage(
     isError,
     timestamp: Date.now()
   };
+}
+
+async function resolveProcessPermissions(
+  currentPermissions: SessionPermissions,
+  requestedTags: string[] | undefined
+): Promise<SessionPermissions> {
+  if (!requestedTags || requestedTags.length === 0) {
+    return permissionClone(currentPermissions);
+  }
+  const permissionTags = permissionTagsNormalize(requestedTags);
+  await permissionTagsValidate(currentPermissions, permissionTags);
+
+  const processPermissions: SessionPermissions = {
+    workingDir: currentPermissions.workingDir,
+    writeDirs: [],
+    readDirs: [],
+    network: false
+  };
+  permissionTagsApply(processPermissions, permissionTags);
+  return processPermissions;
 }

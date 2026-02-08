@@ -10,6 +10,7 @@ Daycare now includes durable shell process tools that behave like a lightweight 
 - Allow explicit stop operations (`process_stop`, `process_stop_all`).
 - Expose absolute process log filenames via `process_list` and `process_get`.
 - Provide engine API endpoints for dashboard monitoring.
+- Support explicit `process_start.permissions` tags validated against caller permissions.
 
 ## Storage Model
 
@@ -33,6 +34,9 @@ Managed process state is stored per process in engine data:
 ```mermaid
 flowchart TD
   A[shell plugin tools] --> B[Engine Processes facade]
+  A --> A1[Validate requested permission tags]
+  A1 --> A2[Build process sandbox permissions]
+  A2 --> B
   B --> C[Persist record.json + sandbox.json]
   C --> D[Spawn detached sandbox runtime process]
   D --> E[Append stdout/stderr to process.log]
@@ -67,6 +71,9 @@ flowchart TD
 ## Notes
 
 - Keep-alive is opt-in per process via `process_start.keepAlive`.
+- `process_start.permissions` is optional:
+  - Omitted: process inherits current agent sandbox permissions.
+  - Provided: tags are validated against caller permissions, then only requested tags are applied.
 - Reboot safety uses system boot time comparison; boot mismatch clears persisted pids.
 - Keep-alive restarts use exponential backoff (2s base, doubling to 60s max) for crash loops.
 - Stop operations apply to the full process group to terminate child processes.
