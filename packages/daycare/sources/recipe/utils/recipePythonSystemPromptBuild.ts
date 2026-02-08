@@ -8,6 +8,7 @@ export function recipePythonSystemPromptBuild(sandboxDir: string): string {
     "Input protocol:",
     "- The actual user message is available in Python variable `userPrompt`.",
     "- User message text is not provided in chat content.",
+    "- `userPrompt` can be very long; handle it without echoing the full content unless explicitly required.",
     "Output protocol (strict):",
     "- Never send plain assistant text messages.",
     "- Every assistant response must be tool calls only.",

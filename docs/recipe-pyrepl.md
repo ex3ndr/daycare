@@ -12,6 +12,7 @@ Behavior:
   - `output_string({ output: string })` for final user-visible output
 - each user turn is injected into Python variable `userPrompt`
 - user prompt text is not sent directly as chat text content
+- prompt guidance explicitly states that `userPrompt` can be very long
 - executes python actions in a persistent system `python3` subprocess
 - uses a recipe sandbox directory under `sources/recipe/.sandbox/<sandboxName>`
 - returns stdout/stderr/result/error through `toolResult` messages
