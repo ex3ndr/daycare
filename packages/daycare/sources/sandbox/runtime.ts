@@ -15,6 +15,7 @@ const srtCliPath = nodeRequire.resolve("@anthropic-ai/sandbox-runtime/dist/cli.j
 const execFile = promisify(execFileCallback);
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_BUFFER_BYTES = 1_000_000;
+const DEFAULT_ENABLE_WEAKER_NESTED_SANDBOX = true;
 
 /**
  * Runs a command with a per-call sandbox config.
@@ -31,11 +32,16 @@ export async function runInSandbox(
     maxBufferBytes?: number;
   } = {}
 ): Promise<{ stdout: string; stderr: string }> {
+  const runtimeConfig: SandboxRuntimeConfig = {
+    ...config,
+    enableWeakerNestedSandbox:
+      config.enableWeakerNestedSandbox ?? DEFAULT_ENABLE_WEAKER_NESTED_SANDBOX
+  };
   const settingsPath = path.join(
     os.tmpdir(),
     `claybot-srt-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`
   );
-  await fs.writeFile(settingsPath, JSON.stringify(config), "utf8");
+  await fs.writeFile(settingsPath, JSON.stringify(runtimeConfig), "utf8");
   logger.debug("Executing command with sandbox config");
   try {
     const baseEnv = options.env ?? process.env;

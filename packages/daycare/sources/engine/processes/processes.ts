@@ -549,7 +549,8 @@ function buildSandboxConfig(
     network: {
       allowedDomains,
       deniedDomains: []
-    }
+    },
+    enableWeakerNestedSandbox: true
   };
 }
 

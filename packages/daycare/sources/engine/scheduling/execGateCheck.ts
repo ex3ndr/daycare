@@ -138,7 +138,8 @@ function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: str
     network: {
       allowedDomains,
       deniedDomains: []
-    }
+    },
+    enableWeakerNestedSandbox: true
   };
 }
 
