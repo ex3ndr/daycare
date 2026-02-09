@@ -2,6 +2,7 @@
 
 Connectors are plugin modules that bridge Daycare to external systems.
 They emit messages (text + files) into agents and send responses back.
+Incoming files are persisted on disk and passed to the LLM as file-path references.
 
 ## Connector interface
 Each connector exposes:
@@ -13,6 +14,7 @@ Messages are normalized to:
 ```
 { text: string | null, files?: FileReference[], replyToMessageId?: string }
 ```
+The LLM-facing user message references `FileReference.path` and never embeds raw file bytes.
 
 ```mermaid
 classDiagram
@@ -33,6 +35,19 @@ classDiagram
 ```
 
 Connectors emit a user descriptor alongside `MessageContext` for agent targeting.
+
+## File transport policy
+
+- Connectors persist received files via `FileStore` (resolved to `<workspace>/files`).
+- Image generation tools write output files to `<workspace>/files`.
+- LLM context includes file metadata + path only; no inline base64/image payloads.
+
+```mermaid
+flowchart LR
+  External[Connector/Image provider] --> Store[workspace/files]
+  Store --> Ref[FileReference.path]
+  Ref --> LLM[LLM context as text]
+```
 
 ## Telegram connector
 - Implemented as the `telegram` plugin.

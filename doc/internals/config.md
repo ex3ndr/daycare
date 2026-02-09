@@ -30,6 +30,18 @@ flowchart TD
 - `/v1/engine/reload` validates with schema and rebuilds Config
 - Engine applies the new Config snapshot (paths must be unchanged)
 
+## File storage path
+
+`filesDir` resolves to `<workspaceDir>/files` so connector attachments and generated images
+are colocated in the workspace.
+
+```mermaid
+flowchart LR
+  Workspace[workspaceDir] --> Files[workspaceDir/files]
+  Connectors --> Files
+  ImageTools --> Files
+```
+
 ## Settings defaults
 Resolved settings apply defaults so runtime code can rely on non-null values.
 

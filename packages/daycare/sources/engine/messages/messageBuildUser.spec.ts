@@ -24,7 +24,7 @@ describe("messageBuildUser", () => {
     expect(typeof result.timestamp).toBe("number");
   });
 
-  it("embeds image files as base64 blocks", async () => {
+  it("represents image files as path references", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "daycare-msg-"));
     try {
       const filePath = path.join(dir, "image.png");
@@ -50,11 +50,11 @@ describe("messageBuildUser", () => {
       };
 
       const result = await messageBuildUser(entry);
-      const content = result.content as Array<{ type: string; data?: string }>;
+      const content = result.content as Array<{ type: string; text?: string }>;
 
       expect(content).toHaveLength(1);
-      expect(content[0]?.type).toBe("image");
-      expect(content[0]?.data).toBe(buffer.toString("base64"));
+      expect(content[0]?.type).toBe("text");
+      expect(content[0]?.text).toContain(`at ${filePath}`);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

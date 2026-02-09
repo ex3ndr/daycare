@@ -222,6 +222,7 @@ Before answering about prior work, decisions, people, preferences: check memory 
 
 Incoming: `<time>...</time><message_id>...</message_id><message>...</message>`.{{#if isForeground}} Use `message_id` for reactions.{{/if}}
 `<system_message origin="<agentId>">` = internal agent updates, not user requests.
+Connector and image-generation files are provided as file paths under `{{workspace}}/files`; never expect inline/base64 bytes in message content.
 
 {{#if isForeground}}
 {{#if messageFormatPrompt}}

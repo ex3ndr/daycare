@@ -59,15 +59,15 @@ export function buildImageGenerationTool(
       );
 
       const workspaceDir = toolContext.permissions.workingDir;
-      const workspaceImagesDir = path.join(workspaceDir, "images");
-      await fs.mkdir(workspaceImagesDir, { recursive: true });
+      const workspaceFilesDir = path.join(workspaceDir, "files");
+      await fs.mkdir(workspaceFilesDir, { recursive: true });
       const createdAt = new Date();
       const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
 
-      const content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }> = [
+      const content: Array<{ type: "text"; text: string }> = [
         {
           type: "text",
-          text: `Generated ${result.files.length} image(s) with ${providerId}.`
+          text: `Generated ${result.files.length} image(s) with ${providerId}. Saved under ${workspaceFilesDir}.`
         }
       ];
       const workspaceFiles: Array<{ name: string; path: string; mimeType: string }> = [];
@@ -75,16 +75,14 @@ export function buildImageGenerationTool(
         if (!file.mimeType.startsWith("image/")) {
           continue;
         }
-        const data = await fs.readFile(file.path);
         const suffix = result.files.length > 1 ? `-${index + 1}` : "";
         const filename = `${timestamp}${suffix}.png`;
-        const outputPath = path.join(workspaceImagesDir, filename);
-        await fs.writeFile(outputPath, data);
+        const outputPath = path.join(workspaceFilesDir, filename);
+        await fs.copyFile(file.path, outputPath);
         workspaceFiles.push({ name: filename, path: outputPath, mimeType: file.mimeType });
         content.push({
-          type: "image",
-          data: data.toString("base64"),
-          mimeType: file.mimeType
+          type: "text",
+          text: `Image file: ${outputPath} (${file.mimeType})`
         });
       }
 
@@ -102,7 +100,7 @@ export function buildImageGenerationTool(
             size: file.size
           })),
           workspace: {
-            dir: workspaceImagesDir,
+            dir: workspaceFilesDir,
             files: workspaceFiles
           }
         },

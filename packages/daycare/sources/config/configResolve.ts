@@ -21,11 +21,11 @@ export function configResolve(
   const resolvedSettingsPath = path.resolve(settingsPath);
   const configDir = path.dirname(resolvedSettingsPath);
   const dataDir = path.resolve(resolvedSettings.engine?.dataDir ?? DEFAULT_DAYCARE_DIR);
+  const workspaceDir = resolveWorkspaceDir(configDir, resolvedSettings.assistant ?? null);
   const agentsDir = path.join(dataDir, "agents");
-  const filesDir = path.join(dataDir, "files");
+  const filesDir = path.join(workspaceDir, "files");
   const authPath = path.join(dataDir, "auth.json");
   const socketPath = resolveEngineSocketPath(resolvedSettings.engine?.socketPath);
-  const workspaceDir = resolveWorkspaceDir(configDir, resolvedSettings.assistant ?? null);
   const defaultPermissions = permissionBuildDefault(workspaceDir, configDir);
   const frozenSettings = freezeDeep(structuredClone(resolvedSettings));
   const frozenPermissions = freezeDeep(defaultPermissions);
