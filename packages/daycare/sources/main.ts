@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { readFileSync } from "fs";
 import { startCommand } from "./commands/start.js";
 import { statusCommand } from "./commands/status.js";
 import { initLogging } from "./log.js";
@@ -11,6 +12,10 @@ import { doctorCommand } from "./commands/doctor.js";
 import { DEFAULT_SETTINGS_PATH } from "./settings.js";
 import { eventCommand } from "./commands/event.js";
 
+const pkg = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf-8")
+);
+
 const program = new Command();
 
 initLogging();
@@ -18,7 +23,7 @@ initLogging();
 program
   .name("daycare")
   .description("Personal AI agent")
-  .version("0.0.0");
+  .version(pkg.version);
 
 program
   .command("start")

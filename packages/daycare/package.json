@@ -1,14 +1,46 @@
 {
   "name": "daycare-cli",
   "version": "0.0.1",
+  "description": "Local-first, plugin-driven multi-agent runtime",
   "type": "module",
+  "license": "MIT",
+  "author": "ex3ndr",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ex3ndr/daycare.git",
+    "directory": "packages/daycare"
+  },
+  "homepage": "https://github.com/ex3ndr/daycare",
+  "bugs": {
+    "url": "https://github.com/ex3ndr/daycare/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "multi-agent",
+    "runtime",
+    "cli"
+  ],
+  "bin": {
+    "daycare": "./bin/daycare.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/skills dist/skills",
     "dev": "tsx sources/main.ts",
     "recipe": "tsx sources/recipe/recipeRun.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "yarn build"
   },
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "^0.0.32",

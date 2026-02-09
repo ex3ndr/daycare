@@ -6,10 +6,10 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspace daycare run build",
+    "build": "yarn workspace daycare-cli run build",
     "dashboard": "yarn workspace daycare-dashboard dev",
-    "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare run dev",
-    "recipe": "yarn workspace daycare run recipe",
+    "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare-cli run dev",
+    "recipe": "yarn workspace daycare-cli run recipe",
     "test": "yarn workspaces run test",
     "test:watch": "yarn workspaces run test:watch",
     "typecheck": "yarn workspaces run typecheck"

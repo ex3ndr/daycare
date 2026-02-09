@@ -23,7 +23,7 @@ In this monorepo, source code lives in `packages/daycare/sources` and builds to 
 ## Install (npm)
 
 ```sh
-npm install daycare
+npm install -g daycare-cli
 ```
 
 This repository currently develops Daycare in a monorepo, but this package README is scoped for standalone package consumption.
