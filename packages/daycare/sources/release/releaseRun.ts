@@ -27,26 +27,40 @@ export async function releaseRun(): Promise<void> {
   const nextVersion = await releaseVersionPrompt(currentVersion);
   const tagName = `daycare-cli@${nextVersion}`;
   const commitMessage = `chore(release): daycare-cli ${nextVersion}`;
+  let releaseCommitHash: string | null = null;
+  let tagCreated = false;
 
   assertTagMissing(tagName);
 
-  commandRun("yarn", ["install", "--frozen-lockfile"], repositoryDirectory);
-  commandRun("npm", ["whoami", "--registry", npmRegistry], packageDirectory);
-  commandRun(
-    "npm",
-    ["version", nextVersion, "--no-git-tag-version", "--registry", npmRegistry],
-    packageDirectory
-  );
-  commandRun("git", ["add", packageManifestRelativePath], repositoryDirectory);
-  commandRun("git", ["commit", "-m", commitMessage], repositoryDirectory);
-  commandRun("git", ["tag", tagName], repositoryDirectory);
+  try {
+    commandRun("yarn", ["install", "--frozen-lockfile"], repositoryDirectory);
+    commandRun("npm", ["whoami", "--registry", npmRegistry], packageDirectory);
+    commandRun(
+      "npm",
+      ["version", nextVersion, "--no-git-tag-version", "--registry", npmRegistry],
+      packageDirectory
+    );
+    commandRun("git", ["add", packageManifestRelativePath], repositoryDirectory);
+    commandRun("git", ["commit", "-m", commitMessage], repositoryDirectory);
+    releaseCommitHash = commandOutput("git", ["rev-parse", "HEAD"], repositoryDirectory);
+
+    commandRun("yarn", ["test"], repositoryDirectory);
+    commandRun("yarn", ["build"], repositoryDirectory);
+
+    commandRun("git", ["tag", tagName], repositoryDirectory);
+    tagCreated = true;
+
+    commandRun(
+      "npm",
+      ["publish", "--access", "public", "--registry", npmRegistry],
+      packageDirectory
+    );
+  } catch (error) {
+    releaseRollback(releaseCommitHash, tagName, tagCreated);
+    throw error;
+  }
   commandRun("git", ["push", "origin", "HEAD"], repositoryDirectory);
   commandRun("git", ["push", "origin", tagName], repositoryDirectory);
-  commandRun(
-    "npm",
-    ["publish", "--access", "public", "--registry", npmRegistry],
-    packageDirectory
-  );
 
   console.log(`Released daycare-cli ${nextVersion} with tag ${tagName}`);
 }
@@ -97,6 +111,22 @@ function commandOutput(command: string, args: string[], cwd: string): string {
     stdio: ["ignore", "pipe", "inherit"],
     encoding: "utf8"
   }).trim();
+}
+
+function releaseRollback(
+  releaseCommitHash: string | null,
+  tagName: string,
+  tagCreated: boolean
+): void {
+  if (!releaseCommitHash) {
+    return;
+  }
+
+  if (tagCreated) {
+    commandRun("git", ["tag", "-d", tagName], repositoryDirectory);
+  }
+
+  commandRun("git", ["revert", "--no-edit", releaseCommitHash], repositoryDirectory);
 }
 
 await releaseRun();
