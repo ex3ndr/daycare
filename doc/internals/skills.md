@@ -24,15 +24,20 @@ The system prompt lists skills in XML tags to make parsing explicit.
 ## Skills catalog flow (code)
 
 Daycare's skills catalog is composed from small helpers that focus on one task
-each, keeping listing and formatting composable.
+each, keeping listing and formatting composable. During `Agent.handleMessage`,
+the engine gathers all three sources (core, config, plugin) before formatting
+the prompt.
 
 ```mermaid
 flowchart TD
+  Agent[Agent.handleMessage] --> Core[skillListCore]
+  Agent --> Config[skillListConfig(configDir/skills)]
+  Agent --> Plugin[skillListRegistered]
   Core[skillListCore] --> FromRoot[skillListFromRoot]
-  Config[skillListConfig] --> FromRoot
+  Config --> FromRoot
   FromRoot --> Resolve[skillResolve]
   Resolve --> Sort[skillSort]
-  Plugin[skillListRegistered] --> Resolve
+  Plugin --> Resolve
   Plugin --> Sort
   Sort --> Prompt[skillPromptFormat]
 ```
