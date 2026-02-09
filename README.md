@@ -86,6 +86,7 @@ See `doc/internals/config.md` and `doc/internals/auth.md` for exact schema/behav
 yarn build        # build daycare package
 yarn test         # run workspace tests
 yarn typecheck    # typecheck workspaces
+yarn release      # release daycare-cli (version bump, tag, push, publish)
 yarn dashboard    # run dashboard on :7331
 ```
 

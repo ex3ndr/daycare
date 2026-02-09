@@ -31,6 +31,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `engine-message-agent-helpers.md` - extracted message + agent helpers
 - `engine-modules-registry.md` - engine modules registry
 - `engine-tool-agent-extractions.md` - extracted tool + agent persistence helpers
+- `release-command.md` - `yarn release` flow for daycare-cli publish
 - `config.md` - config files and resolution order
 - `config-reload-locking.md` - online config reload lock model and plugin/provider apply flow
 - `context-compaction.md` - compaction thresholds and auto-compaction flow
