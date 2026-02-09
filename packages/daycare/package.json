@@ -1,7 +1,6 @@
 {
-  "name": "daycare",
-  "private": true,
-  "version": "0.0.0",
+  "name": "daycare-cli",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/skills dist/skills",
