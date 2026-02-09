@@ -8,11 +8,12 @@
 2. Prompt for release mode (`patch`, `minor`, `major`, or `custom`).
 3. Resolve next version from the selected mode.
 4. Run `yarn install --frozen-lockfile` in the monorepo root.
-5. Run `npm version <version> --no-git-tag-version` in `packages/daycare`.
-6. Commit `packages/daycare/package.json`.
-7. Create tag `daycare-cli@<version>`.
-8. Push branch and tag to `origin`.
-9. Run `npm publish --access public` from `packages/daycare`.
+5. Verify npm auth with `npm whoami --registry https://registry.npmjs.org/`.
+6. Run `npm version <version> --no-git-tag-version --registry https://registry.npmjs.org/` in `packages/daycare`.
+7. Commit `packages/daycare/package.json`.
+8. Create tag `daycare-cli@<version>`.
+9. Push branch and tag to `origin`.
+10. Run `npm publish --access public --registry https://registry.npmjs.org/` from `packages/daycare`.
 
 ## Sequence
 
@@ -29,9 +30,10 @@ sequenceDiagram
   User->>CLI: Select mode or custom version
   CLI->>CLI: Resolve target version
   CLI->>CLI: yarn install --frozen-lockfile
-  CLI->>NPM: npm version --no-git-tag-version
+  CLI->>NPM: npm whoami --registry npmjs
+  CLI->>NPM: npm version --no-git-tag-version --registry npmjs
   CLI->>Git: commit package.json
   CLI->>Git: tag daycare-cli@<version>
   CLI->>Git: push HEAD + tag
-  CLI->>NPM: npm publish --access public
+  CLI->>NPM: npm publish --access public --registry npmjs
 ```

@@ -14,6 +14,7 @@ const packageDirectory = resolve(scriptDirectory, "../..");
 const repositoryDirectory = resolve(packageDirectory, "../..");
 const packageManifestPath = resolve(packageDirectory, "package.json");
 const packageManifestRelativePath = "packages/daycare/package.json";
+const npmRegistry = "https://registry.npmjs.org/";
 
 /**
  * Runs the daycare-cli release flow.
@@ -30,13 +31,22 @@ export async function releaseRun(): Promise<void> {
   assertTagMissing(tagName);
 
   commandRun("yarn", ["install", "--frozen-lockfile"], repositoryDirectory);
-  commandRun("npm", ["version", nextVersion, "--no-git-tag-version"], packageDirectory);
+  commandRun("npm", ["whoami", "--registry", npmRegistry], packageDirectory);
+  commandRun(
+    "npm",
+    ["version", nextVersion, "--no-git-tag-version", "--registry", npmRegistry],
+    packageDirectory
+  );
   commandRun("git", ["add", packageManifestRelativePath], repositoryDirectory);
   commandRun("git", ["commit", "-m", commitMessage], repositoryDirectory);
   commandRun("git", ["tag", tagName], repositoryDirectory);
   commandRun("git", ["push", "origin", "HEAD"], repositoryDirectory);
   commandRun("git", ["push", "origin", tagName], repositoryDirectory);
-  commandRun("npm", ["publish", "--access", "public"], packageDirectory);
+  commandRun(
+    "npm",
+    ["publish", "--access", "public", "--registry", npmRegistry],
+    packageDirectory
+  );
 
   console.log(`Released daycare-cli ${nextVersion} with tag ${tagName}`);
 }
