@@ -64,6 +64,7 @@ import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
+import { agentRestoreContextResolve } from "./ops/agentRestoreContextResolve.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
 import { systemAgentPromptResolve } from "./system/systemAgentPromptResolve.js";
@@ -757,8 +758,13 @@ export class Agent {
 
   private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
     const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
-    const messages = await this.buildHistoryContext(history);
-    this.state.context = { messages };
+    const historyMessages = await this.buildHistoryContext(history);
+    this.state.context = {
+      messages: agentRestoreContextResolve(
+        this.state.context.messages ?? [],
+        historyMessages
+      )
+    };
     this.state.updatedAt = Date.now();
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.restored", { agentId: this.id });

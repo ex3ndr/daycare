@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import type { Context } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import type { Config } from "@/types";
@@ -42,6 +43,11 @@ const statsSchema = z.record(z.record(tokenSizeSchema));
 
 const agentStateSchema = z
   .object({
+    context: z
+      .object({
+        messages: z.array(z.unknown())
+      })
+      .optional(),
     permissions: permissionsSchema,
     tokens: tokensSchema,
     stats: statsSchema,
@@ -72,7 +78,9 @@ export async function agentStateRead(config: Config, agentId: string): Promise<A
   const persisted = agentStateSchema.parse(parsed);
   const lifecycle = persisted.state ?? (persisted.sleeping ? "sleeping" : "active");
   return {
-    context: { messages: [] },
+    context: {
+      messages: (persisted.context?.messages ?? []) as Context["messages"]
+    },
     permissions: persisted.permissions,
     tokens: persisted.tokens,
     stats: persisted.stats,

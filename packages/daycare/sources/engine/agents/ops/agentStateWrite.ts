@@ -20,6 +20,7 @@ export async function agentStateWrite(
   const filePath = path.join(basePath, "state.json");
   const payload = `${JSON.stringify(
     {
+      context: state.context,
       permissions: state.permissions,
       tokens: state.tokens,
       stats: state.stats,

@@ -27,6 +27,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `agents.md` - agent queueing and sequencing
 - `agent-types.md` - agent descriptors and resolution
 - `agent-system.md` - agent system lifecycle and ownership
+- `agent-context-restore.md` - persisted state context and restore fallback behavior
 - `engine.md` - engine socket updates and control plane
 - `engine-agent.md` - engine agent helpers
 - `engine-heartbeat-utils.md` - engine heartbeat utilities
