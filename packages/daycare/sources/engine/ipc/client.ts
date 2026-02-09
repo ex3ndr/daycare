@@ -1,4 +1,5 @@
 import http from "node:http";
+import type { SignalSource } from "@/types";
 
 import { resolveEngineSocketPath } from "./socket.js";
 
@@ -123,5 +124,24 @@ export async function sendEngineEvent(
   });
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new Error(response.body || "Engine event send failed.");
+  }
+}
+
+export async function sendEngineSignal(
+  type: string,
+  data?: unknown,
+  source?: SignalSource,
+  socketPathOverride?: string
+): Promise<void> {
+  const socketPath = resolveEngineSocketPath(socketPathOverride);
+  const response = await requestSocket({
+    socketPath,
+    path: "/v1/engine/signals/generate",
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, data, source })
+  });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Signal send failed.");
   }
 }

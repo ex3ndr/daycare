@@ -10,7 +10,7 @@ The CLI is implemented with Commander in `sources/main.ts`. It always initialize
 - `plugins unload <instanceId>` - unloads a plugin instance.
 - `auth set <id> <key> <value>` - stores an auth credential.
 - `doctor` - runs basic inference checks for configured providers.
-- `event <type> [payload]` - sends a custom engine event with optional JSON payload over the local socket.
+- `event <type> [payload]` - generates a custom signal with optional JSON payload over the local socket.
 
 ## Development
 - `yarn dev` runs the CLI directly via `tsx`.
@@ -48,10 +48,11 @@ sequenceDiagram
   participant User
   participant CLI
   participant Socket
+  participant Signals
   participant EventBus
   User->>CLI: daycare event custom.type {"ok":true}
-  CLI->>Socket: POST /v1/engine/events
-  Socket->>EventBus: emit(custom.type, payload)
-  EventBus-->>Socket: event published
+  CLI->>Socket: POST /v1/engine/signals/generate
+  Socket->>Signals: generate(type, source=process:daycare-cli, data)
+  Signals->>EventBus: emit(signal.generated, signal)
   Socket-->>CLI: { ok: true }
 ```

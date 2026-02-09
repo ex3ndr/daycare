@@ -109,7 +109,7 @@ program
 
 program
   .command("event")
-  .description("Send an engine event over the local socket")
+  .description("Generate a signal event over the local socket")
   .argument("<type>", "Event type")
   .argument("[payload]", "JSON payload")
   .action(eventCommand);

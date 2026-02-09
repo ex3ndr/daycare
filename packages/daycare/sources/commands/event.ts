@@ -1,10 +1,10 @@
-import { sendEngineEvent } from "../engine/ipc/client.js";
+import { sendEngineSignal } from "../engine/ipc/client.js";
 
 export async function eventCommand(type: string, payloadJson?: string): Promise<void> {
   intro("daycare event");
   try {
     const payload = eventPayloadParse(payloadJson);
-    await sendEngineEvent(type, payload);
+    await sendEngineSignal(type, payload, { type: "process", id: "daycare-cli" });
     outro(`Sent event ${type}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

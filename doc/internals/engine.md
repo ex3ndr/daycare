@@ -112,11 +112,11 @@ sequenceDiagram
 sequenceDiagram
   participant CLI
   participant EngineSocket
+  participant Signals
   participant EventBus
-  participant SSE
-  CLI->>EngineSocket: POST /v1/engine/events
-  EngineSocket->>EventBus: emit(type, payload)
-  EventBus-->>SSE: broadcast event
+  CLI->>EngineSocket: POST /v1/engine/signals/generate
+  EngineSocket->>Signals: generate(type, source, data)
+  Signals->>EventBus: emit(signal.generated, signal)
   EngineSocket-->>CLI: { ok: true }
 ```
 
