@@ -79,7 +79,7 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
     tool: {
       name: "process_start",
       description:
-        "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. By default it starts with no network and no write grants. Reads are always allowed (except protected deny-list paths). Explicit permission tags can only re-enable caller-held permissions; @read tags are ignored.",
+        "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. By default it starts with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Explicit permission tags can only re-enable caller-held permissions; @read tags are ignored.",
       parameters: processStartSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -258,7 +258,8 @@ async function resolveProcessPermissions(
     workingDir: currentPermissions.workingDir,
     writeDirs: [],
     readDirs: [],
-    network: false
+    network: false,
+    events: false
   };
   if (!requestedTags || requestedTags.length === 0) {
     return processPermissions;

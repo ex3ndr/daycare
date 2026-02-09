@@ -9,7 +9,8 @@ function basePermissions(): SessionPermissions {
     workingDir: path.resolve("/workspace"),
     writeDirs: [path.resolve("/workspace/tmp"), path.resolve("/workspace/tmp")],
     readDirs: [],
-    network: false
+    network: false,
+    events: false
   };
 }
 

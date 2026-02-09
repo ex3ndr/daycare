@@ -6,7 +6,7 @@ import { pathSanitizeAndResolve } from "./pathSanitize.js";
 
 /**
  * Checks whether a permission access is already allowed by current permissions.
- * Expects: access.kind is network/read/write; paths must be absolute.
+ * Expects: access.kind is network/events/read/write; paths must be absolute for read/write.
  */
 export async function permissionAccessAllows(
   permissions: SessionPermissions,
@@ -14,6 +14,9 @@ export async function permissionAccessAllows(
 ): Promise<boolean> {
   if (access.kind === "network") {
     return permissions.network;
+  }
+  if (access.kind === "events") {
+    return permissions.events;
   }
 
   if (!path.isAbsolute(access.path)) {

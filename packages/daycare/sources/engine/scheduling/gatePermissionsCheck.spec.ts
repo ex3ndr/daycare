@@ -7,7 +7,8 @@ const basePermissions: SessionPermissions = {
   workingDir: "/tmp",
   readDirs: ["/tmp"],
   writeDirs: ["/tmp"],
-  network: false
+  network: false,
+  events: false
 };
 
 describe("gatePermissionsCheck", () => {
@@ -28,6 +29,18 @@ describe("gatePermissionsCheck", () => {
     expect(result).toEqual({ allowed: true, missing: [] });
   });
 
+  it("denies events when not allowed", async () => {
+    const result = await gatePermissionsCheck(basePermissions, ["@events"]);
+    expect(result.allowed).toBe(false);
+    expect(result.missing).toEqual(["@events"]);
+  });
+
+  it("allows events when permitted", async () => {
+    const permissions: SessionPermissions = { ...basePermissions, events: true };
+    const result = await gatePermissionsCheck(permissions, ["@events"]);
+    expect(result).toEqual({ allowed: true, missing: [] });
+  });
+
   it("denies paths outside allowed roots", async () => {
     const result = await gatePermissionsCheck(basePermissions, ["@read:/etc"]);
     expect(result.allowed).toBe(false);
@@ -38,7 +51,7 @@ describe("gatePermissionsCheck", () => {
     const result = await gatePermissionsCheck(basePermissions, ["@banana"]);
     expect(result.allowed).toBe(false);
     expect(result.missing).toEqual([
-      "@banana (Permission must be @network, @read:<path>, or @write:<path>.)"
+      "@banana (Permission must be @network, @events, @read:<path>, or @write:<path>.)"
     ]);
   });
 });

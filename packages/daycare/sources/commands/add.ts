@@ -282,7 +282,9 @@ async function validatePluginLoad(
     fileStore,
     pluginCatalog: buildPluginCatalog(),
     inferenceRouter,
-    processes: new Processes(config.dataDir, getLogger("processes.validate")),
+    processes: new Processes(config.dataDir, getLogger("processes.validate"), {
+      socketPath: config.socketPath
+    }),
     mode: "validate"
   });
 

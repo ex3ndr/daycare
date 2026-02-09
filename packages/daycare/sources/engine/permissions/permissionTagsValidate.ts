@@ -6,7 +6,7 @@ import { permissionAccessParse } from "./permissionAccessParse.js";
  * Validates that all permission tags are allowed by current permissions.
  * Throws an error if any permission is not already held by the caller.
  *
- * Expects: tags are @network, @read:<path>, or @write:<path>.
+ * Expects: tags are @network, @events, @read:<path>, or @write:<path>.
  */
 export async function permissionTagsValidate(
   permissions: SessionPermissions,

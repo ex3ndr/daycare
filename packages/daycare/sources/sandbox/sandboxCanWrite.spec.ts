@@ -62,6 +62,7 @@ function buildPermissions(workingDir: string, writeDirs: string[]): SessionPermi
     workingDir: path.resolve(workingDir),
     readDirs: [],
     writeDirs: writeDirs.map((entry) => path.resolve(entry)),
-    network: false
+    network: false,
+    events: false
   };
 }

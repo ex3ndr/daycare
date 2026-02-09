@@ -85,7 +85,8 @@ function createContext(workingDir: string): ToolExecutionContext {
       workingDir,
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     },
     tokens: null,
     stats: {},

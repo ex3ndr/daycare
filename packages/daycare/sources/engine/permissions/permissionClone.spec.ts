@@ -9,7 +9,8 @@ describe("permissionClone", () => {
       workingDir: "/tmp/work",
       writeDirs: ["/tmp/work"],
       readDirs: ["/tmp/read"],
-      network: false
+      network: false,
+      events: false
     };
 
     const cloned = permissionClone(permissions);

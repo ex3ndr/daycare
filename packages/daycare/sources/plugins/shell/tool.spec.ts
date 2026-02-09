@@ -352,7 +352,8 @@ describe("exec tool allowedDomains", () => {
       workingDir: context.permissions.workingDir,
       writeDirs: [...context.permissions.writeDirs],
       readDirs: [...context.permissions.readDirs],
-      network: context.permissions.network
+      network: context.permissions.network,
+      events: context.permissions.events
     };
 
     try {
@@ -388,7 +389,8 @@ function createContext(
       workingDir,
       writeDirs: writeDirs.map((entry) => path.resolve(entry)),
       readDirs: readDirs.map((entry) => path.resolve(entry)),
-      network
+      network,
+      events: false
     },
     tokens: null,
     stats: {},
@@ -413,7 +415,9 @@ function createContext(
     agent,
     source: "test",
     messageContext,
-    agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
+    agentSystem: {
+      config: { current: { socketPath: path.join(workingDir, "engine.sock") } }
+    } as unknown as ToolExecutionContext["agentSystem"],
     heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
   };
 }

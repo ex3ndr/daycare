@@ -156,6 +156,7 @@ function mergeCronPermissions(
     workingDir: base.workingDir,
     writeDirs: Array.from(writeDirs.values()),
     readDirs: Array.from(readDirs.values()),
-    network: base.network || current.network
+    network: base.network || current.network,
+    events: base.events || current.events
   };
 }

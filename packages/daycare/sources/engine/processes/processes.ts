@@ -18,6 +18,7 @@ import { AsyncLock } from "../../util/lock.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import { atomicWrite } from "../../util/atomicWrite.js";
 import { processBootTimeRead } from "./processBootTimeRead.js";
+import { resolveEngineSocketPath } from "../ipc/socket.js";
 
 const RECORD_VERSION = 2;
 const MONITOR_INTERVAL_MS = 2_000;
@@ -100,6 +101,7 @@ export class Processes {
   private readonly lock = new AsyncLock();
   private readonly logger: Logger;
   private readonly bootTimeProvider: () => Promise<number | null>;
+  private readonly socketPath: string;
   private readonly records = new Map<string, ProcessRecord>();
   private readonly children = new Map<string, ChildProcess>();
   private currentBootTimeMs: number | null = null;
@@ -109,12 +111,13 @@ export class Processes {
   constructor(
     baseDir: string,
     logger: Logger,
-    options: { bootTimeProvider?: () => Promise<number | null> } = {}
+    options: { bootTimeProvider?: () => Promise<number | null>; socketPath?: string } = {}
   ) {
     this.baseDir = path.resolve(baseDir);
     this.recordsDir = path.join(this.baseDir, "processes");
     this.logger = logger;
     this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
+    this.socketPath = resolveEngineSocketPath(options.socketPath);
   }
 
   async load(): Promise<void> {
@@ -391,7 +394,11 @@ export class Processes {
     record: ProcessRecord,
     options: { incrementRestart: boolean }
   ): Promise<void> {
-    const sandboxConfig = buildSandboxConfig(record.allowedDomains, record.permissions);
+    const sandboxConfig = buildSandboxConfig(
+      record.allowedDomains,
+      record.permissions,
+      this.socketPath
+    );
     await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
     const baseEnv = { ...process.env, ...record.env };
     const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
@@ -542,7 +549,8 @@ export class Processes {
 
 function buildSandboxConfig(
   allowedDomains: string[],
-  permissions: SessionPermissions
+  permissions: SessionPermissions,
+  socketPath: string
 ): SandboxRuntimeConfig {
   return {
     filesystem: sandboxFilesystemPolicyBuild({ permissions }),
@@ -550,6 +558,7 @@ function buildSandboxConfig(
       allowedDomains,
       deniedDomains: []
     },
+    ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
     enableWeakerNestedSandbox: true
   };
 }
@@ -661,7 +670,8 @@ function parsePermissions(value: unknown): SessionPermissions | null {
     typeof candidate.workingDir !== "string" ||
     !Array.isArray(candidate.writeDirs) ||
     !Array.isArray(candidate.readDirs) ||
-    typeof candidate.network !== "boolean"
+    typeof candidate.network !== "boolean" ||
+    typeof candidate.events !== "boolean"
   ) {
     return null;
   }
@@ -675,7 +685,8 @@ function parsePermissions(value: unknown): SessionPermissions | null {
     workingDir: candidate.workingDir,
     writeDirs,
     readDirs,
-    network: candidate.network
+    network: candidate.network,
+    events: candidate.events
   };
 }
 
@@ -684,7 +695,8 @@ function clonePermissions(permissions: SessionPermissions): SessionPermissions {
     workingDir: permissions.workingDir,
     writeDirs: [...permissions.writeDirs],
     readDirs: [...permissions.readDirs],
-    network: permissions.network
+    network: permissions.network,
+    events: permissions.events
   };
 }
 

@@ -15,8 +15,16 @@ describe("permissionAccessAllows", () => {
 
   it("allows network access when enabled", async () => {
     const allowed = await permissionAccessAllows(
-      { workingDir: "/tmp", writeDirs: [], readDirs: [], network: true },
+      { workingDir: "/tmp", writeDirs: [], readDirs: [], network: true, events: false },
       { kind: "network" }
+    );
+    expect(allowed).toBe(true);
+  });
+
+  it("allows events access when enabled", async () => {
+    const allowed = await permissionAccessAllows(
+      { workingDir: "/tmp", writeDirs: [], readDirs: [], network: false, events: true },
+      { kind: "events" }
     );
     expect(allowed).toBe(true);
   });
@@ -27,7 +35,7 @@ describe("permissionAccessAllows", () => {
     const target = path.join(dir, "file.txt");
     await fs.writeFile(target, "ok", "utf8");
     const allowed = await permissionAccessAllows(
-      { workingDir: dir, writeDirs: [], readDirs: [dir], network: false },
+      { workingDir: dir, writeDirs: [], readDirs: [dir], network: false, events: false },
       { kind: "read", path: target }
     );
     expect(allowed).toBe(true);
@@ -41,7 +49,7 @@ describe("permissionAccessAllows", () => {
     await fs.writeFile(outsideFile, "ok", "utf8");
 
     const allowed = await permissionAccessAllows(
-      { workingDir: workspaceDir, writeDirs: [], readDirs: [], network: false },
+      { workingDir: workspaceDir, writeDirs: [], readDirs: [], network: false, events: false },
       { kind: "read", path: outsideFile }
     );
 
@@ -53,7 +61,7 @@ describe("permissionAccessAllows", () => {
     tempDirs.push(dir);
     const target = path.join(dir, "elsewhere", "file.txt");
     const allowed = await permissionAccessAllows(
-      { workingDir: "/tmp", writeDirs: ["/tmp"], readDirs: [], network: false },
+      { workingDir: "/tmp", writeDirs: ["/tmp"], readDirs: [], network: false, events: false },
       { kind: "write", path: target }
     );
     expect(allowed).toBe(false);
@@ -64,7 +72,7 @@ describe("permissionAccessAllows", () => {
     tempDirs.push(dir);
     const target = path.join(dir, "file.txt");
     const allowed = await permissionAccessAllows(
-      { workingDir: dir, writeDirs: [], readDirs: [], network: false },
+      { workingDir: dir, writeDirs: [], readDirs: [], network: false, events: false },
       { kind: "write", path: target }
     );
     expect(allowed).toBe(false);
@@ -75,7 +83,7 @@ describe("permissionAccessAllows", () => {
     tempDirs.push(dir);
     const target = path.join(dir, "file.txt");
     const allowed = await permissionAccessAllows(
-      { workingDir: "/tmp", writeDirs: [dir], readDirs: [], network: false },
+      { workingDir: "/tmp", writeDirs: [dir], readDirs: [], network: false, events: false },
       { kind: "write", path: target }
     );
     expect(allowed).toBe(true);

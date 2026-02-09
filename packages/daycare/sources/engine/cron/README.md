@@ -66,7 +66,8 @@ const defaultPermissions = {
   workingDir: "/path/to/workspace",
   writeDirs: [],
   readDirs: [],
-  network: false
+  network: false,
+  events: false
 };
 const scheduler = new CronScheduler({
   store,

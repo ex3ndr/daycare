@@ -117,7 +117,8 @@ function contextBuild(saveBuffer: (options: {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     },
     agent: { id: "agent-test" } as unknown as ToolExecutionContext["agent"],
     source: "test",

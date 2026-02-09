@@ -4,5 +4,8 @@ export function permissionFormatTag(access: PermissionAccess): string {
   if (access.kind === "network") {
     return "@network";
   }
+  if (access.kind === "events") {
+    return "@events";
+  }
   return `@${access.kind}:${access.path}`;
 }

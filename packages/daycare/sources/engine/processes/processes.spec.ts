@@ -23,7 +23,8 @@ describe("Processes", () => {
       workingDir: workspaceDir,
       writeDirs: [workspaceDir],
       readDirs: [workspaceDir],
-      network: false
+      network: false,
+      events: false
     };
     managers = [];
   });
@@ -39,6 +40,52 @@ describe("Processes", () => {
     }
     await fs.rm(baseDir, { recursive: true, force: true });
   });
+
+  it(
+    "adds allowUnixSockets when events permission is granted",
+    async () => {
+      const socketPath = path.join(baseDir, "engine.sock");
+      const manager = await createManager(baseDir, { socketPath });
+      const created = await manager.create(
+        {
+          command: `node -e "console.log('events-enabled')"`,
+          keepAlive: false,
+          cwd: workspaceDir
+        },
+        { ...permissions, events: true }
+      );
+
+      const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
+      const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
+        allowUnixSockets?: string[];
+      };
+      expect(config.allowUnixSockets).toEqual([socketPath]);
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    "omits allowUnixSockets when events permission is not granted",
+    async () => {
+      const socketPath = path.join(baseDir, "engine.sock");
+      const manager = await createManager(baseDir, { socketPath });
+      const created = await manager.create(
+        {
+          command: `node -e "console.log('events-disabled')"`,
+          keepAlive: false,
+          cwd: workspaceDir
+        },
+        permissions
+      );
+
+      const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
+      const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
+        allowUnixSockets?: string[];
+      };
+      expect(config.allowUnixSockets).toBeUndefined();
+    },
+    TEST_TIMEOUT_MS
+  );
 
   it(
     "rehydrates running processes after manager reload",
@@ -205,7 +252,7 @@ describe("Processes", () => {
         "utf8"
       );
 
-      const manager = await createManager(baseDir, 2_000);
+      const manager = await createManager(baseDir, { bootTimeMs: 2_000 });
       const listed = await manager.list();
       const item = listed.find((entry) => entry.id === processId);
 
@@ -227,11 +274,12 @@ describe("Processes", () => {
 
   async function createManager(
     dir: string,
-    bootTimeMs?: number | null
+    options: { bootTimeMs?: number | null; socketPath?: string } = {}
   ): Promise<Processes> {
     const manager = new Processes(dir, getLogger("test.processes"), {
       bootTimeProvider:
-        bootTimeMs === undefined ? undefined : async () => bootTimeMs
+        options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null,
+      socketPath: options.socketPath
     });
     managers.push(manager);
     await manager.load();

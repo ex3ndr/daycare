@@ -2,12 +2,15 @@ import type { PermissionAccess } from "@/types";
 
 /**
  * Parses a permission tag string into a PermissionAccess union.
- * Expects: value is @network, @read:<path>, or @write:<path>.
+ * Expects: value is @network, @events, @read:<path>, or @write:<path>.
  */
 export function permissionAccessParse(value: string): PermissionAccess {
   const trimmed = value.trim();
   if (trimmed === "@network") {
     return { kind: "network" };
+  }
+  if (trimmed === "@events") {
+    return { kind: "events" };
   }
   if (trimmed.startsWith("@read:")) {
     const pathValue = trimmed.slice("@read:".length).trim();
@@ -23,5 +26,5 @@ export function permissionAccessParse(value: string): PermissionAccess {
     }
     return { kind: "write", path: pathValue };
   }
-  throw new Error("Permission must be @network, @read:<path>, or @write:<path>.");
+  throw new Error("Permission must be @network, @events, @read:<path>, or @write:<path>.");
 }

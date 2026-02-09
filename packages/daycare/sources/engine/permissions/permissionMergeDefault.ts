@@ -11,6 +11,7 @@ export function permissionMergeDefault(
     workingDir: permissions.workingDir?.trim() || defaultPermissions.workingDir,
     writeDirs: Array.from(nextWrite.values()),
     readDirs: Array.from(nextRead.values()),
-    network: permissions.network || defaultPermissions.network
+    network: permissions.network || defaultPermissions.network,
+    events: permissions.events || defaultPermissions.events
   };
 }

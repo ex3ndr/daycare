@@ -57,6 +57,7 @@ function buildPermissions(
     workingDir: path.resolve(workingDir),
     readDirs: readDirs.map((entry) => path.resolve(entry)),
     writeDirs: writeDirs.map((entry) => path.resolve(entry)),
-    network: false
+    network: false,
+    events: false
   };
 }

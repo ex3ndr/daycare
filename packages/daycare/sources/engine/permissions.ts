@@ -8,6 +8,7 @@ export type SessionPermissions = {
   writeDirs: string[];
   readDirs: string[];
   network: boolean;
+  events: boolean;
 };
 
 export function resolveWorkspaceDir(
@@ -34,12 +35,14 @@ export function normalizePermissions(
   let writeDirs: string[] = [];
   let readDirs: string[] = [];
   let network = false;
+  let events = false;
   if (value && typeof value === "object") {
     const candidate = value as {
       workingDir?: unknown;
       writeDirs?: unknown;
       readDirs?: unknown;
       network?: unknown;
+      events?: unknown;
     };
     if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {
       if (path.isAbsolute(candidate.workingDir)) {
@@ -60,11 +63,15 @@ export function normalizePermissions(
         if (typeof candidate.network === "boolean") {
           network = candidate.network;
         }
+        if (typeof candidate.events === "boolean") {
+          events = candidate.events;
+        }
         return {
           workingDir: path.resolve(candidate.workingDir),
           writeDirs: dedupe(writeDirs),
           readDirs: dedupe(readDirs),
-          network
+          network,
+          events
         };
       }
     }
@@ -73,7 +80,8 @@ export function normalizePermissions(
     workingDir: path.resolve(defaultWorkingDir),
     writeDirs: [],
     readDirs: [],
-    network: false
+    network: false,
+    events: false
   };
 }
 

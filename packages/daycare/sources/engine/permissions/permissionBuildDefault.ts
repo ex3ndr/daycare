@@ -33,6 +33,7 @@ export function permissionBuildDefault(
     workingDir: path.resolve(workingDir),
     writeDirs: Array.from(new Set(writeDirs)),
     readDirs: Array.from(new Set(readDirs)),
-    network: false
+    network: false,
+    events: false
   };
 }

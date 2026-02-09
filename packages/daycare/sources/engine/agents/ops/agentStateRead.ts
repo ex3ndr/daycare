@@ -12,7 +12,8 @@ const permissionsSchema = z
     workingDir: z.string().min(1),
     writeDirs: z.array(z.string()),
     readDirs: z.array(z.string()),
-    network: z.boolean()
+    network: z.boolean(),
+    events: z.boolean()
   })
   .strict();
 

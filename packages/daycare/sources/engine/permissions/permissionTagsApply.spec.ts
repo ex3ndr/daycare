@@ -8,10 +8,12 @@ describe("permissionTagsApply", () => {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     };
-    permissionTagsApply(permissions, ["@network", "@read:/tmp", "@write:/var/tmp"]);
+    permissionTagsApply(permissions, ["@network", "@events", "@read:/tmp", "@write:/var/tmp"]);
     expect(permissions.network).toBe(true);
+    expect(permissions.events).toBe(true);
     expect(permissions.readDirs).toContain("/tmp");
     expect(permissions.readDirs).toContain("/var/tmp");
     expect(permissions.writeDirs).toContain("/var/tmp");

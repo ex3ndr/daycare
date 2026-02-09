@@ -75,7 +75,8 @@ function contextBuild(agentId: string, exists: boolean): ToolExecutionContext {
       workingDir: "/tmp",
       writeDirs: ["/tmp"],
       readDirs: ["/tmp"],
-      network: true
+      network: true,
+      events: false
     },
     agent: { id: agentId } as unknown as ToolExecutionContext["agent"],
     source: "test",

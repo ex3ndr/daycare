@@ -21,7 +21,8 @@ describe("process_start permissions", () => {
         workingDir: "/workspace",
         writeDirs: ["/workspace", "/tmp"],
         readDirs: ["/workspace", "/tmp", "/tmp/read-only"],
-        network: true
+        network: true,
+        events: false
       }),
       { id: "call-0", name: "process_start" }
     );
@@ -30,7 +31,8 @@ describe("process_start permissions", () => {
       workingDir: "/workspace",
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     });
   });
 
@@ -41,13 +43,15 @@ describe("process_start permissions", () => {
       workingDir: "/workspace",
       writeDirs: ["/workspace", "/tmp"],
       readDirs: ["/workspace", "/tmp"],
-      network: true
+      network: true,
+      events: false
     };
     const original = {
       workingDir: permissions.workingDir,
       writeDirs: [...permissions.writeDirs],
       readDirs: [...permissions.readDirs],
-      network: permissions.network
+      network: permissions.network,
+      events: permissions.events
     };
     const context = createContext(permissions);
 
@@ -77,7 +81,8 @@ describe("process_start permissions", () => {
           workingDir: "/workspace",
           writeDirs: ["/workspace"],
           readDirs: ["/workspace"],
-          network: false
+          network: false,
+          events: false
         }),
         { id: "call-1", name: "process_start" }
       )
@@ -103,7 +108,8 @@ describe("process_start permissions", () => {
         workingDir: "/workspace",
         writeDirs: ["/workspace", "/tmp"],
         readDirs: ["/workspace", "/tmp", "/tmp/read-only"],
-        network: true
+        network: true,
+        events: false
       }),
       { id: "call-2", name: "process_start" }
     );
@@ -112,7 +118,8 @@ describe("process_start permissions", () => {
       workingDir: "/workspace",
       writeDirs: ["/tmp"],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     });
   });
 
@@ -133,7 +140,8 @@ describe("process_start permissions", () => {
         workingDir: "/workspace",
         writeDirs: ["/workspace"],
         readDirs: ["/workspace"],
-        network: false
+        network: false,
+        events: false
       }),
       { id: "call-3", name: "process_start" }
     );
@@ -142,7 +150,8 @@ describe("process_start permissions", () => {
       workingDir: "/workspace",
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     });
   });
 });

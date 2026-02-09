@@ -105,6 +105,7 @@ function buildPermissions(
     writeDirs: ["/workspace"],
     readDirs: [],
     network: false,
+    events: false,
     ...overrides
   };
 }

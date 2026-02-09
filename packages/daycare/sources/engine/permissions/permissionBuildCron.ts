@@ -11,7 +11,8 @@ export function permissionBuildCron(
       workingDir: filesPath,
       writeDirs: defaultPermissions.writeDirs,
       readDirs: defaultPermissions.readDirs,
-      network: defaultPermissions.network
+      network: defaultPermissions.network,
+      events: defaultPermissions.events
     },
     defaultPermissions.workingDir
   );

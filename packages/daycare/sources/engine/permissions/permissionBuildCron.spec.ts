@@ -11,7 +11,8 @@ describe("permissionBuildCron", () => {
       workingDir: path.resolve("tmp", "workspace"),
       writeDirs: [path.resolve("tmp", "write")],
       readDirs: [path.resolve("tmp", "read")],
-      network: true
+      network: true,
+      events: false
     };
 
     const permissions = permissionBuildCron(defaults, path.resolve("tmp", "cron"));
@@ -20,5 +21,6 @@ describe("permissionBuildCron", () => {
     expect(permissions.writeDirs).toEqual(expect.arrayContaining(defaults.writeDirs));
     expect(permissions.readDirs).toEqual(expect.arrayContaining(defaults.readDirs));
     expect(permissions.network).toBe(true);
+    expect(permissions.events).toBe(false);
   });
 });

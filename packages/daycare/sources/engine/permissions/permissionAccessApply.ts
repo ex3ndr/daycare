@@ -15,6 +15,10 @@ export function permissionAccessApply(
     permissions.network = true;
     return true;
   }
+  if (access.kind === "events") {
+    permissions.events = true;
+    return true;
+  }
 
   if (!path.isAbsolute(access.path)) {
     return false;

@@ -18,6 +18,7 @@ import { envNormalize } from "../../util/envNormalize.js";
 import { permissionTagsApply } from "../../engine/permissions/permissionTagsApply.js";
 import { permissionTagsNormalize } from "../../engine/permissions/permissionTagsNormalize.js";
 import { permissionTagsValidate } from "../../engine/permissions/permissionTagsValidate.js";
+import { resolveEngineSocketPath } from "../../engine/ipc/socket.js";
 import {
   isWithinSecure,
   openSecure
@@ -189,7 +190,7 @@ export function buildExecTool(): ToolDefinition {
     tool: {
       name: "exec",
       description:
-        "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. By default exec runs with no network and no write grants. Reads are always allowed (except protected deny-list paths). Use explicit permission tags to re-enable caller-held network or writable path access; @read tags are ignored. Writes are sandboxed to the allowed write directories. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+        "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. By default exec runs with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Use explicit permission tags to re-enable caller-held network, events, or writable path access; @read tags are ignored. Writes are sandboxed to the allowed write directories. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
       parameters: execSchema
     },
     execute: async (args, toolContext, toolCall) => {
@@ -228,7 +229,8 @@ export function buildExecTool(): ToolDefinition {
       const envOverrides = envNormalize(payload.env);
       const env = envOverrides ? { ...process.env, ...envOverrides } : process.env;
       const timeout = payload.timeoutMs ?? DEFAULT_EXEC_TIMEOUT;
-      const sandboxConfig = buildSandboxConfig(permissions, allowedDomains);
+      const socketPath = resolveEngineSocketPath(toolContext.agentSystem.config.current.socketPath);
+      const sandboxConfig = buildSandboxConfig(permissions, allowedDomains, socketPath);
 
       try {
         const result = await runInSandbox(payload.command, sandboxConfig, {
@@ -763,7 +765,11 @@ function formatDisplayPath(workingDir: string, target: string): string {
   return target;
 }
 
-function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[]) {
+function buildSandboxConfig(
+  permissions: SessionPermissions,
+  allowedDomains: string[],
+  socketPath: string
+) {
   const filesystem = sandboxFilesystemPolicyBuild({ permissions });
   return {
     filesystem,
@@ -771,6 +777,7 @@ function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: str
       allowedDomains,
       deniedDomains: []
     },
+    ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
     enableWeakerNestedSandbox: true
   };
 }
@@ -783,7 +790,8 @@ async function resolveExecPermissions(
     workingDir: currentPermissions.workingDir,
     writeDirs: [],
     readDirs: [],
-    network: false
+    network: false,
+    events: false
   };
   if (!requestedTags || requestedTags.length === 0) {
     return execPermissions;

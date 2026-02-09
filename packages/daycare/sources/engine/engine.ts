@@ -100,7 +100,11 @@ export class Engine {
     });
     this.authStore = new AuthStore(this.config.current);
     this.fileStore = new FileStore(this.config.current);
-    this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"));
+    this.processes = new Processes(
+      this.config.current.dataDir,
+      getLogger("engine.processes"),
+      { socketPath: this.config.current.socketPath }
+    );
     this.incomingMessages = new IncomingMessages({
       delayMs: INCOMING_MESSAGES_DEBOUNCE_MS,
       onFlush: async (items) => {

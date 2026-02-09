@@ -42,6 +42,7 @@ import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { AsyncLock } from "../../util/lock.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionAccessApply } from "../permissions/permissionAccessApply.js";
+import { permissionFormatTag } from "../permissions/permissionFormatTag.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Signals } from "../signals/signals.js";
 
@@ -347,9 +348,7 @@ export class AgentSystem {
       decision: {
         token: "direct",
         approved: true,
-        permission: access.kind === "network"
-          ? "@network"
-          : `@${access.kind}:${access.path}`,
+        permission: permissionFormatTag(access),
         access
       }
     });

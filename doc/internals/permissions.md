@@ -35,7 +35,7 @@ flowchart TD
 - `permissionApply`: apply an approved permission decision to an agent.
 - `permissionAccessAllows`: verify an agent already holds a permission before sharing it.
 - `permissionTagsValidate`: validate that all permission tags are already held by the caller.
-- `permissionFormatTag`: format the `@network`/`@read`/`@write` tag used in logs.
+- `permissionFormatTag`: format the `@network`/`@events`/`@read`/`@write` tag used in logs.
 - `permissionDescribeDecision`: human-readable label for permission decisions.
 
 ## Write implies read
@@ -119,7 +119,7 @@ flowchart LR
 mutate the caller permission object:
 
 - keep caller `workingDir`
-- drop `writeDirs` and `network` by default
+- drop `writeDirs`, `network`, and `events` by default
 - keep `readDirs` empty in tool-call scope (reads are globally allowed)
 - apply explicit non-read tags only after validating they are already allowed by caller permissions
 
@@ -130,8 +130,23 @@ flowchart TD
   B --> D[writeDirs cleared]
   B --> D2[readDirs cleared]
   B --> E[network false]
+  B --> E2[events false]
   D2 --> I[optional tag validation + apply]
   I --> J[exec/process sandbox permissions]
+```
+
+## Events permission and unix sockets
+
+`@events` grants scoped access to the Daycare engine unix socket for sandboxed `exec`,
+`process_start`, and scheduled gate commands. When granted, sandbox config includes
+`allowUnixSockets` with the configured server socket path.
+
+```mermaid
+flowchart LR
+  P[@events granted] --> C[Sandbox config builder]
+  C --> S[allowUnixSockets = [engine socket path]]
+  S --> A[Sandboxed process can call daycare CLI events/control]
+  P -. not granted .-> N[No allowUnixSockets entry]
 ```
 
 ## Direct grants

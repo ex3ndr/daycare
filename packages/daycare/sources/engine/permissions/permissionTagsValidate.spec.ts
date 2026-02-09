@@ -23,11 +23,17 @@ describe("permissionTagsValidate", () => {
       workingDir: dir,
       writeDirs: [dir],
       readDirs: [dir],
-      network: true
+      network: true,
+      events: true
     };
 
     // Should not throw
-    await permissionTagsValidate(permissions, ["@network", `@read:${target}`, `@write:${dir}`]);
+    await permissionTagsValidate(permissions, [
+      "@network",
+      "@events",
+      `@read:${target}`,
+      `@write:${dir}`
+    ]);
   });
 
   it("rejects network permission when caller lacks it", async () => {
@@ -35,11 +41,25 @@ describe("permissionTagsValidate", () => {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     };
 
     await expect(permissionTagsValidate(permissions, ["@network"]))
       .rejects.toThrow("Cannot attach permission '@network' - you don't have it.");
+  });
+
+  it("rejects events permission when caller lacks it", async () => {
+    const permissions = {
+      workingDir: "/tmp",
+      writeDirs: [],
+      readDirs: [],
+      network: false,
+      events: false
+    };
+
+    await expect(permissionTagsValidate(permissions, ["@events"]))
+      .rejects.toThrow("Cannot attach permission '@events' - you don't have it.");
   });
 
   it("rejects write permission outside allowed directories", async () => {
@@ -47,7 +67,8 @@ describe("permissionTagsValidate", () => {
       workingDir: "/tmp",
       writeDirs: ["/tmp"],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     };
 
     await expect(permissionTagsValidate(permissions, ["@write:/etc"]))
@@ -59,7 +80,8 @@ describe("permissionTagsValidate", () => {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: ["/tmp"],
-      network: false
+      network: false,
+      events: false
     };
 
     await expect(permissionTagsValidate(permissions, ["@read:/etc"]))
@@ -71,7 +93,8 @@ describe("permissionTagsValidate", () => {
       workingDir: "/tmp",
       writeDirs: [],
       readDirs: [],
-      network: false
+      network: false,
+      events: false
     };
 
     await expect(

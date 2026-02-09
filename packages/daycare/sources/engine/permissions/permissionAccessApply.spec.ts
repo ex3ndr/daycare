@@ -8,7 +8,8 @@ describe("permissionAccessApply", () => {
     workingDir: "/tmp",
     writeDirs: [] as string[],
     readDirs: [] as string[],
-    network: false
+    network: false,
+    events: false
   });
 
   it("applies network access", () => {
@@ -16,6 +17,13 @@ describe("permissionAccessApply", () => {
     const applied = permissionAccessApply(permissions, { kind: "network" });
     expect(applied).toBe(true);
     expect(permissions.network).toBe(true);
+  });
+
+  it("applies events access", () => {
+    const permissions = basePermissions();
+    const applied = permissionAccessApply(permissions, { kind: "events" });
+    expect(applied).toBe(true);
+    expect(permissions.events).toBe(true);
   });
 
   it("applies read/write paths", () => {

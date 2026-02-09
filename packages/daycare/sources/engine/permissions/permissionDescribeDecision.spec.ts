@@ -7,6 +7,10 @@ describe("permissionDescribeDecision", () => {
     expect(permissionDescribeDecision({ kind: "network" })).toBe("network access");
   });
 
+  it("describes events access", () => {
+    expect(permissionDescribeDecision({ kind: "events" })).toBe("events access");
+  });
+
   it("describes read access", () => {
     expect(permissionDescribeDecision({ kind: "read", path: "/tmp" })).toBe(
       "read access to /tmp"

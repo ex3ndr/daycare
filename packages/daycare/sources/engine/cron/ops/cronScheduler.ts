@@ -285,7 +285,8 @@ export class CronScheduler {
     const result = await this.gateCheck?.({
       gate: task.gate,
       permissions,
-      workingDir: permissions.workingDir
+      workingDir: permissions.workingDir,
+      socketPath: this.config.current.socketPath
     });
     if (!result) {
       return { allowed: true };

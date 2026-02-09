@@ -29,5 +29,6 @@ describe("permissionBuildDefault", () => {
     );
     expect(permissions.readDirs).toEqual(expect.arrayContaining(permissions.writeDirs));
     expect(permissions.network).toBe(false);
+    expect(permissions.events).toBe(false);
   });
 });

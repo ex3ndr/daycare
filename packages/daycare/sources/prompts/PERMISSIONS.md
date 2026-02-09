@@ -27,6 +27,7 @@ Bias toward action. If you can do it, do it. If you need permission, request it 
 {{/each}}
 {{/if}}
 - **Network**: {{#if network}}enabled{{else}}not enabled{{/if}}.
+- **Events**: {{#if events}}enabled{{else}}not enabled{{/if}} (`@events` allows Unix socket access to Daycare CLI control endpoint).
 
 ## Exec Networking
 
@@ -38,7 +39,7 @@ Bias toward action. If you can do it, do it. If you need permission, request it 
 - no network
 - no write grants
 - read remains allowed by sandbox defaults (all paths except protected deny-list paths)
-Provide explicit permission tags in the tool call when needed. Tags must be a subset of your current granted permissions (`@network`, `@read:/absolute/path`, `@write:/absolute/path`).
+Provide explicit permission tags in the tool call when needed. Tags must be a subset of your current granted permissions (`@network`, `@events`, `@read:/absolute/path`, `@write:/absolute/path`).
 
 ## Exec Home
 
@@ -53,4 +54,4 @@ Workspace is shared with other agents. Use dedicated folders, check before overw
 Use `request_permission` as soon as permissions block progress.
 Do not wait for explicit user pre-approval in chat. Do not pause if other useful work is available.
 Request immediately, keep moving, and use the narrowest scope needed.
-Formats: `@network`, `@read:/absolute/path`, `@write:/absolute/path`. Paths must be absolute. If you are requesting a write permission you dont need to request read one!
+Formats: `@network`, `@events`, `@read:/absolute/path`, `@write:/absolute/path`. Paths must be absolute. If you are requesting a write permission you dont need to request read one!

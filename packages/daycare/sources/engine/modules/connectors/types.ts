@@ -45,10 +45,11 @@ export type CommandHandler = (
 export type MessageUnsubscribe = () => void;
 export type CommandUnsubscribe = () => void;
 
-export type PermissionKind = "read" | "write" | "network";
+export type PermissionKind = "read" | "write" | "network" | "events";
 
 export type PermissionAccess =
   | { kind: "network" }
+  | { kind: "events" }
   | { kind: "read"; path: string }
   | { kind: "write"; path: string };
 

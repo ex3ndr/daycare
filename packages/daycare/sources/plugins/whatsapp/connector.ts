@@ -604,7 +604,10 @@ function formatPermissionMessage(
   status: PermissionStatus
 ): string {
   const access = describePermissionKind(request.access);
-  const pathStr = request.access.kind === "network" ? null : request.access.path;
+  const pathStr =
+    request.access.kind === "read" || request.access.kind === "write"
+      ? request.access.path
+      : null;
 
   const heading =
     status === "approved"
@@ -639,6 +642,9 @@ function describePermissionKind(access: PermissionRequest["access"]): string {
   }
   if (access.kind === "write") {
     return "Write/edit files";
+  }
+  if (access.kind === "events") {
+    return "Events access";
   }
   return "Network access";
 }

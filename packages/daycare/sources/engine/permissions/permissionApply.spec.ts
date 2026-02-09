@@ -11,7 +11,8 @@ describe("permissionApply", () => {
     workingDir: "/workspace",
     writeDirs: [],
     readDirs: [],
-    network: false
+    network: false,
+    events: false
   });
 
   it("ignores unapproved decisions", () => {
@@ -27,6 +28,21 @@ describe("permissionApply", () => {
     permissionApply(permissions, decision);
 
     expect(permissions.network).toBe(false);
+  });
+
+  it("applies approved events access", () => {
+    const permissions = basePermissions();
+    const decision: PermissionDecision = {
+      token: "token-events",
+      agentId: "agent-1",
+      approved: true,
+      permission: "@events",
+      access: { kind: "events" }
+    };
+
+    permissionApply(permissions, decision);
+
+    expect(permissions.events).toBe(true);
   });
 
   it("adds approved write paths", () => {
