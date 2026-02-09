@@ -5,152 +5,122 @@
 <h1 align="center">Daycare</h1>
 
 <p align="center">
-  A minimal, composable AI agent framework with plugin-driven architecture.
+  Local-first, plugin-driven multi-agent runtime.
 </p>
 
-## Features
+## What It Is
 
-- **Plugin system** - Connectors, inference providers, tools, and image generators as plugins
-- **Agent management** - Per-channel message sequencing with persistent state
-- **Memory plugin** - Searchable conversation history across agents
-- **Cron scheduler** - Timed message dispatch and scheduled actions
-- **Multi-provider inference** - Anthropic, OpenAI, Google Gemini, Groq, Mistral, xAI, and more
-- **Heartbeat scheduler** - Periodic agent actions on configurable intervals
-- **Skills** - Composable agent skills for scheduling, agent creation, and more
-- **Dashboard** - Next.js app for monitoring and control
+Daycare runs persistent agents behind connectors like Telegram and WhatsApp, with schedulers (cron + heartbeat), permissions, sandboxed shell/process tools, and pluggable providers/tools.
+
+The core lives in `packages/daycare`. A monitoring UI lives in `packages/daycare-dashboard`.
+
+## Repository Layout
+
+- `packages/daycare` - CLI, engine, plugins, prompts, skills
+- `packages/daycare-dashboard` - Next.js dashboard
+- `doc` - concepts, providers, connectors, internals
+
+## Requirements
+
+- Node.js 22+
+- Yarn 1.x (`yarn@1.22.22` in this repo)
 
 ## Quick Start
 
 ```sh
-# Install dependencies
 yarn install
 
-# Build the project
-yarn build
+# Interactive onboarding (pick provider/plugin)
+yarn dev add
 
-# Start the engine
-yarn daycare start
+# Start engine
+yarn dev start
+
+# Check status
+yarn dev status
 ```
 
-## Configuration
+`yarn dev` in this repo sets `DAYCARE_ROOT_DIR=~/.dev`, so local development state is written under `~/.dev`.
 
-Daycare uses two configuration files in `.daycare/`:
-
-**settings.json** - Engine and plugin configuration
-```json
-{
-  "engine": { "socketPath": ".daycare/daycare.sock", "dataDir": ".daycare" },
-  "plugins": [
-    { "instanceId": "telegram", "pluginId": "telegram", "enabled": true },
-    { "instanceId": "anthropic", "pluginId": "anthropic", "enabled": true },
-    { "instanceId": "memory", "pluginId": "memory", "enabled": true }
-  ],
-  "inference": {
-    "providers": [{ "id": "anthropic", "model": "claude-sonnet-4-20250514" }]
-  }
-}
-```
-
-**auth.json** - API keys and tokens
-```json
-{
-  "telegram": { "type": "token", "token": "..." },
-  "openai": { "type": "apiKey", "apiKey": "..." }
-}
-```
-
-## Plugins
-
-| Plugin | Type | Description |
-|--------|------|-------------|
-| telegram | Connector | Telegram bot with long polling |
-| whatsapp | Connector | WhatsApp via Baileys with QR auth |
-| anthropic-fetch | Web Fetch | URL content extraction via Claude |
-| anthropic-search | Web Search | Search powered by Claude |
-| brave-search | Web Search | Brave Search API integration |
-| exa-ai | Web Search | Neural search via Exa AI |
-| firecrawl | Web Fetch | Clean content extraction via Firecrawl |
-| gemini-search | Web Search | Google Gemini with Search Grounding |
-| openai-search | Web Search | GPT-powered web search |
-| perplexity-search | Web Search | Perplexity Sonar search |
-| web-fetch | Web Fetch | Minimal URL content download |
-| memory | System | Structured entity storage as Markdown |
-| database | System | Local PGlite (Postgres) with schema docs |
-| shell | Tool | File read/write/edit and command execution |
-| monty-python | Tool | Sandboxed Python snippets via Monty |
-
-## Tools
-
-Built-in tools available to the agent:
-
-- `cron_add` / `cron_read_task` / `cron_read_memory` / `cron_write_memory` / `cron_delete_task` - Cron scheduling
-- `heartbeat_add` / `heartbeat_run` / `heartbeat_list` / `heartbeat_remove` - Heartbeat scheduling
-- `create_permanent_agent` / `start_background_agent` / `send_agent_message` - Multi-agent coordination
-- `generate_image` - Image generation via configured providers
-- `generate_mermaid_png` - Render Mermaid source into a PNG artifact
-- `set_reaction` - React to messages
-- `send_file` - Send files via connectors
-- `request_permission` / `grant_permission` - Runtime permission management
-
-Plugin-provided tools:
-
-- `read` / `write` / `edit` / `exec` - File system and shell (shell plugin)
-- `python` - Sandboxed Python execution (monty-python plugin)
-- `memory_create_entity` / `memory_upsert_record` / `memory_list_entities` - Entity memory (memory plugin)
-- Web search / fetch tools from search and fetch plugins
+If you run the CLI directly from `packages/daycare` without `DAYCARE_ROOT_DIR`, default state lives under `~/.daycare`.
 
 ## CLI Commands
 
+Use the dev CLI runner:
+
 ```sh
-daycare start                              # Launch the engine
-daycare status                             # Check engine status
-daycare add                                # Add a provider or plugin
-daycare remove                             # Remove a provider or plugin
-daycare providers                          # Select default provider
-daycare plugins load <pluginId>            # Load a plugin
-daycare plugins unload <instanceId>        # Unload a plugin
-daycare auth set <id> <key> <value>        # Store a credential
-daycare doctor                             # Run inference health checks
+yarn dev --help
 ```
+
+Common commands:
+
+- `yarn dev start` - start engine
+- `yarn dev status` - show engine status
+- `yarn dev add` - add provider or plugin (interactive)
+- `yarn dev remove` - remove provider or plugin (interactive)
+- `yarn dev providers` - select default provider
+- `yarn dev plugins load <pluginId> [instanceId]` - load plugin
+- `yarn dev plugins unload <instanceId>` - unload plugin
+- `yarn dev auth set <id> <key> <value>` - set auth credential
+- `yarn dev doctor` - provider health checks
+- `yarn dev event <type> [payload]` - send engine event via local socket
+
+## Configuration And Data
+
+The runtime uses:
+
+- `settings.json` - engine/providers/plugins config
+- `auth.json` - credentials
+- `daycare.sock` - local engine socket
+
+By default these live under:
+
+- `~/.dev` when using this repo's root `yarn dev` script
+- `~/.daycare` otherwise
+
+See `doc/internals/config.md` and `doc/internals/auth.md` for exact schema/behavior.
 
 ## Development
 
 ```sh
-yarn install      # Install dependencies
-yarn build        # Compile TypeScript
-yarn test         # Run tests
-yarn typecheck    # Type check without emit
-yarn dev          # Run with tsx (no build)
+yarn build        # build daycare package
+yarn test         # run workspace tests
+yarn typecheck    # typecheck workspaces
+yarn dashboard    # run dashboard on :7331
 ```
 
-## Workspace
+You can also run workspace-local scripts:
 
-- `packages/daycare` - Core engine, plugins, and tools
-- `packages/daycare-dashboard` - Next.js dashboard
+```sh
+yarn workspace daycare dev --help
+yarn workspace daycare test
+yarn workspace daycare typecheck
+```
+
+## Providers, Plugins, Tools
+
+Daycare ships with built-in provider integrations plus plugins for connectors, search/fetch, memory/database, shell/process tooling, and more.
+
+Use interactive onboarding to see current options in your checkout:
+
+```sh
+yarn dev add
+```
+
+Reference docs:
+
+- `doc/providers/README.md`
+- `doc/concepts/networking.md`
+- `doc/concepts/sandboxes.md`
+- `doc/concepts/agents.md`
 
 ## Documentation
 
-See [doc/](./doc/) for documentation:
-
-### Concepts
-- [Agents](./doc/concepts/agents.md) - Agent types, persistence, message flow
-- [Cron](./doc/concepts/cron.md) - Scheduled task execution
-- [Heartbeats](./doc/concepts/heartbeats.md) - Batch-executed periodic prompts
-- [Signals](./doc/concepts/signals.md) - Broadcast event system
-- [Sandboxes](./doc/concepts/sandboxes.md) - Filesystem/network sandboxing, durable processes
-- [Networking & Permissions](./doc/concepts/networking.md) - Permission system, web search/fetch
-- [Memory](./doc/concepts/memory.md) - Structured entity storage
-- [Skills](./doc/concepts/skills.md) - Opt-in agent capabilities
-
-### Providers
-- [Providers Overview](./doc/providers/README.md) - All inference and image providers
-
-### Connectors
-- [Telegram](./doc/connectors/telegram.md) - Bot API with long polling
-- [WhatsApp](./doc/connectors/whatsapp.md) - Baileys WebSocket integration
-
-### Internals
-- [Implementation details](./doc/internals/) - Low-level implementation docs
+- `doc/README.md` - docs index
+- `doc/concepts` - architecture and runtime behavior
+- `doc/providers` - provider setup
+- `doc/connectors` - connector setup
+- `doc/internals` - implementation notes
 
 ## License
 
