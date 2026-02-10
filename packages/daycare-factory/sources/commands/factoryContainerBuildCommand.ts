@@ -6,9 +6,11 @@ import {
   FACTORY_OUT_ENV,
   FACTORY_TASK_ENV
 } from "../constants.js";
+import { factoryPiAgentPromptRun } from "./factoryPiAgentPromptRun.js";
 
 interface FactoryContainerBuildCommandDependencies {
   dockerEnvironmentIs?: () => Promise<boolean>;
+  piAgentPromptRun?: (taskPath: string, outDirectory: string) => Promise<void>;
   buildCommandRun?: (
     command: string[],
     env: NodeJS.ProcessEnv
@@ -26,6 +28,8 @@ export async function factoryContainerBuildCommand(
 ): Promise<void> {
   const dockerEnvironmentIs =
     dependencies.dockerEnvironmentIs ?? factoryDockerEnvironmentIs;
+  const piAgentPromptRun =
+    dependencies.piAgentPromptRun ?? factoryPiAgentPromptRun;
   const buildCommandRun =
     dependencies.buildCommandRun ?? factoryBuildCommandRun;
 
@@ -46,6 +50,8 @@ export async function factoryContainerBuildCommand(
     [FACTORY_TASK_ENV]: taskPath,
     [FACTORY_OUT_ENV]: outDirectory
   };
+
+  await piAgentPromptRun(taskPath, outDirectory);
 
   const exitCode = await buildCommandRun(buildCommand, buildEnv);
   if (exitCode !== 0) {

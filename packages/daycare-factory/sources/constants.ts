@@ -2,3 +2,4 @@ export const FACTORY_INTERNAL_COMMAND = "_factory-build-3f8d";
 export const FACTORY_BUILD_COMMAND_ENV = "DAYCARE_FACTORY_BUILD_COMMAND";
 export const FACTORY_TASK_ENV = "DAYCARE_FACTORY_TASK";
 export const FACTORY_OUT_ENV = "DAYCARE_FACTORY_OUT";
+export const FACTORY_PI_DIR_MOUNT_PATH = "/root/.pi";

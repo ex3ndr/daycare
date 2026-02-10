@@ -2,7 +2,9 @@ import Docker from "dockerode";
 import { FACTORY_BUILD_COMMAND_ENV } from "../constants.js";
 import { factoryContainerBindsBuild } from "./factoryContainerBindsBuild.js";
 import { factoryContainerNameBuild } from "./factoryContainerNameBuild.js";
+import { factoryContainerPiBindBuild } from "./factoryContainerPiBindBuild.js";
 import { dockerContainerRemoveIfExists } from "./dockerContainerRemoveIfExists.js";
+import { factoryPiDirectoryResolve } from "../paths/factoryPiDirectoryResolve.js";
 import type { FactoryContainerRunInput } from "../types.js";
 
 /**
@@ -27,7 +29,11 @@ export async function dockerContainerRunFactory(
     JSON.stringify(input.config.buildCommand)
   );
 
-  const binds = factoryContainerBindsBuild(input.paths, input.config);
+  const hostPiDirectory = await factoryPiDirectoryResolve();
+  const binds = [
+    ...factoryContainerBindsBuild(input.paths, input.config),
+    factoryContainerPiBindBuild(hostPiDirectory)
+  ];
   const container = await docker.createContainer({
     name: containerName,
     Image: input.config.image,

@@ -44,18 +44,50 @@ describe("factoryContainerBuildCommand", () => {
       "build"
     ]);
 
+    const piRunSpy = vi.fn().mockResolvedValue(undefined);
     const runSpy = vi.fn().mockResolvedValue(0);
 
     await factoryContainerBuildCommand(taskPath, outPath, {
       dockerEnvironmentIs: async () => true,
+      piAgentPromptRun: piRunSpy,
       buildCommandRun: runSpy
     });
 
+    expect(piRunSpy).toHaveBeenCalledTimes(1);
+    expect(piRunSpy).toHaveBeenCalledWith(taskPath, outPath);
     expect(runSpy).toHaveBeenCalledTimes(1);
     expect(runSpy.mock.calls[0]?.[0]).toEqual(["npm", "run", "build"]);
     expect(runSpy.mock.calls[0]?.[1]?.[FACTORY_TASK_ENV]).toBe(taskPath);
     expect(runSpy.mock.calls[0]?.[1]?.[FACTORY_OUT_ENV]).toBe(outPath);
     const outStat = await stat(outPath);
     expect(outStat.isDirectory()).toBe(true);
+  });
+
+  it("propagates Pi prompt failure without fallback behavior", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "factory-pi-fail-"));
+    tempDirectories.push(directory);
+    const taskPath = join(directory, "TASK.md");
+    const outPath = join(directory, "out");
+    await writeFile(taskPath, "# task\n");
+    process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
+      "npm",
+      "run",
+      "build"
+    ]);
+
+    const runSpy = vi.fn().mockResolvedValue(0);
+    const piRunError = new Error("pi auth failed");
+
+    await expect(
+      factoryContainerBuildCommand(taskPath, outPath, {
+        dockerEnvironmentIs: async () => true,
+        piAgentPromptRun: async () => {
+          throw piRunError;
+        },
+        buildCommandRun: runSpy
+      })
+    ).rejects.toThrow("pi auth failed");
+
+    expect(runSpy).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,11 @@ exec > >(tee -a "${LOG_FILE}") 2>&1
 echo "[e2e] run root: ${RUN_ROOT}"
 echo "[e2e] log file: ${LOG_FILE}"
 
+if [[ ! -f "${HOME}/.pi/agent/auth.json" ]]; then
+  echo "[e2e] missing required auth file: ${HOME}/.pi/agent/auth.json"
+  exit 1
+fi
+
 cat > "${TASK_DIR}/TASK.md" <<'TASK'
 # E2E TASK
 

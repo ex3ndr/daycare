@@ -38,6 +38,7 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
+    "@mariozechner/pi-coding-agent": "^0.52.9",
     "commander": "^12.1.0",
     "dockerode": "^4.0.7",
     "yaml": "^2.8.1",

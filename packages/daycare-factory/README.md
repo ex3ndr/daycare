@@ -3,8 +3,12 @@
 `daycare-factory` runs a build task inside Docker by mounting:
 - `TASK.md` from your task folder (read-only)
 - `out/` from your task folder (read-write)
+- host `~/.pi` auth directory into container `/root/.pi` (read-only)
 
 The container image and runtime options come from `daycare-factory.yaml`.
+
+Inside the container, `daycare-factory` uses `@mariozechner/pi-coding-agent`
+programmatic SDK (`createAgentSession`) with `SessionManager.inMemory()`.
 
 ## Task folder layout
 
@@ -42,7 +46,7 @@ env:
 
 Required fields:
 - `image`
-- `buildCommand` (array command executed inside Docker)
+- `buildCommand` (array command executed inside Docker after Pi task run)
 
 All other fields are optional.
 
@@ -68,3 +72,12 @@ yarn workspace daycare-factory build
 yarn workspace daycare-factory test
 yarn workspace daycare-factory run e2e
 ```
+
+## Auth requirement
+
+`~/.pi/agent/auth.json` must exist on the host. The CLI mounts host `~/.pi` into
+the container as read-only so the internal Pi SDK session can authenticate
+without writing session files to disk.
+
+If Pi authentication fails inside Docker, the build fails immediately. There is
+no fallback mode.

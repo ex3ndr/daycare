@@ -25,15 +25,13 @@ RUN yarn workspace daycare-cli run build \
 
 FROM node:22-bookworm-slim AS runtime
 
-ARG PI_AI_VERSION=0.50.3
-
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates git \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /artifacts /artifacts
 
-RUN npm install -g /artifacts/daycare-cli-*.tgz /artifacts/daycare-factory-*.tgz "@mariozechner/pi-ai@${PI_AI_VERSION}" \
+RUN npm install -g /artifacts/daycare-cli-*.tgz /artifacts/daycare-factory-*.tgz \
   && rm -rf /artifacts
 
 WORKDIR /workspace

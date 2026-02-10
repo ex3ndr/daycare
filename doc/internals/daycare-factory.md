@@ -5,6 +5,7 @@
 `daycare-factory` is a CLI wrapper that runs a containerized build using a task folder containing `TASK.md` and `daycare-factory.yaml`.
 
 The host `out/` folder is bind-mounted into the container so build artifacts are produced directly on the host.
+The host `~/.pi` directory is bind-mounted as read-only to provide Pi auth (`~/.pi/agent/auth.json`) to the container.
 
 ## Build flow
 
@@ -16,16 +17,21 @@ flowchart TD
   D --> E[Read daycare-factory.yaml]
   E --> F[Remove existing container by name if enabled]
   F --> G[Create container from configured image]
-  G --> H[Mount TASK.md as read-only and out as read-write]
+  G --> H[Mount TASK.md and out plus host ~/.pi as readonly]
   H --> I[Run internal daycare-factory command inside container]
   I --> J[Internal command verifies it is running in Docker]
-  J --> K[Internal command executes configured buildCommand]
-  K --> L[Stream logs to host stdout/stderr]
-  L --> M{Exit code == 0?}
-  M -- Yes --> N[Optional container cleanup]
-  N --> O[Done: outputs available in host out]
-  M -- No --> P[Fail build with container exit code]
+  J --> K[Create Pi SDK session with SessionManager.inMemory]
+  K --> L[Run Pi prompt from TASK.md via createAgentSession]
+  L --> M[Execute configured buildCommand]
+  M --> N[Stream logs to host stdout/stderr]
+  N --> O{Exit code == 0?}
+  O -- Yes --> P[Optional container cleanup]
+  P --> Q[Done: outputs available in host out]
+  O -- No --> R[Fail build with container exit code]
 ```
+
+Pi prompt/auth failures are treated as hard failures. The flow does not include
+fallback behavior.
 
 ## Config contract
 
