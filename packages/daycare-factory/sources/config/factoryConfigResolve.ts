@@ -1,0 +1,45 @@
+import { z } from "zod";
+import type { FactoryConfigResolved } from "../types.js";
+
+const factoryConfigSchema = z
+  .object({
+    image: z.string().min(1),
+    containerName: z.string().min(1).optional(),
+    command: z.array(z.string().min(1)).min(1).optional(),
+    workingDirectory: z.string().min(1).optional(),
+    taskMountPath: z.string().min(1).optional(),
+    outMountPath: z.string().min(1).optional(),
+    env: z.record(z.string()).optional(),
+    removeExistingContainer: z.boolean().optional(),
+    removeContainerOnExit: z.boolean().optional()
+  })
+  .strict();
+
+/**
+ * Resolves raw config input into a fully defaulted factory config.
+ * Expects: rawConfig is a plain object compatible with the schema.
+ */
+export function factoryConfigResolve(rawConfig: unknown): FactoryConfigResolved {
+  const parsed = factoryConfigSchema.parse(rawConfig);
+  const taskMountPath = parsed.taskMountPath ?? "/workspace/TASK.md";
+  const outMountPath = parsed.outMountPath ?? "/workspace/out";
+
+  return {
+    image: parsed.image,
+    containerName: parsed.containerName,
+    command: parsed.command ?? [
+      "daycare-factory",
+      "build",
+      "--task",
+      taskMountPath,
+      "--out",
+      outMountPath
+    ],
+    workingDirectory: parsed.workingDirectory ?? "/workspace",
+    taskMountPath,
+    outMountPath,
+    env: parsed.env ?? {},
+    removeExistingContainer: parsed.removeExistingContainer ?? true,
+    removeContainerOnExit: parsed.removeContainerOnExit ?? true
+  };
+}

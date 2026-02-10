@@ -1,0 +1,52 @@
+{
+  "name": "daycare-factory",
+  "version": "0.0.1",
+  "description": "Docker-driven build runner for Daycare factory tasks",
+  "type": "module",
+  "license": "MIT",
+  "author": "ex3ndr",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ex3ndr/daycare.git",
+    "directory": "packages/daycare-factory"
+  },
+  "keywords": [
+    "daycare",
+    "factory",
+    "docker",
+    "build"
+  ],
+  "bin": {
+    "daycare-factory": "./bin/daycare-factory.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx sources/main.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "yarn build"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dockerode": "^4.0.7",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.36",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
