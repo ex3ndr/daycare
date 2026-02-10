@@ -1,0 +1,16 @@
+{
+  "name": "daycare-factory-typescript-template",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun sources/main.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

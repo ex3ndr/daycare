@@ -94,7 +94,7 @@ run_sample() {
 }
 
 run_sample "bash" "${BASH_TASK_DIR}" "${BASH_ENV_DIR}" "bash.sh" "bash-environment-ok"
-run_sample "typescript" "${TS_TASK_DIR}" "${TS_ENV_DIR}" "main.ts" "typescript-environment-ok"
+run_sample "typescript" "${TS_TASK_DIR}" "${TS_ENV_DIR}" "sources/main.ts" "typescript-environment-ok"
 
 echo "[e2e] success"
 echo "[e2e] output directories: ${BASH_TASK_DIR}/out and ${TS_TASK_DIR}/out"

@@ -5,16 +5,21 @@ buildCommand:
   - -lc
   - |
     set -eu
-    test -f "$DAYCARE_FACTORY_OUT/main.ts"
+    test -f "$DAYCARE_FACTORY_OUT/package.json"
+    test -f "$DAYCARE_FACTORY_OUT/tsconfig.json"
+    test -f "$DAYCARE_FACTORY_OUT/vitest.config.ts"
+    test -f "$DAYCARE_FACTORY_OUT/sources/main.ts"
     test -f "$DAYCARE_FACTORY_OUT/TASK.md"
     test -f "$DAYCARE_FACTORY_OUT/AGENTS.md"
+    grep -q '"typescript"' "$DAYCARE_FACTORY_OUT/package.json"
+    grep -q '"vitest"' "$DAYCARE_FACTORY_OUT/package.json"
     echo "typescript build complete" > "$DAYCARE_FACTORY_OUT/result.txt"
 testCommand:
   - sh
   - -lc
   - |
     set -eu
-    actual="$(bun "$DAYCARE_FACTORY_OUT/main.ts")"
+    actual="$(bun "$DAYCARE_FACTORY_OUT/sources/main.ts")"
     if [ "$actual" != "typescript-environment-ok" ]; then
       echo "validator failed: expected=typescript-environment-ok actual=${actual}"
       exit 1
