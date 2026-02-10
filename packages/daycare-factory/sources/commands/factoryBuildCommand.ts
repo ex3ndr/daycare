@@ -2,7 +2,6 @@ import { mkdir } from "node:fs/promises";
 import { factoryConfigRead } from "../config/factoryConfigRead.js";
 import { dockerContainerRunFactory } from "../docker/dockerContainerRunFactory.js";
 import { factoryOutDirectoryReset } from "../fs/factoryOutDirectoryReset.js";
-import { factoryAgentsFileEnsure } from "../paths/factoryAgentsFileEnsure.js";
 import { factoryBuildPathsResolve } from "../paths/factoryBuildPathsResolve.js";
 import { factoryTaskFileEnsure } from "../paths/factoryTaskFileEnsure.js";
 import { factoryTemplateDirectoryEnsure } from "../paths/factoryTemplateDirectoryEnsure.js";
@@ -10,7 +9,7 @@ import type { FactoryBuildCliOptions, FactoryConfigResolved } from "../types.js"
 
 /**
  * Builds a task by running daycare-factory inside a Docker container.
- * Expects: task has TASK.md/AGENTS.md and environment has daycare-factory.yaml/template.
+ * Expects: task has TASK.md and environment has daycare-factory.yaml/template.
  */
 export async function factoryBuildCommand(
   taskDirectory: string,
@@ -24,7 +23,6 @@ export async function factoryBuildCommand(
   );
 
   await factoryTaskFileEnsure(paths.taskFilePath);
-  await factoryAgentsFileEnsure(paths.agentsFilePath);
   await factoryTemplateDirectoryEnsure(paths.templateDirectory);
 
   if (options.keepOut) {

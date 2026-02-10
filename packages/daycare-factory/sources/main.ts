@@ -23,7 +23,7 @@ program
   )
   .argument(
     "<taskDirectory>",
-    "Folder containing TASK.md and AGENTS.md"
+    "Folder containing TASK.md"
   )
   .requiredOption(
     "-e, --environment <path>",

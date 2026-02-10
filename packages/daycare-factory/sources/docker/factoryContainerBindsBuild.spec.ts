@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import { factoryContainerBindsBuild } from "./factoryContainerBindsBuild.js";
 
 describe("factoryContainerBindsBuild", () => {
-  it("builds readonly TASK.md/AGENTS.md and writable out mount strings", () => {
+  it("builds readonly TASK.md/template and writable out mount strings", () => {
     const binds = factoryContainerBindsBuild(
       {
         taskDirectory: "/tmp/task",
         environmentDirectory: "/tmp/environment",
         taskFilePath: "/tmp/task/TASK.md",
-        agentsFilePath: "/tmp/task/AGENTS.md",
         templateDirectory: "/tmp/environment/template",
         configPath: "/tmp/task/daycare-factory.yaml",
         outDirectory: "/tmp/task/out"
@@ -31,7 +30,6 @@ describe("factoryContainerBindsBuild", () => {
 
     expect(binds).toEqual([
       "/tmp/task/TASK.md:/workspace/TASK.md:ro",
-      "/tmp/task/AGENTS.md:/workspace/AGENTS.md:ro",
       "/tmp/environment/template:/workspace/template:ro",
       "/tmp/task/out:/workspace/out"
     ]);

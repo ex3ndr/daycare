@@ -18,7 +18,6 @@ export interface FactoryBuildPaths {
   taskDirectory: string;
   environmentDirectory: string;
   taskFilePath: string;
-  agentsFilePath: string;
   templateDirectory: string;
   configPath: string;
   outDirectory: string;

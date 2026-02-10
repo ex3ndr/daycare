@@ -1,7 +1,7 @@
 # daycare-factory
 
 `daycare-factory` runs a build task inside Docker by mounting:
-- task files (`TASK.md` and `AGENTS.md`) from a task folder (read-only)
+- task file (`TASK.md`) from a task folder (read-only)
 - environment template folder from an environment folder (read-only)
 - `out/` from the task folder (read-write)
 - host `~/.pi` auth directory into container `/root/.pi` (read-only)
@@ -16,18 +16,18 @@ programmatic SDK (`createAgentSession`) with `SessionManager.inMemory()`.
 ```text
 task-folder/
   TASK.md
-  AGENTS.md
   out/
 
 environment-folder/
   daycare-factory.yaml
   template/
+    AGENTS.md
 ```
 
 `out/` is deleted and recreated before each run unless `--keep-out` is provided.
-Before running `buildCommand`, the internal runner copies `TASK.md` and
-`AGENTS.md` into `out/` with the same filenames, and copies all files from
-`environment-folder/template/` into `out/`.
+Before running `buildCommand`, the internal runner copies all files from
+`environment-folder/template/` into `out/`, then copies `TASK.md` into `out/`
+with the same filename. `AGENTS.md` must come from the template.
 
 ## Config file
 

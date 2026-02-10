@@ -22,7 +22,7 @@ interface FactoryPiAgentPromptRunDependencies {
 }
 
 /**
- * Runs a Pi coding agent prompt from TASK.md and AGENTS.md using an in-memory session.
+ * Runs a Pi coding agent prompt from TASK.md and template-provided AGENTS.md.
  * Expects: ~/.pi is mounted in container at /root/.pi with readable auth files.
  */
 export async function factoryPiAgentPromptRun(
@@ -45,7 +45,7 @@ export async function factoryPiAgentPromptRun(
   });
 
   const taskContents = await readFile(taskPath, "utf-8");
-  const agentsPath = join(dirname(taskPath), "AGENTS.md");
+  const agentsPath = join(outDirectory, "AGENTS.md");
   const agentsContents = await readFile(agentsPath, "utf-8");
   const historyPath = input.historyPath;
   const authStorage = new AuthStorage(authPath);

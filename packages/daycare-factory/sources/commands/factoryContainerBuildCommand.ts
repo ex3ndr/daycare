@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import { access, copyFile, cp, mkdir, readdir, readFile, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import {
   FACTORY_BUILD_COMMAND_ENV,
   FACTORY_BUILD_HISTORY_FILE,
@@ -40,7 +40,7 @@ interface FactoryContainerBuildCommandDependencies {
 
 /**
  * Executes a configured build command inside a Docker container.
- * Expects: taskPath points to readable TASK.md/AGENTS.md and templateDirectory is readable.
+ * Expects: taskPath points to readable TASK.md and templateDirectory is readable.
  */
 export async function factoryContainerBuildCommand(
   taskPath: string,
@@ -62,10 +62,6 @@ export async function factoryContainerBuildCommand(
   await access(taskPath, constants.R_OK).catch(() => {
     throw new Error(`TASK.md is not readable: ${taskPath}`);
   });
-  const agentsPath = join(dirname(taskPath), "AGENTS.md");
-  await access(agentsPath, constants.R_OK).catch(() => {
-    throw new Error(`AGENTS.md is not readable: ${agentsPath}`);
-  });
   await access(templateDirectory, constants.R_OK).catch(() => {
     throw new Error(`template directory is not readable: ${templateDirectory}`);
   });
@@ -78,7 +74,12 @@ export async function factoryContainerBuildCommand(
   await mkdir(outDirectory, { recursive: true });
   await factoryTemplateContentsCopy(templateDirectory, outDirectory);
   await copyFile(taskPath, join(outDirectory, "TASK.md"));
-  await copyFile(agentsPath, join(outDirectory, "AGENTS.md"));
+  const outAgentsPath = join(outDirectory, "AGENTS.md");
+  await access(outAgentsPath, constants.R_OK).catch(() => {
+    throw new Error(
+      `template must provide readable AGENTS.md at ${outAgentsPath}`
+    );
+  });
 
   const historyPath = join(outDirectory, FACTORY_BUILD_HISTORY_FILE);
   await factoryBuildHistoryAppend(historyPath, {

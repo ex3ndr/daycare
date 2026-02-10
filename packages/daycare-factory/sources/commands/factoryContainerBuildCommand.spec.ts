@@ -27,14 +27,14 @@ async function factoryEnvironmentFilesWrite(
   directory: string
 ): Promise<{ taskPath: string; outPath: string; templatePath: string }> {
   const taskPath = join(directory, "TASK.md");
-  const agentsPath = join(directory, "AGENTS.md");
   const templatePath = join(directory, "template");
   const templateFilePath = join(templatePath, "seed.txt");
+  const templateAgentsPath = join(templatePath, "AGENTS.md");
   const outPath = join(directory, "out");
   await writeFile(taskPath, "# task\n");
-  await writeFile(agentsPath, "# agents\n");
   await mkdir(templatePath, { recursive: true });
   await writeFile(templateFilePath, "seed\n");
+  await writeFile(templateAgentsPath, "# agents\n");
   return { taskPath, outPath, templatePath };
 }
 
@@ -89,6 +89,27 @@ describe("factoryContainerBuildCommand", () => {
     expect(copiedTemplateStat.isFile()).toBe(true);
     const historyStat = await stat(join(outPath, FACTORY_BUILD_HISTORY_FILE));
     expect(historyStat.isFile()).toBe(true);
+  });
+
+  it("fails when template does not provide AGENTS.md", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "factory-no-agents-"));
+    tempDirectories.push(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
+    await rm(join(templatePath, "AGENTS.md"));
+    process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
+      "npm",
+      "run",
+      "build"
+    ]);
+
+    await expect(
+      factoryContainerBuildCommand(taskPath, outPath, templatePath, {
+        dockerEnvironmentIs: async () => true,
+        piAgentPromptRun: vi.fn().mockResolvedValue(undefined),
+        buildCommandRun: vi.fn().mockResolvedValue(0)
+      })
+    ).rejects.toThrow("template must provide readable AGENTS.md");
   });
 
   it("propagates Pi prompt failure without fallback behavior", async () => {

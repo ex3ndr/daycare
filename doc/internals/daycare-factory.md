@@ -3,7 +3,7 @@
 ## Overview
 
 `daycare-factory` is a CLI wrapper that runs a containerized build using:
-- a task folder with `TASK.md` and `AGENTS.md`
+- a task folder with `TASK.md`
 - a separate environment folder with `daycare-factory.yaml` and `template/`
 
 The host `out/` folder is bind-mounted into the container so build artifacts are produced directly on the host.
@@ -14,18 +14,18 @@ The host `~/.pi` directory is bind-mounted as read-only to provide Pi auth (`~/.
 ```mermaid
 flowchart TD
   A[CLI: daycare-factory build TASK_DIR --environment ENV_DIR] --> B[Resolve task and environment paths]
-  B --> C[Validate TASK.md and AGENTS.md exist]
+  B --> C[Validate TASK.md exists]
   C --> D[Validate environment template directory exists]
   D --> E[Reset out directory unless --keep-out]
   E --> F[Read environment daycare-factory.yaml]
   F --> G[Remove existing container by name if enabled]
   G --> H[Create container from configured image]
-  H --> I[Mount TASK.md, AGENTS.md, template/, and out plus host ~/.pi]
+  H --> I[Mount TASK.md, template/, and out plus host ~/.pi]
   I --> J[Run internal daycare-factory command inside container]
   J --> K[Internal command verifies it is running in Docker]
   K --> L[Copy template contents to out/]
-  L --> M[Copy TASK.md and AGENTS.md to out/]
-  M --> N[Create Pi SDK session with SessionManager.inMemory]
+  L --> M[Require AGENTS.md from copied template]
+  M --> N[Copy TASK.md to out/]
   N --> O[Append session + command records to out/build.jsonl]
   O --> P[Run Pi prompt from TASK.md + AGENTS.md via createAgentSession]
   P --> Q[Execute configured buildCommand]

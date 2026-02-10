@@ -22,7 +22,6 @@ export function factoryBuildPathsResolve(
     taskDirectory: taskDirectoryResolved,
     environmentDirectory: environmentDirectoryResolved,
     taskFilePath: resolve(taskDirectoryResolved, "TASK.md"),
-    agentsFilePath: resolve(taskDirectoryResolved, "AGENTS.md"),
     templateDirectory: resolve(environmentDirectoryResolved, "template"),
     configPath: resolve(environmentDirectoryResolved, configPath),
     outDirectory: resolve(taskDirectoryResolved, outPath)
