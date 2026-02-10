@@ -9,6 +9,23 @@
 The host `out/` folder is bind-mounted into the container so build artifacts are produced directly on the host.
 The host `~/.pi` directory is bind-mounted as read-only to provide Pi auth (`~/.pi/agent/auth.json`) to the container.
 
+## Root helper script
+
+The repository root includes `yarn factory:build`, which prompts for:
+- a task folder containing `TASK.md`
+- an environment folder (defaults to `packages/daycare-factory/environments/typescript`)
+
+It then runs `daycare-factory build <taskDir> --environment <envDir>` via
+`yarn workspace daycare-factory run dev --`.
+
+```mermaid
+flowchart LR
+  A[yarn factory:build] --> B[Prompt for task folder]
+  B --> C[Prompt for environment folder]
+  C --> D[Validate TASK.md and daycare-factory.yaml]
+  D --> E[Run daycare-factory build]
+```
+
 ## Build flow
 
 ```mermaid

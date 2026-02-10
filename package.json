@@ -9,6 +9,7 @@
     "build": "yarn workspace daycare-cli run build",
     "dashboard": "yarn workspace daycare-dashboard dev",
     "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare-cli run dev",
+    "factory:build": "node ./scripts/daycareFactoryBuildPrompt.mjs",
     "release": "yarn workspace daycare-cli run release",
     "recipe": "yarn workspace daycare-cli run recipe",
     "test": "yarn workspaces run test",
