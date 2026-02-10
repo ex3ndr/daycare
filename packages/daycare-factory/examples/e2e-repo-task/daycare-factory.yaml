@@ -1,0 +1,8 @@
+image: daycare-factory:e2e
+buildCommand:
+  - sh
+  - -lc
+  - |
+    set -eu
+    cp "$DAYCARE_FACTORY_TASK" "$DAYCARE_FACTORY_OUT/TASK.copy.md"
+    echo "built inside docker" > "$DAYCARE_FACTORY_OUT/result.txt"

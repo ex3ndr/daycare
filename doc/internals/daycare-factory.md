@@ -33,6 +33,19 @@ flowchart TD
 Pi prompt/auth failures are treated as hard failures. The flow does not include
 fallback behavior.
 
+## Repo-backed E2E fixture
+
+The e2e script uses a committed fixture folder:
+`packages/daycare-factory/examples/e2e-repo-task`.
+
+```mermaid
+flowchart LR
+  A[scripts/factoryE2e.sh] --> B[examples/e2e-repo-task/TASK.md]
+  A --> C[examples/e2e-repo-task/daycare-factory.yaml]
+  A --> D[examples/e2e-repo-task/out/]
+  D --> E[Generated artifacts after run]
+```
+
 ## Config contract
 
 Required field:

@@ -73,6 +73,9 @@ yarn workspace daycare-factory test
 yarn workspace daycare-factory run e2e
 ```
 
+The e2e command runs against a committed repo example task folder:
+`packages/daycare-factory/examples/e2e-repo-task`.
+
 ## Auth requirement
 
 `~/.pi/agent/auth.json` must exist on the host. The CLI mounts host `~/.pi` into

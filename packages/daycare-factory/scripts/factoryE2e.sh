@@ -4,39 +4,24 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${PACKAGE_DIR}/../.." && pwd)"
-RUN_ROOT="$(mktemp -d -t daycare-factory-e2e.XXXXXX)"
-TASK_DIR="${RUN_ROOT}/task"
-LOG_FILE="${RUN_ROOT}/factory-e2e.log"
+TASK_DIR="${PACKAGE_DIR}/examples/e2e-repo-task"
+LOG_DIR="${REPO_ROOT}/.context/daycare-factory"
+LOG_FILE="${LOG_DIR}/factory-e2e.log"
 IMAGE_TAG="daycare-factory:e2e"
 
-mkdir -p "${TASK_DIR}/out"
+mkdir -p "${TASK_DIR}/out" "${LOG_DIR}"
+rm -f "${LOG_FILE}"
+rm -rf "${TASK_DIR}/out-host-check"
 
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
-echo "[e2e] run root: ${RUN_ROOT}"
+echo "[e2e] task dir: ${TASK_DIR}"
 echo "[e2e] log file: ${LOG_FILE}"
 
 if [[ ! -f "${HOME}/.pi/agent/auth.json" ]]; then
   echo "[e2e] missing required auth file: ${HOME}/.pi/agent/auth.json"
   exit 1
 fi
-
-cat > "${TASK_DIR}/TASK.md" <<'TASK'
-# E2E TASK
-
-Build output into the mounted out directory.
-TASK
-
-cat > "${TASK_DIR}/daycare-factory.yaml" <<'YAML'
-image: daycare-factory:e2e
-buildCommand:
-  - sh
-  - -lc
-  - |
-    set -eu
-    cp "$DAYCARE_FACTORY_TASK" "$DAYCARE_FACTORY_OUT/TASK.copy.md"
-    echo "built inside docker" > "$DAYCARE_FACTORY_OUT/result.txt"
-YAML
 
 echo "[e2e] building package"
 cd "${REPO_ROOT}"
@@ -72,7 +57,7 @@ if [[ ! -f "${TASK_DIR}/out/TASK.copy.md" ]]; then
 fi
 
 grep -q "built inside docker" "${TASK_DIR}/out/result.txt"
-grep -q "# E2E TASK" "${TASK_DIR}/out/TASK.copy.md"
+grep -q "# E2E Repo Task" "${TASK_DIR}/out/TASK.copy.md"
 
 echo "[e2e] success"
 echo "[e2e] output directory: ${TASK_DIR}/out"
