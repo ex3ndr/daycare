@@ -38,6 +38,7 @@ fallback behavior.
 
 The e2e script uses a committed fixture folder:
 `packages/daycare-factory/examples/e2e-repo-task`.
+The fixture keeps `out/` in git so generated artifacts can be inspected directly.
 
 ```mermaid
 flowchart LR
