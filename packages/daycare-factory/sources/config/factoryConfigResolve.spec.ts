@@ -10,6 +10,7 @@ describe("factoryConfigResolve", () => {
     });
 
     expect(result.taskMountPath).toBe("/workspace/TASK.md");
+    expect(result.templateMountPath).toBe("/workspace/template");
     expect(result.outMountPath).toBe("/workspace/out");
     expect(result.buildCommand).toEqual(["npm", "run", "build"]);
     expect(result.testCommand).toBeUndefined();
@@ -19,6 +20,8 @@ describe("factoryConfigResolve", () => {
       FACTORY_INTERNAL_COMMAND,
       "--task",
       "/workspace/TASK.md",
+      "--template",
+      "/workspace/template",
       "--out",
       "/workspace/out"
     ]);
@@ -31,6 +34,7 @@ describe("factoryConfigResolve", () => {
       image: "daycare/factory:latest",
       buildCommand: ["pnpm", "build"],
       taskMountPath: "/custom/TASK.md",
+      templateMountPath: "/custom/template",
       outMountPath: "/custom/out"
     });
 
@@ -39,6 +43,8 @@ describe("factoryConfigResolve", () => {
       FACTORY_INTERNAL_COMMAND,
       "--task",
       "/custom/TASK.md",
+      "--template",
+      "/custom/template",
       "--out",
       "/custom/out"
     ]);

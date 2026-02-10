@@ -2,21 +2,29 @@ import { resolve } from "node:path";
 import type { FactoryBuildPaths } from "../types.js";
 
 /**
- * Resolves task, agents, config, and output paths for a build run.
- * Expects: taskDirectory exists; config and out paths may be relative to taskDirectory.
+ * Resolves task, environment, and output paths for a build run.
+ * Expects: taskDirectory and environmentDirectory are different directories.
  */
 export function factoryBuildPathsResolve(
   taskDirectory: string,
+  environmentDirectory: string,
   configPath: string,
   outPath: string
 ): FactoryBuildPaths {
   const taskDirectoryResolved = resolve(taskDirectory);
+  const environmentDirectoryResolved = resolve(environmentDirectory);
+
+  if (taskDirectoryResolved === environmentDirectoryResolved) {
+    throw new Error("task directory and environment directory must be different");
+  }
 
   return {
     taskDirectory: taskDirectoryResolved,
+    environmentDirectory: environmentDirectoryResolved,
     taskFilePath: resolve(taskDirectoryResolved, "TASK.md"),
     agentsFilePath: resolve(taskDirectoryResolved, "AGENTS.md"),
-    configPath: resolve(taskDirectoryResolved, configPath),
+    templateDirectory: resolve(environmentDirectoryResolved, "template"),
+    configPath: resolve(environmentDirectoryResolved, configPath),
     outDirectory: resolve(taskDirectoryResolved, outPath)
   };
 }

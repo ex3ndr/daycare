@@ -1,33 +1,37 @@
 # daycare-factory
 
 `daycare-factory` runs a build task inside Docker by mounting:
-- `TASK.md` from your task folder (read-only)
-- `AGENTS.md` from your task folder (read-only)
-- `out/` from your task folder (read-write)
+- task files (`TASK.md` and `AGENTS.md`) from a task folder (read-only)
+- environment template folder from an environment folder (read-only)
+- `out/` from the task folder (read-write)
 - host `~/.pi` auth directory into container `/root/.pi` (read-only)
 
-The container image and runtime options come from `daycare-factory.yaml`.
+The container image and runtime options come from environment `daycare-factory.yaml`.
 
 Inside the container, `daycare-factory` uses `@mariozechner/pi-coding-agent`
 programmatic SDK (`createAgentSession`) with `SessionManager.inMemory()`.
 
-## Task folder layout
+## Task and Environment Layout
 
 ```text
 task-folder/
   TASK.md
   AGENTS.md
-  daycare-factory.yaml
   out/
+
+environment-folder/
+  daycare-factory.yaml
+  template/
 ```
 
 `out/` is deleted and recreated before each run unless `--keep-out` is provided.
 Before running `buildCommand`, the internal runner copies `TASK.md` and
-`AGENTS.md` into `out/` with the same filenames.
+`AGENTS.md` into `out/` with the same filenames, and copies all files from
+`environment-folder/template/` into `out/`.
 
 ## Config file
 
-Create `daycare-factory.yaml` in the task folder:
+Create `daycare-factory.yaml` in the environment folder:
 
 ```yaml
 image: daycare/factory:latest
@@ -49,6 +53,7 @@ testMaxAttempts: 5
 containerName: daycare-factory-build
 workingDirectory: /workspace
 taskMountPath: /workspace/TASK.md
+templateMountPath: /workspace/template
 outMountPath: /workspace/out
 removeExistingContainer: true
 removeContainerOnExit: true
@@ -67,6 +72,7 @@ Optional fields:
 - `command`
 - `workingDirectory`
 - `taskMountPath`
+- `templateMountPath`
 - `outMountPath`
 - `removeExistingContainer`
 - `removeContainerOnExit`
@@ -76,10 +82,11 @@ Optional fields:
 
 ```bash
 # Build from a task directory
-node dist/main.js build ./task-folder
+node dist/main.js build ./task-folder --environment ./environment-folder
 
 # Same with custom paths/options
 node dist/main.js build ./task-folder \
+  --environment ./environment-folder \
   --config daycare-factory.yaml \
   --out out \
   --container-name my-factory-build \
@@ -95,8 +102,9 @@ yarn workspace daycare-factory test
 yarn workspace daycare-factory run e2e
 ```
 
-The e2e command runs against a committed repo example task folder:
-`packages/daycare-factory/examples/e2e-repo-task`.
+The e2e command runs two committed sample tasks/environments:
+- `packages/daycare-factory/examples/tasks/bash`
+- `packages/daycare-factory/examples/tasks/typescript`
 
 ## Auth requirement
 

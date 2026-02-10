@@ -12,6 +12,7 @@ const factoryConfigSchema = z
     command: z.array(z.string().min(1)).min(1).optional(),
     workingDirectory: z.string().min(1).optional(),
     taskMountPath: z.string().min(1).optional(),
+    templateMountPath: z.string().min(1).optional(),
     outMountPath: z.string().min(1).optional(),
     env: z.record(z.string()).optional(),
     removeExistingContainer: z.boolean().optional(),
@@ -26,6 +27,7 @@ const factoryConfigSchema = z
 export function factoryConfigResolve(rawConfig: unknown): FactoryConfigResolved {
   const parsed = factoryConfigSchema.parse(rawConfig);
   const taskMountPath = parsed.taskMountPath ?? "/workspace/TASK.md";
+  const templateMountPath = parsed.templateMountPath ?? "/workspace/template";
   const outMountPath = parsed.outMountPath ?? "/workspace/out";
 
   return {
@@ -39,11 +41,14 @@ export function factoryConfigResolve(rawConfig: unknown): FactoryConfigResolved 
       FACTORY_INTERNAL_COMMAND,
       "--task",
       taskMountPath,
+      "--template",
+      templateMountPath,
       "--out",
       outMountPath
     ],
     workingDirectory: parsed.workingDirectory ?? "/workspace",
     taskMountPath,
+    templateMountPath,
     outMountPath,
     env: parsed.env ?? {},
     removeExistingContainer: parsed.removeExistingContainer ?? true,

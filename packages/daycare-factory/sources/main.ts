@@ -19,11 +19,15 @@ program.name("daycare-factory").version(pkg.version);
 program
   .command("build")
   .description(
-    "Run daycare-factory inside Docker with mounted TASK.md, AGENTS.md, and out"
+    "Run daycare-factory inside Docker using a separate environment and task"
   )
   .argument(
     "<taskDirectory>",
-    "Folder containing TASK.md, AGENTS.md, and daycare-factory.yaml"
+    "Folder containing TASK.md and AGENTS.md"
+  )
+  .requiredOption(
+    "-e, --environment <path>",
+    "Environment directory containing daycare-factory.yaml and template/"
   )
   .option("-c, --config <path>", "Config file path", "daycare-factory.yaml")
   .option("-o, --out <path>", "Output directory path", "out")
@@ -42,8 +46,13 @@ program
   .command(FACTORY_INTERNAL_COMMAND, { hidden: true })
   .requiredOption("--task <path>")
   .requiredOption("--out <path>")
+  .requiredOption("--template <path>")
   .action(async (options: FactoryContainerBuildCliOptions) => {
-    await factoryContainerBuildCommand(options.task, options.out);
+    await factoryContainerBuildCommand(
+      options.task,
+      options.out,
+      options.template
+    );
   });
 
 if (process.argv.length <= 2) {

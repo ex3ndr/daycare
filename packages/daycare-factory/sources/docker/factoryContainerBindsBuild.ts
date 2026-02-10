@@ -14,6 +14,7 @@ export function factoryContainerBindsBuild(
   return [
     `${paths.taskFilePath}:${config.taskMountPath}:ro`,
     `${paths.agentsFilePath}:${agentsMountPath}:ro`,
+    `${paths.templateDirectory}:${config.templateMountPath}:ro`,
     `${paths.outDirectory}:${config.outMountPath}`
   ];
 }

@@ -1,0 +1,22 @@
+image: daycare-factory:e2e
+testMaxAttempts: 8
+buildCommand:
+  - sh
+  - -lc
+  - |
+    set -eu
+    test -f "$DAYCARE_FACTORY_OUT/main.ts"
+    test -f "$DAYCARE_FACTORY_OUT/TASK.md"
+    test -f "$DAYCARE_FACTORY_OUT/AGENTS.md"
+    echo "typescript build complete" > "$DAYCARE_FACTORY_OUT/result.txt"
+testCommand:
+  - sh
+  - -lc
+  - |
+    set -eu
+    actual="$(bun "$DAYCARE_FACTORY_OUT/main.ts")"
+    if [ "$actual" != "typescript-environment-ok" ]; then
+      echo "validator failed: expected=typescript-environment-ok actual=${actual}"
+      exit 1
+    fi
+    echo "typescript tests passed" > "$DAYCARE_FACTORY_OUT/test-result.txt"

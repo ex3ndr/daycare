@@ -1,4 +1,4 @@
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,23 +25,28 @@ afterEach(async () => {
 
 async function factoryEnvironmentFilesWrite(
   directory: string
-): Promise<{ taskPath: string; outPath: string }> {
+): Promise<{ taskPath: string; outPath: string; templatePath: string }> {
   const taskPath = join(directory, "TASK.md");
   const agentsPath = join(directory, "AGENTS.md");
+  const templatePath = join(directory, "template");
+  const templateFilePath = join(templatePath, "seed.txt");
   const outPath = join(directory, "out");
   await writeFile(taskPath, "# task\n");
   await writeFile(agentsPath, "# agents\n");
-  return { taskPath, outPath };
+  await mkdir(templatePath, { recursive: true });
+  await writeFile(templateFilePath, "seed\n");
+  return { taskPath, outPath, templatePath };
 }
 
 describe("factoryContainerBuildCommand", () => {
   it("rejects when not running inside Docker", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-no-docker-"));
     tempDirectories.push(directory);
-    const { taskPath, outPath } = await factoryEnvironmentFilesWrite(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
 
     await expect(
-      factoryContainerBuildCommand(taskPath, outPath, {
+      factoryContainerBuildCommand(taskPath, outPath, templatePath, {
         dockerEnvironmentIs: async () => false
       })
     ).rejects.toThrow("inside Docker");
@@ -50,7 +55,8 @@ describe("factoryContainerBuildCommand", () => {
   it("runs configured build command and sets task/out env vars", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-docker-"));
     tempDirectories.push(directory);
-    const { taskPath, outPath } = await factoryEnvironmentFilesWrite(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
     process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
       "npm",
       "run",
@@ -60,7 +66,7 @@ describe("factoryContainerBuildCommand", () => {
     const piRunSpy = vi.fn().mockResolvedValue(undefined);
     const runSpy = vi.fn().mockResolvedValue(0);
 
-    await factoryContainerBuildCommand(taskPath, outPath, {
+    await factoryContainerBuildCommand(taskPath, outPath, templatePath, {
       dockerEnvironmentIs: async () => true,
       piAgentPromptRun: piRunSpy,
       buildCommandRun: runSpy
@@ -79,6 +85,8 @@ describe("factoryContainerBuildCommand", () => {
     expect(copiedTaskStat.isFile()).toBe(true);
     const copiedAgentsStat = await stat(join(outPath, "AGENTS.md"));
     expect(copiedAgentsStat.isFile()).toBe(true);
+    const copiedTemplateStat = await stat(join(outPath, "seed.txt"));
+    expect(copiedTemplateStat.isFile()).toBe(true);
     const historyStat = await stat(join(outPath, FACTORY_BUILD_HISTORY_FILE));
     expect(historyStat.isFile()).toBe(true);
   });
@@ -86,7 +94,8 @@ describe("factoryContainerBuildCommand", () => {
   it("propagates Pi prompt failure without fallback behavior", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-pi-fail-"));
     tempDirectories.push(directory);
-    const { taskPath, outPath } = await factoryEnvironmentFilesWrite(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
     process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
       "npm",
       "run",
@@ -97,7 +106,7 @@ describe("factoryContainerBuildCommand", () => {
     const piRunError = new Error("pi auth failed");
 
     await expect(
-      factoryContainerBuildCommand(taskPath, outPath, {
+      factoryContainerBuildCommand(taskPath, outPath, templatePath, {
         dockerEnvironmentIs: async () => true,
         piAgentPromptRun: async () => {
           throw piRunError;
@@ -112,7 +121,8 @@ describe("factoryContainerBuildCommand", () => {
   it("runs optional test command after build command", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-test-command-"));
     tempDirectories.push(directory);
-    const { taskPath, outPath } = await factoryEnvironmentFilesWrite(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
     process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
       "npm",
       "run",
@@ -126,7 +136,7 @@ describe("factoryContainerBuildCommand", () => {
 
     const runSpy = vi.fn().mockResolvedValue(0);
 
-    await factoryContainerBuildCommand(taskPath, outPath, {
+    await factoryContainerBuildCommand(taskPath, outPath, templatePath, {
       dockerEnvironmentIs: async () => true,
       piAgentPromptRun: vi.fn().mockResolvedValue(undefined),
       buildCommandRun: runSpy
@@ -140,7 +150,8 @@ describe("factoryContainerBuildCommand", () => {
   it("fails when optional test command exits non-zero", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-test-fail-"));
     tempDirectories.push(directory);
-    const { taskPath, outPath } = await factoryEnvironmentFilesWrite(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
     process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
       "npm",
       "run",
@@ -159,7 +170,7 @@ describe("factoryContainerBuildCommand", () => {
       .mockResolvedValueOnce(1);
 
     await expect(
-      factoryContainerBuildCommand(taskPath, outPath, {
+      factoryContainerBuildCommand(taskPath, outPath, templatePath, {
         dockerEnvironmentIs: async () => true,
         piAgentPromptRun: vi.fn().mockResolvedValue(undefined),
         buildCommandRun: runSpy
@@ -170,7 +181,8 @@ describe("factoryContainerBuildCommand", () => {
   it("retries after failing test command and passes on next attempt", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-test-retry-"));
     tempDirectories.push(directory);
-    const { taskPath, outPath } = await factoryEnvironmentFilesWrite(directory);
+    const { taskPath, outPath, templatePath } =
+      await factoryEnvironmentFilesWrite(directory);
     process.env[FACTORY_BUILD_COMMAND_ENV] = JSON.stringify([
       "npm",
       "run",
@@ -191,7 +203,7 @@ describe("factoryContainerBuildCommand", () => {
       .mockResolvedValueOnce(0);
     const piRunSpy = vi.fn().mockResolvedValue(undefined);
 
-    await factoryContainerBuildCommand(taskPath, outPath, {
+    await factoryContainerBuildCommand(taskPath, outPath, templatePath, {
       dockerEnvironmentIs: async () => true,
       piAgentPromptRun: piRunSpy,
       buildCommandRun: runSpy

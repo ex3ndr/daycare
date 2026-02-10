@@ -2,7 +2,9 @@
 
 ## Overview
 
-`daycare-factory` is a CLI wrapper that runs a containerized build using a task folder containing `TASK.md`, `AGENTS.md`, and `daycare-factory.yaml`.
+`daycare-factory` is a CLI wrapper that runs a containerized build using:
+- a task folder with `TASK.md` and `AGENTS.md`
+- a separate environment folder with `daycare-factory.yaml` and `template/`
 
 The host `out/` folder is bind-mounted into the container so build artifacts are produced directly on the host.
 The host `~/.pi` directory is bind-mounted as read-only to provide Pi auth (`~/.pi/agent/auth.json`) to the container.
@@ -11,28 +13,30 @@ The host `~/.pi` directory is bind-mounted as read-only to provide Pi auth (`~/.
 
 ```mermaid
 flowchart TD
-  A[CLI: daycare-factory build TASK_DIR] --> B[Resolve paths: TASK.md config out]
+  A[CLI: daycare-factory build TASK_DIR --environment ENV_DIR] --> B[Resolve task and environment paths]
   B --> C[Validate TASK.md and AGENTS.md exist]
-  C --> D[Reset out directory unless --keep-out]
-  D --> E[Read daycare-factory.yaml]
-  E --> F[Remove existing container by name if enabled]
-  F --> G[Create container from configured image]
-  G --> H[Mount TASK.md, AGENTS.md, and out plus host ~/.pi as readonly]
-  H --> I[Run internal daycare-factory command inside container]
-  I --> J[Internal command verifies it is running in Docker]
-  J --> K[Copy TASK.md and AGENTS.md to out/]
-  K --> L[Create Pi SDK session with SessionManager.inMemory]
-  L --> M[Append session + command records to out/build.jsonl]
-  M --> N[Run Pi prompt from TASK.md + AGENTS.md via createAgentSession]
-  N --> O[Execute configured buildCommand]
-  O --> P[Execute optional testCommand]
-  P --> Q{Build/test pass?}
-  Q -- Yes --> R[Optional container cleanup]
-  R --> S[Done: outputs available in host out]
-  Q -- No --> T{Attempts left?}
-  T -- Yes --> U[Feed failure output to Pi and retry]
-  U --> N
-  T -- No --> V[Fail build with last exit code]
+  C --> D[Validate environment template directory exists]
+  D --> E[Reset out directory unless --keep-out]
+  E --> F[Read environment daycare-factory.yaml]
+  F --> G[Remove existing container by name if enabled]
+  G --> H[Create container from configured image]
+  H --> I[Mount TASK.md, AGENTS.md, template/, and out plus host ~/.pi]
+  I --> J[Run internal daycare-factory command inside container]
+  J --> K[Internal command verifies it is running in Docker]
+  K --> L[Copy template contents to out/]
+  L --> M[Copy TASK.md and AGENTS.md to out/]
+  M --> N[Create Pi SDK session with SessionManager.inMemory]
+  N --> O[Append session + command records to out/build.jsonl]
+  O --> P[Run Pi prompt from TASK.md + AGENTS.md via createAgentSession]
+  P --> Q[Execute configured buildCommand]
+  Q --> R[Execute optional testCommand]
+  R --> S{Build/test pass?}
+  S -- Yes --> T[Optional container cleanup]
+  T --> U[Done: outputs available in host out]
+  S -- No --> V{Attempts left?}
+  V -- Yes --> W[Feed failure output to Pi and retry]
+  W --> P
+  V -- No --> X[Fail build with last exit code]
 ```
 
 Pi prompt/auth failures are treated as hard failures. The flow does not include
@@ -40,16 +44,20 @@ fallback behavior.
 
 ## Repo-backed E2E fixture
 
-The e2e script uses a committed fixture folder:
-`packages/daycare-factory/examples/e2e-repo-task`.
-The fixture keeps `out/` in git so generated artifacts can be inspected directly.
+The e2e script uses committed fixture folders for two samples:
+- `packages/daycare-factory/examples/tasks/bash`
+- `packages/daycare-factory/examples/tasks/typescript`
+- `packages/daycare-factory/examples/environments/bash`
+- `packages/daycare-factory/examples/environments/typescript`
 
 ```mermaid
 flowchart LR
-  A[scripts/factoryE2e.sh] --> B[examples/e2e-repo-task/TASK.md]
-  A --> C[examples/e2e-repo-task/daycare-factory.yaml]
-  A --> D[examples/e2e-repo-task/out/]
-  D --> E[Generated artifacts after run]
+  A[scripts/factoryE2e.sh] --> B[examples/tasks/bash]
+  A --> C[examples/tasks/typescript]
+  A --> D[examples/environments/bash]
+  A --> E[examples/environments/typescript]
+  B --> F[Generated artifacts in out/]
+  C --> G[Generated artifacts in out/]
 ```
 
 ## Config contract
@@ -65,6 +73,7 @@ Optional fields:
 - `command`: command array executed in the container.
 - `workingDirectory`: container working directory.
 - `taskMountPath`: mount target for `TASK.md`.
+- `templateMountPath`: mount target for environment `template/`.
 - `outMountPath`: mount target for host `out/`.
 - `env`: environment variables for the container process.
 - `removeExistingContainer`: remove previous container with same name before run.

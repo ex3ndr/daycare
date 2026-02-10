@@ -6,8 +6,10 @@ describe("factoryContainerBindsBuild", () => {
     const binds = factoryContainerBindsBuild(
       {
         taskDirectory: "/tmp/task",
+        environmentDirectory: "/tmp/environment",
         taskFilePath: "/tmp/task/TASK.md",
         agentsFilePath: "/tmp/task/AGENTS.md",
+        templateDirectory: "/tmp/environment/template",
         configPath: "/tmp/task/daycare-factory.yaml",
         outDirectory: "/tmp/task/out"
       },
@@ -19,6 +21,7 @@ describe("factoryContainerBindsBuild", () => {
         command: ["daycare-factory"],
         workingDirectory: "/workspace",
         taskMountPath: "/workspace/TASK.md",
+        templateMountPath: "/workspace/template",
         outMountPath: "/workspace/out",
         env: {},
         removeExistingContainer: true,
@@ -29,6 +32,7 @@ describe("factoryContainerBindsBuild", () => {
     expect(binds).toEqual([
       "/tmp/task/TASK.md:/workspace/TASK.md:ro",
       "/tmp/task/AGENTS.md:/workspace/AGENTS.md:ro",
+      "/tmp/environment/template:/workspace/template:ro",
       "/tmp/task/out:/workspace/out"
     ]);
   });

@@ -1,4 +1,5 @@
 export interface FactoryBuildCliOptions {
+  environment: string;
   config: string;
   out: string;
   keepOut: boolean;
@@ -10,12 +11,15 @@ export interface FactoryBuildCliOptions {
 export interface FactoryContainerBuildCliOptions {
   task: string;
   out: string;
+  template: string;
 }
 
 export interface FactoryBuildPaths {
   taskDirectory: string;
+  environmentDirectory: string;
   taskFilePath: string;
   agentsFilePath: string;
+  templateDirectory: string;
   configPath: string;
   outDirectory: string;
 }
@@ -29,6 +33,7 @@ export interface FactoryConfigResolved {
   command: string[];
   workingDirectory: string;
   taskMountPath: string;
+  templateMountPath: string;
   outMountPath: string;
   env: Record<string, string>;
   removeExistingContainer: boolean;

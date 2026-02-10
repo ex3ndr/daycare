@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
-import { access, copyFile, mkdir, readFile } from "node:fs/promises";
+import { access, copyFile, cp, mkdir, readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
   FACTORY_BUILD_COMMAND_ENV,
@@ -40,11 +40,12 @@ interface FactoryContainerBuildCommandDependencies {
 
 /**
  * Executes a configured build command inside a Docker container.
- * Expects: taskPath points to readable TASK.md and AGENTS.md sibling; build command is set in env JSON.
+ * Expects: taskPath points to readable TASK.md/AGENTS.md and templateDirectory is readable.
  */
 export async function factoryContainerBuildCommand(
   taskPath: string,
   outDirectory: string,
+  templateDirectory: string,
   dependencies: FactoryContainerBuildCommandDependencies = {}
 ): Promise<void> {
   const dockerEnvironmentIs =
@@ -65,7 +66,17 @@ export async function factoryContainerBuildCommand(
   await access(agentsPath, constants.R_OK).catch(() => {
     throw new Error(`AGENTS.md is not readable: ${agentsPath}`);
   });
+  await access(templateDirectory, constants.R_OK).catch(() => {
+    throw new Error(`template directory is not readable: ${templateDirectory}`);
+  });
+  const templateStat = await stat(templateDirectory).catch(() => {
+    throw new Error(`template directory is not readable: ${templateDirectory}`);
+  });
+  if (!templateStat.isDirectory()) {
+    throw new Error(`template path is not a directory: ${templateDirectory}`);
+  }
   await mkdir(outDirectory, { recursive: true });
+  await factoryTemplateContentsCopy(templateDirectory, outDirectory);
   await copyFile(taskPath, join(outDirectory, "TASK.md"));
   await copyFile(agentsPath, join(outDirectory, "AGENTS.md"));
 
@@ -302,4 +313,23 @@ function factoryCommandOutputLimit(value: string, maxLength: number): string {
     return value;
   }
   return value.slice(value.length - maxLength);
+}
+
+async function factoryTemplateContentsCopy(
+  templateDirectory: string,
+  outDirectory: string
+): Promise<void> {
+  const entries = await readdir(templateDirectory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const sourcePath = join(templateDirectory, entry.name);
+    const targetPath = join(outDirectory, entry.name);
+    if (entry.isDirectory()) {
+      await cp(sourcePath, targetPath, { recursive: true });
+      continue;
+    }
+    if (entry.isFile()) {
+      await copyFile(sourcePath, targetPath);
+    }
+  }
 }

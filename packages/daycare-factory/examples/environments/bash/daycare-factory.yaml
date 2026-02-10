@@ -1,0 +1,22 @@
+image: daycare-factory:e2e
+testMaxAttempts: 8
+buildCommand:
+  - sh
+  - -lc
+  - |
+    set -eu
+    test -f "$DAYCARE_FACTORY_OUT/bash.sh"
+    test -f "$DAYCARE_FACTORY_OUT/TASK.md"
+    test -f "$DAYCARE_FACTORY_OUT/AGENTS.md"
+    echo "bash build complete" > "$DAYCARE_FACTORY_OUT/result.txt"
+testCommand:
+  - sh
+  - -lc
+  - |
+    set -eu
+    actual="$(bash "$DAYCARE_FACTORY_OUT/bash.sh")"
+    if [ "$actual" != "bash-environment-ok" ]; then
+      echo "validator failed: expected=bash-environment-ok actual=${actual}"
+      exit 1
+    fi
+    echo "bash tests passed" > "$DAYCARE_FACTORY_OUT/test-result.txt"
