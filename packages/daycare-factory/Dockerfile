@@ -31,7 +31,7 @@ RUN apt-get update \
 
 COPY --from=builder /artifacts /artifacts
 
-RUN npm install -g /artifacts/daycare-cli-*.tgz /artifacts/daycare-factory-*.tgz \
+RUN npm install -g bun /artifacts/daycare-cli-*.tgz /artifacts/daycare-factory-*.tgz \
   && rm -rf /artifacts
 
 WORKDIR /workspace
