@@ -47,15 +47,15 @@ fallback behavior.
 The e2e script uses committed fixture folders for two samples:
 - `packages/daycare-factory/examples/tasks/bash`
 - `packages/daycare-factory/examples/tasks/typescript`
-- `packages/daycare-factory/examples/environments/bash`
-- `packages/daycare-factory/examples/environments/typescript`
+- `packages/daycare-factory/environments/bash`
+- `packages/daycare-factory/environments/typescript`
 
 ```mermaid
 flowchart LR
   A[scripts/factoryE2e.sh] --> B[examples/tasks/bash]
   A --> C[examples/tasks/typescript]
-  A --> D[examples/environments/bash]
-  A --> E[examples/environments/typescript]
+  A --> D[environments/bash]
+  A --> E[environments/typescript]
   B --> F[Generated artifacts in out/]
   C --> G[Generated artifacts in out/]
 ```
