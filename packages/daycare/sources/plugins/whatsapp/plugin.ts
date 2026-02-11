@@ -70,10 +70,10 @@ export const plugin = definePlugin({
           fileStore: api.fileStore,
           dataDir: api.dataDir,
           onQRCode: (qr) => {
-            api.logger.info({ qr }, "whatsapp:info WhatsApp QR code ready - scan with your phone");
+            api.logger.info({ qr }, "ready: WhatsApp QR code ready - scan with your phone");
           },
           onFatal: (reason, error) => {
-            api.logger.warn({ reason, error }, "whatsapp:warn WhatsApp connector fatal");
+            api.logger.warn({ reason, error }, "event: WhatsApp connector fatal");
           }
         });
 

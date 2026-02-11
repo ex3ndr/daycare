@@ -55,7 +55,7 @@ export class Heartbeats {
         );
       },
       onError: async (error, taskIds) => {
-        logger.warn({ taskIds, error }, "heartbeat:warn Heartbeat task failed");
+        logger.warn({ taskIds, error }, "error: Heartbeat task failed");
       },
       onGatePermissionSkip: async (task, missing) => {
         const label = task.title ? `"${task.title}" (${task.id})` : task.id;
@@ -87,7 +87,7 @@ export class Heartbeats {
     const tasks = await this.listTasks();
     this.eventBus.emit("heartbeat.started", { tasks });
     if (tasks.length === 0) {
-      logger.info("heartbeat:info No heartbeat tasks found on boot.");
+      logger.info("event: No heartbeat tasks found on boot.");
       return;
     }
     const withLastRun = tasks.filter((task) => !!task.lastRunAt);
@@ -102,7 +102,7 @@ export class Heartbeats {
           taskCount: tasks.length,
           mostRecentRunAt: mostRecent
         },
-        "heartbeat:info Heartbeat last run loaded on boot"
+        "load: Heartbeat last run loaded on boot"
       );
     }
     if (missingLastRun.length > 0) {
@@ -111,14 +111,14 @@ export class Heartbeats {
           taskCount: missingLastRun.length,
           taskIds: missingLastRun.map((task) => task.id)
         },
-        "heartbeat:info Heartbeat missing last run info; running now"
+        "event: Heartbeat missing last run info; running now"
       );
       await this.runNow({ ids: missingLastRun.map((task) => task.id) });
     }
     const nextRunAt =
       this.scheduler.getNextRunAt() ??
       new Date(Date.now() + this.scheduler.getIntervalMs());
-    logger.info({ nextRunAt: nextRunAt.toISOString() }, "heartbeat:info Next heartbeat run scheduled");
+    logger.info({ nextRunAt: nextRunAt.toISOString() }, "schedule: Next heartbeat run scheduled");
   }
 
   stop(): void {

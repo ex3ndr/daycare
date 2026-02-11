@@ -79,7 +79,7 @@ export class Signals {
         sourceType: signal.source.type,
         sourceId: "id" in signal.source ? signal.source.id ?? null : null
       },
-      "signal:info Signal generated"
+      "event: Signal generated"
     );
 
     return signal;
@@ -178,7 +178,7 @@ export class Signals {
     try {
       await this.onDeliver(signal, subscriptions);
     } catch (error) {
-      logger.warn({ signalId: signal.id, error }, "signal:warn Signal delivery failed");
+      logger.warn({ signalId: signal.id, error }, "error: Signal delivery failed");
     }
   }
 }

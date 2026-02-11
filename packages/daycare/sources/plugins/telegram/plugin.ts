@@ -64,7 +64,7 @@ export const plugin = definePlugin({
           dataDir: api.dataDir,
           enableGracefulShutdown: false,
           onFatal: (reason, error) => {
-            api.logger.warn({ reason, error }, "telegram:warn Telegram connector fatal");
+            api.logger.warn({ reason, error }, "event: Telegram connector fatal");
           }
         });
         api.registrar.registerConnector(connectorId, connector);

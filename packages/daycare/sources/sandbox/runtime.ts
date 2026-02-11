@@ -42,7 +42,7 @@ export async function runInSandbox(
     `claybot-srt-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`
   );
   await fs.writeFile(settingsPath, JSON.stringify(runtimeConfig), "utf8");
-  logger.debug("sandbox:debug Executing command with sandbox config");
+  logger.debug("execute: Executing command with sandbox config");
   try {
     const baseEnv = options.env ?? process.env;
     const { env } = await sandboxHomeRedefine({

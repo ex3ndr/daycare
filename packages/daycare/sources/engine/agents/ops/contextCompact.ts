@@ -56,7 +56,7 @@ export async function contextCompact(options: ContextCompactOptions): Promise<Co
   });
 
   logger.debug(
-    `agents:debug contextCompact starting messageCount=${context.messages.length} providerCount=${providersOverride.length}`
+    `start: contextCompact starting messageCount=${context.messages.length} providerCount=${providersOverride.length}`
   );
   const response = await inferenceRouter.complete(
     compactionContext,
@@ -68,7 +68,7 @@ export async function contextCompact(options: ContextCompactOptions): Promise<Co
 
   const summaryText = messageExtractText(response.message)?.trim();
   if (!summaryText) {
-    logger.debug("agents:debug contextCompact produced empty summary; returning original context");
+    logger.debug("event: contextCompact produced empty summary; returning original context");
     return { messages: [...context.messages] };
   }
 

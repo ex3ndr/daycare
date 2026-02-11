@@ -50,6 +50,26 @@ flowchart LR
   Format --> Append[append to visible message]
 ```
 
+### Message Grouping
+
+Message text uses an explicit action prefix at callsites:
+
+```
+action: message details...
+```
+
+- Module labels already carry system/plugin domain context.
+- Message prefixes focus on grouping by operation (`init:`, `start:`, `stop:`, `register:`, `execute:`, `error:`).
+- Avoid embedding log level in message text (`debug/info/warn/error` already comes from logger level).
+
+```mermaid
+flowchart LR
+  Module["[module label]"] --> Context[domain context]
+  Prefix["action: ..."] --> Grouping[operation grouping]
+  Context --> Line[final log line]
+  Grouping --> Line
+```
+
 ## Verbose Logging
 
 The codebase includes extensive verbose logging at the `debug` level. Debug logging is enabled by default in development mode (`yarn dev`).

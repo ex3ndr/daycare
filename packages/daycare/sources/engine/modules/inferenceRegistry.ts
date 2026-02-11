@@ -8,18 +8,18 @@ export class InferenceRegistry {
   private logger = getLogger("inference.registry");
 
   register(pluginId: string, provider: InferenceProvider): void {
-    this.logger.debug(`inference:debug Registering inference provider pluginId=${pluginId} providerId=${provider.id} label=${provider.label}`);
+    this.logger.debug(`register: Registering inference provider pluginId=${pluginId} providerId=${provider.id} label=${provider.label}`);
     this.providers.set(provider.id, { ...provider, pluginId });
-    this.logger.debug(`inference:debug Inference provider registered totalProviders=${this.providers.size}`);
+    this.logger.debug(`register: Inference provider registered totalProviders=${this.providers.size}`);
   }
 
   unregister(id: string): void {
-    this.logger.debug(`inference:debug Unregistering inference provider providerId=${id}`);
+    this.logger.debug(`unregister: Unregistering inference provider providerId=${id}`);
     this.providers.delete(id);
   }
 
   unregisterByPlugin(pluginId: string): void {
-    this.logger.debug(`inference:debug Unregistering inference providers by plugin pluginId=${pluginId}`);
+    this.logger.debug(`unregister: Unregistering inference providers by plugin pluginId=${pluginId}`);
     let count = 0;
     for (const [id, entry] of this.providers.entries()) {
       if (entry.pluginId === pluginId) {
@@ -27,12 +27,12 @@ export class InferenceRegistry {
         count++;
       }
     }
-    this.logger.debug(`inference:debug Inference providers unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
+    this.logger.debug(`unregister: Inference providers unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
   }
 
   get(id: string): InferenceProvider | null {
     const provider = this.providers.get(id) ?? null;
-    this.logger.debug(`inference:debug get() inference provider providerId=${id} found=${!!provider}`);
+    this.logger.debug(`event: get() inference provider providerId=${id} found=${!!provider}`);
     return provider;
   }
 

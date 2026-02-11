@@ -76,7 +76,7 @@ export async function authenticate(
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-          logger.info("whatsapp:info Scan this QR code with WhatsApp on your phone:");
+          logger.info("event: Scan this QR code with WhatsApp on your phone:");
           console.log(""); // Empty line before QR
           qrcodeTerminal.generate(qr, { small: true });
           console.log(""); // Empty line after QR
@@ -85,7 +85,7 @@ export async function authenticate(
 
         if (connection === "open") {
           clearTimeout(timeout);
-          logger.info("whatsapp:info WhatsApp authenticated successfully!");
+          logger.info("event: WhatsApp authenticated successfully!");
           finish({ success: true });
         }
 
@@ -97,7 +97,7 @@ export async function authenticate(
             finish({ success: false, reason: "Logged out during authentication" });
           } else if (statusCode === DisconnectReason.connectionClosed) {
             // Connection closed, might be temporary
-            logger.debug("whatsapp:debug Connection closed during auth, waiting...");
+            logger.debug("event: Connection closed during auth, waiting...");
           }
         }
       });

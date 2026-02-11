@@ -25,7 +25,7 @@ export async function skillResolve(
   const resolvedPath = path.resolve(filePath);
   const readable = await skillFileReadable(resolvedPath);
   if (!readable) {
-    logger.warn({ path: resolvedPath }, "engine:warn Skill file not readable; skipping");
+    logger.warn({ path: resolvedPath }, "skip: Skill file not readable; skipping");
     return null;
   }
 
@@ -33,7 +33,7 @@ export async function skillResolve(
   try {
     content = await fs.readFile(resolvedPath, "utf8");
   } catch (error) {
-    logger.warn({ path: resolvedPath, error }, "engine:warn Skill file not readable; skipping");
+    logger.warn({ path: resolvedPath, error }, "skip: Skill file not readable; skipping");
     return null;
   }
 

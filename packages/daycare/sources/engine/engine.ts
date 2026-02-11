@@ -80,7 +80,7 @@ export class Engine {
   private readonly incomingMessages: IncomingMessages;
 
   constructor(options: EngineOptions) {
-    logger.debug(`engine:debug Engine constructor starting, dataDir=${options.config.dataDir}`);
+    logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
     this.config = new ConfigModule(options.config);
     this.eventBus = options.eventBus;
     this.signals = new Signals({
@@ -112,7 +112,7 @@ export class Engine {
           for (const item of items) {
             const connector = item.descriptor.type === "user" ? item.descriptor.connector : "unknown";
             logger.debug(
-              `engine:debug Connector message received: connector=${connector} type=${item.descriptor.type} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
+              `receive: Connector message received: connector=${connector} type=${item.descriptor.type} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
             );
             await this.agentSystem.post(
               { descriptor: item.descriptor },
@@ -122,7 +122,7 @@ export class Engine {
         });
       }
     });
-    logger.debug(`engine:debug AuthStore and FileStore initialized`);
+    logger.debug(`init: AuthStore and FileStore initialized`);
 
     this.modules = new ModuleRegistry({
       onMessage: async (message, context, descriptor) => {
@@ -140,7 +140,7 @@ export class Engine {
           }
           logger.info(
             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-            "engine:info Reset command received"
+            "receive: Reset command received"
           );
           await this.handleResetCommand(descriptor, context);
           return;
@@ -151,7 +151,7 @@ export class Engine {
           }
           logger.info(
             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-            "engine:info Context command received"
+            "receive: Context command received"
           );
           await this.handleContextCommand(descriptor, context);
           return;
@@ -162,12 +162,12 @@ export class Engine {
           }
           logger.info(
             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-            "engine:info Stop command received"
+            "stop: Stop command received"
           );
           await this.handleStopCommand(descriptor, context);
           return;
         }
-        logger.debug({ connector, command: parsed.name }, "engine:debug Unknown command ignored");
+        logger.debug({ connector, command: parsed.name }, "event: Unknown command ignored");
       }),
       onPermission: async (decision, context, descriptor) => this.runConnectorCallback("permission", async () => {
         if (decision.agentId) {
@@ -203,7 +203,7 @@ export class Engine {
         );
       }),
       onFatal: (source, reason, error) => {
-        logger.warn({ source, reason, error }, "engine:warn Connector requested shutdown");
+        logger.warn({ source, reason, error }, "event: Connector requested shutdown");
       }
     });
 
@@ -272,29 +272,29 @@ export class Engine {
   }
 
   async start(): Promise<void> {
-    logger.debug("engine:debug Engine.start() beginning");
+    logger.debug("start: Engine.start() beginning");
     await ensureWorkspaceDir(this.config.current.defaultPermissions.workingDir);
 
-    logger.debug("engine:debug Loading agents");
+    logger.debug("load: Loading agents");
     await this.agentSystem.load();
-    logger.debug("engine:debug Agents loaded");
+    logger.debug("load: Agents loaded");
 
-    logger.debug("engine:debug Reloading provider manager with current config");
+    logger.debug("reload: Reloading provider manager with current config");
     await this.providerManager.reload();
-    logger.debug("engine:debug Provider manager reload complete");
-    logger.debug("engine:debug Loading durable process manager");
+    logger.debug("reload: Provider manager reload complete");
+    logger.debug("load: Loading durable process manager");
     await this.processes.load();
-    logger.debug("engine:debug Durable process manager loaded");
-    logger.debug("engine:debug Reloading plugins with current config");
+    logger.debug("load: Durable process manager loaded");
+    logger.debug("reload: Reloading plugins with current config");
     await this.pluginManager.reload();
-    logger.debug("engine:debug Plugin reload complete");
+    logger.debug("reload: Plugin reload complete");
 
     await this.crons.ensureDir();
     await this.heartbeats.ensureDir();
     await this.signals.ensureDir();
     await this.delayedSignals.ensureDir();
 
-    logger.debug("engine:debug Registering core tools");
+    logger.debug("register: Registering core tools");
     this.modules.tools.register("core", buildCronTool(this.crons));
     this.modules.tools.register("core", buildCronReadTaskTool(this.crons));
     this.modules.tools.register("core", buildCronReadMemoryTool(this.crons));
@@ -319,20 +319,20 @@ export class Engine {
     this.modules.tools.register("core", buildPermissionRequestTool());
     this.modules.tools.register("core", buildPermissionGrantTool());
     logger.debug(
-      "engine:debug Core tools registered: cron, cron_memory, heartbeat, background, agent_listing, session_history, permanent_agents, image_generation, mermaid_png, reaction, send_file, generate_signal, signal_subscribe, signal_unsubscribe, request_permission, grant_permission"
+      "register: Core tools registered: cron, cron_memory, heartbeat, background, agent_listing, session_history, permanent_agents, image_generation, mermaid_png, reaction, send_file, generate_signal, signal_subscribe, signal_unsubscribe, request_permission, grant_permission"
     );
 
-    logger.debug("engine:debug Starting agent system");
+    logger.debug("start: Starting agent system");
     await this.agentSystem.start();
-    logger.debug("engine:debug Agent system started");
+    logger.debug("start: Agent system started");
 
-    logger.debug("engine:debug Starting cron scheduler");
+    logger.debug("start: Starting cron scheduler");
     await this.crons.start();
-    logger.debug("engine:debug Starting heartbeat scheduler");
+    logger.debug("start: Starting heartbeat scheduler");
     await this.heartbeats.start();
-    logger.debug("engine:debug Starting delayed signal scheduler");
+    logger.debug("start: Starting delayed signal scheduler");
     await this.delayedSignals.start();
-    logger.debug("engine:debug Engine.start() complete");
+    logger.debug("start: Engine.start() complete");
   }
 
   async shutdown(): Promise<void> {
@@ -412,7 +412,7 @@ export class Engine {
     try {
       tokens = await this.agentSystem.tokensForTarget({ descriptor });
     } catch (error) {
-      logger.warn({ connector: target.connector, error }, "engine:warn Context command failed to load tokens");
+      logger.warn({ connector: target.connector, error }, "error: Context command failed to load tokens");
     }
     const text = contextCommandTextBuild(tokens);
     try {
@@ -421,7 +421,7 @@ export class Engine {
         replyToMessageId: context.messageId
       });
     } catch (error) {
-      logger.warn({ connector: target.connector, error }, "engine:warn Context command failed to send response");
+      logger.warn({ connector: target.connector, error }, "error: Context command failed to send response");
     }
   }
 
@@ -457,7 +457,7 @@ export class Engine {
         replyToMessageId: context.messageId
       });
     } catch (error) {
-      logger.warn({ connector: target.connector, error }, "engine:warn Stop command failed to send response");
+      logger.warn({ connector: target.connector, error }, "error: Stop command failed to send response");
     }
   }
 
@@ -480,7 +480,7 @@ export class Engine {
     try {
       await this.inReadLock(operation);
     } catch (error) {
-      logger.error({ kind, error }, "engine:error Connector callback failed");
+      logger.error({ kind, error }, "error: Connector callback failed");
     }
   }
 
@@ -490,7 +490,7 @@ export class Engine {
       throw new Error("Config reload requires restart (paths changed).");
     }
     if (configReloadEqual(this.config.current, config)) {
-      logger.debug("engine:debug Reload requested but config is unchanged.");
+      logger.debug("reload: Reload requested but config is unchanged.");
       return;
     }
 
@@ -500,7 +500,7 @@ export class Engine {
         throw new Error("Config reload requires restart (paths changed).");
       }
       if (configReloadEqual(this.config.current, latest)) {
-        logger.debug("engine:debug Reload requested but config is unchanged.");
+        logger.debug("reload: Reload requested but config is unchanged.");
         return;
       }
       this.config.configSet(latest);
@@ -508,7 +508,7 @@ export class Engine {
       await this.providerManager.reload();
       await this.pluginManager.reload();
       this.inferenceRouter.reload();
-      logger.info("engine:info Runtime configuration reloaded");
+      logger.info("reload: Runtime configuration reloaded");
     });
   }
 

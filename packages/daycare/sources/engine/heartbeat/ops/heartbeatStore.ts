@@ -124,7 +124,7 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
 
       const { title, prompt } = heartbeatParse(parsed.body, parsed.frontmatter, baseName);
       if (!prompt) {
-        logger.warn({ filePath }, "heartbeat:warn Heartbeat file missing prompt");
+        logger.warn({ filePath }, "event: Heartbeat file missing prompt");
         return null;
       }
 
@@ -143,7 +143,7 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return null;
       }
-      logger.warn({ filePath, error }, "heartbeat:warn Failed to load heartbeat file");
+      logger.warn({ filePath, error }, "error: Failed to load heartbeat file");
       return null;
     }
   }
@@ -197,7 +197,7 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return {};
       }
-      logger.warn({ error }, "heartbeat:warn Failed to read heartbeat state");
+      logger.warn({ error }, "error: Failed to read heartbeat state");
       return {};
     }
   }
@@ -208,7 +208,7 @@ export class HeartbeatStore implements HeartbeatStoreInterface {
     try {
       await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
     } catch (error) {
-      logger.warn({ error }, "heartbeat:warn Failed to write heartbeat state");
+      logger.warn({ error }, "error: Failed to write heartbeat state");
     }
   }
 }

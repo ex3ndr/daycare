@@ -8,18 +8,18 @@ export class ImageGenerationRegistry {
   private logger = getLogger("image.registry");
 
   register(pluginId: string, provider: ImageGenerationProvider): void {
-    this.logger.debug(`image:debug Registering image provider pluginId=${pluginId} providerId=${provider.id} label=${provider.label}`);
+    this.logger.debug(`register: Registering image provider pluginId=${pluginId} providerId=${provider.id} label=${provider.label}`);
     this.providers.set(provider.id, { ...provider, pluginId });
-    this.logger.debug(`image:debug Image provider registered totalProviders=${this.providers.size}`);
+    this.logger.debug(`register: Image provider registered totalProviders=${this.providers.size}`);
   }
 
   unregister(id: string): void {
-    this.logger.debug(`image:debug Unregistering image provider providerId=${id}`);
+    this.logger.debug(`unregister: Unregistering image provider providerId=${id}`);
     this.providers.delete(id);
   }
 
   unregisterByPlugin(pluginId: string): void {
-    this.logger.debug(`image:debug Unregistering image providers by plugin pluginId=${pluginId}`);
+    this.logger.debug(`unregister: Unregistering image providers by plugin pluginId=${pluginId}`);
     let count = 0;
     for (const [id, entry] of this.providers.entries()) {
       if (entry.pluginId === pluginId) {
@@ -27,7 +27,7 @@ export class ImageGenerationRegistry {
         count++;
       }
     }
-    this.logger.debug(`image:debug Image providers unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
+    this.logger.debug(`unregister: Image providers unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
   }
 
   get(id: string): ImageGenerationProvider | null {

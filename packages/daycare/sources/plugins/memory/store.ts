@@ -77,7 +77,7 @@ export class MemoryStore {
       await this.writeIndex(entities);
     }
 
-    logger.info({ entity, created: !exists }, "memory:info Memory entity ready");
+    logger.info({ entity, created: !exists }, "ready: Memory entity ready");
 
     return { entity, created: !exists, path: entityPath };
   }
@@ -123,7 +123,7 @@ export class MemoryStore {
     );
     await fs.writeFile(entityPath, updated, "utf8");
 
-    logger.info({ entity, record, created }, "memory:info Memory record upserted");
+    logger.info({ entity, record, created }, "event: Memory record upserted");
 
     return { entity, record, created, path: entityPath };
   }

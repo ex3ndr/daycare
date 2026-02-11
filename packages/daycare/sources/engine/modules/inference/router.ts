@@ -41,13 +41,13 @@ export class InferenceRouter {
     this.auth = options.auth;
     this.config = options.config;
     this.reload();
-    this.logger.debug(`inference:debug InferenceRouter initialized providerCount=${this.providers.length}`);
+    this.logger.debug(`init: InferenceRouter initialized providerCount=${this.providers.length}`);
   }
 
   reload(): void {
     const providers = listActiveInferenceProviders(this.config.current.settings);
     const providerIds = providers.map(p => p.id).join(",");
-    this.logger.debug(`inference:debug Updating providers oldCount=${this.providers.length} newCount=${providers.length} providerIds=${providerIds}`);
+    this.logger.debug(`event: Updating providers oldCount=${this.providers.length} newCount=${providers.length} providerIds=${providerIds}`);
     this.providers = providers;
   }
 
@@ -58,31 +58,31 @@ export class InferenceRouter {
   ): Promise<InferenceResult> {
     const execute = async (): Promise<InferenceResult> => {
       const providers = options?.providersOverride ?? this.providers;
-      this.logger.debug(`inference:debug InferenceRouter.complete() starting agentId=${agentId} messageCount=${context.messages.length} toolCount=${context.tools?.length ?? 0} providerCount=${providers.length}`);
+      this.logger.debug(`start: InferenceRouter.complete() starting agentId=${agentId} messageCount=${context.messages.length} toolCount=${context.tools?.length ?? 0} providerCount=${providers.length}`);
       let lastError: unknown = null;
 
       for (const [index, providerConfig] of providers.entries()) {
-        this.logger.debug(`inference:debug Trying provider providerIndex=${index} providerId=${providerConfig.id} model=${providerConfig.model}`);
+        this.logger.debug(`event: Trying provider providerIndex=${index} providerId=${providerConfig.id} model=${providerConfig.model}`);
 
         const provider = this.registry.get(providerConfig.id);
         if (!provider) {
-          this.logger.warn({ provider: providerConfig.id }, "inference:warn Missing inference provider");
-          this.logger.debug(`inference:debug Provider not found in registry, skipping providerId=${providerConfig.id}`);
+          this.logger.warn({ provider: providerConfig.id }, "event: Missing inference provider");
+          this.logger.debug(`skip: Provider not found in registry, skipping providerId=${providerConfig.id}`);
           continue;
         }
 
         let client;
         try {
-          this.logger.debug(`inference:debug Creating inference client providerId=${providerConfig.id} model=${providerConfig.model}`);
+          this.logger.debug(`event: Creating inference client providerId=${providerConfig.id} model=${providerConfig.model}`);
           client = await provider.createClient({
             model: providerConfig.model,
             config: providerConfig.options,
             auth: this.auth,
             logger: this.logger
           });
-          this.logger.debug(`inference:debug Inference client created providerId=${providerConfig.id} modelId=${client.modelId}`);
+          this.logger.debug(`create: Inference client created providerId=${providerConfig.id} modelId=${client.modelId}`);
         } catch (error) {
-          this.logger.debug(`inference:debug Failed to create client, falling back providerId=${providerConfig.id} error=${String(error)}`);
+          this.logger.debug(`error: Failed to create client, falling back providerId=${providerConfig.id} error=${String(error)}`);
           lastError = error;
           options?.onFallback?.(providerConfig.id, error);
           continue;
@@ -90,23 +90,23 @@ export class InferenceRouter {
 
         options?.onAttempt?.(providerConfig.id, client.modelId);
         try {
-          this.logger.debug(`inference:debug Calling client.complete() providerId=${providerConfig.id} modelId=${client.modelId} agentId=${agentId}`);
+          this.logger.debug(`event: Calling client.complete() providerId=${providerConfig.id} modelId=${client.modelId} agentId=${agentId}`);
           // Provider API still expects `sessionId`; map to the agent id.
           const message = await client.complete(context, {
             sessionId: agentId,
             signal: options?.signal
           });
-          this.logger.debug(`inference:debug Inference completed successfully providerId=${providerConfig.id} modelId=${client.modelId} stopReason=${message.stopReason} contentBlocks=${message.content.length} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`);
+          this.logger.debug(`event: Inference completed successfully providerId=${providerConfig.id} modelId=${client.modelId} stopReason=${message.stopReason} contentBlocks=${message.content.length} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`);
           options?.onSuccess?.(providerConfig.id, client.modelId, message);
           return { message, providerId: providerConfig.id, modelId: client.modelId };
         } catch (error) {
-          this.logger.debug(`inference:debug Inference call failed providerId=${providerConfig.id} error=${String(error)}`);
+          this.logger.debug(`error: Inference call failed providerId=${providerConfig.id} error=${String(error)}`);
           options?.onFailure?.(providerConfig.id, error);
           throw error;
         }
       }
 
-      this.logger.debug(`inference:debug All providers exhausted lastError=${String(lastError)}`);
+      this.logger.debug(`event: All providers exhausted lastError=${String(lastError)}`);
       if (lastError instanceof Error) {
         throw lastError;
       }

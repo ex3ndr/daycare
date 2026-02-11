@@ -59,42 +59,42 @@ export class ProviderManager {
 
   async reload(): Promise<void> {
     const currentConfig = this.config.current;
-    logger.debug(`providers:debug reload() starting loadedCount=${this.loaded.size}`);
+    logger.debug(`start: reload() starting loadedCount=${this.loaded.size}`);
     const activeProviders = listProviders(currentConfig.settings).filter(
       (provider) => provider.enabled !== false
     );
     const activeIds = activeProviders.map(p => p.id).join(",");
-    logger.debug(`providers:debug Active providers from settings activeCount=${activeProviders.length} activeIds=${activeIds}`);
+    logger.debug(`event: Active providers from settings activeCount=${activeProviders.length} activeIds=${activeIds}`);
 
     const activeIdSet = new Set(activeProviders.map((provider) => provider.id));
     for (const [id, entry] of this.loaded.entries()) {
       if (!activeIdSet.has(id)) {
-        logger.debug(`providers:debug Provider no longer active, unloading providerId=${id}`);
+        logger.debug(`unload: Provider no longer active, unloading providerId=${id}`);
         await this.unloadProvider(id, entry.instance);
       }
     }
 
     for (const providerSettings of activeProviders) {
-      logger.debug(`providers:debug Processing provider providerId=${providerSettings.id} model=${providerSettings.model}`);
+      logger.debug(`event: Processing provider providerId=${providerSettings.id} model=${providerSettings.model}`);
       const definition = this.providerDefinitionResolve(providerSettings.id);
       if (!definition) {
-        logger.debug(`providers:debug Provider definition not found providerId=${providerSettings.id}`);
-        logger.warn({ provider: providerSettings.id }, "providers:warn Unknown provider");
+        logger.debug(`event: Provider definition not found providerId=${providerSettings.id}`);
+        logger.warn({ provider: providerSettings.id }, "event: Unknown provider");
         continue;
       }
 
       const existing = this.loaded.get(providerSettings.id);
       if (existing && valueDeepEqual(existing.settings, providerSettings)) {
-        logger.debug(`providers:debug Provider already loaded with same settings providerId=${providerSettings.id}`);
+        logger.debug(`load: Provider already loaded with same settings providerId=${providerSettings.id}`);
         continue;
       }
 
       if (existing) {
-        logger.debug(`providers:debug Provider settings changed, reloading providerId=${providerSettings.id}`);
+        logger.debug(`reload: Provider settings changed, reloading providerId=${providerSettings.id}`);
         await this.unloadProvider(providerSettings.id, existing.instance);
       }
 
-      logger.debug(`providers:debug Creating provider instance providerId=${providerSettings.id}`);
+      logger.debug(`event: Creating provider instance providerId=${providerSettings.id}`);
       const instance = await Promise.resolve(
         definition.create({
           settings: providerSettings,
@@ -106,18 +106,18 @@ export class ProviderManager {
         })
       );
       try {
-        logger.debug(`providers:debug Calling provider.load() providerId=${providerSettings.id}`);
+        logger.debug(`load: Calling provider.load() providerId=${providerSettings.id}`);
         await instance.load?.();
         this.loaded.set(providerSettings.id, { instance, settings: structuredClone(providerSettings) });
-        logger.debug(`providers:debug Provider registered providerId=${providerSettings.id} totalLoaded=${this.loaded.size}`);
-        logger.info({ provider: providerSettings.id }, "providers:info Provider loaded");
+        logger.debug(`register: Provider registered providerId=${providerSettings.id} totalLoaded=${this.loaded.size}`);
+        logger.info({ provider: providerSettings.id }, "load: Provider loaded");
       } catch (error) {
         this.inferenceRegistry.unregisterByPlugin(providerSettings.id);
         this.imageRegistry.unregisterByPlugin(providerSettings.id);
         throw error;
       }
     }
-    logger.debug(`providers:debug reload() complete loadedCount=${this.loaded.size}`);
+    logger.debug(`reload: reload() complete loadedCount=${this.loaded.size}`);
   }
 
   static listDefinitions() {
@@ -132,7 +132,7 @@ export class ProviderManager {
       this.inferenceRegistry.unregisterByPlugin(providerId);
       this.imageRegistry.unregisterByPlugin(providerId);
       this.loaded.delete(providerId);
-      logger.info({ provider: providerId }, "providers:info Provider unloaded");
+      logger.info({ provider: providerId }, "unload: Provider unloaded");
     }
   }
 }

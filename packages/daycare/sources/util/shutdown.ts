@@ -104,7 +104,7 @@ async function triggerShutdown(
   shutdownController.abort();
 
   const forceExit = setTimeout(() => {
-    logger.warn(`shutdown:warn Shutdown: forcing exit after ${FORCE_EXIT_MS}ms`);
+    logger.warn(`event: Shutdown: forcing exit after ${FORCE_EXIT_MS}ms`);
     process.exit(1);
   }, FORCE_EXIT_MS);
   forceExit.unref();
@@ -120,13 +120,13 @@ async function triggerShutdown(
   );
 
   logger.info(
-    `shutdown:info Shutdown: running ${totalHandlers} handler${totalHandlers === 1 ? "" : "s"}`
+    `event: Shutdown: running ${totalHandlers} handler${totalHandlers === 1 ? "" : "s"}`
   );
 
   const tasks: Promise<unknown>[] = [];
   for (const [name, handlers] of snapshot) {
     if (handlers.length > 0) {
-      logger.info(`shutdown:info Shutdown: starting ${handlers.length} handler(s) for ${name}`);
+      logger.info(`start: Shutdown: starting ${handlers.length} handler(s) for ${name}`);
     }
     handlers.forEach((handler, index) => {
       tasks.push(
@@ -135,7 +135,7 @@ async function triggerShutdown(
           .catch((error) => {
             logger.warn(
               { error },
-              `shutdown:warn Shutdown: handler ${name}[${index + 1}] failed`
+              `event: Shutdown: handler ${name}[${index + 1}] failed`
             );
           })
       );
@@ -144,12 +144,12 @@ async function triggerShutdown(
 
   if (totalHandlers > 0) {
     logger.info(
-      `shutdown:info Shutdown: waiting for ${totalHandlers} handler${
+      `event: Shutdown: waiting for ${totalHandlers} handler${
         totalHandlers === 1 ? "" : "s"
       }`
     );
   } else {
-    logger.info("shutdown:info Shutdown: no handlers registered");
+    logger.info("register: Shutdown: no handlers registered");
   }
 
   if (tasks.length > 0) {
@@ -157,7 +157,7 @@ async function triggerShutdown(
     await Promise.allSettled(tasks);
     const elapsedMs = Date.now() - startedAt;
     logger.info(
-      `shutdown:info Shutdown: completed ${totalHandlers} handler${
+      `event: Shutdown: completed ${totalHandlers} handler${
         totalHandlers === 1 ? "" : "s"
       } in ${elapsedMs}ms`
     );

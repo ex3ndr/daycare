@@ -164,7 +164,7 @@ export class AgentSystem {
         descriptor = await agentDescriptorRead(this.config.current, agentId);
         state = await agentStateRead(this.config.current, agentId);
       } catch (error) {
-        logger.warn({ agentId, error }, "engine:warn Agent restore skipped due to invalid persisted data");
+        logger.warn({ agentId, error }, "restore: Agent restore skipped due to invalid persisted data");
         continue;
       }
       if (!descriptor || !state) {
@@ -175,14 +175,14 @@ export class AgentSystem {
         if (key) {
           this.keyMap.set(key, agentId);
         }
-        logger.info({ agentId }, "engine:info Agent restore skipped (sleeping)");
+        logger.info({ agentId }, "restore: Agent restore skipped (sleeping)");
         continue;
       }
       const inbox = new AgentInbox(agentId);
       const agent = Agent.restore(agentId, descriptor, state, inbox, this);
       const registered = this.registerEntry({ agentId, descriptor, agent, inbox });
       registered.inbox.post({ type: "restore" });
-      logger.info({ agentId }, "engine:info Agent restored");
+      logger.info({ agentId }, "restore: Agent restored");
       this.startEntryIfRunning(registered);
     }
 
@@ -208,15 +208,15 @@ export class AgentSystem {
       (item.type === "message" || item.type === "system_message")
     ) {
       const agentType = "descriptor" in target ? target.descriptor.type : "agent";
-      logger.warn({ agentType }, "engine:warn AgentSystem received message before load");
+      logger.warn({ agentType }, "load: AgentSystem received message before load");
     }
     const targetLabel =
       "descriptor" in target ? `descriptor:${target.descriptor.type}` : `agent:${target.agentId}`;
-    logger.debug(`engine:debug post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
+    logger.debug(`receive: post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
     const entry = await this.resolveEntry(target, item);
     await this.enqueueEntry(entry, item, null);
     logger.debug(
-      `engine:debug post() queued item agentId=${entry.agentId} inboxSize=${entry.inbox.size()}`
+      `event: post() queued item agentId=${entry.agentId} inboxSize=${entry.inbox.size()}`
     );
     this.startEntryIfRunning(entry);
   }
@@ -307,7 +307,7 @@ export class AgentSystem {
               pattern: subscription.pattern,
               error
             },
-            "engine:warn Signal delivery skipped"
+            "skip: Signal delivery skipped"
           );
         }
       })
@@ -324,7 +324,7 @@ export class AgentSystem {
       return false;
     }
     const aborted = entry.agent.abortInference();
-    logger.info({ agentId: entry.agentId, aborted }, "engine:info Abort inference requested");
+    logger.info({ agentId: entry.agentId, aborted }, "event: Abort inference requested");
     return aborted;
   }
 
@@ -357,11 +357,11 @@ export class AgentSystem {
   markStopped(agentId: string, error?: unknown): void {
     const entry = this.entries.get(agentId);
     if (!entry) {
-      logger.warn({ agentId }, "engine:warn Agent stop reported for unknown agent");
+      logger.warn({ agentId }, "stop: Agent stop reported for unknown agent");
       return;
     }
     entry.running = false;
-    logger.debug({ agentId, error }, "engine:debug Agent marked stopped");
+    logger.debug({ agentId, error }, "stop: Agent marked stopped");
   }
 
   async sleepIfIdle(
@@ -383,7 +383,7 @@ export class AgentSystem {
       entry.agent.state.state = "sleeping";
       await agentStateWrite(this.config.current, agentId, entry.agent.state);
       this.eventBus.emit("agent.sleep", { agentId, reason });
-      logger.debug({ agentId, reason }, "engine:debug Agent entered sleep mode");
+      logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
       // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
       // interleaving that could leave stale idle lifecycle signals behind.
       await this.scheduleIdleSignal(agentId);
@@ -512,7 +512,7 @@ export class AgentSystem {
         ? { ...descriptor, id: agentId }
         : descriptor;
     logger.debug(
-      `engine:debug Creating agent entry agentId=${agentId} type=${resolvedDescriptor.type}`
+      `event: Creating agent entry agentId=${agentId} type=${resolvedDescriptor.type}`
     );
     const inbox = new AgentInbox(agentId);
     const agent = await Agent.create(agentId, resolvedDescriptor, inbox, this);
@@ -522,7 +522,7 @@ export class AgentSystem {
       agent,
       inbox
     });
-    logger.debug(`engine:debug Agent entry registered agentId=${agentId}`);
+    logger.debug(`register: Agent entry registered agentId=${agentId}`);
     return entry;
   }
 
@@ -550,14 +550,14 @@ export class AgentSystem {
 
   private startEntryIfRunning(entry: AgentEntry): void {
     if (this.stage !== "running") {
-      logger.debug(`engine:debug startEntryIfRunning skipped agentId=${entry.agentId} reason=stage:${this.stage}`);
+      logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.agentId} reason=stage:${this.stage}`);
       return;
     }
     if (entry.running) {
-      logger.debug(`engine:debug startEntryIfRunning skipped agentId=${entry.agentId} reason=already-running`);
+      logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.agentId} reason=already-running`);
       return;
     }
-    logger.debug(`engine:debug startEntryIfRunning starting agentId=${entry.agentId} type=${entry.descriptor.type}`);
+    logger.debug(`start: startEntryIfRunning starting agentId=${entry.agentId} type=${entry.descriptor.type}`);
     entry.running = true;
     entry.agent.start();
   }
@@ -585,7 +585,7 @@ export class AgentSystem {
     entry.agent.state.state = "active";
     await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
     this.eventBus.emit("agent.woke", { agentId: entry.agentId });
-    logger.debug({ agentId: entry.agentId }, "engine:debug Agent woke from sleep");
+    logger.debug({ agentId: entry.agentId }, "event: Agent woke from sleep");
     return true;
   }
 
@@ -604,7 +604,7 @@ export class AgentSystem {
         repeatKey: AGENT_IDLE_REPEAT_KEY
       });
     } catch (error) {
-      logger.warn({ agentId, error }, "engine:warn Failed to schedule idle lifecycle signal");
+      logger.warn({ agentId, error }, "error: Failed to schedule idle lifecycle signal");
     }
   }
 
@@ -618,7 +618,7 @@ export class AgentSystem {
         repeatKey: AGENT_IDLE_REPEAT_KEY
       });
     } catch (error) {
-      logger.warn({ agentId, error }, "engine:warn Failed to cancel idle lifecycle signal");
+      logger.warn({ agentId, error }, "error: Failed to cancel idle lifecycle signal");
     }
   }
 
@@ -633,7 +633,7 @@ export class AgentSystem {
         data: { agentId, state }
       });
     } catch (error) {
-      logger.warn({ agentId, state, error }, "engine:warn Failed to emit lifecycle signal");
+      logger.warn({ agentId, state, error }, "error: Failed to emit lifecycle signal");
     }
   }
 
@@ -647,7 +647,7 @@ export class AgentSystem {
       descriptor = await agentDescriptorRead(this.config.current, agentId);
       state = await agentStateRead(this.config.current, agentId);
     } catch (error) {
-      logger.warn({ agentId, error }, "engine:warn Agent restore failed due to invalid persisted data");
+      logger.warn({ agentId, error }, "error: Agent restore failed due to invalid persisted data");
       return null;
     }
     if (!descriptor || !state) {

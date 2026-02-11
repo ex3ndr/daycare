@@ -75,21 +75,21 @@ export async function startEngineServer(
   options: EngineServerOptions
 ): Promise<EngineServer> {
   const logger = getLogger("engine.server");
-  logger.debug(`engine:debug startEngineServer() called settingsPath=${options.settingsPath}`);
+  logger.debug(`event: startEngineServer() called settingsPath=${options.settingsPath}`);
   const socketPath = resolveEngineSocketPath(options.socketPath);
-  logger.debug(`engine:debug Socket path resolved socketPath=${socketPath}`);
+  logger.debug(`event: Socket path resolved socketPath=${socketPath}`);
   await fs.mkdir(path.dirname(socketPath), { recursive: true });
   await fs.rm(socketPath, { force: true });
-  logger.debug("engine:debug Socket directory prepared");
+  logger.debug("event: Socket directory prepared");
 
   const app = fastify({ logger: false });
-  logger.debug("engine:debug Fastify app created");
+  logger.debug("create: Fastify app created");
   const pluginCatalog = buildPluginCatalog();
 
   app.get("/v1/engine/status", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/status");
+    logger.debug("event: GET /v1/engine/status");
     const status = options.runtime.getStatus();
-    logger.debug(`engine:debug Status retrieved pluginCount=${status.plugins.length} connectorCount=${status.connectors.length}`);
+    logger.debug(`event: Status retrieved pluginCount=${status.plugins.length} connectorCount=${status.connectors.length}`);
     return reply.send({
       ok: true,
       status
@@ -97,29 +97,29 @@ export async function startEngineServer(
   });
 
   app.get("/v1/engine/cron/tasks", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/cron/tasks");
+    logger.debug("event: GET /v1/engine/cron/tasks");
     const tasks = options.runtime.crons.listScheduledTasks();
-    logger.debug(`engine:debug Cron tasks retrieved taskCount=${tasks.length}`);
+    logger.debug(`event: Cron tasks retrieved taskCount=${tasks.length}`);
     return reply.send({ ok: true, tasks });
   });
 
   app.get("/v1/engine/heartbeat/tasks", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/heartbeat/tasks");
+    logger.debug("event: GET /v1/engine/heartbeat/tasks");
     const tasks = await options.runtime.heartbeats.listTasks();
-    logger.debug(`engine:debug Heartbeat tasks retrieved taskCount=${tasks.length}`);
+    logger.debug(`event: Heartbeat tasks retrieved taskCount=${tasks.length}`);
     return reply.send({ ok: true, tasks });
   });
 
   app.get("/v1/engine/processes", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/processes");
+    logger.debug("event: GET /v1/engine/processes");
     const processes = await options.runtime.processes.list();
-    logger.debug(`engine:debug Processes retrieved count=${processes.length}`);
+    logger.debug(`event: Processes retrieved count=${processes.length}`);
     return reply.send({ ok: true, processes });
   });
 
   app.get("/v1/engine/processes/:processId", async (request, reply) => {
     const processId = (request.params as { processId: string }).processId;
-    logger.debug(`engine:debug GET /v1/engine/processes/:processId processId=${processId}`);
+    logger.debug(`event: GET /v1/engine/processes/:processId processId=${processId}`);
     try {
       const processInfo = await options.runtime.processes.get(processId);
       return reply.send({ ok: true, process: processInfo });
@@ -133,19 +133,19 @@ export async function startEngineServer(
   });
 
   app.get("/v1/engine/signals/events", async (request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/signals/events");
+    logger.debug("event: GET /v1/engine/signals/events");
     const parsed = signalEventsQuerySchema.safeParse(request.query);
     if (!parsed.success) {
       return reply.status(400).send({ ok: false, error: "Invalid query" });
     }
     const limit = parsed.data.limit ?? 200;
     const events = await options.runtime.signals.listRecent(limit);
-    logger.debug(`engine:debug Signal events retrieved eventCount=${events.length} limit=${limit}`);
+    logger.debug(`event: Signal events retrieved eventCount=${events.length} limit=${limit}`);
     return reply.send({ ok: true, events });
   });
 
   app.post("/v1/engine/signals/generate", async (request, reply) => {
-    logger.debug("engine:debug POST /v1/engine/signals/generate");
+    logger.debug("event: POST /v1/engine/signals/generate");
     const payload = parseBody(signalGenerateSchema, request.body, reply);
     if (!payload) {
       return;
@@ -156,7 +156,7 @@ export async function startEngineServer(
         source: payload.source,
         data: payload.data
       });
-      logger.info({ signalId: signal.id, type: signal.type }, "engine:info Signal generated via API");
+      logger.info({ signalId: signal.id, type: signal.type }, "event: Signal generated via API");
       return reply.send({ ok: true, signal });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Signal generation failed";
@@ -165,55 +165,55 @@ export async function startEngineServer(
   });
 
   app.get("/v1/engine/signals/subscriptions", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/signals/subscriptions");
+    logger.debug("event: GET /v1/engine/signals/subscriptions");
     const subscriptions = options.runtime.signals.listSubscriptions();
-    logger.debug(`engine:debug Signal subscriptions retrieved count=${subscriptions.length}`);
+    logger.debug(`event: Signal subscriptions retrieved count=${subscriptions.length}`);
     return reply.send({ ok: true, subscriptions });
   });
 
   app.get("/v1/engine/agents/background", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/agents/background");
+    logger.debug("event: GET /v1/engine/agents/background");
     const agents = await agentBackgroundList(options.runtime.config.current);
-    logger.debug(`engine:debug Background agents retrieved agentCount=${agents.length}`);
+    logger.debug(`event: Background agents retrieved agentCount=${agents.length}`);
     return reply.send({ ok: true, agents });
   });
 
   app.get("/v1/engine/agents", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/agents");
+    logger.debug("event: GET /v1/engine/agents");
     const agents = await agentList(options.runtime.config.current);
-    logger.debug(`engine:debug Agents retrieved agentCount=${agents.length}`);
+    logger.debug(`event: Agents retrieved agentCount=${agents.length}`);
     return reply.send({ ok: true, agents });
   });
 
   app.get("/v1/engine/agents/:agentId/history", async (request, reply) => {
     const agentId = (request.params as { agentId: string }).agentId;
-    logger.debug(`engine:debug GET /v1/engine/agents/:agentId/history agentId=${agentId}`);
+    logger.debug(`event: GET /v1/engine/agents/:agentId/history agentId=${agentId}`);
     const records = await agentHistoryLoad(options.runtime.config.current, agentId);
-    logger.debug(`engine:debug Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
+    logger.debug(`event: Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
     return reply.send({ ok: true, records });
   });
 
   app.post("/v1/engine/agents/:agentId/reset", async (request, reply) => {
     const agentId = (request.params as { agentId: string }).agentId;
-    logger.debug(`engine:debug POST /v1/engine/agents/:agentId/reset agentId=${agentId}`);
+    logger.debug(`event: POST /v1/engine/agents/:agentId/reset agentId=${agentId}`);
     const ok = options.runtime.agentSystem.post(
       { agentId },
       { type: "reset", message: "Manual reset requested by the user." }
     );
     if (!ok) {
-      logger.debug(`engine:debug Agent reset failed agentId=${agentId}`);
+      logger.debug(`error: Agent reset failed agentId=${agentId}`);
       return reply.status(404).send({ ok: false, error: "Agent not found" });
     }
-    logger.info({ agentId }, "engine:info Agent reset");
+    logger.info({ agentId }, "event: Agent reset");
     return reply.send({ ok: true });
   });
 
   app.get("/v1/engine/plugins", async (_request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/plugins");
+    logger.debug("event: GET /v1/engine/plugins");
     const settings = await readSettingsFile(options.settingsPath);
     const loaded = options.runtime.pluginManager.listLoaded();
     const configured = listPlugins(settings);
-    logger.debug(`engine:debug Plugin list retrieved loadedCount=${loaded.length} configuredCount=${configured.length}`);
+    logger.debug(`event: Plugin list retrieved loadedCount=${loaded.length} configuredCount=${configured.length}`);
     return reply.send({
       ok: true,
       loaded,
@@ -222,10 +222,10 @@ export async function startEngineServer(
   });
 
   app.post("/v1/engine/plugins/load", async (request, reply) => {
-    logger.debug("engine:debug POST /v1/engine/plugins/load");
+    logger.debug("load: POST /v1/engine/plugins/load");
     const payload = parseBody(pluginLoadSchema, request.body, reply);
     if (!payload) {
-      logger.debug("engine:debug Invalid payload for plugin load");
+      logger.debug("load: Invalid payload for plugin load");
       return;
     }
 
@@ -238,7 +238,7 @@ export async function startEngineServer(
       : undefined;
     const resolvedPluginId = pluginId ?? existing?.pluginId;
     if (!resolvedPluginId) {
-      logger.debug("engine:debug Missing pluginId");
+      logger.debug("event: Missing pluginId");
       reply.status(400).send({ error: "pluginId required" });
       return;
     }
@@ -250,7 +250,7 @@ export async function startEngineServer(
         exclusive: definition?.descriptor.exclusive
       });
     if (!definition) {
-      logger.debug(`engine:debug Unknown pluginId=${resolvedPluginId}`);
+      logger.debug(`event: Unknown pluginId=${resolvedPluginId}`);
       reply.status(400).send({ error: `Unknown pluginId: ${resolvedPluginId}` });
       return;
     }
@@ -269,8 +269,8 @@ export async function startEngineServer(
       reply.status(400).send({ error: message });
       return;
     }
-    logger.info({ plugin: resolvedPluginId, instance: instanceId }, "engine:info Plugin load requested");
-    logger.debug(`engine:debug Processing plugin load pluginId=${resolvedPluginId} instanceId=${instanceId} hasSettings=${!!payload.settings}`);
+    logger.info({ plugin: resolvedPluginId, instance: instanceId }, "load: Plugin load requested");
+    logger.debug(`load: Processing plugin load pluginId=${resolvedPluginId} instanceId=${instanceId} hasSettings=${!!payload.settings}`);
 
     try {
       await updateSettingsFile(options.settingsPath, (current) => {
@@ -282,7 +282,7 @@ export async function startEngineServer(
           pluginId: resolvedPluginId,
           enabled: true
         };
-        logger.debug(`engine:debug Updating settings file existing=${!!existingEntry}`);
+        logger.debug(`event: Updating settings file existing=${!!existingEntry}`);
         const nextPlugins = upsertPlugin(current.plugins, {
           ...config,
           enabled: true,
@@ -323,28 +323,28 @@ export async function startEngineServer(
     }
 
     options.eventBus.emit("plugin.loaded", { id: instanceId });
-    logger.debug(`engine:debug Plugin load completed instanceId=${instanceId}`);
+    logger.debug(`load: Plugin load completed instanceId=${instanceId}`);
     return reply.send({ ok: true });
   });
 
   app.post("/v1/engine/plugins/unload", async (request, reply) => {
-    logger.debug("engine:debug POST /v1/engine/plugins/unload");
+    logger.debug("unload: POST /v1/engine/plugins/unload");
     const payload = parseBody(pluginUnloadSchema, request.body, reply);
     if (!payload) {
-      logger.debug("engine:debug Invalid payload for plugin unload");
+      logger.debug("unload: Invalid payload for plugin unload");
       return;
     }
 
     const instanceId = payload.instanceId ?? payload.id;
     if (!instanceId) {
-      logger.debug("engine:debug Missing instanceId");
+      logger.debug("event: Missing instanceId");
       reply.status(400).send({ error: "instanceId required" });
       return;
     }
 
-    logger.info({ instance: instanceId }, "engine:info Plugin unload requested");
+    logger.info({ instance: instanceId }, "unload: Plugin unload requested");
 
-    logger.debug(`engine:debug Updating settings file for unload instanceId=${instanceId}`);
+    logger.debug(`unload: Updating settings file for unload instanceId=${instanceId}`);
     await updateSettingsFile(options.settingsPath, (current) => ({
       ...current,
       plugins: upsertPlugin(current.plugins, {
@@ -364,25 +364,25 @@ export async function startEngineServer(
       return;
     }
     options.eventBus.emit("plugin.unloaded", { id: instanceId });
-    logger.debug(`engine:debug Plugin unload completed instanceId=${instanceId}`);
+    logger.debug(`unload: Plugin unload completed instanceId=${instanceId}`);
     return reply.send({ ok: true });
   });
 
   app.post("/v1/engine/auth", async (request, reply) => {
-    logger.debug("engine:debug POST /v1/engine/auth");
+    logger.debug("event: POST /v1/engine/auth");
     const payload = parseBody(authSchema, request.body, reply);
     if (!payload) {
-      logger.debug("engine:debug Invalid payload for auth");
+      logger.debug("event: Invalid payload for auth");
       return;
     }
-    logger.debug(`engine:debug Setting auth field id=${payload.id} key=${payload.key}`);
+    logger.debug(`event: Setting auth field id=${payload.id} key=${payload.key}`);
     await options.runtime.authStore.setField(payload.id, payload.key, payload.value);
-    logger.debug("engine:debug Auth field set");
+    logger.debug("event: Auth field set");
     return reply.send({ ok: true });
   });
 
   app.post("/v1/engine/shutdown", async (_request, reply) => {
-    logger.info("engine:info Shutdown requested via API");
+    logger.info("event: Shutdown requested via API");
     reply.send({ ok: true });
     setImmediate(() => {
       requestShutdown("SIGTERM");
@@ -390,7 +390,7 @@ export async function startEngineServer(
   });
 
   app.post("/v1/engine/reload", async (_request, reply) => {
-    logger.info("engine:info Reload requested via API");
+    logger.info("reload: Reload requested via API");
     try {
       await reloadRuntime(options.runtime);
     } catch (error) {
@@ -402,18 +402,18 @@ export async function startEngineServer(
   });
 
   app.post("/v1/engine/events", async (request, reply) => {
-    logger.debug("engine:debug POST /v1/engine/events");
+    logger.debug("event: POST /v1/engine/events");
     const payload = parseBody(engineEventSchema, request.body, reply);
     if (!payload) {
       return;
     }
     options.eventBus.emit(payload.type, payload.payload ?? null);
-    logger.info({ eventType: payload.type }, "engine:info Engine event emitted via API");
+    logger.info({ eventType: payload.type }, "event: Engine event emitted via API");
     return reply.send({ ok: true });
   });
 
   app.get("/v1/engine/events", async (request, reply) => {
-    logger.debug("engine:debug GET /v1/engine/events (SSE connection)");
+    logger.debug("event: GET /v1/engine/events (SSE connection)");
     reply.raw.setHeader("Content-Type", "text/event-stream");
     reply.raw.setHeader("Cache-Control", "no-cache");
     reply.raw.setHeader("Connection", "keep-alive");
@@ -423,7 +423,7 @@ export async function startEngineServer(
       reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
     };
 
-    logger.debug("engine:debug Sending init event");
+    logger.debug("send: Sending init event");
     sendEvent({
       type: "init",
       payload: {
@@ -436,28 +436,28 @@ export async function startEngineServer(
     });
 
     const unsubscribe = options.eventBus.onEvent((event) => {
-      logger.debug(`engine:debug Forwarding event to SSE client eventType=${(event as { type?: string }).type}`);
+      logger.debug(`event: Forwarding event to SSE client eventType=${(event as { type?: string }).type}`);
       sendEvent(event);
     });
 
     request.raw.on("close", () => {
-      logger.debug("engine:debug SSE connection closed");
+      logger.debug("event: SSE connection closed");
       unsubscribe();
     });
   });
 
-  logger.debug("engine:debug Starting server listen");
+  logger.debug("start: Starting server listen");
   await app.listen({ path: socketPath });
-  logger.info({ socket: socketPath }, "engine:info Engine server ready");
-  logger.debug("engine:debug Server listening on socket");
+  logger.info({ socket: socketPath }, "ready: Engine server ready");
+  logger.debug("event: Server listening on socket");
 
   return {
     socketPath,
     close: async () => {
-      logger.debug("engine:debug Closing engine server");
+      logger.debug("event: Closing engine server");
       await closeServer(app);
       await fs.rm(socketPath, { force: true });
-      logger.debug("engine:debug Engine server closed");
+      logger.debug("event: Engine server closed");
     }
   };
 }

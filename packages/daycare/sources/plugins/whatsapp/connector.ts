@@ -88,7 +88,7 @@ export class WhatsAppConnector implements Connector {
   >();
 
   constructor(options: WhatsAppConnectorOptions) {
-    logger.debug(`whatsapp:debug WhatsAppConnector constructor instanceId=${options.instanceId}`);
+    logger.debug(`init: WhatsAppConnector constructor instanceId=${options.instanceId}`);
     this.allowedPhones = new Set(
       options.allowedPhones.map((phone) => normalizePhoneNumber(phone))
     );
@@ -135,11 +135,11 @@ export class WhatsAppConnector implements Connector {
 
   async sendMessage(targetId: string, message: ConnectorMessage): Promise<void> {
     logger.debug(
-      `whatsapp:debug sendMessage() called targetId=${targetId} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`
+      `event: sendMessage() called targetId=${targetId} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`
     );
 
     if (!this.socket) {
-      logger.warn("whatsapp:warn Cannot send message: socket not connected");
+      logger.warn("send: Cannot send message: socket not connected");
       return;
     }
 
@@ -178,7 +178,7 @@ export class WhatsAppConnector implements Connector {
     descriptor: AgentDescriptor
   ): Promise<void> {
     if (!this.socket) {
-      logger.warn("whatsapp:warn Cannot request permission: socket not connected");
+      logger.warn("event: Cannot request permission: socket not connected");
       return;
     }
 
@@ -230,7 +230,7 @@ export class WhatsAppConnector implements Connector {
   }
 
   async shutdown(reason: string = "shutdown"): Promise<void> {
-    logger.debug(`whatsapp:debug shutdown() called reason=${reason}`);
+    logger.debug(`event: shutdown() called reason=${reason}`);
     if (this.shuttingDown) {
       return;
     }
@@ -240,11 +240,11 @@ export class WhatsAppConnector implements Connector {
       this.socket.end(undefined);
       this.socket = null;
     }
-    logger.debug("whatsapp:debug WhatsApp connector shutdown complete");
+    logger.debug("event: WhatsApp connector shutdown complete");
   }
 
   private async initialize(): Promise<void> {
-    logger.debug("whatsapp:debug initialize() starting");
+    logger.debug("init: initialize() starting");
     await this.connect();
   }
 
@@ -253,7 +253,7 @@ export class WhatsAppConnector implements Connector {
       return;
     }
 
-    logger.debug("whatsapp:debug Connecting to WhatsApp");
+    logger.debug("event: Connecting to WhatsApp");
 
     const { state, saveCreds } = await useAuthStoreState(this.authStore, this.instanceId);
     const { version } = await fetchLatestBaileysVersion();
@@ -277,7 +277,7 @@ export class WhatsAppConnector implements Connector {
       void this.handleMessagesUpsert(event);
     });
 
-    logger.debug("whatsapp:debug WhatsApp socket created, waiting for connection");
+    logger.debug("create: WhatsApp socket created, waiting for connection");
   }
 
   private handleConnectionUpdate(
@@ -286,7 +286,7 @@ export class WhatsAppConnector implements Connector {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      logger.info("whatsapp:info WhatsApp QR code received - scan with your phone");
+      logger.info("receive: WhatsApp QR code received - scan with your phone");
       if (this.printQRInTerminal) {
         qrcodeTerminal.generate(qr, { small: true });
       }
@@ -299,7 +299,7 @@ export class WhatsAppConnector implements Connector {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-      logger.info({ statusCode, shouldReconnect }, "whatsapp:info WhatsApp connection closed");
+      logger.info({ statusCode, shouldReconnect }, "event: WhatsApp connection closed");
 
       if (statusCode === DisconnectReason.loggedOut) {
         this.onFatal?.("logged_out", lastDisconnect?.error);
@@ -314,7 +314,7 @@ export class WhatsAppConnector implements Connector {
         }, 3000);
       }
     } else if (connection === "open") {
-      logger.info("whatsapp:info WhatsApp connected");
+      logger.info("event: WhatsApp connected");
     }
   }
 
@@ -341,13 +341,13 @@ export class WhatsAppConnector implements Connector {
     const jid = key.remoteJid;
     // Skip group messages
     if (jid.endsWith("@g.us")) {
-      logger.debug(`whatsapp:debug Skipping group message jid=${jid}`);
+      logger.debug(`skip: Skipping group message jid=${jid}`);
       return;
     }
 
     const phone = jidToPhone(jid);
     if (!this.isAllowedPhone(phone)) {
-      logger.info({ phone, jid }, "whatsapp:info Skipping message from unapproved phone");
+      logger.info({ phone, jid }, "skip: Skipping message from unapproved phone");
       return;
     }
 
@@ -355,7 +355,7 @@ export class WhatsAppConnector implements Connector {
     const messageId = key.id ?? undefined;
 
     logger.debug(
-      `whatsapp:debug Received WhatsApp message phone=${phone} messageId=${messageId} hasText=${!!text}`
+      `receive: Received WhatsApp message phone=${phone} messageId=${messageId} hasText=${!!text}`
     );
 
     // Check for permission response
@@ -379,7 +379,7 @@ export class WhatsAppConnector implements Connector {
     // Check for commands
     const trimmedText = text?.trim() ?? "";
     if (trimmedText.startsWith("/")) {
-      logger.debug(`whatsapp:debug Dispatching to command handlers phone=${phone}`);
+      logger.debug(`event: Dispatching to command handlers phone=${phone}`);
       for (const handler of this.commandHandlers) {
         await handler(trimmedText, context, descriptor);
       }
@@ -394,7 +394,7 @@ export class WhatsAppConnector implements Connector {
       files: files.length > 0 ? files : undefined
     };
 
-    logger.debug(`whatsapp:debug Dispatching to message handlers phone=${phone}`);
+    logger.debug(`event: Dispatching to message handlers phone=${phone}`);
     for (const handler of this.handlers) {
       await handler(payload, context, descriptor);
     }
@@ -545,7 +545,7 @@ export class WhatsAppConnector implements Connector {
         }
       }
     } catch (error) {
-      logger.warn({ error }, "whatsapp:warn Failed to download WhatsApp media");
+      logger.warn({ error }, "error: Failed to download WhatsApp media");
     }
 
     return files;
@@ -559,7 +559,7 @@ export class WhatsAppConnector implements Connector {
     if (this.isAllowedPhone(targetId)) {
       return true;
     }
-    logger.warn({ targetId, action }, "whatsapp:warn Blocked WhatsApp action for unapproved phone");
+    logger.warn({ targetId, action }, "event: Blocked WhatsApp action for unapproved phone");
     return false;
   }
 }

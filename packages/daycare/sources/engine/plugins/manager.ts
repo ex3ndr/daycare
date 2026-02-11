@@ -72,7 +72,7 @@ export class PluginManager {
       router: options.inferenceRouter,
       config: this.config
     });
-    this.logger.debug(`plugins:debug PluginManager initialized catalogSize=${options.pluginCatalog.size} dataDir=${this.config.current.dataDir} mode=${this.mode}`);
+    this.logger.debug(`init: PluginManager initialized catalogSize=${options.pluginCatalog.size} dataDir=${this.config.current.dataDir} mode=${this.mode}`);
   }
 
   listLoaded(): string[] {
@@ -125,25 +125,25 @@ export class PluginManager {
           prompts.push(value.trim());
         }
       } catch (error) {
-        this.logger.warn({ error }, "plugins:warn Plugin system prompt failed");
+        this.logger.warn({ error }, "error: Plugin system prompt failed");
       }
     }
     return prompts;
   }
 
   async reload(): Promise<void> {
-    this.logger.debug(`plugins:debug reload() starting loadedCount=${this.loaded.size}`);
+    this.logger.debug(`start: reload() starting loadedCount=${this.loaded.size}`);
     const settings = this.config.current.settings;
     const desired = this.resolveEnabledPlugins(settings);
     const desiredMap = new Map(desired.map((plugin) => [plugin.instanceId, plugin]));
     const desiredIds = desired.map(p => p.instanceId).join(",");
-    this.logger.debug(`plugins:debug Desired plugins from settings desiredCount=${desired.length} desiredIds=${desiredIds}`);
+    this.logger.debug(`event: Desired plugins from settings desiredCount=${desired.length} desiredIds=${desiredIds}`);
 
     for (const [instanceId, entry] of this.loaded) {
       const next = desiredMap.get(instanceId);
       if (!next) {
-        this.logger.debug(`plugins:debug Plugin no longer desired, unloading instanceId=${instanceId}`);
-        this.logger.info({ instance: instanceId }, "plugins:info Unloading plugin (disabled)");
+        this.logger.debug(`unload: Plugin no longer desired, unloading instanceId=${instanceId}`);
+        this.logger.info({ instance: instanceId }, "unload: Unloading plugin (disabled)");
         await this.unload(instanceId);
         continue;
       }
@@ -151,10 +151,10 @@ export class PluginManager {
         next.pluginId !== entry.config.pluginId ||
         !valueDeepEqual(next.settings ?? {}, entry.config.settings ?? {})
       ) {
-        this.logger.debug(`plugins:debug Plugin settings changed, reloading instanceId=${instanceId} oldPluginId=${entry.config.pluginId} newPluginId=${next.pluginId}`);
+        this.logger.debug(`reload: Plugin settings changed, reloading instanceId=${instanceId} oldPluginId=${entry.config.pluginId} newPluginId=${next.pluginId}`);
         this.logger.info(
           { instance: instanceId, plugin: entry.config.pluginId },
-          "plugins:info Reloading plugin (settings changed)"
+          "reload: Reloading plugin (settings changed)"
         );
         await this.unload(instanceId);
       }
@@ -164,7 +164,7 @@ export class PluginManager {
       if (this.loaded.has(plugin.instanceId)) {
         const entry = this.loaded.get(plugin.instanceId);
         if (entry) {
-          this.logger.debug(`plugins:debug Plugin already loaded, updating config instanceId=${plugin.instanceId}`);
+          this.logger.debug(`load: Plugin already loaded, updating config instanceId=${plugin.instanceId}`);
           try {
             const parsed = entry.module.settingsSchema.parse(plugin.settings ?? {});
             entry.config = plugin;
@@ -173,7 +173,7 @@ export class PluginManager {
             if (error instanceof ZodError) {
               this.logger.warn(
                 { instance: plugin.instanceId, plugin: plugin.pluginId, error },
-                "plugins:warn Plugin settings validation failed"
+                "error: Plugin settings validation failed"
               );
               await this.unload(plugin.instanceId);
               if (this.mode === "validate") {
@@ -186,14 +186,14 @@ export class PluginManager {
         }
         continue;
       }
-      this.logger.debug(`plugins:debug Loading new plugin pluginId=${plugin.pluginId} instanceId=${plugin.instanceId}`);
+      this.logger.debug(`load: Loading new plugin pluginId=${plugin.pluginId} instanceId=${plugin.instanceId}`);
       this.logger.info(
         { plugin: plugin.pluginId, instance: plugin.instanceId },
-        "plugins:info Loading plugin (settings reload)"
+        "reload: Loading plugin (settings reload)"
       );
       await this.load(plugin);
     }
-    this.logger.debug(`plugins:debug reload() complete loadedCount=${this.loaded.size}`);
+    this.logger.debug(`reload: reload() complete loadedCount=${this.loaded.size}`);
   }
 
   getConfig(instanceId: string): PluginInstanceSettings | null {
@@ -202,33 +202,33 @@ export class PluginManager {
 
   async load(pluginConfig: PluginInstanceSettings): Promise<void> {
     const instanceId = pluginConfig.instanceId;
-    this.logger.debug(`plugins:debug load() called pluginId=${pluginConfig.pluginId} instanceId=${instanceId}`);
+    this.logger.debug(`load: load() called pluginId=${pluginConfig.pluginId} instanceId=${instanceId}`);
 
     if (this.loaded.has(instanceId)) {
-      this.logger.info({ instance: instanceId }, "plugins:info Plugin already loaded, reloading instance");
+      this.logger.info({ instance: instanceId }, "reload: Plugin already loaded, reloading instance");
       await this.unload(instanceId);
     }
 
     const definition = this.pluginCatalog.get(pluginConfig.pluginId);
     if (!definition) {
       const catalogKeys = Array.from(this.pluginCatalog.keys()).join(",");
-      this.logger.debug(`plugins:debug Plugin not found in catalog pluginId=${pluginConfig.pluginId} catalogKeys=${catalogKeys}`);
+      this.logger.debug(`event: Plugin not found in catalog pluginId=${pluginConfig.pluginId} catalogKeys=${catalogKeys}`);
       this.logger.warn(
         { plugin: pluginConfig.pluginId, instance: instanceId },
-        "plugins:warn Unknown plugin - skipping"
+        "skip: Unknown plugin - skipping"
       );
       return;
     }
 
     this.logger.info(
       { plugin: pluginConfig.pluginId, instance: instanceId },
-      "plugins:info Loading plugin"
+      "load: Loading plugin"
     );
 
-    this.logger.debug(`plugins:debug Loading plugin module entryPath=${definition.entryPath}`);
+    this.logger.debug(`load: Loading plugin module entryPath=${definition.entryPath}`);
     const loader = new PluginModuleLoader(`plugin:${instanceId}`);
     const { module } = await loader.load(definition.entryPath);
-    this.logger.debug("plugins:debug Plugin module loaded, parsing settings");
+    this.logger.debug("load: Plugin module loaded, parsing settings");
     let parsedSettings: unknown;
     try {
       parsedSettings = module.settingsSchema.parse(pluginConfig.settings ?? {});
@@ -236,7 +236,7 @@ export class PluginManager {
       if (error instanceof ZodError) {
         this.logger.warn(
           { plugin: pluginConfig.pluginId, instance: instanceId, error },
-          "plugins:warn Plugin settings validation failed"
+          "error: Plugin settings validation failed"
         );
         if (this.mode === "validate") {
           throw error;
@@ -245,15 +245,15 @@ export class PluginManager {
       }
       throw error;
     }
-    this.logger.debug("plugins:debug Settings parsed successfully");
+    this.logger.debug("event: Settings parsed successfully");
 
-    this.logger.debug("plugins:debug Creating registrar");
+    this.logger.debug("event: Creating registrar");
     const registrar = this.registry.createRegistrar(instanceId);
-    this.logger.debug("plugins:debug Ensuring plugin data directory");
+    this.logger.debug("event: Ensuring plugin data directory");
     const dataDir = await this.ensurePluginDir(instanceId);
-    this.logger.debug(`plugins:debug Plugin data directory ready dataDir=${dataDir}`);
+    this.logger.debug(`ready: Plugin data directory ready dataDir=${dataDir}`);
 
-    this.logger.debug("plugins:debug Building plugin API");
+    this.logger.debug("event: Building plugin API");
     const api: PluginApi = {
       instance: pluginConfig,
       settings: parsedSettings,
@@ -269,17 +269,17 @@ export class PluginManager {
       engineEvents: this.engineEvents,
       events: {
         emit: (event) => {
-          this.logger.debug(`plugins:debug Plugin emitting event instanceId=${instanceId} eventType=${event.type}`);
+          this.logger.debug(`event: Plugin emitting event instanceId=${instanceId} eventType=${event.type}`);
           this.onEvent?.(buildPluginEvent({ pluginId: pluginConfig.pluginId, instanceId }, event));
         }
       }
     };
 
     try {
-      this.logger.debug("plugins:debug Creating plugin instance");
+      this.logger.debug("event: Creating plugin instance");
       const instance = await module.create(api);
-      this.logger.debug("plugins:debug Plugin instance created");
-      this.logger.debug("plugins:debug Calling plugin.load()");
+      this.logger.debug("create: Plugin instance created");
+      this.logger.debug("load: Calling plugin.load()");
       await instance.load?.();
       this.loaded.set(instanceId, {
         module,
@@ -289,51 +289,51 @@ export class PluginManager {
         dataDir,
         settings: parsedSettings
       });
-      this.logger.debug(`plugins:debug Plugin registered in loaded map instanceId=${instanceId} loadedCount=${this.loaded.size}`);
+      this.logger.debug(`load: Plugin registered in loaded map instanceId=${instanceId} loadedCount=${this.loaded.size}`);
       this.logger.info(
         { plugin: pluginConfig.pluginId, instance: instanceId },
-        "plugins:info Plugin loaded"
+        "load: Plugin loaded"
       );
     } catch (error) {
-      this.logger.debug(`plugins:debug Plugin load failed, cleaning up instanceId=${instanceId} error=${String(error)}`);
+      this.logger.debug(`error: Plugin load failed, cleaning up instanceId=${instanceId} error=${String(error)}`);
       await registrar.unregisterAll();
       throw error;
     }
   }
 
   async unload(instanceId: string): Promise<void> {
-    this.logger.debug(`plugins:debug unload() called instanceId=${instanceId}`);
+    this.logger.debug(`unload: unload() called instanceId=${instanceId}`);
     const entry = this.loaded.get(instanceId);
     if (!entry) {
-      this.logger.debug(`plugins:debug Plugin not loaded, nothing to unload instanceId=${instanceId}`);
+      this.logger.debug(`unload: Plugin not loaded, nothing to unload instanceId=${instanceId}`);
       return;
     }
 
     this.logger.info(
       { instance: instanceId, plugin: entry.config.pluginId },
-      "plugins:info Unloading plugin"
+      "unload: Unloading plugin"
     );
 
     try {
-      this.logger.debug(`plugins:debug Calling plugin.unload() instanceId=${instanceId}`);
+      this.logger.debug(`unload: Calling plugin.unload() instanceId=${instanceId}`);
       await entry.instance.unload?.();
-      this.logger.debug(`plugins:debug Plugin.unload() completed instanceId=${instanceId}`);
+      this.logger.debug(`unload: Plugin.unload() completed instanceId=${instanceId}`);
     } finally {
-      this.logger.debug(`plugins:debug Unregistering plugin components instanceId=${instanceId}`);
+      this.logger.debug(`unregister: Unregistering plugin components instanceId=${instanceId}`);
       await entry.registrar.unregisterAll();
       this.loaded.delete(instanceId);
-      this.logger.debug(`plugins:debug Plugin removed from loaded map instanceId=${instanceId} remainingCount=${this.loaded.size}`);
-      this.logger.info({ instance: instanceId }, "plugins:info Plugin unloaded");
+      this.logger.debug(`load: Plugin removed from loaded map instanceId=${instanceId} remainingCount=${this.loaded.size}`);
+      this.logger.info({ instance: instanceId }, "unload: Plugin unloaded");
     }
   }
 
   async unloadAll(): Promise<void> {
     const ids = Array.from(this.loaded.keys());
-    this.logger.debug(`plugins:debug unloadAll() starting count=${ids.length} ids=${ids.join(",")}`);
+    this.logger.debug(`start: unloadAll() starting count=${ids.length} ids=${ids.join(",")}`);
     for (const id of ids) {
       await this.unload(id);
     }
-    this.logger.debug("plugins:debug unloadAll() complete");
+    this.logger.debug("event: unloadAll() complete");
   }
 
   private async ensurePluginDir(instanceId: string): Promise<string> {
@@ -353,7 +353,7 @@ export class PluginManager {
           exclusive: exclusive?.instanceId,
           skipped: skippedIds
         },
-        "plugins:warn Exclusive plugin enabled; skipping other plugins"
+        "skip: Exclusive plugin enabled; skipping other plugins"
       );
     }
     return resolution.allowed;

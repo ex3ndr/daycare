@@ -57,7 +57,7 @@ export class CronStore {
           tasks.push(task);
         }
       } catch (error) {
-        logger.warn({ taskId, error }, "cron:warn Failed to load cron task");
+        logger.warn({ taskId, error }, "error: Failed to load cron task");
       }
     }
 
@@ -77,7 +77,7 @@ export class CronStore {
       // Cron task ids must come from frontmatter; do not guess or backfill missing ids.
       const taskUid = cronTaskUidResolve(parsed.frontmatter);
       if (!cuid2Is(taskUid)) {
-        logger.warn({ taskId, taskUid }, "cron:warn Cron task missing valid taskId");
+        logger.warn({ taskId, taskUid }, "event: Cron task missing valid taskId");
         return null;
       }
 
@@ -90,7 +90,7 @@ export class CronStore {
         parsed.frontmatter.one_off ??
         parsed.frontmatter.once;
       if (!parsed.frontmatter.name || !schedule) {
-        logger.warn({ taskId }, "cron:warn Cron task missing required frontmatter fields");
+        logger.warn({ taskId }, "event: Cron task missing required frontmatter fields");
         return null;
       }
 
@@ -162,7 +162,7 @@ export class CronStore {
     // Write initial MEMORY.md
     await fs.writeFile(memoryPath, "No memory\n", "utf8");
 
-    logger.info({ taskId, name: definition.name }, "cron:info Cron task created");
+    logger.info({ taskId, name: definition.name }, "create: Cron task created");
 
     return {
       id: taskId,
@@ -228,7 +228,7 @@ export class CronStore {
     const content = cronFrontmatterSerialize(frontmatter, updated.prompt);
     await fs.writeFile(existing.taskPath, content, "utf8");
 
-    logger.info({ taskId }, "cron:info Cron task updated");
+    logger.info({ taskId }, "update: Cron task updated");
 
     return {
       ...updated,
@@ -245,10 +245,10 @@ export class CronStore {
 
     try {
       await fs.rm(taskDir, { recursive: true, force: true });
-      logger.info({ taskId }, "cron:info Cron task deleted");
+      logger.info({ taskId }, "delete: Cron task deleted");
       return true;
     } catch (error) {
-      logger.warn({ taskId, error }, "cron:warn Failed to delete cron task");
+      logger.warn({ taskId, error }, "error: Failed to delete cron task");
       return false;
     }
   }
@@ -274,7 +274,7 @@ export class CronStore {
     await fs.mkdir(taskDir, { recursive: true });
     await fs.writeFile(memoryPath, content, "utf8");
 
-    logger.debug({ taskId }, "cron:debug Cron task memory updated");
+    logger.debug({ taskId }, "update: Cron task memory updated");
   }
 
   async recordRun(taskId: string, runAt: Date): Promise<void> {
@@ -336,7 +336,7 @@ export class CronStore {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return {};
       }
-      logger.warn({ taskId, error }, "cron:warn Failed to read cron task state");
+      logger.warn({ taskId, error }, "error: Failed to read cron task state");
       return {};
     }
   }
@@ -346,7 +346,7 @@ export class CronStore {
     try {
       await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
     } catch (error) {
-      logger.warn({ taskId, error }, "cron:warn Failed to write cron task state");
+      logger.warn({ taskId, error }, "error: Failed to write cron task state");
     }
   }
 }

@@ -22,7 +22,7 @@ export type StartOptions = {
 export async function startCommand(options: StartOptions): Promise<void> {
   const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
   const config = await configLoad(settingsPath, { verbose: options.verbose ?? false });
-  logger.info({ settings: config.settingsPath }, "command:info Starting Daycare");
+  logger.info({ settings: config.settingsPath }, "start: Starting Daycare");
 
   const eventBus = new EngineEventBus();
   const socketPath = config.socketPath;
@@ -36,7 +36,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
   const running = socketResponsive || pidRunning;
   if (running) {
     if (!socketResponsive && pidRunning) {
-      logger.warn({ pid: existingPid }, "command:warn Engine process detected but socket unresponsive.");
+      logger.warn({ pid: existingPid }, "event: Engine process detected but socket unresponsive.");
     }
     const shouldRestart = options.force === true
       ? true
@@ -45,19 +45,19 @@ export async function startCommand(options: StartOptions): Promise<void> {
           default: false
         });
     if (shouldRestart !== true) {
-      logger.info("command:info Engine already running; leaving it in place.");
+      logger.info("event: Engine already running; leaving it in place.");
       return;
     }
 
     const requested = await requestEngineShutdown(socketPath);
     if (!requested) {
-      logger.warn("command:warn Failed to request engine shutdown. Aborting start.");
+      logger.warn("error: Failed to request engine shutdown. Aborting start.");
       return;
     }
 
     const stopped = await waitForEngineShutdown(socketPath, existingPid, 2000);
     if (!stopped) {
-      logger.warn("command:warn Engine did not shut down in time. Aborting start.");
+      logger.warn("start: Engine did not shut down in time. Aborting start.");
       return;
     }
     await removeStaleFile(socketPath);
@@ -85,7 +85,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
       socketPath: config.socketPath
     });
   } catch (error) {
-    logger.warn({ error }, "command:warn Engine server failed to start");
+    logger.warn({ error }, "error: Engine server failed to start");
   }
 
   if (engineServer) {
@@ -100,14 +100,14 @@ export async function startCommand(options: StartOptions): Promise<void> {
   if (engineServer) {
     onShutdown("engine-server", () => {
       void engineServer?.close().catch((error) => {
-        logger.warn({ error }, "command:warn Engine server shutdown failed");
+        logger.warn({ error }, "error: Engine server shutdown failed");
       });
     });
   }
 
-  logger.info("command:info Ready. Listening for messages.");
+  logger.info("ready: Ready. Listening for messages.");
   const signal = await awaitShutdown();
-  logger.info({ signal }, "command:info Shutdown complete");
+  logger.info({ signal }, "event: Shutdown complete");
   process.exit(0);
 }
 

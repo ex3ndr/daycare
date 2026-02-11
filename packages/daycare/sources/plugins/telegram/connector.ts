@@ -95,7 +95,7 @@ export class TelegramConnector implements Connector {
   private clearedWebhook = false;
 
   constructor(options: TelegramConnectorOptions) {
-    logger.debug(`telegram:debug TelegramConnector constructor polling=${options.polling} clearWebhook=${options.clearWebhook} dataDir=${options.dataDir}`);
+    logger.debug(`init: TelegramConnector constructor polling=${options.polling} clearWebhook=${options.clearWebhook} dataDir=${options.dataDir}`);
     this.pollingEnabled = options.polling ?? true;
     this.clearWebhookOnStart = options.clearWebhook ?? true;
     this.fileStore = options.fileStore;
@@ -108,29 +108,29 @@ export class TelegramConnector implements Connector {
     if (this.statePath) {
       this.statePath = path.resolve(this.statePath);
     }
-    logger.debug(`telegram:debug State path configured statePath=${this.statePath} pollingEnabled=${this.pollingEnabled}`);
+    logger.debug(`event: State path configured statePath=${this.statePath} pollingEnabled=${this.pollingEnabled}`);
 
     this.bot = new TelegramBot(options.token, { polling: false });
-    logger.debug("telegram:debug TelegramBot instance created");
+    logger.debug("create: TelegramBot instance created");
 
     const originalProcessUpdate = this.bot.processUpdate.bind(this.bot);
     this.bot.processUpdate = (update: TelegramBot.Update) => {
-      logger.debug(`telegram:debug Processing Telegram update updateId=${update.update_id}`);
+      logger.debug(`update: Processing Telegram update updateId=${update.update_id}`);
       this.trackUpdate(update);
       return originalProcessUpdate(update);
     };
 
     this.bot.on("message", async (message) => {
       if (message.chat?.type !== "private") {
-        logger.debug(`telegram:debug Skipping non-private chat type=${message.chat?.type} chatId=${message.chat?.id}`);
+        logger.debug(`skip: Skipping non-private chat type=${message.chat?.type} chatId=${message.chat?.id}`);
         return;
       }
       const senderId = message.from?.id ?? message.chat?.id;
       if (!this.isAllowedUid(senderId)) {
-        logger.info({ senderId, chatId: message.chat?.id }, "telegram:info Skipping telegram message from unapproved uid");
+        logger.info({ senderId, chatId: message.chat?.id }, "skip: Skipping telegram message from unapproved uid");
         return;
       }
-      logger.debug(`telegram:debug Received Telegram message chatId=${message.chat.id} fromId=${message.from?.id} messageId=${message.message_id} hasText=${!!message.text} hasCaption=${!!message.caption} hasPhoto=${!!message.photo} hasDocument=${!!message.document}`);
+      logger.debug(`receive: Received Telegram message chatId=${message.chat.id} fromId=${message.from?.id} messageId=${message.message_id} hasText=${!!message.text} hasCaption=${!!message.caption} hasPhoto=${!!message.photo} hasDocument=${!!message.document}`);
       const rawText = typeof message.text === "string" ? message.text : null;
       const trimmedText = rawText?.trim() ?? "";
       const isCommand = trimmedText.startsWith("/");
@@ -147,34 +147,34 @@ export class TelegramConnector implements Connector {
 
       if (isCommand && rawText) {
         logger.debug(
-          `telegram:debug Dispatching to command handlers handlerCount=${this.commandHandlers.length} channelId=${descriptor.channelId}`
+          `event: Dispatching to command handlers handlerCount=${this.commandHandlers.length} channelId=${descriptor.channelId}`
         );
         for (const handler of this.commandHandlers) {
           await handler(rawText, context, descriptor);
         }
-        logger.debug(`telegram:debug All command handlers completed channelId=${descriptor.channelId}`);
+        logger.debug(`event: All command handlers completed channelId=${descriptor.channelId}`);
         return;
       }
 
       const files = await this.extractFiles(message);
-      logger.debug(`telegram:debug Extracted files from message fileCount=${files.length}`);
+      logger.debug(`event: Extracted files from message fileCount=${files.length}`);
       const payload: ConnectorMessage = {
         text: rawText ?? message.caption ?? null,
         files: files.length > 0 ? files : undefined
       };
 
       logger.debug(
-        `telegram:debug Dispatching to handlers handlerCount=${this.handlers.length} channelId=${descriptor.channelId}`
+        `event: Dispatching to handlers handlerCount=${this.handlers.length} channelId=${descriptor.channelId}`
       );
       for (const handler of this.handlers) {
         await handler(payload, context, descriptor);
       }
-      logger.debug(`telegram:debug All handlers completed channelId=${descriptor.channelId}`);
+      logger.debug(`event: All handlers completed channelId=${descriptor.channelId}`);
     });
 
     this.bot.on("callback_query", async (query) => {
       if (!this.isAllowedUid(query.from?.id)) {
-        logger.info({ senderId: query.from?.id }, "telegram:info Skipping telegram callback from unapproved uid");
+        logger.info({ senderId: query.from?.id }, "skip: Skipping telegram callback from unapproved uid");
         return;
       }
       const data = query.data;
@@ -260,21 +260,21 @@ export class TelegramConnector implements Connector {
   }
 
   async sendMessage(targetId: string, message: ConnectorMessage): Promise<void> {
-    logger.debug(`telegram:debug sendMessage() called targetId=${targetId} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`);
+    logger.debug(`event: sendMessage() called targetId=${targetId} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`);
     if (!this.isAllowedTarget(targetId, "sendMessage")) {
       return;
     }
     const files = message.files ?? [];
     if (files.length === 0) {
-      logger.debug(`telegram:debug Sending text-only message targetId=${targetId}`);
+      logger.debug(`send: Sending text-only message targetId=${targetId}`);
       await this.sendTextWithFallback(targetId, message.text ?? "");
-      logger.debug(`telegram:debug Text message sent targetId=${targetId}`);
+      logger.debug(`send: Text message sent targetId=${targetId}`);
       return;
     }
 
     const first = files[0];
     if (!first) {
-      logger.debug("telegram:debug No first file found, returning");
+      logger.debug("event: No first file found, returning");
       return;
     }
     const rest = files.slice(1);
@@ -282,18 +282,18 @@ export class TelegramConnector implements Connector {
     const captionChunks = caption ? telegramMessageSplit(caption, TELEGRAM_CAPTION_MAX_LENGTH) : [];
     const sendCaption = captionChunks.length === 1 ? captionChunks[0] : undefined;
     if (!sendCaption && caption) {
-      logger.debug(`telegram:debug Caption too long for Telegram; sending as separate message targetId=${targetId} captionLength=${caption.length}`);
+      logger.debug(`send: Caption too long for Telegram; sending as separate message targetId=${targetId} captionLength=${caption.length}`);
     }
-    logger.debug(`telegram:debug Sending first file targetId=${targetId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`);
+    logger.debug(`send: Sending first file targetId=${targetId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`);
     await this.sendFile(targetId, first, sendCaption);
     for (const file of rest) {
-      logger.debug(`telegram:debug Sending additional file targetId=${targetId} fileName=${file.name} mimeType=${file.mimeType}`);
+      logger.debug(`send: Sending additional file targetId=${targetId} fileName=${file.name} mimeType=${file.mimeType}`);
       await this.sendFile(targetId, file);
     }
     if (!sendCaption && caption) {
       await this.sendTextWithFallback(targetId, caption);
     }
-    logger.debug(`telegram:debug All files sent targetId=${targetId} totalFiles=${files.length}`);
+    logger.debug(`send: All files sent targetId=${targetId} totalFiles=${files.length}`);
   }
 
   async requestPermission(
@@ -333,7 +333,7 @@ export class TelegramConnector implements Connector {
 
     const send = () => {
       void this.bot.sendChatAction(targetId, "typing").catch((error) => {
-        logger.warn({ error }, "telegram:warn Telegram typing failed");
+        logger.warn({ error }, "error: Telegram typing failed");
       });
     };
 
@@ -379,7 +379,7 @@ export class TelegramConnector implements Connector {
       if (!caption || !useHtmlCaption || !isTelegramParseError(error)) {
         throw error;
       }
-      logger.warn({ error }, "telegram:warn Telegram HTML caption parse error; retrying without parse_mode");
+      logger.warn({ error }, "error: Telegram HTML caption parse error; retrying without parse_mode");
       await this.sendFileWithOptions(targetId, file, sendAs, { caption });
     }
   }
@@ -406,7 +406,7 @@ export class TelegramConnector implements Connector {
       if (!useHtml || !isTelegramParseError(error)) {
         throw error;
       }
-      logger.warn({ error }, "telegram:warn Telegram HTML parse error; retrying without parse_mode");
+      logger.warn({ error }, "error: Telegram HTML parse error; retrying without parse_mode");
       await this.bot.sendMessage(targetId, text);
     }
   }
@@ -446,19 +446,19 @@ export class TelegramConnector implements Connector {
   }
 
   private async initialize(): Promise<void> {
-    logger.debug(`telegram:debug initialize() starting pollingEnabled=${this.pollingEnabled} clearWebhookOnStart=${this.clearWebhookOnStart}`);
+    logger.debug(`init: initialize() starting pollingEnabled=${this.pollingEnabled} clearWebhookOnStart=${this.clearWebhookOnStart}`);
     await this.registerSlashCommands();
     if (this.pollingEnabled && this.clearWebhookOnStart) {
-      logger.debug("telegram:debug Clearing webhook before polling");
+      logger.debug("event: Clearing webhook before polling");
       await this.ensureWebhookCleared();
     }
-    logger.debug("telegram:debug Loading state");
+    logger.debug("load: Loading state");
     await this.loadState();
     if (this.pollingEnabled) {
-      logger.debug("telegram:debug Starting polling");
+      logger.debug("start: Starting polling");
       await this.startPolling();
     }
-    logger.debug("telegram:debug initialize() complete");
+    logger.debug("init: initialize() complete");
   }
 
   private async registerSlashCommands(): Promise<void> {
@@ -468,9 +468,9 @@ export class TelegramConnector implements Connector {
           type: "all_private_chats"
         }
       });
-      logger.debug("telegram:debug Telegram slash commands registered");
+      logger.debug("register: Telegram slash commands registered");
     } catch (error) {
-      logger.warn({ error }, "telegram:warn Failed to register Telegram slash commands");
+      logger.warn({ error }, "error: Failed to register Telegram slash commands");
     }
   }
 
@@ -508,17 +508,17 @@ export class TelegramConnector implements Connector {
           this.lastUpdateId = recovered;
           logger.warn(
             { statePath: this.statePath, lastUpdateId: recovered },
-            "telegram:warn Telegram connector state was invalid JSON; recovered lastUpdateId"
+            "event: Telegram connector state was invalid JSON; recovered lastUpdateId"
           );
           await this.persistState();
           return;
         }
         await this.quarantineStateFile();
-        logger.warn({ error, statePath: this.statePath }, "telegram:warn Telegram connector state load failed");
+        logger.warn({ error, statePath: this.statePath }, "error: Telegram connector state load failed");
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        logger.warn({ error, statePath: this.statePath }, "telegram:warn Telegram connector state load failed");
+        logger.warn({ error, statePath: this.statePath }, "error: Telegram connector state load failed");
       }
     }
   }
@@ -550,7 +550,7 @@ export class TelegramConnector implements Connector {
       await fs.writeFile(tmpPath, payload, "utf8");
       await fs.rename(tmpPath, this.statePath);
     } catch (error) {
-      logger.warn({ error, statePath: this.statePath }, "telegram:warn Telegram connector state persist failed");
+      logger.warn({ error, statePath: this.statePath }, "error: Telegram connector state persist failed");
     }
   }
 
@@ -565,27 +565,27 @@ export class TelegramConnector implements Connector {
       await fs.rename(this.statePath, target);
       logger.warn(
         { statePath: this.statePath, quarantinePath: target },
-        "telegram:warn Telegram state file quarantined"
+        "event: Telegram state file quarantined"
       );
     } catch (error) {
-      logger.warn({ error, statePath: this.statePath }, "telegram:warn Failed to quarantine telegram state file");
+      logger.warn({ error, statePath: this.statePath }, "error: Failed to quarantine telegram state file");
     }
   }
 
   private async startPolling(): Promise<void> {
-    logger.debug(`telegram:debug startPolling() called pollingEnabled=${this.pollingEnabled} isPolling=${this.bot.isPolling()}`);
+    logger.debug(`event: startPolling() called pollingEnabled=${this.pollingEnabled} isPolling=${this.bot.isPolling()}`);
     if (!this.pollingEnabled) {
-      logger.debug("telegram:debug Polling disabled, returning");
+      logger.debug("event: Polling disabled, returning");
       return;
     }
 
     if (this.startingPolling) {
-      logger.debug("telegram:debug Polling start already in progress, returning");
+      logger.debug("start: Polling start already in progress, returning");
       return;
     }
 
     if (this.bot.isPolling()) {
-      logger.debug("telegram:debug Already polling, returning");
+      logger.debug("event: Already polling, returning");
       return;
     }
 
@@ -598,22 +598,22 @@ export class TelegramConnector implements Connector {
       pollingOptions.params = {
         offset: this.lastUpdateId + 1
       };
-      logger.debug(`telegram:debug Resuming from last update ID offset=${this.lastUpdateId + 1}`);
+      logger.debug(`update: Resuming from last update ID offset=${this.lastUpdateId + 1}`);
     }
 
     this.startingPolling = true;
     try {
-      logger.debug("telegram:debug Starting Telegram polling");
+      logger.debug("start: Starting Telegram polling");
       await this.bot.startPolling({
         restart: true,
         polling: pollingOptions
       });
       if (this.shuttingDown || !this.pollingEnabled) {
-        logger.debug("telegram:debug Polling disabled after start, stopping");
+        logger.debug("start: Polling disabled after start, stopping");
         await this.stopPolling("disabled");
         return;
       }
-      logger.debug("telegram:debug Telegram polling started successfully");
+      logger.debug("start: Telegram polling started successfully");
     } catch (error) {
       this.handlePollingError(error);
     } finally {
@@ -623,12 +623,12 @@ export class TelegramConnector implements Connector {
 
   private handlePollingError(error: unknown): void {
     if (isTelegramConflictError(error) && !this.clearedWebhook) {
-      logger.warn({ error }, "telegram:warn Telegram polling conflict; clearing webhook");
+      logger.warn({ error }, "event: Telegram polling conflict; clearing webhook");
       void this.ensureWebhookCleared();
       return;
     }
 
-    logger.warn({ error }, "telegram:warn Telegram polling error; relying on library restart");
+    logger.warn({ error }, "error: Telegram polling error; relying on library restart");
   }
 
   private isAllowedUid(uid: string | number | null | undefined): boolean {
@@ -642,7 +642,7 @@ export class TelegramConnector implements Connector {
     if (this.isAllowedUid(targetId)) {
       return true;
     }
-    logger.warn({ targetId, action }, "telegram:warn Blocked telegram action for unapproved uid");
+    logger.warn({ targetId, action }, "event: Blocked telegram action for unapproved uid");
     return false;
   }
 
@@ -656,37 +656,37 @@ export class TelegramConnector implements Connector {
   }
 
   async shutdown(reason: string = "shutdown"): Promise<void> {
-    logger.debug(`telegram:debug shutdown() called reason=${reason} alreadyShuttingDown=${this.shuttingDown}`);
+    logger.debug(`event: shutdown() called reason=${reason} alreadyShuttingDown=${this.shuttingDown}`);
     if (this.shuttingDown) {
-      logger.debug("telegram:debug Already shutting down, returning");
+      logger.debug("event: Already shutting down, returning");
       return;
     }
 
     this.shuttingDown = true;
-    logger.debug("telegram:debug Beginning shutdown sequence");
+    logger.debug("event: Beginning shutdown sequence");
 
     if (this.persistTimer) {
-      logger.debug("telegram:debug Clearing persist timer");
+      logger.debug("event: Clearing persist timer");
       clearTimeout(this.persistTimer);
       this.persistTimer = null;
     }
-    logger.debug(`telegram:debug Clearing typing timers typingTimerCount=${this.typingTimers.size}`);
+    logger.debug(`event: Clearing typing timers typingTimerCount=${this.typingTimers.size}`);
     for (const timer of this.typingTimers.values()) {
       clearInterval(timer);
     }
     this.typingTimers.clear();
 
     try {
-      logger.debug("telegram:debug Stopping polling");
+      logger.debug("stop: Stopping polling");
       await this.bot.stopPolling({ cancel: true, reason });
-      logger.debug("telegram:debug Polling stopped");
+      logger.debug("stop: Polling stopped");
     } catch (error) {
-      logger.warn({ error }, "telegram:warn Telegram polling stop failed");
+      logger.warn({ error }, "error: Telegram polling stop failed");
     }
 
-    logger.debug("telegram:debug Persisting state");
+    logger.debug("event: Persisting state");
     await this.persistState();
-    logger.debug("telegram:debug Shutdown complete");
+    logger.debug("event: Shutdown complete");
   }
 
   private async stopPolling(reason: string): Promise<void> {
@@ -695,7 +695,7 @@ export class TelegramConnector implements Connector {
         await this.bot.stopPolling({ cancel: true, reason });
       }
     } catch (error) {
-      logger.warn({ error }, "telegram:warn Telegram polling stop failed");
+      logger.warn({ error }, "error: Telegram polling stop failed");
     }
   }
 
@@ -707,9 +707,9 @@ export class TelegramConnector implements Connector {
     try {
       await this.bot.deleteWebHook();
       this.clearedWebhook = true;
-      logger.info("telegram:info Telegram webhook cleared for polling");
+      logger.info("event: Telegram webhook cleared for polling");
     } catch (error) {
-      logger.warn({ error }, "telegram:warn Failed to clear Telegram webhook");
+      logger.warn({ error }, "error: Failed to clear Telegram webhook");
     }
   }
 
@@ -776,7 +776,7 @@ export class TelegramConnector implements Connector {
         path: stored.path
       };
     } catch (error) {
-      logger.warn({ error }, "telegram:warn Telegram file download failed");
+      logger.warn({ error }, "error: Telegram file download failed");
       return null;
     }
   }
@@ -810,7 +810,7 @@ export class TelegramConnector implements Connector {
         });
       }
     } catch (error) {
-      logger.warn({ error }, "telegram:warn Failed to update Telegram permission message");
+      logger.warn({ error }, "error: Failed to update Telegram permission message");
     }
   }
 }

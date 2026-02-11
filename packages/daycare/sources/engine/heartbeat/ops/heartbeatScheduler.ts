@@ -44,11 +44,11 @@ export class HeartbeatScheduler {
     this.defaultPermissions = options.defaultPermissions;
     this.resolvePermissions = options.resolvePermissions;
     this.gateCheck = options.gateCheck ?? execGateCheck;
-    logger.debug("heartbeat:debug HeartbeatScheduler initialized");
+    logger.debug("init: HeartbeatScheduler initialized");
   }
 
   async start(): Promise<void> {
-    logger.debug(`heartbeat:debug start() called started=${this.started} stopped=${this.stopped}`);
+    logger.debug(`start: start() called started=${this.started} stopped=${this.stopped}`);
     if (this.started || this.stopped) {
       return;
     }
@@ -57,7 +57,7 @@ export class HeartbeatScheduler {
   }
 
   stop(): void {
-    logger.debug(`heartbeat:debug stop() called stopped=${this.stopped}`);
+    logger.debug(`stop: stop() called stopped=${this.stopped}`);
     if (this.stopped) {
       return;
     }
@@ -66,7 +66,7 @@ export class HeartbeatScheduler {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    logger.debug("heartbeat:debug HeartbeatScheduler stopped");
+    logger.debug("stop: HeartbeatScheduler stopped");
   }
 
   async runNow(taskIds?: string[]): Promise<{ ran: number; taskIds: string[] }> {
@@ -116,7 +116,7 @@ export class HeartbeatScheduler {
 
   private async runOnceUnlocked(taskIds?: string[]): Promise<{ ran: number; taskIds: string[] }> {
     if (this.running) {
-      logger.debug("heartbeat:debug HeartbeatScheduler run skipped (already running)");
+      logger.debug("skip: HeartbeatScheduler run skipped (already running)");
       return { ran: 0, taskIds: [] };
     }
     this.running = true;
@@ -140,12 +140,12 @@ export class HeartbeatScheduler {
           taskCount: gated.length,
           taskIds: ids
         },
-        "heartbeat:info Heartbeat run started"
+        "start: Heartbeat run started"
       );
       try {
         await this.onRun(gated, runAt);
       } catch (error) {
-        logger.warn({ taskIds: ids, error }, "heartbeat:warn Heartbeat run failed");
+        logger.warn({ taskIds: ids, error }, "error: Heartbeat run failed");
         await this.onError?.(error, ids);
       } finally {
         await this.store.recordRun(runAt);
@@ -159,11 +159,11 @@ export class HeartbeatScheduler {
           taskCount: filtered.length,
           taskIds: ids
         },
-        "heartbeat:info Heartbeat run completed"
+        "event: Heartbeat run completed"
       );
       return { ran: gated.length, taskIds: ids };
     } catch (error) {
-      logger.warn({ error }, "heartbeat:warn Heartbeat run failed");
+      logger.warn({ error }, "error: Heartbeat run failed");
       await this.onError?.(error, undefined);
       return { ran: 0, taskIds: [] };
     } finally {
@@ -186,7 +186,7 @@ export class HeartbeatScheduler {
       if (!permissionCheck.allowed) {
         logger.warn(
           { taskId: task.id, missing: permissionCheck.missing },
-          "heartbeat:warn Heartbeat gate permissions not satisfied; continuing without gate"
+          "event: Heartbeat gate permissions not satisfied; continuing without gate"
         );
         await this.onGatePermissionSkip?.(task, permissionCheck.missing);
         eligible.push(task);
@@ -203,14 +203,14 @@ export class HeartbeatScheduler {
         continue;
       }
       if (result.error) {
-        logger.warn({ taskId: task.id, error: result.error }, "heartbeat:warn Heartbeat gate failed");
+        logger.warn({ taskId: task.id, error: result.error }, "error: Heartbeat gate failed");
         await this.onError?.(result.error, [task.id]);
         continue;
       }
       if (!result.shouldRun) {
         logger.debug(
           { taskId: task.id, exitCode: result.exitCode },
-          "heartbeat:debug Heartbeat gate skipped execution"
+          "skip: Heartbeat gate skipped execution"
         );
         continue;
       }

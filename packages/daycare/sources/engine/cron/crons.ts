@@ -59,7 +59,7 @@ export class Crons {
               }
             };
         logger.debug(
-          `cron:debug CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "cron"}`
+          `event: CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "cron"}`
         );
         await this.agentSystem.postAndAwait(
           target,
@@ -71,7 +71,7 @@ export class Crons {
         );
       },
       onError: async (error, taskId) => {
-        logger.warn({ taskId, error }, "cron:warn Cron task failed");
+        logger.warn({ taskId, error }, "error: Cron task failed");
       },
       onGatePermissionSkip: async (task, missing) => {
         const label = task.name ? `"${task.name}" (${task.id})` : task.id;

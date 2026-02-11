@@ -101,39 +101,39 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
   const target = agentDescriptorTargetResolve(agent.descriptor);
   const targetId = target?.targetId ?? null;
-  logger.debug(`engine:debug Starting typing indicator targetId=${targetId ?? "none"}`);
+  logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
   const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
 
   try {
-    logger.debug(`engine:debug Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
+    logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       logger.debug(
-        `engine:debug Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
+        `event: Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
       );
       response = await inferenceRouter.complete(context, agent.id, {
         providersOverride: providersForAgent,
         signal: abortSignal,
         onAttempt: (providerId, modelId) => {
           logger.debug(
-            `engine:debug Inference attempt starting providerId=${providerId} modelId=${modelId} agentId=${agent.id}`
+            `start: Inference attempt starting providerId=${providerId} modelId=${modelId} agentId=${agent.id}`
           );
           logger.info(
             { agentId: agent.id, messageId: entry.id, provider: providerId, model: modelId },
-            "engine:info Inference started"
+            "start: Inference started"
           );
         },
         onFallback: (providerId, error) => {
           logger.debug(
-            `engine:debug Inference falling back to next provider providerId=${providerId} error=${String(error)}`
+            `event: Inference falling back to next provider providerId=${providerId} error=${String(error)}`
           );
           logger.warn(
             { agentId: agent.id, messageId: entry.id, provider: providerId, error },
-            "engine:warn Inference fallback"
+            "event: Inference fallback"
           );
         },
         onSuccess: (providerId, modelId, message) => {
           logger.debug(
-            `engine:debug Inference succeeded providerId=${providerId} modelId=${modelId} stopReason=${message.stopReason} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
+            `event: Inference succeeded providerId=${providerId} modelId=${modelId} stopReason=${message.stopReason} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
           );
           logger.info(
             {
@@ -144,16 +144,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
               stopReason: message.stopReason,
               usage: message.usage
             },
-            "engine:info Inference completed"
+            "event: Inference completed"
           );
         },
         onFailure: (providerId, error) => {
           logger.debug(
-            `engine:debug Inference failed completely providerId=${providerId} error=${String(error)}`
+            `error: Inference failed completely providerId=${providerId} error=${String(error)}`
           );
           logger.warn(
             { agentId: agent.id, messageId: entry.id, provider: providerId, error },
-            "engine:warn Inference failed"
+            "error: Inference failed"
           );
         }
       });
@@ -186,7 +186,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       }
 
       logger.debug(
-        `engine:debug Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`
+        `receive: Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`
       );
       context.messages.push(response.message);
 
@@ -196,7 +196,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       const suppressUserOutput = messageNoMessageIs(responseText);
       if (suppressUserOutput) {
         stripNoMessageTextBlocks(response.message);
-        logger.debug("engine:debug NO_MESSAGE detected; suppressing user output for this response");
+        logger.debug("event: NO_MESSAGE detected; suppressing user output for this response");
       }
       lastResponseNoMessage = suppressUserOutput;
       const effectiveResponseText = suppressUserOutput ? null : responseText;
@@ -218,11 +218,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           });
           lastResponseTextSent = true;
         } catch (error) {
-          logger.warn({ connector: source, error }, "engine:warn Failed to send response text");
+          logger.warn({ connector: source, error }, "error: Failed to send response text");
         }
       }
 
-      logger.debug(`engine:debug Extracted tool calls from response toolCallCount=${toolCalls.length}`);
+      logger.debug(`event: Extracted tool calls from response toolCallCount=${toolCalls.length}`);
       historyRecords.push({
         type: "assistant_message",
         at: Date.now(),
@@ -232,14 +232,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         tokens: tokensEntry
       });
       if (toolCalls.length === 0) {
-        logger.debug(`engine:debug No tool calls, breaking inference loop iteration=${iteration}`);
+        logger.debug(`event: No tool calls, breaking inference loop iteration=${iteration}`);
         break;
       }
 
       for (const toolCall of toolCalls) {
         const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 200);
         logger.debug(
-          `engine:debug Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
+          `execute: Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
         );
 
         if (verbose && !suppressUserOutput && connector && targetId) {
@@ -263,7 +263,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           heartbeats
         });
         logger.debug(
-          `engine:debug Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError} fileCount=${toolResult.files.length}`
+          `event: Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError} fileCount=${toolResult.files.length}`
         );
 
         if (verbose && !suppressUserOutput && connector && targetId) {
@@ -282,32 +282,32 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         });
         if (toolResult.files.length > 0) {
           generatedFiles.push(...toolResult.files);
-          logger.debug(`engine:debug Tool generated files count=${toolResult.files.length}`);
+          logger.debug(`event: Tool generated files count=${toolResult.files.length}`);
         }
       }
 
       if (iteration === MAX_TOOL_ITERATIONS - 1) {
-        logger.debug(`engine:debug Tool loop limit reached iteration=${iteration}`);
+        logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
         toolLoopExceeded = true;
       }
     }
-    logger.debug("engine:debug Inference loop completed");
+    logger.debug("event: Inference loop completed");
   } catch (error) {
-    logger.debug(`engine:debug Inference loop caught error error=${String(error)}`);
+    logger.debug(`error: Inference loop caught error error=${String(error)}`);
     if (isInferenceAbortError(error, abortSignal)) {
-      logger.info({ agentId: agent.id }, "engine:info Inference aborted");
+      logger.info({ agentId: agent.id }, "event: Inference aborted");
       return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
     }
     if (isContextOverflowError(error)) {
-      logger.warn({ agentId: agent.id, error }, "engine:warn Inference context overflow detected");
+      logger.warn({ agentId: agent.id, error }, "event: Inference context overflow detected");
       return { responseText: finalResponseText, historyRecords, contextOverflow: true, tokenStatsUpdates };
     }
-    logger.warn({ connector: source, error }, "engine:warn Inference failed");
+    logger.warn({ connector: source, error }, "error: Inference failed");
     const message =
       error instanceof Error && error.message === "No inference provider available"
         ? "No inference provider available."
         : "Inference failed.";
-    logger.debug(`engine:debug Sending error message to user message=${message}`);
+    logger.debug(`error: Sending error message to user message=${message}`);
     await notifySubagentFailure("Inference failed", error);
     if (connector && targetId) {
       await connector.sendMessage(targetId, {
@@ -315,20 +315,20 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         replyToMessageId: entry.context.messageId
       });
     }
-    logger.debug("engine:debug handleMessage completed with error");
+    logger.debug("error: handleMessage completed with error");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   } finally {
-    logger.debug("engine:debug Stopping typing indicator");
+    logger.debug("stop: Stopping typing indicator");
     stopTyping?.();
   }
 
   if (!response) {
-    logger.debug("engine:debug No response received, returning without completion");
+    logger.debug("receive: No response received, returning without completion");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   }
 
   if (response.message.stopReason === "aborted") {
-    logger.info({ agentId: agent.id }, "engine:info Inference aborted by provider");
+    logger.info({ agentId: agent.id }, "event: Inference aborted by provider");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   }
 
@@ -336,7 +336,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     if (isContextOverflowError(response.message.errorMessage ?? "")) {
       logger.warn(
         { agentId: agent.id, error: response.message.errorMessage },
-        "engine:warn Inference context overflow detected"
+        "event: Inference context overflow detected"
       );
       return { responseText: finalResponseText, historyRecords, contextOverflow: true, tokenStatsUpdates };
     }
@@ -346,7 +346,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         ? response.message.errorMessage
         : "unknown";
     logger.warn(
-      `engine:warn Inference returned error response provider=${response.providerId} model=${response.modelId} stopReason=${response.message.stopReason} error=${errorDetail}`
+      `error: Inference returned error response provider=${response.providerId} model=${response.modelId} stopReason=${response.message.stopReason} error=${errorDetail}`
     );
     await notifySubagentFailure("Inference failed", response.message.errorMessage);
     try {
@@ -363,22 +363,22 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         });
       }
     } catch (error) {
-      logger.warn({ connector: source, error }, "engine:warn Failed to send error response");
+      logger.warn({ connector: source, error }, "error: Failed to send error response");
     }
-    logger.debug("engine:debug handleMessage completed with error stop reason");
+    logger.debug("error: handleMessage completed with error stop reason");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   }
 
   const responseText = messageExtractText(response.message);
   const hasResponseText = !!responseText && responseText.trim().length > 0;
   logger.debug(
-    `engine:debug Extracted assistant text hasText=${hasResponseText} textLength=${responseText?.length ?? 0} generatedFileCount=${generatedFiles.length}`
+    `event: Extracted assistant text hasText=${hasResponseText} textLength=${responseText?.length ?? 0} generatedFileCount=${generatedFiles.length}`
   );
 
   if (!hasResponseText && generatedFiles.length === 0) {
     if (toolLoopExceeded && lastResponseHadToolCalls) {
       const message = "Tool execution limit reached.";
-      logger.debug("engine:debug Tool loop exceeded, sending error message");
+      logger.debug("error: Tool loop exceeded, sending error message");
       await notifySubagentFailure(message);
       try {
         if (connector && targetId && !lastResponseNoMessage) {
@@ -388,15 +388,15 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           });
         }
       } catch (error) {
-        logger.warn({ connector: source, error }, "engine:warn Failed to send tool error");
+        logger.warn({ connector: source, error }, "error: Failed to send tool error");
       }
     }
-    logger.debug("engine:debug handleMessage completed with no response text");
+    logger.debug("event: handleMessage completed with no response text");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   }
 
   if (lastResponseNoMessage) {
-    logger.debug("engine:debug NO_MESSAGE suppressed final response delivery");
+    logger.debug("event: NO_MESSAGE suppressed final response delivery");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   }
 
@@ -409,7 +409,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         ? "Generated files."
         : null;
   logger.debug(
-    `engine:debug Sending response to user textLength=${outgoingText?.length ?? 0} fileCount=${generatedFiles.length} targetId=${targetId ?? "none"}`
+    `send: Sending response to user textLength=${outgoingText?.length ?? 0} fileCount=${generatedFiles.length} targetId=${targetId ?? "none"}`
   );
   try {
     if (connector && targetId && (outgoingText || shouldSendFiles)) {
@@ -418,7 +418,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         files: shouldSendFiles ? generatedFiles : undefined,
         replyToMessageId: entry.context.messageId
       });
-      logger.debug("engine:debug Response sent successfully");
+      logger.debug("send: Response sent successfully");
       eventBus.emit("agent.outgoing", {
         agentId: agent.id,
         source,
@@ -428,13 +428,13 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         },
         context: entry.context
       });
-      logger.debug("engine:debug Agent outgoing event emitted");
+      logger.debug("event: Agent outgoing event emitted");
     }
   } catch (error) {
-    logger.debug(`engine:debug Failed to send response error=${String(error)}`);
-    logger.warn({ connector: source, error }, "engine:warn Failed to send response");
+    logger.debug(`error: Failed to send response error=${String(error)}`);
+    logger.warn({ connector: source, error }, "error: Failed to send response");
   }
-  logger.debug("engine:debug handleMessage completed successfully");
+  logger.debug("event: handleMessage completed successfully");
   return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
 }
 

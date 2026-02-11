@@ -156,12 +156,12 @@ export class Agent {
     }
     this.started = true;
     logger.debug(
-      `engine:debug Agent loop starting agentId=${this.id} type=${this.descriptor.type}`
+      `start: Agent loop starting agentId=${this.id} type=${this.descriptor.type}`
     );
     void this.runLoop().catch((error) => {
       this.started = false;
       this.agentSystem.markStopped(this.id, error);
-      logger.warn({ agentId: this.id, error }, "engine:warn Agent loop exited unexpectedly");
+      logger.warn({ agentId: this.id, error }, "event: Agent loop exited unexpectedly");
     });
   }
 
@@ -188,7 +188,7 @@ export class Agent {
       for (;;) {
         const entry = await this.inbox.next();
         logger.debug(
-          `engine:debug Agent inbox item dequeued agentId=${this.id} type=${entry.item.type}`
+          `event: Agent inbox item dequeued agentId=${this.id} type=${entry.item.type}`
         );
         this.processing = true;
         try {
@@ -207,7 +207,7 @@ export class Agent {
               errorMessage: failure.message,
               errorStack: failure.stack
             },
-            `engine:error Agent inbox item failed: ${failure.message}`
+            `error: Agent inbox item failed: ${failure.message}`
           );
           entry.completion?.reject(failure);
           if (entry.item.type === "message") {
@@ -296,7 +296,7 @@ export class Agent {
       const failure = error instanceof Error ? error : new Error(String(error));
       logger.warn(
         { agentId: this.id, error: failure },
-        "engine:warn Failed to send unexpected error message"
+        "error: Failed to send unexpected error message"
       );
     }
   }
@@ -318,7 +318,7 @@ export class Agent {
           ? this.descriptor.tag
           : this.descriptor.type;
     logger.debug(
-      `engine:debug handleMessage start agentId=${this.id} source=${source} textLength=${entry.message.text?.length ?? 0} fileCount=${entry.message.files?.length ?? 0}`
+      `start: handleMessage start agentId=${this.id} source=${source} textLength=${entry.message.text?.length ?? 0} fileCount=${entry.message.files?.length ?? 0}`
     );
 
     this.state.updatedAt = receivedAt;
@@ -354,11 +354,11 @@ export class Agent {
           }
         : { connector: source };
     const pluginManager = this.agentSystem.pluginManager;
-    logger.debug(`engine:debug handleMessage loading plugin prompts agentId=${this.id}`);
+    logger.debug(`load: handleMessage loading plugin prompts agentId=${this.id}`);
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
     const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
-    logger.debug(`engine:debug handleMessage loading available skills agentId=${this.id}`);
+    logger.debug(`load: handleMessage loading available skills agentId=${this.id}`);
     const [coreSkills, configSkills, pluginSkills] = await Promise.all([
       skillListCore(),
       skillListConfig(configSkillsRoot),
@@ -393,18 +393,18 @@ export class Agent {
       try {
         permissionTagsApply(this.state.permissions, permissionTags);
       } catch (error) {
-        logger.warn({ agentId: this.id, error }, "engine:warn Failed to apply task permissions");
+        logger.warn({ agentId: this.id, error }, "error: Failed to apply task permissions");
       }
     }
 
-    logger.debug(`engine:debug handleMessage ensuring prompt files agentId=${this.id}`);
+    logger.debug(`event: handleMessage ensuring prompt files agentId=${this.id}`);
     await agentPromptFilesEnsure();
 
     const providerSettings = providerId
       ? providers.find((provider) => provider.id === providerId)
       : providers[0];
 
-    logger.debug(`engine:debug handleMessage building system prompt agentId=${this.id}`);
+    logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
     const systemPrompt = await this.buildSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
@@ -443,10 +443,10 @@ export class Agent {
     try {
       const wrote = await agentSystemPromptWrite(this.agentSystem.config.current, this.id, systemPrompt);
       if (wrote) {
-        logger.debug(`engine:debug System prompt snapshot written agentId=${this.id}`);
+        logger.debug(`event: System prompt snapshot written agentId=${this.id}`);
       }
     } catch (error) {
-      logger.warn({ agentId: this.id, error }, "engine:warn Failed to write system prompt snapshot");
+      logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
     }
 
     const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
@@ -502,7 +502,7 @@ export class Agent {
           });
         }
       } catch (error) {
-        logger.warn({ agentId: this.id, error }, "engine:warn Context compaction failed; continuing with full context");
+        logger.warn({ agentId: this.id, error }, "error: Context compaction failed; continuing with full context");
       }
     }
 
@@ -527,7 +527,7 @@ export class Agent {
       contextForRun.messages = [];
     }
 
-    logger.debug(`engine:debug handleMessage building user message agentId=${this.id}`);
+    logger.debug(`event: handleMessage building user message agentId=${this.id}`);
     const userMessage = await messageBuildUser(entry);
     contextForRun.messages.push(userMessage);
 
@@ -535,7 +535,7 @@ export class Agent {
       ? providers.filter((provider) => provider.id === providerId)
       : [];
 
-    logger.debug(`engine:debug handleMessage invoking inference loop agentId=${this.id}`);
+    logger.debug(`event: handleMessage invoking inference loop agentId=${this.id}`);
     const inferenceAbortController = new AbortController();
     this.inferenceAbortController = inferenceAbortController;
     const result = await (async () => {
@@ -569,7 +569,7 @@ export class Agent {
     })();
 
     if (result.contextOverflow) {
-      logger.warn({ agentId: this.id }, "engine:warn Inference context overflow; resetting session");
+      logger.warn({ agentId: this.id }, "event: Inference context overflow; resetting session");
       await this.handleEmergencyReset(entry, source);
       return null;
     }
@@ -712,7 +712,7 @@ export class Agent {
         replyToMessageId: item.context?.messageId
       });
     } catch (error) {
-      logger.warn({ agentId: this.id, error }, "engine:warn Reset confirmation send failed");
+      logger.warn({ agentId: this.id, error }, "error: Reset confirmation send failed");
     }
     return true;
   }
@@ -752,7 +752,7 @@ export class Agent {
         replyToMessageId: entry.context.messageId
       });
     } catch (error) {
-      logger.warn({ agentId: this.id, error }, "engine:warn Failed to notify user about emergency reset");
+      logger.warn({ agentId: this.id, error }, "error: Failed to notify user about emergency reset");
     }
   }
 
@@ -785,13 +785,13 @@ export class Agent {
     if (!decision.approved) {
       logger.info(
         { source, permission: permissionTag, agentId: this.id },
-        "engine:info Permission denied"
+        "event: Permission denied"
       );
     }
 
     if (decision.approved && (decision.access.kind === "read" || decision.access.kind === "write")) {
       if (!path.isAbsolute(decision.access.path)) {
-        logger.warn({ agentId: this.id, permission: permissionTag }, "engine:warn Permission path not absolute");
+        logger.warn({ agentId: this.id, permission: permissionTag }, "event: Permission path not absolute");
         if (connector && target) {
           await connector.sendMessage(target.targetId, {
             text: `Permission ignored (path must be absolute): ${permissionLabel}.`,
@@ -834,7 +834,7 @@ export class Agent {
     }
     const parentAgentId = this.descriptor.parentAgentId ?? null;
     if (!parentAgentId) {
-      logger.warn({ agentId: this.id }, "engine:warn Subagent missing parent agent");
+      logger.warn({ agentId: this.id }, "event: Subagent missing parent agent");
       return;
     }
     const name = this.descriptor.name ?? "subagent";
@@ -852,7 +852,7 @@ export class Agent {
     } catch (sendError) {
       logger.warn(
         { agentId: this.id, parentAgentId, error: sendError },
-        "engine:warn Subagent failure notification failed"
+        "error: Subagent failure notification failed"
       );
     }
   }
@@ -994,21 +994,21 @@ export class Agent {
     const actorsPath = context.actorsPath ?? DEFAULT_ACTORS_PATH;
     const toolsPath = context.toolsPath ?? DEFAULT_TOOLS_PATH;
     const memoryPath = context.memoryPath ?? DEFAULT_MEMORY_PATH;
-    logger.debug(`engine:debug buildSystemPrompt reading soul prompt path=${soulPath}`);
+    logger.debug(`event: buildSystemPrompt reading soul prompt path=${soulPath}`);
     const soul = await promptFileRead(soulPath, "SOUL.md");
-    logger.debug(`engine:debug buildSystemPrompt reading user prompt path=${userPath}`);
+    logger.debug(`event: buildSystemPrompt reading user prompt path=${userPath}`);
     const user = await promptFileRead(userPath, "USER.md");
-    logger.debug(`engine:debug buildSystemPrompt reading actors prompt path=${actorsPath}`);
+    logger.debug(`event: buildSystemPrompt reading actors prompt path=${actorsPath}`);
     const actors = await promptFileRead(actorsPath, "ACTORS.md");
-    logger.debug(`engine:debug buildSystemPrompt reading tools prompt path=${toolsPath}`);
+    logger.debug(`event: buildSystemPrompt reading tools prompt path=${toolsPath}`);
     const tools = await promptFileRead(toolsPath, "TOOLS.md");
-    logger.debug(`engine:debug buildSystemPrompt reading memory prompt path=${memoryPath}`);
+    logger.debug(`event: buildSystemPrompt reading memory prompt path=${memoryPath}`);
     const memory = await promptFileRead(memoryPath, "MEMORY.md");
-    logger.debug("engine:debug buildSystemPrompt reading system template");
+    logger.debug("event: buildSystemPrompt reading system template");
     const systemTemplate = await agentPromptBundledRead("SYSTEM.md");
-    logger.debug("engine:debug buildSystemPrompt reading permissions template");
+    logger.debug("event: buildSystemPrompt reading permissions template");
     const permissionsTemplate = (await agentPromptBundledRead("PERMISSIONS.md")).trim();
-    logger.debug("engine:debug buildSystemPrompt reading agentic template");
+    logger.debug("event: buildSystemPrompt reading agentic template");
     const agenticTemplate = (await agentPromptBundledRead("AGENTIC.md")).trim();
     const additionalWriteDirs = resolveAdditionalWriteDirs(
       context.writeDirs ?? [],
@@ -1067,15 +1067,15 @@ export class Agent {
     };
 
     // Render permissions template first (it contains Handlebars expressions)
-    logger.debug("engine:debug buildSystemPrompt compiling permissions template");
+    logger.debug("event: buildSystemPrompt compiling permissions template");
     const permissions = Handlebars.compile(permissionsTemplate)(templateContext);
 
-    logger.debug("engine:debug buildSystemPrompt compiling agentic template");
+    logger.debug("event: buildSystemPrompt compiling agentic template");
     const agentic = Handlebars.compile(agenticTemplate)(templateContext);
 
-    logger.debug("engine:debug buildSystemPrompt compiling main template");
+    logger.debug("event: buildSystemPrompt compiling main template");
     const template = Handlebars.compile(systemTemplate);
-    logger.debug("engine:debug buildSystemPrompt rendering template");
+    logger.debug("event: buildSystemPrompt rendering template");
     const rendered = template({
       ...templateContext,
       permissions,

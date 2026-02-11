@@ -13,18 +13,18 @@ export class ToolResolver {
   private tools = new Map<string, RegisteredTool>();
 
   register(pluginId: string, definition: ToolDefinition): void {
-    logger.debug(`engine:debug Registering tool pluginId=${pluginId} toolName=${definition.tool.name}`);
+    logger.debug(`register: Registering tool pluginId=${pluginId} toolName=${definition.tool.name}`);
     this.tools.set(definition.tool.name, { ...definition, pluginId });
-    logger.debug(`engine:debug Tool registered totalTools=${this.tools.size}`);
+    logger.debug(`register: Tool registered totalTools=${this.tools.size}`);
   }
 
   unregister(name: string): void {
-    logger.debug(`engine:debug Unregistering tool toolName=${name}`);
+    logger.debug(`unregister: Unregistering tool toolName=${name}`);
     this.tools.delete(name);
   }
 
   unregisterByPlugin(pluginId: string): void {
-    logger.debug(`engine:debug Unregistering tools by plugin pluginId=${pluginId}`);
+    logger.debug(`unregister: Unregistering tools by plugin pluginId=${pluginId}`);
     let count = 0;
     for (const [name, entry] of this.tools.entries()) {
       if (entry.pluginId === pluginId) {
@@ -32,7 +32,7 @@ export class ToolResolver {
         count++;
       }
     }
-    logger.debug(`engine:debug Tools unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
+    logger.debug(`unregister: Tools unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
   }
 
   listTools(): Tool[] {
@@ -44,11 +44,11 @@ export class ToolResolver {
     context: ToolExecutionContext
   ): Promise<ToolExecutionResult> {
     const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 100);
-    logger.debug(`engine:debug execute() called toolName=${toolCall.name} toolCallId=${toolCall.id} argsPreview=${argsPreview}`);
+    logger.debug(`execute: execute() called toolName=${toolCall.name} toolCallId=${toolCall.id} argsPreview=${argsPreview}`);
     const entry = this.tools.get(toolCall.name);
     if (!entry) {
       const availableTools = Array.from(this.tools.keys()).join(",");
-      logger.debug(`engine:debug Tool not found toolName=${toolCall.name} availableTools=${availableTools}`);
+      logger.debug(`event: Tool not found toolName=${toolCall.name} availableTools=${availableTools}`);
       return {
         toolMessage: buildToolError(toolCall, `Unknown tool: ${toolCall.name}`),
         files: []
@@ -56,13 +56,13 @@ export class ToolResolver {
     }
 
     try {
-      logger.debug(`engine:debug Validating tool call arguments toolName=${toolCall.name}`);
+      logger.debug(`event: Validating tool call arguments toolName=${toolCall.name}`);
       const args = validateToolCall([entry.tool], toolCall);
-      logger.debug(`engine:debug Arguments validated, executing tool toolName=${toolCall.name}`);
+      logger.debug(`execute: Arguments validated, executing tool toolName=${toolCall.name}`);
       const startTime = Date.now();
       const result = await entry.execute(args, context, toolCall);
       const duration = Date.now() - startTime;
-      logger.debug(`engine:debug Tool execution completed toolName=${toolCall.name} durationMs=${duration} isError=${result.toolMessage.isError} fileCount=${result.files.length}`);
+      logger.debug(`event: Tool execution completed toolName=${toolCall.name} durationMs=${duration} isError=${result.toolMessage.isError} fileCount=${result.files.length}`);
       if (!result.toolMessage.toolCallId) {
         result.toolMessage.toolCallId = toolCall.id;
       }
@@ -72,8 +72,8 @@ export class ToolResolver {
       return toolResultTruncate(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Tool execution failed.";
-      logger.debug(`engine:debug Tool execution threw error toolName=${toolCall.name} error=${String(error)}`);
-      logger.warn({ tool: toolCall.name, error }, "engine:warn Tool execution failed");
+      logger.debug(`error: Tool execution threw error toolName=${toolCall.name} error=${String(error)}`);
+      logger.warn({ tool: toolCall.name, error }, "error: Tool execution failed");
       return { toolMessage: buildToolError(toolCall, message), files: [] };
     }
   }

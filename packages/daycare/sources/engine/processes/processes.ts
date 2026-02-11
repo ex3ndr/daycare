@@ -291,7 +291,7 @@ export class Processes {
       void this.lock.inLock(async () => {
         await this.refreshRecordStatusLocked();
       }).catch((error) => {
-        this.logger.warn({ error }, "engine:warn Process monitor tick failed");
+        this.logger.warn({ error }, "error: Process monitor tick failed");
       });
     }, MONITOR_INTERVAL_MS);
     this.monitorHandle.unref();
@@ -379,7 +379,7 @@ export class Processes {
     } catch (error) {
       this.logger.warn(
         { error, processId: record.id, restartFailureCount: record.restartFailureCount + 1 },
-        "engine:warn Process restart failed; backoff applied"
+        "error: Process restart failed; backoff applied"
       );
       const failedAt = Date.now();
       record.pid = null;
@@ -442,7 +442,7 @@ export class Processes {
         keepAlive: record.keepAlive,
         cwd: record.cwd
       },
-      "engine:info Process started"
+      "start: Process started"
     );
   }
 
@@ -467,7 +467,7 @@ export class Processes {
         record.updatedAt = Date.now();
         await this.writeRecordLocked(record);
       }).catch((error) => {
-        this.logger.warn({ error, processId }, "engine:warn Process exit handler failed");
+        this.logger.warn({ error, processId }, "error: Process exit handler failed");
       });
     });
   }
@@ -488,7 +488,7 @@ export class Processes {
     record.updatedAt = now;
     this.children.delete(record.id);
 
-    this.logger.info({ processId: record.id, signal }, "engine:info Process stopped");
+    this.logger.info({ processId: record.id, signal }, "stop: Process stopped");
   }
 
   private async writeRecordLocked(record: ProcessRecord): Promise<void> {
@@ -534,7 +534,7 @@ export class Processes {
         recordBootTimeMs: record.bootTimeMs,
         currentBootTimeMs: this.currentBootTimeMs
       },
-      "engine:info Process pid cleared after boot mismatch detection"
+      "event: Process pid cleared after boot mismatch detection"
     );
     record.pid = null;
     record.bootTimeMs = this.currentBootTimeMs;

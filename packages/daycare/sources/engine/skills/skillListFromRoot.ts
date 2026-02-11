@@ -36,11 +36,11 @@ async function collectSkillFiles(root: string): Promise<string[]> {
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
-      logger.warn({ path: root }, "engine:warn Skills root missing; skipping");
+      logger.warn({ path: root }, "skip: Skills root missing; skipping");
       return [];
     }
     if (code === "ENOTDIR") {
-      logger.warn({ path: root }, "engine:warn Skills root is not a directory; skipping");
+      logger.warn({ path: root }, "skip: Skills root is not a directory; skipping");
       return [];
     }
     throw error;
