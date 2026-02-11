@@ -81,6 +81,28 @@ const PRETTY_RESERVED_FIELDS = new Set([
   "module",
   "msg"
 ]);
+const PREFIX_PATTERN = /^[a-z0-9_.-]+:[a-z0-9_.-]+(?:\s|$)/;
+const ACTION_PATTERNS: Array<{ pattern: RegExp; action: string }> = [
+  { pattern: /\b(fail(?:ed|ure)?|error|exception|panic)\b/i, action: "error" },
+  { pattern: /\b(initialize(?:d)?|initializ(?:e|ed)|constructor)\b/i, action: "init" },
+  { pattern: /\bstart(?:ed|ing)?\b/i, action: "start" },
+  { pattern: /\bstop(?:ped|ping)?\b/i, action: "stop" },
+  { pattern: /\breload(?:ed|ing)?\b/i, action: "reload" },
+  { pattern: /\bunload(?:ed|ing)?\b/i, action: "unload" },
+  { pattern: /\bload(?:ed|ing)?\b/i, action: "load" },
+  { pattern: /\bunregister(?:ed|ing)?\b/i, action: "unregister" },
+  { pattern: /\bregister(?:ed|ing)?\b/i, action: "register" },
+  { pattern: /\bcreate(?:d)?\b/i, action: "create" },
+  { pattern: /\bupdate(?:d)?\b/i, action: "update" },
+  { pattern: /\bdelete(?:d)?\b/i, action: "delete" },
+  { pattern: /\bexecut(?:e|ed|ing)\b/i, action: "execute" },
+  { pattern: /\bschedul(?:e|ed|ing)\b/i, action: "schedule" },
+  { pattern: /\brestor(?:e|ed|ing)\b/i, action: "restore" },
+  { pattern: /\breceiv(?:e|ed|ing)\b/i, action: "receive" },
+  { pattern: /\bsent\b|\bsend(?:ing)?\b/i, action: "send" },
+  { pattern: /\bready\b/i, action: "ready" },
+  { pattern: /\bskip(?:ped|ping)?\b/i, action: "skip" }
+];
 const moduleColorCache = new Map<string, string>();
 
 export function initLogging(overrides: Partial<LogConfig> = {}): Logger {
@@ -233,11 +255,12 @@ export function formatPrettyMessage(
     messageValue === undefined || messageValue === null
       ? ""
       : String(messageValue);
-  const details = formatPrettyDetails(log, messageKey, message);
+  const normalizedMessage = messageNormalize(rawModule, message);
+  const details = formatPrettyDetails(log, messageKey, normalizedMessage);
   const timeLabel = colorTime(`[${time}]`);
   const content =
-    message.length > 0
-      ? `${moduleLabel} ${message}${details.length > 0 ? ` ${details}` : ""}`
+    normalizedMessage.length > 0
+      ? `${moduleLabel} ${normalizedMessage}${details.length > 0 ? ` ${details}` : ""}`
       : `${moduleLabel}${details.length > 0 ? ` ${details}` : ""}`;
   return `${timeLabel} ${colorMessage(content)}`;
 }
@@ -322,6 +345,37 @@ function formatModuleLabel(moduleValue: unknown): string {
   const baseName = isPlugin ? rawModule.slice(PLUGIN_MODULE_PREFIX.length) : rawModule;
   const normalized = normalizeModuleName(baseName);
   return isPlugin ? `(${normalized})` : `[${normalized}]`;
+}
+
+function messageNormalize(moduleName: string, message: string): string {
+  const trimmed = message.trim();
+  if (trimmed.length === 0) {
+    return `${moduleDomain(moduleName)}:event`;
+  }
+  if (PREFIX_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+  const action = messageAction(trimmed);
+  const prefix = `${moduleDomain(moduleName)}:${action}`;
+  return `${prefix} ${trimmed}`;
+}
+
+function moduleDomain(moduleName: string): string {
+  const normalized = normalizeModule(moduleName);
+  const base = normalized.startsWith(PLUGIN_MODULE_PREFIX)
+    ? normalized.slice(PLUGIN_MODULE_PREFIX.length)
+    : normalized;
+  const segment = base.split(".")[0]?.trim() ?? "";
+  return segment.length > 0 ? segment.toLowerCase() : "unknown";
+}
+
+function messageAction(message: string): string {
+  for (const entry of ACTION_PATTERNS) {
+    if (entry.pattern.test(message)) {
+      return entry.action;
+    }
+  }
+  return "event";
 }
 
 function formatPrettyDetails(

@@ -50,6 +50,24 @@ flowchart LR
   Format --> Append[append to visible message]
 ```
 
+### Message Prefix Normalization
+
+Legacy/non-prefixed messages are normalized at render time to keep output consistent with `domain:action` notation.
+The formatter infers:
+- `domain`: from module (`engine.runtime` -> `engine`, `plugin.telegram` -> `telegram`)
+- `action`: from message keywords (`initialized` -> `init`, `failed` -> `error`, etc.)
+
+```mermaid
+flowchart LR
+  Msg[raw message text] --> Check{already prefix?}
+  Check -- yes --> Keep[keep as-is]
+  Check -- no --> Domain[infer domain from module]
+  Check -- no --> Action[infer action from message]
+  Domain --> Join[build domain:action]
+  Action --> Join
+  Join --> Prefix[prefix + original message]
+```
+
 ## Verbose Logging
 
 The codebase includes extensive verbose logging at the `debug` level. Debug logging is enabled by default in development mode (`yarn dev`).

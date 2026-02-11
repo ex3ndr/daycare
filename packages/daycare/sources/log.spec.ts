@@ -80,6 +80,58 @@ describe("formatPrettyMessage", () => {
 
     expect(output).toContain("engine:tick-failed error=Error:code:E_TEST:boom");
   });
+
+  it("normalizes legacy message text to domain:action prefix", () => {
+    const output = stripAnsi(
+      formatPrettyMessage(
+        {
+          time: "2026-01-02T03:04:05.000Z",
+          level: 30,
+          module: "cron.scheduler",
+          msg: "CronScheduler initialized"
+        },
+        "msg",
+        "info"
+      )
+    );
+
+    expect(output).toContain("cron:init CronScheduler initialized");
+  });
+
+  it("does not re-prefix messages already in prefix notation", () => {
+    const output = stripAnsi(
+      formatPrettyMessage(
+        {
+          time: "2026-01-02T03:04:05.000Z",
+          level: 30,
+          module: "engine.runtime",
+          msg: "engine:start boot"
+        },
+        "msg",
+        "info"
+      )
+    );
+
+    expect(output).toContain("engine:start boot");
+    expect(output).not.toContain("engine:event engine:start boot");
+  });
+
+  it("fills empty messages with a module-based prefix", () => {
+    const output = stripAnsi(
+      formatPrettyMessage(
+        {
+          time: "2026-01-02T03:04:05.000Z",
+          level: 30,
+          module: "plugin.telegram",
+          msg: "   "
+        },
+        "msg",
+        "info"
+      )
+    );
+
+    expect(output).toContain("(telegram            ) telegram:event");
+  });
 });
 
 function stripAnsi(value: string): string {
