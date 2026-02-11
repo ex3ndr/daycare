@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { Context } from "@mariozechner/pi-ai";
 import type { Logger } from "pino";
 
@@ -95,9 +94,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   let toolLoopExceeded = false;
   let lastResponseHadToolCalls = false;
   const generatedFiles: FileReference[] = [];
-  const generatedFileIds = new Set<string>();
-  const generatedFilePaths = new Set<string>();
-  let generatedFilesManuallySent = false;
   let lastResponseTextSent = false;
   let finalResponseText: string | null = null;
   let lastResponseNoMessage = false;
@@ -245,19 +241,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         logger.debug(
           `execute: Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
         );
-        if (
-          sendFileReferencesGeneratedFile(
-            toolCall.name,
-            toolCall.arguments,
-            generatedFileIds,
-            generatedFilePaths
-          )
-        ) {
-          generatedFilesManuallySent = true;
-          logger.debug(
-            "event: send_file references generated file; suppressing automatic file delivery"
-          );
-        }
 
         if (verbose && !suppressUserOutput && connector && targetId) {
           const argsFormatted = toolArgsFormatVerbose(toolCall.arguments);
@@ -299,13 +282,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         });
         if (toolResult.files.length > 0) {
           generatedFiles.push(...toolResult.files);
-          for (const file of toolResult.files) {
-            if (file.id.trim().length > 0) {
-              generatedFileIds.add(file.id);
-            }
-            addGeneratedPath(generatedFilePaths, file.path);
-          }
-          collectGeneratedWorkspacePaths(toolResult.toolMessage.details, generatedFilePaths);
           logger.debug(`event: Tool generated files count=${toolResult.files.length}`);
         }
       }
@@ -425,14 +401,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   }
 
   const shouldSendText = hasResponseText && !lastResponseTextSent && !lastResponseNoMessage;
-  const shouldSendFiles =
-    generatedFiles.length > 0 && !lastResponseNoMessage && !generatedFilesManuallySent;
-  const outgoingText =
-    shouldSendText
-      ? responseText
-      : !hasResponseText && shouldSendFiles
-        ? "Generated files."
-        : null;
+  const shouldSendFiles = generatedFiles.length > 0 && !lastResponseNoMessage;
+  const outgoingText = shouldSendText ? responseText : null;
   logger.debug(
     `send: Sending response to user textLength=${outgoingText?.length ?? 0} fileCount=${generatedFiles.length} targetId=${targetId ?? "none"}`
   );
@@ -538,61 +508,6 @@ function isContextOverflowError(error: unknown): boolean {
     }
   }
   return false;
-}
-
-function collectGeneratedWorkspacePaths(details: unknown, paths: Set<string>): void {
-  if (!details || typeof details !== "object") {
-    return;
-  }
-  const workspace = (details as { workspace?: unknown }).workspace;
-  if (!workspace || typeof workspace !== "object") {
-    return;
-  }
-  const files = (workspace as { files?: unknown }).files;
-  if (!Array.isArray(files)) {
-    return;
-  }
-  for (const file of files) {
-    if (!file || typeof file !== "object") {
-      continue;
-    }
-    const filePath = (file as { path?: unknown }).path;
-    if (typeof filePath === "string" && filePath.trim().length > 0) {
-      addGeneratedPath(paths, filePath);
-    }
-  }
-}
-
-function sendFileReferencesGeneratedFile(
-  toolName: string,
-  args: unknown,
-  generatedFileIds: Set<string>,
-  generatedFilePaths: Set<string>
-): boolean {
-  if (toolName !== "send_file" || !args || typeof args !== "object") {
-    return false;
-  }
-  const record = args as { fileId?: unknown; path?: unknown };
-  const fileId = typeof record.fileId === "string" ? record.fileId.trim() : "";
-  if (fileId.length > 0 && generatedFileIds.has(fileId)) {
-    return true;
-  }
-  const filePath = typeof record.path === "string" ? record.path.trim() : "";
-  if (filePath.length === 0) {
-    return false;
-  }
-  if (generatedFilePaths.has(filePath)) {
-    return true;
-  }
-  return generatedFilePaths.has(path.resolve(filePath));
-}
-
-function addGeneratedPath(paths: Set<string>, value: string): void {
-  if (value.trim().length === 0) {
-    return;
-  }
-  paths.add(value);
-  paths.add(path.resolve(value));
 }
 
 function isInferenceAbortError(error: unknown, signal?: AbortSignal): boolean {

@@ -15,65 +15,7 @@ import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 
 describe("agentLoopRun", () => {
-  it("does not auto-send generated files when send_file references them", async () => {
-    const generatedFile: FileReference = {
-      id: "generated-file-1",
-      name: "image.png",
-      mimeType: "image/png",
-      size: 16,
-      path: "/tmp/provider/image.png"
-    };
-    const generatedWorkspacePath = "/workspace/files/generated-image.png";
-    const connectorSend = vi.fn(
-      async (_targetId: string, _message: unknown) => undefined
-    );
-    const connector = connectorBuild(connectorSend);
-    const entry = entryBuild();
-    const context = contextBuild();
-    const inferenceRouter = inferenceRouterBuild([
-      assistantMessageBuild([
-        toolCallBuild("call-1", "generate_image", { prompt: "draw cat" })
-      ]),
-      assistantMessageBuild([
-        toolCallBuild("call-2", "send_file", { path: generatedWorkspacePath })
-      ]),
-      assistantMessageBuild([])
-    ]);
-
-    const toolResolver = toolResolverBuild(async (toolCall) => {
-      if (toolCall.name === "generate_image") {
-        return toolResultGeneratedBuild(generatedFile, generatedWorkspacePath, toolCall.id, toolCall.name);
-      }
-      if (toolCall.name === "send_file") {
-        await connector.sendMessage("channel-1", {
-          text: null,
-          files: [generatedFile]
-        });
-        return toolResultSentBuild(toolCall.id, toolCall.name);
-      }
-      throw new Error(`Unexpected tool: ${toolCall.name}`);
-    });
-
-    await agentLoopRun(
-      optionsBuild({
-        entry,
-        context,
-        connector,
-        inferenceRouter,
-        toolResolver
-      })
-    );
-
-    expect(connectorSend).toHaveBeenCalledTimes(1);
-    expect(
-      connectorSend.mock.calls.some((call) => {
-        const message = call[1] as { text?: string | null } | undefined;
-        return message?.text === "Generated files.";
-      })
-    ).toBe(false);
-  });
-
-  it("auto-sends generated files when send_file is not used", async () => {
+  it("auto-sends generated files without fallback text when model has no final text", async () => {
     const generatedFile: FileReference = {
       id: "generated-file-1",
       name: "image.png",
@@ -120,7 +62,7 @@ describe("agentLoopRun", () => {
     expect(connectorSend).toHaveBeenCalledWith(
       "channel-1",
       expect.objectContaining({
-        text: "Generated files.",
+        text: null,
         files: [generatedFile]
       })
     );
@@ -291,19 +233,5 @@ function toolResultGeneratedBuild(
       timestamp: Date.now()
     },
     files: [file]
-  };
-}
-
-function toolResultSentBuild(toolCallId: string, toolName: string): ToolExecutionResult {
-  return {
-    toolMessage: {
-      role: "toolResult",
-      toolCallId,
-      toolName,
-      content: [{ type: "text", text: "sent" }],
-      isError: false,
-      timestamp: Date.now()
-    },
-    files: []
   };
 }

@@ -245,6 +245,8 @@ Human can't see Toll call messages, so assume that. Also do not end your message
 
 ## File Sending
 
+Files returned by tool calls (for example `generate_image`) are attached automatically in the final response. Do not call `send_file` for the same file unless the user explicitly asks to resend it or send it somewhere else.
+
 {{#if canSendFiles}}
 Send files via `send_file`. Supported modes: {{fileSendModes}}.
 {{else}}
