@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { createId } from "@paralleldrive/cuid2";
 import { getLogger } from "../../log.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import { heartbeatPromptBuildBatch } from "./ops/heartbeatPromptBuildBatch.js";
@@ -45,14 +46,25 @@ export class Heartbeats {
         }),
       onRun: async (tasks) => {
         const batch = heartbeatPromptBuildBatch(tasks);
-        await this.agentSystem.postAndAwait(
-          { descriptor: { type: "system", tag: "heartbeat" } },
-          {
-            type: "message",
-            message: { text: batch.prompt },
-            context: {}
+        const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
+        const targetAgentId = await this.agentSystem.agentIdForTarget(target);
+        const permissions = await this.agentSystem.permissionsForTarget(target);
+        this.agentSystem.updateAgentPermissions(targetAgentId, permissions, Date.now());
+
+        await this.agentSystem.postAndAwait(target, {
+          type: "signal",
+          subscriptionPattern: "internal.heartbeat.tick",
+          signal: {
+            id: createId(),
+            type: "internal.heartbeat.tick",
+            source: { type: "system" },
+            createdAt: Date.now(),
+            data: {
+              prompt: batch.prompt,
+              tasks: tasks.map((task) => ({ id: task.id, title: task.title, prompt: task.prompt }))
+            }
           }
-        );
+        });
       },
       onError: async (error, taskIds) => {
         logger.warn({ taskIds, error }, "error: Heartbeat task failed");

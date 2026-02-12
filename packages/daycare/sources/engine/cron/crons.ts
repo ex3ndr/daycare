@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { createId } from "@paralleldrive/cuid2";
 import { getLogger } from "../../log.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { SessionPermissions } from "@/types";
@@ -51,24 +52,39 @@ export class Crons {
       onTask: async (task, messageContext) => {
         const target = task.agentId
           ? { agentId: task.agentId }
-          : {
-              descriptor: {
-                type: "cron" as const,
-                id: task.taskUid,
-                name: task.taskName
-              }
-            };
+          : { descriptor: { type: "system" as const, tag: "cron" } };
         logger.debug(
-          `event: CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "cron"}`
+          `event: CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "system:cron"}`
         );
-        await this.agentSystem.postAndAwait(
-          target,
-          {
-            type: "message",
-            message: { text: task.prompt },
-            context: messageContext
+
+        const permissions = task.agentId
+          ? await this.agentSystem.permissionsForTarget({ agentId: task.agentId })
+          : mergeCronPermissions(
+              permissionBuildCron(options.config.current.defaultPermissions, task.filesPath),
+              await this.agentSystem.permissionsForTarget({ descriptor: { type: "system", tag: "cron" } })
+            );
+        const targetAgentId = await this.agentSystem.agentIdForTarget(target);
+        this.agentSystem.updateAgentPermissions(targetAgentId, permissions, Date.now());
+
+        await this.agentSystem.postAndAwait(target, {
+          type: "signal",
+          subscriptionPattern: "internal.cron.task",
+          signal: {
+            id: createId(),
+            type: "internal.cron.task",
+            source: { type: "system" },
+            createdAt: Date.now(),
+            data: {
+              prompt: task.prompt,
+              taskId: task.taskId,
+              taskUid: task.taskUid,
+              taskName: task.taskName,
+              filesPath: task.filesPath,
+              memoryPath: task.memoryPath,
+              messageContext
+            }
           }
-        );
+        });
       },
       onError: async (error, taskId) => {
         logger.warn({ taskId, error }, "error: Cron task failed");
@@ -80,13 +96,7 @@ export class Crons {
         )}. The gate check was skipped and the task ran anyway.`;
         const target = task.agentId
           ? { agentId: task.agentId }
-          : {
-              descriptor: {
-                type: "cron" as const,
-                id: task.taskUid,
-                name: task.name
-              }
-            };
+          : { descriptor: { type: "system" as const, tag: "cron" } };
         await this.agentSystem.post(target, {
           type: "system_message",
           text: notice,
