@@ -26,7 +26,6 @@ import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild.js";
-import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
@@ -383,9 +382,7 @@ export class Agent {
     const allowCronTools = agentDescriptorIsCron(this.descriptor);
 
     const defaultPermissions = this.agentSystem.config.current.defaultPermissions;
-    if (cronTask?.filesPath) {
-      this.state.permissions = permissionBuildCron(defaultPermissions, cronTask.filesPath);
-    } else if (agentDescriptorIsHeartbeat(this.descriptor)) {
+    if (agentDescriptorIsHeartbeat(this.descriptor)) {
       this.state.permissions = permissionMergeDefault(this.state.permissions, defaultPermissions);
       permissionEnsureDefaultFile(this.state.permissions, defaultPermissions);
     }
@@ -656,18 +653,21 @@ export class Agent {
   private async handleSignal(
     item: AgentInboxSignal
   ): Promise<{ delivered: boolean; responseText: string | null }> {
-    const subscription = this.agentSystem.signals.subscriptionGet({
-      agentId: this.id,
-      pattern: item.subscriptionPattern
-    });
-    if (!subscription) {
+    const isInternalSignal = item.subscriptionPattern.startsWith("internal.");
+    const subscription = isInternalSignal
+      ? null
+      : this.agentSystem.signals.subscriptionGet({
+          agentId: this.id,
+          pattern: item.subscriptionPattern
+        });
+    if (!isInternalSignal && !subscription) {
       return { delivered: false, responseText: null };
     }
     const responseText = await this.handleSystemMessage({
       type: "system_message",
       text: signalMessageBuild(item.signal),
       origin: `signal:${item.signal.id}`,
-      silent: subscription.silent,
+      silent: isInternalSignal ? false : (subscription?.silent ?? false),
       context: {}
     });
     return { delivered: true, responseText };

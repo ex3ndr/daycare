@@ -10,6 +10,14 @@ describe("systemAgentPromptResolve", () => {
     expect(heartbeat?.replaceSystemPrompt).toBe(false);
   });
 
+
+  it("resolves cron prompt without replacing base system prompt", async () => {
+    const cron = await systemAgentPromptResolve("cron");
+    expect(cron?.tag).toBe("cron");
+    expect(cron?.systemPrompt.length).toBeGreaterThan(0);
+    expect(cron?.replaceSystemPrompt).toBe(false);
+  });
+
   it("resolves architect prompt with full prompt replacement enabled", async () => {
     const architect = await systemAgentPromptResolve("architect");
     expect(architect?.tag).toBe("architect");
