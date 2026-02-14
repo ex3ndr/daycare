@@ -54,4 +54,27 @@ describe("rlmPreambleBuild", () => {
     expect(preamble).not.toContain("def search-v2");
     expect(preamble).toContain("def search_v2(query: str) -> str:");
   });
+
+  it("emits required parameters before optional parameters", () => {
+    const tools = [
+      {
+        name: "create_task",
+        description: "Create task",
+        parameters: Type.Object(
+          {
+            note: Type.Optional(Type.String()),
+            taskId: Type.String(),
+            priority: Type.Optional(Type.Integer())
+          },
+          { additionalProperties: false }
+        )
+      }
+    ] as unknown as Tool[];
+
+    const preamble = rlmPreambleBuild(tools);
+
+    expect(preamble).toContain(
+      "def create_task(taskId: str, note: str | None = None, priority: int | None = None) -> str:"
+    );
+  });
 });

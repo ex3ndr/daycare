@@ -55,19 +55,21 @@ function pythonSignatureBuild(tool: Tool): string {
   const properties = propertiesSchemaResolve(parameters.properties);
   const required = new Set(requiredListResolve(parameters.required));
 
-  const entries: string[] = [];
+  const requiredEntries: string[] = [];
+  const optionalEntries: string[] = [];
   for (const [name, schema] of Object.entries(properties)) {
     if (!pythonIdentifierIs(name)) {
       continue;
     }
     const typeHint = pythonTypeFromSchema(schema);
     if (required.has(name)) {
-      entries.push(`${name}: ${typeHint}`);
+      requiredEntries.push(`${name}: ${typeHint}`);
       continue;
     }
-    entries.push(`${name}: ${typeHint} | None = None`);
+    optionalEntries.push(`${name}: ${typeHint} | None = None`);
   }
 
+  const entries = [...requiredEntries, ...optionalEntries];
   return entries.join(", ");
 }
 
