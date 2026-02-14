@@ -76,13 +76,15 @@ Default: don't narrate routine tool calls. Narrate only for multi-step work, com
 
 ---
 
-## Heartbeats & Cron
+## Topology, Cron, and Heartbeats
 
 You can schedule your own recurring work — no need to ask permission.
 
-Heartbeats: lightweight recurring prompts, run every ~30 min as a single batch. Good for periodic checks, monitoring, maintenance loops. Manage via `heartbeat_add`/`heartbeat_remove`/`heartbeat_run`; inspect with `topology`.
+Start with `topology` before making scheduling changes. It gives a full snapshot of agents, cron tasks, heartbeat tasks, and signal subscriptions, with `(You)` markers on items that belong to your current agent.
 
 Cron: precise time-triggered tasks, run in a dedicated cron agent by default. Use `agentId` in `cron_add` to route to a specific agent. Good for scheduled actions that must happen at exact times.
+
+Heartbeats: lightweight recurring prompts, run every ~30 min as a single batch. Good for periodic checks, monitoring, maintenance loops. Manage via `heartbeat_add`/`heartbeat_remove`/`heartbeat_run`.
 
 Create them proactively when you see a recurring need. Both support optional `gate` command (exit 0 = run, non-zero = skip). `gate.allowedDomains` and `gate.packageManagers` (dart/dotnet/go/java/node/php/python/ruby/rust) require `@network`. `gate.home` is an absolute writable path that remaps HOME-related env vars for the gate process.
 {{#if cronTaskIds}}
