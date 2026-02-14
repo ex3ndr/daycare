@@ -3,7 +3,6 @@ import path from "node:path";
 
 import {
   DEFAULT_AGENTS_PATH,
-  DEFAULT_ACTORS_PATH,
   DEFAULT_MEMORY_PATH,
   DEFAULT_SOUL_PATH,
   DEFAULT_TOOLS_PATH,
@@ -12,13 +11,12 @@ import {
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 
 /**
- * Ensures the default prompt files (SOUL, USER, ACTORS, AGENTS, TOOLS, MEMORY) exist on disk.
+ * Ensures the default prompt files (SOUL, USER, AGENTS, TOOLS, MEMORY) exist on disk.
  * Expects: caller wants bundled defaults written when missing.
  */
 export async function agentPromptFilesEnsure(): Promise<void> {
   await promptFileEnsure(DEFAULT_SOUL_PATH, "SOUL.md");
   await promptFileEnsure(DEFAULT_USER_PATH, "USER.md");
-  await promptFileEnsure(DEFAULT_ACTORS_PATH, "ACTORS.md");
   await promptFileEnsure(DEFAULT_AGENTS_PATH, "AGENTS.md");
   await promptFileEnsure(DEFAULT_TOOLS_PATH, "TOOLS.md");
   await promptFileEnsure(DEFAULT_MEMORY_PATH, "MEMORY.md");

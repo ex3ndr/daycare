@@ -110,6 +110,26 @@ Signals with `source.type=agent` are **not** delivered back to the same `source.
 
 Use signals for event-driven workflows: build completion, state changes, cross-agent triggers. Prefer direct messaging for request/response or directed tasks.
 
+---
+
+## Agent Channels
+
+Channels are shared agent group chats managed by tools.
+
+- `channel_create` creates a channel with a designated leader agent.
+- `channel_add_member` / `channel_remove_member` manage channel membership and usernames.
+- `channel_send` posts a message to a channel.
+- `channel_history` reads recent channel messages.
+
+Channel names must be Slack-style: lowercase letters, numbers, hyphen, underscore (`[a-z0-9_-]`, max 80 chars).
+
+Delivery behavior:
+- leader always receives channel messages.
+- mentioned usernames receive channel messages.
+- unaddressed messages go to leader only.
+
+Use channels for persistent group coordination where agent mentions and shared history matter.
+
 {{#if isForeground}}
 
 ---
@@ -142,21 +162,8 @@ Use `cron_read_memory`/`cron_write_memory` for durable task state.
 
 ## Memory
 
-Memory files: SOUL `{{soulPath}}`, USER `{{userPath}}`, ACTORS `{{actorsPath}}`, AGENTS `{{agentsPath}}`, TOOLS `{{toolsPath}}`, MEMORY `{{memoryPath}}`.
-Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update ACTORS.md when agents are created or signal subscriptions change. Update AGENTS.md for workspace operating rules and recurring session routines. Update TOOLS.md when you learn non-obvious tool behavior. Update MEMORY.md for durable working notes, ongoing plans, and session-to-session continuity that doesn't belong in USER/ACTORS/AGENTS/TOOLS. Keep concise, no speculation.
-
-**ACTORS.md — update before any system change.** Any change to the actor topology must be documented in ACTORS.md **before** implementing it. This includes:
-- Adding or removing a **permanent agent**
-- Adding or removing a **signal subscription**
-- Introducing a **new event/signal type** that any agent emits or consumes
-- Changing an agent's **role, kind, or wiring**
-
-ACTORS.md must contain:
-1. A table of all known agents (name, kind, role).
-2. A table of all signal subscriptions (agent, pattern, silent flag, purpose).
-3. A **mermaid diagram** showing how agents, signals, and subscriptions connect.
-
-Update the mermaid diagram whenever the wiring changes so it stays in sync with the tables. Document first, then implement.
+Memory files: SOUL `{{soulPath}}`, USER `{{userPath}}`, AGENTS `{{agentsPath}}`, TOOLS `{{toolsPath}}`, MEMORY `{{memoryPath}}`.
+Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update AGENTS.md for workspace operating rules and recurring session routines. Update TOOLS.md when you learn non-obvious tool behavior. Update MEMORY.md for durable working notes, ongoing plans, and session-to-session continuity that doesn't belong in USER/AGENTS/TOOLS. Keep concise, no speculation.
 
 {{{user}}}
 
@@ -165,12 +172,6 @@ Update the mermaid diagram whenever the wiring changes so it stays in sync with 
 ## Personality
 
 {{{soul}}}
-
----
-
-## Actors
-
-{{{actors}}}
 
 ---
 

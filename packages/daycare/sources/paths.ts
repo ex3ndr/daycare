@@ -18,7 +18,6 @@ export function resolveDaycarePath(...segments: string[]): string {
 
 export const DEFAULT_SOUL_PATH = resolveDaycarePath("SOUL.md");
 export const DEFAULT_USER_PATH = resolveDaycarePath("USER.md");
-export const DEFAULT_ACTORS_PATH = resolveDaycarePath("ACTORS.md");
 export const DEFAULT_AGENTS_PATH = resolveDaycarePath("AGENTS.md");
 export const DEFAULT_TOOLS_PATH = resolveDaycarePath("TOOLS.md");
 export const DEFAULT_MEMORY_PATH = resolveDaycarePath("MEMORY.md");

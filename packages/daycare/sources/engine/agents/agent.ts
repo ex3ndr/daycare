@@ -9,7 +9,6 @@ import Handlebars from "handlebars";
 import { getLogger } from "../../log.js";
 import {
   DEFAULT_AGENTS_PATH,
-  DEFAULT_ACTORS_PATH,
   DEFAULT_MEMORY_PATH,
   DEFAULT_SOUL_PATH,
   DEFAULT_TOOLS_PATH,
@@ -426,7 +425,6 @@ export class Agent {
       cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : "",
       soulPath: DEFAULT_SOUL_PATH,
       userPath: DEFAULT_USER_PATH,
-      actorsPath: DEFAULT_ACTORS_PATH,
       agentsPath: DEFAULT_AGENTS_PATH,
       toolsPath: DEFAULT_TOOLS_PATH,
       memoryPath: DEFAULT_MEMORY_PATH,
@@ -1001,7 +999,6 @@ export class Agent {
 
     const soulPath = context.soulPath ?? DEFAULT_SOUL_PATH;
     const userPath = context.userPath ?? DEFAULT_USER_PATH;
-    const actorsPath = context.actorsPath ?? DEFAULT_ACTORS_PATH;
     const agentsPath = context.agentsPath ?? DEFAULT_AGENTS_PATH;
     const toolsPath = context.toolsPath ?? DEFAULT_TOOLS_PATH;
     const memoryPath = context.memoryPath ?? DEFAULT_MEMORY_PATH;
@@ -1009,8 +1006,6 @@ export class Agent {
     const soul = await promptFileRead(soulPath, "SOUL.md");
     logger.debug(`event: buildSystemPrompt reading user prompt path=${userPath}`);
     const user = await promptFileRead(userPath, "USER.md");
-    logger.debug(`event: buildSystemPrompt reading actors prompt path=${actorsPath}`);
-    const actors = await promptFileRead(actorsPath, "ACTORS.md");
     logger.debug(`event: buildSystemPrompt reading agents prompt path=${agentsPath}`);
     const agents = await promptFileRead(agentsPath, "AGENTS.md");
     logger.debug(`event: buildSystemPrompt reading tools prompt path=${toolsPath}`);
@@ -1028,7 +1023,6 @@ export class Agent {
       context.workspace ?? "",
       soulPath,
       userPath,
-      actorsPath,
       agentsPath,
       toolsPath,
       memoryPath
@@ -1061,7 +1055,6 @@ export class Agent {
       cronTaskIds: context.cronTaskIds ?? "",
       soulPath,
       userPath,
-      actorsPath,
       agentsPath,
       toolsPath,
       memoryPath,
@@ -1073,7 +1066,6 @@ export class Agent {
       isForeground,
       soul,
       user,
-      actors,
       agents,
       tools,
       memory,
@@ -1126,7 +1118,6 @@ type AgentSystemPromptContext = {
   cronTaskIds?: string;
   soulPath?: string;
   userPath?: string;
-  actorsPath?: string;
   agentsPath?: string;
   toolsPath?: string;
   memoryPath?: string;
@@ -1146,13 +1137,12 @@ function resolveAdditionalWriteDirs(
   workspace: string,
   soulPath: string,
   userPath: string,
-  actorsPath: string,
   agentsPath: string,
   toolsPath: string,
   memoryPath: string
 ): string[] {
   const excluded = new Set(
-    [workspace, soulPath, userPath, actorsPath, agentsPath, toolsPath, memoryPath]
+    [workspace, soulPath, userPath, agentsPath, toolsPath, memoryPath]
       .filter((entry) => entry && entry.trim().length > 0)
       .map((entry) => path.resolve(entry))
   );

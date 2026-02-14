@@ -2,7 +2,6 @@ import path from "node:path";
 
 import {
   DEFAULT_AGENTS_PATH,
-  DEFAULT_ACTORS_PATH,
   DEFAULT_MEMORY_PATH,
   DEFAULT_SOUL_PATH,
   DEFAULT_TOOLS_PATH,
@@ -19,7 +18,6 @@ export function permissionBuildDefault(
   const writeDefaults = [
     DEFAULT_SOUL_PATH,
     DEFAULT_USER_PATH,
-    DEFAULT_ACTORS_PATH,
     DEFAULT_AGENTS_PATH,
     DEFAULT_TOOLS_PATH,
     DEFAULT_MEMORY_PATH
