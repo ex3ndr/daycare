@@ -1,5 +1,6 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
+import matter from "gray-matter";
 
 /**
  * Loads SKILL.md body content and strips optional YAML frontmatter.
@@ -8,21 +9,10 @@ import { promises as fs } from "node:fs";
  */
 export async function skillContentLoad(filePath: string): Promise<string> {
   const content = await fs.readFile(path.resolve(filePath), "utf8");
-  return skillFrontmatterStrip(content).trim();
-}
-
-function skillFrontmatterStrip(content: string): string {
-  const lines = content.split(/\r?\n/);
-  if ((lines[0] ?? "").trim() !== "---") {
-    return content;
+  try {
+    const parsed = matter(content);
+    return parsed.content.trim();
+  } catch {
+    return content.trim();
   }
-
-  for (let i = 1; i < lines.length; i += 1) {
-    const line = lines[i]?.trim() ?? "";
-    if (line === "---" || line === "...") {
-      return lines.slice(i + 1).join("\n");
-    }
-  }
-
-  return content;
 }

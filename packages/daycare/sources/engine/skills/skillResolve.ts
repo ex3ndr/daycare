@@ -1,5 +1,6 @@
 import path from "node:path";
 import { constants as fsConstants, promises as fs } from "node:fs";
+import matter from "gray-matter";
 
 import { getLogger } from "../../log.js";
 import { SKILL_FILENAME } from "./skillConstants.js";
@@ -74,192 +75,49 @@ async function skillFileReadable(filePath: string): Promise<boolean> {
 }
 
 function skillFrontmatterParse(content: string): SkillFrontmatter {
-  const lines = content.split(/\r?\n/);
-  const firstLine = lines[0] ?? "";
-  if (lines.length === 0 || firstLine.trim() !== "---") {
+  try {
+    const parsed = matter(content);
+    return skillFrontmatterNormalize(parsed.data as Record<string, unknown>);
+  } catch {
     return {};
   }
-
-  const frontmatter: string[] = [];
-  for (let i = 1; i < lines.length; i += 1) {
-    const line = lines[i] ?? "";
-    if (line.trim() === "---" || line.trim() === "...") {
-      break;
-    }
-    frontmatter.push(line);
-  }
-
-  if (frontmatter.length === 0) {
-    return {};
-  }
-
-  return skillYamlFrontmatterParse(frontmatter);
 }
 
-function skillYamlFrontmatterParse(lines: string[]): SkillFrontmatter {
+function skillFrontmatterNormalize(data: Record<string, unknown>): SkillFrontmatter {
   const result: SkillFrontmatter = {};
+  if (typeof data.name === "string") {
+    result.name = data.name;
+  }
+  if (typeof data.description === "string") {
+    result.description = data.description;
+  }
 
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i] ?? "";
-    if (!line || line.trim().length === 0 || line.trim().startsWith("#")) {
-      continue;
-    }
-
-    const match = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-
-    const key = match[1];
-    let value = match[2] ?? "";
-
-    if (value === "|" || value === ">" || value.trim().length === 0) {
-      const block = skillYamlBlockCollect(lines, i + 1);
-      i = block.nextIndex - 1;
-      value = value === ">" ? block.value.replace(/\n/g, " ") : block.value;
-    } else {
-      value = value.trim();
-    }
-
-    const normalized = skillYamlValueNormalize(value);
-    if (key === "name") {
-      result.name = normalized;
-    }
-    if (key === "description") {
-      result.description = normalized;
-    }
-    if (key === "sandbox") {
-      const sandbox = skillYamlBooleanParse(normalized);
-      if (typeof sandbox === "boolean") {
-        result.sandbox = sandbox;
-      }
-    }
-    if (key === "permissions") {
-      const permissions = skillYamlPermissionsParse(value);
-      if (permissions.length > 0) {
-        result.permissions = permissions;
-      }
+  if (typeof data.sandbox === "boolean") {
+    result.sandbox = data.sandbox;
+  } else if (typeof data.sandbox === "string") {
+    const normalized = data.sandbox.trim().toLowerCase();
+    if (normalized === "true") {
+      result.sandbox = true;
+    } else if (normalized === "false") {
+      result.sandbox = false;
     }
   }
 
+  if (Array.isArray(data.permissions)) {
+    const permissions = data.permissions
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (permissions.length > 0) {
+      result.permissions = Array.from(new Set(permissions));
+    }
+  } else if (typeof data.permissions === "string") {
+    const permission = data.permissions.trim();
+    if (permission.length > 0) {
+      result.permissions = [permission];
+    }
+  }
   return result;
-}
-
-function skillYamlBlockCollect(
-  lines: string[],
-  startIndex: number
-): { value: string; nextIndex: number } {
-  const blockLines: string[] = [];
-  let minIndent: number | null = null;
-  let index = startIndex;
-
-  for (; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (line.trim().length === 0) {
-      blockLines.push("");
-      continue;
-    }
-    const match = line.match(/^(\s+)/);
-    if (!match) {
-      break;
-    }
-    const indentMatch = match[1];
-    if (!indentMatch) {
-      break;
-    }
-    const indent = indentMatch.length;
-    if (minIndent === null || indent < minIndent) {
-      minIndent = indent;
-    }
-    blockLines.push(line);
-  }
-
-  if (blockLines.length === 0) {
-    return { value: "", nextIndex: index };
-  }
-
-  const trimmed = blockLines.map((line) => {
-    if (minIndent && line.length >= minIndent) {
-      return line.slice(minIndent);
-    }
-    return line.trim();
-  });
-
-  return { value: trimmed.join("\n").trimEnd(), nextIndex: index };
-}
-
-function skillYamlValueNormalize(value: string): string {
-  if (value.length === 0) {
-    return value;
-  }
-  if (value.startsWith('"') && value.endsWith('"')) {
-    return skillYamlDoubleUnescape(value.slice(1, -1));
-  }
-  if (value.startsWith("'") && value.endsWith("'")) {
-    return value.slice(1, -1).replace(/''/g, "'");
-  }
-  return value;
-}
-
-function skillYamlDoubleUnescape(value: string): string {
-  return value
-    .replace(/\\n/g, "\n")
-    .replace(/\\t/g, "\t")
-    .replace(/\\r/g, "\r")
-    .replace(/\\"/g, '"')
-    .replace(/\\\\/g, "\\");
-}
-
-function skillYamlBooleanParse(value: string): boolean | undefined {
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "true" || normalized === "yes" || normalized === "on") {
-    return true;
-  }
-  if (normalized === "false" || normalized === "no" || normalized === "off") {
-    return false;
-  }
-  return undefined;
-}
-
-function skillYamlPermissionsParse(value: string): string[] {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return [];
-  }
-
-  const entries: string[] = [];
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    const inline = trimmed.slice(1, -1).trim();
-    if (inline.length === 0) {
-      return [];
-    }
-    for (const item of inline.split(",")) {
-      const normalized = skillYamlValueNormalize(item.trim());
-      if (normalized.length > 0) {
-        entries.push(normalized);
-      }
-    }
-    return Array.from(new Set(entries));
-  }
-
-  for (const line of trimmed.split(/\r?\n/)) {
-    const match = line.match(/^\s*-\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-    const raw = match[1]?.trim() ?? "";
-    const normalized = skillYamlValueNormalize(raw);
-    if (normalized.length > 0) {
-      entries.push(normalized);
-    }
-  }
-
-  if (entries.length > 0) {
-    return Array.from(new Set(entries));
-  }
-
-  const single = skillYamlValueNormalize(trimmed);
-  return single.length > 0 ? [single] : [];
 }
 
 function skillIdBuild(filePath: string, source: SkillSource, root?: string): string {
