@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { Channel, ChannelMessage } from "@/types";
 import { atomicWrite } from "../../util/atomicWrite.js";
 
-const CHANNEL_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+const CHANNEL_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]{0,79}$/;
 
 const channelMessageSchema = z
   .object({
@@ -46,7 +46,7 @@ export function channelNameNormalize(name: string): string {
   const normalized = name.trim().toLowerCase();
   if (!CHANNEL_NAME_PATTERN.test(normalized)) {
     throw new Error(
-      "Channel name must match /^[a-z0-9][a-z0-9._-]{0,63}$/."
+      "Channel name must be Slack-style: lowercase letters, numbers, hyphen, underscore (max 80 chars)."
     );
   }
   return normalized;

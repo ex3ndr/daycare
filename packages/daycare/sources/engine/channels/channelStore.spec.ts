@@ -8,6 +8,7 @@ import type { Channel } from "@/types";
 import {
   channelAppendMessage,
   channelLoad,
+  channelNameNormalize,
   channelReadHistory,
   channelSave
 } from "./channelStore.js";
@@ -88,5 +89,16 @@ describe("channelStore", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
-});
 
+  it("accepts slack-style channel names", () => {
+    expect(channelNameNormalize("dev-team")).toBe("dev-team");
+    expect(channelNameNormalize("ops_team_1")).toBe("ops_team_1");
+    expect(channelNameNormalize("Release_2026")).toBe("release_2026");
+  });
+
+  it("rejects non slack-style channel names", () => {
+    expect(() => channelNameNormalize("dev.team")).toThrow("Slack-style");
+    expect(() => channelNameNormalize("dev team")).toThrow("Slack-style");
+    expect(() => channelNameNormalize("")).toThrow("Slack-style");
+  });
+});
