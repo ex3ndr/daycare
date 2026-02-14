@@ -4,7 +4,6 @@ import type {
   ConnectorMessage,
   FileReference,
   MessageContext,
-  PermissionDecision,
   Signal,
   SessionPermissions,
   ToolExecutionResult
@@ -97,11 +96,6 @@ export type AgentInboxItem =
       context?: MessageContext;
     }
   | {
-      type: "permission";
-      decision: PermissionDecision;
-      context: MessageContext;
-    }
-  | {
       type: "restore";
     };
 
@@ -114,7 +108,6 @@ export type AgentInboxSignal = Extract<AgentInboxItem, { type: "signal" }>;
 
 export type AgentInboxReset = Extract<AgentInboxItem, { type: "reset" }>;
 export type AgentInboxRestore = Extract<AgentInboxItem, { type: "restore" }>;
-export type AgentInboxPermission = Extract<AgentInboxItem, { type: "permission" }>;
 
 export type AgentInboxResult =
   | {
@@ -136,10 +129,6 @@ export type AgentInboxResult =
     }
   | {
       type: "restore";
-      ok: boolean;
-    }
-  | {
-      type: "permission";
       ok: boolean;
     };
 

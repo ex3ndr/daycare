@@ -28,9 +28,6 @@ import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
-import { permissionApply } from "../permissions/permissionApply.js";
-import { permissionDescribeDecision } from "../permissions/permissionDescribeDecision.js";
-import { permissionFormatTag } from "../permissions/permissionFormatTag.js";
 import { permissionTagsApply } from "../permissions/permissionTagsApply.js";
 import { skillListConfig } from "../skills/skillListConfig.js";
 import { skillListCore } from "../skills/skillListCore.js";
@@ -50,7 +47,6 @@ import type {
   AgentInboxMessage,
   AgentInboxSignal,
   AgentInboxSystemMessage,
-  AgentInboxPermission,
   AgentInboxReset,
   AgentInboxRestore,
   AgentInboxResult,
@@ -233,7 +229,6 @@ export class Agent {
       item.type !== "system_message" &&
       item.type !== "signal" &&
       item.type !== "reset" &&
-      item.type !== "permission" &&
       item.type !== "restore"
     ) {
       return;
@@ -248,7 +243,6 @@ export class Agent {
       | AgentInboxSignal
       | AgentInboxReset
       | AgentInboxRestore
-      | AgentInboxPermission
   ): Promise<AgentInboxResult> {
     switch (item.type) {
       case "message": {
@@ -270,10 +264,6 @@ export class Agent {
       case "restore": {
         const ok = await this.handleRestore(item);
         return { type: "restore", ok };
-      }
-      case "permission": {
-        const ok = await this.handlePermission(item);
-        return { type: "permission", ok };
       }
       default:
         return { type: "restore", ok: false };
@@ -776,59 +766,6 @@ export class Agent {
     this.state.updatedAt = Date.now();
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.restored", { agentId: this.id });
-    return true;
-  }
-
-  private async handlePermission(item: AgentInboxPermission): Promise<boolean> {
-    const context = item.context;
-    const decision = item.decision;
-    const target = agentDescriptorTargetResolve(this.descriptor);
-    const source = target?.connector ?? this.descriptor.type;
-    const connector = target
-      ? this.agentSystem.connectorRegistry.get(target.connector)
-      : null;
-    const permissionTag = permissionFormatTag(decision.access);
-    const permissionLabel = permissionDescribeDecision(decision.access);
-
-    if (!decision.approved) {
-      logger.info(
-        { source, permission: permissionTag, agentId: this.id },
-        "event: Permission denied"
-      );
-    }
-
-    if (decision.approved && (decision.access.kind === "read" || decision.access.kind === "write")) {
-      if (!path.isAbsolute(decision.access.path)) {
-        logger.warn({ agentId: this.id, permission: permissionTag }, "event: Permission path not absolute");
-        if (connector && target) {
-          await connector.sendMessage(target.targetId, {
-            text: `Permission ignored (path must be absolute): ${permissionLabel}.`,
-            replyToMessageId: context.messageId
-          });
-        }
-        return false;
-      }
-    }
-
-    if (decision.approved) {
-      permissionApply(this.state.permissions, decision);
-      await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
-      this.agentSystem.eventBus.emit("permission.granted", {
-        agentId: this.id,
-        source,
-        decision
-      });
-    }
-
-    const resumeText = decision.approved
-      ? `Permission granted for ${permissionLabel}. Please continue with the previous request.`
-      : `Permission denied for ${permissionLabel}. Please continue without that permission.`;
-    const resumeMessage: AgentInboxMessage = {
-      type: "message",
-      message: { text: resumeText, rawText: resumeText },
-      context: { ...context }
-    };
-    await this.handleMessage(resumeMessage);
     return true;
   }
 

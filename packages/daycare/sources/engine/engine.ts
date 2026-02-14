@@ -57,6 +57,7 @@ import { Signals } from "./signals/signals.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Processes } from "./processes/processes.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
+import { PermissionRequestRegistry } from "./modules/tools/permissionRequestRegistry.js";
 import { Channels } from "./channels/channels.js";
 
 const logger = getLogger("engine.runtime");
@@ -84,6 +85,7 @@ export class Engine {
   readonly processes: Processes;
   readonly inferenceRouter: InferenceRouter;
   readonly eventBus: EngineEventBus;
+  readonly permissionRequestRegistry: PermissionRequestRegistry;
   private readonly reloadSync: InvalidateSync;
   private readonly incomingMessages: IncomingMessages;
 
@@ -106,6 +108,7 @@ export class Engine {
     this.reloadSync = new InvalidateSync(async () => {
       await this.reloadApplyLatest();
     });
+    this.permissionRequestRegistry = new PermissionRequestRegistry();
     this.authStore = new AuthStore(this.config.current);
     this.fileStore = new FileStore(this.config.current);
     this.processes = new Processes(
@@ -178,11 +181,15 @@ export class Engine {
         logger.debug({ connector, command: parsed.name }, "event: Unknown command ignored");
       }),
       onPermission: async (decision, context, descriptor) => this.runConnectorCallback("permission", async () => {
-        if (decision.agentId) {
-          await this.agentSystem.post(
-            { agentId: decision.agentId },
-            { type: "permission", decision, context }
+        const resolved = this.permissionRequestRegistry.resolve(decision.token, decision);
+        if (!resolved) {
+          logger.warn(
+            { token: decision.token, agentId: decision.agentId },
+            "event: Permission decision dropped; no pending request"
           );
+        }
+
+        if (decision.agentId) {
           const requester = this.agentSystem.getAgentDescriptor(decision.agentId);
           if (!requester || requester.type !== "user") {
             const status = decision.approved ? "approved" : "denied";
@@ -203,12 +210,7 @@ export class Engine {
               }
             );
           }
-          return;
         }
-        await this.agentSystem.post(
-          { descriptor },
-          { type: "permission", decision, context }
-        );
       }),
       onFatal: (source, reason, error) => {
         logger.warn({ source, reason, error }, "event: Connector requested shutdown");
@@ -257,7 +259,8 @@ export class Engine {
       inferenceRouter: this.inferenceRouter,
       fileStore: this.fileStore,
       authStore: this.authStore,
-      delayedSignals: this.delayedSignals
+      delayedSignals: this.delayedSignals,
+      permissionRequestRegistry: this.permissionRequestRegistry
     });
 
     this.crons = new Crons({

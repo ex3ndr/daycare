@@ -11,6 +11,7 @@ import type { AssistantSettings } from "../../../settings.js";
 import type { SessionPermissions } from "@/types";
 import type { AgentSystem } from "../../agents/agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
+import type { PermissionRequestRegistry } from "./permissionRequestRegistry.js";
 
 export type ToolExecutionContext<State = Record<string, unknown>> = {
   connectorRegistry: ConnectorRegistry;
@@ -24,6 +25,7 @@ export type ToolExecutionContext<State = Record<string, unknown>> = {
   messageContext: MessageContext;
   agentSystem: AgentSystem;
   heartbeats: Heartbeats;
+  permissionRequestRegistry?: PermissionRequestRegistry;
 };
 
 export type ToolExecutionResult = {

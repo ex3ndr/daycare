@@ -260,7 +260,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           source,
           messageContext: entry.context,
           agentSystem,
-          heartbeats
+          heartbeats,
+          permissionRequestRegistry: agentSystem.permissionRequestRegistry
         });
         logger.debug(
           `event: Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError} fileCount=${toolResult.files.length}`

@@ -5,17 +5,19 @@ import { createId } from "@paralleldrive/cuid2";
 import path from "node:path";
 
 import type { ToolDefinition } from "@/types";
-import type { PermissionAccess, PermissionRequest } from "@/types";
+import type { PermissionAccess, PermissionDecision, PermissionRequest } from "@/types";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import { permissionAccessParse } from "../../permissions/permissionAccessParse.js";
 import { permissionAccessAllows } from "../../permissions/permissionAccessAllows.js";
+import { permissionDescribeDecision } from "../../permissions/permissionDescribeDecision.js";
 
 const schema = Type.Object(
   {
     permission: Type.String({ minLength: 1 }),
     reason: Type.String({ minLength: 1 }),
-    agentId: Type.Optional(Type.String({ minLength: 1 }))
+    agentId: Type.Optional(Type.String({ minLength: 1 })),
+    timeout_minutes: Type.Optional(Type.Integer({ minimum: 1, maximum: 60, default: 15 }))
   },
   { additionalProperties: false }
 );
@@ -47,6 +49,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
       const isForeground = descriptor.type === "user";
       const permission = payload.permission.trim();
       const reason = payload.reason.trim();
+      const timeoutMinutes = payload.timeout_minutes ?? 15;
       if (!reason) {
         throw new Error("Permission reason is required.");
       }
@@ -68,6 +71,10 @@ export function buildPermissionRequestTool(): ToolDefinition {
       const connectorRegistry = toolContext.connectorRegistry;
       if (!connectorRegistry) {
         throw new Error("Connector registry unavailable.");
+      }
+      const permissionRequestRegistry = toolContext.permissionRequestRegistry;
+      if (!permissionRequestRegistry) {
+        throw new Error("Permission request registry unavailable.");
       }
 
       const foregroundAgentId = isForeground
@@ -152,15 +159,60 @@ export function buildPermissionRequestTool(): ToolDefinition {
         );
       }
 
+      let decision: PermissionDecision;
+      try {
+        decision = await permissionRequestRegistry.register(
+          request.token,
+          timeoutMinutes * 60_000
+        );
+      } catch (error) {
+        const isTimeout =
+          error instanceof Error && error.message === "Permission request timed out.";
+        if (!isTimeout) {
+          throw error;
+        }
+        const timeoutText = `Permission request timed out after ${timeoutMinutes} minute${timeoutMinutes === 1 ? "" : "s"}.`;
+        const toolMessage: ToolResultMessage = {
+          role: "toolResult",
+          toolCallId: toolCall.id,
+          toolName: toolCall.name,
+          content: [{ type: "text", text: timeoutText }],
+          details: {
+            permission,
+            token: request.token,
+            agentId: requestedAgentId,
+            timeoutMinutes
+          },
+          isError: true,
+          timestamp: Date.now()
+        };
+        return { toolMessage, files: [] };
+      }
+
+      const targetAgentId = decision.agentId || requestedAgentId;
+      if (decision.approved) {
+        await toolContext.agentSystem.grantPermission(
+          { agentId: targetAgentId },
+          decision.access,
+          { source: toolContext.source, decision }
+        );
+      }
+
+      const permissionLabel = permissionDescribeDecision(decision.access);
+      const resultText = decision.approved
+        ? `Permission granted for ${permissionLabel}.`
+        : `Permission denied for ${permissionLabel}.`;
+
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text: "Permission request sent." }],
+        content: [{ type: "text", text: resultText }],
         details: {
           permission,
           token: request.token,
-          agentId: requestedAgentId
+          agentId: targetAgentId,
+          approved: decision.approved
         },
         isError: false,
         timestamp: Date.now()

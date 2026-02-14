@@ -11,6 +11,7 @@ import type {
   DelayedSignalCancelRepeatKeyInput,
   DelayedSignalScheduleInput,
   PermissionAccess,
+  PermissionDecision,
   SessionPermissions,
   Signal,
   SignalSubscription
@@ -45,6 +46,7 @@ import { permissionAccessApply } from "../permissions/permissionAccessApply.js";
 import { permissionFormatTag } from "../permissions/permissionFormatTag.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Signals } from "../signals/signals.js";
+import { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
 
 const logger = getLogger("engine.agent-system");
 const AGENT_IDLE_DELAY_MS = 60_000;
@@ -75,6 +77,7 @@ export type AgentSystemOptions = {
   fileStore: FileStore;
   authStore: AuthStore;
   delayedSignals?: DelayedSignalsFacade;
+  permissionRequestRegistry?: PermissionRequestRegistry;
 };
 
 export class AgentSystem {
@@ -87,6 +90,7 @@ export class AgentSystem {
   readonly inferenceRouter: InferenceRouter;
   readonly fileStore: FileStore;
   readonly authStore: AuthStore;
+  readonly permissionRequestRegistry: PermissionRequestRegistry;
   private readonly delayedSignals: DelayedSignalsFacade | null;
   private _crons: Crons | null = null;
   private _heartbeats: Heartbeats | null = null;
@@ -106,6 +110,8 @@ export class AgentSystem {
     this.fileStore = options.fileStore;
     this.authStore = options.authStore;
     this.delayedSignals = options.delayedSignals ?? null;
+    this.permissionRequestRegistry =
+      options.permissionRequestRegistry ?? new PermissionRequestRegistry();
   }
 
   get crons(): Crons {
@@ -330,7 +336,8 @@ export class AgentSystem {
 
   async grantPermission(
     target: AgentPostTarget,
-    access: PermissionAccess
+    access: PermissionAccess,
+    options?: { source?: string; decision?: PermissionDecision }
   ): Promise<void> {
     const entry = await this.resolveEntry(target, {
       type: "message",
@@ -342,15 +349,17 @@ export class AgentSystem {
       throw new Error("Permission could not be applied.");
     }
     await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+    const decision: PermissionDecision = options?.decision ?? {
+      token: "direct",
+      agentId: entry.agentId,
+      approved: true,
+      permission: permissionFormatTag(access),
+      access
+    };
     this.eventBus.emit("permission.granted", {
       agentId: entry.agentId,
-      source: "agent",
-      decision: {
-        token: "direct",
-        approved: true,
-        permission: permissionFormatTag(access),
-        access
-      }
+      source: options?.source ?? "agent",
+      decision
     });
   }
 
@@ -366,7 +375,7 @@ export class AgentSystem {
 
   async sleepIfIdle(
     agentId: string,
-    reason: "message" | "system_message" | "signal" | "reset" | "permission" | "restore"
+    reason: "message" | "system_message" | "signal" | "reset" | "restore"
   ): Promise<void> {
     const entry = this.entries.get(agentId);
     if (!entry) {

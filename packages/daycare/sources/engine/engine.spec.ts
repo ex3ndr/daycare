@@ -191,3 +191,164 @@ describe("Engine message batching", () => {
     }
   });
 });
+
+describe("Engine permission callbacks", () => {
+  it("resolves pending permission requests via the registry", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      const resolveSpy = vi
+        .spyOn(engine.permissionRequestRegistry, "resolve")
+        .mockReturnValue(true);
+      vi.spyOn(engine.agentSystem, "getAgentDescriptor").mockReturnValue({
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      });
+      const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+      const permissionState: {
+        handler?: (
+          decision: {
+            token: string;
+            agentId: string;
+            approved: boolean;
+            permission: string;
+            access: { kind: "network" };
+          },
+          context: MessageContext,
+          descriptor: AgentDescriptor
+        ) => void | Promise<void>;
+      } = {};
+
+      const connector: Connector = {
+        capabilities: { sendText: true },
+        onMessage: () => () => undefined,
+        onPermission: (handler) => {
+          permissionState.handler = handler as typeof permissionState.handler;
+          return () => undefined;
+        },
+        sendMessage: async () => undefined
+      };
+
+      const registerResult = engine.modules.connectors.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+      const handler = permissionState.handler;
+      if (!handler) {
+        throw new Error("Expected permission handler to be registered");
+      }
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      };
+      const context: MessageContext = { messageId: "77" };
+      const decision = {
+        token: "perm-1",
+        agentId: "agent-1",
+        approved: true,
+        permission: "@network",
+        access: { kind: "network" as const }
+      };
+
+      await handler(decision, context, descriptor);
+
+      expect(resolveSpy).toHaveBeenCalledWith("perm-1", decision);
+      expect(postSpy).not.toHaveBeenCalled();
+
+      await engine.modules.connectors.unregisterAll("test");
+      await engine.shutdown();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still sends foreground notice for background requester decisions", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      vi.spyOn(engine.permissionRequestRegistry, "resolve").mockReturnValue(false);
+      vi.spyOn(engine.agentSystem, "getAgentDescriptor").mockReturnValue({
+        type: "permanent",
+        id: "agent-bg",
+        name: "worker",
+        description: "background worker",
+        systemPrompt: "run tasks"
+      });
+      const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+      const permissionState: {
+        handler?: (
+          decision: {
+            token: string;
+            agentId: string;
+            approved: boolean;
+            permission: string;
+            access: { kind: "network" };
+          },
+          context: MessageContext,
+          descriptor: AgentDescriptor
+        ) => void | Promise<void>;
+      } = {};
+
+      const connector: Connector = {
+        capabilities: { sendText: true },
+        onMessage: () => () => undefined,
+        onPermission: (handler) => {
+          permissionState.handler = handler as typeof permissionState.handler;
+          return () => undefined;
+        },
+        sendMessage: async () => undefined
+      };
+
+      const registerResult = engine.modules.connectors.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+      const handler = permissionState.handler;
+      if (!handler) {
+        throw new Error("Expected permission handler to be registered");
+      }
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      };
+      const context: MessageContext = { messageId: "78" };
+      const decision = {
+        token: "perm-2",
+        agentId: "agent-bg",
+        approved: false,
+        permission: "@network",
+        access: { kind: "network" as const }
+      };
+
+      await handler(decision, context, descriptor);
+
+      expect(postSpy).toHaveBeenCalledWith(
+        { descriptor },
+        {
+          type: "system_message",
+          text: expect.stringContaining("Decision delivered to background agent."),
+          origin: "agent-bg",
+          context,
+          silent: true
+        }
+      );
+
+      await engine.modules.connectors.unregisterAll("test");
+      await engine.shutdown();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
