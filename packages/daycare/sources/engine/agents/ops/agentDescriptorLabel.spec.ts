@@ -17,10 +17,11 @@ describe("agentDescriptorLabel", () => {
         type: "permanent",
         id: "perm-1",
         name: "memory",
+        username: "memorybot",
         description: "desc",
         systemPrompt: "prompt"
       })
-    ).toBe("memory");
+    ).toBe("memory (@memorybot)");
   });
 
   it("labels non-user agents", () => {

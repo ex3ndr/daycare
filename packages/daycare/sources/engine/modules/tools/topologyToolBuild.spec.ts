@@ -31,7 +31,8 @@ describe("topologyToolBuild", () => {
 
       const tool = topologyToolBuild(
         { listTasks: async () => [] } as unknown as Crons,
-        { listSubscriptions: () => [] } as unknown as Signals
+        { listSubscriptions: () => [] } as unknown as Signals,
+        { list: () => [] } as never
       );
       const result = await tool.execute(
         {},
@@ -48,6 +49,7 @@ describe("topologyToolBuild", () => {
       expect(text).toContain("## Cron Tasks (0)");
       expect(text).toContain("## Heartbeat Tasks (0)");
       expect(text).toContain("## Signal Subscriptions (0)");
+      expect(text).toContain("## Channels (0)");
 
       const details = result.toolMessage.details as
         | {
@@ -56,6 +58,7 @@ describe("topologyToolBuild", () => {
             crons: unknown[];
             heartbeats: unknown[];
             signalSubscriptions: unknown[];
+            channels: unknown[];
           }
         | undefined;
       expect(details).toEqual({
@@ -63,7 +66,8 @@ describe("topologyToolBuild", () => {
         agents: [],
         crons: [],
         heartbeats: [],
-        signalSubscriptions: []
+        signalSubscriptions: [],
+        channels: []
       });
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -121,7 +125,21 @@ describe("topologyToolBuild", () => {
               silent: true
             })
           ]
-        } as unknown as Signals
+        } as unknown as Signals,
+        {
+          list: () => [
+            {
+              id: "channel-dev",
+              name: "dev",
+              leader: "agent-other",
+              members: [
+                { agentId: "agent-caller", username: "monitor", joinedAt: 1 }
+              ],
+              createdAt: 1,
+              updatedAt: 1
+            }
+          ]
+        } as never
       );
 
       const result = await tool.execute(
@@ -152,6 +170,8 @@ describe("topologyToolBuild", () => {
       expect(text).toContain("check-health: Health Check lastRun=2025-01-15T10:00:00Z");
       expect(text).toContain("## Signal Subscriptions (2)");
       expect(text).toContain("agent=agent-other pattern=deploy:done silent=false");
+      expect(text).toContain("## Channels (1)");
+      expect(text).toContain("#dev leader=agent-other members=@monitor(agent-caller)");
 
       const details = result.toolMessage.details as
         | {
@@ -159,12 +179,14 @@ describe("topologyToolBuild", () => {
             crons: Array<{ id: string }>;
             heartbeats: Array<{ id: string }>;
             signalSubscriptions: Array<{ agentId: string }>;
+            channels: Array<{ id: string }>;
           }
         | undefined;
       expect(details?.agents).toHaveLength(2);
       expect(details?.crons).toHaveLength(2);
       expect(details?.heartbeats).toHaveLength(1);
       expect(details?.signalSubscriptions).toHaveLength(2);
+      expect(details?.channels).toHaveLength(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -209,7 +231,10 @@ describe("topologyToolBuild", () => {
               silent: true
             })
           ]
-        } as unknown as Signals
+        } as unknown as Signals,
+        {
+          list: () => []
+        } as never
       );
 
       const result = await tool.execute(

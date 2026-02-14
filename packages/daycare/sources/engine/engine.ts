@@ -27,6 +27,13 @@ import { buildSignalSubscribeTool } from "./modules/tools/signalSubscribeToolBui
 import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToolBuild.js";
 import { sessionHistoryToolBuild } from "./modules/tools/sessionHistoryToolBuild.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
+import { channelCreateToolBuild } from "./modules/tools/channelCreateTool.js";
+import { channelSendToolBuild } from "./modules/tools/channelSendTool.js";
+import { channelHistoryToolBuild } from "./modules/tools/channelHistoryTool.js";
+import {
+  channelAddMemberToolBuild,
+  channelRemoveMemberToolBuild
+} from "./modules/tools/channelMemberTool.js";
 import {
   buildHeartbeatAddTool,
   buildHeartbeatRemoveTool,
@@ -50,6 +57,7 @@ import { Signals } from "./signals/signals.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Processes } from "./processes/processes.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
+import { Channels } from "./channels/channels.js";
 
 const logger = getLogger("engine.runtime");
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
@@ -72,6 +80,7 @@ export class Engine {
   readonly heartbeats: Heartbeats;
   readonly signals: Signals;
   readonly delayedSignals: DelayedSignals;
+  readonly channels: Channels;
   readonly processes: Processes;
   readonly inferenceRouter: InferenceRouter;
   readonly eventBus: EngineEventBus;
@@ -267,6 +276,11 @@ export class Engine {
     });
     this.heartbeats = heartbeats;
     this.agentSystem.setHeartbeats(heartbeats);
+    this.channels = new Channels({
+      configDir: this.config.current.configDir,
+      signals: this.signals,
+      agentSystem: this.agentSystem
+    });
 
   }
 
@@ -292,6 +306,8 @@ export class Engine {
     await this.heartbeats.ensureDir();
     await this.signals.ensureDir();
     await this.delayedSignals.ensureDir();
+    await this.channels.ensureDir();
+    await this.channels.load();
 
     logger.debug("register: Registering core tools");
     this.modules.tools.register("core", buildCronTool(this.crons));
@@ -304,9 +320,14 @@ export class Engine {
     this.modules.tools.register("core", buildHeartbeatRemoveTool());
     this.modules.tools.register("core", buildStartBackgroundAgentTool());
     this.modules.tools.register("core", buildSendAgentMessageTool());
-    this.modules.tools.register("core", topologyToolBuild(this.crons, this.signals));
+    this.modules.tools.register("core", topologyToolBuild(this.crons, this.signals, this.channels));
     this.modules.tools.register("core", sessionHistoryToolBuild());
     this.modules.tools.register("core", permanentAgentToolBuild());
+    this.modules.tools.register("core", channelCreateToolBuild(this.channels));
+    this.modules.tools.register("core", channelSendToolBuild(this.channels));
+    this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
+    this.modules.tools.register("core", channelAddMemberToolBuild(this.channels));
+    this.modules.tools.register("core", channelRemoveMemberToolBuild(this.channels));
     this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
     this.modules.tools.register("core", buildMermaidPngTool());
     this.modules.tools.register("core", buildReactionTool());
@@ -317,7 +338,7 @@ export class Engine {
     this.modules.tools.register("core", buildPermissionRequestTool());
     this.modules.tools.register("core", buildPermissionGrantTool());
     logger.debug(
-      "register: Core tools registered: cron, cron_memory, heartbeat, topology, background, session_history, permanent_agents, image_generation, mermaid_png, reaction, send_file, generate_signal, signal_subscribe, signal_unsubscribe, request_permission, grant_permission"
+      "register: Core tools registered: cron, cron_memory, heartbeat, topology, background, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, send_file, generate_signal, signal_subscribe, signal_unsubscribe, request_permission, grant_permission"
     );
 
     logger.debug("start: Starting agent system");

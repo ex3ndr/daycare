@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 import type { ToolDefinition } from "@/types";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import { agentList } from "../../agents/ops/agentList.js";
+import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
 import type { Signals } from "../../signals/signals.js";
 
@@ -13,7 +14,11 @@ const schema = Type.Object({}, { additionalProperties: false });
  * Builds the topology tool that snapshots agents, cron tasks, heartbeat tasks,
  * and signal subscriptions in one response.
  */
-export function topologyToolBuild(crons: Crons, signals: Signals): ToolDefinition {
+export function topologyToolBuild(
+  crons: Crons,
+  signals: Signals,
+  channels: Pick<Channels, "list">
+): ToolDefinition {
   return {
     tool: {
       name: "topology",
@@ -30,6 +35,7 @@ export function topologyToolBuild(crons: Crons, signals: Signals): ToolDefinitio
         toolContext.heartbeats.listTasks()
       ]);
       const signalSubscriptions = signals.listSubscriptions();
+      const channelEntries = channels.list();
 
       const agents = agentEntries
         .slice()
@@ -79,6 +85,22 @@ export function topologyToolBuild(crons: Crons, signals: Signals): ToolDefinitio
           isYou: subscription.agentId === callerAgentId
         }));
 
+      const channelsSummary = channelEntries
+        .slice()
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((channel) => ({
+          id: channel.id,
+          name: channel.name,
+          leader: channel.leader,
+          members: channel.members
+            .slice()
+            .sort((left, right) => left.username.localeCompare(right.username))
+            .map((member) => ({
+              agentId: member.agentId,
+              username: member.username
+            }))
+        }));
+
       const text = [
         `## Agents (${agents.length})`,
         ...listAgentsLinesBuild(agents),
@@ -90,7 +112,10 @@ export function topologyToolBuild(crons: Crons, signals: Signals): ToolDefinitio
         ...listHeartbeatLinesBuild(heartbeats),
         "",
         `## Signal Subscriptions (${signalSubscriptionsSummary.length})`,
-        ...listSignalSubscriptionLinesBuild(signalSubscriptionsSummary)
+        ...listSignalSubscriptionLinesBuild(signalSubscriptionsSummary),
+        "",
+        `## Channels (${channelsSummary.length})`,
+        ...listChannelLinesBuild(channelsSummary)
       ].join("\n");
 
       const toolMessage: ToolResultMessage = {
@@ -103,7 +128,8 @@ export function topologyToolBuild(crons: Crons, signals: Signals): ToolDefinitio
           agents,
           crons: cronsSummary,
           heartbeats,
-          signalSubscriptions: signalSubscriptionsSummary
+          signalSubscriptions: signalSubscriptionsSummary,
+          channels: channelsSummary
         },
         isError: false,
         timestamp: Date.now()
@@ -166,4 +192,26 @@ function listSignalSubscriptionLinesBuild(
   return subscriptions.map((subscription) =>
     `agent=${subscription.agentId} pattern=${subscription.pattern} silent=${subscription.silent}${subscription.isYou ? " (You)" : ""}`
   );
+}
+
+function listChannelLinesBuild(
+  channels: Array<{
+    id: string;
+    name: string;
+    leader: string;
+    members: Array<{ agentId: string; username: string }>;
+  }>
+): string[] {
+  if (channels.length === 0) {
+    return ["None"];
+  }
+
+  return channels.map((channel) => {
+    const members = channel.members.length === 0
+      ? "none"
+      : channel.members
+          .map((member) => `@${member.username}(${member.agentId})`)
+          .join(", ");
+    return `#${channel.name} leader=${channel.leader} members=${members}`;
+  });
 }

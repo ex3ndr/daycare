@@ -95,6 +95,45 @@ describe("permanentAgentToolBuild", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("stores username on permanent agent descriptor when provided", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-permanent-tool-username-"));
+    try {
+      const config = configResolve(
+        {
+          engine: { dataDir: dir },
+          assistant: { workspaceDir: dir }
+        },
+        path.join(dir, "settings.json")
+      );
+      const tool = permanentAgentToolBuild();
+      const context = contextBuild(
+        buildPermissions({ network: false }),
+        {
+          config: { current: config },
+          updateAgentDescriptor: vi.fn(),
+          updateAgentPermissions: vi.fn()
+        }
+      );
+
+      await tool.execute(
+        {
+          name: "ops",
+          username: "opsbot",
+          description: "Operations agent",
+          systemPrompt: "Run operations tasks"
+        },
+        context,
+        toolCall
+      );
+
+      const agents = await agentPermanentList(config);
+      const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
+      expect(created?.descriptor.username).toBe("opsbot");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 function buildPermissions(

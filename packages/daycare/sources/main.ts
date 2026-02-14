@@ -11,6 +11,11 @@ import { setDefaultProviderCommand } from "./commands/providers.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { DEFAULT_SETTINGS_PATH } from "./settings.js";
 import { eventCommand } from "./commands/event.js";
+import { channelCreateCommand } from "./commands/channelCreate.js";
+import { channelListCommand } from "./commands/channelList.js";
+import { channelAddMemberCommand } from "./commands/channelAddMember.js";
+import { channelRemoveMemberCommand } from "./commands/channelRemoveMember.js";
+import { channelSendCommand } from "./commands/channelSend.js";
 
 const pkg = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf-8")
@@ -113,6 +118,42 @@ program
   .argument("<type>", "Event type")
   .argument("[payload]", "JSON payload")
   .action(eventCommand);
+
+const channelCommand = program.command("channel").description("Manage group channels");
+
+channelCommand
+  .command("create")
+  .description("Create a channel with a leader agent")
+  .argument("<name>", "Channel name")
+  .requiredOption("--leader <agentId>", "Leader agent id")
+  .action(channelCreateCommand);
+
+channelCommand
+  .command("list")
+  .description("List channels")
+  .action(channelListCommand);
+
+channelCommand
+  .command("add-member")
+  .description("Add a member to a channel")
+  .argument("<channelName>", "Channel name")
+  .argument("<agentId>", "Agent id")
+  .argument("<username>", "Member username")
+  .action(channelAddMemberCommand);
+
+channelCommand
+  .command("remove-member")
+  .description("Remove a member from a channel")
+  .argument("<channelName>", "Channel name")
+  .argument("<agentId>", "Agent id")
+  .action(channelRemoveMemberCommand);
+
+channelCommand
+  .command("send")
+  .description("Send a message to a channel")
+  .argument("<channelName>", "Channel name")
+  .argument("<text>", "Message text")
+  .action(channelSendCommand);
 
 if (process.argv.length <= 2) {
   program.outputHelp();

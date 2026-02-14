@@ -42,6 +42,7 @@ const descriptorSchema = z.discriminatedUnion("type", [
       type: z.literal("permanent"),
       id: z.string().min(1),
       name: z.string().min(1),
+      username: z.string().min(1).optional(),
       description: z.string().min(1),
       systemPrompt: z.string().min(1),
       workspaceDir: z.string().min(1).optional()

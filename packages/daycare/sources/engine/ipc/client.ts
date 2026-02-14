@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { SignalSource } from "@/types";
+import type { Channel, ChannelMessage, SignalSource } from "@/types";
 
 import { resolveEngineSocketPath } from "./socket.js";
 
@@ -144,4 +144,115 @@ export async function sendEngineSignal(
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new Error(response.body || "Signal send failed.");
   }
+}
+
+export async function listEngineChannels(socketPathOverride?: string): Promise<Channel[]> {
+  const socketPath = resolveEngineSocketPath(socketPathOverride);
+  const response = await requestSocket({
+    socketPath,
+    path: "/v1/engine/channels"
+  });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Channel list failed.");
+  }
+  const payload = JSON.parse(response.body) as { channels?: Channel[] };
+  return payload.channels ?? [];
+}
+
+export async function createEngineChannel(
+  name: string,
+  leaderAgentId: string,
+  socketPathOverride?: string
+): Promise<Channel> {
+  const socketPath = resolveEngineSocketPath(socketPathOverride);
+  const response = await requestSocket({
+    socketPath,
+    path: "/v1/engine/channels",
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, leaderAgentId })
+  });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Channel create failed.");
+  }
+  const payload = JSON.parse(response.body) as { channel?: Channel };
+  if (!payload.channel) {
+    throw new Error("Channel create failed.");
+  }
+  return payload.channel;
+}
+
+export async function addEngineChannelMember(
+  channelName: string,
+  agentId: string,
+  username: string,
+  socketPathOverride?: string
+): Promise<Channel> {
+  const socketPath = resolveEngineSocketPath(socketPathOverride);
+  const response = await requestSocket({
+    socketPath,
+    path: `/v1/engine/channels/${encodeURIComponent(channelName)}/members`,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ agentId, username })
+  });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Channel add member failed.");
+  }
+  const payload = JSON.parse(response.body) as { channel?: Channel };
+  if (!payload.channel) {
+    throw new Error("Channel add member failed.");
+  }
+  return payload.channel;
+}
+
+export async function removeEngineChannelMember(
+  channelName: string,
+  agentId: string,
+  socketPathOverride?: string
+): Promise<boolean> {
+  const socketPath = resolveEngineSocketPath(socketPathOverride);
+  const response = await requestSocket({
+    socketPath,
+    path: `/v1/engine/channels/${encodeURIComponent(channelName)}/members/remove`,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ agentId })
+  });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Channel remove member failed.");
+  }
+  const payload = JSON.parse(response.body) as { removed?: boolean };
+  return payload.removed === true;
+}
+
+export async function sendEngineChannelMessage(
+  channelName: string,
+  senderUsername: string,
+  text: string,
+  mentions: string[] = [],
+  socketPathOverride?: string
+): Promise<{ message: ChannelMessage; deliveredAgentIds: string[] }> {
+  const socketPath = resolveEngineSocketPath(socketPathOverride);
+  const response = await requestSocket({
+    socketPath,
+    path: `/v1/engine/channels/${encodeURIComponent(channelName)}/send`,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ senderUsername, text, mentions })
+  });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Channel send failed.");
+  }
+  const payload = JSON.parse(response.body) as {
+    message?: ChannelMessage;
+    deliveredAgentIds?: string[];
+  };
+  if (!payload.message) {
+    throw new Error("Channel send failed.");
+  }
+  return {
+    message: payload.message,
+    deliveredAgentIds: payload.deliveredAgentIds ?? []
+  };
 }

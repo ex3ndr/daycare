@@ -5,8 +5,14 @@ import type { AgentDescriptor } from "./agentDescriptorTypes.js";
  * Expects: descriptor is valid.
  */
 export function agentDescriptorLabel(descriptor: AgentDescriptor): string {
-  if (descriptor.type === "subagent" || descriptor.type === "permanent") {
+  if (descriptor.type === "subagent") {
     return descriptor.name ?? descriptor.type;
+  }
+  if (descriptor.type === "permanent") {
+    if (descriptor.username) {
+      return `${descriptor.name} (@${descriptor.username})`;
+    }
+    return descriptor.name;
   }
   if (descriptor.type === "cron") {
     return descriptor.name ?? "cron task";

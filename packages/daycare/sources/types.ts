@@ -89,3 +89,11 @@ export type {
   SignalSubscribeInput,
   SignalUnsubscribeInput
 } from "./engine/signals/signalTypes.js";
+
+// Channels
+export type {
+  Channel,
+  ChannelMember,
+  ChannelMessage,
+  ChannelSignalData
+} from "./engine/channels/channelTypes.js";

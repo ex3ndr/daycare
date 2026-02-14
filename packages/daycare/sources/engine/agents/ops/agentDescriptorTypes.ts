@@ -7,6 +7,7 @@ export type AgentDescriptor =
       type: "permanent";
       id: string;
       name: string;
+      username?: string;
       description: string;
       systemPrompt: string;
       workspaceDir?: string;

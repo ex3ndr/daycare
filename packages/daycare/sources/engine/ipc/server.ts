@@ -70,6 +70,22 @@ const engineEventSchema = z.object({
   type: z.string().min(1),
   payload: z.unknown().optional()
 });
+const channelCreateSchema = z.object({
+  name: z.string().min(1),
+  leaderAgentId: z.string().min(1)
+});
+const channelSendSchema = z.object({
+  senderUsername: z.string().min(1),
+  text: z.string().min(1),
+  mentions: z.array(z.string().min(1)).optional()
+});
+const channelMemberAddSchema = z.object({
+  agentId: z.string().min(1),
+  username: z.string().min(1)
+});
+const channelMemberRemoveSchema = z.object({
+  agentId: z.string().min(1)
+});
 
 export async function startEngineServer(
   options: EngineServerOptions
@@ -169,6 +185,86 @@ export async function startEngineServer(
     const subscriptions = options.runtime.signals.listSubscriptions();
     logger.debug(`event: Signal subscriptions retrieved count=${subscriptions.length}`);
     return reply.send({ ok: true, subscriptions });
+  });
+
+  app.get("/v1/engine/channels", async (_request, reply) => {
+    logger.debug("event: GET /v1/engine/channels");
+    const channels = options.runtime.channels.list();
+    return reply.send({ ok: true, channels });
+  });
+
+  app.post("/v1/engine/channels", async (request, reply) => {
+    logger.debug("event: POST /v1/engine/channels");
+    const payload = parseBody(channelCreateSchema, request.body, reply);
+    if (!payload) {
+      return;
+    }
+    try {
+      const channel = await options.runtime.channels.create(payload.name, payload.leaderAgentId);
+      return reply.send({ ok: true, channel });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Channel create failed";
+      return reply.status(400).send({ ok: false, error: message });
+    }
+  });
+
+  app.post("/v1/engine/channels/:channelName/send", async (request, reply) => {
+    const channelName = (request.params as { channelName: string }).channelName;
+    logger.debug(`event: POST /v1/engine/channels/:channelName/send channelName=${channelName}`);
+    const payload = parseBody(channelSendSchema, request.body, reply);
+    if (!payload) {
+      return;
+    }
+    try {
+      const result = await options.runtime.channels.send(
+        channelName,
+        payload.senderUsername,
+        payload.text,
+        payload.mentions ?? []
+      );
+      return reply.send({ ok: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Channel send failed";
+      return reply.status(400).send({ ok: false, error: message });
+    }
+  });
+
+  app.post("/v1/engine/channels/:channelName/members", async (request, reply) => {
+    const channelName = (request.params as { channelName: string }).channelName;
+    logger.debug(`event: POST /v1/engine/channels/:channelName/members channelName=${channelName}`);
+    const payload = parseBody(channelMemberAddSchema, request.body, reply);
+    if (!payload) {
+      return;
+    }
+    try {
+      const channel = await options.runtime.channels.addMember(
+        channelName,
+        payload.agentId,
+        payload.username
+      );
+      return reply.send({ ok: true, channel });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Channel add member failed";
+      return reply.status(400).send({ ok: false, error: message });
+    }
+  });
+
+  app.post("/v1/engine/channels/:channelName/members/remove", async (request, reply) => {
+    const channelName = (request.params as { channelName: string }).channelName;
+    logger.debug(
+      `event: POST /v1/engine/channels/:channelName/members/remove channelName=${channelName}`
+    );
+    const payload = parseBody(channelMemberRemoveSchema, request.body, reply);
+    if (!payload) {
+      return;
+    }
+    try {
+      const removed = await options.runtime.channels.removeMember(channelName, payload.agentId);
+      return reply.send({ ok: true, removed });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Channel remove member failed";
+      return reply.status(400).send({ ok: false, error: message });
+    }
   });
 
   app.get("/v1/engine/agents/background", async (_request, reply) => {

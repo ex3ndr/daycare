@@ -17,6 +17,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `cron.md` - cron scheduler tasks and actions
 - `heartbeat.md` - heartbeat scheduler and storage
 - `signals.md` - signal generation framework and `generate_signal` tool
+- `agent-group-channels.md` - agent group channel model, storage, and signal delivery flow
 - `auth.md` - auth store and helper commands
 - `inference.md` - inference runtime and provider catalog
 - `permissions.md` - permission system and resolution

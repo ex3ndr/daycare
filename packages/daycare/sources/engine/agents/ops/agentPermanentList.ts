@@ -42,6 +42,7 @@ export async function agentPermanentList(config: Config): Promise<PermanentAgent
       descriptor: {
         ...descriptor,
         name: descriptor.name.trim(),
+        ...(descriptor.username ? { username: descriptor.username.trim() } : {}),
         description: descriptor.description.trim(),
         systemPrompt: descriptor.systemPrompt.trim(),
         ...(descriptor.workspaceDir ? { workspaceDir: descriptor.workspaceDir } : {})

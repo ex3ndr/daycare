@@ -67,6 +67,7 @@ import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentRestoreContextResolve } from "./ops/agentRestoreContextResolve.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
+import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
 import { systemAgentPromptResolve } from "./system/systemAgentPromptResolve.js";
 
@@ -665,9 +666,14 @@ export class Agent {
     if (!isInternalSignal && !subscription) {
       return { delivered: false, responseText: null };
     }
+    const channelSignalData = channelSignalDataParse(item.signal.data);
+    const text =
+      isChannelSignalType(item.signal.type) && channelSignalData
+        ? channelMessageBuild(channelSignalData)
+        : signalMessageBuild(item.signal);
     const responseText = await this.handleSystemMessage({
       type: "system_message",
-      text: signalMessageBuild(item.signal),
+      text,
       origin: `signal:${item.signal.id}`,
       silent: isInternalSignal ? false : (subscription?.silent ?? false),
       context: {}
@@ -1094,6 +1100,10 @@ export class Agent {
 
     return rendered.trim();
   }
+}
+
+function isChannelSignalType(type: string): boolean {
+  return type.startsWith("channel.") && type.endsWith(":message");
 }
 
 type AgentSystemPromptContext = {
