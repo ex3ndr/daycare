@@ -121,12 +121,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             context.tools = toolsForSkillsBuild(activeSkills);
           }
           logger.debug(
-            `load: Refreshed skills for inference iteration=${iteration} count=${activeSkills.length}`
+            `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
           );
         } catch (error) {
           logger.warn(
             { agentId: agent.id, error },
-            "error: Failed to refresh skills; continuing with previous snapshot"
+            "error: Failed to read skills before inference call; continuing with previous snapshot"
           );
         }
       }

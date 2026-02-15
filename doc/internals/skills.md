@@ -77,7 +77,7 @@ Optional frontmatter fields include:
 ## Loading and unloading
 
 - **Load**: call `skill(name: "...")`; tool resolves metadata and skill body.
-- **Reload**: skills are re-listed from disk before each inference iteration.
+- **Read before inference**: skills are read from disk before each inference call.
 - **Unload**: stop calling that skill.
 
 ```mermaid
@@ -104,6 +104,6 @@ flowchart LR
   ToolList --> Desc[rlmToolDescriptionBuild]
   Desc --> Python[run_python description]
   Python --> Loop[agentLoopRun iteration]
-  Loop --> Reload[skillsLoad refresh]
-  Reload --> ToolList
+  Loop --> Read[skillsLoad reads all skills]
+  Read --> ToolList
 ```
