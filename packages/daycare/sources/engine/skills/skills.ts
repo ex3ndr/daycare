@@ -1,5 +1,5 @@
 import type { AgentSkill } from "@/types";
-import type { PluginSkillRegistration } from "./skillTypes.js";
+import type { PluginManager } from "../plugins/manager.js";
 
 import { skillListConfig } from "./skillListConfig.js";
 import { skillListCore } from "./skillListCore.js";
@@ -8,20 +8,20 @@ import { skillListUser } from "./skillListUser.js";
 
 type SkillsOptions = {
   configRoot: string;
-  pluginSkillsList: () => PluginSkillRegistration[];
+  pluginManager: Pick<PluginManager, "listRegisteredSkills">;
 };
 
 /**
  * Coordinates loading skill metadata from all supported roots.
- * Expects: pluginSkillsList returns current plugin registrations.
+ * Expects: pluginManager can list currently registered plugin skills.
  */
 export class Skills {
   private readonly configRoot: string;
-  private readonly pluginSkillsList: () => PluginSkillRegistration[];
+  private readonly pluginManager: Pick<PluginManager, "listRegisteredSkills">;
 
   constructor(options: SkillsOptions) {
     this.configRoot = options.configRoot;
-    this.pluginSkillsList = options.pluginSkillsList;
+    this.pluginManager = options.pluginManager;
   }
 
   async list(): Promise<AgentSkill[]> {
@@ -29,7 +29,7 @@ export class Skills {
       skillListCore(),
       skillListConfig(this.configRoot),
       skillListUser(),
-      skillListRegistered(this.pluginSkillsList())
+      skillListRegistered(this.pluginManager.listRegisteredSkills())
     ]);
     return [...coreSkills, ...configSkills, ...userSkills, ...pluginSkills];
   }

@@ -348,7 +348,7 @@ export class Agent {
     const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
     const skills = new Skills({
       configRoot: configSkillsRoot,
-      pluginSkillsList: () => pluginManager.listRegisteredSkills()
+      pluginManager
     });
     logger.debug(`load: handleMessage loading available skills agentId=${this.id}`);
     const availableSkills = await skills.list();
