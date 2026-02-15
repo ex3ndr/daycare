@@ -26,6 +26,7 @@ import { messageExtractText } from "../messages/messageExtractText.js";
 import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild.js";
 import { contextEstimateTokens } from "./ops/contextEstimateTokens.js";
+import { messageContextReset } from "./ops/messageContextReset.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
@@ -451,7 +452,7 @@ export class Agent {
       const targetId = target?.targetId ?? null;
       if (agentKind === "foreground" && connector?.capabilities.sendText && targetId) {
         await connector.sendMessage(targetId, {
-          text: "Compacting session context. I'll continue shortly.",
+          text: messageContextReset({ kind: "compaction" }),
           replyToMessageId: entry.context.messageId
         });
       }
@@ -706,7 +707,7 @@ export class Agent {
 
     try {
       await connector.sendMessage(this.descriptor.channelId, {
-        text: "Session reset.",
+        text: messageContextReset({ kind: "manual" }),
         replyToMessageId: item.context?.messageId
       });
     } catch (error) {
@@ -748,13 +749,9 @@ export class Agent {
       return;
     }
 
-    const tokensFormatted = estimatedTokens > 0
-      ? ` (~${Math.round(estimatedTokens / 1000)}k tokens)`
-      : "";
-
     try {
       await connector.sendMessage(targetId, {
-        text: `⚠️ Session reset — context overflow${tokensFormatted}. Please resend your last message.`,
+        text: messageContextReset({ kind: "overflow", estimatedTokens }),
         replyToMessageId: entry.context.messageId
       });
     } catch (error) {

@@ -124,7 +124,7 @@ describe("Agent", () => {
 
       expect(result).toEqual({ type: "reset", ok: true });
       expect(sendMessage).toHaveBeenCalledWith("channel-1", {
-        text: "Session reset.",
+        text: "🔄 Session reset.",
         replyToMessageId: "42"
       });
 
