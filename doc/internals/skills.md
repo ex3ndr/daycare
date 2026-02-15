@@ -76,6 +76,16 @@ Optional frontmatter fields include:
 - `permissions` (`string[]`): permission tags granted to forked subagent (must be subset of caller)
 - `license`, `compatibility`, `metadata`, `allowed-tools`
 
+When a sandboxed skill grants declared permissions to its subagent, the grant
+source is labeled as `"<skill-name> Skill"` for permission attribution.
+
+```mermaid
+flowchart LR
+  SkillTool[skill tool execute] --> Source[skillSourceBuild]
+  Source --> Label["<skill-name> Skill"]
+  Label --> Grant[grantPermission source]
+```
+
 ## Loading and unloading
 
 - **Load**: call `skill(name: "...")`; tool resolves metadata and skill body.

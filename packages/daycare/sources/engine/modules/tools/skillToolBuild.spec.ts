@@ -48,7 +48,16 @@ describe("skillToolBuild", () => {
       );
 
       expect(agentIdForTarget).toHaveBeenCalledTimes(1);
-      expect(grantPermission).toHaveBeenCalledWith({ agentId: "agent-sub" }, { kind: "network" });
+      expect(agentIdForTarget).toHaveBeenCalledWith(
+        expect.objectContaining({
+          descriptor: expect.objectContaining({ name: "deploy Skill" })
+        })
+      );
+      expect(grantPermission).toHaveBeenCalledWith(
+        { agentId: "agent-sub" },
+        { kind: "network" },
+        { source: "deploy Skill" }
+      );
       expect(postAndAwait).toHaveBeenCalledWith(
         { agentId: "agent-sub" },
         expect.objectContaining({
@@ -153,7 +162,7 @@ function contextBuild(input?: {
   skills?: AgentSkill[];
   agentSystem?: {
     agentIdForTarget?: (target: unknown) => Promise<string>;
-    grantPermission?: (target: unknown, access: unknown) => Promise<void>;
+    grantPermission?: (target: unknown, access: unknown, options?: unknown) => Promise<void>;
     postAndAwait?: (target: unknown, item: unknown) => Promise<{ responseText: string | null; type: "message" }>;
   };
 }): ToolExecutionContext {

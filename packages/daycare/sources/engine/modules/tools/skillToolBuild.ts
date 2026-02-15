@@ -49,6 +49,7 @@ export function skillToolBuild(): ToolDefinition {
 
       const skillBody = await skillContentLoad(skill.path);
       if (skill.sandbox === true) {
+        const skillSource = skillSourceBuild(skill.name);
         const prompt = payload.prompt?.trim() ?? "";
         if (!prompt) {
           throw new Error(`Skill "${skill.name}" requires prompt in sandbox mode.`);
@@ -61,13 +62,14 @@ export function skillToolBuild(): ToolDefinition {
           type: "subagent" as const,
           id: createId(),
           parentAgentId: toolContext.agent.id,
-          name: skill.name
+          name: skillSource
         };
         const agentId = await toolContext.agentSystem.agentIdForTarget({ descriptor });
         for (const tag of permissionTags) {
           await toolContext.agentSystem.grantPermission(
             { agentId },
-            permissionAccessParse(tag)
+            permissionAccessParse(tag),
+            { source: skillSource }
           );
         }
 
@@ -137,6 +139,10 @@ function skillByNameResolve(requested: string, skills: AgentSkill[]): AgentSkill
   }
 
   return null;
+}
+
+function skillSourceBuild(skillName: string): string {
+  return `${skillName} Skill`;
 }
 
 function skillSandboxPromptBuild(skillBody: string, prompt: string): string {

@@ -74,6 +74,12 @@ Frontmatter fields used by Daycare:
 - `sandbox` (optional boolean): when `true`, runs the skill in a forked subagent.
 - `permissions` (optional string array): permission tags (for example `@read:/workspace`, `@write:/workspace`, `@network`) granted to sandbox subagent; must be a subset of caller permissions.
 
+Sandbox policy:
+- Use a **strong default bias** toward `sandbox: true`.
+- Choose `sandbox: true` when the skill can run autonomously from one prompt, may be long-running, may produce lots of intermediate output, may need isolated permissions, or should avoid polluting the caller context.
+- Choose non-sandbox (omit `sandbox`) only when the skill is intentionally conversational and requires tight in-context collaboration with frequent back-and-forth decisions.
+- When using `sandbox: true`, declare the minimal required `permissions` explicitly (principle of least privilege).
+
 #### Bundled Resources (optional)
 
 ##### Scripts (`scripts/`)
@@ -328,15 +334,17 @@ Any example files and directories not needed for the skill should be deleted.
 
 ##### Frontmatter
 
-Write the YAML frontmatter with `name` and `description`:
+Write YAML frontmatter with required and execution fields:
 
 - `name`: The skill name
 - `description`: This is the primary triggering mechanism for your skill, and helps Daycare understand when to use the skill.
   - Include both what the Skill does and specific triggers/contexts for when to use it.
   - Include all "when to use" information here - Not in the body. The body is only loaded after triggering, so "When to Use This Skill" sections in the body are not helpful to Daycare.
   - Example description for a `docx` skill: "Comprehensive document creation, editing, and analysis with support for tracked changes, comments, formatting preservation, and text extraction. Use when Daycare needs to work with professional documents (.docx files) for: (1) Creating new documents, (2) Modifying or editing content, (3) Working with tracked changes, (4) Adding comments, or any other document tasks"
+- `sandbox` (recommended): default to `true` unless the skill must be collaborative in-context.
+- `permissions` (required for sandboxed skills that need extra access): minimal list of permission tags.
 
-Do not include any other fields in YAML frontmatter.
+Do not include unrelated custom fields in YAML frontmatter.
 
 ##### Body
 
