@@ -40,6 +40,8 @@ type AgentLoopRunOptions = {
   agentSystem: AgentSystem;
   heartbeats: Heartbeats;
   skills: AgentSkill[];
+  skillsLoad?: () => Promise<AgentSkill[]>;
+  toolsForSkillsBuild?: (skills: AgentSkill[]) => Context["tools"];
   providersForAgent: ProviderSettings[];
   verbose: boolean;
   logger: Logger;
@@ -85,6 +87,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     agentSystem,
     heartbeats,
     skills,
+    skillsLoad,
+    toolsForSkillsBuild,
     providersForAgent,
     verbose,
     logger,
@@ -101,6 +105,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   let lastResponseNoMessage = false;
   const historyRecords: AgentHistoryRecord[] = [];
   const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
+  let activeSkills = skills;
   const target = agentDescriptorTargetResolve(agent.descriptor);
   const targetId = target?.targetId ?? null;
   logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
@@ -109,6 +114,22 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   try {
     logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      if (skillsLoad) {
+        try {
+          activeSkills = await skillsLoad();
+          if (toolsForSkillsBuild) {
+            context.tools = toolsForSkillsBuild(activeSkills);
+          }
+          logger.debug(
+            `load: Refreshed skills for inference iteration=${iteration} count=${activeSkills.length}`
+          );
+        } catch (error) {
+          logger.warn(
+            { agentId: agent.id, error },
+            "error: Failed to refresh skills; continuing with previous snapshot"
+          );
+        }
+      }
       logger.debug(
         `event: Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
       );
@@ -263,7 +284,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           messageContext: entry.context,
           agentSystem,
           heartbeats,
-          skills,
+          skills: activeSkills,
           permissionRequestRegistry: agentSystem.permissionRequestRegistry
         });
         logger.debug(

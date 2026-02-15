@@ -349,14 +349,17 @@ export class Agent {
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
     const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
+    const skillsLoad = async (): Promise<AgentSkill[]> => {
+      const [coreSkills, configSkills, userSkills, pluginSkills] = await Promise.all([
+        skillListCore(),
+        skillListConfig(configSkillsRoot),
+        skillListUser(),
+        skillListRegistered(pluginManager.listRegisteredSkills())
+      ]);
+      return [...coreSkills, ...configSkills, ...userSkills, ...pluginSkills];
+    };
     logger.debug(`load: handleMessage loading available skills agentId=${this.id}`);
-    const [coreSkills, configSkills, userSkills, pluginSkills] = await Promise.all([
-      skillListCore(),
-      skillListConfig(configSkillsRoot),
-      skillListUser(),
-      skillListRegistered(pluginManager.listRegisteredSkills())
-    ]);
-    const skills = [...coreSkills, ...configSkills, ...userSkills, ...pluginSkills];
+    const skills = await skillsLoad();
     const skillsPrompt = skillPromptFormat(skills);
     const permanentAgents = await agentPermanentList(this.agentSystem.config.current);
     const permanentAgentsPrompt = agentPermanentPromptBuild(permanentAgents);
@@ -547,6 +550,13 @@ export class Agent {
           agentSystem: this.agentSystem,
           heartbeats: this.agentSystem.heartbeats,
           skills,
+          skillsLoad,
+          toolsForSkillsBuild: (refreshedSkills) =>
+            this.listContextTools(source, {
+              agentKind,
+              allowCronTools,
+              skills: refreshedSkills
+            }),
           providersForAgent,
           verbose: this.agentSystem.config.current.verbose,
           logger,
