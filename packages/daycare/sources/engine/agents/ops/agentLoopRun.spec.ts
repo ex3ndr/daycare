@@ -13,6 +13,7 @@ import type { AuthStore } from "../../../auth/store.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
+import type { Skills } from "../../skills/skills.js";
 
 describe("agentLoopRun", () => {
   it("auto-sends generated files without fallback text when model has no final text", async () => {
@@ -68,7 +69,7 @@ describe("agentLoopRun", () => {
     );
   });
 
-  it("refreshes skills and tool context on each inference iteration", async () => {
+  it("reads skills via facade before each inference call", async () => {
     const firstSkills: AgentSkill[] = [
       {
         id: "config:alpha",
@@ -87,17 +88,18 @@ describe("agentLoopRun", () => {
         source: "config"
       }
     ];
-    const skillsLoad = vi
+    const skillsList = vi
       .fn(async (): Promise<AgentSkill[]> => firstSkills)
       .mockResolvedValueOnce(firstSkills)
       .mockResolvedValueOnce(secondSkills);
-    const toolsForSkillsBuild = vi.fn((skills: AgentSkill[]): Tool[] => [
+    const skills = { list: skillsList } as unknown as Skills;
+    const tools: Tool[] = [
       {
         name: "run_python",
-        description: `skills=${skills.map((skill) => skill.name).join(",")}`,
+        description: "run python",
         parameters: {} as Tool["parameters"]
       }
-    ]);
+    ];
     const toolDescriptionsSeen: string[] = [];
     const toolResolverSkills: AgentSkill[][] = [];
     const connector = connectorBuild(vi.fn(async () => undefined));
@@ -110,7 +112,7 @@ describe("agentLoopRun", () => {
           toolDescriptionsSeen.push(String(incomingContext.tools?.[0]?.description ?? ""));
           return {
             message: assistantMessageBuild([
-              toolCallBuild("call-1", "skill", { name: "alpha" })
+              toolCallBuild("call-1", "run_python", { code: "print(1)" })
             ]),
             providerId: "provider-1",
             modelId: "model-1"
@@ -126,9 +128,10 @@ describe("agentLoopRun", () => {
         })
     } as unknown as InferenceRouter;
     const toolResolver = {
+      listTools: vi.fn(() => tools),
       execute: vi.fn(async (_toolCall, executeContext) => {
         toolResolverSkills.push(executeContext.skills);
-        return toolResultTextBuild("call-1", "skill", "ok");
+        return toolResultTextBuild("call-1", "run_python", "ok");
       })
     } as unknown as ToolResolver;
 
@@ -139,14 +142,15 @@ describe("agentLoopRun", () => {
         connector,
         inferenceRouter,
         toolResolver,
-        skillsLoad,
-        toolsForSkillsBuild
+        skills,
+        rlm: true
       })
     );
 
-    expect(skillsLoad).toHaveBeenCalledTimes(2);
-    expect(toolsForSkillsBuild).toHaveBeenCalledTimes(2);
-    expect(toolDescriptionsSeen).toEqual(["skills=alpha", "skills=beta"]);
+    expect(skillsList).toHaveBeenCalledTimes(2);
+    expect(toolDescriptionsSeen).toHaveLength(2);
+    expect(toolDescriptionsSeen[0]).toContain("alpha");
+    expect(toolDescriptionsSeen[1]).toContain("beta");
     expect(toolResolverSkills).toHaveLength(1);
     expect(toolResolverSkills[0]).toEqual(firstSkills);
   });
@@ -158,8 +162,8 @@ function optionsBuild(params: {
   connector: Connector;
   inferenceRouter: InferenceRouter;
   toolResolver: ToolResolver;
-  skillsLoad?: () => Promise<AgentSkill[]>;
-  toolsForSkillsBuild?: (skills: AgentSkill[]) => Tool[];
+  skills?: Skills;
+  rlm?: boolean;
 }) {
   const logger = {
     debug: vi.fn(),
@@ -167,6 +171,12 @@ function optionsBuild(params: {
     warn: vi.fn(),
     error: vi.fn()
   };
+  const connectorRegistry = connectorRegistryBuild();
+  const skills =
+    params.skills ??
+    ({
+      list: vi.fn(async (): Promise<AgentSkill[]> => [])
+    } as unknown as Skills);
   return {
     entry: params.entry,
     agent: {
@@ -190,18 +200,19 @@ function optionsBuild(params: {
     source: "telegram",
     context: params.context,
     connector: params.connector,
-    connectorRegistry: {} as ConnectorRegistry,
+    connectorRegistry,
     inferenceRouter: params.inferenceRouter,
     toolResolver: params.toolResolver,
     fileStore: {} as FileStore,
     authStore: {} as AuthStore,
     eventBus: { emit: vi.fn() } as unknown as EngineEventBus,
     assistant: null,
-    agentSystem: {} as AgentSystem,
+    agentSystem: {
+      config: { current: { rlm: params.rlm ?? false } },
+      imageRegistry: { list: () => [] }
+    } as unknown as AgentSystem,
     heartbeats: {} as Heartbeats,
-    skills: [],
-    skillsLoad: params.skillsLoad,
-    toolsForSkillsBuild: params.toolsForSkillsBuild,
+    skills,
     providersForAgent: [],
     verbose: false,
     logger: logger as never,
@@ -257,8 +268,16 @@ function toolResolverBuild(
   execute: (toolCall: { id: string; name: string }) => Promise<ToolExecutionResult>
 ): ToolResolver {
   return {
+    listTools: () => [],
     execute: vi.fn(async (toolCall: { id: string; name: string }) => execute(toolCall))
   } as unknown as ToolResolver;
+}
+
+function connectorRegistryBuild(): ConnectorRegistry {
+  return {
+    get: () => ({ capabilities: { sendFiles: { modes: ["photo"] }, reactions: false } }),
+    list: () => ["telegram"]
+  } as unknown as ConnectorRegistry;
 }
 
 function assistantMessageBuild(content: AssistantMessage["content"]): AssistantMessage {

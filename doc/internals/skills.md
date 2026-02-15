@@ -29,17 +29,17 @@ The system prompt lists skills in XML tags to make parsing explicit.
 
 ## Skills catalog flow (code)
 
-Daycare's skills catalog is composed from small helpers that focus on one task
-each, keeping listing and formatting composable. During `Agent.handleMessage`,
-the engine gathers all four sources (core, config, user, plugin), passes them
-into tool context, and formats prompt metadata.
+Daycare's skills catalog is coordinated by the `Skills` facade. The facade
+reads all four sources (core, config, user, plugin) on demand and returns one
+combined list to both prompt formatting and inference-time tool context updates.
 
 ```mermaid
 flowchart TD
-  Agent[Agent.handleMessage] --> Core[skillListCore]
-  Agent --> Config[skillListConfig(configDir/skills)]
-  Agent --> User[skillListUser(~/.agents/skills)]
-  Agent --> Plugin[skillListRegistered]
+  Agent[Agent.handleMessage] --> SkillsFacade[Skills facade]
+  SkillsFacade --> Core[skillListCore]
+  SkillsFacade --> Config[skillListConfig(configDir/skills)]
+  SkillsFacade --> User[skillListUser(~/.agents/skills)]
+  SkillsFacade --> Plugin[skillListRegistered]
   Core[skillListCore] --> FromRoot[skillListFromRoot]
   Config --> FromRoot
   User --> FromRoot
@@ -47,8 +47,10 @@ flowchart TD
   Resolve --> Sort[skillSort]
   Plugin --> Resolve
   Plugin --> Sort
-  Sort --> Prompt[skillPromptFormat]
+  Sort --> SkillsList[combined AgentSkill[]]
+  SkillsList --> Prompt[skillPromptFormat]
   Agent --> Loop[agentLoopRun]
+  Loop --> SkillsFacade
   Loop --> SkillTool[skill tool execute()]
   SkillTool --> Content[skillContentLoad]
 ```
@@ -99,11 +101,11 @@ can still discover and call the `skill(...)` function stub.
 
 ```mermaid
 flowchart LR
-  Agent[Agent.handleMessage] --> Skills[Resolved skills list]
-  Skills --> ToolList[toolListContextBuild rlm]
+  Agent[Agent.handleMessage] --> SkillsFacade[Skills facade]
+  SkillsFacade --> ToolList[toolListContextBuild rlm]
   ToolList --> Desc[rlmToolDescriptionBuild]
   Desc --> Python[run_python description]
   Python --> Loop[agentLoopRun iteration]
-  Loop --> Read[skillsLoad reads all skills]
-  Read --> ToolList
+  Loop --> SkillsFacade
+  SkillsFacade --> ToolList
 ```
