@@ -29,11 +29,8 @@ import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
 import { permissionTagsApply } from "../permissions/permissionTagsApply.js";
-import { skillListConfig } from "../skills/skillListConfig.js";
-import { skillListCore } from "../skills/skillListCore.js";
-import { skillListRegistered } from "../skills/skillListRegistered.js";
-import { skillListUser } from "../skills/skillListUser.js";
 import { skillPromptFormat } from "../skills/skillPromptFormat.js";
+import { Skills } from "../skills/skills.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { agentPermanentList } from "./ops/agentPermanentList.js";
 import { agentPermanentPromptBuild } from "./ops/agentPermanentPromptBuild.js";
@@ -349,15 +346,13 @@ export class Agent {
     const pluginPrompts = await pluginManager.getSystemPrompts();
     const pluginPrompt = pluginPrompts.length > 0 ? pluginPrompts.join("\n\n") : "";
     const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
+    const skills = new Skills({
+      configRoot: configSkillsRoot,
+      pluginManager
+    });
     logger.debug(`load: handleMessage loading available skills agentId=${this.id}`);
-    const [coreSkills, configSkills, userSkills, pluginSkills] = await Promise.all([
-      skillListCore(),
-      skillListConfig(configSkillsRoot),
-      skillListUser(),
-      skillListRegistered(pluginManager.listRegisteredSkills())
-    ]);
-    const skills = [...coreSkills, ...configSkills, ...userSkills, ...pluginSkills];
-    const skillsPrompt = skillPromptFormat(skills);
+    const availableSkills = await skills.list();
+    const skillsPrompt = skillPromptFormat(availableSkills);
     const permanentAgents = await agentPermanentList(this.agentSystem.config.current);
     const permanentAgentsPrompt = agentPermanentPromptBuild(permanentAgents);
     const systemAgentPrompt =
@@ -509,7 +504,7 @@ export class Agent {
       tools: this.listContextTools(source, {
         agentKind,
         allowCronTools,
-        skills
+        skills: availableSkills
       }),
       systemPrompt
     };

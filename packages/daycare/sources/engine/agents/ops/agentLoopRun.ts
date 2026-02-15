@@ -14,13 +14,16 @@ import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import { toolResultFormatVerbose } from "../../modules/tools/toolResultFormatVerbose.js";
+import { toolListContextBuild } from "../../modules/tools/toolListContextBuild.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Agent } from "../agent.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
+import { agentDescriptorIsCron } from "./agentDescriptorIsCron.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import { tokensResolve } from "./tokensResolve.js";
+import type { Skills } from "../../skills/skills.js";
 
 const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
 
@@ -39,7 +42,7 @@ type AgentLoopRunOptions = {
   assistant: AssistantSettings | null;
   agentSystem: AgentSystem;
   heartbeats: Heartbeats;
-  skills: AgentSkill[];
+  skills: Skills;
   providersForAgent: ProviderSettings[];
   verbose: boolean;
   logger: Logger;
@@ -101,6 +104,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   let lastResponseNoMessage = false;
   const historyRecords: AgentHistoryRecord[] = [];
   const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
+  let activeSkills: AgentSkill[] = [];
+  const agentKind = agent.descriptor.type === "user" ? "foreground" : "background";
+  const allowCronTools = agentDescriptorIsCron(agent.descriptor);
   const target = agentDescriptorTargetResolve(agent.descriptor);
   const targetId = target?.targetId ?? null;
   logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
@@ -109,6 +115,27 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   try {
     logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      try {
+        activeSkills = await skills.list();
+        context.tools = toolListContextBuild({
+          tools: toolResolver.listTools(),
+          skills: activeSkills,
+          source,
+          agentKind,
+          allowCronTools,
+          rlm: agentSystem.config.current.rlm,
+          connectorRegistry,
+          imageRegistry: agentSystem.imageRegistry
+        });
+        logger.debug(
+          `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
+        );
+      } catch (error) {
+        logger.warn(
+          { agentId: agent.id, error },
+          "error: Failed to read skills before inference call; continuing with previous snapshot"
+        );
+      }
       logger.debug(
         `event: Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
       );
@@ -263,7 +290,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           messageContext: entry.context,
           agentSystem,
           heartbeats,
-          skills,
+          skills: activeSkills,
           permissionRequestRegistry: agentSystem.permissionRequestRegistry
         });
         logger.debug(
