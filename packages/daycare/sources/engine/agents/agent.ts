@@ -25,6 +25,7 @@ import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild.js";
+import { contextEstimateTokens } from "./ops/contextEstimateTokens.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
@@ -722,6 +723,10 @@ export class Agent {
     entry: AgentMessage,
     source: string
   ): Promise<void> {
+    // Estimate token usage before resetting context
+    const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
+    const estimatedTokens = contextEstimateTokens(history);
+
     const reset: AgentInboxReset = {
       type: "reset",
       message: "Emergency reset: context overflow detected. Previous session context was cleared."
@@ -743,9 +748,13 @@ export class Agent {
       return;
     }
 
+    const tokensFormatted = estimatedTokens > 0
+      ? ` (~${Math.round(estimatedTokens / 1000)}k tokens)`
+      : "";
+
     try {
       await connector.sendMessage(targetId, {
-        text: "Context limit reached. Session reset. Please resend your last request.",
+        text: `⚠️ Session reset — context overflow${tokensFormatted}. Please resend your last message.`,
         replyToMessageId: entry.context.messageId
       });
     } catch (error) {
