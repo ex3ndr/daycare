@@ -92,6 +92,16 @@ describe("toolListContextBuild", () => {
   it("returns only run_python in rlm mode", () => {
     const result = toolListContextBuild({
       tools: baseTools,
+      skills: [
+        {
+          id: "core:scheduling",
+          name: "scheduling",
+          description: "Set up recurring tasks",
+          source: "core",
+          path: "/tmp/skills/scheduling/SKILL.md",
+          sandbox: true
+        }
+      ],
       source: "slack",
       rlm: true,
       connectorRegistry: {
@@ -104,5 +114,7 @@ describe("toolListContextBuild", () => {
     expect(result.map((tool) => tool.name)).toEqual(["run_python"]);
     expect(result[0]?.description).toContain("The following functions are available:");
     expect(result[0]?.description).toContain("def other() -> str:");
+    expect(result[0]?.description).toContain("Available skills");
+    expect(result[0]?.description).toContain("scheduling sandbox=true - Set up recurring tasks");
   });
 });

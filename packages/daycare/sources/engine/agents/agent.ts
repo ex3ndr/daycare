@@ -18,7 +18,7 @@ import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { agentPromptBundledRead } from "./ops/agentPromptBundledRead.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
-import type { MessageContext } from "@/types";
+import type { AgentSkill, MessageContext } from "@/types";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
@@ -508,7 +508,8 @@ export class Agent {
       ...agentContext,
       tools: this.listContextTools(source, {
         agentKind,
-        allowCronTools
+        allowCronTools,
+        skills
       }),
       systemPrompt
     };
@@ -819,10 +820,15 @@ export class Agent {
 
   private listContextTools(
     source?: string,
-    options?: { agentKind?: "background" | "foreground"; allowCronTools?: boolean }
+    options?: {
+      agentKind?: "background" | "foreground";
+      allowCronTools?: boolean;
+      skills?: AgentSkill[];
+    }
   ) {
     return toolListContextBuild({
       tools: this.agentSystem.toolResolver.listTools(),
+      skills: options?.skills,
       source,
       agentKind: options?.agentKind,
       allowCronTools: options?.allowCronTools,

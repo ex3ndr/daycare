@@ -90,3 +90,17 @@ flowchart TD
   Embedded --> Memory[Skill guidance in caller context]
   Forked --> Result[Subagent result returned]
 ```
+
+## RLM mode skill exposure
+
+When `rlm: true` is enabled, only `run_python` is exposed directly. The runtime
+embeds the current skill catalog in the `run_python` description so Python code
+can still discover and call the `skill(...)` function stub.
+
+```mermaid
+flowchart LR
+  Agent[Agent.handleMessage] --> Skills[Resolved skills list]
+  Skills --> ToolList[toolListContextBuild rlm]
+  ToolList --> Desc[rlmToolDescriptionBuild]
+  Desc --> Python[run_python description]
+```
