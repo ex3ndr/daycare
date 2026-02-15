@@ -24,6 +24,7 @@ import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import { tokensResolve } from "./tokensResolve.js";
 import type { Skills } from "../../skills/skills.js";
+import { agentHistoryPendingToolResultsBuild } from "./agentHistoryPendingToolResultsBuild.js";
 
 const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
 
@@ -47,6 +48,7 @@ type AgentLoopRunOptions = {
   verbose: boolean;
   logger: Logger;
   abortSignal?: AbortSignal;
+  appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
   notifySubagentFailure: (reason: string, error?: unknown) => Promise<void>;
 };
 
@@ -92,6 +94,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     verbose,
     logger,
     abortSignal,
+    appendHistoryRecord,
     notifySubagentFailure
   } = options;
 
@@ -252,14 +255,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       }
 
       logger.debug(`event: Extracted tool calls from response toolCallCount=${toolCalls.length}`);
-      historyRecords.push({
+      await historyRecordAppend(historyRecords, {
         type: "assistant_message",
         at: Date.now(),
         text: effectiveResponseText ?? "",
         files: [],
         toolCalls,
         tokens: tokensEntry
-      });
+      }, appendHistoryRecord);
       if (toolCalls.length === 0) {
         logger.debug(`event: No tool calls, breaking inference loop iteration=${iteration}`);
         break;
@@ -305,12 +308,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         }
 
         context.messages.push(toolResult.toolMessage);
-        historyRecords.push({
+        await historyRecordAppend(historyRecords, {
           type: "tool_result",
           at: Date.now(),
           toolCallId: toolCall.id,
           output: toolResult
-        });
+        }, appendHistoryRecord);
         if (toolResult.files.length > 0) {
           generatedFiles.push(...toolResult.files);
           logger.debug(`event: Tool generated files count=${toolResult.files.length}`);
@@ -326,6 +329,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   } catch (error) {
     logger.debug(`error: Inference loop caught error error=${String(error)}`);
     if (isInferenceAbortError(error, abortSignal)) {
+      await historyPendingToolCallsComplete(
+        historyRecords,
+        "user_aborted",
+        appendHistoryRecord
+      );
       logger.info({ agentId: agent.id }, "event: Inference aborted");
       return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
     }
@@ -333,6 +341,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       logger.warn({ agentId: agent.id, error }, "event: Inference context overflow detected");
       return { responseText: finalResponseText, historyRecords, contextOverflow: true, tokenStatsUpdates };
     }
+    await historyPendingToolCallsComplete(
+      historyRecords,
+      "session_crashed",
+      appendHistoryRecord
+    );
     logger.warn({ connector: source, error }, "error: Inference failed");
     const message =
       error instanceof Error && error.message === "No inference provider available"
@@ -359,6 +372,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   }
 
   if (response.message.stopReason === "aborted") {
+    await historyPendingToolCallsComplete(
+      historyRecords,
+      "user_aborted",
+      appendHistoryRecord
+    );
     logger.info({ agentId: agent.id }, "event: Inference aborted by provider");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
   }
@@ -462,6 +480,30 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   }
   logger.debug("event: handleMessage completed successfully");
   return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
+}
+
+async function historyPendingToolCallsComplete(
+  historyRecords: AgentHistoryRecord[],
+  reason: "session_crashed" | "user_aborted",
+  appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>
+): Promise<void> {
+  const completionRecords = agentHistoryPendingToolResultsBuild(
+    historyRecords,
+    reason,
+    Date.now()
+  );
+  for (const record of completionRecords) {
+    await historyRecordAppend(historyRecords, record, appendHistoryRecord);
+  }
+}
+
+async function historyRecordAppend(
+  historyRecords: AgentHistoryRecord[],
+  record: AgentHistoryRecord,
+  appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>
+): Promise<void> {
+  historyRecords.push(record);
+  await appendHistoryRecord?.(record);
 }
 
 // Remove NO_MESSAGE text blocks so the sentinel never re-enters future model context.

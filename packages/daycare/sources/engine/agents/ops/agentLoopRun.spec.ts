@@ -2,7 +2,7 @@ import type { AssistantMessage, Context, Tool, ToolCall } from "@mariozechner/pi
 import { describe, expect, it, vi } from "vitest";
 
 import { agentLoopRun } from "./agentLoopRun.js";
-import type { AgentMessage } from "./agentTypes.js";
+import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import type { Agent } from "../agent.js";
 import type { AgentSkill, Connector, FileReference, ToolExecutionResult } from "@/types";
 import type { ToolResolver } from "../../modules/toolResolver.js";
@@ -154,6 +154,53 @@ describe("agentLoopRun", () => {
     expect(toolResolverSkills).toHaveLength(1);
     expect(toolResolverSkills[0]).toEqual(firstSkills);
   });
+
+  it("completes unfinished tool calls with abort records", async () => {
+    const controller = new AbortController();
+    const appended: string[] = [];
+    const connector = connectorBuild(vi.fn(async () => undefined));
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        toolCallBuild("call-1", "run_python", { code: "print(1)" }),
+        toolCallBuild("call-2", "read_file", { path: "notes.txt" })
+      ])
+    ]);
+    const toolResolver = toolResolverBuild(async () => {
+      controller.abort();
+      const error = new Error("aborted");
+      error.name = "AbortError";
+      throw error;
+    });
+
+    const result = await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        abortSignal: controller.signal,
+        appendHistoryRecord: async (record) => {
+          appended.push(record.type);
+        }
+      })
+    );
+
+    const abortedResults = result.historyRecords.filter((record) => record.type === "tool_result");
+    expect(abortedResults).toHaveLength(2);
+    for (const record of abortedResults) {
+      if (record.type !== "tool_result") {
+        continue;
+      }
+      expect(record.output.toolMessage.isError).toBe(true);
+      expect(record.output.toolMessage.content).toEqual([
+        { type: "text", text: "User aborted before tool completion." }
+      ]);
+    }
+    expect(appended).toEqual(["assistant_message", "tool_result", "tool_result"]);
+  });
 });
 
 function optionsBuild(params: {
@@ -164,6 +211,8 @@ function optionsBuild(params: {
   toolResolver: ToolResolver;
   skills?: Skills;
   rlm?: boolean;
+  abortSignal?: AbortSignal;
+  appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
 }) {
   const logger = {
     debug: vi.fn(),
@@ -216,6 +265,8 @@ function optionsBuild(params: {
     providersForAgent: [],
     verbose: false,
     logger: logger as never,
+    abortSignal: params.abortSignal,
+    appendHistoryRecord: params.appendHistoryRecord,
     notifySubagentFailure: vi.fn(async () => undefined)
   };
 }

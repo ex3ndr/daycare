@@ -54,10 +54,12 @@ import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
+import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentRestoreContextResolve } from "./ops/agentRestoreContextResolve.js";
+import { agentHistoryPendingToolResultsBuild } from "./ops/agentHistoryPendingToolResultsBuild.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
@@ -321,6 +323,8 @@ export class Agent {
       files
     };
 
+    await this.completePendingToolCalls("session_crashed");
+
     const providers = listActiveInferenceProviders(this.agentSystem.config.current.settings);
     const providerId = this.resolveAgentProvider(providers);
 
@@ -546,6 +550,8 @@ export class Agent {
           verbose: this.agentSystem.config.current.verbose,
           logger,
           abortSignal: inferenceAbortController.signal,
+          appendHistoryRecord: (record) =>
+            agentHistoryAppend(this.agentSystem.config.current, this.id, record),
           notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error)
         });
       } finally {
@@ -559,10 +565,6 @@ export class Agent {
       logger.warn({ agentId: this.id }, "event: Inference context overflow; resetting session");
       await this.handleEmergencyReset(entry, source);
       return null;
-    }
-
-    for (const record of result.historyRecords) {
-      await agentHistoryAppend(this.agentSystem.config.current, this.id, record);
     }
 
     if (result.tokenStatsUpdates.length > 0) {
@@ -752,6 +754,7 @@ export class Agent {
   }
 
   private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
+    await this.completePendingToolCalls("session_crashed");
     const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
     const historyMessages = await this.buildHistoryContext(history);
     this.state.context = {
@@ -764,6 +767,31 @@ export class Agent {
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.restored", { agentId: this.id });
     return true;
+  }
+
+  /**
+   * Completes dangling tool calls from persisted history with a synthetic result.
+   * Expects: called before rebuilding context or starting a new inference loop.
+   */
+  private async completePendingToolCalls(
+    reason: "session_crashed" | "user_aborted"
+  ): Promise<void> {
+    const records = await agentHistoryLoadAll(this.agentSystem.config.current, this.id);
+    const completionRecords = agentHistoryPendingToolResultsBuild(records, reason, Date.now());
+    if (completionRecords.length === 0) {
+      return;
+    }
+    for (const record of completionRecords) {
+      await agentHistoryAppend(this.agentSystem.config.current, this.id, record);
+    }
+    logger.warn(
+      {
+        agentId: this.id,
+        reason,
+        completedToolCalls: completionRecords.length
+      },
+      "event: Completed pending tool calls in history"
+    );
   }
 
   /**

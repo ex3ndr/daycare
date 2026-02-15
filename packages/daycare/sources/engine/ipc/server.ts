@@ -22,7 +22,7 @@ import type { EngineEventBus } from "./events.js";
 import { requestShutdown } from "../../util/shutdown.js";
 import { agentBackgroundList } from "../agents/ops/agentBackgroundList.js";
 import { agentList } from "../agents/ops/agentList.js";
-import { agentHistoryLoad } from "../agents/ops/agentHistoryLoad.js";
+import { agentHistoryLoadAll } from "../agents/ops/agentHistoryLoadAll.js";
 
 export type EngineServerOptions = {
   socketPath?: string;
@@ -284,7 +284,7 @@ export async function startEngineServer(
   app.get("/v1/engine/agents/:agentId/history", async (request, reply) => {
     const agentId = (request.params as { agentId: string }).agentId;
     logger.debug(`event: GET /v1/engine/agents/:agentId/history agentId=${agentId}`);
-    const records = await agentHistoryLoad(options.runtime.config.current, agentId);
+    const records = await agentHistoryLoadAll(options.runtime.config.current, agentId);
     logger.debug(`event: Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
     return reply.send({ ok: true, records });
   });
