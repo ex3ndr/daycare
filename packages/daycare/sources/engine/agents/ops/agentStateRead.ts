@@ -55,7 +55,7 @@ const agentStateSchema = z
     stats: statsSchema,
     createdAt: z.number().int(),
     updatedAt: z.number().int(),
-    state: z.enum(["active", "sleeping"]).optional(),
+    state: z.enum(["active", "sleeping", "dead"]).optional(),
     sleeping: z.boolean().optional()
   })
   .strip();

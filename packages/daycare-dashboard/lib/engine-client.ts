@@ -45,7 +45,7 @@ export type BackgroundAgentState = {
   agentId: string;
   name: string | null;
   parentAgentId: string | null;
-  lifecycle: "active" | "sleeping";
+  lifecycle: "active" | "sleeping" | "dead";
   status: "running" | "queued" | "idle";
   pending: number;
   updatedAt: number;
@@ -114,7 +114,7 @@ export type AgentDescriptor =
 export type AgentSummary = {
   agentId: string;
   descriptor: AgentDescriptor;
-  lifecycle: "active" | "sleeping";
+  lifecycle: "active" | "sleeping" | "dead";
   updatedAt: number;
 };
 

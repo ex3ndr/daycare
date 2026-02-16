@@ -87,6 +87,16 @@ export class AgentInbox {
   listPending(): AgentInboxEntry[] {
     return [...this.items];
   }
+
+  /**
+   * Removes and returns all queued inbox entries.
+   * Expects: caller owns synchronization for queue mutation.
+   */
+  drainPending(): AgentInboxEntry[] {
+    const pending = this.items;
+    this.items = [];
+    return pending;
+  }
 }
 
 function messageItemMerge(left: AgentInboxMessage, right: AgentInboxMessage): AgentInboxMessage {

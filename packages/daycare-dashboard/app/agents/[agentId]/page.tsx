@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, Bell, BellOff, Cable, Clock, MessageSquare, RefreshCw } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Cable, Clock, MessageSquare, Moon, RefreshCw, Skull } from "lucide-react";
 
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +88,12 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
         void refresh({ silent: true });
         return;
       }
-      if (payload.type === "agent.created" || payload.type === "agent.reset" || payload.type === "agent.restored") {
+      if (
+        payload.type === "agent.created" ||
+        payload.type === "agent.reset" ||
+        payload.type === "agent.restored" ||
+        payload.type === "agent.dead"
+      ) {
         const eventAgentId = (payload.payload as { agentId?: string } | undefined)?.agentId;
         const currentAgentId = agentIdRef.current;
         if (!currentAgentId || !eventAgentId || eventAgentId === currentAgentId) {
@@ -161,7 +166,21 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
             {connected ? "Live" : "Offline"}
           </Badge>
           {summary?.lifecycle ? (
-            <Badge variant={summary.lifecycle === "sleeping" ? "outline" : "secondary"} className="capitalize">
+            <Badge
+              variant={
+                summary.lifecycle === "dead"
+                  ? "destructive"
+                  : summary.lifecycle === "sleeping"
+                    ? "outline"
+                    : "secondary"
+              }
+              className="gap-1 capitalize"
+            >
+              {summary.lifecycle === "dead"
+                ? <Skull className="h-3 w-3" />
+                : summary.lifecycle === "sleeping"
+                  ? <Moon className="h-3 w-3" />
+                  : <MessageSquare className="h-3 w-3" />}
               {summary.lifecycle}
             </Badge>
           ) : null}

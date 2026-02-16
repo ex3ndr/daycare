@@ -19,6 +19,7 @@ import {
   Radio,
   RefreshCw,
   Server,
+  Skull,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -154,6 +155,7 @@ export default function Dashboard() {
         case "agent.created":
         case "agent.reset":
         case "agent.restored":
+        case "agent.dead":
           void fetchAgentsData();
           void fetchBackgroundAgentsData();
           break;
@@ -1046,14 +1048,20 @@ function AgentsTable({ agents }: { agents: AgentSummary[] }) {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={agent.lifecycle === "sleeping" ? "outline" : "secondary"}
+                        variant={
+                          agent.lifecycle === "dead"
+                            ? "destructive"
+                            : agent.lifecycle === "sleeping"
+                              ? "outline"
+                              : "secondary"
+                        }
                         className="gap-1 capitalize"
                       >
-                        {agent.lifecycle === "sleeping" ? (
-                          <Moon className="h-3 w-3" />
-                        ) : (
-                          <Sparkles className="h-3 w-3" />
-                        )}
+                        {agent.lifecycle === "dead"
+                          ? <Skull className="h-3 w-3" />
+                          : agent.lifecycle === "sleeping"
+                            ? <Moon className="h-3 w-3" />
+                            : <Sparkles className="h-3 w-3" />}
                         {agent.lifecycle}
                       </Badge>
                     </TableCell>

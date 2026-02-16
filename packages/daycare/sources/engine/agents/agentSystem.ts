@@ -52,6 +52,8 @@ import { PermissionRequestRegistry } from "../modules/tools/permissionRequestReg
 const logger = getLogger("engine.agent-system");
 const AGENT_IDLE_DELAY_MS = 60_000;
 const AGENT_IDLE_REPEAT_KEY = "lifecycle-idle";
+const AGENT_POISON_PILL_DELAY_MS = 3_600_000;
+const AGENT_POISON_PILL_REPEAT_KEY = "lifecycle-poison-pill";
 
 type DelayedSignalsFacade = {
   schedule: (input: DelayedSignalScheduleInput) => Promise<unknown>;
@@ -64,6 +66,7 @@ type AgentEntry = {
   agent: Agent;
   inbox: AgentInbox;
   running: boolean;
+  terminating: boolean;
   lock: AsyncLock;
 };
 
@@ -113,6 +116,19 @@ export class AgentSystem {
     this.delayedSignals = options.delayedSignals ?? null;
     this.permissionRequestRegistry =
       options.permissionRequestRegistry ?? new PermissionRequestRegistry();
+    this.eventBus.onEvent((event) => {
+      if (event.type !== "signal.generated") {
+        return;
+      }
+      const signal = event.payload as Signal;
+      const agentId = parsePoisonPillAgentId(signal.type);
+      if (!agentId) {
+        return;
+      }
+      void this.handlePoisonPill(agentId).catch((error) => {
+        logger.warn({ agentId, error }, "error: Poison-pill handling failed");
+      });
+    });
   }
 
   get crons(): Crons {
@@ -177,7 +193,18 @@ export class AgentSystem {
       if (!descriptor || !state) {
         continue;
       }
+      if (state.state === "dead") {
+        await this.cancelPoisonPill(agentId, { descriptor });
+        logger.info({ agentId }, "restore: Agent restore skipped (dead)");
+        continue;
+      }
       if (state.state === "sleeping") {
+        if (descriptor.type === "subagent") {
+          await this.schedulePoisonPill(agentId, {
+            descriptor,
+            deliverAt: state.updatedAt + AGENT_POISON_PILL_DELAY_MS
+          });
+        }
         const key = agentPathForDescriptor(descriptor);
         if (key) {
           this.keyMap.set(key, agentId);
@@ -438,6 +465,7 @@ export class AgentSystem {
       // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
       // interleaving that could leave stale idle lifecycle signals behind.
       await this.scheduleIdleSignal(agentId);
+      await this.schedulePoisonPill(agentId, { descriptor: entry.descriptor });
       slept = true;
     });
     if (slept) {
@@ -516,11 +544,14 @@ export class AgentSystem {
 
   private async resolveEntry(
     target: AgentPostTarget,
-    item: AgentInboxItem
+    _item: AgentInboxItem
   ): Promise<AgentEntry> {
     if ("agentId" in target) {
       const existing = this.entries.get(target.agentId);
       if (existing) {
+        if (existing.agent.state.state === "dead" || existing.terminating) {
+          throw deadErrorBuild(target.agentId);
+        }
         return existing;
       }
       const restored = await this.restoreAgent(target.agentId, { allowSleeping: true });
@@ -537,6 +568,9 @@ export class AgentSystem {
       if (agentId) {
         const existing = this.entries.get(agentId);
         if (existing) {
+          if (existing.agent.state.state === "dead" || existing.terminating) {
+            throw deadErrorBuild(agentId);
+          }
           return existing;
         }
         const restored = await this.restoreAgent(agentId, { allowSleeping: true });
@@ -549,6 +583,9 @@ export class AgentSystem {
     if (descriptor.type === "cron" && cuid2Is(descriptor.id)) {
       const existing = this.entries.get(descriptor.id);
       if (existing) {
+        if (existing.agent.state.state === "dead" || existing.terminating) {
+          throw deadErrorBuild(descriptor.id);
+        }
         return existing;
       }
       const restored = await this.restoreAgent(descriptor.id, { allowSleeping: true });
@@ -589,6 +626,7 @@ export class AgentSystem {
       agent: input.agent,
       inbox: input.inbox,
       running: false,
+      terminating: false,
       lock: new AsyncLock()
     };
     this.entries.set(input.agentId, entry);
@@ -633,6 +671,7 @@ export class AgentSystem {
       return false;
     }
     await this.cancelIdleSignal(entry.agentId);
+    await this.cancelPoisonPill(entry.agentId, { descriptor: entry.descriptor });
     entry.agent.state.state = "active";
     await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
     this.eventBus.emit("agent.woke", { agentId: entry.agentId });
@@ -673,6 +712,53 @@ export class AgentSystem {
     }
   }
 
+  private async schedulePoisonPill(
+    agentId: string,
+    options?: { descriptor?: AgentDescriptor; deliverAt?: number }
+  ): Promise<void> {
+    if (!this.delayedSignals) {
+      return;
+    }
+    const descriptor = options?.descriptor ?? this.entries.get(agentId)?.descriptor;
+    if (descriptor?.type !== "subagent") {
+      return;
+    }
+    try {
+      // load() runs before DelayedSignals.start(); ensure persistence directory exists.
+      await fs.mkdir(`${this.config.current.configDir}/signals`, { recursive: true });
+      await this.delayedSignals.schedule({
+        type: lifecycleSignalTypeBuild(agentId, "poison-pill"),
+        deliverAt: options?.deliverAt ?? Date.now() + AGENT_POISON_PILL_DELAY_MS,
+        source: { type: "agent", id: agentId },
+        data: { agentId, state: "poison-pill" },
+        repeatKey: AGENT_POISON_PILL_REPEAT_KEY
+      });
+    } catch (error) {
+      logger.warn({ agentId, error }, "error: Failed to schedule poison-pill signal");
+    }
+  }
+
+  private async cancelPoisonPill(
+    agentId: string,
+    options?: { descriptor?: AgentDescriptor }
+  ): Promise<void> {
+    if (!this.delayedSignals) {
+      return;
+    }
+    const descriptor = options?.descriptor ?? this.entries.get(agentId)?.descriptor;
+    if (descriptor?.type !== "subagent") {
+      return;
+    }
+    try {
+      await this.delayedSignals.cancelByRepeatKey({
+        type: lifecycleSignalTypeBuild(agentId, "poison-pill"),
+        repeatKey: AGENT_POISON_PILL_REPEAT_KEY
+      });
+    } catch (error) {
+      logger.warn({ agentId, error }, "error: Failed to cancel poison-pill signal");
+    }
+  }
+
   private async signalLifecycle(agentId: string, state: "wake" | "sleep"): Promise<void> {
     if (!this._signals) {
       return;
@@ -686,6 +772,96 @@ export class AgentSystem {
     } catch (error) {
       logger.warn({ agentId, state, error }, "error: Failed to emit lifecycle signal");
     }
+  }
+
+  private async handlePoisonPill(agentId: string): Promise<void> {
+    const entry = this.entries.get(agentId);
+    if (entry) {
+      if (entry.descriptor.type !== "subagent") {
+        return;
+      }
+      if (entry.agent.state.state === "dead") {
+        return;
+      }
+      if (entry.agent.state.state === "active") {
+        entry.terminating = true;
+        try {
+          const completion = this.createCompletion();
+          await this.enqueueEntry(
+            entry,
+            {
+              type: "system_message",
+              text: "You have been terminated due to inactivity. Stop all work immediately.",
+              origin: "system:poison-pill"
+            },
+            completion.completion
+          );
+          this.startEntryIfRunning(entry);
+          await completion.promise;
+        } catch (error) {
+          logger.warn({ agentId, error }, "error: Failed to deliver poison-pill system message");
+        }
+      }
+      await this.markEntryDead(entry, "poison-pill");
+      return;
+    }
+
+    let descriptor: AgentDescriptor | null = null;
+    let state: Awaited<ReturnType<typeof agentStateRead>> = null;
+    try {
+      descriptor = await agentDescriptorRead(this.config.current, agentId);
+      state = await agentStateRead(this.config.current, agentId);
+    } catch (error) {
+      logger.warn({ agentId, error }, "error: Poison-pill read failed");
+      return;
+    }
+    if (!descriptor || !state || descriptor.type !== "subagent") {
+      return;
+    }
+    if (state.state === "dead") {
+      return;
+    }
+    await this.cancelPoisonPill(agentId, { descriptor });
+    state.state = "dead";
+    state.updatedAt = Date.now();
+    await agentStateWrite(this.config.current, agentId, state);
+    this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
+  }
+
+  private async markEntryDead(
+    entry: AgentEntry,
+    reason: "poison-pill"
+  ): Promise<void> {
+    entry.terminating = true;
+    let pending = entry.inbox.listPending();
+    let changed = false;
+    await entry.lock.inLock(async () => {
+      if (entry.agent.state.state === "dead") {
+        pending = [];
+        return;
+      }
+      await this.cancelIdleSignal(entry.agentId);
+      await this.cancelPoisonPill(entry.agentId, { descriptor: entry.descriptor });
+      entry.agent.state.state = "dead";
+      entry.agent.state.updatedAt = Date.now();
+      await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+      pending = entry.inbox.drainPending();
+      changed = true;
+    });
+    if (!changed) {
+      return;
+    }
+    entry.running = false;
+    this.entries.delete(entry.agentId);
+    const key = agentPathForDescriptor(entry.descriptor);
+    if (key) {
+      this.keyMap.delete(key);
+    }
+    const deadError = deadErrorBuild(entry.agentId);
+    for (const queued of pending) {
+      queued.completion?.reject(deadError);
+    }
+    this.eventBus.emit("agent.dead", { agentId: entry.agentId, reason });
   }
 
   private async restoreAgent(
@@ -703,6 +879,9 @@ export class AgentSystem {
     }
     if (!descriptor || !state) {
       return null;
+    }
+    if (state.state === "dead") {
+      throw deadErrorBuild(agentId);
     }
     if (state.state === "sleeping" && !options?.allowSleeping) {
       return null;
@@ -738,6 +917,26 @@ export class AgentSystem {
   }
 }
 
-function lifecycleSignalTypeBuild(agentId: string, state: "wake" | "sleep" | "idle"): string {
+function lifecycleSignalTypeBuild(
+  agentId: string,
+  state: "wake" | "sleep" | "idle" | "poison-pill"
+): string {
   return `agent:${agentId}:${state}`;
+}
+
+function parsePoisonPillAgentId(signalType: string): string | null {
+  const parts = signalType.split(":");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const [prefix, agentId, suffix] = parts;
+  if (prefix !== "agent" || suffix !== "poison-pill") {
+    return null;
+  }
+  const normalized = agentId?.trim() ?? "";
+  return normalized ? normalized : null;
+}
+
+function deadErrorBuild(agentId: string): Error {
+  return new Error(`Agent is dead: ${agentId}`);
 }

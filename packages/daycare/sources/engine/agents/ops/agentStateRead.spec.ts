@@ -84,4 +84,31 @@ describe("agentStateRead", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("parses dead lifecycle state from disk", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-state-"));
+    const agentId = createId();
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const state: AgentState = {
+        context: { messages: [] },
+        permissions: { ...config.defaultPermissions },
+        tokens: null,
+        stats: {},
+        createdAt: 1,
+        updatedAt: 2,
+        state: "dead"
+      };
+      await agentStateWrite(config, agentId, state);
+
+      const restored = await agentStateRead(config, agentId);
+
+      expect(restored?.state).toBe("dead");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

@@ -5,6 +5,7 @@ AgentSystem owns inbox-backed agent lifecycle:
 - route posts by agent id or descriptor
 - start background agents and dispatch messages
 - expose agent info for status/history/reset
+- enforce subagent dead-state transitions via delayed poison-pill signals
 
 AgentSystem boots in stages:
 1. **load()** scans `agents/<id>/` for `descriptor.json` + `state.json`, creates inboxes, queues restore (no execution)
@@ -23,4 +24,6 @@ history.jsonl]
   AgentSystem --> Connectors[modules/connectorRegistry.ts]
   AgentSystem --> Tools[modules/toolResolver.ts]
   AgentSystem --> Inference[inference/router.ts]
+  AgentSystem --> Delayed[signals/delayedSignals.ts]
+  Delayed --> AgentSystem
 ```

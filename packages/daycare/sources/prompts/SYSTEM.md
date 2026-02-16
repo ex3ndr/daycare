@@ -107,7 +107,7 @@ Signals with `source.type=agent` are **not** delivered back to the same `source.
 
 **Unsubscribing:** `signal_unsubscribe` — pass the exact pattern to remove.
 
-**Lifecycle signals:** The system automatically emits `agent:<agentId>:wake`, `agent:<agentId>:sleep`, and `agent:<agentId>:idle` (after 1 minute asleep) when agents change state. These lifecycle signals use `source={ type: "agent", id: <agentId> }`. Subscribe to these to coordinate handoffs or monitor agent activity.
+**Lifecycle signals:** The system automatically emits `agent:<agentId>:wake`, `agent:<agentId>:sleep`, and `agent:<agentId>:idle` (after 1 minute asleep) when agents change state. These lifecycle signals use `source={ type: "agent", id: <agentId> }`. Subagents can also transition to a terminal `dead` state after extended inactivity (via an internal poison-pill signal). Subscribe to lifecycle signals to coordinate handoffs or monitor agent activity.
 
 Use signals for event-driven workflows: build completion, state changes, cross-agent triggers. Prefer direct messaging for request/response or directed tasks.
 

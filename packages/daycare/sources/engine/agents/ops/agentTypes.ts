@@ -47,7 +47,7 @@ export type AgentState = {
   state: AgentLifecycleState;
 };
 
-export type AgentLifecycleState = "active" | "sleeping";
+export type AgentLifecycleState = "active" | "sleeping" | "dead";
 
 export type AgentHistoryRecord =
   | { type: "start"; at: number }

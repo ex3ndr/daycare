@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MessageSquare, RefreshCw, Search } from "lucide-react";
+import { MessageSquare, Moon, RefreshCw, Search, Skull } from "lucide-react";
 
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +68,12 @@ export default function AgentsPage() {
         return;
       }
 
-      if (payload.type === "agent.created" || payload.type === "agent.reset" || payload.type === "agent.restored") {
+      if (
+        payload.type === "agent.created" ||
+        payload.type === "agent.reset" ||
+        payload.type === "agent.restored" ||
+        payload.type === "agent.dead"
+      ) {
         void syncAgents({ silent: true });
       }
     };
@@ -272,9 +277,20 @@ export default function AgentsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={agent.lifecycle === "sleeping" ? "outline" : "secondary"}
-                            className="capitalize"
+                            variant={
+                              agent.lifecycle === "dead"
+                                ? "destructive"
+                                : agent.lifecycle === "sleeping"
+                                  ? "outline"
+                                  : "secondary"
+                            }
+                            className="gap-1 capitalize"
                           >
+                            {agent.lifecycle === "dead"
+                              ? <Skull className="h-3 w-3" />
+                              : agent.lifecycle === "sleeping"
+                                ? <Moon className="h-3 w-3" />
+                                : <MessageSquare className="h-3 w-3" />}
                             {agent.lifecycle}
                           </Badge>
                         </TableCell>
