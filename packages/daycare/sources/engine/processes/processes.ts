@@ -49,6 +49,7 @@ export type ProcessCreateInput = {
   packageManagers?: SandboxPackageManager[];
   allowedDomains?: string[];
   keepAlive?: boolean;
+  allowLocalBinding?: boolean;
   owner?: ProcessOwner;
 };
 
@@ -80,6 +81,7 @@ type ProcessRecord = {
   env: Record<string, string>;
   packageManagers: SandboxPackageManager[];
   allowedDomains: string[];
+  allowLocalBinding: boolean;
   permissions: SessionPermissions;
   owner: ProcessOwner | null;
   keepAlive: boolean;
@@ -220,6 +222,7 @@ export class Processes {
         env: envInput,
         packageManagers: [...(input.packageManagers ?? [])],
         allowedDomains,
+        allowLocalBinding: input.allowLocalBinding === true,
         permissions: clonePermissions(permissions),
         owner: input.owner ? ownerNormalize(input.owner) : null,
         keepAlive: input.keepAlive ?? false,
@@ -454,7 +457,8 @@ export class Processes {
     const sandboxConfig = buildSandboxConfig(
       record.allowedDomains,
       record.permissions,
-      this.socketPath
+      this.socketPath,
+      record.allowLocalBinding
     );
     await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
     const baseEnv = { ...process.env, ...record.env };
@@ -607,13 +611,15 @@ export class Processes {
 function buildSandboxConfig(
   allowedDomains: string[],
   permissions: SessionPermissions,
-  socketPath: string
+  socketPath: string,
+  allowLocalBinding: boolean
 ): SandboxRuntimeConfig {
   return {
     filesystem: sandboxFilesystemPolicyBuild({ permissions }),
     network: {
       allowedDomains,
-      deniedDomains: []
+      deniedDomains: [],
+      ...(allowLocalBinding ? { allowLocalBinding: true } : {})
     },
     ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
     enableWeakerNestedSandbox: true
@@ -694,6 +700,7 @@ async function readRecord(recordPath: string): Promise<ProcessRecord | null> {
       env,
       packageManagers,
       allowedDomains,
+      allowLocalBinding: parsed.allowLocalBinding === true,
       permissions,
       owner,
       keepAlive,

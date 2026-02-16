@@ -91,6 +91,7 @@ sequenceDiagram
 ## Local Expose provider on port 80
 - `local-expose` plugin accepts a configured hostname and exposes it over plain HTTP.
 - On first endpoint create, plugin starts a managed forwarder process bound to `0.0.0.0:80`.
+- Forwarder process is created with sandbox `allowLocalBinding: true`.
 - Forwarder process proxies requests to expose proxy (`127.0.0.1:<proxyPort>`) preserving host header routing.
 
 ```mermaid

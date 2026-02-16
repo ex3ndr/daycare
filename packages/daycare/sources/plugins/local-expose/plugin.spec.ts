@@ -52,6 +52,7 @@ describe("local-expose plugin", () => {
       expect.objectContaining({
         name: "local-expose-local-expose-1-3000",
         keepAlive: true,
+        allowLocalBinding: true,
         owner: { type: "plugin", id: "local-expose-1" },
         cwd: "/tmp/daycare/plugins/local-expose-1",
         home: "/tmp/daycare/plugins/local-expose-1",

@@ -88,6 +88,29 @@ describe("Processes", () => {
   );
 
   it(
+    "adds allowLocalBinding when requested by process input",
+    async () => {
+      const manager = await createManager(baseDir);
+      const created = await manager.create(
+        {
+          command: `node -e "console.log('local-bind-enabled')"`,
+          keepAlive: false,
+          cwd: workspaceDir,
+          allowLocalBinding: true
+        },
+        { ...permissions, network: true }
+      );
+
+      const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
+      const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
+        network?: { allowLocalBinding?: boolean };
+      };
+      expect(config.network?.allowLocalBinding).toBe(true);
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
     "rehydrates running processes after manager reload",
     async () => {
       const first = await createManager(baseDir);

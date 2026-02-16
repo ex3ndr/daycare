@@ -72,6 +72,7 @@ export const plugin = definePlugin({
           cwd: api.dataDir,
           home: api.dataDir,
           keepAlive: true,
+          allowLocalBinding: true,
           owner: processOwner,
           allowedDomains: LOCAL_FORWARDER_ALLOWED_DOMAINS
         },

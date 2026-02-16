@@ -7,6 +7,7 @@ Registers an expose provider for plain HTTP on local port `80` (no TLS terminati
 
 ## Behavior
 - Starts a managed userspace forwarder process bound to `0.0.0.0:80`
+- Requests sandbox `allowLocalBinding: true` so local listen sockets are permitted
 - Forwards traffic to the internal expose proxy port on `127.0.0.1`
 - Keeps one active endpoint/domain per plugin instance
 - Provider capabilities: `{ public: true, localNetwork: true }`

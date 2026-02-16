@@ -81,3 +81,21 @@ flowchart TD
 - Keep-alive restarts use exponential backoff (2s base, doubling to 60s max) for crash loops.
 - Stop operations apply to the full process group to terminate child processes.
 - `process_list` and `process_get` return the full absolute log filename; read file contents via the `read` tool.
+
+## Local Binding in Sandbox
+
+- `process_start` supports `allowLocalBinding` to permit local TCP listeners inside sandboxed processes.
+- Use this only for processes that must accept inbound local traffic (for example `local-expose` forwarder on port `80`).
+
+```mermaid
+sequenceDiagram
+  participant Tool as process_start / plugin
+  participant Processes
+  participant Sandbox as sandbox.json
+  participant Runtime as sandbox-runtime
+
+  Tool->>Processes: create({ allowLocalBinding: true, ... })
+  Processes->>Sandbox: write network.allowLocalBinding=true
+  Processes->>Runtime: spawn with sandbox settings
+  Runtime-->>Tool: process can bind local listen socket
+```
