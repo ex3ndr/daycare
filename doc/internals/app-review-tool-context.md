@@ -7,6 +7,9 @@ This prevents false denials where the reviewer confuses Daycare tool names with
 language/runtime built-ins (for example, interpreting tool `exec` as Python
 `exec()`).
 
+The review prompt also includes the app's own runtime system prompt so policy
+evaluation can account for the app's intended behavior and constraints.
+
 ## Prompt flow
 
 ```mermaid
@@ -18,8 +21,8 @@ sequenceDiagram
 
   App->>Exec: tool call (name + args)
   Exec->>Exec: resolve allowed runtime tools
-  Exec->>Review: appToolReview(toolCall + availableTools + rules)
-  Review->>Model: prompt with available tool context
+  Exec->>Review: appToolReview(toolCall + availableTools + rules + appSystemPrompt)
+  Review->>Model: prompt with tools + app system prompt context
   Model-->>Review: ALLOW or DENY: reason
   Review-->>Exec: decision
 ```
@@ -31,6 +34,7 @@ sequenceDiagram
   - `Name`
   - `Description`
   - `Parameters` (JSON schema)
+- Added section: `## App System Prompt`
 - Added explicit interpretation guard:
   - evaluate against provided tool list only
   - do not reinterpret names by language built-ins

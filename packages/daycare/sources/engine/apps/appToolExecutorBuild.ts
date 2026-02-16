@@ -13,6 +13,7 @@ import { appToolReview } from "./appToolReview.js";
 type AppToolExecutorBuildInput = {
   appId: string;
   appName: string;
+  appSystemPrompt: string;
   sourceIntent: string;
   rules: AppRuleSet;
   inferenceRouter: InferenceRouter;
@@ -66,6 +67,7 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
       const decision = await appToolReview({
         appId: input.appId,
         appName: input.appName,
+        appSystemPrompt: input.appSystemPrompt,
         sourceIntent: input.sourceIntent,
         toolCall,
         rules: input.rules,

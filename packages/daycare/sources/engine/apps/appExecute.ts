@@ -55,6 +55,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
   const reviewedExecutor = appToolExecutorBuild({
     appId: input.app.id,
     appName: input.app.manifest.title,
+    appSystemPrompt: input.app.manifest.systemPrompt,
     sourceIntent: input.app.permissions.sourceIntent,
     rules: input.app.permissions.rules,
     inferenceRouter: agentSystem.inferenceRouter,

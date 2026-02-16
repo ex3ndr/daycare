@@ -2,6 +2,7 @@ import type { AppRuleSet } from "./appTypes.js";
 
 type AppReviewPromptBuildInput = {
   appName: string;
+  appSystemPrompt: string;
   sourceIntent: string;
   toolName: string;
   args: unknown;
@@ -20,6 +21,7 @@ type AppReviewPromptBuildInput = {
 export function appReviewPromptBuild(input: AppReviewPromptBuildInput): string {
   const argsText = argsSerialize(input.args);
   const availableTools = toolsSerialize(input.availableTools);
+  const appSystemPrompt = systemPromptSerialize(input.appSystemPrompt);
   const allowRules =
     input.rules.allow.length > 0
       ? input.rules.allow.map((rule) => `- ${rule.text}`).join("\n")
@@ -44,6 +46,9 @@ export function appReviewPromptBuild(input: AppReviewPromptBuildInput): string {
     "Do not reinterpret tool names using unrelated language/runtime built-ins.",
     `For example: tool "exec" is the Daycare exec tool from this list, not Python exec().`,
     "",
+    "## App System Prompt",
+    appSystemPrompt,
+    "",
     "## Source Intent",
     input.sourceIntent,
     "",
@@ -57,6 +62,14 @@ export function appReviewPromptBuild(input: AppReviewPromptBuildInput): string {
     "- ALLOW",
     "- DENY: <reason>"
   ].join("\n");
+}
+
+function systemPromptSerialize(systemPrompt: string): string {
+  const trimmed = systemPrompt.trim();
+  if (trimmed.length === 0) {
+    return "(none)";
+  }
+  return trimmed;
 }
 
 function argsSerialize(value: unknown): string {

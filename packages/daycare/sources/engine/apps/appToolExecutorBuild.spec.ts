@@ -13,6 +13,7 @@ describe("appToolExecutorBuild", () => {
     const executor = appToolExecutorBuild({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
       inferenceRouter: inferenceRouterBuild("ALLOW"),
@@ -33,6 +34,7 @@ describe("appToolExecutorBuild", () => {
     const executor = appToolExecutorBuild({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
       inferenceRouter: inferenceRouterBuild("DENY: blocked by rules"),
@@ -54,6 +56,7 @@ describe("appToolExecutorBuild", () => {
     const executor = appToolExecutorBuild({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
       inferenceRouter: inferenceRouterBuild("ALLOW"),
@@ -75,6 +78,7 @@ describe("appToolExecutorBuild", () => {
     const executor = appToolExecutorBuild({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
       inferenceRouter: inferenceRouterBuild("ALLOW"),
@@ -90,6 +94,7 @@ describe("appToolExecutorBuild", () => {
     const executor = appToolExecutorBuild({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
       inferenceRouter: inferenceRouterBuild("ALLOW"),

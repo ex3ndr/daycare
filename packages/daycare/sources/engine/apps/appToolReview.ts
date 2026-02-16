@@ -9,6 +9,7 @@ import type { AppReviewDecision, AppRuleSet } from "./appTypes.js";
 type AppToolReviewInput = {
   appId: string;
   appName: string;
+  appSystemPrompt: string;
   sourceIntent: string;
   toolCall: ToolCall;
   rules: AppRuleSet;
@@ -28,6 +29,7 @@ type AppToolReviewInput = {
 export async function appToolReview(input: AppToolReviewInput): Promise<AppReviewDecision> {
   const reviewPrompt = appReviewPromptBuild({
     appName: input.appName,
+    appSystemPrompt: input.appSystemPrompt,
     sourceIntent: input.sourceIntent,
     toolName: input.toolCall.name,
     args: input.toolCall.arguments,

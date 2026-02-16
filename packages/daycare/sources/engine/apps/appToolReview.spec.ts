@@ -9,6 +9,7 @@ describe("appToolReview", () => {
     const review = await appToolReview({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "read", type: "toolCall", arguments: { path: "/tmp/file" } },
       rules: { allow: [], deny: [] },
@@ -23,6 +24,7 @@ describe("appToolReview", () => {
     const review = await appToolReview({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "exec", type: "toolCall", arguments: { command: "rm -rf ." } },
       rules: { allow: [], deny: [] },
@@ -37,6 +39,7 @@ describe("appToolReview", () => {
     const review = await appToolReview({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "exec", type: "toolCall", arguments: { command: "echo ok" } },
       rules: { allow: [], deny: [] },
@@ -58,6 +61,7 @@ describe("appToolReview", () => {
     await appToolReview({
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "exec", type: "toolCall", arguments: { command: "echo ok" } },
       rules: { allow: [], deny: [] },
@@ -77,6 +81,8 @@ describe("appToolReview", () => {
     expect(prompt).toContain("## Available Tools In This Sandbox");
     expect(prompt).toContain("Name: exec");
     expect(prompt).toContain('not Python exec()');
+    expect(prompt).toContain("## App System Prompt");
+    expect(prompt).toContain("You are a focused review assistant.");
   });
 });
 

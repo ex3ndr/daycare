@@ -6,6 +6,8 @@ describe("appReviewPromptBuild", () => {
   it("includes tool details and allow/deny rules", () => {
     const prompt = appReviewPromptBuild({
       appName: "GitHub Reviewer",
+      appSystemPrompt:
+        "You are a secure review assistant. Use only approved tooling and avoid destructive actions.",
       sourceIntent: "Review pull requests safely.",
       toolName: "exec",
       args: { command: "git diff" },
@@ -32,6 +34,8 @@ describe("appReviewPromptBuild", () => {
     expect(prompt).toContain("## Available Tools In This Sandbox");
     expect(prompt).toContain("Name: exec");
     expect(prompt).toContain("not Python exec()");
+    expect(prompt).toContain("## App System Prompt");
+    expect(prompt).toContain("You are a secure review assistant.");
     expect(prompt).toContain("Review pull requests safely.");
     expect(prompt).toContain("- Run read-only git commands");
     expect(prompt).toContain("- Rewrite git history");
