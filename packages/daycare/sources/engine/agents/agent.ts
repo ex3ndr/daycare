@@ -18,6 +18,7 @@ import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { agentPromptBundledRead } from "./ops/agentPromptBundledRead.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
+import { agentPromptResolve } from "./ops/agentPromptResolve.js";
 import type { AgentSkill, MessageContext } from "@/types";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
@@ -66,7 +67,6 @@ import { agentHistoryPendingToolResultsBuild } from "./ops/agentHistoryPendingTo
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
-import { systemAgentPromptResolve } from "./system/systemAgentPromptResolve.js";
 import type { ToolResolverLike } from "../modules/toolResolver.js";
 
 const logger = getLogger("engine.agent");
@@ -370,16 +370,8 @@ export class Agent {
     const skillsPrompt = skillPromptFormat(availableSkills);
     const permanentAgents = await agentPermanentList(this.agentSystem.config.current);
     const permanentAgentsPrompt = agentPermanentPromptBuild(permanentAgents);
-    const systemAgentPrompt =
-      this.descriptor.type === "system"
-        ? await systemAgentPromptResolve(this.descriptor.tag)
-        : null;
-    if (this.descriptor.type === "system" && !systemAgentPrompt) {
-      throw new Error(`Unknown system agent tag: ${this.descriptor.tag}`);
-    }
-    const agentPrompt = this.descriptor.type === "permanent" || this.descriptor.type === "app"
-      ? this.descriptor.systemPrompt.trim()
-      : (systemAgentPrompt?.systemPrompt ?? "");
+    const promptResolved = await agentPromptResolve(this.descriptor);
+    const agentPrompt = promptResolved.agentPrompt;
     const agentKind = this.resolveAgentKind();
     const allowCronTools = agentDescriptorIsCron(this.descriptor);
 
@@ -432,7 +424,7 @@ export class Agent {
       skillsPrompt,
       permanentAgentsPrompt,
       agentPrompt,
-      replaceSystemPrompt: systemAgentPrompt?.replaceSystemPrompt ?? false,
+      replaceSystemPrompt: promptResolved.replaceSystemPrompt,
       agentKind,
       parentAgentId: this.descriptor.type === "subagent" || this.descriptor.type === "app"
         ? this.descriptor.parentAgentId ?? ""
