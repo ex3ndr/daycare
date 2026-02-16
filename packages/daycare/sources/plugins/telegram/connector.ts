@@ -121,8 +121,9 @@ export class TelegramConnector implements Connector {
     };
 
     this.bot.on("message", async (message) => {
-      if (message.chat?.type !== "private") {
-        logger.debug(`skip: Skipping non-private chat type=${message.chat?.type} chatId=${message.chat?.id}`);
+      const chatType = message.chat?.type;
+      if (chatType !== "private" && chatType !== "group" && chatType !== "supergroup") {
+        logger.debug(`skip: Skipping unsupported chat type=${chatType} chatId=${message.chat?.id}`);
         return;
       }
       const senderId = message.from?.id ?? message.chat?.id;
