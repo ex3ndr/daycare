@@ -83,7 +83,7 @@ describe("local-expose plugin", () => {
     expect(api.exposes.unregisterProvider).toHaveBeenCalledWith("local-expose-1");
   });
 
-  it("reuses an already running forwarder process for matching proxy port", async () => {
+  it("replaces existing forwarder process before creating a tunnel", async () => {
     let registeredProvider: ExposeTunnelProvider | null = null;
     const api = {
       instance: { instanceId: "local-expose-1", pluginId: "local-expose", enabled: true },
@@ -142,7 +142,11 @@ describe("local-expose plugin", () => {
     const provider = registeredProvider as ExposeTunnelProvider;
     await provider.createTunnel(3000, "public");
 
-    expect(api.processes.create).not.toHaveBeenCalled();
+    expect(api.processes.removeByOwner).toHaveBeenCalledWith({
+      type: "plugin",
+      id: "local-expose-1"
+    });
+    expect(api.processes.create).toHaveBeenCalledTimes(1);
   });
 
   it("supports only one active domain at a time", async () => {

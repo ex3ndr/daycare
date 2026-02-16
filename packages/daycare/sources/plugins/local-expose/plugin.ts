@@ -46,14 +46,6 @@ export const plugin = definePlugin({
     const processEnsure = async (proxyPort: number): Promise<void> => {
       const expectedName = processNameBuild(instanceId, proxyPort);
       const existing = await api.processes.listByOwner(processOwner);
-      if (
-        existing.some(
-          (entry) =>
-            entry.desiredState === "running" && entry.status === "running" && entry.name === expectedName
-        )
-      ) {
-        return;
-      }
       if (existing.length > 0) {
         await api.processes.removeByOwner(processOwner);
       }
