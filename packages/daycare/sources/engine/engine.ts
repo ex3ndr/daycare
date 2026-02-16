@@ -181,13 +181,13 @@ export class Engine {
           await this.handleCompactionCommand(descriptor, context);
           return;
         }
-        if (parsed.name === "stop") {
+        if (parsed.name === "stop" || parsed.name === "abort") {
           if (descriptor.type !== "user") {
             return;
           }
           logger.info(
             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-            "stop: Stop command received"
+            "stop: Abort command received"
           );
           await this.handleStopCommand(descriptor, context);
           return;

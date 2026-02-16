@@ -42,7 +42,8 @@ const CORE_COMMANDS: SlashCommandEntry[] = [
   { command: "reset", description: "Reset the current conversation." },
   { command: "context", description: "Show latest context token usage." },
   { command: "compaction", description: "Compact the current conversation." },
-  { command: "stop", description: "Abort the current inference." }
+  { command: "stop", description: "Abort the current inference." },
+  { command: "abort", description: "Abort the current inference." }
 ];
 
 type ManagedConnector = {

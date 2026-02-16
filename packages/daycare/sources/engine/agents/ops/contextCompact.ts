@@ -8,13 +8,19 @@ import { getProviderDefinition } from "../../../providers/catalog.js";
 import { providerModelSelectBySize } from "../../../providers/providerModelSelectBySize.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
+import { compactionLogAppend } from "./compactionLogAppend.js";
 
 type ContextCompactOptions = {
   context: Context;
   inferenceRouter: InferenceRouter;
   providers: ProviderSettings[];
   providerId?: string;
-  agentId?: string;
+  inferenceSessionId?: string;
+  signal?: AbortSignal;
+  compactionLog?: {
+    agentsDir: string;
+    agentId: string;
+  };
 };
 
 const logger = getLogger("agents.context-compact");
@@ -24,7 +30,7 @@ const logger = getLogger("agents.context-compact");
  * Expects: context contains the full session messages to compress.
  */
 export async function contextCompact(options: ContextCompactOptions): Promise<Context> {
-  const { context, inferenceRouter, providers, providerId, agentId } = options;
+  const { context, inferenceRouter, providers, providerId, inferenceSessionId, signal, compactionLog } = options;
   if (!context.messages || context.messages.length === 0) {
     return { messages: [] };
   }
@@ -58,26 +64,58 @@ export async function contextCompact(options: ContextCompactOptions): Promise<Co
   logger.debug(
     `start: contextCompact starting messageCount=${context.messages.length} providerCount=${providersOverride.length}`
   );
-  const response = await inferenceRouter.complete(
-    compactionContext,
-    agentId ?? `compaction:${createId()}`,
-    {
-      providersOverride
-    }
-  );
-
-  const summaryText = messageExtractText(response.message)?.trim();
-  if (!summaryText) {
-    logger.debug("event: contextCompact produced empty summary; returning original context");
-    return { messages: [...context.messages] };
-  }
-
-  return {
-    messages: [
+  const startedAt = Date.now();
+  const sessionId = inferenceSessionId ?? `compaction:${createId()}`;
+  let response: Awaited<ReturnType<InferenceRouter["complete"]>> | null = null;
+  let error: unknown;
+  let summaryText = "";
+  try {
+    response = await inferenceRouter.complete(
+      compactionContext,
+      sessionId,
       {
-        ...response.message,
-        content: [{ type: "text", text: summaryText }]
+        providersOverride,
+        signal
       }
-    ]
-  };
+    );
+
+    summaryText = messageExtractText(response.message)?.trim() ?? "";
+    if (!summaryText) {
+      logger.debug("event: contextCompact produced empty summary; returning empty compacted context");
+      return { messages: [] };
+    }
+
+    return {
+      messages: [
+        {
+          ...response.message,
+          content: [{ type: "text", text: summaryText }]
+        }
+      ]
+    };
+  } catch (caughtError) {
+    error = caughtError;
+    throw caughtError;
+  } finally {
+    if (compactionLog) {
+      try {
+        await compactionLogAppend({
+          agentsDir: compactionLog.agentsDir,
+          agentId: compactionLog.agentId,
+          startedAt,
+          finishedAt: Date.now(),
+          sessionId,
+          requestContext: compactionContext,
+          providersOverride,
+          providerId: response?.providerId,
+          modelId: response?.modelId,
+          responseMessage: response?.message,
+          summaryText,
+          error
+        });
+      } catch (logError) {
+        logger.warn({ error: logError, agentId: compactionLog.agentId }, "error: Compaction log write failed");
+      }
+    }
+  }
 }

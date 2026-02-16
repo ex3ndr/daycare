@@ -66,8 +66,9 @@ Core commands are registered with Telegram (scoped to private chats), and plugin
 |---------|-------------|
 | `/reset` | Clear agent message history for the current user |
 | `/context` | Show token usage snapshot |
-| `/compaction` | Compact the current conversation |
+| `/compaction` | Compact the current conversation context |
 | `/stop` | Abort the current inference for the current user |
+| `/abort` | Alias for `/stop` |
 
 When the Upgrade plugin is enabled, it also contributes:
 - `/upgrade` to install the latest `daycare-cli` and restart PM2.

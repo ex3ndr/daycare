@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -179,6 +179,213 @@ describe("Agent", () => {
       const secondState = await agentStateRead(config, agentId);
       expect(secondState?.inferenceSessionId).toBeTruthy();
       expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("shows typing and writes compaction logs for manual compaction", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    try {
+      const config = configResolve(
+        {
+          engine: { dataDir: dir },
+          assistant: { workspaceDir: dir },
+          providers: [{ id: "openai", model: "gpt-4.1" }]
+        },
+        path.join(dir, "settings.json")
+      );
+      const connectorRegistry = new ConnectorRegistry({
+        onMessage: async () => undefined
+      });
+      const sendMessage = vi.fn(async () => undefined);
+      const stopTyping = vi.fn(() => undefined);
+      const startTyping = vi.fn(() => stopTyping);
+      const connector: Connector = {
+        capabilities: { sendText: true, typing: true },
+        onMessage: () => () => undefined,
+        sendMessage,
+        startTyping
+      };
+      const registerResult = connectorRegistry.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+
+      let receivedSessionId: string | undefined;
+      const complete = vi.fn(async (
+        _context: unknown,
+        sessionId: string
+      ) => {
+        receivedSessionId = sessionId;
+        return {
+          providerId: "openai",
+          modelId: "gpt-4.1",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "Compacted summary" }],
+            api: "openai-responses",
+            provider: "openai",
+            model: "gpt-4.1",
+            usage: {
+              input: 10,
+              output: 5,
+              cacheRead: 0,
+              cacheWrite: 0,
+              totalTokens: 15,
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+            },
+            stopReason: "stop",
+            timestamp: Date.now()
+          }
+        };
+      });
+      const inferenceRouter: InferenceRouter = {
+        complete
+      } as unknown as InferenceRouter;
+
+      const agentSystem = new AgentSystem({
+        config: new ConfigModule(config),
+        eventBus: new EngineEventBus(),
+        connectorRegistry,
+        imageRegistry: new ImageGenerationRegistry(),
+        toolResolver: new ToolResolver(),
+        pluginManager: {} as unknown as PluginManager,
+        inferenceRouter,
+        fileStore: new FileStore(config),
+        authStore: new AuthStore(config)
+      });
+      agentSystem.setCrons({} as unknown as Crons);
+      await agentSystem.load();
+      await agentSystem.start();
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "channel-1",
+        userId: "user-1"
+      };
+
+      await agentSystem.postAndAwait(
+        { descriptor },
+        { type: "reset", message: "seed context" }
+      );
+      const agentId = await agentSystem.agentIdForTarget({ descriptor });
+      const beforeCompaction = await agentStateRead(config, agentId);
+      expect(beforeCompaction?.inferenceSessionId).toBeTruthy();
+      const result = await agentSystem.postAndAwait(
+        { descriptor },
+        { type: "compact", context: { messageId: "88" } }
+      );
+
+      expect(result).toEqual({ type: "compact", ok: true });
+      expect(complete).toHaveBeenCalledTimes(1);
+      expect(receivedSessionId).toBe(beforeCompaction?.inferenceSessionId);
+      expect(startTyping).toHaveBeenCalledWith("channel-1");
+      expect(stopTyping).toHaveBeenCalledTimes(1);
+      expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
+        text: "Session compacted.",
+        replyToMessageId: "88"
+      });
+
+      const state = await agentStateRead(config, agentId);
+      const firstContextMessage = state?.context.messages?.[0];
+      expect(firstContextMessage?.role).toBe("user");
+      expect(typeof firstContextMessage?.content).toBe("string");
+      expect(String(firstContextMessage?.content)).toContain("Session context compacted.");
+      const files = await readdir(path.join(config.agentsDir, agentId));
+      expect(files.some((file) => file.startsWith("compaction_") && file.endsWith(".md"))).toBe(true);
+
+      await connectorRegistry.unregisterAll("test");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports empty compaction summaries without changing context", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    try {
+      const config = configResolve(
+        {
+          engine: { dataDir: dir },
+          assistant: { workspaceDir: dir },
+          providers: [{ id: "openai", model: "gpt-4.1" }]
+        },
+        path.join(dir, "settings.json")
+      );
+      const connectorRegistry = new ConnectorRegistry({
+        onMessage: async () => undefined
+      });
+      const sendMessage = vi.fn(async () => undefined);
+      const connector: Connector = {
+        capabilities: { sendText: true, typing: true },
+        onMessage: () => () => undefined,
+        sendMessage,
+        startTyping: () => () => undefined
+      };
+      const registerResult = connectorRegistry.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+
+      const inferenceRouter: InferenceRouter = {
+        complete: vi.fn(async () => ({
+          providerId: "openai",
+          modelId: "gpt-4.1",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "   " }],
+            api: "openai-responses",
+            provider: "openai",
+            model: "gpt-4.1",
+            usage: {
+              input: 10,
+              output: 5,
+              cacheRead: 0,
+              cacheWrite: 0,
+              totalTokens: 15,
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+            },
+            stopReason: "stop",
+            timestamp: Date.now()
+          }
+        }))
+      } as unknown as InferenceRouter;
+
+      const agentSystem = new AgentSystem({
+        config: new ConfigModule(config),
+        eventBus: new EngineEventBus(),
+        connectorRegistry,
+        imageRegistry: new ImageGenerationRegistry(),
+        toolResolver: new ToolResolver(),
+        pluginManager: {} as unknown as PluginManager,
+        inferenceRouter,
+        fileStore: new FileStore(config),
+        authStore: new AuthStore(config)
+      });
+      agentSystem.setCrons({} as unknown as Crons);
+      await agentSystem.load();
+      await agentSystem.start();
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "channel-1",
+        userId: "user-1"
+      };
+
+      await agentSystem.postAndAwait(
+        { descriptor },
+        { type: "reset", message: "seed context" }
+      );
+      const result = await agentSystem.postAndAwait(
+        { descriptor },
+        { type: "compact", context: { messageId: "89" } }
+      );
+
+      expect(result).toEqual({ type: "compact", ok: false });
+      expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
+        text: "Compaction produced an empty summary; context unchanged.",
+        replyToMessageId: "89"
+      });
+
+      await connectorRegistry.unregisterAll("test");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

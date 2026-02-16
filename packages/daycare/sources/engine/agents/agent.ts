@@ -474,13 +474,22 @@ export class Agent {
           replyToMessageId: entry.context.messageId
         });
       }
+      const stopCompactionTyping = this.startCompactionTypingIndicator();
+      const compactionAbortController = new AbortController();
+      this.inferenceAbortController = compactionAbortController;
+      let compactionAborted = false;
       try {
         const compacted = await contextCompact({
           context: this.state.context,
           inferenceRouter: this.agentSystem.inferenceRouter,
           providers,
           providerId: providerId ?? undefined,
-          agentId: `${this.id}:compaction`
+          inferenceSessionId: this.state.inferenceSessionId ?? this.id,
+          signal: compactionAbortController.signal,
+          compactionLog: {
+            agentsDir: this.agentSystem.config.current.agentsDir,
+            agentId: this.id
+          }
         });
         const summaryMessage = compacted.messages?.[0];
         const summaryText = summaryMessage
@@ -488,9 +497,24 @@ export class Agent {
           : "";
         if (summaryText) {
           compactionAt = await this.applyCompactionSummary(summaryText);
+        } else {
+          logger.info({ agentId: this.id }, "event: Compaction produced empty summary; using full context");
         }
       } catch (error) {
-        logger.warn({ agentId: this.id, error }, "error: Context compaction failed; continuing with full context");
+        if (isAbortError(error, compactionAbortController.signal)) {
+          compactionAborted = true;
+          logger.info({ agentId: this.id }, "event: Compaction aborted");
+        } else {
+          logger.warn({ agentId: this.id, error }, "error: Context compaction failed; continuing with full context");
+        }
+      } finally {
+        stopCompactionTyping?.();
+        if (this.inferenceAbortController === compactionAbortController) {
+          this.inferenceAbortController = null;
+        }
+      }
+      if (compactionAborted) {
+        return null;
       }
     }
 
@@ -800,13 +824,21 @@ export class Agent {
       return { ok: false, reason: "no_provider" };
     }
     const providerId = this.resolveAgentProvider(providers);
+    const stopCompactionTyping = this.startCompactionTypingIndicator();
+    const compactionAbortController = new AbortController();
+    this.inferenceAbortController = compactionAbortController;
     try {
       const compacted = await contextCompact({
         context: this.state.context,
         inferenceRouter: this.agentSystem.inferenceRouter,
         providers,
         providerId: providerId ?? undefined,
-        agentId: `${this.id}:compaction`
+        inferenceSessionId: this.state.inferenceSessionId ?? this.id,
+        signal: compactionAbortController.signal,
+        compactionLog: {
+          agentsDir: this.agentSystem.config.current.agentsDir,
+          agentId: this.id
+        }
       });
       const summaryMessage = compacted.messages?.[0];
       const summaryText = summaryMessage
@@ -820,8 +852,17 @@ export class Agent {
       await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
       return { ok: true };
     } catch (error) {
+      if (isAbortError(error, compactionAbortController.signal)) {
+        logger.info({ agentId: this.id }, "event: Manual compaction aborted");
+        return { ok: false, reason: "aborted" };
+      }
       logger.warn({ agentId: this.id, error }, "error: Manual compaction failed");
       return { ok: false, reason: "failed" };
+    } finally {
+      stopCompactionTyping?.();
+      if (this.inferenceAbortController === compactionAbortController) {
+        this.inferenceAbortController = null;
+      }
     }
   }
 
@@ -836,6 +877,8 @@ export class Agent {
         return "Compaction produced an empty summary; context unchanged.";
       case "no_provider":
         return "Compaction unavailable: no inference provider configured.";
+      case "aborted":
+        return "Compaction aborted.";
       default:
         return "Compaction failed.";
     }
@@ -957,6 +1000,22 @@ export class Agent {
     return providerId;
   }
 
+  /**
+   * Starts typing indication for foreground user agents during long compaction operations.
+   * Expects: connector supports startTyping for the active target.
+   */
+  private startCompactionTypingIndicator(): (() => void) | null {
+    if (this.descriptor.type !== "user") {
+      return null;
+    }
+    const target = agentDescriptorTargetResolve(this.descriptor);
+    if (!target?.targetId) {
+      return null;
+    }
+    const connector = this.agentSystem.connectorRegistry.get(target.connector);
+    return connector?.startTyping?.(target.targetId) ?? null;
+  }
+
   private async buildHistoryContext(
     records: AgentHistoryRecord[]
   ): Promise<Context["messages"]> {
@@ -1025,8 +1084,10 @@ export class Agent {
   private async applyCompactionSummary(summaryText: string): Promise<number> {
     const summaryWithContinue = `${summaryText}\n\nPlease continue with the user's latest request.`;
     const compactionAt = Date.now();
+    const resetMessage = "Session context compacted.";
     this.state.context = {
       messages: [
+        buildResetSystemMessage(resetMessage, compactionAt, this.id),
         {
           role: "user",
           content: summaryWithContinue,
@@ -1037,7 +1098,8 @@ export class Agent {
     this.state.tokens = null;
     await agentHistoryAppend(this.agentSystem.config.current, this.id, {
       type: "reset",
-      at: compactionAt
+      at: compactionAt,
+      message: resetMessage
     });
     await agentHistoryAppend(this.agentSystem.config.current, this.id, {
       type: "user_message",
@@ -1257,4 +1319,14 @@ function buildResetSystemMessage(
     content: messageBuildSystemText(text, origin),
     timestamp: at
   };
+}
+
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) {
+    return true;
+  }
+  if (error instanceof Error) {
+    return error.name === "AbortError" || error.message.toLowerCase().includes("abort");
+  }
+  return false;
 }

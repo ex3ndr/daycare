@@ -1,6 +1,7 @@
 # Telegram stop command
 
-This note documents the `/stop` command flow for aborting an in-flight inference.
+This note documents the `/stop` and `/abort` command flow for aborting an in-flight
+inference or compaction call.
 
 ```mermaid
 sequenceDiagram
@@ -11,11 +12,11 @@ sequenceDiagram
   participant A as Agent
   participant IR as InferenceRouter
 
-  U->>T: /stop
-  T->>E: onCommand("/stop", context, descriptor)
+  U->>T: /abort (or /stop)
+  T->>E: onCommand("/abort", context, descriptor)
   E->>AS: abortInferenceForTarget(descriptor)
   AS->>A: abortInference()
-  A->>IR: complete(..., signal)
+  A->>IR: complete(..., signal) or compaction complete(..., signal)
   Note over A,IR: AbortSignal is triggered
   E->>T: sendMessage("Stopped current inference.")
 ```
