@@ -1,6 +1,6 @@
 {
   "name": "daycare-cli",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "Local-first, plugin-driven multi-agent runtime",
   "type": "module",
   "license": "MIT",
