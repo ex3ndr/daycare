@@ -10,6 +10,7 @@ type AppToolReviewInput = {
   appId: string;
   appName: string;
   appSystemPrompt: string;
+  rlmEnabled: boolean;
   sourceIntent: string;
   toolCall: ToolCall;
   rules: AppRuleSet;
@@ -30,6 +31,7 @@ export async function appToolReview(input: AppToolReviewInput): Promise<AppRevie
   const reviewPrompt = await appReviewPromptBuild({
     appName: input.appName,
     appSystemPrompt: input.appSystemPrompt,
+    rlmEnabled: input.rlmEnabled,
     sourceIntent: input.sourceIntent,
     toolName: input.toolCall.name,
     args: input.toolCall.arguments,

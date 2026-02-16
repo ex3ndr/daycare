@@ -10,6 +10,7 @@ describe("appToolReview", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "read", type: "toolCall", arguments: { path: "/tmp/file" } },
       rules: { allow: [], deny: [] },
@@ -25,6 +26,7 @@ describe("appToolReview", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "exec", type: "toolCall", arguments: { command: "rm -rf ." } },
       rules: { allow: [], deny: [] },
@@ -40,6 +42,7 @@ describe("appToolReview", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "exec", type: "toolCall", arguments: { command: "echo ok" } },
       rules: { allow: [], deny: [] },
@@ -62,6 +65,7 @@ describe("appToolReview", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      rlmEnabled: true,
       sourceIntent: "Review pull requests safely.",
       toolCall: { id: "t1", name: "exec", type: "toolCall", arguments: { command: "echo ok" } },
       rules: { allow: [], deny: [] },
@@ -83,6 +87,8 @@ describe("appToolReview", () => {
     expect(prompt).toContain('not Python exec()');
     expect(prompt).toContain("## App System Prompt");
     expect(prompt).toContain("You are a focused review assistant.");
+    expect(prompt).toContain("RLM mode is enabled.");
+    expect(prompt).toContain("`run_python` tool");
   });
 });
 

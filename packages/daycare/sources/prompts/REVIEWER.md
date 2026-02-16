@@ -12,6 +12,13 @@ Interpret the tool call strictly against this tool list and descriptions.
 Do not reinterpret tool names using unrelated language/runtime built-ins.
 For example: tool "exec" is the Daycare exec tool from this list, not Python exec().
 
+## Execution Mode
+{{#if rlmEnabled}}
+RLM mode is enabled. Runtime execution goes through the `run_python` tool, and Python function calls can dispatch to any tools listed in this prompt.
+{{else}}
+RLM mode is disabled. Tools execute directly using normal tool-call execution.
+{{/if}}
+
 ## App System Prompt
 {{{appSystemPrompt}}}
 

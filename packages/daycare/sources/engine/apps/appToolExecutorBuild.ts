@@ -14,6 +14,7 @@ type AppToolExecutorBuildInput = {
   appId: string;
   appName: string;
   appSystemPrompt: string;
+  rlmEnabled: boolean;
   sourceIntent: string;
   rules: AppRuleSet;
   inferenceRouter: InferenceRouter;
@@ -68,6 +69,7 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
         appId: input.appId,
         appName: input.appName,
         appSystemPrompt: input.appSystemPrompt,
+        rlmEnabled: input.rlmEnabled,
         sourceIntent: input.sourceIntent,
         toolCall,
         rules: input.rules,

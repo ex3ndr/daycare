@@ -8,6 +8,7 @@ describe("appReviewPromptBuild", () => {
       appName: "GitHub Reviewer",
       appSystemPrompt:
         "You are a secure review assistant. Use only approved tooling and avoid destructive actions.",
+      rlmEnabled: true,
       sourceIntent: "Review pull requests safely.",
       toolName: "exec",
       args: { command: "git diff" },
@@ -34,6 +35,9 @@ describe("appReviewPromptBuild", () => {
     expect(prompt).toContain("## Available Tools In This Sandbox");
     expect(prompt).toContain("Name: exec");
     expect(prompt).toContain("not Python exec()");
+    expect(prompt).toContain("## Execution Mode");
+    expect(prompt).toContain("RLM mode is enabled.");
+    expect(prompt).toContain("`run_python` tool");
     expect(prompt).toContain("## App System Prompt");
     expect(prompt).toContain("You are a secure review assistant.");
     expect(prompt).toContain("Review pull requests safely.");

@@ -38,6 +38,10 @@ sequenceDiagram
   - `Description`
   - `Parameters` (JSON schema)
 - Added section: `## App System Prompt`
+- Added section: `## Execution Mode`:
+  - when `rlm` is enabled, prompt explicitly states execution flows through `run_python`
+    and Python calls can dispatch to the listed tools
+  - otherwise prompt states normal direct tool execution
 - Added explicit interpretation guard:
   - evaluate against provided tool list only
   - do not reinterpret names by language built-ins
