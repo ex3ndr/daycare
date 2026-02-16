@@ -5,6 +5,38 @@ import type { ExposeTunnelProvider } from "@/types";
 import { plugin } from "./plugin.js";
 
 describe("local-expose plugin", () => {
+  it("onboarding uses default port when omitted", async () => {
+    const prompt = {
+      input: vi
+        .fn()
+        .mockResolvedValueOnce("local.example.test")
+        .mockResolvedValueOnce("")
+    };
+    const result = await plugin.onboarding?.({ prompt } as never);
+    expect(result).toEqual({
+      settings: {
+        domain: "local.example.test",
+        port: 18221
+      }
+    });
+  });
+
+  it("onboarding accepts custom port", async () => {
+    const prompt = {
+      input: vi
+        .fn()
+        .mockResolvedValueOnce("local.example.test")
+        .mockResolvedValueOnce("18080")
+    };
+    const result = await plugin.onboarding?.({ prompt } as never);
+    expect(result).toEqual({
+      settings: {
+        domain: "local.example.test",
+        port: 18080
+      }
+    });
+  });
+
   it("registers provider and starts local forwarder process on create", async () => {
     let registeredProvider: ExposeTunnelProvider | null = null;
     const api = {
@@ -71,7 +103,7 @@ describe("local-expose plugin", () => {
       ?.command;
     expect(createdCommand).toContain("localTunnelForwarderEntry.js");
     expect(createdCommand).toContain("3000");
-    expect(createdCommand).toContain("80");
+    expect(createdCommand).toContain("18221");
 
     await provider.destroyTunnel(created.domain);
     expect(api.processes.removeByOwner).toHaveBeenCalledWith({

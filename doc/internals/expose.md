@@ -88,9 +88,9 @@ sequenceDiagram
   Processes-->>PM: removed process count
 ```
 
-## Local Expose provider on port 80
+## Local Expose provider on configurable local HTTP port
 - `local-expose` plugin accepts a configured hostname and exposes it over plain HTTP.
-- On first endpoint create, plugin starts a managed forwarder process bound to `0.0.0.0:80`.
+- On first endpoint create, plugin starts a managed forwarder process bound to configured `0.0.0.0:<port>` (default `18221`).
 - Forwarder process is created with sandbox `allowLocalBinding: true`.
 - Forwarder process proxies requests to expose proxy (`127.0.0.1:<proxyPort>`) preserving host header routing.
 
@@ -98,11 +98,11 @@ sequenceDiagram
 sequenceDiagram
   participant Plugin as local-expose plugin
   participant Processes
-  participant Forwarder as :80 forwarder
+  participant Forwarder as :<port> forwarder
   participant Proxy as ExposeProxy
 
   Plugin->>Processes: create(owner=plugin instance, keepAlive=true)
-  Processes->>Forwarder: start node localTunnelForwarderEntry.js proxyPort 80
+  Processes->>Forwarder: start node localTunnelForwarderEntry.js proxyPort listenPort(default 18221)
   Forwarder->>Proxy: proxy HTTP to 127.0.0.1:proxyPort
   Plugin->>Plugin: register expose provider(domain)
 ```

@@ -5,9 +5,12 @@ import { z } from "zod";
 import type { ExposeTunnelProvider, SessionPermissions } from "@/types";
 import { definePlugin } from "../../engine/plugins/types.js";
 
+const LOCAL_EXPOSE_DEFAULT_LISTEN_PORT = 18221;
+
 const settingsSchema = z
   .object({
-    domain: z.string().trim().min(1)
+    domain: z.string().trim().min(1),
+    port: z.coerce.number().int().min(1).max(65535).default(LOCAL_EXPOSE_DEFAULT_LISTEN_PORT)
   })
   .strict();
 
@@ -22,15 +25,19 @@ export const plugin = definePlugin({
   settingsSchema,
   onboarding: async (api) => {
     const domain = await api.prompt.input({
-      message: "Local domain (host header) to expose on port 80"
+      message: "Local domain (host header) to expose over local HTTP"
     });
     if (!domain) {
       return null;
     }
+    const listenPortInput = await api.prompt.input({
+      message: `Local listen port (default: ${LOCAL_EXPOSE_DEFAULT_LISTEN_PORT})`
+    });
 
     return {
       settings: {
-        domain: domain.trim()
+        domain: domain.trim(),
+        port: localExposeListenPortResolve(listenPortInput)
       }
     };
   },
@@ -39,6 +46,7 @@ export const plugin = definePlugin({
     const instanceId = api.instance.instanceId;
     const processOwner = { type: "plugin" as const, id: instanceId };
     const configuredDomain = settings.domain.trim().toLowerCase();
+    const configuredPort = settings.port ?? LOCAL_EXPOSE_DEFAULT_LISTEN_PORT;
     const activeDomains = new Set<string>();
 
     let provider: ExposeTunnelProvider | null = null;
@@ -60,7 +68,7 @@ export const plugin = definePlugin({
       await api.processes.create(
         {
           name: expectedName,
-          command: processCommandBuild(proxyPort),
+          command: processCommandBuild(proxyPort, configuredPort),
           cwd: api.dataDir,
           home: api.dataDir,
           keepAlive: true,
@@ -121,12 +129,24 @@ function processNameBuild(instanceId: string, proxyPort: number): string {
   return `local-expose-${instanceId}-${proxyPort}`;
 }
 
-function processCommandBuild(proxyPort: number): string {
+function processCommandBuild(proxyPort: number, listenPort: number): string {
   return `${shellQuote(process.execPath)} ${shellQuote(FORWARDER_ENTRY_PATH)} ${shellQuote(
     String(proxyPort)
-  )} ${shellQuote("80")}`;
+  )} ${shellQuote(String(listenPort))}`;
 }
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\"'\"'`)}'`;
+}
+
+function localExposeListenPortResolve(input: string | null | undefined): number {
+  const value = input?.trim();
+  if (!value) {
+    return LOCAL_EXPOSE_DEFAULT_LISTEN_PORT;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+    throw new Error("Local listen port must be an integer between 1 and 65535.");
+  }
+  return parsed;
 }

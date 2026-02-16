@@ -2,7 +2,7 @@ import http from "node:http";
 import { pipeline } from "node:stream/promises";
 
 const proxyPort = parsePort(process.argv[2], "proxy port");
-const listenPort = parsePort(process.argv[3] ?? "80", "listen port");
+const listenPort = parsePort(process.argv[3] ?? "18221", "listen port");
 
 const server = http.createServer((request, response) => {
   const headers: http.OutgoingHttpHeaders = { ...request.headers };
