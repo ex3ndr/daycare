@@ -11,7 +11,7 @@ from recent history plus the current system prompt and compacts when thresholds 
 - When warning/critical, the agent notifies the user that compaction is starting, runs compaction
   immediately, and resumes inference with the compacted context.
 - During compaction, connectors that support typing show a typing indicator.
-- Compaction runs with an abort signal so `/abort` (or `/stop`) can interrupt in-flight compaction.
+- Compaction runs with an abort signal so `/abort` can interrupt in-flight compaction.
 
 ## Compaction summary handling
 

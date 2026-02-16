@@ -89,7 +89,7 @@ flowchart LR
 - `/reset` clears the agent message history for the current user.
 - `/context` reports the latest context token usage snapshot.
 - `/compaction` requests manual context compaction.
-- `/stop` aborts the current inference for the current user.
+- `/abort` aborts the current inference for the current user.
 - Upgrade plugin commands may add `/upgrade` and `/restart` when that plugin is enabled.
 
 ```mermaid

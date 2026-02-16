@@ -3,7 +3,7 @@
 Telegram slash commands are pushed dynamically from the runtime command registry.
 
 ## Command sources
-- Core commands: `/reset`, `/context`, `/compaction`, `/stop`, `/abort`
+- Core commands: `/reset`, `/context`, `/compaction`, `/abort`
 - Plugin commands: registered through `PluginRegistrar.registerCommand()`
 - Example plugin commands: Upgrade plugin registers `/upgrade` and `/restart`
 

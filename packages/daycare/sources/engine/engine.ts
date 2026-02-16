@@ -181,7 +181,7 @@ export class Engine {
           await this.handleCompactionCommand(descriptor, context);
           return;
         }
-        if (parsed.name === "stop" || parsed.name === "abort") {
+        if (parsed.name === "abort") {
           if (descriptor.type !== "user") {
             return;
           }
