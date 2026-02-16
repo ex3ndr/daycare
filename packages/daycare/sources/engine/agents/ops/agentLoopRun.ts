@@ -303,7 +303,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       await historyRecordAppend(historyRecords, {
         type: "assistant_message",
         at: Date.now(),
-        text: effectiveResponseText ?? "",
+        text: responseText ?? "",
         files: [],
         toolCalls,
         tokens: tokensEntry
