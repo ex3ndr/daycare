@@ -17,7 +17,8 @@ export function messageContextStatus(options: MessageContextStatusOptions): stri
   }
 
   const { size, provider, model } = tokens;
-  const used = size.input;
+  // Context window usage = all prompt tokens (input + cached)
+  const used = size.input + size.cacheRead + size.cacheWrite;
   const pct = contextLimit > 0 ? Math.min(100, Math.round((used / contextLimit) * 100)) : 0;
   const bar = progressBar(pct);
   const usedK = formatTokensK(used);

@@ -12,17 +12,30 @@ describe("messageContextStatus", () => {
       tokens: {
         provider: "openai",
         model: "gpt-4o",
-        size: { input: 50_000, output: 2_000, cacheRead: 10_000, cacheWrite: 5_000, total: 67_000 }
+        size: { input: 50_000, output: 2_000, cacheRead: 0, cacheWrite: 0, total: 52_000 }
       },
       contextLimit: 200_000
     });
+    // used = input + cacheRead + cacheWrite = 50k
     expect(result).toContain("📊 Context: 50k / 200k tokens (25%)");
     expect(result).toContain("[█████░░░░░░░░░░░░░░░]");
     expect(result).toContain("Provider: openai/gpt-4o");
     expect(result).toContain("Input: 50,000");
     expect(result).toContain("Output: 2,000");
-    expect(result).toContain("Cache read: 10,000");
-    expect(result).toContain("Cache write: 5,000");
+  });
+
+  it("includes cached tokens in context usage", () => {
+    const result = messageContextStatus({
+      tokens: {
+        provider: "anthropic",
+        model: "claude-opus-4-5",
+        size: { input: 399, output: 20, cacheRead: 12_741, cacheWrite: 0, total: 13_160 }
+      },
+      contextLimit: 200_000
+    });
+    // used = 399 + 12_741 + 0 = 13_140
+    expect(result).toContain("📊 Context: 13k / 200k tokens (7%)");
+    expect(result).toContain("Cache read: 12,741");
   });
 
   it("caps utilization at 100%", () => {
