@@ -21,12 +21,14 @@ export type {
   MessageContext,
   MessageHandler,
   MessageUnsubscribe,
+  PluginCommandDefinition,
   PermissionAccess,
   PermissionEntry,
   PermissionDecision,
   PermissionHandler,
   PermissionKind,
-  PermissionRequest
+  PermissionRequest,
+  SlashCommandEntry
 } from "./engine/modules/connectors/types.js";
 
 // Files

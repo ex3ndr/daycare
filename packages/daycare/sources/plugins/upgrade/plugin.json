@@ -1,0 +1,6 @@
+{
+  "id": "upgrade",
+  "name": "Upgrade",
+  "description": "Runs in-place daycare upgrades and restarts the runtime.",
+  "entry": "./plugin.js"
+}

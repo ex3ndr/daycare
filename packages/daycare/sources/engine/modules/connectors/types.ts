@@ -42,6 +42,15 @@ export type CommandHandler = (
   descriptor: AgentDescriptor
 ) => void | Promise<void>;
 
+export type SlashCommandEntry = {
+  command: string;
+  description: string;
+};
+
+export type PluginCommandDefinition = SlashCommandEntry & {
+  handler: CommandHandler;
+};
+
 export type MessageUnsubscribe = () => void;
 export type CommandUnsubscribe = () => void;
 
@@ -89,6 +98,7 @@ export interface Connector {
   capabilities: ConnectorCapabilities;
   onMessage(handler: MessageHandler): MessageUnsubscribe;
   onCommand?: (handler: CommandHandler) => CommandUnsubscribe;
+  updateCommands?: (commands: SlashCommandEntry[]) => void | Promise<void>;
   onPermission?: (handler: PermissionHandler) => MessageUnsubscribe;
   sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
   requestPermission?: (

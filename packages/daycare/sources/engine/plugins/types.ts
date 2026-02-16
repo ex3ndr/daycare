@@ -31,6 +31,8 @@ export type PluginApi<TSettings = unknown> = {
 export type PluginInstance = {
   load?: () => Promise<void>;
   unload?: () => Promise<void>;
+  preStart?: () => Promise<void>;
+  postStart?: () => Promise<void>;
   systemPrompt?: (() => Promise<string | null> | string | null) | string | null;
 };
 

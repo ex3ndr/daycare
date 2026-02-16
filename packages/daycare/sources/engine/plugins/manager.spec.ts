@@ -401,4 +401,68 @@ export const plugin = {
     await manager.unload("reload-one");
     expect(modules.tools.listTools()).toEqual([]);
   });
+
+  it("runs preStart/postStart hooks in load order and isolates errors", async () => {
+    const dir = await createTempDir();
+    const pluginSource = `import { z } from "zod";
+
+export const plugin = {
+  settingsSchema: z.object({
+    label: z.string(),
+    failPreStart: z.boolean().optional(),
+    failPostStart: z.boolean().optional()
+  }),
+  create: (api) => ({
+    preStart: async () => {
+      api.events.emit({
+        type: "preStart",
+        payload: { label: api.settings.label }
+      });
+      if (api.settings.failPreStart) {
+        throw new Error("preStart failed");
+      }
+    },
+    postStart: async () => {
+      api.events.emit({
+        type: "postStart",
+        payload: { label: api.settings.label }
+      });
+      if (api.settings.failPostStart) {
+        throw new Error("postStart failed");
+      }
+    }
+  })
+};
+`;
+    const entryPath = await writePluginFile(dir, pluginSource);
+    const events: PluginEvent[] = [];
+    const { manager } = createManager(entryPath, "hooks", dir, (event) => {
+      events.push(event);
+    });
+
+    await manager.load({
+      instanceId: "hooks-a",
+      pluginId: "hooks",
+      enabled: true,
+      settings: { label: "A", failPreStart: true }
+    });
+    await manager.load({
+      instanceId: "hooks-b",
+      pluginId: "hooks",
+      enabled: true,
+      settings: { label: "B", failPostStart: true }
+    });
+
+    await manager.preStartAll();
+    await manager.postStartAll();
+
+    expect(events.filter((event) => event.type === "preStart").map((event) => event.payload)).toEqual([
+      { label: "A" },
+      { label: "B" }
+    ]);
+    expect(events.filter((event) => event.type === "postStart").map((event) => event.payload)).toEqual([
+      { label: "A" },
+      { label: "B" }
+    ]);
+  });
 });

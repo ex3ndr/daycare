@@ -192,6 +192,18 @@ export class Engine {
           await this.handleStopCommand(descriptor, context);
           return;
         }
+        if (descriptor.type !== "user") {
+          return;
+        }
+        const pluginCommand = this.modules.commands.get(parsed.name);
+        if (pluginCommand) {
+          logger.info(
+            { connector, command: parsed.name, channelId: descriptor.channelId, userId: descriptor.userId },
+            "event: Dispatching plugin slash command"
+          );
+          await pluginCommand.handler(command, context, descriptor);
+          return;
+        }
         logger.debug({ connector, command: parsed.name }, "event: Unknown command ignored");
       }),
       onPermission: async (decision, context, descriptor) => this.runConnectorCallback("permission", async () => {
@@ -366,6 +378,8 @@ export class Engine {
       "register: Core tools registered: cron, cron_memory, heartbeat, topology, background, skill, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, send_file, generate_signal, signal_subscribe, signal_unsubscribe, request_permission, grant_permission"
     );
 
+    await this.pluginManager.preStartAll();
+
     logger.debug("start: Starting agent system");
     await this.agentSystem.start();
     logger.debug("start: Agent system started");
@@ -376,6 +390,7 @@ export class Engine {
     await this.heartbeats.start();
     logger.debug("start: Starting delayed signal scheduler");
     await this.delayedSignals.start();
+    await this.pluginManager.postStartAll();
     logger.debug("start: Engine.start() complete");
   }
 

@@ -1,22 +1,36 @@
 # Telegram Slash Command Registration
 
-The Telegram connector now registers slash commands when it starts. This ensures Telegram clients show command suggestions for supported runtime commands.
+Telegram slash commands are now pushed dynamically from the runtime command registry.
 
-## Registered commands
-- `/reset` - reset the current conversation.
-- `/context` - show the latest context token usage snapshot.
-- `/stop` - abort the current inference.
+## Command sources
+- Core commands: `/reset`, `/context`, `/stop`
+- Plugin commands: registered through `PluginRegistrar.registerCommand()`
 
-## Startup flow
+## Sync behavior
+- `ConnectorRegistry` merges core + plugin command entries.
+- Connectors implementing `updateCommands()` receive updates.
+- `TelegramConnector.updateCommands()` debounces `setMyCommands()` calls by 1 second.
+- Telegram plugin starts command sync from `postStart()` so initial registration happens after all startup plugin command registrations.
 
+## Runtime flow
 ```mermaid
 flowchart TD
-  A[TelegramConnector constructor] --> B[initialize]
-  B --> C[registerSlashCommands]
-  C --> D[bot.setMyCommands reset/context/stop]
-  D --> E{Succeeded?}
-  E -->|yes| F[Continue startup]
-  E -->|no| G[Log warning]
-  G --> F
-  F --> H[Load state and polling startup]
+  A[Plugin load/registerCommand] --> B[CommandRegistry]
+  B --> C[ConnectorRegistry onChange]
+  C --> D[TelegramConnector.updateCommands]
+  D --> E[1s debounce]
+  E --> F[bot.setMyCommands]
+```
+
+## Startup flow
+```mermaid
+flowchart TD
+  A[Engine.start]
+  A --> B[pluginManager.reload]
+  B --> C[Telegram connector registered]
+  C --> D[ConnectorRegistry sends commands]
+  D --> E[Telegram caches pending command list]
+  E --> F[pluginManager.postStartAll]
+  F --> G[Telegram commandSyncStart]
+  G --> H[Debounced setMyCommands]
 ```

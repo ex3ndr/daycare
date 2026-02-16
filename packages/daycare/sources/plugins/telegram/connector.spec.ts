@@ -199,7 +199,7 @@ describe("TelegramConnector startup", () => {
     telegramInstances.length = 0;
   });
 
-  it("registers slash commands on start", async () => {
+  it("does not register slash commands before command sync starts", async () => {
     const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
     new TelegramConnector({
       token: "token",
@@ -216,31 +216,74 @@ describe("TelegramConnector startup", () => {
 
     const bot = telegramInstances[0];
     expect(bot).toBeTruthy();
-    expect(bot!.setMyCommands).toHaveBeenCalledWith(
-      [
+    expect(bot!.setMyCommands).not.toHaveBeenCalled();
+  });
+});
+
+describe("TelegramConnector command updates", () => {
+  beforeEach(() => {
+    telegramInstances.length = 0;
+  });
+
+  it("debounces setMyCommands updates by 1 second", async () => {
+    vi.useFakeTimers();
+    try {
+      const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+      const connector = new TelegramConnector({
+        token: "token",
+        allowedUids: ["123"],
+        polling: false,
+        clearWebhook: false,
+        statePath: null,
+        fileStore,
+        dataDir: "/tmp",
+        enableGracefulShutdown: false
+      });
+      const bot = telegramInstances[0];
+      expect(bot).toBeTruthy();
+
+      connector.updateCommands([
+        { command: "reset", description: "Reset the current conversation." }
+      ]);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(bot!.setMyCommands).not.toHaveBeenCalled();
+
+      connector.commandSyncStart();
+      connector.updateCommands([
+        { command: "reset", description: "Reset the current conversation." }
+      ]);
+      connector.updateCommands([
+        { command: "reset", description: "Reset the current conversation." },
+        { command: "upgrade", description: "Upgrade daycare to latest version" }
+      ]);
+
+      await vi.advanceTimersByTimeAsync(999);
+      expect(bot!.setMyCommands).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(bot!.setMyCommands).toHaveBeenCalledTimes(1);
+      expect(bot!.setMyCommands).toHaveBeenCalledWith(
+        [
+          {
+            command: "reset",
+            description: "Reset the current conversation."
+          },
+          {
+            command: "upgrade",
+            description: "Upgrade daycare to latest version"
+          }
+        ],
         {
-          command: "reset",
-          description: "Reset the current conversation."
-        },
-        {
-          command: "context",
-          description: "Show latest context token usage."
-        },
-        {
-          command: "compaction",
-          description: "Compact the current conversation."
-        },
-        {
-          command: "stop",
-          description: "Abort the current inference."
+          scope: {
+            type: "all_private_chats"
+          }
         }
-      ],
-      {
-        scope: {
-          type: "all_private_chats"
-        }
-      }
-    );
+      );
+
+      await connector.shutdown("test");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

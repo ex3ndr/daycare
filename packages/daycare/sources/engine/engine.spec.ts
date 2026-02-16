@@ -156,6 +156,53 @@ describe("Engine RLM mode", () => {
   });
 });
 
+describe("Engine startup plugin hooks", () => {
+  it("runs preStart hooks before systems and postStart hooks after systems", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      const order: string[] = [];
+
+      vi.spyOn(engine.pluginManager, "preStartAll").mockImplementation(async () => {
+        order.push("preStart");
+      });
+      vi.spyOn(engine.agentSystem, "start").mockImplementation(async () => {
+        order.push("agentSystem.start");
+      });
+      vi.spyOn(engine.crons, "start").mockImplementation(async () => {
+        order.push("crons.start");
+      });
+      vi.spyOn(engine.heartbeats, "start").mockImplementation(async () => {
+        order.push("heartbeats.start");
+      });
+      vi.spyOn(engine.delayedSignals, "start").mockImplementation(async () => {
+        order.push("delayedSignals.start");
+      });
+      vi.spyOn(engine.pluginManager, "postStartAll").mockImplementation(async () => {
+        order.push("postStart");
+      });
+
+      await engine.start();
+      expect(order).toEqual([
+        "preStart",
+        "agentSystem.start",
+        "crons.start",
+        "heartbeats.start",
+        "delayedSignals.start",
+        "postStart"
+      ]);
+
+      await engine.shutdown();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("Engine tool registration", () => {
   it("registers the skill tool in normal mode", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
@@ -284,6 +331,62 @@ describe("Engine compaction command", () => {
         { type: "compact", context }
       );
       expect(sendMessage).not.toHaveBeenCalled();
+
+      await engine.modules.connectors.unregisterAll("test");
+      await engine.shutdown();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("Engine plugin commands", () => {
+  it("dispatches unknown slash commands to the plugin command registry", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      const pluginHandler = vi.fn(async () => undefined);
+      engine.modules.commands.register("upgrade-plugin", {
+        command: "upgrade",
+        description: "Upgrade daycare to latest version",
+        handler: pluginHandler
+      });
+
+      const commandState: {
+        handler?: (command: string, context: MessageContext, descriptor: AgentDescriptor) => void | Promise<void>;
+      } = {};
+
+      const connector: Connector = {
+        capabilities: { sendText: true },
+        onMessage: () => () => undefined,
+        onCommand: (handler) => {
+          commandState.handler = handler;
+          return () => undefined;
+        },
+        sendMessage: async () => undefined
+      };
+
+      const registerResult = engine.modules.connectors.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+      const commandHandler = commandState.handler;
+      if (!commandHandler) {
+        throw new Error("Expected command handler to be registered");
+      }
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      };
+      const context: MessageContext = { messageId: "56" };
+      await commandHandler("/upgrade now", context, descriptor);
+
+      expect(pluginHandler).toHaveBeenCalledWith("/upgrade now", context, descriptor);
 
       await engine.modules.connectors.unregisterAll("test");
       await engine.shutdown();

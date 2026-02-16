@@ -40,6 +40,7 @@ export const plugin = definePlugin({
   },
   create: (api) => {
     const connectorId = api.instance.instanceId;
+    let connector: TelegramConnector | null = null;
     return {
       load: async () => {
         const token = await api.auth.getToken(connectorId);
@@ -56,7 +57,7 @@ export const plugin = definePlugin({
             : config.statePath === null
               ? null
               : resolvePluginPath(api.dataDir, config.statePath);
-        const connector = new TelegramConnector({
+        connector = new TelegramConnector({
           ...config,
           statePath,
           token,
@@ -69,8 +70,12 @@ export const plugin = definePlugin({
         });
         api.registrar.registerConnector(connectorId, connector);
       },
+      postStart: async () => {
+        connector?.commandSyncStart();
+      },
       unload: async () => {
         await api.registrar.unregisterConnector(connectorId);
+        connector = null;
       }
     };
   }

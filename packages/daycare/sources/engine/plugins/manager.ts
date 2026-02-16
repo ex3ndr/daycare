@@ -336,6 +336,38 @@ export class PluginManager {
     this.logger.debug("event: unloadAll() complete");
   }
 
+  async preStartAll(): Promise<void> {
+    for (const [instanceId, entry] of this.loaded.entries()) {
+      if (!entry.instance.preStart) {
+        continue;
+      }
+      try {
+        await entry.instance.preStart();
+      } catch (error) {
+        this.logger.warn(
+          { instance: instanceId, plugin: entry.config.pluginId, error },
+          "error: Plugin preStart hook failed"
+        );
+      }
+    }
+  }
+
+  async postStartAll(): Promise<void> {
+    for (const [instanceId, entry] of this.loaded.entries()) {
+      if (!entry.instance.postStart) {
+        continue;
+      }
+      try {
+        await entry.instance.postStart();
+      } catch (error) {
+        this.logger.warn(
+          { instance: instanceId, plugin: entry.config.pluginId, error },
+          "error: Plugin postStart hook failed"
+        );
+      }
+    }
+  }
+
   private async ensurePluginDir(instanceId: string): Promise<string> {
     const dir = path.join(this.config.current.dataDir, "plugins", instanceId);
     await fs.mkdir(dir, { recursive: true });

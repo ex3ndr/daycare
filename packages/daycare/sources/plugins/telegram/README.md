@@ -30,8 +30,9 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands
-- Registers Telegram bot commands during startup via `setMyCommands`.
-- Commands are scoped to private chats: `/reset`, `/context`, and `/stop`.
+- Receives slash command definitions dynamically via `updateCommands(commands)`.
+- Debounces Telegram `setMyCommands` updates by 1 second.
+- Initial command sync is triggered from plugin `postStart()` so command registration happens after startup plugin loading.
 
 ## Persistence
 - Tracks the last processed Telegram `update_id` and persists it to the configured state file.

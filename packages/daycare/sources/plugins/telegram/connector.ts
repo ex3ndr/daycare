@@ -15,7 +15,8 @@ import type {
   PermissionDecision,
   PermissionHandler,
   PermissionRequest,
-  FileReference
+  FileReference,
+  SlashCommandEntry
 } from "@/types";
 import { getLogger } from "../../log.js";
 import type { FileStore } from "../../files/store.js";
@@ -48,24 +49,7 @@ const TELEGRAM_MESSAGE_FORMAT_PROMPT = [
 
 const TELEGRAM_MESSAGE_MAX_LENGTH = 4096;
 const TELEGRAM_CAPTION_MAX_LENGTH = 1024;
-const TELEGRAM_SLASH_COMMANDS: TelegramBot.BotCommand[] = [
-  {
-    command: "reset",
-    description: "Reset the current conversation."
-  },
-  {
-    command: "context",
-    description: "Show latest context token usage."
-  },
-  {
-    command: "compaction",
-    description: "Compact the current conversation."
-  },
-  {
-    command: "stop",
-    description: "Abort the current inference."
-  }
-];
+const TELEGRAM_COMMAND_UPDATE_DEBOUNCE_MS = 1000;
 
 export class TelegramConnector implements Connector {
   capabilities: ConnectorCapabilities = {
@@ -89,6 +73,9 @@ export class TelegramConnector implements Connector {
   private persistTimer: NodeJS.Timeout | null = null;
   private typingTimers = new Map<string, NodeJS.Timeout>();
   private startingPolling = false;
+  private commandSyncEnabled = false;
+  private pendingCommands: SlashCommandEntry[] = [];
+  private commandSyncTimer: NodeJS.Timeout | null = null;
   private allowedUids: Set<string>;
   private pendingPermissions = new Map<
     string,
@@ -250,6 +237,19 @@ export class TelegramConnector implements Connector {
         this.commandHandlers.splice(index, 1);
       }
     };
+  }
+
+  updateCommands(commands: SlashCommandEntry[]): void {
+    this.pendingCommands = commands;
+    if (!this.commandSyncEnabled) {
+      return;
+    }
+    this.scheduleCommandSync();
+  }
+
+  commandSyncStart(): void {
+    this.commandSyncEnabled = true;
+    this.scheduleCommandSync();
   }
 
   onPermission(handler: PermissionHandler): () => void {
@@ -450,7 +450,6 @@ export class TelegramConnector implements Connector {
 
   private async initialize(): Promise<void> {
     logger.debug(`init: initialize() starting pollingEnabled=${this.pollingEnabled} clearWebhookOnStart=${this.clearWebhookOnStart}`);
-    await this.registerSlashCommands();
     if (this.pollingEnabled && this.clearWebhookOnStart) {
       logger.debug("event: Clearing webhook before polling");
       await this.ensureWebhookCleared();
@@ -462,19 +461,6 @@ export class TelegramConnector implements Connector {
       await this.startPolling();
     }
     logger.debug("init: initialize() complete");
-  }
-
-  private async registerSlashCommands(): Promise<void> {
-    try {
-      await this.bot.setMyCommands(TELEGRAM_SLASH_COMMANDS, {
-        scope: {
-          type: "all_private_chats"
-        }
-      });
-      logger.debug("register: Telegram slash commands registered");
-    } catch (error) {
-      logger.warn({ error }, "error: Failed to register Telegram slash commands");
-    }
   }
 
   private trackUpdate(update: TelegramBot.Update): void {
@@ -673,6 +659,11 @@ export class TelegramConnector implements Connector {
       clearTimeout(this.persistTimer);
       this.persistTimer = null;
     }
+    if (this.commandSyncTimer) {
+      logger.debug("event: Clearing command sync timer");
+      clearTimeout(this.commandSyncTimer);
+      this.commandSyncTimer = null;
+    }
     logger.debug(`event: Clearing typing timers typingTimerCount=${this.typingTimers.size}`);
     for (const timer of this.typingTimers.values()) {
       clearInterval(timer);
@@ -814,6 +805,38 @@ export class TelegramConnector implements Connector {
       }
     } catch (error) {
       logger.warn({ error }, "error: Failed to update Telegram permission message");
+    }
+  }
+
+  private scheduleCommandSync(): void {
+    if (this.commandSyncTimer) {
+      clearTimeout(this.commandSyncTimer);
+      this.commandSyncTimer = null;
+    }
+    this.commandSyncTimer = setTimeout(() => {
+      void this.commandSyncFlush();
+    }, TELEGRAM_COMMAND_UPDATE_DEBOUNCE_MS);
+  }
+
+  private async commandSyncFlush(): Promise<void> {
+    this.commandSyncTimer = null;
+    try {
+      await this.bot.setMyCommands(
+        this.pendingCommands.map((command) => ({
+          command: command.command,
+          description: command.description
+        })),
+        {
+          scope: {
+            type: "all_private_chats"
+          }
+        }
+      );
+      logger.debug(
+        `register: Telegram slash commands updated commandCount=${this.pendingCommands.length}`
+      );
+    } catch (error) {
+      logger.warn({ error }, "error: Failed to update Telegram slash commands");
     }
   }
 }

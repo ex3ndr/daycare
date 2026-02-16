@@ -1,27 +1,35 @@
 import path from "node:path";
 
 import type {
+  AgentDescriptor,
   Connector,
+  ConnectorMessage,
   ImageGenerationProvider,
   InferenceProvider,
+  MessageContext,
+  PluginCommandDefinition,
   ToolDefinition
 } from "@/types";
+import type { CommandRegistry } from "../modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRegistry } from "../modules/inferenceRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
 import { ModuleRegistry } from "../modules/moduleRegistry.js";
+import { agentDescriptorTargetResolve } from "../agents/ops/agentDescriptorTargetResolve.js";
 
 type PluginRegistrations = {
   connectors: Set<string>;
   providers: Set<string>;
   tools: Set<string>;
   images: Set<string>;
+  commands: Set<string>;
   skills: Set<string>;
 };
 
 export class PluginRegistrar {
   private pluginId: string;
+  private commandRegistry: CommandRegistry;
   private connectorRegistry: ConnectorRegistry;
   private inferenceRegistry: InferenceRegistry;
   private imageRegistry: ImageGenerationRegistry;
@@ -30,12 +38,14 @@ export class PluginRegistrar {
 
   constructor(
     pluginId: string,
+    commandRegistry: CommandRegistry,
     connectorRegistry: ConnectorRegistry,
     inferenceRegistry: InferenceRegistry,
     imageRegistry: ImageGenerationRegistry,
     toolResolver: ToolResolver
   ) {
     this.pluginId = pluginId;
+    this.commandRegistry = commandRegistry;
     this.connectorRegistry = connectorRegistry;
     this.inferenceRegistry = inferenceRegistry;
     this.imageRegistry = imageRegistry;
@@ -45,6 +55,7 @@ export class PluginRegistrar {
       providers: new Set(),
       tools: new Set(),
       images: new Set(),
+      commands: new Set(),
       skills: new Set()
     };
   }
@@ -57,6 +68,25 @@ export class PluginRegistrar {
   async unregisterConnector(id: string): Promise<void> {
     await this.connectorRegistry.unregister(id, "plugin-unload");
     this.registrations.connectors.delete(id);
+  }
+
+  async sendMessage(
+    descriptor: AgentDescriptor,
+    context: MessageContext,
+    message: ConnectorMessage
+  ): Promise<void> {
+    const target = agentDescriptorTargetResolve(descriptor);
+    if (!target) {
+      return;
+    }
+    const connector = this.connectorRegistry.get(target.connector);
+    if (!connector?.capabilities.sendText) {
+      return;
+    }
+    await connector.sendMessage(target.targetId, {
+      ...message,
+      replyToMessageId: context.messageId
+    });
   }
 
   registerInferenceProvider(provider: InferenceProvider): void {
@@ -77,6 +107,16 @@ export class PluginRegistrar {
   unregisterTool(name: string): void {
     this.toolResolver.unregister(name);
     this.registrations.tools.delete(name);
+  }
+
+  registerCommand(definition: PluginCommandDefinition): void {
+    this.commandRegistry.register(this.pluginId, definition);
+    this.registrations.commands.add(definition.command);
+  }
+
+  unregisterCommand(name: string): void {
+    this.commandRegistry.unregister(name);
+    this.registrations.commands.delete(name);
   }
 
   registerImageProvider(provider: ImageGenerationProvider): void {
@@ -116,15 +156,20 @@ export class PluginRegistrar {
     for (const name of this.registrations.tools) {
       this.toolResolver.unregister(name);
     }
+    for (const command of this.registrations.commands) {
+      this.commandRegistry.unregister(command);
+    }
     this.registrations.connectors.clear();
     this.registrations.providers.clear();
     this.registrations.images.clear();
     this.registrations.tools.clear();
+    this.registrations.commands.clear();
     this.registrations.skills.clear();
   }
 }
 
 export class PluginRegistry {
+  private commandRegistry: CommandRegistry;
   private connectorRegistry: ConnectorRegistry;
   private inferenceRegistry: InferenceRegistry;
   private imageRegistry: ImageGenerationRegistry;
@@ -133,6 +178,7 @@ export class PluginRegistry {
   constructor(
     modules: ModuleRegistry,
   ) {
+    this.commandRegistry = modules.commands;
     this.connectorRegistry = modules.connectors;
     this.inferenceRegistry = modules.inference;
     this.imageRegistry = modules.images;
@@ -142,6 +188,7 @@ export class PluginRegistry {
   createRegistrar(pluginId: string): PluginRegistrar {
     return new PluginRegistrar(
       pluginId,
+      this.commandRegistry,
       this.connectorRegistry,
       this.inferenceRegistry,
       this.imageRegistry,

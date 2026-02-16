@@ -1,4 +1,5 @@
 import { getLogger } from "../../log.js";
+import { CommandRegistry } from "./commandRegistry.js";
 import type {
   Connector,
   ConnectorMessage,
@@ -7,6 +8,7 @@ import type {
   CommandHandler,
   CommandUnsubscribe,
   MessageUnsubscribe,
+  SlashCommandEntry,
   PermissionDecision,
   PermissionHandler
 } from "./connectors/types.js";
@@ -17,6 +19,7 @@ export type ConnectorActionResult =
   | { ok: false; status: "error"; message: string };
 
 export type ConnectorRegistryOptions = {
+  commandRegistry?: CommandRegistry;
   onMessage: (
     message: ConnectorMessage,
     context: MessageContext,
@@ -35,6 +38,13 @@ export type ConnectorRegistryOptions = {
   onFatal?: (source: string, reason: string, error?: unknown) => void;
 };
 
+const CORE_COMMANDS: SlashCommandEntry[] = [
+  { command: "reset", description: "Reset the current conversation." },
+  { command: "context", description: "Show latest context token usage." },
+  { command: "compaction", description: "Compact the current conversation." },
+  { command: "stop", description: "Abort the current inference." }
+];
+
 type ManagedConnector = {
   connector: Connector;
   unsubscribe?: MessageUnsubscribe;
@@ -45,6 +55,7 @@ type ManagedConnector = {
 
 export class ConnectorRegistry {
   private connectors = new Map<string, ManagedConnector>();
+  private commandRegistry: CommandRegistry;
   private onMessage: ConnectorRegistryOptions["onMessage"];
   private onCommand?: ConnectorRegistryOptions["onCommand"];
   private onPermission?: ConnectorRegistryOptions["onPermission"];
@@ -52,10 +63,14 @@ export class ConnectorRegistry {
   private logger = getLogger("connectors.registry");
 
   constructor(options: ConnectorRegistryOptions) {
+    this.commandRegistry = options.commandRegistry ?? new CommandRegistry();
     this.onMessage = options.onMessage;
     this.onCommand = options.onCommand;
     this.onPermission = options.onPermission;
     this.onFatal = options.onFatal;
+    this.commandRegistry.onChange(() => {
+      void this.updateCommandsForAllConnectors();
+    });
     this.logger.debug("init: ConnectorRegistry initialized");
   }
 
@@ -96,6 +111,7 @@ export class ConnectorRegistry {
       permissionUnsubscribe,
       loadedAt: new Date()
     });
+    void this.updateCommandsForConnector(id, connector);
     this.logger.debug(`event: Connector added to registry connectorId=${id} totalConnectors=${this.connectors.size}`);
     this.logger.info({ connector: id }, "register: Connector registered");
     return { ok: true, status: "loaded" };
@@ -164,5 +180,37 @@ export class ConnectorRegistry {
       return this.onPermission?.(decision, context, descriptor);
     };
     return connector.onPermission(handler);
+  }
+
+  private commandListBuild(): SlashCommandEntry[] {
+    const commandByName = new Map<string, SlashCommandEntry>();
+    for (const command of CORE_COMMANDS) {
+      commandByName.set(command.command, command);
+    }
+    for (const command of this.commandRegistry.list()) {
+      commandByName.set(command.command, command);
+    }
+    return Array.from(commandByName.values());
+  }
+
+  private async updateCommandsForAllConnectors(): Promise<void> {
+    for (const [id, entry] of this.connectors.entries()) {
+      await this.updateCommandsForConnector(id, entry.connector);
+    }
+  }
+
+  private async updateCommandsForConnector(id: string, connector: Connector): Promise<void> {
+    if (!connector.updateCommands) {
+      return;
+    }
+    const commands = this.commandListBuild();
+    try {
+      await connector.updateCommands(commands);
+    } catch (error) {
+      this.logger.warn(
+        { connector: id, error },
+        "error: Connector updateCommands() failed"
+      );
+    }
   }
 }
