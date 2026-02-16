@@ -44,6 +44,7 @@ import { AsyncLock } from "../../util/lock.js";
 import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionAccessApply } from "../permissions/permissionAccessApply.js";
 import { permissionFormatTag } from "../permissions/permissionFormatTag.js";
+import { appPermissionStateGrant } from "../apps/appPermissionStateGrant.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Signals } from "../signals/signals.js";
 import { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
@@ -361,6 +362,47 @@ export class AgentSystem {
       source: options?.source ?? "agent",
       decision
     });
+  }
+
+  /**
+   * Grants a shared permission to an app and syncs loaded app-agent sessions.
+   * Expects: appId belongs to an installed app.
+   */
+  async grantAppPermission(
+    appId: string,
+    access: PermissionAccess,
+    options?: { source?: string; decision?: PermissionDecision }
+  ): Promise<void> {
+    await appPermissionStateGrant(this.config.current.workspaceDir, appId, access);
+    for (const entry of this.entries.values()) {
+      if (entry.descriptor.type !== "app" || entry.descriptor.appId !== appId) {
+        continue;
+      }
+      const applied = permissionAccessApply(entry.agent.state.permissions, access);
+      if (!applied) {
+        throw new Error("Permission could not be applied.");
+      }
+      entry.agent.state.updatedAt = Date.now();
+      await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+      const decision: PermissionDecision = options?.decision
+        ? {
+            ...options.decision,
+            agentId: entry.agentId,
+            scope: "always"
+          }
+        : {
+            token: "direct",
+            agentId: entry.agentId,
+            approved: true,
+            permissions: [{ permission: permissionFormatTag(access), access }],
+            scope: "always"
+          };
+      this.eventBus.emit("permission.granted", {
+        agentId: entry.agentId,
+        source: options?.source ?? "agent",
+        decision
+      });
+    }
   }
 
   markStopped(agentId: string, error?: unknown): void {

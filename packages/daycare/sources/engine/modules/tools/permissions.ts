@@ -9,7 +9,8 @@ import type {
   PermissionAccess,
   PermissionDecision,
   PermissionEntry,
-  PermissionRequest
+  PermissionRequest,
+  PermissionRequestScope
 } from "@/types";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
@@ -22,6 +23,7 @@ const schema = Type.Object(
     permissions: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
     reason: Type.String({ minLength: 1 }),
     agentId: Type.Optional(Type.String({ minLength: 1 })),
+    scope: Type.Optional(Type.Union([Type.Literal("now"), Type.Literal("always")])),
     timeout_minutes: Type.Optional(Type.Integer({ minimum: 1, maximum: 60, default: 15 }))
   },
   { additionalProperties: false }
@@ -54,12 +56,16 @@ export function buildPermissionRequestTool(): ToolDefinition {
       const isForeground = descriptor.type === "user";
       const permissionTags = permissionTagsNormalize(payload.permissions);
       const reason = payload.reason.trim();
+      const requestedScope = payload.scope ?? "now";
       const timeoutMinutes = payload.timeout_minutes ?? 15;
       if (!reason) {
         throw new Error("Permission reason is required.");
       }
       if (permissionTags.length === 0) {
         throw new Error("At least one permission string is required.");
+      }
+      if (payload.scope && descriptor.type !== "app") {
+        throw new Error("Permission scope is only supported for app agents.");
       }
       if (!isForeground && payload.agentId) {
         throw new Error("Background agents cannot override agentId.");
@@ -155,13 +161,25 @@ export function buildPermissionRequestTool(): ToolDefinition {
         requestedDescriptor.type === "user"
           ? "Permission request:"
           : `Permission request from background agent "${requesterLabel}":`;
-      const text = `${heading}\n${friendly}\nReason: ${reason}`;
+      const scopeLine =
+        descriptor.type === "app"
+          ? `Scope: ${requestedScope === "always" ? "always (all agents for this app)" : "now (this app agent only)"}`
+          : null;
+      const text = [
+        heading,
+        friendly,
+        `Reason: ${reason}`,
+        scopeLine
+      ]
+        .filter((line): line is string => Boolean(line))
+        .join("\n");
       const request: PermissionRequest = {
         token: createId(),
         agentId: requestedAgentId,
         reason,
         message: text,
         permissions: permissionsToRequest,
+        ...(descriptor.type === "app" ? { scope: requestedScope } : {}),
         requester: {
           id: requestedAgentId,
           type: requestedDescriptor.type,
@@ -237,16 +255,30 @@ export function buildPermissionRequestTool(): ToolDefinition {
       }
 
       const targetAgentId = decision.agentId || requestedAgentId;
+      const resolvedScope: PermissionRequestScope =
+        descriptor.type === "app" && (decision.scope === "always" || requestedScope === "always")
+          ? "always"
+          : "now";
       if (decision.approved) {
         for (const permission of decision.permissions) {
           if (!missingPermissionTags.has(permission.permission)) {
             continue;
           }
-          await toolContext.agentSystem.grantPermission(
-            { agentId: targetAgentId },
-            permission.access,
-            { source: toolContext.source, decision }
-          );
+          if (descriptor.type === "app" && resolvedScope === "always") {
+            await toolContext.agentSystem.grantAppPermission(
+              descriptor.appId,
+              permission.access,
+              {
+                source: toolContext.source,
+                decision: { ...decision, scope: "always" }
+              }
+            );
+            continue;
+          }
+          await toolContext.agentSystem.grantPermission({ agentId: targetAgentId }, permission.access, {
+            source: toolContext.source,
+            decision
+          });
         }
       }
 
@@ -255,17 +287,22 @@ export function buildPermissionRequestTool(): ToolDefinition {
       const resultText = decision.approved
         ? `${permissionNoun} granted for ${permissionLabel}.`
         : `${permissionNoun} denied for ${permissionLabel}.`;
+      const scopedResultText =
+        descriptor.type === "app"
+          ? `${resultText} Scope: ${resolvedScope}.`
+          : resultText;
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text: resultText }],
+        content: [{ type: "text", text: scopedResultText }],
         details: {
           permissions: permissionTags,
           token: request.token,
           agentId: targetAgentId,
-          approved: decision.approved
+          approved: decision.approved,
+          ...(descriptor.type === "app" ? { scope: resolvedScope } : {})
         },
         isError: false,
         timestamp: Date.now()

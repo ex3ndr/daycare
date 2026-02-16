@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { appPermissionBuild } from "./appPermissionBuild.js";
+import { appPermissionStateWrite } from "./appPermissionStateWrite.js";
 
 describe("appPermissionBuild", () => {
   let workspaceDir: string;
@@ -30,5 +31,19 @@ describe("appPermissionBuild", () => {
 
     const stat = await fs.stat(expectedDataDir);
     expect(stat.isDirectory()).toBe(true);
+  });
+
+  it("merges shared app permissions persisted in app state", async () => {
+    await appPermissionStateWrite(workspaceDir, "github-reviewer", [
+      "@network",
+      "@read:/tmp/daycare-app-read",
+      "@write:/tmp/daycare-app-write"
+    ]);
+
+    const permissions = await appPermissionBuild(workspaceDir, "github-reviewer");
+    expect(permissions.network).toBe(true);
+    expect(permissions.readDirs).toContain("/tmp/daycare-app-read");
+    expect(permissions.readDirs).toContain("/tmp/daycare-app-write");
+    expect(permissions.writeDirs).toContain("/tmp/daycare-app-write");
   });
 });

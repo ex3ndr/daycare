@@ -83,6 +83,21 @@ describe("appToolExecutorBuild", () => {
 
     expect(executor.listTools().map((tool) => tool.name)).toContain("run_python");
   });
+
+  it("includes request_permission in app allowlist when resolver exposes it", () => {
+    const execute = vi.fn(async () => toolResultBuild(false, "ok"));
+    const resolver = resolverBuild(execute);
+    const executor = appToolExecutorBuild({
+      appId: "github-reviewer",
+      appName: "GitHub Reviewer",
+      sourceIntent: "Review pull requests safely.",
+      rules: { allow: [], deny: [] },
+      inferenceRouter: inferenceRouterBuild("ALLOW"),
+      toolResolver: resolver
+    });
+
+    expect(executor.listTools().map((tool) => tool.name)).toContain("request_permission");
+  });
 });
 
 function inferenceRouterBuild(text: string): InferenceRouter {
@@ -126,6 +141,7 @@ function resolverBuild(execute: () => Promise<ToolExecutionResult>) {
       { name: "edit", description: "edit", parameters: schema },
       { name: "exec", description: "exec", parameters: schema },
       { name: "run_python", description: "run_python", parameters: schema },
+      { name: "request_permission", description: "request_permission", parameters: schema },
       { name: "cron", description: "cron", parameters: schema }
     ],
     execute: vi.fn(async () => execute())

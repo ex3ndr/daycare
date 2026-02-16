@@ -425,7 +425,8 @@ export class WhatsAppConnector implements Connector {
             token,
             agentId: pending.request.agentId,
             approved,
-            permissions: pending.request.permissions
+            permissions: pending.request.permissions,
+            ...(pending.request.scope ? { scope: pending.request.scope } : {})
           };
 
           // Send confirmation
@@ -617,12 +618,19 @@ function formatPermissionMessage(
     request.requester.kind === "background"
       ? `*Requester*: ${request.requester.label} (background agent)`
       : null;
+  const scopeLine =
+    request.scope === "always"
+      ? "*Scope*: always (shared across this app)"
+      : request.scope === "now"
+        ? "*Scope*: now (current app agent only)"
+        : null;
   const lines = [
     heading,
     "",
     "*Permissions*:",
     ...permissionLines,
     requesterLine,
+    scopeLine,
     `*Reason*: ${request.reason}`,
     "",
     status === "pending"

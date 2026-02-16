@@ -416,6 +416,87 @@ describe("buildPermissionRequestTool", () => {
       }
     );
   });
+
+  it("routes app `always` scope grants to shared app permissions", async () => {
+    const registry = new PermissionRequestRegistry();
+    const grantPermission = vi.fn(async () => undefined);
+    const grantAppPermission = vi.fn(async () => undefined);
+    const requestPermission = vi.fn(
+      async (
+        _targetId: string,
+        _request: PermissionRequest,
+        _context: unknown,
+        _descriptor: unknown
+      ) => undefined
+    );
+
+    const context = contextBuild({
+      descriptor: {
+        type: "app",
+        id: "agent-1",
+        parentAgentId: "parent-1",
+        name: "github-reviewer",
+        systemPrompt: "review pull requests",
+        appId: "github-reviewer"
+      },
+      registry,
+      connector: { requestPermission },
+      agentSystem: {
+        grantPermission,
+        grantAppPermission,
+        agentFor: () => "foreground-1",
+        getAgentDescriptor: (agentId: string) => {
+          if (agentId === "foreground-1") {
+            return {
+              type: "user",
+              connector: "telegram",
+              userId: "u1",
+              channelId: "c1"
+            };
+          }
+          return null;
+        }
+      }
+    });
+
+    const pending = buildPermissionRequestTool().execute(
+      { permissions: ["@network"], reason: "Need web access", scope: "always" },
+      context,
+      toolCall
+    );
+
+    const request = await permissionRequestWait(requestPermission);
+    await registryResolveWhenReady(
+      registry,
+      decisionBuild({
+        token: request.token,
+        agentId: request.agentId,
+        approved: true,
+        permissions: request.permissions
+      })
+    );
+
+    const result = await pending;
+    expect(grantAppPermission).toHaveBeenCalledWith(
+      "github-reviewer",
+      { kind: "network" },
+      expect.objectContaining({ source: "telegram" })
+    );
+    expect(grantPermission).not.toHaveBeenCalled();
+    expect(contentText(result.toolMessage.content)).toContain("Scope: always.");
+  });
+
+  it("rejects scoped permission requests from non-app agents", async () => {
+    const registry = new PermissionRequestRegistry();
+    const context = contextBuild({ registry });
+    await expect(
+      buildPermissionRequestTool().execute(
+        { permissions: ["@network"], reason: "Need web access", scope: "always" },
+        context,
+        toolCall
+      )
+    ).rejects.toThrow("Permission scope is only supported for app agents.");
+  });
 });
 
 function contextBuild(options: {
@@ -431,6 +512,7 @@ function contextBuild(options: {
   };
   agentSystem?: {
     grantPermission?: (...args: unknown[]) => Promise<void>;
+    grantAppPermission?: (...args: unknown[]) => Promise<void>;
     post?: (...args: unknown[]) => Promise<void>;
     agentFor?: (strategy: "most-recent-foreground" | "heartbeat") => string | null;
     getAgentDescriptor?: (agentId: string) => AgentDescriptor | null;
@@ -474,6 +556,7 @@ function contextBuild(options: {
     messageContext: { messageId: "m1" },
     agentSystem: {
       grantPermission: options.agentSystem?.grantPermission ?? (async () => undefined),
+      grantAppPermission: options.agentSystem?.grantAppPermission ?? (async () => undefined),
       post: options.agentSystem?.post ?? (async () => undefined),
       agentFor: options.agentSystem?.agentFor ?? (() => "agent-1"),
       getAgentDescriptor: options.agentSystem?.getAgentDescriptor ?? (() => descriptor),

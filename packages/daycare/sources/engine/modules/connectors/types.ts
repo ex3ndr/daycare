@@ -55,6 +55,7 @@ export type MessageUnsubscribe = () => void;
 export type CommandUnsubscribe = () => void;
 
 export type PermissionKind = "read" | "write" | "network" | "events";
+export type PermissionRequestScope = "now" | "always";
 
 export type PermissionAccess =
   | { kind: "network" }
@@ -73,6 +74,7 @@ export type PermissionRequest = {
   reason: string;
   message: string;
   permissions: PermissionEntry[];
+  scope?: PermissionRequestScope;
   requester: {
     id: string;
     type: AgentDescriptor["type"];
@@ -86,6 +88,7 @@ export type PermissionDecision = {
   agentId: string;
   approved: boolean;
   permissions: PermissionEntry[];
+  scope?: PermissionRequestScope;
 };
 
 export type PermissionHandler = (

@@ -27,7 +27,7 @@ type AppToolExecutor = {
   execute: (toolCall: ToolCall, context: ToolExecutionContext) => Promise<ToolExecutionResult>;
 };
 
-const DEFAULT_ALLOWED_TOOLS = ["read", "write", "edit", "exec", RLM_TOOL_NAME];
+const DEFAULT_ALLOWED_TOOLS = ["read", "write", "edit", "exec", "request_permission", RLM_TOOL_NAME];
 
 /**
  * Wraps a tool resolver with app-review middleware for each tool call.

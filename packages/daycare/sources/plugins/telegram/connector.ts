@@ -195,7 +195,8 @@ export class TelegramConnector implements Connector {
         token,
         agentId: pending.request.agentId,
         approved,
-        permissions: pending.request.permissions
+        permissions: pending.request.permissions,
+        ...(pending.request.scope ? { scope: pending.request.scope } : {})
       };
       for (const handler of this.permissionHandlers) {
         await handler(decision, pending.context, pending.descriptor);
@@ -874,12 +875,19 @@ function formatPermissionMessage(
     request.requester.kind === "background"
       ? `<b>Requester</b>: ${escapeHtml(request.requester.label)} (background agent)`
       : null;
+  const scopeLine =
+    request.scope === "always"
+      ? "<b>Scope</b>: always (shared across this app)"
+      : request.scope === "now"
+        ? "<b>Scope</b>: now (current app agent only)"
+        : null;
   const lines = [
     heading,
     "",
     "<b>Permissions</b>:",
     ...permissionLines,
     requesterLine,
+    scopeLine,
     `<b>Reason</b>: ${escapedReason}`,
     "",
     footer

@@ -27,6 +27,7 @@ export type {
   PermissionDecision,
   PermissionHandler,
   PermissionKind,
+  PermissionRequestScope,
   PermissionRequest,
   SlashCommandEntry
 } from "./engine/modules/connectors/types.js";
