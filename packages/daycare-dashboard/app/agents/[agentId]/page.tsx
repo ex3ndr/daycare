@@ -638,6 +638,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `system:${descriptor.tag}`;
     case "subagent":
       return descriptor.name ? `${descriptor.name} / ${descriptor.id}` : descriptor.id;
+    case "app":
+      return `${descriptor.name} / ${descriptor.appId}`;
     case "permanent":
       return `${descriptor.name} / ${descriptor.id}`;
     default:

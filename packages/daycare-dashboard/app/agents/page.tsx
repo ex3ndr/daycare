@@ -309,6 +309,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `system:${descriptor.tag}`;
     case "subagent":
       return descriptor.name ? `${descriptor.name} / ${descriptor.id}` : descriptor.id;
+    case "app":
+      return `${descriptor.name} / ${descriptor.appId}`;
     case "permanent":
       return `${descriptor.name} / ${descriptor.id}`;
     default:
@@ -330,6 +332,8 @@ function formatAgentTypeKey(type: string) {
       return "Heartbeat";
     case "subagent":
       return "Subagent";
+    case "app":
+      return "App";
     case "permanent":
       return "Permanent";
     case "system":

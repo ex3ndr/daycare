@@ -5,6 +5,7 @@ export type AgentType =
   | { type: "cron"; id: string }
   | { type: "heartbeat" }
   | { type: "subagent"; id: string; parentAgentId: string; name: string }
+  | { type: "app"; id: string; parentAgentId: string; name: string; appId: string }
   | { type: "permanent"; id: string; name: string }
   | { type: "system"; tag: string };
 
@@ -32,6 +33,14 @@ export function buildAgentType(agent: AgentSummary): AgentType {
         parentAgentId: descriptor.parentAgentId,
         name: descriptor.name
       };
+    case "app":
+      return {
+        type: "app",
+        id: descriptor.id,
+        parentAgentId: descriptor.parentAgentId,
+        name: descriptor.name,
+        appId: descriptor.appId
+      };
     case "permanent":
       return {
         type: "permanent",
@@ -53,6 +62,8 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "Heartbeat";
     case "subagent":
       return "Subagent";
+    case "app":
+      return "App";
     case "permanent":
       return "Permanent";
     case "system":

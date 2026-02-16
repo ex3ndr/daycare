@@ -101,6 +101,7 @@ export type AgentDescriptor =
   | { type: "cron"; id: string }
   | { type: "system"; tag: string }
   | { type: "subagent"; id: string; parentAgentId: string; name: string }
+  | { type: "app"; id: string; parentAgentId: string; name: string; appId: string }
   | {
       type: "permanent";
       id: string;
