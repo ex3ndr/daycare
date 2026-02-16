@@ -37,6 +37,20 @@ export class IncomingMessages {
     this.schedule();
   }
 
+  /**
+   * Drops queued (not yet flushed) messages for one descriptor.
+   * Expects: caller uses this for command-style control flows like /reset.
+   */
+  dropForDescriptor(descriptor: AgentDescriptor): number {
+    if (this.pending.length === 0) {
+      return 0;
+    }
+    const key = batchKeyBuild(descriptor);
+    const before = this.pending.length;
+    this.pending = this.pending.filter((entry) => batchKeyBuild(entry.descriptor) !== key);
+    return before - this.pending.length;
+  }
+
   async flush(): Promise<void> {
     this.cancelTimer();
     for (;;) {

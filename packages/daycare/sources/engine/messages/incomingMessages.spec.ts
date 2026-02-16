@@ -92,4 +92,40 @@ describe("IncomingMessages", () => {
       vi.useRealTimers();
     }
   });
+
+  it("drops queued messages for one descriptor", async () => {
+    vi.useFakeTimers();
+    const records: IncomingMessageBatch[][] = [];
+    const incoming = new IncomingMessages({
+      delayMs: 100,
+      onFlush: async (items) => {
+        records.push(items);
+      }
+    });
+
+    try {
+      incoming.post({
+        descriptor: userDescriptor("channel-1"),
+        message: { text: "old" },
+        context: {}
+      });
+      incoming.post({
+        descriptor: userDescriptor("channel-2"),
+        message: { text: "keep" },
+        context: {}
+      });
+
+      const dropped = incoming.dropForDescriptor(userDescriptor("channel-1"));
+      expect(dropped).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(100);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toHaveLength(1);
+      expect(records[0]?.[0]?.descriptor).toEqual(userDescriptor("channel-2"));
+      expect(records[0]?.[0]?.message.text).toBe("keep");
+    } finally {
+      await incoming.flush();
+      vi.useRealTimers();
+    }
+  });
 });

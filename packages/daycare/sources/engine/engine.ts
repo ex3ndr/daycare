@@ -464,6 +464,10 @@ export class Engine {
     descriptor: AgentDescriptor,
     context: MessageContext
   ): Promise<void> {
+    const dropped = this.incomingMessages.dropForDescriptor(descriptor);
+    if (dropped > 0) {
+      logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
+    }
     await this.agentSystem.post(
       { descriptor },
       { type: "reset", message: "Manual reset requested by the user.", context }

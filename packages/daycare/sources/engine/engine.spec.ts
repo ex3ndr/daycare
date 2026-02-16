@@ -64,6 +64,75 @@ describe("Engine reset command", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("drops pending debounced messages for descriptor before reset", async () => {
+    vi.useFakeTimers();
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+      const state: {
+        messageHandler?: (
+          message: ConnectorMessage,
+          context: MessageContext,
+          descriptor: AgentDescriptor
+        ) => void | Promise<void>;
+        commandHandler?: (
+          command: string,
+          context: MessageContext,
+          descriptor: AgentDescriptor
+        ) => void | Promise<void>;
+      } = {};
+
+      const connector: Connector = {
+        capabilities: { sendText: true },
+        onMessage: (handler) => {
+          state.messageHandler = handler;
+          return () => undefined;
+        },
+        onCommand: (handler) => {
+          state.commandHandler = handler;
+          return () => undefined;
+        },
+        sendMessage: async () => undefined
+      };
+
+      const registerResult = engine.modules.connectors.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      };
+      const messageHandler = state.messageHandler;
+      const commandHandler = state.commandHandler;
+      if (!messageHandler || !commandHandler) {
+        throw new Error("Expected handlers to be registered");
+      }
+
+      await messageHandler({ text: "can you check downloads?" }, { messageId: "1" }, descriptor);
+      await commandHandler("/reset", { messageId: "2" }, descriptor);
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(postSpy).toHaveBeenCalledTimes(1);
+      expect(postSpy).toHaveBeenCalledWith(
+        { descriptor },
+        { type: "reset", message: "Manual reset requested by the user.", context: { messageId: "2" } }
+      );
+
+      await engine.modules.connectors.unregisterAll("test");
+      await engine.shutdown();
+    } finally {
+      vi.useRealTimers();
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("Engine RLM mode", () => {
