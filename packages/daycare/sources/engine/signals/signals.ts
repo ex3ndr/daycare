@@ -135,12 +135,33 @@ export class Signals {
     return Array.from(this.subscriptions.values());
   }
 
+  /**
+   * Returns all persisted signal events in append order.
+   */
+  async listAll(): Promise<Signal[]> {
+    return this.appendLock.inLock(async () => {
+      try {
+        const raw = await fs.readFile(this.eventsPath, "utf8");
+        return signalLinesParse(raw);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return [];
+        }
+        throw error;
+      }
+    });
+  }
+
   async listRecent(limit = 200): Promise<Signal[]> {
     const normalizedLimit = signalLimitNormalize(limit);
     return this.appendLock.inLock(async () => {
       try {
         const raw = await fs.readFile(this.eventsPath, "utf8");
-        return signalLinesParse(raw, normalizedLimit);
+        const events = signalLinesParse(raw);
+        if (events.length <= normalizedLimit) {
+          return events;
+        }
+        return events.slice(events.length - normalizedLimit);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
           return [];
@@ -223,15 +244,10 @@ function signalLimitNormalize(limit: number): number {
   return Math.min(1000, Math.max(1, Math.floor(limit)));
 }
 
-function signalLinesParse(content: string, limit: number): Signal[] {
+function signalLinesParse(content: string): Signal[] {
   const lines = content.split("\n").filter((line) => line.trim().length > 0);
-  if (lines.length === 0) {
-    return [];
-  }
-  const start = Math.max(0, lines.length - limit);
-  const recent = lines.slice(start);
   const events: Signal[] = [];
-  for (const line of recent) {
+  for (const line of lines) {
     try {
       const parsed = JSON.parse(line) as Signal;
       events.push(parsed);

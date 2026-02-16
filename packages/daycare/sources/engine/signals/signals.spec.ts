@@ -45,6 +45,33 @@ describe("Signals", () => {
       const recent = await signals.listRecent(10);
       expect(recent).toHaveLength(1);
       expect(recent[0]?.id).toBe(signal.id);
+
+      const all = await signals.listAll();
+      expect(all).toHaveLength(1);
+      expect(all[0]?.id).toBe(signal.id);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns all persisted events without recent-limit truncation", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
+    try {
+      const signals = new Signals({
+        eventBus: new EngineEventBus(),
+        configDir: dir
+      });
+      await signals.ensureDir();
+      await signals.generate({ type: "event.one", source: { type: "system" }, data: { n: 1 } });
+      await signals.generate({ type: "event.two", source: { type: "system" }, data: { n: 2 } });
+
+      const recent = await signals.listRecent(1);
+      expect(recent).toHaveLength(1);
+      expect(recent[0]?.type).toBe("event.two");
+
+      const all = await signals.listAll();
+      expect(all).toHaveLength(2);
+      expect(all.map((item) => item.type)).toEqual(["event.one", "event.two"]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
