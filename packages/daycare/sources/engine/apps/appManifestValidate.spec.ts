@@ -5,10 +5,10 @@ import { appManifestValidate } from "./appManifestValidate.js";
 
 function baseManifest(): AppManifest {
   return {
-    id: "github-reviewer",
     name: "github-reviewer",
     title: "GitHub Reviewer",
-    description: "Reviews pull requests"
+    description: "Reviews pull requests",
+    systemPrompt: "You are a focused PR review assistant."
   };
 }
 
@@ -16,26 +16,18 @@ describe("appManifestValidate", () => {
   it("accepts valid manifests", () => {
     const validated = appManifestValidate(baseManifest());
 
-    expect(validated.id).toBe("github-reviewer");
+    expect(validated.name).toBe("github-reviewer");
     expect(validated.title).toBe("GitHub Reviewer");
     expect(validated.description).toBe("Reviews pull requests");
-  });
-
-  it("rejects invalid ids", () => {
-    const manifest = baseManifest();
-    manifest.id = "GitHub Reviewer";
-
-    expect(() => appManifestValidate(manifest)).toThrow(
-      "App id must be lowercase alphanumeric with optional hyphen separators."
-    );
+    expect(validated.systemPrompt).toBe("You are a focused PR review assistant.");
   });
 
   it("rejects missing required fields", () => {
     const manifest = baseManifest();
-    manifest.description = "   ";
+    manifest.systemPrompt = "   ";
 
     expect(() => appManifestValidate(manifest)).toThrow(
-      "App manifest requires id, name, title, and description."
+      "App manifest requires name, title, description, and systemPrompt."
     );
   });
 

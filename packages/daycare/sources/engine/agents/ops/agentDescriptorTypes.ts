@@ -13,6 +13,7 @@ export type AgentDescriptor =
       id: string;
       parentAgentId: string;
       name: string;
+      systemPrompt: string;
       appId: string;
     }
   | {

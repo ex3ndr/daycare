@@ -7,42 +7,61 @@ describe("appManifestParse", () => {
     const manifest = appManifestParse(
       [
         "---",
-        "id: github-reviewer",
         "name: github-reviewer",
         "title: GitHub Reviewer",
         "description: Reviews pull requests",
         "model: gpt-4.1-mini",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are a focused PR review assistant."
       ].join("\n")
     );
 
     expect(manifest).toEqual({
-      id: "github-reviewer",
       name: "github-reviewer",
       title: "GitHub Reviewer",
       description: "Reviews pull requests",
-      model: "gpt-4.1-mini"
+      model: "gpt-4.1-mini",
+      systemPrompt: "You are a focused PR review assistant."
     });
   });
 
   it("throws when required frontmatter fields are missing", () => {
     const content = [
       "---",
-      "name: missing-id",
-      "title: Missing id",
-      "description: Missing id field",
+      "name: missing-description",
+      "title: Missing description",
+      "---",
+      "",
+      "## System Prompt",
+      "",
+      "prompt"
+    ].join("\n");
+
+    expect(() => appManifestParse(content)).toThrow(
+      "APP.md frontmatter must include name, title, and description."
+    );
+  });
+
+  it("throws when system prompt section is missing", () => {
+    const content = [
+      "---",
+      "name: github-reviewer",
+      "title: GitHub Reviewer",
+      "description: Reviews pull requests",
       "---"
     ].join("\n");
 
     expect(() => appManifestParse(content)).toThrow(
-      "APP.md frontmatter must include id, name, title, and description."
+      "APP.md must include a non-empty `## System Prompt` section."
     );
   });
 
   it("throws on malformed yaml", () => {
     const content = [
       "---",
-      "id: github-reviewer",
       "name: github-reviewer",
       "title: [not closed",
       "---"

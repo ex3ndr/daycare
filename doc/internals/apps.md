@@ -6,19 +6,19 @@ Apps are implemented in `sources/engine/apps/` and wired by `engine.ts`.
 
 1. `Engine.start()` registers `install_app` and `app_rules`.
 2. `Apps.discover()` scans `<workspace>/apps/*/APP.md` + `PERMISSIONS.md`.
-3. `Apps.registerTools()` registers `app_<id>` for each valid descriptor.
+3. `Apps.registerTools()` registers `app_<name>` for each valid descriptor.
 
 ## App Invocation
 
 ```mermaid
 sequenceDiagram
   participant A as Caller Agent
-  participant T as app_<id> Tool
+  participant T as app_<name> Tool
   participant S as App Agent (type=app)
   participant R as Review Model
   participant X as Real Tool
 
-  A->>T: app_<id>({prompt})
+  A->>T: app_<name>({prompt})
   T->>S: create + post message
   S->>R: review(tool call + source intent + allow/deny rules)
   R-->>S: ALLOW or DENY: reason
@@ -43,7 +43,7 @@ sequenceDiagram
 
 ## Files
 
-- `appManifestParse.ts` / `appManifestValidate.ts`: APP.md parsing and validation
+- `appManifestParse.ts` / `appManifestValidate.ts`: APP.md frontmatter + `## System Prompt` parsing and validation
 - `appPermissionsParse.ts` / `appPermissionsValidate.ts`: PERMISSIONS.md parsing and validation
 - `appDiscover.ts`: app discovery
 - `appExecute.ts`: app-agent creation and execution

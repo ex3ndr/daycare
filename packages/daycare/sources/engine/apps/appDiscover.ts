@@ -54,7 +54,7 @@ export async function appDiscover(workspaceDir: string): Promise<AppDescriptor[]
       const manifest = appManifestValidate(appManifestParse(content));
       const permissions = appPermissionsValidate(appPermissionsParse(permissionsContent));
       descriptors.push({
-        id: manifest.id,
+        id: manifest.name,
         path: appPath,
         manifest,
         permissions

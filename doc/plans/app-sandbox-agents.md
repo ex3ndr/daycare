@@ -5,7 +5,7 @@
 Introduce a new core concept: **App** — an LLM-sandboxed tool that wraps inference around tool execution. Apps provide a security boundary where every tool call is reviewed by a separate model against configurable rules before execution.
 
 **Key properties:**
-- Apps are invoked as individual tools (`app_<id>(prompt)`) — callers prompt, not command
+- Apps are invoked as individual tools (`app_<name>(prompt)`) — callers prompt, not command
 - Each app runs as a special subagent with restricted tools (read, write, edit, exec only)
 - Every tool call by the app subagent passes through a **middleware review layer** — a separate inference call checks the call against the app's allow/deny rules
 - Apps can only write to `<workspace>/apps/<app-id>/data/` — persistent state across invocations
@@ -61,8 +61,8 @@ Apps live at `<workspace>/apps/<app-id>/APP.md` with YAML frontmatter:
 
 ```yaml
 ---
-id: github-reviewer
-name: GitHub Reviewer
+name: github-reviewer
+title: GitHub Reviewer
 description: Reviews pull requests and provides feedback
 model: default
 ---
@@ -237,12 +237,12 @@ Create the function that runs an app as a subagent with restricted tools and the
 
 ### Task 7: Build per-app tool registration
 
-Create the tool definition that exposes each app as `app_<id>`.
+Create the tool definition that exposes each app as `app_<name>`.
 
 **Files:** `sources/engine/apps/appToolBuild.ts`
 
 - [x] Create `sources/engine/apps/appToolBuild.ts` — given an `AppDescriptor`, build a `ToolDefinition`:
-  - Tool name: `app_<id>` (hyphens replaced with underscores for valid tool names)
+  - Tool name: `app_<name>` (hyphens replaced with underscores for valid tool names)
   - Tool description: from manifest description
   - Parameters: `{ prompt: string }` (TypeBox schema)
   - Execute: calls `appExecute()` with the prompt
@@ -257,7 +257,7 @@ Create the `Apps` facade class that coordinates discovery, registration, and lif
 
 - [x] Create `sources/engine/apps/appManager.ts` — `Apps` class:
   - `discover(workspaceDir)`: scan for apps, validate manifests
-  - `registerTools(toolResolver)`: register `app_<id>` tools for each discovered app
+  - `registerTools(toolResolver)`: register `app_<name>` tools for each discovered app
   - `unregisterTools(toolResolver)`: unregister all app tools
   - `list()`: return discovered apps
   - `get(id)`: return specific app descriptor
@@ -342,7 +342,7 @@ Document the new app agent type in topology-facing documentation.
 ### Task 14: Verify acceptance criteria
 
 - [x] Verify: apps are discovered from `<workspace>/apps/` on startup
-- [x] Verify: each app registers as `app_<id>` tool
+- [x] Verify: each app registers as `app_<name>` tool
 - [x] Verify: app invocation creates subagent with restricted permissions
 - [x] Verify: every tool call goes through LLM review middleware
 - [x] Verify: denied calls return error, subagent can adapt
@@ -385,7 +385,7 @@ type AppRule = {
 };
 
 type AppDescriptor = {
-  id: string;           // matches manifest.id
+  id: string;           // matches manifest.name
   path: string;         // absolute path to app folder
   manifest: AppManifest;
 };

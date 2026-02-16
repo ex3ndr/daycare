@@ -16,7 +16,7 @@ const schema = Type.Object(
 type AppToolBuildArgs = Static<typeof schema>;
 
 /**
- * Builds the per-app `app_<id>` tool definition.
+ * Builds the per-app `app_<name>` tool definition.
  * Expects: descriptor is a validated discovered app.
  */
 export function appToolBuild(app: AppDescriptor): ToolDefinition {

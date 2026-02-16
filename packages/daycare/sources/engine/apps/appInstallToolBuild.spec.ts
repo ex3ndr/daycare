@@ -30,11 +30,14 @@ describe("appInstallToolBuild", () => {
       path.join(sourceDir, "APP.md"),
       [
         "---",
-        "id: github-reviewer",
         "name: github-reviewer",
         "title: GitHub Reviewer",
         "description: Reviews pull requests",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are a focused PR review assistant."
       ].join("\n")
     );
     await fs.writeFile(

@@ -12,7 +12,7 @@ This skill provides guidance for creating effective Daycare apps.
 
 Apps are sandboxed tool wrappers discovered from
 `workspace/apps/<app-id>/APP.md` and `workspace/apps/<app-id>/PERMISSIONS.md`.
-Each app is exposed as a callable tool named `app_<id>`.
+Each app is exposed as a callable tool named `app_<name>`.
 
 On invocation, an app runs as a constrained app agent and each tool call is reviewed
 against the app's allow/deny rules before execution.
@@ -52,12 +52,12 @@ Every app consists of required `APP.md` and `PERMISSIONS.md` files plus optional
 app-id/
 ├── APP.md (required)
 │   ├── YAML frontmatter (required)
-│   │   ├── id: (required)
-│   │   ├── name: (required, username-style)
+│   │   ├── name: (required, username-style; this is the app id)
 │   │   ├── title: (required, human-readable)
 │   │   ├── description: (required)
 │   │   └── model: (optional)
-│   └── Markdown body (optional notes for humans)
+│   └── Markdown body (required)
+│       └── ## System Prompt
 ├── PERMISSIONS.md (required)
 │   └── Markdown body (required)
 │       ├── ## Source Intent
@@ -72,8 +72,8 @@ app-id/
 
 Every `APP.md` consists of:
 
-- **Frontmatter** (YAML): `id`, `name`, `title`, `description`, optional `model`.
-- **Body** (Markdown): optional notes for humans.
+- **Frontmatter** (YAML): `name`, `title`, `description`, optional `model`.
+- **Body** (Markdown): required `## System Prompt`.
 
 When parsing or writing `APP.md`:
 
@@ -85,12 +85,15 @@ When parsing or writing `APP.md`:
 
 ```markdown
 ---
-id: github-reviewer
 name: github-reviewer
 title: GitHub Reviewer
 description: Reviews pull requests and drafts feedback
 model: default
 ---
+
+## System Prompt
+
+You review pull requests and provide concrete, actionable feedback.
 ```
 
 ### Example PERMISSIONS.md
@@ -171,8 +174,9 @@ If scripts are needed, keep them minimal and app-specific.
 
 Validation checklist:
 
-- Frontmatter has valid `id`, `name`, `title`, `description` (optional `model`)
-- Tool name maps cleanly to `app_<id>`
+- Frontmatter has valid `name`, `title`, `description` (optional `model`)
+- APP.md body includes a non-empty `## System Prompt`
+- Tool name maps cleanly to `app_<name>`
 - Writes are limited to `data/`
 - Allow rules cover intended workflows
 - Deny rules block destructive actions

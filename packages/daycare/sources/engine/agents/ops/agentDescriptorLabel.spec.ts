@@ -28,6 +28,7 @@ describe("agentDescriptorLabel", () => {
         id: "app-agent-1",
         parentAgentId: "parent",
         name: "github-reviewer",
+        systemPrompt: "prompt",
         appId: "github-reviewer"
       })
     ).toBe("github-reviewer");

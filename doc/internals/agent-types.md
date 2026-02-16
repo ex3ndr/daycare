@@ -98,7 +98,7 @@ Resolution behavior:
 ```mermaid
 flowchart LR
   User[User agent] -->|spawns| Subagent[Subagent]
-  User -->|invokes app_<id>| AppAgent[App agent]
+  User -->|invokes app_<name>| AppAgent[App agent]
   Cron[Cron agent] -->|spawns| Subagent
   Heartbeat[Heartbeat scheduler] -->|batch prompt| HeartbeatAgent[System agent: heartbeat]
   Architect[Planner flow] -->|specialized prompt| ArchitectAgent[System agent: architect]

@@ -27,11 +27,14 @@ describe("appInstall", () => {
       path.join(sourceDir, "APP.md"),
       [
         "---",
-        "id: github-reviewer",
         "name: github-reviewer",
         "title: GitHub Reviewer",
         "description: Reviews pull requests",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are a focused PR review assistant."
       ].join("\n")
     );
     await fs.writeFile(
@@ -67,11 +70,14 @@ describe("appInstall", () => {
       path.join(sourceDir, "APP.md"),
       [
         "---",
-        "id: Invalid With Spaces",
-        "name: broken",
+        "name: Invalid With Spaces",
         "title: Broken",
         "description: bad id",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are broken."
       ].join("\n")
     );
     await fs.writeFile(
@@ -91,7 +97,7 @@ describe("appInstall", () => {
       ].join("\n")
     );
 
-    await expect(appInstall(workspaceDir, sourceDir)).rejects.toThrow("App id must be lowercase");
+    await expect(appInstall(workspaceDir, sourceDir)).rejects.toThrow("App name must be username-style");
   });
 
   it("throws when destination app already exists", async () => {
@@ -101,11 +107,14 @@ describe("appInstall", () => {
       path.join(sourceDir, "APP.md"),
       [
         "---",
-        "id: github-reviewer",
         "name: github-reviewer",
         "title: GitHub Reviewer",
         "description: Reviews pull requests",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are a focused PR review assistant."
       ].join("\n")
     );
     await fs.writeFile(
@@ -136,11 +145,14 @@ describe("appInstall", () => {
       path.join(sourceDir, "APP.md"),
       [
         "---",
-        "id: missing-permissions",
         "name: missing-permissions",
         "title: Missing Permissions",
         "description: Missing permissions file",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are a focused app."
       ].join("\n")
     );
 

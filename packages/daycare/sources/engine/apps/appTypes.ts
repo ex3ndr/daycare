@@ -9,11 +9,11 @@ export type AppRuleSet = {
 };
 
 export type AppManifest = {
-  id: string;
   name: string;
   title: string;
   description: string;
   model?: string;
+  systemPrompt: string;
 };
 
 export type AppPermissions = {

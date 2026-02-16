@@ -9,7 +9,7 @@ import type { AppDescriptor } from "./appTypes.js";
 
 /**
  * Installs an app from a source directory into `<workspace>/apps/<app-id>`.
- * Expects: sourceDir contains APP.md + PERMISSIONS.md and destination app id does not exist.
+ * Expects: sourceDir contains APP.md + PERMISSIONS.md and destination app name does not exist.
  */
 export async function appInstall(
   workspaceDir: string,
@@ -36,10 +36,10 @@ export async function appInstall(
   appPermissionsValidate(appPermissionsParse(sourcePermissionsContent));
 
   const appsRoot = path.join(resolvedWorkspace, "apps");
-  const destinationPath = path.join(appsRoot, sourceManifest.id);
+  const destinationPath = path.join(appsRoot, sourceManifest.name);
   const destinationStat = await fs.stat(destinationPath).catch(() => null);
   if (destinationStat) {
-    throw new Error(`App already installed: ${sourceManifest.id}`);
+    throw new Error(`App already installed: ${sourceManifest.name}`);
   }
 
   await fs.mkdir(appsRoot, { recursive: true });
@@ -53,7 +53,7 @@ export async function appInstall(
   const copiedPermissionsContent = await fs.readFile(copiedPermissionsPath, "utf8");
   const copiedPermissions = appPermissionsValidate(appPermissionsParse(copiedPermissionsContent));
   return {
-    id: copiedManifest.id,
+    id: copiedManifest.name,
     path: destinationPath,
     manifest: copiedManifest,
     permissions: copiedPermissions

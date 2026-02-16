@@ -105,10 +105,10 @@ describe("appExecute", () => {
       id: "github-reviewer",
       path: path.join(rootDir, "apps", "github-reviewer"),
       manifest: {
-        id: "github-reviewer",
         name: "github-reviewer",
         title: "GitHub Reviewer",
-        description: "Reviews pull requests"
+        description: "Reviews pull requests",
+        systemPrompt: "You are a focused PR review assistant."
       },
       permissions: {
         sourceIntent: "Review pull requests safely.",
@@ -131,6 +131,7 @@ describe("appExecute", () => {
         id: expect.any(String),
         parentAgentId: "parent-agent",
         name: "github-reviewer",
+        systemPrompt: "You are a focused PR review assistant.",
         appId: "github-reviewer"
       }
     });

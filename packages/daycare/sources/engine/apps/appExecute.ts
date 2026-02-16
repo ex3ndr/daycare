@@ -33,6 +33,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
     id: createId(),
     parentAgentId: input.context.agent.id,
     name: input.app.manifest.name,
+    systemPrompt: input.app.manifest.systemPrompt,
     appId: input.app.id
   };
 

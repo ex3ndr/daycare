@@ -377,7 +377,7 @@ export class Agent {
     if (this.descriptor.type === "system" && !systemAgentPrompt) {
       throw new Error(`Unknown system agent tag: ${this.descriptor.tag}`);
     }
-    const agentPrompt = this.descriptor.type === "permanent"
+    const agentPrompt = this.descriptor.type === "permanent" || this.descriptor.type === "app"
       ? this.descriptor.systemPrompt.trim()
       : (systemAgentPrompt?.systemPrompt ?? "");
     const agentKind = this.resolveAgentKind();

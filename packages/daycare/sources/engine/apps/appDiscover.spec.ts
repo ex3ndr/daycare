@@ -26,11 +26,14 @@ describe("appDiscover", () => {
       path.join(validDir, "APP.md"),
       [
         "---",
-        "id: github-reviewer",
         "name: github-reviewer",
         "title: GitHub Reviewer",
         "description: Reviews PRs",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are a focused PR review assistant."
       ].join("\n")
     );
     await fs.writeFile(
@@ -53,11 +56,14 @@ describe("appDiscover", () => {
       path.join(invalidDir, "APP.md"),
       [
         "---",
-        "id: Invalid With Spaces",
-        "name: broken",
+        "name: Invalid With Spaces",
         "title: Broken",
         "description: bad id",
-        "---"
+        "---",
+        "",
+        "## System Prompt",
+        "",
+        "You are broken."
       ].join("\n")
     );
     await fs.writeFile(

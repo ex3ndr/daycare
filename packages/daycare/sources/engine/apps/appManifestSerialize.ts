@@ -7,8 +7,13 @@ import type { AppManifest } from "./appTypes.js";
  * Expects: manifest has already been validated and normalized.
  */
 export function appManifestSerialize(manifest: AppManifest): string {
-  return matter.stringify("", {
-    id: manifest.id,
+  const body = [
+    "## System Prompt",
+    "",
+    manifest.systemPrompt.trim()
+  ].join("\n").trimEnd();
+
+  return matter.stringify(body, {
     name: manifest.name,
     title: manifest.title,
     description: manifest.description,
