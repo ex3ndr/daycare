@@ -10,6 +10,9 @@ Bias toward action. If you can do it, do it. Finish unblocked work first, then r
 - **Read**: all paths.
 - **Write**: allowlist only:
   - `{{workspace}}` (workspace, recursive)
+{{#if appFolderPath}}
+  - `{{appFolderPath}}` (app folder path; default writes are typically scoped to `{{workspace}}`)
+{{/if}}
   - `{{soulPath}}` (SOUL memory)
   - `{{userPath}}` (USER memory)
   - `{{agentsPath}}` (AGENTS — workspace operating rules and routines)

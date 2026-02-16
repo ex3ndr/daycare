@@ -64,6 +64,7 @@ import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentRestoreContextResolve } from "./ops/agentRestoreContextResolve.js";
 import { agentHistoryPendingToolResultsBuild } from "./ops/agentHistoryPendingToolResultsBuild.js";
+import { agentAppFolderPathResolve } from "./ops/agentAppFolderPathResolve.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
@@ -400,10 +401,12 @@ export class Agent {
       : providers[0];
 
     logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
+    const appFolderPath = agentAppFolderPathResolve(this.descriptor, this.agentSystem.config.current.workspaceDir);
     const systemPrompt = await this.buildSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
       workspace: this.state.permissions.workingDir,
+      appFolderPath: appFolderPath ?? "",
       writeDirs: this.state.permissions.writeDirs,
       network: this.state.permissions.network,
       events: this.state.permissions.events,
@@ -1180,6 +1183,7 @@ export class Agent {
       cronMemoryPath: context.cronMemoryPath ?? "",
       cronFilesPath: context.cronFilesPath ?? "",
       cronTaskIds: context.cronTaskIds ?? "",
+      appFolderPath: context.appFolderPath ?? "",
       soulPath,
       userPath,
       agentsPath,
@@ -1243,6 +1247,7 @@ type AgentSystemPromptContext = {
   cronMemoryPath?: string;
   cronFilesPath?: string;
   cronTaskIds?: string;
+  appFolderPath?: string;
   soulPath?: string;
   userPath?: string;
   agentsPath?: string;
