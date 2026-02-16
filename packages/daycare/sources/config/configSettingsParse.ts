@@ -51,6 +51,9 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
     agents: z.object({
       emergencyContextLimit: z.number().int().positive().optional()
     }).passthrough().optional(),
+    security: z.object({
+      appReviewerEnabled: z.boolean().optional()
+    }).passthrough().optional(),
     plugins: z.array(pluginInstance).optional(),
     providers: z.array(provider).optional(),
     inference: z.object({

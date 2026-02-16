@@ -39,8 +39,13 @@ export type AgentSettings = {
   emergencyContextLimit?: number;
 };
 
-export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents"> & {
+export type SecuritySettings = {
+  appReviewerEnabled?: boolean;
+};
+
+export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security"> & {
   agents: Required<AgentSettings>;
+  security: Required<SecuritySettings>;
 };
 
 export type SettingsConfig = {
@@ -51,6 +56,7 @@ export type SettingsConfig = {
   };
   assistant?: AssistantSettings;
   agents?: AgentSettings;
+  security?: SecuritySettings;
   plugins?: PluginInstanceSettings[];
   providers?: ProviderSettings[];
   inference?: {

@@ -34,4 +34,19 @@ describe("configResolve", () => {
     const config = configResolve({ rlm: true }, configPath);
     expect(config.rlm).toBe(true);
   });
+
+  it("defaults security.appReviewerEnabled to true", () => {
+    const configPath = path.join("/tmp/daycare", "settings.json");
+    const config = configResolve({}, configPath);
+    expect(config.settings.security.appReviewerEnabled).toBe(true);
+  });
+
+  it("resolves security.appReviewerEnabled from settings", () => {
+    const configPath = path.join("/tmp/daycare", "settings.json");
+    const config = configResolve(
+      { security: { appReviewerEnabled: false } },
+      configPath
+    );
+    expect(config.settings.security.appReviewerEnabled).toBe(false);
+  });
 });

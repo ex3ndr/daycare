@@ -58,3 +58,26 @@ flowchart TD
   D --> E[Render with tool + rule + intent context]
   E --> F[Review model user message]
 ```
+
+## Security toggle
+
+App review execution is now configurable via settings:
+
+```json
+{
+  "security": {
+    "appReviewerEnabled": false
+  }
+}
+```
+
+When `security.appReviewerEnabled` is `false`, app tool calls still go through
+the app tool allowlist, but the review-model decision step is skipped.
+
+```mermaid
+flowchart TD
+  A[App tool call] --> B{appReviewerEnabled?}
+  B -->|true| C[Run appToolReview]
+  C --> D[Allow or deny]
+  B -->|false| E[Execute tool directly]
+```

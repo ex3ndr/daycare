@@ -56,6 +56,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
     appId: input.app.id,
     appName: input.app.manifest.title,
     appSystemPrompt: input.app.manifest.systemPrompt,
+    reviewerEnabled: config.settings.security.appReviewerEnabled,
     rlmEnabled: config.rlm,
     sourceIntent: input.app.permissions.sourceIntent,
     rules: input.app.permissions.rules,

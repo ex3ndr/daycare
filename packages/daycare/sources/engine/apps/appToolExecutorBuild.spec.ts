@@ -14,6 +14,7 @@ describe("appToolExecutorBuild", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      reviewerEnabled: true,
       rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
@@ -36,6 +37,7 @@ describe("appToolExecutorBuild", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      reviewerEnabled: true,
       rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
@@ -59,6 +61,7 @@ describe("appToolExecutorBuild", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      reviewerEnabled: true,
       rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
@@ -82,6 +85,7 @@ describe("appToolExecutorBuild", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      reviewerEnabled: true,
       rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
@@ -99,6 +103,7 @@ describe("appToolExecutorBuild", () => {
       appId: "github-reviewer",
       appName: "GitHub Reviewer",
       appSystemPrompt: "You are a focused review assistant.",
+      reviewerEnabled: true,
       rlmEnabled: false,
       sourceIntent: "Review pull requests safely.",
       rules: { allow: [], deny: [] },
@@ -107,6 +112,59 @@ describe("appToolExecutorBuild", () => {
     });
 
     expect(executor.listTools().map((tool) => tool.name)).toContain("request_permission");
+  });
+
+  it("bypasses review model when reviewer is disabled by config", async () => {
+    const execute = vi.fn(async () => toolResultBuild(false, "read ok"));
+    const resolver = resolverBuild(execute);
+    const complete = vi.fn(async () => ({
+      providerId: "provider",
+      modelId: "model",
+      message: {
+        role: "assistant" as const,
+        content: [{ type: "text" as const, text: "DENY: should not be used" }],
+        api: "openai-responses" as const,
+        provider: "provider",
+        model: "model",
+        usage: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+          cost: {
+            input: 0,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            total: 0
+          }
+        },
+        stopReason: "stop" as const,
+        timestamp: Date.now()
+      }
+    }));
+    const inferenceRouter = { complete } as unknown as InferenceRouter;
+    const executor = appToolExecutorBuild({
+      appId: "github-reviewer",
+      appName: "GitHub Reviewer",
+      appSystemPrompt: "You are a focused review assistant.",
+      reviewerEnabled: false,
+      rlmEnabled: false,
+      sourceIntent: "Review pull requests safely.",
+      rules: { allow: [], deny: [] },
+      inferenceRouter,
+      toolResolver: resolver
+    });
+
+    const result = await executor.execute(
+      { id: "t1", name: "read", type: "toolCall", arguments: { path: "/tmp/a.txt" } },
+      contextBuild()
+    );
+
+    expect(complete).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(result.toolMessage.isError).toBe(false);
   });
 });
 

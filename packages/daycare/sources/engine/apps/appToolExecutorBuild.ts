@@ -14,6 +14,7 @@ type AppToolExecutorBuildInput = {
   appId: string;
   appName: string;
   appSystemPrompt: string;
+  reviewerEnabled: boolean;
   rlmEnabled: boolean;
   sourceIntent: string;
   rules: AppRuleSet;
@@ -64,6 +65,14 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
           description: tool.description,
           parameters: tool.parameters
         }));
+
+      if (!input.reviewerEnabled) {
+        appLogger.info(
+          { appId: input.appId, tool: toolCall.name, allowed: true },
+          "review: App tool review disabled by security config"
+        );
+        return input.toolResolver.execute(toolCall, context);
+      }
 
       const decision = await appToolReview({
         appId: input.appId,
