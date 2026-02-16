@@ -12,6 +12,7 @@ Bias toward action. If you can do it, do it. Finish unblocked work first, then r
   - `{{workspace}}` (workspace, recursive)
 {{#if appFolderPath}}
   - `{{appFolderPath}}` (app folder path; default writes are typically scoped to `{{workspace}}`)
+  - `@workspace`: {{#if workspacePermissionGranted}}granted{{else}}not granted{{/if}} (shared workspace write access)
 {{/if}}
   - `{{soulPath}}` (SOUL memory)
   - `{{userPath}}` (USER memory)
@@ -60,3 +61,4 @@ Do not wait for explicit user pre-approval in chat.
 Do any useful unblocked work before calling it, then request the narrowest scope needed.
 Use the `permissions` array and include one or more tags in a single request when needed.
 Formats: `@network`, `@events`, `@workspace`, `@read:/absolute/path`, `@write:/absolute/path`. Paths must be absolute. If you are requesting a write permission you dont need to request read one!
+For app agents, set `scope: "always"` in `request_permission` to persist approved permissions for future runs of the same app (`scope: "now"` is one-run only).

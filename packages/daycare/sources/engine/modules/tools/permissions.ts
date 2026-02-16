@@ -47,7 +47,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
     tool: {
       name: "request_permission",
       description:
-        "Request additional permissions from the user. Emits a connector-specific approval prompt.",
+        "Request additional permissions from the user. App agents may set scope='always' to persist grants for future runs.",
       parameters: schema
     },
     execute: async (args, toolContext, toolCall) => {

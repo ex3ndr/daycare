@@ -12,6 +12,21 @@ approved access across invocations.
   - `One time` for `now`
   - `Always` for `always`
 
+## request_permission payload
+
+For app agents, `request_permission` supports explicit scope selection:
+
+- `scope: "now"`: one-time grant for the current app run.
+- `scope: "always"`: persist the approved grant for future runs of the same app.
+
+```mermaid
+flowchart TD
+  A[App calls request_permission] --> B{scope}
+  B -->|now| C[Grant current app agent only]
+  B -->|always| D[Persist to apps/<app-id>/state.json]
+  D --> E[Apply to loaded app agents with same appId]
+```
+
 ## Persistence
 
 Shared app grants are stored at:

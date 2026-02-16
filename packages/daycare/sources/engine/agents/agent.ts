@@ -32,6 +32,7 @@ import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
 import { permissionTagsApply } from "../permissions/permissionTagsApply.js";
+import { permissionWorkspaceGranted } from "../permissions/permissionWorkspaceGranted.js";
 import { skillPromptFormat } from "../skills/skillPromptFormat.js";
 import { Skills } from "../skills/skills.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
@@ -402,11 +403,13 @@ export class Agent {
 
     logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
     const appFolderPath = agentAppFolderPathResolve(this.descriptor, this.agentSystem.config.current.workspaceDir);
+    const workspacePermissionGranted = permissionWorkspaceGranted(this.state.permissions);
     const systemPrompt = await this.buildSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
       workspace: this.state.permissions.workingDir,
       appFolderPath: appFolderPath ?? "",
+      workspacePermissionGranted,
       writeDirs: this.state.permissions.writeDirs,
       network: this.state.permissions.network,
       events: this.state.permissions.events,
@@ -1184,6 +1187,7 @@ export class Agent {
       cronFilesPath: context.cronFilesPath ?? "",
       cronTaskIds: context.cronTaskIds ?? "",
       appFolderPath: context.appFolderPath ?? "",
+      workspacePermissionGranted: context.workspacePermissionGranted ?? false,
       soulPath,
       userPath,
       agentsPath,
@@ -1248,6 +1252,7 @@ type AgentSystemPromptContext = {
   cronFilesPath?: string;
   cronTaskIds?: string;
   appFolderPath?: string;
+  workspacePermissionGranted?: boolean;
   soulPath?: string;
   userPath?: string;
   agentsPath?: string;
