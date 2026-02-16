@@ -141,7 +141,7 @@ describe("Engine RLM mode", () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
     try {
       const config = configResolve(
-        { rlm: true, engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        { features: { rlm: true }, engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
         path.join(dir, "settings.json")
       );
       const engine = new Engine({ config, eventBus: new EngineEventBus() });

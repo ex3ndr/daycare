@@ -1,4 +1,4 @@
-import type { ResolvedSettingsConfig } from "../settings.js";
+import type { ResolvedFeaturesConfig, ResolvedSettingsConfig } from "../settings.js";
 import type { SessionPermissions } from "../engine/permissions.js";
 
 export type Config = {
@@ -10,7 +10,7 @@ export type Config = {
   authPath: string;
   socketPath: string;
   workspaceDir: string;
-  rlm: boolean;
+  features: ResolvedFeaturesConfig;
   settings: ResolvedSettingsConfig;
   defaultPermissions: SessionPermissions;
   verbose: boolean;

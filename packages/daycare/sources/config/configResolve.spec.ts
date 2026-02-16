@@ -23,16 +23,24 @@ describe("configResolve", () => {
     expect(config.filesDir).toBe(path.resolve("/tmp/daycare/workspace/files"));
   });
 
-  it("defaults rlm to false", () => {
+  it("defaults features to all false", () => {
     const configPath = path.join("/tmp/daycare", "settings.json");
     const config = configResolve({}, configPath);
-    expect(config.rlm).toBe(false);
+    expect(config.features).toEqual({ say: false, rlm: false });
   });
 
-  it("resolves rlm from settings", () => {
+  it("resolves features.rlm from settings", () => {
     const configPath = path.join("/tmp/daycare", "settings.json");
-    const config = configResolve({ rlm: true }, configPath);
-    expect(config.rlm).toBe(true);
+    const config = configResolve({ features: { rlm: true } }, configPath);
+    expect(config.features.rlm).toBe(true);
+    expect(config.features.say).toBe(false);
+  });
+
+  it("resolves features.say from settings", () => {
+    const configPath = path.join("/tmp/daycare", "settings.json");
+    const config = configResolve({ features: { say: true } }, configPath);
+    expect(config.features.say).toBe(true);
+    expect(config.features.rlm).toBe(false);
   });
 
   it("defaults security.appReviewerEnabled to false", () => {

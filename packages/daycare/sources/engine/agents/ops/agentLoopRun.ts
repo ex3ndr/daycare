@@ -130,7 +130,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           source,
           agentKind,
           allowCronTools,
-          rlm: agentSystem.config.current.rlm,
+          rlm: agentSystem.config.current.features.rlm,
           connectorRegistry,
           imageRegistry: agentSystem.imageRegistry
         });

@@ -59,7 +59,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
     appName: input.app.manifest.title,
     appSystemPrompt: input.app.manifest.systemPrompt,
     reviewerEnabled: config.settings.security.appReviewerEnabled,
-    rlmEnabled: config.rlm,
+    rlmEnabled: config.features.rlm,
     sourceIntent: input.app.permissions.sourceIntent,
     rules: input.app.permissions.rules,
     inferenceRouter: agentSystem.inferenceRouter,

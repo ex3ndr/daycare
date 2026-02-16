@@ -30,7 +30,6 @@ export function configResolve(
   const frozenSettings = freezeDeep(structuredClone(resolvedSettings));
   const frozenPermissions = freezeDeep(defaultPermissions);
   const verbose = overrides.verbose ?? false;
-  const rlm = resolvedSettings.rlm ?? false;
 
   return freezeDeep({
     settingsPath: resolvedSettingsPath,
@@ -41,7 +40,7 @@ export function configResolve(
     authPath,
     socketPath,
     workspaceDir,
-    rlm,
+    features: frozenSettings.features,
     settings: frozenSettings,
     defaultPermissions: frozenPermissions,
     verbose
@@ -61,6 +60,10 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
     security: {
       ...settings.security,
       appReviewerEnabled
+    },
+    features: {
+      say: settings.features?.say ?? false,
+      rlm: settings.features?.rlm ?? false
     }
   };
 }

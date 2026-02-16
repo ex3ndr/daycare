@@ -43,13 +43,21 @@ export type SecuritySettings = {
   appReviewerEnabled?: boolean;
 };
 
-export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security"> & {
+export type FeaturesConfig = {
+  say?: boolean;
+  rlm?: boolean;
+};
+
+export type ResolvedFeaturesConfig = Required<FeaturesConfig>;
+
+export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security" | "features"> & {
   agents: Required<AgentSettings>;
   security: Required<SecuritySettings>;
+  features: ResolvedFeaturesConfig;
 };
 
 export type SettingsConfig = {
-  rlm?: boolean;
+  features?: FeaturesConfig;
   engine?: {
     socketPath?: string;
     dataDir?: string;

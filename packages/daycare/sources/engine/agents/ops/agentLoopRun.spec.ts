@@ -292,7 +292,7 @@ function optionsBuild(params: {
     eventBus: { emit: vi.fn() } as unknown as EngineEventBus,
     assistant: null,
     agentSystem: {
-      config: { current: { rlm: params.rlm ?? false } },
+      config: { current: { features: { rlm: params.rlm ?? false, say: false } } },
       imageRegistry: { list: () => [] }
     } as unknown as AgentSystem,
     heartbeats: {} as Heartbeats,

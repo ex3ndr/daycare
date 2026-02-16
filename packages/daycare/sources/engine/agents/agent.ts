@@ -978,7 +978,7 @@ export class Agent {
       source,
       agentKind: options?.agentKind,
       allowCronTools: options?.allowCronTools,
-      rlm: this.agentSystem.config.current.rlm,
+      rlm: this.agentSystem.config.current.features.rlm,
       connectorRegistry: this.agentSystem.connectorRegistry,
       imageRegistry: this.agentSystem.imageRegistry
     });

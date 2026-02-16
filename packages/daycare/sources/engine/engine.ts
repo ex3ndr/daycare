@@ -382,7 +382,7 @@ export class Engine {
     this.modules.tools.register("core", buildPermissionGrantTool());
     this.modules.tools.register("core", appInstallToolBuild(this.apps));
     this.modules.tools.register("core", appRuleToolBuild(this.apps));
-    if (this.config.current.rlm) {
+    if (this.config.current.features.rlm) {
       this.modules.tools.register("core", rlmToolBuild(this.modules.tools));
     }
     await this.apps.discover();
@@ -463,7 +463,7 @@ export class Engine {
       source,
       agentKind: options?.agentKind,
       allowCronTools: options?.allowCronTools,
-      rlm: this.config.current.rlm,
+      rlm: this.config.current.features.rlm,
       connectorRegistry: this.modules.connectors,
       imageRegistry: this.modules.images
     });
