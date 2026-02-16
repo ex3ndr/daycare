@@ -69,6 +69,11 @@ describe("database plugin", () => {
       auth,
       dataDir: baseDir,
       registrar,
+      exposes: {
+        registerProvider: async () => undefined,
+        unregisterProvider: async () => undefined,
+        listProviders: () => []
+      },
       fileStore,
       inference: {
         complete: async () => {

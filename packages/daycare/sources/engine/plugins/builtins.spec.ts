@@ -59,6 +59,11 @@ async function createApi<TSettings>(
     auth,
     dataDir: dir,
     registrar,
+    exposes: {
+      registerProvider: async () => undefined,
+      unregisterProvider: async () => undefined,
+      listProviders: () => []
+    },
     fileStore,
     inference,
     processes: new Processes(dir, getLogger(`test.processes.${instanceId}`)),

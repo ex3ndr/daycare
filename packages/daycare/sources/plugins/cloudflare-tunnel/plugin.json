@@ -1,0 +1,6 @@
+{
+  "id": "cloudflare-tunnel",
+  "name": "Cloudflare Tunnel",
+  "description": "Expose local services through cloudflared tunnels.",
+  "entry": "./plugin.js"
+}

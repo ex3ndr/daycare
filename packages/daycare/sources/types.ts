@@ -114,3 +114,15 @@ export type {
   AppRule,
   AppRuleSet
 } from "./engine/apps/appTypes.js";
+
+// Expose
+export type {
+  ExposeCreateInput,
+  ExposeEndpoint,
+  ExposeEndpointAuth,
+  ExposeMode,
+  ExposeProviderRegistrationApi,
+  ExposeTarget,
+  ExposeTunnelProvider,
+  ExposeUpdateInput
+} from "./engine/expose/exposeTypes.js";

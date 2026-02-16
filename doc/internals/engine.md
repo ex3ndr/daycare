@@ -139,3 +139,26 @@ sequenceDiagram
   Connector->>Engine: permission decision (agentId)
   Engine->>Background: incoming decision message
 ```
+
+## Expose lifecycle
+
+Engine wires expose lifecycle around plugin loading so tunnel providers are available before endpoint restore:
+
+1. Reload plugins (providers register via `api.exposes.registerProvider`).
+2. Start `Exposes` (proxy starts, persisted endpoints restore).
+3. Register `expose_*` tools.
+4. On shutdown, stop `Exposes` before unloading plugins.
+
+```mermaid
+sequenceDiagram
+  participant Engine
+  participant PluginManager
+  participant Exposes
+
+  Engine->>PluginManager: reload()
+  PluginManager->>Exposes: registerProvider(...)
+  Engine->>Exposes: start()
+  Engine->>Engine: register expose_* tools
+  Engine->>Exposes: stop()
+  Engine->>PluginManager: unloadAll()
+```

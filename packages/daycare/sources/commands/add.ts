@@ -31,6 +31,8 @@ import type { Config } from "@/types";
 import { engineReloadRequest } from "./engineReloadRequest.js";
 import { ConfigModule } from "../engine/config/configModule.js";
 import { Processes } from "../engine/processes/processes.js";
+import { Exposes } from "../engine/expose/exposes.js";
+import { EngineEventBus } from "../engine/ipc/events.js";
 
 export type AddOptions = {
   settings?: string;
@@ -285,6 +287,7 @@ async function validatePluginLoad(
     processes: new Processes(config.dataDir, getLogger("processes.validate"), {
       socketPath: config.socketPath
     }),
+    exposes: new Exposes({ config: configModule, eventBus: new EngineEventBus() }),
     mode: "validate"
   });
 

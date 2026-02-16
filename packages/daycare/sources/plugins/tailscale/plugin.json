@@ -1,0 +1,6 @@
+{
+  "id": "tailscale",
+  "name": "Tailscale",
+  "description": "Expose local services through Tailscale Serve/Funnel.",
+  "entry": "./plugin.js"
+}

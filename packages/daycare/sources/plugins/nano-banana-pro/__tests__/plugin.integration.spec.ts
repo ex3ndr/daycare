@@ -80,6 +80,11 @@ describeIf("nano-banana-pro image generation", () => {
       auth,
       dataDir: dir,
       registrar,
+      exposes: {
+        registerProvider: async () => undefined,
+        unregisterProvider: async () => undefined,
+        listProviders: () => []
+      },
       fileStore,
       inference,
       processes: new Processes(dir, getLogger("test.processes.nano-banana-pro")),

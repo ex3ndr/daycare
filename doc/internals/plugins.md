@@ -111,6 +111,7 @@ type PluginApi<TSettings> = {
   auth: AuthStore;                        // Credentials storage
   dataDir: string;                        // Plugin's data directory
   registrar: PluginRegistrar;             // Component registration
+  exposes: ExposeProviderRegistrationApi; // Expose tunnel provider registry
   fileStore: FileStore;                   // Shared file storage
   inference: PluginInference;             // LLM inference API
   mode: "runtime" | "validate";           // Execution context
@@ -155,6 +156,22 @@ Strategies:
 - `small` - Prefer smallest model; fall back to normal, then large
 - `normal` - Prefer normal model; fall back to large, then small
 - `large` - Prefer largest model; fall back to normal, then small
+
+#### `exposes` - Tunnel Provider Registration
+
+Register expose tunnel backends for core `expose_*` tools:
+
+```typescript
+await api.exposes.registerProvider({
+  instanceId: api.instance.instanceId,
+  domain: "tail123.ts.net",
+  capabilities: { public: true, localNetwork: true },
+  createTunnel: async (proxyPort, mode) => ({ domain: `demo.tail123.ts.net` }),
+  destroyTunnel: async (domain) => {}
+});
+```
+
+Use `api.exposes.unregisterProvider(instanceId)` in `unload()` to remove the backend cleanly.
 
 #### `events` - Plugin Events
 

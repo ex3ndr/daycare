@@ -67,6 +67,11 @@ import { Channels } from "./channels/channels.js";
 import { Apps } from "./apps/appManager.js";
 import { appInstallToolBuild } from "./apps/appInstallToolBuild.js";
 import { appRuleToolBuild } from "./apps/appRuleToolBuild.js";
+import { Exposes } from "./expose/exposes.js";
+import { exposeCreateToolBuild } from "./modules/tools/exposeCreateToolBuild.js";
+import { exposeListToolBuild } from "./modules/tools/exposeListToolBuild.js";
+import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js";
+import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js";
 
 const logger = getLogger("engine.runtime");
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
@@ -95,6 +100,7 @@ export class Engine {
   readonly eventBus: EngineEventBus;
   readonly permissionRequestRegistry: PermissionRequestRegistry;
   readonly apps: Apps;
+  readonly exposes: Exposes;
   private readonly reloadSync: InvalidateSync;
   private readonly incomingMessages: IncomingMessages;
 
@@ -143,6 +149,10 @@ export class Engine {
       }
     });
     logger.debug(`init: AuthStore and FileStore initialized`);
+    this.exposes = new Exposes({
+      config: this.config,
+      eventBus: this.eventBus
+    });
 
     this.modules = new ModuleRegistry({
       onMessage: async (message, context, descriptor) => {
@@ -271,6 +281,7 @@ export class Engine {
       pluginCatalog: buildPluginCatalog(),
       inferenceRouter: this.inferenceRouter,
       processes: this.processes,
+      exposes: this.exposes,
       engineEvents: this.eventBus,
       onEvent: (event) => {
         this.agentSystem.eventBus.emit("plugin.event", event);
@@ -347,7 +358,9 @@ export class Engine {
     await this.signals.ensureDir();
     await this.delayedSignals.ensureDir();
     await this.channels.ensureDir();
+    await this.exposes.ensureDir();
     await this.channels.load();
+    await this.exposes.start();
 
     logger.debug("register: Registering core tools");
     this.modules.tools.register("core", buildCronTool(this.crons));
@@ -362,7 +375,10 @@ export class Engine {
     this.modules.tools.register("core", buildSendAgentMessageTool());
     this.modules.tools.register("core", sendUserMessageToolBuild());
     this.modules.tools.register("core", skillToolBuild());
-    this.modules.tools.register("core", topologyToolBuild(this.crons, this.signals, this.channels));
+    this.modules.tools.register(
+      "core",
+      topologyToolBuild(this.crons, this.signals, this.channels, this.exposes)
+    );
     this.modules.tools.register("core", sessionHistoryToolBuild());
     this.modules.tools.register("core", permanentAgentToolBuild());
     this.modules.tools.register("core", channelCreateToolBuild(this.channels));
@@ -382,6 +398,10 @@ export class Engine {
     this.modules.tools.register("core", buildPermissionGrantTool());
     this.modules.tools.register("core", appInstallToolBuild(this.apps));
     this.modules.tools.register("core", appRuleToolBuild(this.apps));
+    this.modules.tools.register("core", exposeCreateToolBuild(this.exposes));
+    this.modules.tools.register("core", exposeRemoveToolBuild(this.exposes));
+    this.modules.tools.register("core", exposeUpdateToolBuild(this.exposes));
+    this.modules.tools.register("core", exposeListToolBuild(this.exposes));
     if (this.config.current.features.rlm) {
       this.modules.tools.register("core", rlmToolBuild(this.modules.tools));
     }
@@ -415,6 +435,7 @@ export class Engine {
     this.heartbeats.stop();
     this.delayedSignals.stop();
     this.processes.unload();
+    await this.exposes.stop();
     await this.pluginManager.unloadAll();
   }
 

@@ -1,0 +1,6 @@
+{
+  "id": "custom-tunnel",
+  "name": "Custom Tunnel",
+  "description": "Expose local services via user-provided scripts.",
+  "entry": "./plugin.js"
+}

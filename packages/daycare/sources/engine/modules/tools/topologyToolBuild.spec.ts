@@ -32,7 +32,8 @@ describe("topologyToolBuild", () => {
       const tool = topologyToolBuild(
         { listTasks: async () => [] } as unknown as Crons,
         { listSubscriptions: () => [] } as unknown as Signals,
-        { list: () => [] } as never
+        { list: () => [] } as never,
+        { list: async () => [] } as never
       );
       const result = await tool.execute(
         {},
@@ -50,6 +51,7 @@ describe("topologyToolBuild", () => {
       expect(text).toContain("## Heartbeat Tasks (0)");
       expect(text).toContain("## Signal Subscriptions (0)");
       expect(text).toContain("## Channels (0)");
+      expect(text).toContain("## Expose Endpoints (0)");
 
       const details = result.toolMessage.details as
         | {
@@ -59,6 +61,7 @@ describe("topologyToolBuild", () => {
             heartbeats: unknown[];
             signalSubscriptions: unknown[];
             channels: unknown[];
+            exposes: unknown[];
           }
         | undefined;
       expect(details).toEqual({
@@ -67,7 +70,8 @@ describe("topologyToolBuild", () => {
         crons: [],
         heartbeats: [],
         signalSubscriptions: [],
-        channels: []
+        channels: [],
+        exposes: []
       });
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -139,6 +143,20 @@ describe("topologyToolBuild", () => {
               updatedAt: 1
             }
           ]
+        } as never,
+        {
+          list: async () => [
+            {
+              id: "expose-1",
+              target: { type: "port", port: 8080 },
+              provider: "provider-a",
+              domain: "app.example.com",
+              mode: "public",
+              auth: null,
+              createdAt: 1,
+              updatedAt: 1
+            }
+          ]
         } as never
       );
 
@@ -172,6 +190,10 @@ describe("topologyToolBuild", () => {
       expect(text).toContain("agent=agent-other pattern=deploy:done silent=false");
       expect(text).toContain("## Channels (1)");
       expect(text).toContain("#dev leader=agent-other members=@monitor(agent-caller)");
+      expect(text).toContain("## Expose Endpoints (1)");
+      expect(text).toContain(
+        "expose-1 domain=app.example.com target=port:8080 provider=provider-a mode=public authenticated=false"
+      );
 
       const details = result.toolMessage.details as
         | {
@@ -180,6 +202,7 @@ describe("topologyToolBuild", () => {
             heartbeats: Array<{ id: string }>;
             signalSubscriptions: Array<{ agentId: string }>;
             channels: Array<{ id: string }>;
+            exposes: Array<{ id: string }>;
           }
         | undefined;
       expect(details?.agents).toHaveLength(2);
@@ -187,6 +210,7 @@ describe("topologyToolBuild", () => {
       expect(details?.heartbeats).toHaveLength(1);
       expect(details?.signalSubscriptions).toHaveLength(2);
       expect(details?.channels).toHaveLength(1);
+      expect(details?.exposes).toHaveLength(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -234,7 +258,8 @@ describe("topologyToolBuild", () => {
         } as unknown as Signals,
         {
           list: () => []
-        } as never
+        } as never,
+        { list: async () => [] } as never
       );
 
       const result = await tool.execute(

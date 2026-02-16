@@ -74,6 +74,11 @@ function createManager(
       pluginCatalog: catalog,
       inferenceRouter,
       processes: new Processes(rootDir, getLogger("test.processes")),
+      exposes: {
+        registerProvider: async () => undefined,
+        unregisterProvider: async () => undefined,
+        listProviders: () => []
+      },
       onEvent
     })
   };

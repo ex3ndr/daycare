@@ -6,6 +6,7 @@ import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import { agentList } from "../../agents/ops/agentList.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
+import type { Exposes } from "../../expose/exposes.js";
 import type { Signals } from "../../signals/signals.js";
 
 const schema = Type.Object({}, { additionalProperties: false });
@@ -17,7 +18,8 @@ const schema = Type.Object({}, { additionalProperties: false });
 export function topologyToolBuild(
   crons: Crons,
   signals: Signals,
-  channels: Pick<Channels, "list">
+  channels: Pick<Channels, "list">,
+  exposes: Pick<Exposes, "list">
 ): ToolDefinition {
   return {
     tool: {
@@ -29,10 +31,11 @@ export function topologyToolBuild(
     execute: async (_args, toolContext, toolCall) => {
       const callerAgentId = toolContext.agent.id;
 
-      const [agentEntries, cronTasks, heartbeatTasks] = await Promise.all([
+      const [agentEntries, cronTasks, heartbeatTasks, exposeEndpoints] = await Promise.all([
         agentList(toolContext.agentSystem.config.current),
         crons.listTasks(),
-        toolContext.heartbeats.listTasks()
+        toolContext.heartbeats.listTasks(),
+        exposes.list()
       ]);
       const signalSubscriptions = signals.listSubscriptions();
       const channelEntries = channels.list();
@@ -101,6 +104,21 @@ export function topologyToolBuild(
             }))
         }));
 
+      const exposeSummary = exposeEndpoints
+        .slice()
+        .sort((left, right) => left.createdAt - right.createdAt)
+        .map((endpoint) => ({
+          id: endpoint.id,
+          domain: endpoint.domain,
+          target:
+            endpoint.target.type === "port"
+              ? `port:${endpoint.target.port}`
+              : `unix:${endpoint.target.path}`,
+          provider: endpoint.provider,
+          mode: endpoint.mode,
+          authenticated: Boolean(endpoint.auth)
+        }));
+
       const text = [
         `## Agents (${agents.length})`,
         ...listAgentsLinesBuild(agents),
@@ -115,7 +133,10 @@ export function topologyToolBuild(
         ...listSignalSubscriptionLinesBuild(signalSubscriptionsSummary),
         "",
         `## Channels (${channelsSummary.length})`,
-        ...listChannelLinesBuild(channelsSummary)
+        ...listChannelLinesBuild(channelsSummary),
+        "",
+        `## Expose Endpoints (${exposeSummary.length})`,
+        ...listExposeLinesBuild(exposeSummary)
       ].join("\n");
 
       const toolMessage: ToolResultMessage = {
@@ -129,7 +150,8 @@ export function topologyToolBuild(
           crons: cronsSummary,
           heartbeats,
           signalSubscriptions: signalSubscriptionsSummary,
-          channels: channelsSummary
+          channels: channelsSummary,
+          exposes: exposeSummary
         },
         isError: false,
         timestamp: Date.now()
@@ -214,4 +236,23 @@ function listChannelLinesBuild(
           .join(", ");
     return `#${channel.name} leader=${channel.leader} members=${members}`;
   });
+}
+
+function listExposeLinesBuild(
+  endpoints: Array<{
+    id: string;
+    domain: string;
+    target: string;
+    provider: string;
+    mode: string;
+    authenticated: boolean;
+  }>
+): string[] {
+  if (endpoints.length === 0) {
+    return ["None"];
+  }
+
+  return endpoints.map((endpoint) =>
+    `${endpoint.id} domain=${endpoint.domain} target=${endpoint.target} provider=${endpoint.provider} mode=${endpoint.mode} authenticated=${endpoint.authenticated}`
+  );
 }

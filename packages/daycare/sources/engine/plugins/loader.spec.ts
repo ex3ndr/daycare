@@ -65,6 +65,11 @@ export const plugin = {
       auth: {} as never,
       dataDir: dir,
       registrar: {} as never,
+      exposes: {
+        registerProvider: async () => undefined,
+        unregisterProvider: async () => undefined,
+        listProviders: () => []
+      },
       fileStore: {} as never,
       inference: {
         complete: async () => {

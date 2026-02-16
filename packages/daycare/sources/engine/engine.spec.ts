@@ -204,6 +204,31 @@ describe("Engine startup plugin hooks", () => {
   });
 });
 
+describe("Engine expose lifecycle", () => {
+  it("ensures, starts, and stops expose module with engine lifecycle", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      const ensureSpy = vi.spyOn(engine.exposes, "ensureDir").mockResolvedValue(undefined);
+      const startSpy = vi.spyOn(engine.exposes, "start").mockResolvedValue(undefined);
+      const stopSpy = vi.spyOn(engine.exposes, "stop").mockResolvedValue(undefined);
+
+      await engine.start();
+      await engine.shutdown();
+
+      expect(ensureSpy).toHaveBeenCalledTimes(1);
+      expect(startSpy).toHaveBeenCalledTimes(1);
+      expect(stopSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("Engine tool registration", () => {
   it("registers the skill tool in normal mode", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
