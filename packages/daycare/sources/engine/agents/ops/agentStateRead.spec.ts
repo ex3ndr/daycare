@@ -23,6 +23,7 @@ describe("agentStateRead", () => {
         context: {
           messages: [{ role: "user", content: "hello", timestamp: 1 }]
         },
+        inferenceSessionId: "session-1",
         permissions: { ...config.defaultPermissions },
         tokens: null,
         stats: {},
@@ -35,6 +36,7 @@ describe("agentStateRead", () => {
       const restored = await agentStateRead(config, agentId);
 
       expect(restored?.context.messages).toEqual(state.context.messages);
+      expect(restored?.inferenceSessionId).toBe("session-1");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -77,6 +79,7 @@ describe("agentStateRead", () => {
       const restored = await agentStateRead(config, agentId);
 
       expect(restored?.context.messages).toEqual([]);
+      expect(restored?.inferenceSessionId).toBeUndefined();
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

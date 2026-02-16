@@ -142,53 +142,57 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       logger.debug(
         `event: Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
       );
-      response = await inferenceRouter.complete(context, agent.id, {
-        providersOverride: providersForAgent,
-        signal: abortSignal,
-        onAttempt: (providerId, modelId) => {
-          logger.debug(
-            `start: Inference attempt starting providerId=${providerId} modelId=${modelId} agentId=${agent.id}`
-          );
-          logger.info(
-            { agentId: agent.id, messageId: entry.id, provider: providerId, model: modelId },
-            "start: Inference started"
-          );
-        },
-        onFallback: (providerId, error) => {
-          logger.debug(
-            `event: Inference falling back to next provider providerId=${providerId} error=${String(error)}`
-          );
-          logger.warn(
-            { agentId: agent.id, messageId: entry.id, provider: providerId, error },
-            "event: Inference fallback"
-          );
-        },
-        onSuccess: (providerId, modelId, message) => {
-          logger.debug(
-            `event: Inference succeeded providerId=${providerId} modelId=${modelId} stopReason=${message.stopReason} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
-          );
-          logger.info(
-            {
-              agentId: agent.id,
-              messageId: entry.id,
-              provider: providerId,
-              model: modelId,
-              stopReason: message.stopReason,
-              usage: message.usage
-            },
-            "event: Inference completed"
-          );
-        },
-        onFailure: (providerId, error) => {
-          logger.debug(
-            `error: Inference failed completely providerId=${providerId} error=${String(error)}`
-          );
-          logger.warn(
-            { agentId: agent.id, messageId: entry.id, provider: providerId, error },
-            "error: Inference failed"
-          );
+      response = await inferenceRouter.complete(
+        context,
+        agent.state.inferenceSessionId ?? agent.id,
+        {
+          providersOverride: providersForAgent,
+          signal: abortSignal,
+          onAttempt: (providerId, modelId) => {
+            logger.debug(
+              `start: Inference attempt starting providerId=${providerId} modelId=${modelId} agentId=${agent.id}`
+            );
+            logger.info(
+              { agentId: agent.id, messageId: entry.id, provider: providerId, model: modelId },
+              "start: Inference started"
+            );
+          },
+          onFallback: (providerId, error) => {
+            logger.debug(
+              `event: Inference falling back to next provider providerId=${providerId} error=${String(error)}`
+            );
+            logger.warn(
+              { agentId: agent.id, messageId: entry.id, provider: providerId, error },
+              "event: Inference fallback"
+            );
+          },
+          onSuccess: (providerId, modelId, message) => {
+            logger.debug(
+              `event: Inference succeeded providerId=${providerId} modelId=${modelId} stopReason=${message.stopReason} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
+            );
+            logger.info(
+              {
+                agentId: agent.id,
+                messageId: entry.id,
+                provider: providerId,
+                model: modelId,
+                stopReason: message.stopReason,
+                usage: message.usage
+              },
+              "event: Inference completed"
+            );
+          },
+          onFailure: (providerId, error) => {
+            logger.debug(
+              `error: Inference failed completely providerId=${providerId} error=${String(error)}`
+            );
+            logger.warn(
+              { agentId: agent.id, messageId: entry.id, provider: providerId, error },
+              "error: Inference failed"
+            );
+          }
         }
-      });
+      );
 
       const tokenUsage = tokensResolve(context, response.message);
       const tokensEntry =

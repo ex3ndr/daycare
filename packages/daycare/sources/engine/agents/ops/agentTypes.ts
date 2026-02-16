@@ -37,6 +37,7 @@ export type AgentTokenStats = Record<string, Record<string, AgentTokenSize>>;
 
 export type AgentState = {
   context: Context;
+  inferenceSessionId?: string;
   permissions: SessionPermissions;
   tokens: AgentTokenEntry | null;
   stats: AgentTokenStats;

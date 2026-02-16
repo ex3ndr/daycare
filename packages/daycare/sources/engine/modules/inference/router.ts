@@ -53,12 +53,12 @@ export class InferenceRouter {
 
   async complete(
     context: Context,
-    agentId: string,
+    sessionId: string,
     options?: InferenceCompleteOptions
   ): Promise<InferenceResult> {
     const execute = async (): Promise<InferenceResult> => {
       const providers = options?.providersOverride ?? this.providers;
-      this.logger.debug(`start: InferenceRouter.complete() starting agentId=${agentId} messageCount=${context.messages.length} toolCount=${context.tools?.length ?? 0} providerCount=${providers.length}`);
+      this.logger.debug(`start: InferenceRouter.complete() starting sessionId=${sessionId} messageCount=${context.messages.length} toolCount=${context.tools?.length ?? 0} providerCount=${providers.length}`);
       let lastError: unknown = null;
 
       for (const [index, providerConfig] of providers.entries()) {
@@ -90,10 +90,10 @@ export class InferenceRouter {
 
         options?.onAttempt?.(providerConfig.id, client.modelId);
         try {
-          this.logger.debug(`event: Calling client.complete() providerId=${providerConfig.id} modelId=${client.modelId} agentId=${agentId}`);
-          // Provider API still expects `sessionId`; map to the agent id.
+          this.logger.debug(`event: Calling client.complete() providerId=${providerConfig.id} modelId=${client.modelId} sessionId=${sessionId}`);
+          // Provider API expects `sessionId`; caller owns how this is scoped/rotated.
           const message = await client.complete(context, {
-            sessionId: agentId,
+            sessionId,
             signal: options?.signal
           });
           this.logger.debug(`event: Inference completed successfully providerId=${providerConfig.id} modelId=${client.modelId} stopReason=${message.stopReason} contentBlocks=${message.content.length} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`);

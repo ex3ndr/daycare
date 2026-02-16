@@ -48,6 +48,7 @@ const agentStateSchema = z
         messages: z.array(z.unknown())
       })
       .optional(),
+    inferenceSessionId: z.string().min(1).optional(),
     permissions: permissionsSchema,
     tokens: tokensSchema,
     stats: statsSchema,
@@ -81,6 +82,7 @@ export async function agentStateRead(config: Config, agentId: string): Promise<A
     context: {
       messages: (persisted.context?.messages ?? []) as Context["messages"]
     },
+    inferenceSessionId: persisted.inferenceSessionId,
     permissions: persisted.permissions,
     tokens: persisted.tokens,
     stats: persisted.stats,

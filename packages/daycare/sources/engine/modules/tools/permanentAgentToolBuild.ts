@@ -115,6 +115,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
         permissionTagsApply(permissions, permissionTags);
         const state: AgentState = {
           context: { messages: [] },
+          inferenceSessionId: createId(),
           permissions,
           tokens: null,
           stats: {},

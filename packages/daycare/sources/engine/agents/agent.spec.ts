@@ -22,6 +22,7 @@ import type { Crons } from "../cron/crons.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Signals } from "../signals/signals.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
+import { agentStateRead } from "./ops/agentStateRead.js";
 
 describe("Agent", () => {
   it("persists descriptor, state, and history on create", async () => {
@@ -129,6 +130,55 @@ describe("Agent", () => {
       });
 
       await connectorRegistry.unregisterAll("test");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rotates inference session id on reset", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const agentSystem = new AgentSystem({
+        config: new ConfigModule(config),
+        eventBus: new EngineEventBus(),
+        connectorRegistry: new ConnectorRegistry({
+          onMessage: async () => undefined
+        }),
+        imageRegistry: new ImageGenerationRegistry(),
+        toolResolver: new ToolResolver(),
+        pluginManager: {} as unknown as PluginManager,
+        inferenceRouter: {} as unknown as InferenceRouter,
+        fileStore: new FileStore(config),
+        authStore: new AuthStore(config)
+      });
+      agentSystem.setCrons({} as unknown as Crons);
+      await agentSystem.load();
+      await agentSystem.start();
+
+      const descriptor: AgentDescriptor = {
+        type: "cron",
+        id: createId(),
+        name: "Reset Session Agent"
+      };
+      await agentSystem.postAndAwait(
+        { descriptor },
+        { type: "reset", message: "first reset" }
+      );
+      const agentId = await agentSystem.agentIdForTarget({ descriptor });
+      const firstState = await agentStateRead(config, agentId);
+      expect(firstState?.inferenceSessionId).toBeTruthy();
+
+      await agentSystem.postAndAwait(
+        { agentId },
+        { type: "reset", message: "second reset" }
+      );
+      const secondState = await agentStateRead(config, agentId);
+      expect(secondState?.inferenceSessionId).toBeTruthy();
+      expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

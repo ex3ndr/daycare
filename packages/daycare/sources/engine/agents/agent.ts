@@ -110,6 +110,7 @@ export class Agent {
     const now = Date.now();
     const state: AgentState = {
       context: { messages: [] },
+      inferenceSessionId: createId(),
       permissions: permissionClone(agentSystem.config.current.defaultPermissions),
       tokens: null,
       stats: {},
@@ -680,6 +681,7 @@ export class Agent {
     } else {
       this.state.context = { messages: [] };
     }
+    this.state.inferenceSessionId = createId();
     this.state.tokens = null;
     this.state.updatedAt = now;
     await agentHistoryAppend(this.agentSystem.config.current, this.id, {

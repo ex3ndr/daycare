@@ -201,6 +201,38 @@ describe("agentLoopRun", () => {
     }
     expect(appended).toEqual(["assistant_message", "tool_result", "tool_result"]);
   });
+
+  it("uses persisted inference session id for inference calls", async () => {
+    const connector = connectorBuild(vi.fn(async () => undefined));
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = {
+      complete: vi.fn(async () => ({
+        message: assistantMessageBuild([]),
+        providerId: "provider-1",
+        modelId: "model-1"
+      }))
+    } as unknown as InferenceRouter;
+    const toolResolver = toolResolverBuild(async () => toolResultTextBuild("call-1", "noop", "ok"));
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        inferenceSessionId: "session-abc"
+      })
+    );
+
+    expect(inferenceRouter.complete).toHaveBeenCalledTimes(1);
+    expect(inferenceRouter.complete).toHaveBeenCalledWith(
+      expect.anything(),
+      "session-abc",
+      expect.anything()
+    );
+  });
 });
 
 function optionsBuild(params: {
@@ -213,6 +245,7 @@ function optionsBuild(params: {
   rlm?: boolean;
   abortSignal?: AbortSignal;
   appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
+  inferenceSessionId?: string;
 }) {
   const logger = {
     debug: vi.fn(),
@@ -237,6 +270,7 @@ function optionsBuild(params: {
         userId: "user-1"
       },
       state: {
+        inferenceSessionId: params.inferenceSessionId ?? "session-agent-1",
         permissions: {
           workingDir: "/workspace",
           writeDirs: ["/workspace"],
