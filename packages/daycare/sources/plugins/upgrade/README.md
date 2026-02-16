@@ -11,6 +11,13 @@ The command runs:
 - `strategy` (required): currently only `"pm2"`.
 - `processName` (required): PM2 process name to restart after install.
 
+## Onboarding
+- On add, the plugin runs `pm2 jlist` and looks for an **online** PM2 process named `daycare`.
+- If `daycare` is not online (or PM2 is unavailable), onboarding aborts and the plugin is not added.
+- If detected, onboarding stores:
+  - `strategy: "pm2"`
+  - `processName: "daycare"`
+
 ## Slash command
 - `/upgrade` - upgrades Daycare CLI and restarts the configured PM2 process.
 

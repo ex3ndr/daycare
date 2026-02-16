@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
 import type { AgentDescriptor, MessageContext } from "@/types";
+import { upgradePm2ProcessDetect } from "./upgradePm2ProcessDetect.js";
 import { upgradeRun } from "./upgradeRun.js";
 
 const UPGRADE_COMMAND = "upgrade";
@@ -20,6 +21,26 @@ type UpgradePluginSettings = {
 
 export const plugin = definePlugin({
   settingsSchema,
+  onboarding: async (api) => {
+    const detection = await upgradePm2ProcessDetect("daycare");
+    if (!detection.found) {
+      api.note(
+        `Upgrade plugin requires an online PM2 process named "daycare". ${detection.reason}`,
+        "Upgrade"
+      );
+      return null;
+    }
+    api.note(
+      `Detected online PM2 process "${detection.processName}". Upgrade plugin configured.`,
+      "Upgrade"
+    );
+    return {
+      settings: {
+        strategy: "pm2",
+        processName: detection.processName
+      }
+    };
+  },
   create: (api) => {
     const settings = api.settings as UpgradePluginSettings;
 
