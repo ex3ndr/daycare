@@ -116,16 +116,25 @@ export class ExposeProxy {
       }
     }
 
-    await this.proxyRequest(request, reply, route.target);
+    await this.proxyRequest(
+      request,
+      reply,
+      route.target,
+      route.passwordHash !== null
+    );
   }
 
   private async proxyRequest(
     request: FastifyRequest,
     reply: FastifyReply,
-    target: ExposeTarget
+    target: ExposeTarget,
+    stripAuthorizationHeader: boolean
   ): Promise<void> {
     const headers: http.OutgoingHttpHeaders = { ...request.headers };
     delete headers.connection;
+    if (stripAuthorizationHeader) {
+      delete headers.authorization;
+    }
 
     const options: http.RequestOptions = {
       method: request.raw.method,

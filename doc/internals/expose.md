@@ -53,6 +53,19 @@ sequenceDiagram
 - Password is randomly generated and returned once to the caller.
 - Only bcrypt hash is persisted in endpoint JSON.
 - `expose_update` regenerates a password whenever auth is enabled.
+- For auth-protected routes, `Authorization` is consumed by proxy auth and removed before upstream forwarding.
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Proxy as ExposeProxy
+  participant Upstream as Local service
+
+  Client->>Proxy: Authorization: Basic daycare:password
+  Proxy->>Proxy: Validate auth against bcrypt hash
+  Proxy->>Proxy: Delete Authorization header
+  Proxy->>Upstream: Forward request without proxy credentials
+```
 
 ## Tailscale binary resolution
 The Tailscale plugin resolves the executable path at runtime:

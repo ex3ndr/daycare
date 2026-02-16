@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { ExposeTunnelProvider, SessionPermissions } from "@/types";
 import { definePlugin } from "../../engine/plugins/types.js";
+import { shellQuote } from "../../util/shellQuote.js";
 
 const LOCAL_EXPOSE_DEFAULT_LISTEN_PORT = 18221;
 
@@ -133,10 +134,6 @@ function processCommandBuild(proxyPort: number, listenPort: number): string {
   return `${shellQuote(process.execPath)} ${shellQuote(FORWARDER_ENTRY_PATH)} ${shellQuote(
     String(proxyPort)
   )} ${shellQuote(String(listenPort))}`;
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\"'\"'`)}'`;
 }
 
 function localExposeListenPortResolve(input: string | null | undefined): number {

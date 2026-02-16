@@ -107,9 +107,9 @@ describe("ExposeProxy", () => {
   });
 
   it("enforces basic auth when configured", async () => {
-    const upstream = await serverStart((_, response) => {
+    const upstream = await serverStart((request, response) => {
       response.statusCode = 200;
-      response.end("ok");
+      response.end(String(request.headers.authorization ?? "none"));
     });
 
     const passwordHash = await bcrypt.hash("secret", 10);
@@ -143,16 +143,19 @@ describe("ExposeProxy", () => {
       }
     });
     expect(validAuth.statusCode).toBe(200);
-    expect(validAuth.body).toBe("ok");
+    expect(validAuth.body).toBe("none");
 
     proxy.updateRoute("auth.example.com", { passwordHash: null });
     const afterDisable = await requestRun({
       port,
       host: "auth.example.com",
-      path: "/"
+      path: "/",
+      headers: {
+        authorization: "Bearer local-service-token"
+      }
     });
     expect(afterDisable.statusCode).toBe(200);
-    expect(afterDisable.body).toBe("ok");
+    expect(afterDisable.body).toBe("Bearer local-service-token");
   });
 });
 
