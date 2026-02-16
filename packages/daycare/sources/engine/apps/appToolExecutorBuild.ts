@@ -4,8 +4,9 @@ import type { ProviderSettings } from "../../settings.js";
 
 import { getLogger } from "../../log.js";
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
-import type { ToolResolverLike } from "../modules/toolResolver.js";
+import type { ToolResolverApi } from "../modules/toolResolver.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
+import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
 import type { AppRuleSet } from "./appTypes.js";
 import { appToolReview } from "./appToolReview.js";
 
@@ -15,7 +16,7 @@ type AppToolExecutorBuildInput = {
   sourceIntent: string;
   rules: AppRuleSet;
   inferenceRouter: InferenceRouter;
-  toolResolver: ToolResolverLike;
+  toolResolver: ToolResolverApi;
   providersOverride?: ProviderSettings[];
   allowedToolNames?: string[];
   logger?: Logger;
@@ -26,7 +27,7 @@ type AppToolExecutor = {
   execute: (toolCall: ToolCall, context: ToolExecutionContext) => Promise<ToolExecutionResult>;
 };
 
-const DEFAULT_ALLOWED_TOOLS = ["read", "write", "edit", "exec"];
+const DEFAULT_ALLOWED_TOOLS = ["read", "write", "edit", "exec", RLM_TOOL_NAME];
 
 /**
  * Wraps a tool resolver with app-review middleware for each tool call.

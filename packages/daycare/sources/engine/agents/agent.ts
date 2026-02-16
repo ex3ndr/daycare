@@ -67,7 +67,7 @@ import { agentHistoryPendingToolResultsBuild } from "./ops/agentHistoryPendingTo
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
-import type { ToolResolverLike } from "../modules/toolResolver.js";
+import type { ToolResolverApi } from "../modules/toolResolver.js";
 
 const logger = getLogger("engine.agent");
 
@@ -955,7 +955,7 @@ export class Agent {
   }
 
   private listContextTools(
-    toolResolver: ToolResolverLike,
+    toolResolver: ToolResolverApi,
     source?: string,
     options?: {
       agentKind?: "background" | "foreground";

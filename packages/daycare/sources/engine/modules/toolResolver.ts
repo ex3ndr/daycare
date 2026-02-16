@@ -9,12 +9,7 @@ type RegisteredTool = ToolDefinition & { pluginId: string };
 
 const logger = getLogger("engine.modules");
 
-export interface ToolResolverLike {
-  listTools(): Tool[];
-  execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult>;
-}
-
-export class ToolResolver implements ToolResolverLike {
+export class ToolResolver {
   private tools = new Map<string, RegisteredTool>();
 
   register(pluginId: string, definition: ToolDefinition): void {
@@ -83,6 +78,8 @@ export class ToolResolver implements ToolResolverLike {
     }
   }
 }
+
+export type ToolResolverApi = Pick<ToolResolver, "listTools" | "execute">;
 
 function buildToolError(toolCall: ToolCall, text: string): ToolResultMessage {
   return {

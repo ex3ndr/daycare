@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
-import type { ToolResolver } from "../toolResolver.js";
+import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmToolBuild } from "./rlmTool.js";
 
 describe("rlmToolBuild", () => {
@@ -70,11 +70,55 @@ describe("rlmToolBuild", () => {
     expect(messageText(result)).toContain("Python runtime error.");
     expect(messageText(result)).toContain("ZeroDivisionError");
   });
+
+  it("uses the runtime tool resolver from execution context when provided", async () => {
+    const fallbackExecute = vi.fn(async () => okResult("echo", "fallback"));
+    const fallbackResolver: ToolResolverApi = {
+      listTools: () => [
+        {
+          name: "run_python",
+          description: "meta",
+          parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+        }
+      ],
+      execute: fallbackExecute
+    };
+    const runtimeExecute = vi.fn(async (toolCall: { arguments: { text: string } }) =>
+      okResult("echo", toolCall.arguments.text)
+    );
+    const runtimeResolver: ToolResolverApi = {
+      listTools: () => [
+        {
+          name: "echo",
+          description: "Echo text.",
+          parameters: Type.Object({ text: Type.String() }, { additionalProperties: false })
+        },
+        {
+          name: "run_python",
+          description: "meta",
+          parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+        }
+      ],
+      execute: runtimeExecute as unknown as ToolResolverApi["execute"]
+    };
+    const tool = rlmToolBuild(fallbackResolver);
+
+    const result = await tool.execute(
+      { code: "echo('runtime') " },
+      createContext({ toolResolver: runtimeResolver }),
+      { id: "tool-call-4", name: "run_python" }
+    );
+
+    expect(result.toolMessage.isError).toBe(false);
+    expect(messageText(result)).toContain("runtime");
+    expect(runtimeExecute).toHaveBeenCalledTimes(1);
+    expect(fallbackExecute).not.toHaveBeenCalled();
+  });
 });
 
 function createResolver(
   handler: (name: string, args: unknown) => Promise<ToolExecutionResult>
-): ToolResolver {
+): ToolResolverApi {
   const tools = [
     {
       name: "echo",
@@ -91,10 +135,12 @@ function createResolver(
   return {
     listTools: () => tools,
     execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments))
-  } as unknown as ToolResolver;
+  };
 }
 
-function createContext(): ToolExecutionContext {
+function createContext(
+  overrides: Partial<ToolExecutionContext> = {}
+): ToolExecutionContext {
   return {
     connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
     fileStore: null as unknown as ToolExecutionContext["fileStore"],
@@ -112,7 +158,8 @@ function createContext(): ToolExecutionContext {
     source: "test",
     messageContext: {},
     agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
-    heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+    heartbeats: null as unknown as ToolExecutionContext["heartbeats"],
+    ...overrides
   };
 }
 

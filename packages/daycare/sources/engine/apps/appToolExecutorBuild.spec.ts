@@ -68,6 +68,21 @@ describe("appToolExecutorBuild", () => {
     expect(result.toolMessage.isError).toBe(true);
     expect(contentText(result.toolMessage)).toContain("not available in app sandbox");
   });
+
+  it("includes run_python in app allowlist when resolver exposes it", () => {
+    const execute = vi.fn(async () => toolResultBuild(false, "ok"));
+    const resolver = resolverBuild(execute);
+    const executor = appToolExecutorBuild({
+      appId: "github-reviewer",
+      appName: "GitHub Reviewer",
+      sourceIntent: "Review pull requests safely.",
+      rules: { allow: [], deny: [] },
+      inferenceRouter: inferenceRouterBuild("ALLOW"),
+      toolResolver: resolver
+    });
+
+    expect(executor.listTools().map((tool) => tool.name)).toContain("run_python");
+  });
 });
 
 function inferenceRouterBuild(text: string): InferenceRouter {
@@ -110,6 +125,7 @@ function resolverBuild(execute: () => Promise<ToolExecutionResult>) {
       { name: "write", description: "write", parameters: schema },
       { name: "edit", description: "edit", parameters: schema },
       { name: "exec", description: "exec", parameters: schema },
+      { name: "run_python", description: "run_python", parameters: schema },
       { name: "cron", description: "cron", parameters: schema }
     ],
     execute: vi.fn(async () => execute())

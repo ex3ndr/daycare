@@ -9,7 +9,7 @@ import type {
   ToolExecutionResult
 } from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
-import type { ToolResolverLike } from "../../modules/toolResolver.js";
+import type { ToolResolverApi } from "../../modules/toolResolver.js";
 
 export type AgentMessage = {
   id: string;
@@ -79,7 +79,7 @@ export type AgentInboxItem =
       type: "message";
       message: ConnectorMessage;
       context: MessageContext;
-      toolResolverOverride?: ToolResolverLike;
+      toolResolverOverride?: ToolResolverApi;
     }
   | {
       type: "system_message";

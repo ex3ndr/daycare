@@ -25,6 +25,10 @@ def tool_name(arg1: type, arg2: type) -> str:
 The preamble is embedded in the `run_python` tool description and regenerated from the
 current tool set when context tools are built.
 
+At execution time, `run_python` uses the **runtime** tool resolver from the current tool
+execution context when available (for example app/subagent tool overrides). This keeps
+Python tool stubs and dispatch aligned with the active sandboxed tool view.
+
 ## Execution Flow
 
 `rlmExecute()` uses Monty's iterative `start()`/`resume()` loop:

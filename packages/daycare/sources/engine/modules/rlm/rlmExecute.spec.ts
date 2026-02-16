@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
-import type { ToolResolver } from "../toolResolver.js";
+import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
 import { rlmPreambleBuild } from "./rlmPreambleBuild.js";
 
@@ -94,11 +94,11 @@ describe("rlmExecute", () => {
 
 function createResolver(
   handler: (name: string, args: unknown) => Promise<ToolExecutionResult>
-): ToolResolver {
+): ToolResolverApi {
   return {
     listTools: () => baseTools,
     execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments))
-  } as unknown as ToolResolver;
+  };
 }
 
 function createContext(): ToolExecutionContext {

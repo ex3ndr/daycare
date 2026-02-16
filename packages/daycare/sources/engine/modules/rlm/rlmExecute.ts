@@ -2,7 +2,7 @@ import { Monty, MontyComplete, MontySnapshot } from "@pydantic/monty";
 import { createId } from "@paralleldrive/cuid2";
 
 import type { ToolExecutionContext } from "@/types";
-import type { ToolResolver } from "../toolResolver.js";
+import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "./rlmConstants.js";
 
@@ -27,7 +27,7 @@ export async function rlmExecute(
   code: string,
   preamble: string,
   context: ToolExecutionContext,
-  toolResolver: ToolResolver
+  toolResolver: ToolResolverApi
 ): Promise<RlmExecuteResult> {
   const availableTools = toolResolver
     .listTools()

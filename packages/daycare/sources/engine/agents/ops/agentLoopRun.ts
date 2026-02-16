@@ -7,7 +7,7 @@ import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import type { Connector } from "@/types";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
-import type { ToolResolverLike } from "../../modules/toolResolver.js";
+import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
@@ -37,7 +37,7 @@ type AgentLoopRunOptions = {
   connector: Connector | null;
   connectorRegistry: ConnectorRegistry;
   inferenceRouter: InferenceRouter;
-  toolResolver: ToolResolverLike;
+  toolResolver: ToolResolverApi;
   fileStore: FileStore;
   authStore: AuthStore;
   eventBus: EngineEventBus;
@@ -337,6 +337,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           messageContext: entry.context,
           agentSystem,
           heartbeats,
+          toolResolver,
           skills: activeSkills,
           permissionRequestRegistry: agentSystem.permissionRequestRegistry
         });

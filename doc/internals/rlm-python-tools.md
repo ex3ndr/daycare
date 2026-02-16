@@ -26,6 +26,26 @@ flowchart TD
   H --> I[toolResult message to model]
 ```
 
+## Runtime Resolver Selection
+
+`run_python` now resolves tools from the active runtime resolver in `ToolExecutionContext`
+when present. This ensures app/subagent overrides are used consistently for both:
+- generated Python stubs
+- nested tool dispatch from Python
+
+```mermaid
+flowchart TD
+  A[agentLoopRun uses active resolver]
+  A --> B[toolResolver.execute run_python]
+  B --> C[rlmTool.execute]
+  C --> D{context.toolResolver provided?}
+  D -->|yes| E[use override resolver]
+  D -->|no| F[use engine resolver]
+  E --> G[rlmPreambleBuild + rlmExecute]
+  F --> G
+  G --> H[Python calls dispatch through selected resolver]
+```
+
 ## Limits and Errors
 
 `rlmExecute` enforces resource limits (`maxDurationSecs`, `maxMemory`, `maxRecursionDepth`,

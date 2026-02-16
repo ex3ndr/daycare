@@ -3,7 +3,7 @@ import { MontyRuntimeError, MontySyntaxError } from "@pydantic/monty";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolExecutionResult } from "@/types";
-import type { ToolResolver } from "../toolResolver.js";
+import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
 import { RLM_TOOL_NAME } from "./rlmConstants.js";
 import { rlmPreambleBuild } from "./rlmPreambleBuild.js";
@@ -21,7 +21,7 @@ type RlmArgs = Static<typeof schema>;
  * Builds the run_python tool that executes Monty Python and dispatches calls to registered tools.
  * Expects: toolResolver includes the underlying concrete tools to dispatch.
  */
-export function rlmToolBuild(toolResolver: ToolResolver): ToolDefinition {
+export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
   return {
     tool: {
       name: RLM_TOOL_NAME,
@@ -31,10 +31,11 @@ export function rlmToolBuild(toolResolver: ToolResolver): ToolDefinition {
     },
     execute: async (args, context, toolCall) => {
       const payload = args as RlmArgs;
-      const preamble = rlmPreambleBuild(toolResolver.listTools());
+      const runtimeResolver = context.toolResolver ?? toolResolver;
+      const preamble = rlmPreambleBuild(runtimeResolver.listTools());
 
       try {
-        const result = await rlmExecute(payload.code, preamble, context, toolResolver);
+        const result = await rlmExecute(payload.code, preamble, context, runtimeResolver);
         return buildResult(
           toolCall,
           [
