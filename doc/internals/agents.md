@@ -45,8 +45,10 @@ flowchart LR
 ```
 
 ## System message delivery
-`send_agent_message` posts a `system_message` inbox item. The agent wraps the text
-as a `<system_message>` tag before running the inference loop. When a target agent id
+`send_agent_message` posts a `system_message` inbox item (used for intermediate updates
+or ad-hoc messaging). Subagent final responses are auto-delivered via `<response>` tag
+extraction (see "Background agent reporting"). The agent wraps incoming system message
+text as a `<system_message>` tag before running the inference loop. When a target agent id
 is omitted, the tool resolves the most recent foreground agent.
 
 ```mermaid
@@ -199,16 +201,35 @@ sequenceDiagram
 ```
 
 ## Background agent reporting
-Foreground prompts should instruct subagents to report progress via `send_agent_message`.
+Subagents report results by emitting `<response>...</response>` tags in their text output.
+The harness (`agentLoopRun`) extracts content between the first `<response>` and last
+`</response>` (case-insensitive), strips the tag from the model context, and `handleMessage`
+auto-delivers the extracted text to the parent agent as a `system_message`. If the model
+omits the tag, the harness nudges it once; if still missing, it generates an error response.
+`send_agent_message` remains available for intermediate updates or messaging other agents.
 
 ```mermaid
 sequenceDiagram
   participant Foreground
   participant AgentSystem
   participant Subagent
-  Foreground->>AgentSystem: start_background_agent(prompt + report back)
+  participant Harness as agentLoopRun
+  Foreground->>AgentSystem: start_background_agent(prompt)
   AgentSystem->>Subagent: enqueue prompt
-  Subagent->>AgentSystem: send_agent_message(status update)
+  Subagent->>Harness: inference loop
+  Harness->>Harness: extract <response> tag
+  alt tag found
+    Harness-->>Subagent: responseText = extracted content
+  else tag missing
+    Harness->>Harness: nudge (inject user message)
+    Harness->>Harness: re-run inference
+    alt tag found after nudge
+      Harness-->>Subagent: responseText = extracted content
+    else still missing
+      Harness-->>Subagent: responseText = error
+    end
+  end
+  Subagent->>AgentSystem: auto-deliver responseText to parent
   AgentSystem->>Foreground: enqueue system_message
 ```
 

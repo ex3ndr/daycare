@@ -25,6 +25,7 @@ import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import { tokensResolve } from "./tokensResolve.js";
 import type { Skills } from "../../skills/skills.js";
 import { agentHistoryPendingToolResultsBuild } from "./agentHistoryPendingToolResultsBuild.js";
+import { tagExtract, tagStrip } from "../../../util/tagExtract.js";
 
 const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
 
@@ -108,6 +109,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   const historyRecords: AgentHistoryRecord[] = [];
   const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
   let activeSkills: AgentSkill[] = [];
+  const isSubagent = agent.descriptor.type === "subagent";
+  let subagentNudged = false;
   const agentKind = agent.descriptor.type === "user" ? "foreground" : "background";
   const allowCronTools = agentDescriptorIsCron(agent.descriptor);
   const target = agentDescriptorTargetResolve(agent.descriptor);
@@ -268,6 +271,37 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         tokens: tokensEntry
       }, appendHistoryRecord);
       if (toolCalls.length === 0) {
+        // Subagent response tag extraction: check for <response> tag, nudge if missing
+        if (isSubagent) {
+          const extracted = tagExtract(responseText ?? "", "response");
+          if (extracted !== null) {
+            finalResponseText = extracted;
+            stripResponseTagFromMessage(response.message);
+            logger.debug("event: Subagent <response> tag extracted");
+            break;
+          } else if (!subagentNudged) {
+            subagentNudged = true;
+            context.messages.push({
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "You must wrap your final answer in <response>...</response> tags. Emit your response now."
+                }
+              ],
+              timestamp: Date.now()
+            });
+            logger.debug("event: Subagent nudged to emit <response> tag");
+            continue;
+          } else {
+            finalResponseText = "Error: subagent did not produce a response.";
+            logger.warn(
+              { agentId: agent.id },
+              "error: Subagent failed to emit <response> tag after nudge"
+            );
+            break;
+          }
+        }
         logger.debug(`event: No tool calls, breaking inference loop iteration=${iteration}`);
         break;
       }
@@ -508,6 +542,19 @@ async function historyRecordAppend(
 ): Promise<void> {
   historyRecords.push(record);
   await appendHistoryRecord?.(record);
+}
+
+// Strip <response> tag content from assistant message text blocks so the tag
+// doesn't re-enter the model context in future turns.
+function stripResponseTagFromMessage(message: Context["messages"][number]): void {
+  if (message.role !== "assistant" || !Array.isArray(message.content)) {
+    return;
+  }
+  for (const block of message.content) {
+    if (block.type === "text") {
+      block.text = tagStrip(block.text, "response");
+    }
+  }
 }
 
 // Remove NO_MESSAGE text blocks so the sentinel never re-enters future model context.

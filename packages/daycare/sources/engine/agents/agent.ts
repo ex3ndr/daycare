@@ -617,7 +617,34 @@ export class Agent {
     this.state.updatedAt = Date.now();
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
 
-    return result.responseText ?? null;
+    // Auto-deliver subagent response to parent agent
+    const responseText = result.responseText ?? null;
+    if (
+      this.descriptor.type === "subagent" &&
+      responseText &&
+      responseText.trim().length > 0
+    ) {
+      const parentAgentId = this.descriptor.parentAgentId ?? null;
+      if (parentAgentId) {
+        try {
+          await this.agentSystem.post(
+            { agentId: parentAgentId },
+            {
+              type: "system_message",
+              text: responseText,
+              origin: this.id
+            }
+          );
+        } catch (sendError) {
+          logger.warn(
+            { agentId: this.id, parentAgentId, error: sendError },
+            "error: Subagent response auto-delivery failed"
+          );
+        }
+      }
+    }
+
+    return responseText;
   }
 
   private async handleSystemMessage(
