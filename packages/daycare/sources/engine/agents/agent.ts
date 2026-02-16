@@ -23,6 +23,7 @@ import type { AgentSkill, MessageContext } from "@/types";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
+import { messageBuildSystemSilentText } from "../messages/messageBuildSystemSilentText.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatusBuild } from "./ops/contextCompactionStatusBuild.js";
@@ -626,7 +627,9 @@ export class Agent {
   private async handleSystemMessage(
     item: AgentInboxSystemMessage
   ): Promise<string | null> {
-    const text = messageBuildSystemText(item.text, item.origin);
+    const text = item.silent
+      ? messageBuildSystemSilentText(item.text, item.origin)
+      : messageBuildSystemText(item.text, item.origin);
     if (item.silent) {
       const receivedAt = Date.now();
       await agentHistoryAppend(this.agentSystem.config.current, this.id, {

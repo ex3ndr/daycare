@@ -10,6 +10,7 @@ flowchart TD
   Engine --> MsgExtractTools[messageExtractToolCalls.ts]
   Engine --> MsgNoMessage[messageNoMessageIs.ts]
   Engine --> MsgSystem[messageBuildSystemText.ts]
+  Engine --> MsgSystemSilent[messageBuildSystemSilentText.ts]
   Engine --> MsgIsSystem[messageIsSystemText.ts]
   Engine --> MsgUserFacing[messageBuildUserFacing.ts]
   Engine --> MsgIsUserFacing[messageIsUserFacing.ts]
@@ -23,6 +24,9 @@ flowchart TD
 
 `messageNoMessageIs.ts` detects the `NO_MESSAGE` sentinel so the runtime can suppress user-facing output
 without leaking the sentinel into future model context.
+
+`messageBuildSystemSilentText.ts` wraps text in `<system_message_silent>` tags for silent system messages
+(added to context for awareness without triggering inference).
 
 `messageBuildUserFacing.ts` wraps text in `<message_for_user origin="agentId">` tags for background agents
 that need the foreground agent to present content to the user. `messageIsUserFacing.ts` detects this tag.
