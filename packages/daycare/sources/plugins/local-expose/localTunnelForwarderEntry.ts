@@ -41,7 +41,7 @@ const server = http.createServer((request, response) => {
 
 server.listen({ host: "0.0.0.0", port: listenPort }, () => {
   process.stdout.write(
-    `local-http forwarder listening on :${listenPort} -> 127.0.0.1:${proxyPort}\n`
+    `local-expose forwarder listening on :${listenPort} -> 127.0.0.1:${proxyPort}\n`
   );
 });
 

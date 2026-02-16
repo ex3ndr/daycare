@@ -1,4 +1,4 @@
-# Local HTTP Plugin
+# Local Expose Plugin
 
 Registers an expose provider for plain HTTP on local port `80` (no TLS termination).
 

@@ -11,7 +11,7 @@ const settingsSchema = z
   })
   .strict();
 
-type LocalHttpSettings = z.infer<typeof settingsSchema>;
+type LocalExposeSettings = z.infer<typeof settingsSchema>;
 
 const FORWARDER_ENTRY_PATH = fileURLToPath(
   new URL("./localTunnelForwarderEntry.js", import.meta.url)
@@ -35,7 +35,7 @@ export const plugin = definePlugin({
     };
   },
   create: (api) => {
-    const settings = api.settings as LocalHttpSettings;
+    const settings = api.settings as LocalExposeSettings;
     const instanceId = api.instance.instanceId;
     const processOwner = { type: "plugin" as const, id: instanceId };
     const configuredDomain = settings.domain.trim().toLowerCase();
@@ -96,7 +96,7 @@ export const plugin = definePlugin({
           createTunnel: async (proxyPort) => {
             if (activeDomains.size > 0) {
               throw new Error(
-                "Local HTTP provider supports only one active expose endpoint at a time."
+                "Local Expose provider supports only one active expose endpoint at a time."
               );
             }
 
@@ -114,7 +114,7 @@ export const plugin = definePlugin({
           await destroyTunnel(domain).catch((error) => {
             api.logger.warn(
               { domain, error },
-              "error: Failed to destroy local-http expose tunnel"
+              "error: Failed to destroy local-expose expose tunnel"
             );
           });
         }
@@ -125,7 +125,7 @@ export const plugin = definePlugin({
 });
 
 function processNameBuild(instanceId: string, proxyPort: number): string {
-  return `local-http-${instanceId}-${proxyPort}`;
+  return `local-expose-${instanceId}-${proxyPort}`;
 }
 
 function processCommandBuild(proxyPort: number): string {

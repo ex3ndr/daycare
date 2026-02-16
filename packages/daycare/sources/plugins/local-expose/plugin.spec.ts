@@ -4,16 +4,16 @@ import type { ExposeTunnelProvider } from "@/types";
 
 import { plugin } from "./plugin.js";
 
-describe("local-http plugin", () => {
+describe("local-expose plugin", () => {
   it("registers provider and starts local forwarder process on create", async () => {
     let registeredProvider: ExposeTunnelProvider | null = null;
     const api = {
-      instance: { instanceId: "local-http-1", pluginId: "local-http", enabled: true },
+      instance: { instanceId: "local-expose-1", pluginId: "local-expose", enabled: true },
       settings: { domain: "local.example.test" },
       engineSettings: {},
       logger: { warn: vi.fn() },
       auth: {},
-      dataDir: "/tmp/daycare/plugins/local-http-1",
+      dataDir: "/tmp/daycare/plugins/local-expose-1",
       registrar: {},
       exposes: {
         registerProvider: vi.fn(async (provider: ExposeTunnelProvider) => {
@@ -50,17 +50,17 @@ describe("local-http plugin", () => {
     expect(api.processes.create).toHaveBeenCalledTimes(1);
     expect(api.processes.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "local-http-local-http-1-3000",
+        name: "local-expose-local-expose-1-3000",
         keepAlive: true,
-        owner: { type: "plugin", id: "local-http-1" },
-        cwd: "/tmp/daycare/plugins/local-http-1",
-        home: "/tmp/daycare/plugins/local-http-1",
+        owner: { type: "plugin", id: "local-expose-1" },
+        cwd: "/tmp/daycare/plugins/local-expose-1",
+        home: "/tmp/daycare/plugins/local-expose-1",
         allowedDomains: ["127.0.0.1", "localhost"]
       }),
       {
-        workingDir: "/tmp/daycare/plugins/local-http-1",
-        writeDirs: ["/tmp/daycare/plugins/local-http-1"],
-        readDirs: ["/tmp/daycare/plugins/local-http-1"],
+        workingDir: "/tmp/daycare/plugins/local-expose-1",
+        writeDirs: ["/tmp/daycare/plugins/local-expose-1"],
+        readDirs: ["/tmp/daycare/plugins/local-expose-1"],
         network: true,
         events: false
       }
@@ -75,22 +75,22 @@ describe("local-http plugin", () => {
     await provider.destroyTunnel(created.domain);
     expect(api.processes.removeByOwner).toHaveBeenCalledWith({
       type: "plugin",
-      id: "local-http-1"
+      id: "local-expose-1"
     });
 
     await instance.unload?.();
-    expect(api.exposes.unregisterProvider).toHaveBeenCalledWith("local-http-1");
+    expect(api.exposes.unregisterProvider).toHaveBeenCalledWith("local-expose-1");
   });
 
   it("reuses an already running forwarder process for matching proxy port", async () => {
     let registeredProvider: ExposeTunnelProvider | null = null;
     const api = {
-      instance: { instanceId: "local-http-1", pluginId: "local-http", enabled: true },
+      instance: { instanceId: "local-expose-1", pluginId: "local-expose", enabled: true },
       settings: { domain: "local.example.test" },
       engineSettings: {},
       logger: { warn: vi.fn() },
       auth: {},
-      dataDir: "/tmp/daycare/plugins/local-http-1",
+      dataDir: "/tmp/daycare/plugins/local-expose-1",
       registrar: {},
       exposes: {
         registerProvider: vi.fn(async (provider: ExposeTunnelProvider) => {
@@ -109,10 +109,10 @@ describe("local-http plugin", () => {
         listByOwner: vi.fn(async () => [
           {
             id: "proc-1",
-            name: "local-http-local-http-1-3000",
+            name: "local-expose-local-expose-1-3000",
             command: "node localTunnelForwarderEntry.js",
-            cwd: "/tmp/daycare/plugins/local-http-1",
-            home: "/tmp/daycare/plugins/local-http-1",
+            cwd: "/tmp/daycare/plugins/local-expose-1",
+            home: "/tmp/daycare/plugins/local-expose-1",
             pid: 1234,
             keepAlive: true,
             desiredState: "running",
@@ -147,12 +147,12 @@ describe("local-http plugin", () => {
   it("supports only one active domain at a time", async () => {
     let registeredProvider: ExposeTunnelProvider | null = null;
     const api = {
-      instance: { instanceId: "local-http-1", pluginId: "local-http", enabled: true },
+      instance: { instanceId: "local-expose-1", pluginId: "local-expose", enabled: true },
       settings: { domain: "local.example.test" },
       engineSettings: {},
       logger: { warn: vi.fn() },
       auth: {},
-      dataDir: "/tmp/daycare/plugins/local-http-1",
+      dataDir: "/tmp/daycare/plugins/local-expose-1",
       registrar: {},
       exposes: {
         registerProvider: vi.fn(async (provider: ExposeTunnelProvider) => {
@@ -185,7 +185,7 @@ describe("local-http plugin", () => {
 
     const created = await provider.createTunnel(3000, "public");
     await expect(provider.createTunnel(3001, "public")).rejects.toThrow(
-      "Local HTTP provider supports only one active expose endpoint at a time."
+      "Local Expose provider supports only one active expose endpoint at a time."
     );
     await provider.destroyTunnel(created.domain);
   });

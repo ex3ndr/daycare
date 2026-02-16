@@ -6,7 +6,7 @@ The expose module adds runtime-managed tunnel endpoints so agents can publish lo
 Core pieces:
 - `Exposes` facade: endpoint lifecycle, provider registry, persistence
 - `ExposeProxy`: single local reverse proxy with host routing + optional Basic auth
-- Provider plugins: `tailscale`, `cloudflare-tunnel`, `custom-tunnel`, `local-http`
+- Provider plugins: `tailscale`, `cloudflare-tunnel`, `custom-tunnel`, `local-expose`
 - Core tools: `expose_create`, `expose_update`, `expose_remove`, `expose_list`
 
 Endpoint state persists under:
@@ -88,14 +88,14 @@ sequenceDiagram
   Processes-->>PM: removed process count
 ```
 
-## Local HTTP provider on port 80
-- `local-http` plugin accepts a configured hostname and exposes it over plain HTTP.
+## Local Expose provider on port 80
+- `local-expose` plugin accepts a configured hostname and exposes it over plain HTTP.
 - On first endpoint create, plugin starts a managed forwarder process bound to `0.0.0.0:80`.
 - Forwarder process proxies requests to expose proxy (`127.0.0.1:<proxyPort>`) preserving host header routing.
 
 ```mermaid
 sequenceDiagram
-  participant Plugin as local-http plugin
+  participant Plugin as local-expose plugin
   participant Processes
   participant Forwarder as :80 forwarder
   participant Proxy as ExposeProxy

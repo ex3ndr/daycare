@@ -1,6 +1,6 @@
 {
-  "id": "local-http",
-  "name": "Local HTTP",
+  "id": "local-expose",
+  "name": "Local Expose",
   "description": "Expose local services via plain HTTP on port 80.",
   "entry": "./plugin.js"
 }
