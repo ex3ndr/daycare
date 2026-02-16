@@ -88,7 +88,7 @@ flowchart LR
 ## Telegram commands
 - `/reset` clears the agent message history for the current user.
 - `/context` reports the latest context token usage snapshot.
-- `/compaction` requests manual context compaction.
+- `/compact` requests manual context compaction.
 - `/abort` aborts the current inference for the current user.
 - Upgrade plugin commands may add `/upgrade` and `/restart` when that plugin is enabled.
 

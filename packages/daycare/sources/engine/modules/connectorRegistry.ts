@@ -41,7 +41,7 @@ export type ConnectorRegistryOptions = {
 const CORE_COMMANDS: SlashCommandEntry[] = [
   { command: "reset", description: "Reset the current conversation." },
   { command: "context", description: "Show latest context token usage." },
-  { command: "compaction", description: "Compact the current conversation." },
+  { command: "compact", description: "Compact the current conversation." },
   { command: "abort", description: "Abort the current inference." }
 ];
 

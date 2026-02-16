@@ -284,8 +284,8 @@ describe("Engine abort command", () => {
 
 });
 
-describe("Engine compaction command", () => {
-  it("posts compaction work for user commands", async () => {
+describe("Engine compact command", () => {
+  it("posts compact work for user commands", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
     try {
       const config = configResolve(
@@ -325,7 +325,7 @@ describe("Engine compaction command", () => {
       };
       const context: MessageContext = { messageId: "57" };
 
-      await commandHandler("/compaction", context, descriptor);
+      await commandHandler("/compact", context, descriptor);
 
       expect(postSpy).toHaveBeenCalledWith(
         { descriptor },

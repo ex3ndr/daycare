@@ -43,11 +43,11 @@ flowchart TD
 
 ## Manual compaction command
 
-Users can request manual compaction with `/compaction` (alias `/compact`).
+Users can request manual compaction with `/compact`.
 
 ```mermaid
 flowchart TD
-  A[/compaction command/] --> B[Resolve agent + connector]
+  A[/compact command/] --> B[Resolve agent + connector]
   B --> C{Agent busy?}
   C -->|yes| D[Reply: busy]
   C -->|no| E[Start typing indicator]

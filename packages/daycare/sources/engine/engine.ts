@@ -170,15 +170,15 @@ export class Engine {
           await this.handleContextCommand(descriptor, context);
           return;
         }
-        if (parsed.name === "compaction" || parsed.name === "compact") {
+        if (parsed.name === "compact") {
           if (descriptor.type !== "user") {
             return;
           }
           logger.info(
             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-            "receive: Compaction command received"
+            "receive: Compact command received"
           );
-          await this.handleCompactionCommand(descriptor, context);
+          await this.handleCompactCommand(descriptor, context);
           return;
         }
         if (parsed.name === "abort") {
@@ -486,7 +486,7 @@ export class Engine {
     }
   }
 
-  private async handleCompactionCommand(
+  private async handleCompactCommand(
     descriptor: AgentDescriptor,
     context: MessageContext
   ): Promise<void> {
