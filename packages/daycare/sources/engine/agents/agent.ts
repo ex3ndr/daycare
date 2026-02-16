@@ -372,6 +372,9 @@ export class Agent {
     const permanentAgentsPrompt = agentPermanentPromptBuild(permanentAgents);
     const promptResolved = await agentPromptResolve(this.descriptor);
     const agentPrompt = promptResolved.agentPrompt;
+    const replaceSystemPrompt = this.descriptor.type === "system"
+      ? promptResolved.replaceSystemPrompt
+      : false;
     const agentKind = this.resolveAgentKind();
     const allowCronTools = agentDescriptorIsCron(this.descriptor);
 
@@ -424,7 +427,7 @@ export class Agent {
       skillsPrompt,
       permanentAgentsPrompt,
       agentPrompt,
-      replaceSystemPrompt: promptResolved.replaceSystemPrompt,
+      replaceSystemPrompt,
       agentKind,
       parentAgentId: this.descriptor.type === "subagent" || this.descriptor.type === "app"
         ? this.descriptor.parentAgentId ?? ""
