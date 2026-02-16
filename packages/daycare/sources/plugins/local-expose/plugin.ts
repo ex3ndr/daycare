@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-
 import { z } from "zod";
 
 import type { ExposeTunnelProvider, SessionPermissions } from "@/types";
@@ -17,10 +15,73 @@ const settingsSchema = z
 
 type LocalExposeSettings = z.infer<typeof settingsSchema>;
 
-const FORWARDER_ENTRY_PATH = fileURLToPath(
-  new URL("./localTunnelForwarderEntry.js", import.meta.url)
-);
 const LOCAL_FORWARDER_ALLOWED_DOMAINS = ["127.0.0.1", "localhost"];
+const LOCAL_FORWARDER_INLINE_SCRIPT = `
+import http from "node:http";
+import { pipeline } from "node:stream/promises";
+
+const proxyPort = parsePort(process.argv[1], "proxy port");
+const listenPort = parsePort(process.argv[2], "listen port");
+
+const server = http.createServer((request, response) => {
+  const headers = { ...request.headers };
+  delete headers.connection;
+
+  const upstream = http.request(
+    {
+      hostname: "127.0.0.1",
+      port: proxyPort,
+      method: request.method,
+      path: request.url,
+      headers
+    },
+    (upstreamResponse) => {
+      response.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers);
+      void pipeline(upstreamResponse, response).catch(() => {
+        response.destroy();
+      });
+    }
+  );
+
+  upstream.on("error", () => {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+    response.statusCode = 502;
+    response.setHeader("content-type", "text/plain; charset=utf-8");
+    response.end("Expose upstream unavailable.");
+  });
+
+  void pipeline(request, upstream).catch(() => {
+    upstream.destroy();
+  });
+});
+
+server.listen({ host: "0.0.0.0", port: listenPort }, () => {
+  process.stdout.write(
+    \`local-expose forwarder listening on :\${listenPort} -> 127.0.0.1:\${proxyPort}\\n\`
+  );
+});
+
+process.on("SIGTERM", () => {
+  server.close(() => process.exit(0));
+});
+process.on("SIGINT", () => {
+  server.close(() => process.exit(0));
+});
+
+function parsePort(value, label) {
+  if (!value) {
+    throw new Error(\`Missing \${label}.\`);
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+    throw new Error(\`Invalid \${label}: \${value}\`);
+  }
+  return parsed;
+}
+`.trim();
 
 export const plugin = definePlugin({
   settingsSchema,
@@ -131,9 +192,9 @@ function processNameBuild(instanceId: string, proxyPort: number): string {
 }
 
 function processCommandBuild(proxyPort: number, listenPort: number): string {
-  return `${shellQuote(process.execPath)} ${shellQuote(FORWARDER_ENTRY_PATH)} ${shellQuote(
-    String(proxyPort)
-  )} ${shellQuote(String(listenPort))}`;
+  return `${shellQuote(process.execPath)} -e ${shellQuote(
+    LOCAL_FORWARDER_INLINE_SCRIPT
+  )} ${shellQuote(String(proxyPort))} ${shellQuote(String(listenPort))}`;
 }
 
 function localExposeListenPortResolve(input: string | null | undefined): number {

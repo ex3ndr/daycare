@@ -115,7 +115,7 @@ sequenceDiagram
   participant Proxy as ExposeProxy
 
   Plugin->>Processes: create(owner=plugin instance, keepAlive=true)
-  Processes->>Forwarder: start node localTunnelForwarderEntry.js proxyPort listenPort(default 18221)
+  Processes->>Forwarder: start node -e <inline forwarder script> proxyPort listenPort(default 18221)
   Forwarder->>Proxy: proxy HTTP to 127.0.0.1:proxyPort
   Plugin->>Plugin: register expose provider(domain)
 ```

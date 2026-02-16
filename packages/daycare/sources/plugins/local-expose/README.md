@@ -8,6 +8,7 @@ Registers an expose provider for plain HTTP on a configurable local port (defaul
 
 ## Behavior
 - Starts a managed userspace forwarder process bound to `0.0.0.0:<port>` (default `18221`)
+- Starts the forwarder via inline Node script (`node -e ...`) so runtime does not depend on source file paths
 - Requests sandbox `allowLocalBinding: true` so local listen sockets are permitted
 - Forwards traffic to the internal expose proxy port on `127.0.0.1`
 - Keeps one active endpoint/domain per plugin instance
