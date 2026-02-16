@@ -41,6 +41,8 @@ The compaction prompt requires a strict checkpoint format (pi-mono style) so sum
 
 The prompt also explicitly tells the model to not continue the conversation and to output only the structured summary.
 
+At inference time, Daycare appends a final synthetic user instruction ("summarize the conversation above...") before calling the provider. This ensures the model gets an explicit summarization turn instead of attempting to continue the previous chat turn.
+
 ## Flow
 
 ```mermaid

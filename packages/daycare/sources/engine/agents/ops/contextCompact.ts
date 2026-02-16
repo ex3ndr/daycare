@@ -24,6 +24,11 @@ type ContextCompactOptions = {
 };
 
 const logger = getLogger("agents.context-compact");
+const COMPACTION_REQUEST_TEXT = [
+  "Summarize the conversation above into a compact context checkpoint.",
+  "Follow the system prompt format exactly.",
+  "Do not continue the conversation."
+].join(" ");
 
 /**
  * Compacts a conversation context into a single summary message.
@@ -37,7 +42,14 @@ export async function contextCompact(options: ContextCompactOptions): Promise<Co
 
   const compactionPrompt = (await agentPromptBundledRead("COMPACTION.md")).trim();
   const compactionContext: Context = {
-    messages: [...context.messages],
+    messages: [
+      ...context.messages,
+      {
+        role: "user",
+        content: COMPACTION_REQUEST_TEXT,
+        timestamp: Date.now()
+      }
+    ],
     systemPrompt: compactionPrompt
   };
 

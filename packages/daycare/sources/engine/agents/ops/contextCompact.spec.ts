@@ -58,6 +58,33 @@ describe("contextCompact", () => {
     expect(messages[0]?.content).toEqual([{ type: "text", text: "Summary" }]);
   });
 
+  it("adds an explicit compaction instruction as the final user message", async () => {
+    let receivedContext: Context | undefined;
+    const complete = vi.fn(async (context: Context) => {
+      receivedContext = context;
+      return {
+        message: buildAssistantMessage("Summary"),
+        providerId: "openai",
+        modelId: "gpt-4.1"
+      };
+    });
+    const inferenceRouter = { complete } as unknown as InferenceRouter;
+
+    await contextCompact({
+      context: buildContext(),
+      inferenceRouter,
+      providers
+    });
+
+    const lastMessage = receivedContext?.messages.at(-1);
+    expect(lastMessage?.role).toBe("user");
+    expect(lastMessage?.content).toBe(
+      "Summarize the conversation above into a compact context checkpoint. " +
+      "Follow the system prompt format exactly. " +
+      "Do not continue the conversation."
+    );
+  });
+
   it("returns an empty compacted context when summary text is empty", async () => {
     const complete = vi.fn(async () => ({
       message: buildAssistantMessage("  "),
