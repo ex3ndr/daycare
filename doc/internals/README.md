@@ -53,6 +53,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `telegram-message-splitting.md` - telegram message splitting logic
 - `telegram-polling-retry.md` - telegram polling retry behavior
 - `telegram-reset-command.md` - telegram `/reset` acknowledgment flow
+- `telegram-restart-command.md` - telegram `/restart` server restart flow
 - `telegram-stop-command.md` - telegram `/stop` inference abort flow
 - `telegram-slash-commands.md` - telegram startup slash command registration
 - `network-permission-rename.md` - @web to @network rename notes

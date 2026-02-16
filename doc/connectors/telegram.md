@@ -60,13 +60,15 @@ Credentials are stored in `.daycare/auth.json`:
 
 ## Slash commands
 
-Commands are registered with Telegram on startup (scoped to private chats):
+Core commands are registered with Telegram (scoped to private chats), and plugins can add more commands dynamically:
 
 | Command | Description |
 |---------|-------------|
 | `/reset` | Clear agent message history for the current user |
-| `/stop` | Abort the current inference for the current user |
 | `/context` | Show token usage snapshot |
+| `/compaction` | Compact the current conversation |
+| `/stop` | Abort the current inference for the current user |
+| `/restart` | Restart the Daycare server process |
 
 ## Permission handling
 

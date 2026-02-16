@@ -62,6 +62,7 @@ import { Processes } from "./processes/processes.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { PermissionRequestRegistry } from "./modules/tools/permissionRequestRegistry.js";
 import { Channels } from "./channels/channels.js";
+import { requestShutdown } from "../util/shutdown.js";
 
 const logger = getLogger("engine.runtime");
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
@@ -190,6 +191,17 @@ export class Engine {
             "stop: Stop command received"
           );
           await this.handleStopCommand(descriptor, context);
+          return;
+        }
+        if (parsed.name === "restart") {
+          if (descriptor.type !== "user") {
+            return;
+          }
+          logger.info(
+            { connector, channelId: descriptor.channelId, userId: descriptor.userId },
+            "restart: Restart command received"
+          );
+          await this.handleRestartCommand(descriptor, context);
           return;
         }
         if (descriptor.type !== "user") {
@@ -531,6 +543,29 @@ export class Engine {
     } catch (error) {
       logger.warn({ connector: target.connector, error }, "error: Stop command failed to send response");
     }
+  }
+
+  private async handleRestartCommand(
+    descriptor: AgentDescriptor,
+    context: MessageContext
+  ): Promise<void> {
+    const target = agentDescriptorTargetResolve(descriptor);
+    if (!target) {
+      return;
+    }
+    const connector = this.modules.connectors.get(target.connector);
+    if (!connector?.capabilities.sendText) {
+      return;
+    }
+    try {
+      await connector.sendMessage(target.targetId, {
+        text: "Restarting Daycare server...",
+        replyToMessageId: context.messageId
+      });
+    } catch (error) {
+      logger.warn({ connector: target.connector, error }, "error: Restart command failed to send response");
+    }
+    requestShutdown("SIGTERM");
   }
 
   async reload(): Promise<void> {

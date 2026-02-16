@@ -28,7 +28,8 @@ describe("ConnectorRegistry command updates", () => {
       { command: "reset", description: "Reset the current conversation." },
       { command: "context", description: "Show latest context token usage." },
       { command: "compaction", description: "Compact the current conversation." },
-      { command: "stop", description: "Abort the current inference." }
+      { command: "stop", description: "Abort the current inference." },
+      { command: "restart", description: "Restart the Daycare server." }
     ]);
 
     commandRegistry.register("upgrade", {
@@ -44,6 +45,7 @@ describe("ConnectorRegistry command updates", () => {
       { command: "context", description: "Show latest context token usage." },
       { command: "compaction", description: "Compact the current conversation." },
       { command: "stop", description: "Abort the current inference." },
+      { command: "restart", description: "Restart the Daycare server." },
       { command: "upgrade", description: "Upgrade daycare to latest version" }
     ]);
   });
@@ -78,6 +80,7 @@ describe("ConnectorRegistry command updates", () => {
       { command: "context", description: "Show latest context token usage." },
       { command: "compaction", description: "Compact the current conversation." },
       { command: "stop", description: "Abort the current inference." },
+      { command: "restart", description: "Restart the Daycare server." },
       { command: "upgrade", description: "Upgrade daycare to latest version" }
     ]);
   });

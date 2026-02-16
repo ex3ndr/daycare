@@ -8,6 +8,7 @@ import type { AgentDescriptor, Connector, ConnectorMessage, MessageContext } fro
 import { configResolve } from "../config/configResolve.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
+import * as shutdown from "../util/shutdown.js";
 
 describe("Engine reset command", () => {
   it("posts reset with message context for user commands", async () => {
@@ -275,6 +276,68 @@ describe("Engine stop command", () => {
       });
       expect(postSpy).not.toHaveBeenCalled();
 
+      await engine.modules.connectors.unregisterAll("test");
+      await engine.shutdown();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("Engine restart command", () => {
+  it("requests shutdown for user commands and confirms in channel", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      const engine = new Engine({ config, eventBus: new EngineEventBus() });
+      const requestShutdownSpy = vi
+        .spyOn(shutdown, "requestShutdown")
+        .mockImplementation(() => undefined);
+      const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+
+      const sendMessage = vi.fn(async () => undefined);
+      const commandState: {
+        handler?: (command: string, context: MessageContext, descriptor: AgentDescriptor) => void | Promise<void>;
+      } = {};
+
+      const connector: Connector = {
+        capabilities: { sendText: true },
+        onMessage: () => () => undefined,
+        onCommand: (handler) => {
+          commandState.handler = handler;
+          return () => undefined;
+        },
+        sendMessage
+      };
+
+      const registerResult = engine.modules.connectors.register("telegram", connector);
+      expect(registerResult).toEqual({ ok: true, status: "loaded" });
+      const commandHandler = commandState.handler;
+      if (!commandHandler) {
+        throw new Error("Expected command handler to be registered");
+      }
+
+      const descriptor: AgentDescriptor = {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      };
+      const context: MessageContext = { messageId: "56" };
+
+      await commandHandler("/restart", context, descriptor);
+
+      expect(sendMessage).toHaveBeenCalledWith("123", {
+        text: "Restarting Daycare server...",
+        replyToMessageId: "56"
+      });
+      expect(requestShutdownSpy).toHaveBeenCalledWith("SIGTERM");
+      expect(postSpy).not.toHaveBeenCalled();
+
+      requestShutdownSpy.mockRestore();
       await engine.modules.connectors.unregisterAll("test");
       await engine.shutdown();
     } finally {
