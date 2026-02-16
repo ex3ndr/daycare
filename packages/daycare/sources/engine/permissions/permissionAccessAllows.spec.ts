@@ -88,4 +88,38 @@ describe("permissionAccessAllows", () => {
     );
     expect(allowed).toBe(true);
   });
+
+  it("denies writing app policy files from broad directory grants", async () => {
+    const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "perm-app-policy-"));
+    tempDirs.push(workspace);
+    const appDir = path.join(workspace, "apps", "my-app");
+    await fs.mkdir(appDir, { recursive: true });
+    const target = path.join(appDir, "PERMISSIONS.md");
+
+    const allowed = await permissionAccessAllows(
+      { workingDir: workspace, writeDirs: [workspace], readDirs: [], network: false, events: false },
+      { kind: "write", path: target }
+    );
+    expect(allowed).toBe(false);
+  });
+
+  it("allows writing app policy files only with explicit file grant", async () => {
+    const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "perm-app-policy-explicit-"));
+    tempDirs.push(workspace);
+    const appDir = path.join(workspace, "apps", "my-app");
+    await fs.mkdir(appDir, { recursive: true });
+    const target = path.join(appDir, "APP.md");
+
+    const allowed = await permissionAccessAllows(
+      {
+        workingDir: workspace,
+        writeDirs: [workspace, target],
+        readDirs: [],
+        network: false,
+        events: false
+      },
+      { kind: "write", path: target }
+    );
+    expect(allowed).toBe(true);
+  });
 });

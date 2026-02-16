@@ -193,6 +193,64 @@ describe("buildPermissionRequestTool", () => {
     );
   });
 
+  it("requests approval for protected app policy files", async () => {
+    const registry = new PermissionRequestRegistry();
+    const grantPermission = vi.fn(async () => undefined);
+    const requestPermission = vi.fn(
+      async (
+        _targetId: string,
+        _request: PermissionRequest,
+        _context: unknown,
+        _descriptor: unknown
+      ) => undefined
+    );
+
+    const context = contextBuild({
+      registry,
+      connector: { requestPermission },
+      agentSystem: { grantPermission },
+      permissions: permissionsBuild({ writeDirs: ["/workspace"] })
+    });
+
+    const pending = buildPermissionRequestTool().execute(
+      {
+        permissions: ["@write:/workspace/apps/my-app/PERMISSIONS.md"],
+        reason: "Confirm app policy change"
+      },
+      context,
+      toolCall
+    );
+
+    const request = await permissionRequestWait(requestPermission);
+    expect(request.permissions).toEqual([
+      {
+        permission: "@write:/workspace/apps/my-app/PERMISSIONS.md",
+        access: { kind: "write", path: "/workspace/apps/my-app/PERMISSIONS.md" }
+      }
+    ]);
+
+    await registryResolveWhenReady(
+      registry,
+      decisionBuild({
+        token: request.token,
+        agentId: request.agentId,
+        approved: true,
+        permissions: request.permissions
+      })
+    );
+
+    const result = await pending;
+    expect(grantPermission).toHaveBeenCalledTimes(1);
+    expect(grantPermission).toHaveBeenCalledWith(
+      { agentId: "agent-1" },
+      { kind: "write", path: "/workspace/apps/my-app/PERMISSIONS.md" },
+      expect.objectContaining({ source: "telegram" })
+    );
+    expect(contentText(result.toolMessage.content)).toBe(
+      "Permission granted for write access to /workspace/apps/my-app/PERMISSIONS.md."
+    );
+  });
+
   it("requests only permissions that are still missing", async () => {
     const registry = new PermissionRequestRegistry();
     const grantPermission = vi.fn(async () => undefined);

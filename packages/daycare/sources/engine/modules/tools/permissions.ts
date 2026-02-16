@@ -143,7 +143,9 @@ export function buildPermissionRequestTool(): ToolDefinition {
         return { toolMessage, files: [] };
       }
 
-      const friendly = missingPermissions
+      const permissionsToRequest = missingPermissions;
+      const missingPermissionTags = new Set(missingPermissions.map((entry) => entry.permission));
+      const friendly = permissionsToRequest
         .map((entry) => `- ${describePermission(entry.access)}`)
         .join("\n");
       const requesterLabel = agentDescriptorLabel(requestedDescriptor);
@@ -159,7 +161,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
         agentId: requestedAgentId,
         reason,
         message: text,
-        permissions: missingPermissions,
+        permissions: permissionsToRequest,
         requester: {
           id: requestedAgentId,
           type: requestedDescriptor.type,
@@ -184,7 +186,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
 
       if (!isForeground && requestedDescriptor.type !== "user") {
         const agentName = agentDescriptorLabel(requestedDescriptor);
-        const requestedPermissionLines = missingPermissions
+        const requestedPermissionLines = permissionsToRequest
           .map((entry) => `- ${entry.permission}`)
           .join("\n");
         const notice = [
@@ -237,6 +239,9 @@ export function buildPermissionRequestTool(): ToolDefinition {
       const targetAgentId = decision.agentId || requestedAgentId;
       if (decision.approved) {
         for (const permission of decision.permissions) {
+          if (!missingPermissionTags.has(permission.permission)) {
+            continue;
+          }
           await toolContext.agentSystem.grantPermission(
             { agentId: targetAgentId },
             permission.access,

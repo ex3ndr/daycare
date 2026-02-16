@@ -30,6 +30,14 @@ export async function permissionAccessAllows(
     return false;
   }
 
+  if (
+    access.kind === "write" &&
+    permissionIsProtectedAppPolicyPath(resolved) &&
+    !permissionHasExplicitFileWriteGrant(permissions, resolved)
+  ) {
+    return false;
+  }
+
   const allowedDirs = access.kind === "write"
     ? [...permissions.writeDirs]
     : permissions.readDirs.length > 0
@@ -42,4 +50,27 @@ export async function permissionAccessAllows(
   } catch {
     return false;
   }
+}
+
+function permissionIsProtectedAppPolicyPath(target: string): boolean {
+  const baseName = path.basename(target);
+  if (baseName !== "APP.md" && baseName !== "PERMISSIONS.md") {
+    return false;
+  }
+  const appDir = path.dirname(target);
+  const appsDir = path.dirname(appDir);
+  return path.basename(appsDir) === "apps";
+}
+
+function permissionHasExplicitFileWriteGrant(
+  permissions: SessionPermissions,
+  target: string
+): boolean {
+  const resolvedTarget = path.resolve(target);
+  for (const entry of permissions.writeDirs) {
+    if (path.resolve(entry) === resolvedTarget) {
+      return true;
+    }
+  }
+  return false;
 }
