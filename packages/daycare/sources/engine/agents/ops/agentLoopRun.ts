@@ -260,11 +260,34 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       lastResponseNoMessage = suppressUserOutput;
       const sayEnabled = agentSystem.config.current.features.say && agentKind === "foreground";
       let effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
+      let deferredSayBlocks: string[] = [];
+      let deferredSayFiles: Awaited<ReturnType<typeof sayFileResolve>> = [];
+      let runPythonContextText: string | null = null;
 
       // <say> tag mode: only send text inside <say> blocks, suppress the rest
       if (sayEnabled && effectiveResponseText) {
-        const sayBlocks = tagExtractAll(effectiveResponseText, "say");
-        const sayFiles = sayFileExtract(effectiveResponseText);
+        let immediateSayText = effectiveResponseText;
+        if (noToolsModeEnabled && runPythonCode !== null) {
+          const runPythonSplit = runPythonResponseSplit(effectiveResponseText);
+          if (runPythonSplit) {
+            immediateSayText = runPythonSplit.beforeRunPython;
+            runPythonContextText = runPythonSplit.beforeRunPython;
+            deferredSayBlocks = tagExtractAll(runPythonSplit.afterRunPython, "say");
+            const deferredFileRefs = sayFileExtract(runPythonSplit.afterRunPython);
+            deferredSayFiles =
+              deferredFileRefs.length > 0
+                ? await sayFileResolve({
+                    files: deferredFileRefs,
+                    fileStore,
+                    permissions: agent.state.permissions,
+                    logger
+                  })
+                : [];
+          }
+        }
+
+        const sayBlocks = tagExtractAll(immediateSayText, "say");
+        const sayFiles = sayFileExtract(immediateSayText);
         const resolvedSayFiles =
           sayFiles.length > 0
             ? await sayFileResolve({
@@ -336,7 +359,13 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           effectiveResponseText = null;
           finalResponseText = null;
           lastResponseTextSent = true; // prevent post-loop fallback send
-          logger.debug("event: <say> feature enabled but no <say> tags found; suppressing output");
+          if (deferredSayBlocks.length > 0 || deferredSayFiles.length > 0) {
+            logger.debug(
+              "event: deferred post-run_python <say>/<file> payload detected; waiting for execution success"
+            );
+          } else {
+            logger.debug("event: <say> feature enabled but no <say> tags found; suppressing output");
+          }
         }
       } else {
         const hasRunPythonTag = runPythonCode !== null;
@@ -423,9 +452,73 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
               appendHistoryRecord
             );
             context.messages.push(rlmNoToolsResultMessageBuild({ result }));
+
+            if (deferredSayBlocks.length > 0) {
+              finalResponseText = deferredSayBlocks[deferredSayBlocks.length - 1]!;
+              lastResponseTextSent = true;
+              if (connector && targetId) {
+                try {
+                  for (let index = 0; index < deferredSayBlocks.length; index += 1) {
+                    const block = deferredSayBlocks[index]!;
+                    const filesForMessage =
+                      index === deferredSayBlocks.length - 1 && deferredSayFiles.length > 0
+                        ? deferredSayFiles
+                        : undefined;
+                    await connector.sendMessage(targetId, {
+                      text: block,
+                      files: filesForMessage,
+                      replyToMessageId: entry.context.messageId
+                    });
+                    eventBus.emit("agent.outgoing", {
+                      agentId: agent.id,
+                      source,
+                      message: {
+                        text: block,
+                        files: filesForMessage
+                      },
+                      context: entry.context
+                    });
+                  }
+                } catch (error) {
+                  logger.warn(
+                    { connector: source, error },
+                    "error: Failed to send deferred <say> response text"
+                  );
+                }
+              }
+            } else if (deferredSayFiles.length > 0) {
+              finalResponseText = null;
+              lastResponseTextSent = true;
+              if (connector && targetId) {
+                try {
+                  await connector.sendMessage(targetId, {
+                    text: null,
+                    files: deferredSayFiles,
+                    replyToMessageId: entry.context.messageId
+                  });
+                  eventBus.emit("agent.outgoing", {
+                    agentId: agent.id,
+                    source,
+                    message: {
+                      text: null,
+                      files: deferredSayFiles
+                    },
+                    context: entry.context
+                  });
+                } catch (error) {
+                  logger.warn(
+                    { connector: source, error },
+                    "error: Failed to send deferred <file> response files"
+                  );
+                }
+              }
+            }
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
+            if (runPythonContextText !== null) {
+              stripAssistantTextAfterRunPython(response.message, runPythonContextText);
+            }
             context.messages.push(rlmNoToolsResultMessageBuild({ error }));
           }
 
@@ -741,6 +834,42 @@ function stripNoMessageTextBlocks(message: Context["messages"][number]): void {
   if (nextContent.length !== message.content.length) {
     message.content = nextContent;
   }
+}
+
+type RunPythonResponseSplit = {
+  beforeRunPython: string;
+  afterRunPython: string;
+};
+
+function runPythonResponseSplit(text: string): RunPythonResponseSplit | null {
+  const closeTagPattern = /<\/run_python\s*>/gi;
+  let splitIndex = -1;
+  let match: RegExpExecArray | null;
+  while ((match = closeTagPattern.exec(text)) !== null) {
+    splitIndex = match.index + match[0].length;
+  }
+  if (splitIndex === -1) {
+    return null;
+  }
+  return {
+    beforeRunPython: text.slice(0, splitIndex),
+    afterRunPython: text.slice(splitIndex)
+  };
+}
+
+function stripAssistantTextAfterRunPython(
+  message: Context["messages"][number],
+  keptText: string
+): void {
+  if (message.role !== "assistant") {
+    return;
+  }
+  if (!Array.isArray(message.content)) {
+    return;
+  }
+
+  const nonTextBlocks = message.content.filter((block) => block.type !== "text");
+  message.content = [{ type: "text", text: keptText }, ...nonTextBlocks];
 }
 
 function isContextOverflowError(error: unknown): boolean {

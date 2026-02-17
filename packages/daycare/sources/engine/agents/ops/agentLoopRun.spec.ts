@@ -15,6 +15,7 @@ import type { EngineEventBus } from "../../ipc/events.js";
 import type { AgentSystem } from "../agentSystem.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Skills } from "../../skills/skills.js";
+import { messageExtractText } from "../../messages/messageExtractText.js";
 
 describe("agentLoopRun", () => {
   it("does not auto-send files from tool results when model has no final text", async () => {
@@ -607,6 +608,132 @@ describe("agentLoopRun say tag", () => {
       throw new Error("Expected both send and execute calls to be recorded.");
     }
     expect(firstSendOrder).toBeLessThan(firstExecuteOrder);
+  });
+
+  it("defers post-run_python <say> tags until execution succeeds", async () => {
+    const connectorSend = vi.fn(async () => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        {
+          type: "text",
+          text: "<say>before</say><run_python>echo()</run_python><say>after</say>"
+        }
+      ]),
+      assistantMessageBuild([])
+    ]);
+    const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+      return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
+    });
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} },
+        { name: "echo", description: "", parameters: {} }
+      ]),
+      execute
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        say: true,
+        noTools: true,
+        rlm: true
+      })
+    );
+
+    expect(connectorSend).toHaveBeenCalledTimes(2);
+    expect(connectorSend).toHaveBeenNthCalledWith(1, "channel-1", {
+      text: "before",
+      files: undefined,
+      replyToMessageId: undefined
+    });
+    expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", {
+      text: "after",
+      files: undefined,
+      replyToMessageId: undefined
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    const beforeOrder = connectorSend.mock.invocationCallOrder[0];
+    const executeOrder = execute.mock.invocationCallOrder[0];
+    const afterOrder = connectorSend.mock.invocationCallOrder[1];
+    expect(beforeOrder).toBeDefined();
+    expect(executeOrder).toBeDefined();
+    expect(afterOrder).toBeDefined();
+    if (beforeOrder === undefined || executeOrder === undefined || afterOrder === undefined) {
+      throw new Error("Expected ordered send/execute calls to be recorded.");
+    }
+    expect(beforeOrder).toBeLessThan(executeOrder);
+    expect(executeOrder).toBeLessThan(afterOrder);
+  });
+
+  it("drops post-run_python <say> tags and truncates in-memory context when execution fails", async () => {
+    const connectorSend = vi.fn(async (_targetId: string, _message: unknown) => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const contexts: Context[] = [];
+    const inferenceRouter = {
+      complete: vi.fn(async (incomingContext: Context) => {
+        contexts.push(structuredClone(incomingContext));
+        if (contexts.length === 1) {
+          return {
+            message: assistantMessageBuild([
+              {
+                type: "text",
+                text: "<say>before</say><run_python>def broken(</run_python><say>after</say>"
+              }
+            ]),
+            providerId: "provider-1",
+            modelId: "model-1"
+          };
+        }
+        return {
+          message: assistantMessageBuild([{ type: "text", text: "<say>next</say>" }]),
+          providerId: "provider-1",
+          modelId: "model-1"
+        };
+      })
+    } as unknown as InferenceRouter;
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} }
+      ]),
+      execute: vi.fn(async () => {
+        throw new Error("unexpected");
+      })
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        say: true,
+        noTools: true,
+        rlm: true
+      })
+    );
+
+    expect(contexts).toHaveLength(2);
+    const assistantMessage = contexts[1]?.messages.find((message) => message.role === "assistant");
+    const assistantText = assistantMessage ? messageExtractText(assistantMessage) ?? "" : "";
+    expect(assistantText).toContain("</run_python>");
+    expect(assistantText).not.toContain("<say>after</say>");
+
+    const sentTexts = connectorSend.mock.calls.map((call) => {
+      const message = call[1] as { text?: string | null };
+      return message.text ?? null;
+    });
+    expect(sentTexts).toEqual(["before", "next"]);
   });
 
   it("attaches <file> tags to the final <say> block", async () => {
