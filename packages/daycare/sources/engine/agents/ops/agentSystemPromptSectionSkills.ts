@@ -8,36 +8,29 @@ import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
 /**
- * Renders skills and plugin context by loading dynamic skill definitions and plugin prompts.
+ * Renders skills by loading dynamic skill definitions from config and plugins.
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionSkills(
   context: AgentSystemPromptContext = {}
 ): Promise<string> {
-  const [skillsPrompt, pluginPrompt] = await Promise.all([
-    (async () => {
-      const configDir = context.agentSystem?.config?.current.configDir ?? "";
-      if (!configDir) {
-        return "";
-      }
-      const configSkillsRoot = path.join(configDir, "skills");
-      const pluginManager = context.agentSystem?.pluginManager ?? { listRegisteredSkills: () => [] };
-      const skills = new Skills({
-        configRoot: configSkillsRoot,
-        pluginManager
-      });
-      return skillPromptFormat(await skills.list());
-    })(),
-    (async () => {
-      const prompts = await context.agentSystem?.pluginManager?.getSystemPrompts();
-      return prompts && prompts.length > 0 ? prompts.join("\n\n") : "";
-    })()
-  ]);
+  const configDir = context.agentSystem?.config?.current.configDir ?? "";
+  const skillsPrompt = await (async () => {
+    if (!configDir) {
+      return "";
+    }
+    const configSkillsRoot = path.join(configDir, "skills");
+    const pluginManager = context.agentSystem?.pluginManager ?? { listRegisteredSkills: () => [] };
+    const skills = new Skills({
+      configRoot: configSkillsRoot,
+      pluginManager
+    });
+    return skillPromptFormat(await skills.list());
+  })();
 
   const template = await agentPromptBundledRead("SYSTEM_SKILLS.md");
   const section = Handlebars.compile(template)({
-    skillsPrompt,
-    pluginPrompt
+    skillsPrompt
   });
   return section.trim();
 }

@@ -33,15 +33,14 @@ describe("skillPromptFormat", () => {
 
     const prompt = skillPromptFormat(skills);
 
-    expect(prompt).toContain("## Skills (mandatory)");
-    expect(prompt).toContain("Before replying, scan the skill descriptions");
     expect(prompt).toContain("<available_skills>");
+    expect(prompt).toContain("</available_skills>");
     expect(prompt).toContain("<name>deploy</name>");
     expect(prompt).toContain("Use &lt;cron&gt; &amp; heartbeat");
     expect(prompt).toContain("<source>plugin:alpha</source>");
     expect(prompt).toContain("<sandbox>true</sandbox>");
     expect(prompt).not.toContain("/tmp/deploy/SKILL.md");
-    expect(prompt).toContain("call the `skill` tool");
+    expect(prompt).not.toContain("## Skills (mandatory)");
     expect(prompt.match(/<name>deploy<\/name>/g)).toHaveLength(1);
   });
 });

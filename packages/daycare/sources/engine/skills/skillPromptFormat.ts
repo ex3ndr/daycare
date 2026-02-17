@@ -3,7 +3,7 @@ import type { AgentSkill } from "./skillTypes.js";
 import { xmlEscape } from "../../util/xmlEscape.js";
 
 /**
- * Formats available skills into an XML prompt segment for the system prompt.
+ * Formats available skills into an XML list for the skills system section.
  *
  * Expects: skills may include duplicates; the first entry per path is used.
  */
@@ -16,24 +16,7 @@ export function skillPromptFormat(skills: AgentSkill[]): string {
   }
   const ordered = skillSort(Array.from(unique.values()));
 
-  if (ordered.length === 0) {
-    return "";
-  }
-
-  const lines = [
-    "## Skills (mandatory)",
-    "",
-    "Before replying, scan the skill descriptions below:",
-    "- If exactly one skill clearly applies: call the `skill` tool with that skill name.",
-    "- If multiple could apply: choose the most specific one, then call `skill` once.",
-    "- If none clearly apply: do not call `skill`.",
-    "",
-    "Tool behavior:",
-    "- Non-sandbox skill: `skill` returns instructions. Follow them in this context.",
-    "- Sandbox skill (`<sandbox>true</sandbox>`): `skill` runs autonomously and returns results.",
-    "",
-    "<available_skills>"
-  ];
+  const lines = ["<available_skills>"];
 
   for (const skill of ordered) {
     const sourceLabel =

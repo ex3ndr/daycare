@@ -35,7 +35,8 @@ Template naming:
 - Topology section template is `SYSTEM_TOPOLOGY.md`.
 - Topology rendering no longer injects `cronTaskIds`; current cron state is expected to be read via the `topology` tool.
 - Topology rendering no longer injects `permanentAgentsPrompt`; current agent graph should be read via the `topology` tool.
-- In `SYSTEM_SKILLS.md`, both `skillsPrompt` and `pluginPrompt` are appended as raw rendered blocks (no injected `## Plugin Context` header).
+- `SYSTEM_SKILLS.md` owns mandatory skill-invocation guidance.
+- `skillPromptFormat()` now renders only the dynamic `<available_skills>...</available_skills>` list into `skillsPrompt`.
 
 ```mermaid
 flowchart LR

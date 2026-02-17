@@ -106,7 +106,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     agentsPath: "/tmp/AGENTS.md",
     toolsPath: "/tmp/TOOLS.md",
     memoryPath: "/tmp/MEMORY.md",
-    pluginPrompt: "",
     skillsPrompt: options.skillsPrompt,
     parentAgentId: "",
     configDir: "/tmp/.daycare",

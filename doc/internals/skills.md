@@ -31,7 +31,8 @@ Core examples in this repo include:
 - `scheduling`
 - `app-creator`
 
-The system prompt lists skills in XML tags to make parsing explicit.
+The skills section prompt (`SYSTEM_SKILLS.md`) contains mandatory invocation guidance.
+`skillPromptFormat()` contributes only the dynamic XML list (`<available_skills>...</available_skills>`).
 
 ## Skills catalog flow (code)
 

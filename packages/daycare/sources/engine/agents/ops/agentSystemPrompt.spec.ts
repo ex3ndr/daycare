@@ -136,7 +136,6 @@ describe("agentSystemPrompt", () => {
           }
         },
         pluginManager: {
-          getSystemPrompts: async () => ["Plugin prompt from runtime context"],
           listRegisteredSkills: () => []
         },
         connectorRegistry: {
@@ -177,7 +176,6 @@ describe("agentSystemPrompt", () => {
         agentSystem
       });
 
-      expect(rendered).toContain("Plugin prompt from runtime context");
       expect(rendered).toContain("<name>config-skill</name>");
       expect(rendered).toContain("## Agent Prompt");
       expect(rendered).toContain("Handle long-running research.");
