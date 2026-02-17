@@ -129,7 +129,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     agentsTopologySignalsChannelsSection,
     skillsSection,
     formattingSection,
-    filesSection
+    memorySection
   ] = await Promise.all([
     sectionRender("SYSTEM.md", sectionContext),
     sectionRender("SYSTEM_ENVIRONMENT.md", sectionContext),
@@ -148,7 +148,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
       return [base, dynamicSkills].filter((section) => section.length > 0).join("\n\n");
     })(),
     sectionRender("SYSTEM_FORMATTING.md", sectionContext),
-    sectionRender("SYSTEM_FILES.md", sectionContext)
+    sectionRender("SYSTEM_MEMORY.md", sectionContext)
   ]);
   return [
     preambleSection,
@@ -160,7 +160,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     agentsTopologySignalsChannelsSection,
     skillsSection,
     formattingSection,
-    filesSection
+    memorySection
   ]
     .filter((section) => section.length > 0)
     .join(SECTION_SEPARATOR)

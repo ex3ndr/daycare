@@ -9,10 +9,10 @@ import { agentPromptPathsResolve } from "./agentPromptPathsResolve.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
 /**
- * Renders file/memory guidance using prompt-memory files and cron metadata.
+ * Renders memory guidance using prompt-memory files and cron metadata.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionFiles(
+export async function agentSystemPromptSectionMemory(
   context: AgentSystemPromptContext = {}
 ): Promise<string> {
   const descriptor = context.descriptor;
@@ -60,7 +60,7 @@ export async function agentSystemPromptSectionFiles(
     })()
   ]);
 
-  const template = await agentPromptBundledRead("SYSTEM_FILES.md");
+  const template = await agentPromptBundledRead("SYSTEM_MEMORY.md");
   const section = Handlebars.compile(template)({
     isForeground,
     workspace: context.permissions?.workingDir ?? "unknown",

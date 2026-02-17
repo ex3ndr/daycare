@@ -22,7 +22,7 @@ System prompt rendering is centralized in `agentSystemPrompt()` and called from 
 - Agents, Topology, Signals, Channels
 - Skills
 - Formatting
-- Files
+- Memory
 
 Top-level composition is plain concatenation with section separators (no Handlebars composition step).
 
@@ -54,6 +54,6 @@ flowchart TD
   D --> D1[Preamble section loads its own data]
   D --> D2[Autonomous section loads its own data]
   D --> D3[...]
-  D --> D4[Files section loads memory files]
+  D --> D4[Memory section loads memory files]
   D --> E[Concatenate sections with separators]
 ```

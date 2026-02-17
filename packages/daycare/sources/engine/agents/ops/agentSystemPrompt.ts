@@ -4,8 +4,8 @@ import { agentSystemPromptSectionAgentsTopologySignalsChannels } from "./agentSy
 import { agentSystemPromptSectionAutonomousOperation } from "./agentSystemPromptSectionAutonomousOperation.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentSystemPromptSectionEnvironment } from "./agentSystemPromptSectionEnvironment.js";
-import { agentSystemPromptSectionFiles } from "./agentSystemPromptSectionFiles.js";
 import { agentSystemPromptSectionFormatting } from "./agentSystemPromptSectionFormatting.js";
+import { agentSystemPromptSectionMemory } from "./agentSystemPromptSectionMemory.js";
 import { agentSystemPromptSectionPermissions } from "./agentSystemPromptSectionPermissions.js";
 import { agentSystemPromptSectionPreamble } from "./agentSystemPromptSectionPreamble.js";
 import { agentSystemPromptSectionSkills } from "./agentSystemPromptSectionSkills.js";
@@ -46,7 +46,7 @@ export async function agentSystemPrompt(
     agentSystemPromptSectionAgentsTopologySignalsChannels(context),
     agentSystemPromptSectionSkills(context),
     agentSystemPromptSectionFormatting(context),
-    agentSystemPromptSectionFiles(context)
+    agentSystemPromptSectionMemory(context)
   ]);
 
   return renderedSections
