@@ -5,25 +5,33 @@ import path from "node:path";
 import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 
+import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentSystemPrompt } from "./agentSystemPrompt.js";
 
+type AgentSystemPromptParameter = NonNullable<Parameters<typeof agentSystemPrompt>[0]>;
+
 describe("agentSystemPrompt", () => {
-  it("returns the replacement prompt when enabled", async () => {
+  it("returns replacement prompt for architect system agent", async () => {
+    const expected = (await agentPromptBundledRead("ARCHITECT.md")).trim();
     const rendered = await agentSystemPrompt({
-      replaceSystemPrompt: true,
-      agentPrompt: "  custom prompt  "
+      descriptor: {
+        type: "system",
+        tag: "architect"
+      }
     });
 
-    expect(rendered).toBe("custom prompt");
+    expect(rendered).toBe(expected);
   });
 
-  it("throws when replacement is enabled but prompt is empty", async () => {
+  it("throws when system agent tag is unknown", async () => {
     await expect(
       agentSystemPrompt({
-        replaceSystemPrompt: true,
-        agentPrompt: "  "
+        descriptor: {
+          type: "system",
+          tag: "unknown-system-agent"
+        }
       })
-    ).rejects.toThrow("System prompt replacement requires a non-empty agent prompt.");
+    ).rejects.toThrow("Unknown system agent tag: unknown-system-agent");
   });
 
   it("renders the bundled templates with provided prompt files", async () => {
@@ -53,13 +61,7 @@ describe("agentSystemPrompt", () => {
         agentsPath,
         toolsPath,
         memoryPath,
-        configDir: "/tmp/.daycare",
-        agentKind: "foreground",
-        features: {
-          noTools: false,
-          rlm: false,
-          say: false
-        }
+        agentKind: "foreground"
       });
 
       expect(rendered).toContain("## Skills");
@@ -81,6 +83,7 @@ describe("agentSystemPrompt", () => {
       const toolsPath = path.join(dir, "TOOLS.md");
       const memoryPath = path.join(dir, "MEMORY.md");
       const configDir = path.join(dir, ".daycare");
+      const agentsDir = path.join(dir, ".agents");
       const configSkillPath = path.join(configDir, "skills", "my-skill", "SKILL.md");
 
       await writeFile(soulPath, "Soul prompt text\n", "utf8");
@@ -94,6 +97,32 @@ describe("agentSystemPrompt", () => {
         "---\nname: config-skill\ndescription: Config skill\n---\nUse this skill for config work.\n",
         "utf8"
       );
+      const agentSystem = {
+        config: {
+          current: {
+            configDir,
+            agentsDir,
+            features: {
+              noTools: true,
+              rlm: true,
+              say: true
+            }
+          }
+        },
+        pluginManager: {
+          getSystemPrompts: async () => ["Plugin prompt from runtime context"],
+          listRegisteredSkills: () => []
+        },
+        toolResolver: {
+          listTools: () => [
+            {
+              name: "run_python",
+              description: "Python execution",
+              parameters: {}
+            } as unknown as Tool
+          ]
+        }
+      } as unknown as NonNullable<AgentSystemPromptParameter["agentSystem"]>;
 
       const rendered = await agentSystemPrompt({
         provider: "openai",
@@ -107,7 +136,6 @@ describe("agentSystemPrompt", () => {
         agentsPath,
         toolsPath,
         memoryPath,
-        configDir,
         agentKind: "foreground",
         descriptor: {
           type: "permanent",
@@ -116,22 +144,7 @@ describe("agentSystemPrompt", () => {
           description: "Helper agent",
           systemPrompt: "Handle long-running research."
         },
-        pluginManager: {
-          getSystemPrompts: async () => ["Plugin prompt from runtime context"],
-          listRegisteredSkills: () => []
-        },
-        availableTools: [
-          {
-            name: "run_python",
-            description: "Python execution",
-            parameters: {}
-          } as unknown as Tool
-        ],
-        features: {
-          noTools: true,
-          rlm: true,
-          say: true
-        }
+        agentSystem
       });
 
       expect(rendered).toContain("Plugin prompt from runtime context");

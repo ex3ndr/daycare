@@ -416,10 +416,8 @@ export class Agent {
       parentAgentId: this.descriptor.type === "subagent" || this.descriptor.type === "app"
         ? this.descriptor.parentAgentId ?? ""
         : "",
-      config: this.agentSystem.config.current,
       descriptor: this.descriptor,
-      pluginManager,
-      availableTools,
+      agentSystem: this.agentSystem,
       ensurePromptFiles: true
     });
 

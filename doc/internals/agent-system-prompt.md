@@ -2,8 +2,8 @@
 
 System prompt rendering is centralized in `agentSystemPrompt()` and called from `Agent`.
 
-`Agent` now passes runtime context (descriptor, config, plugin manager, and tools), while
-`agentSystemPrompt()` resolves prompt sections internally in a deterministic order.
+`Agent` passes runtime metadata plus `agentSystem`; `agentSystemPrompt()` resolves prompt
+sections from `agentSystem` in a deterministic order.
 
 Sections resolved inside `agentSystemPrompt()`:
 - plugin context (`pluginManager.getSystemPrompts()`)

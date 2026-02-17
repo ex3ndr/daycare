@@ -14,10 +14,10 @@ import {
   DEFAULT_USER_PATH
 } from "../../../paths.js";
 import type { AgentDescriptor, Config } from "@/types";
-import type { PluginManager } from "../../plugins/manager.js";
 import { rlmNoToolsPromptBuild } from "../../modules/rlm/rlmNoToolsPromptBuild.js";
 import { skillPromptFormat } from "../../skills/skillPromptFormat.js";
 import { Skills } from "../../skills/skills.js";
+import type { AgentSystem } from "../agentSystem.js";
 import { agentPermanentList } from "./agentPermanentList.js";
 import { agentPermanentPrompt } from "./agentPermanentPrompt.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
@@ -32,7 +32,11 @@ type AgentPromptFeatures = {
   say: boolean;
 };
 
-type AgentSystemPromptPluginManager = Pick<PluginManager, "getSystemPrompts" | "listRegisteredSkills">;
+type AgentSystemPromptPluginManager = Pick<
+  AgentSystem["pluginManager"],
+  "getSystemPrompts" | "listRegisteredSkills"
+>;
+type AgentSystemPromptAgentSystem = Pick<AgentSystem, "config" | "pluginManager" | "toolResolver">;
 
 type AgentSystemPromptPaths = {
   soulPath: string;
@@ -57,6 +61,15 @@ type AgentSystemPromptSections = {
   agentPrompt: string;
   noToolsPrompt: string;
   replaceSystemPrompt: boolean;
+};
+
+type AgentSystemPromptRuntime = {
+  config: Config | null;
+  configDir: string;
+  features: AgentPromptFeatures;
+  skillsPath: string;
+  pluginManager: AgentSystemPromptPluginManager | null;
+  availableTools: Tool[];
 };
 
 type AgentSystemPromptTemplates = {
@@ -90,21 +103,10 @@ export type AgentSystemPromptContext = {
   agentsPath?: string;
   toolsPath?: string;
   memoryPath?: string;
-  pluginPrompt?: string;
-  skillsPrompt?: string;
-  permanentAgentsPrompt?: string;
-  agentPrompt?: string;
-  noToolsPrompt?: string;
-  replaceSystemPrompt?: boolean;
   agentKind?: "background" | "foreground";
   parentAgentId?: string;
-  configDir?: string;
-  skillsPath?: string;
-  features?: AgentPromptFeatures;
+  agentSystem?: AgentSystemPromptAgentSystem;
   descriptor?: AgentDescriptor;
-  config?: Config;
-  pluginManager?: AgentSystemPromptPluginManager;
-  availableTools?: Tool[];
   ensurePromptFiles?: boolean;
 };
 
@@ -117,16 +119,13 @@ export type AgentSystemPromptBuildContext = AgentSystemPromptContext;
 export async function agentSystemPrompt(
   context: AgentSystemPromptContext = {}
 ): Promise<string> {
+  const runtime = resolveRuntime(context);
   const promptPaths = resolvePromptPaths(context);
   if (context.ensurePromptFiles) {
     await agentPromptFilesEnsure();
   }
 
-  const [promptFiles, templates, sections] = await Promise.all([
-    loadPromptFiles(promptPaths),
-    loadPromptTemplates(),
-    resolvePromptSections(context)
-  ]);
+  const sections = await resolvePromptSections(context, runtime);
 
   if (sections.replaceSystemPrompt) {
     const replaced = sections.agentPrompt.trim();
@@ -135,6 +134,11 @@ export async function agentSystemPrompt(
     }
     return replaced;
   }
+
+  const [promptFiles, templates] = await Promise.all([
+    loadPromptFiles(promptPaths),
+    loadPromptTemplates()
+  ]);
 
   const additionalWriteDirs = resolveAdditionalWriteDirs(
     context.writeDirs ?? [],
@@ -146,14 +150,10 @@ export async function agentSystemPrompt(
     promptPaths.memoryPath
   );
 
-  const configDir = context.configDir ?? context.config?.configDir ?? "";
+  const configDir = runtime.configDir;
   const isForeground = context.agentKind !== "background";
-  const skillsPath = context.skillsPath ?? (configDir ? `${configDir}/skills` : "");
-  const features = context.features ?? context.config?.features ?? {
-    noTools: false,
-    rlm: false,
-    say: false
-  };
+  const skillsPath = runtime.skillsPath;
+  const features = runtime.features;
 
   const templateContext = {
     date: new Date().toISOString().split("T")[0],
@@ -218,6 +218,25 @@ export async function agentSystemPrompt(
   return rendered.trim();
 }
 
+function resolveRuntime(context: AgentSystemPromptContext): AgentSystemPromptRuntime {
+  const config = context.agentSystem?.config.current ?? null;
+  const configDir = config?.configDir ?? "";
+  const skillsPath = configDir ? path.join(configDir, "skills") : "";
+  const features = config?.features ?? {
+    noTools: false,
+    rlm: false,
+    say: false
+  };
+  return {
+    config,
+    configDir,
+    features,
+    skillsPath,
+    pluginManager: context.agentSystem?.pluginManager ?? null,
+    availableTools: context.agentSystem?.toolResolver.listTools() ?? []
+  };
+}
+
 function resolvePromptPaths(context: AgentSystemPromptContext): AgentSystemPromptPaths {
   return {
     soulPath: context.soulPath ?? DEFAULT_SOUL_PATH,
@@ -267,15 +286,16 @@ async function loadPromptTemplates(): Promise<AgentSystemPromptTemplates> {
 }
 
 async function resolvePromptSections(
-  context: AgentSystemPromptContext
+  context: AgentSystemPromptContext,
+  runtime: AgentSystemPromptRuntime
 ): Promise<AgentSystemPromptSections> {
   const [pluginPrompt, skillsPrompt, permanentAgentsPrompt, agentPromptSection, noToolsPrompt] =
     await Promise.all([
-      resolvePluginPrompt(context),
-      resolveSkillsPrompt(context),
-      resolvePermanentAgentsPrompt(context),
+      resolvePluginPrompt(runtime),
+      resolveSkillsPrompt(runtime),
+      resolvePermanentAgentsPrompt(runtime),
       resolveAgentPromptSection(context),
-      resolveNoToolsPrompt(context)
+      resolveNoToolsPrompt(runtime)
     ]);
   return {
     pluginPrompt,
@@ -287,55 +307,38 @@ async function resolvePromptSections(
   };
 }
 
-async function resolvePluginPrompt(context: AgentSystemPromptContext): Promise<string> {
-  if (context.pluginPrompt !== undefined) {
-    return context.pluginPrompt;
-  }
-  if (!context.pluginManager) {
+async function resolvePluginPrompt(runtime: AgentSystemPromptRuntime): Promise<string> {
+  if (!runtime.pluginManager) {
     return "";
   }
-  const prompts = await context.pluginManager.getSystemPrompts();
+  const prompts = await runtime.pluginManager.getSystemPrompts();
   return prompts.length > 0 ? prompts.join("\n\n") : "";
 }
 
-async function resolveSkillsPrompt(context: AgentSystemPromptContext): Promise<string> {
-  if (context.skillsPrompt !== undefined) {
-    return context.skillsPrompt;
-  }
-  const configDir = context.configDir ?? context.config?.configDir ?? "";
-  const skillsRoot = context.skillsPath ?? (configDir ? path.join(configDir, "skills") : "");
-  if (!skillsRoot) {
+async function resolveSkillsPrompt(runtime: AgentSystemPromptRuntime): Promise<string> {
+  if (!runtime.skillsPath) {
     return "";
   }
-  const pluginSkills = context.pluginManager ?? { listRegisteredSkills: () => [] };
+  const pluginSkills = runtime.pluginManager ?? { listRegisteredSkills: () => [] };
   const skills = new Skills({
-    configRoot: skillsRoot,
+    configRoot: runtime.skillsPath,
     pluginManager: pluginSkills
   });
   const availableSkills = await skills.list();
   return skillPromptFormat(availableSkills);
 }
 
-async function resolvePermanentAgentsPrompt(context: AgentSystemPromptContext): Promise<string> {
-  if (context.permanentAgentsPrompt !== undefined) {
-    return context.permanentAgentsPrompt;
-  }
-  if (!context.config) {
+async function resolvePermanentAgentsPrompt(runtime: AgentSystemPromptRuntime): Promise<string> {
+  if (!runtime.config) {
     return "";
   }
-  const permanentAgents = await agentPermanentList(context.config);
+  const permanentAgents = await agentPermanentList(runtime.config);
   return agentPermanentPrompt(permanentAgents);
 }
 
 async function resolveAgentPromptSection(
   context: AgentSystemPromptContext
 ): Promise<{ agentPrompt: string; replaceSystemPrompt: boolean }> {
-  if (context.agentPrompt !== undefined || context.replaceSystemPrompt !== undefined) {
-    return {
-      agentPrompt: context.agentPrompt ?? "",
-      replaceSystemPrompt: context.replaceSystemPrompt ?? false
-    };
-  }
   if (!context.descriptor) {
     return {
       agentPrompt: "",
@@ -345,19 +348,14 @@ async function resolveAgentPromptSection(
   return agentPromptResolve(context.descriptor);
 }
 
-async function resolveNoToolsPrompt(context: AgentSystemPromptContext): Promise<string> {
-  if (context.noToolsPrompt !== undefined) {
-    return context.noToolsPrompt;
-  }
-  const features = context.features ?? context.config?.features;
-  if (!features?.noTools) {
+async function resolveNoToolsPrompt(runtime: AgentSystemPromptRuntime): Promise<string> {
+  if (!runtime.features.noTools) {
     return "";
   }
-  const availableTools = context.availableTools ?? [];
-  if (availableTools.length === 0) {
+  if (runtime.availableTools.length === 0) {
     return "";
   }
-  return rlmNoToolsPromptBuild(availableTools);
+  return rlmNoToolsPromptBuild(runtime.availableTools);
 }
 
 function resolveAdditionalWriteDirs(
