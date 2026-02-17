@@ -124,7 +124,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     environmentSection,
     autonomousOperationSection,
     permissionsSection,
-    workspaceSection,
     toolCallingSection,
     agentsTopologySignalsChannelsSection,
     skillsSection,
@@ -135,7 +134,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     sectionRender("SYSTEM_ENVIRONMENT.md", sectionContext),
     sectionRender("SYSTEM_AGENCY.md", sectionContext),
     sectionRender("SYSTEM_PERMISSIONS.md", sectionContext),
-    sectionRender("SYSTEM_WORKSPACE.md", sectionContext),
     (async () => {
       const base = await sectionRender("SYSTEM_TOOLS.md", sectionContext);
       const noTools = (options.noToolsPrompt ?? "").trim();
@@ -155,7 +153,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     environmentSection,
     autonomousOperationSection,
     permissionsSection,
-    workspaceSection,
     toolCallingSection,
     agentsTopologySignalsChannelsSection,
     skillsSection,

@@ -17,7 +17,6 @@ System prompt rendering is centralized in `agentSystemPrompt()` and called from 
 - System Environment
 - Autonomous operation
 - Permissions
-- Workspace
 - Tool Calling
 - Agents, Topology, Signals, Channels
 - Skills
@@ -50,7 +49,7 @@ flowchart TD
   A1 --> A2[agentPromptFilesEnsure]
   A2 --> B[agentSystemPrompt]
   B --> C[Check replace-system prompt]
-  B --> D[Call 10 section functions with same context]
+  B --> D[Call 9 section functions with same context]
   D --> D1[Preamble section loads its own data]
   D --> D2[Autonomous section loads its own data]
   D --> D3[...]

@@ -43,7 +43,7 @@ You must decide how tasks should work. Ask questions only to clarify what is nee
 
 ### Charts and Tables
 
-Generate mermaid images to demonstrate how everything is working, prefer "solarized-light" theme.
+Generate mermaid images to demonstrate how everything is working, prefer "solarized-light" theme. Or use generate_image tool - it looks much better than mermaid images.
 
 {{#if agentPrompt}}
 

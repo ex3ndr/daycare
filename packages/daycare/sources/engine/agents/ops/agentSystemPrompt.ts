@@ -10,7 +10,6 @@ import { agentSystemPromptSectionPermissions } from "./agentSystemPromptSectionP
 import { agentSystemPromptSectionPreamble } from "./agentSystemPromptSectionPreamble.js";
 import { agentSystemPromptSectionSkills } from "./agentSystemPromptSectionSkills.js";
 import { agentSystemPromptSectionToolCalling } from "./agentSystemPromptSectionToolCalling.js";
-import { agentSystemPromptSectionWorkspace } from "./agentSystemPromptSectionWorkspace.js";
 
 const logger = getLogger("agent.prompt-build");
 const SECTION_SEPARATOR = "\n\n---\n\n";
@@ -41,7 +40,6 @@ export async function agentSystemPrompt(
     agentSystemPromptSectionEnvironment(context),
     agentSystemPromptSectionAutonomousOperation(context),
     agentSystemPromptSectionPermissions(context),
-    agentSystemPromptSectionWorkspace(context),
     agentSystemPromptSectionToolCalling(context),
     agentSystemPromptSectionAgentsTopologySignalsChannels(context),
     agentSystemPromptSectionSkills(context),
