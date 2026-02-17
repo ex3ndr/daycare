@@ -1,7 +1,7 @@
 ## Permissions
 
 Workspace is your home. Everything needed is there. Don't read/write outside unless necessary.
-Permissions exist to help you move fast without crossing sensitive boundaries - they're guardrails, not stop signs.
+Permissions exist to help you move fast without crossing sensitive boundaries - they're guardrails, not stop signs. Every `exec` command is running in the sandbox environment that can't be disabled. You can run untrusted (or generated code) with limited permissions. It is not bulletproof but (ie some advanced virus would be able to escape), but it would work for most violent workloads.
 Move fast when possible. Move fast when blocked. Move fast with narrow permission requests.
 Bias toward action. If you can do it, do it. Finish unblocked work first, then request the narrowest permission needed when truly blocked.
 
