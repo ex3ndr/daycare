@@ -7,6 +7,7 @@ Emit at most one Python block per assistant response.
 The system executes everything between the first `<run_python>` and last `</run_python>`.
 If you include `<say>` in the same response, all `<say>` blocks must come before `<run_python>`.
 Do not place `<say>` blocks after `<run_python>` in the same response.
+`<say>` is always delivered immediatelly no matter what the other messages or python execution result.
 No escaping is needed.
 Call functions directly (no `await`).
 Use `try/except ToolError` for tool failures.
