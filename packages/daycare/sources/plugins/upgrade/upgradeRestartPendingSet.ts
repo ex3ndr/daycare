@@ -9,10 +9,11 @@ type UpgradeRestartPendingSetOptions = {
   context: MessageContext;
   requestedAtMs: number;
   requesterPid: number;
+  previousVersion?: string;
 };
 
 /**
- * Persists restart confirmation metadata so the next process can acknowledge restart success.
+ * Persists post-restart metadata so the next process can acknowledge restart/upgrade completion.
  * Expects: dataDir exists or can be created, and descriptor/context are command invoker payloads.
  */
 export async function upgradeRestartPendingSet(
@@ -25,7 +26,8 @@ export async function upgradeRestartPendingSet(
       descriptor: options.descriptor,
       context: options.context,
       requestedAtMs: options.requestedAtMs,
-      requesterPid: options.requesterPid
+      requesterPid: options.requesterPid,
+      ...(options.previousVersion ? { previousVersion: options.previousVersion } : {})
     }),
     "utf8"
   );

@@ -4,7 +4,7 @@ import path from "node:path";
 import type { UpgradeRestartPending } from "./upgradeRestartPendingTypes.js";
 
 /**
- * Reads and clears persisted restart confirmation metadata.
+ * Reads and clears persisted post-restart metadata.
  * Expects: dataDir points to the plugin data directory.
  */
 export async function upgradeRestartPendingTake(
@@ -41,6 +41,7 @@ function pendingParse(value: string): UpgradeRestartPending | null {
     context?: unknown;
     requestedAtMs?: unknown;
     requesterPid?: unknown;
+    previousVersion?: unknown;
   };
   if (typeof candidate.requestedAtMs !== "number") {
     return null;
@@ -59,6 +60,10 @@ function pendingParse(value: string): UpgradeRestartPending | null {
     descriptor: candidate.descriptor as UpgradeRestartPending["descriptor"],
     context: candidate.context as UpgradeRestartPending["context"],
     requestedAtMs: candidate.requestedAtMs,
-    requesterPid: candidate.requesterPid
+    requesterPid: candidate.requesterPid,
+    ...(typeof candidate.previousVersion === "string" &&
+    candidate.previousVersion.trim().length > 0
+      ? { previousVersion: candidate.previousVersion.trim() }
+      : {})
   };
 }

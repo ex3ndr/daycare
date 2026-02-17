@@ -7,6 +7,7 @@ import { upgradeRestartPendingSet } from "./upgradeRestartPendingSet.js";
 import { upgradeRestartPendingTake } from "./upgradeRestartPendingTake.js";
 import { upgradeRestartRun } from "./upgradeRestartRun.js";
 import { upgradeRun } from "./upgradeRun.js";
+import { upgradeVersionRead } from "./upgradeVersionRead.js";
 
 vi.mock("./upgradePm2ProcessDetect.js", () => ({
   upgradePm2ProcessDetect: vi.fn()
@@ -26,6 +27,9 @@ vi.mock("./upgradeRestartPendingTake.js", () => ({
 vi.mock("./upgradeRestartPendingClear.js", () => ({
   upgradeRestartPendingClear: vi.fn()
 }));
+vi.mock("./upgradeVersionRead.js", () => ({
+  upgradeVersionRead: vi.fn()
+}));
 
 describe("upgrade plugin onboarding", () => {
   beforeEach(() => {
@@ -35,9 +39,11 @@ describe("upgrade plugin onboarding", () => {
     vi.mocked(upgradeRestartPendingSet).mockReset();
     vi.mocked(upgradeRestartPendingTake).mockReset();
     vi.mocked(upgradeRestartPendingClear).mockReset();
+    vi.mocked(upgradeVersionRead).mockReset();
     vi.mocked(upgradeRestartPendingSet).mockResolvedValue(undefined);
     vi.mocked(upgradeRestartPendingTake).mockResolvedValue(null);
     vi.mocked(upgradeRestartPendingClear).mockResolvedValue(undefined);
+    vi.mocked(upgradeVersionRead).mockResolvedValue("0.0.30");
   });
 
   it("returns default pm2 settings when daycare process is detected", async () => {
@@ -227,7 +233,17 @@ describe("upgrade plugin commands", () => {
         sendStatus: expect.any(Function)
       })
     );
-    expect(upgradeRestartPendingSet).toHaveBeenCalledWith(
+    expect(upgradeRestartPendingSet).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        dataDir: "/tmp/daycare",
+        descriptor,
+        context,
+        previousVersion: "0.0.30"
+      })
+    );
+    expect(upgradeRestartPendingSet).toHaveBeenNthCalledWith(
+      2,
       expect.objectContaining({
         dataDir: "/tmp/daycare",
         descriptor,
@@ -334,6 +350,60 @@ describe("upgrade plugin commands", () => {
       },
       { messageId: "77" },
       { text: "Restart complete. Daycare is back online." }
+    );
+  });
+
+  it("sends upgrade completion from postStart when the version changed", async () => {
+    vi.mocked(upgradeRestartPendingTake).mockResolvedValue({
+      descriptor: {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      },
+      context: { messageId: "77" },
+      requestedAtMs: Date.now(),
+      requesterPid: process.pid - 1,
+      previousVersion: "0.0.30"
+    });
+    vi.mocked(upgradeVersionRead).mockResolvedValue("0.0.31");
+    const registrar = {
+      registerCommand: vi.fn(),
+      unregisterCommand: vi.fn(),
+      sendMessage: vi.fn(async () => undefined)
+    };
+    const api = {
+      instance: { instanceId: "upgrade", pluginId: "upgrade" },
+      settings: { strategy: "pm2", processName: "daycare" },
+      engineSettings: {},
+      logger: { warn: vi.fn() },
+      auth: {},
+      dataDir: "/tmp/daycare",
+      registrar,
+      exposes: {
+        registerProvider: async () => undefined,
+        unregisterProvider: async () => undefined,
+        listProviders: () => []
+      },
+      fileStore: {},
+      inference: { complete: async () => undefined },
+      processes: {},
+      mode: "runtime",
+      events: { emit: () => undefined }
+    };
+    const instance = await plugin.create(api as never);
+
+    await instance.postStart?.();
+
+    expect(registrar.sendMessage).toHaveBeenCalledWith(
+      {
+        type: "user",
+        connector: "telegram",
+        channelId: "123",
+        userId: "123"
+      },
+      { messageId: "77" },
+      { text: "Upgrade complete: Daycare 0.0.30 -> 0.0.31." }
     );
   });
 });

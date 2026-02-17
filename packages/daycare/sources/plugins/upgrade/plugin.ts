@@ -8,6 +8,7 @@ import { upgradeRestartPendingTake } from "./upgradeRestartPendingTake.js";
 import { upgradePm2ProcessDetect } from "./upgradePm2ProcessDetect.js";
 import { upgradeRestartRun } from "./upgradeRestartRun.js";
 import { upgradeRun } from "./upgradeRun.js";
+import { upgradeVersionRead } from "./upgradeVersionRead.js";
 
 const UPGRADE_COMMAND = "upgrade";
 const RESTART_COMMAND = "restart";
@@ -72,6 +73,21 @@ export const plugin = definePlugin({
       };
 
       await sendStatus("Upgrading Daycare...");
+      const previousVersion = await upgradeVersionRead();
+      if (previousVersion) {
+        try {
+          await upgradeRestartPendingSet({
+            dataDir: api.dataDir,
+            descriptor,
+            context,
+            requestedAtMs: Date.now(),
+            requesterPid: process.pid,
+            previousVersion
+          });
+        } catch (error) {
+          api.logger.warn({ error }, "error: Failed to persist upgrade pending marker");
+        }
+      }
       try {
         await upgradeRun({
           strategy: settings.strategy,
@@ -79,6 +95,7 @@ export const plugin = definePlugin({
           sendStatus
         });
       } catch (error) {
+        await upgradeRestartPendingClear(api.dataDir);
         api.logger.warn({ error }, "error: Upgrade command failed");
       }
     };
@@ -156,6 +173,24 @@ export const plugin = definePlugin({
           return;
         }
         if (Date.now() - pending.requestedAtMs > RESTART_CONFIRM_MAX_AGE_MS) {
+          return;
+        }
+        if (pending.previousVersion) {
+          const currentVersion = await upgradeVersionRead();
+          if (!currentVersion || currentVersion === pending.previousVersion) {
+            return;
+          }
+          try {
+            await api.registrar.sendMessage(
+              pending.descriptor,
+              pending.context,
+              {
+                text: `Upgrade complete: Daycare ${pending.previousVersion} -> ${currentVersion}.`
+              }
+            );
+          } catch (error) {
+            api.logger.warn({ error }, "error: Failed to send upgrade completion status message");
+          }
           return;
         }
         try {
