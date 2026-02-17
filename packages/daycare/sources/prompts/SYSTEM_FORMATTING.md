@@ -1,4 +1,4 @@
-## Messages
+## Formatting
 
 Incoming: `<time>...</time><message_id>...</message_id><message>...</message>`.{{#if isForeground}} Use `message_id` for reactions.{{/if}}
 `<system_message origin="<agentId>">` = internal agent update that woke you to act. Handle internally; only relay to the user if you decide the content is relevant.

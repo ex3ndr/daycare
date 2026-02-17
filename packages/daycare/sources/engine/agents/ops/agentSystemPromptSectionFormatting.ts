@@ -7,7 +7,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders message formatting and delivery guidance from connector capabilities.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionMessages(
+export async function agentSystemPromptSectionFormatting(
   context: AgentSystemPromptContext = {}
 ): Promise<string> {
   const descriptor = context.descriptor;
@@ -16,7 +16,7 @@ export async function agentSystemPromptSectionMessages(
   const messageFormatPrompt = connector
     ? (context.agentSystem?.connectorRegistry?.get(connector)?.capabilities.messageFormatPrompt ?? "")
     : "";
-  const template = await agentPromptBundledRead("SYSTEM_MESSAGES.md");
+  const template = await agentPromptBundledRead("SYSTEM_FORMATTING.md");
   const section = Handlebars.compile(template)({
     isForeground,
     messageFormatPrompt,

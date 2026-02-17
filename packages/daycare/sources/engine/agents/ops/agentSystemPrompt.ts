@@ -4,7 +4,7 @@ import { agentSystemPromptSectionAgentsTopologySignalsChannels } from "./agentSy
 import { agentSystemPromptSectionAutonomousOperation } from "./agentSystemPromptSectionAutonomousOperation.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentSystemPromptSectionFiles } from "./agentSystemPromptSectionFiles.js";
-import { agentSystemPromptSectionMessages } from "./agentSystemPromptSectionMessages.js";
+import { agentSystemPromptSectionFormatting } from "./agentSystemPromptSectionFormatting.js";
 import { agentSystemPromptSectionPermissions } from "./agentSystemPromptSectionPermissions.js";
 import { agentSystemPromptSectionPreamble } from "./agentSystemPromptSectionPreamble.js";
 import { agentSystemPromptSectionSkills } from "./agentSystemPromptSectionSkills.js";
@@ -43,7 +43,7 @@ export async function agentSystemPrompt(
     agentSystemPromptSectionToolCalling(context),
     agentSystemPromptSectionAgentsTopologySignalsChannels(context),
     agentSystemPromptSectionSkills(context),
-    agentSystemPromptSectionMessages(context),
+    agentSystemPromptSectionFormatting(context),
     agentSystemPromptSectionFiles(context)
   ]);
 

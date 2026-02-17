@@ -129,7 +129,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     toolCallingSection,
     agentsTopologySignalsChannelsSection,
     skillsSection,
-    messagesSection,
+    formattingSection,
     filesSection
   ] = await Promise.all([
     sectionRender("SYSTEM.md", sectionContext),
@@ -143,7 +143,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     })(),
     sectionRender("SYSTEM_TOPOLOGY.md", sectionContext),
     sectionRender("SYSTEM_SKILLS.md", sectionContext),
-    sectionRender("SYSTEM_MESSAGES.md", sectionContext),
+    sectionRender("SYSTEM_FORMATTING.md", sectionContext),
     sectionRender("SYSTEM_FILES.md", sectionContext)
   ]);
   return [
@@ -154,7 +154,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     toolCallingSection,
     agentsTopologySignalsChannelsSection,
     skillsSection,
-    messagesSection,
+    formattingSection,
     filesSection
   ]
     .filter((section) => section.length > 0)

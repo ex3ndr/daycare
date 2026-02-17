@@ -20,7 +20,7 @@ System prompt rendering is centralized in `agentSystemPrompt()` and called from 
 - Tool Calling
 - Agents, Topology, Signals, Channels
 - Skills
-- Messages
+- Formatting
 - Files
 
 Top-level composition is plain concatenation with section separators (no Handlebars composition step).
