@@ -136,7 +136,11 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     sectionRender("SYSTEM_PERMISSIONS.md", sectionContext),
     sectionRender("SYSTEM_AUTONOMOUS_OPERATION.md", sectionContext),
     sectionRender("SYSTEM_WORKSPACE.md", sectionContext),
-    sectionRender("SYSTEM_TOOL_CALLING.md", sectionContext),
+    (async () => {
+      const base = await sectionRender("SYSTEM_TOOLS.md", sectionContext);
+      const noTools = (options.noToolsPrompt ?? "").trim();
+      return [base, noTools].filter((section) => section.length > 0).join("\n\n");
+    })(),
     sectionRender("SYSTEM_TOPOLOGY.md", sectionContext),
     sectionRender("SYSTEM_SKILLS.md", sectionContext),
     sectionRender("SYSTEM_MESSAGES.md", sectionContext),

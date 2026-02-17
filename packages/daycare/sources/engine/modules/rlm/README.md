@@ -58,8 +58,8 @@ def tool_name(arg1: type, arg2: type) -> str:
 
 The preamble is regenerated from the current tool set when context tools are built:
 
-- tool-call mode: rendered through `sources/prompts/TOOLS_RLM.md` into the `run_python` description
-- tag mode: rendered through `sources/prompts/TOOLS_RLM_INLINE.md` into the no-tools system section
+- tool-call mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM.md` into the `run_python` description
+- tag mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM_INLINE.md` into the no-tools system section
 
 RLM prompt builders no longer embed skill lists. Skills are injected once via
 `skillPromptFormat()` into the dedicated skills section during system-prompt section rendering.

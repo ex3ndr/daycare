@@ -27,7 +27,7 @@ async function rlmToolDescriptionTemplateCompile(): Promise<
   if (rlmToolDescriptionTemplatePromise) {
     return rlmToolDescriptionTemplatePromise;
   }
-  rlmToolDescriptionTemplatePromise = agentPromptBundledRead("TOOLS_RLM.md")
+  rlmToolDescriptionTemplatePromise = agentPromptBundledRead("SYSTEM_TOOLS_RLM.md")
     .then((source) => Handlebars.compile<RlmToolDescriptionTemplateContext>(source));
   return rlmToolDescriptionTemplatePromise;
 }

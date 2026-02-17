@@ -27,7 +27,7 @@ async function rlmNoToolsPromptTemplateCompile(): Promise<
   if (rlmNoToolsPromptTemplatePromise) {
     return rlmNoToolsPromptTemplatePromise;
   }
-  rlmNoToolsPromptTemplatePromise = agentPromptBundledRead("TOOLS_RLM_INLINE.md")
+  rlmNoToolsPromptTemplatePromise = agentPromptBundledRead("SYSTEM_TOOLS_RLM_INLINE.md")
     .then((source) => Handlebars.compile<RlmNoToolsPromptTemplateContext>(source));
   return rlmNoToolsPromptTemplatePromise;
 }

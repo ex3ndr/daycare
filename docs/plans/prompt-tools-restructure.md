@@ -1,7 +1,7 @@
 # Restructure System Prompt: Extract Tool-Mode Templates & Fix Duplicate Skills
 
 ## Overview
-- Extract RLM and RLM-Inline tool-mode prompt text from TypeScript builders into `.md` Handlebars templates (`TOOLS_RLM.md`, `TOOLS_RLM_INLINE.md`) in `sources/prompts/`
+- Extract RLM and RLM-Inline tool-mode prompt text from TypeScript builders into `.md` Handlebars templates (`SYSTEM_TOOLS_RLM.md`, `SYSTEM_TOOLS_RLM_INLINE.md`) in `sources/prompts/`
 - Remove skill lists from RLM/Inline tool descriptions — skills appear **only once** via `skillsPrompt` in the system prompt
 - Make the static "Skills" section (SYSTEM.md lines 149-156) available to **all** agents, not just foreground
 - No new TOOLS_CLASSIC template needed — classic mode keeps current structure
@@ -30,16 +30,16 @@
 
 ## Implementation Steps
 
-### Task 1: Create TOOLS_RLM.md template
-- [ ] Create `sources/prompts/TOOLS_RLM.md` with the static prose from `rlmToolDescriptionBuild()` and `{{{preamble}}}` Handlebars variable — **no skills section**
+### Task 1: Create SYSTEM_TOOLS_RLM.md template
+- [ ] Create `sources/prompts/SYSTEM_TOOLS_RLM.md` with the static prose from `rlmToolDescriptionBuild()` and `{{{preamble}}}` Handlebars variable — **no skills section**
 - [ ] Update `rlmToolDescriptionBuild()` to load and render the `.md` template instead of assembling lines in code
 - [ ] Remove `rlmSkillsSectionBuild()` and the `skills` parameter from `rlmToolDescriptionBuild()`
 - [ ] Update callers: `toolListContextBuild.ts` — stop passing `skills` to `rlmToolDescriptionBuild()`
 - [ ] Update `rlmToolDescriptionBuild.spec.ts` tests — remove skills-related assertions, verify template rendering
 - [ ] Run tests — must pass before next task
 
-### Task 2: Create TOOLS_RLM_INLINE.md template
-- [ ] Create `sources/prompts/TOOLS_RLM_INLINE.md` with the static prose from `rlmNoToolsPromptBuild()` and `{{{preamble}}}` Handlebars variable — **no skills section**
+### Task 2: Create SYSTEM_TOOLS_RLM_INLINE.md template
+- [ ] Create `sources/prompts/SYSTEM_TOOLS_RLM_INLINE.md` with the static prose from `rlmNoToolsPromptBuild()` and `{{{preamble}}}` Handlebars variable — **no skills section**
 - [ ] Update `rlmNoToolsPromptBuild()` to load and render the `.md` template instead of assembling lines in code
 - [ ] Remove `rlmNoToolsSkillsSectionBuild()` and the `skills` parameter from `rlmNoToolsPromptBuild()`
 - [ ] Update caller: `agent.ts` line 417 — stop passing `availableSkills` to `rlmNoToolsPromptBuild()`
@@ -67,7 +67,7 @@
 
 ## Technical Details
 
-### Template structure — TOOLS_RLM.md
+### Template structure — SYSTEM_TOOLS_RLM.md
 ```markdown
 Execute Python code to complete the task.
 
@@ -82,7 +82,7 @@ Use `print()` for debug output.
 The value of the final expression is returned.
 ```
 
-### Template structure — TOOLS_RLM_INLINE.md
+### Template structure — SYSTEM_TOOLS_RLM_INLINE.md
 ```markdown
 ## Python Execution
 
