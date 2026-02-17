@@ -2,8 +2,13 @@
 
 System prompt rendering is centralized in `agentSystemPrompt()` and called from `Agent`.
 
-`Agent` passes runtime metadata plus `agentSystem`; `agentSystemPrompt()` resolves prompt
-sections from `agentSystem` in a deterministic order.
+`Agent` now passes only:
+- `descriptor`
+- `permissions`
+- selected `provider`/`model`
+- `agentSystem`
+
+`agentSystemPrompt()` derives connector, cron, app-folder, and feature context internally.
 
 Sections resolved inside `agentSystemPrompt()`:
 - plugin context (`pluginManager.getSystemPrompts()`)
@@ -16,6 +21,7 @@ Sections resolved inside `agentSystemPrompt()`:
 flowchart TD
   A[Agent handleMessage] --> B[agentSystemPrompt]
   B --> C[Resolve prompt paths]
+  B --> C1[Resolve runtime from descriptor + permissions + agentSystem]
   B --> D[Resolve prompt sections]
   D --> D1[pluginPrompt]
   D --> D2[skillsPrompt]
@@ -25,6 +31,7 @@ flowchart TD
   B --> E[Load prompt files x5]
   B --> F[Load templates: SYSTEM/PERMISSIONS/AGENTIC]
   E --> G[Template context]
+  C1 --> G
   D --> G
   F --> H[Render permissions + agentic]
   G --> H

@@ -13,11 +13,14 @@ import {
   DEFAULT_TOOLS_PATH,
   DEFAULT_USER_PATH
 } from "../../../paths.js";
-import type { AgentDescriptor, Config } from "@/types";
+import type { AgentDescriptor, Config, SessionPermissions } from "@/types";
+import { permissionWorkspaceGranted } from "../../permissions/permissionWorkspaceGranted.js";
 import { rlmNoToolsPromptBuild } from "../../modules/rlm/rlmNoToolsPromptBuild.js";
 import { skillPromptFormat } from "../../skills/skillPromptFormat.js";
 import { Skills } from "../../skills/skills.js";
 import type { AgentSystem } from "../agentSystem.js";
+import { agentAppFolderPathResolve } from "./agentAppFolderPathResolve.js";
+import { agentDescriptorIsCron } from "./agentDescriptorIsCron.js";
 import { agentPermanentList } from "./agentPermanentList.js";
 import { agentPermanentPrompt } from "./agentPermanentPrompt.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
@@ -36,7 +39,12 @@ type AgentSystemPromptPluginManager = Pick<
   AgentSystem["pluginManager"],
   "getSystemPrompts" | "listRegisteredSkills"
 >;
-type AgentSystemPromptAgentSystem = Pick<AgentSystem, "config" | "pluginManager" | "toolResolver">;
+type AgentSystemPromptConnectorRegistry = Pick<AgentSystem["connectorRegistry"], "get">;
+type AgentSystemPromptCrons = Pick<AgentSystem["crons"], "listTasks">;
+type AgentSystemPromptAgentSystem = Pick<
+  AgentSystem,
+  "config" | "pluginManager" | "toolResolver" | "connectorRegistry" | "crons"
+>;
 
 type AgentSystemPromptPaths = {
   soulPath: string;
@@ -69,7 +77,39 @@ type AgentSystemPromptRuntime = {
   features: AgentPromptFeatures;
   skillsPath: string;
   pluginManager: AgentSystemPromptPluginManager | null;
+  connectorRegistry: AgentSystemPromptConnectorRegistry | null;
+  crons: AgentSystemPromptCrons | null;
   availableTools: Tool[];
+};
+
+type AgentSystemPromptCronContext = {
+  cronTaskId: string;
+  cronTaskName: string;
+  cronMemoryPath: string;
+  cronFilesPath: string;
+  cronTaskIds: string;
+};
+
+type AgentSystemPromptConnectorContext = {
+  connector: string;
+  canSendFiles: boolean;
+  fileSendModes: string;
+  messageFormatPrompt: string;
+  channelId: string;
+  userId: string;
+};
+
+type AgentSystemPromptTemplateRuntime = {
+  workspace: string;
+  writeDirs: string[];
+  network: boolean;
+  events: boolean;
+  appFolderPath: string;
+  workspacePermissionGranted: boolean;
+  agentKind: "background" | "foreground";
+  parentAgentId: string;
+  connectorContext: AgentSystemPromptConnectorContext;
+  cronContext: AgentSystemPromptCronContext;
 };
 
 type AgentSystemPromptTemplates = {
@@ -81,30 +121,12 @@ type AgentSystemPromptTemplates = {
 export type AgentSystemPromptContext = {
   model?: string;
   provider?: string;
-  workspace?: string;
-  writeDirs?: string[];
-  network?: boolean;
-  events?: boolean;
-  connector?: string;
-  canSendFiles?: boolean;
-  fileSendModes?: string;
-  messageFormatPrompt?: string;
-  channelId?: string;
-  userId?: string;
-  cronTaskId?: string;
-  cronTaskName?: string;
-  cronMemoryPath?: string;
-  cronFilesPath?: string;
-  cronTaskIds?: string;
-  appFolderPath?: string;
-  workspacePermissionGranted?: boolean;
+  permissions?: SessionPermissions;
   soulPath?: string;
   userPath?: string;
   agentsPath?: string;
   toolsPath?: string;
   memoryPath?: string;
-  agentKind?: "background" | "foreground";
-  parentAgentId?: string;
   agentSystem?: AgentSystemPromptAgentSystem;
   descriptor?: AgentDescriptor;
   ensurePromptFiles?: boolean;
@@ -125,7 +147,10 @@ export async function agentSystemPrompt(
     await agentPromptFilesEnsure();
   }
 
-  const sections = await resolvePromptSections(context, runtime);
+  const [sections, templateRuntime] = await Promise.all([
+    resolvePromptSections(context, runtime),
+    resolveTemplateRuntimeContext(context, runtime)
+  ]);
 
   if (sections.replaceSystemPrompt) {
     const replaced = sections.agentPrompt.trim();
@@ -141,8 +166,8 @@ export async function agentSystemPrompt(
   ]);
 
   const additionalWriteDirs = resolveAdditionalWriteDirs(
-    context.writeDirs ?? [],
-    context.workspace ?? "",
+    templateRuntime.writeDirs,
+    templateRuntime.workspace,
     promptPaths.soulPath,
     promptPaths.userPath,
     promptPaths.agentsPath,
@@ -151,7 +176,6 @@ export async function agentSystemPrompt(
   );
 
   const configDir = runtime.configDir;
-  const isForeground = context.agentKind !== "background";
   const skillsPath = runtime.skillsPath;
   const features = runtime.features;
 
@@ -161,22 +185,22 @@ export async function agentSystemPrompt(
     arch: os.arch(),
     model: context.model ?? "unknown",
     provider: context.provider ?? "unknown",
-    workspace: context.workspace ?? "unknown",
-    network: context.network ?? false,
-    events: context.events ?? false,
-    connector: context.connector ?? "unknown",
-    canSendFiles: context.canSendFiles ?? false,
-    fileSendModes: context.fileSendModes ?? "",
-    messageFormatPrompt: context.messageFormatPrompt ?? "",
-    channelId: context.channelId ?? "unknown",
-    userId: context.userId ?? "unknown",
-    cronTaskId: context.cronTaskId ?? "",
-    cronTaskName: context.cronTaskName ?? "",
-    cronMemoryPath: context.cronMemoryPath ?? "",
-    cronFilesPath: context.cronFilesPath ?? "",
-    cronTaskIds: context.cronTaskIds ?? "",
-    appFolderPath: context.appFolderPath ?? "",
-    workspacePermissionGranted: context.workspacePermissionGranted ?? false,
+    workspace: templateRuntime.workspace,
+    network: templateRuntime.network,
+    events: templateRuntime.events,
+    connector: templateRuntime.connectorContext.connector,
+    canSendFiles: templateRuntime.connectorContext.canSendFiles,
+    fileSendModes: templateRuntime.connectorContext.fileSendModes,
+    messageFormatPrompt: templateRuntime.connectorContext.messageFormatPrompt,
+    channelId: templateRuntime.connectorContext.channelId,
+    userId: templateRuntime.connectorContext.userId,
+    cronTaskId: templateRuntime.cronContext.cronTaskId,
+    cronTaskName: templateRuntime.cronContext.cronTaskName,
+    cronMemoryPath: templateRuntime.cronContext.cronMemoryPath,
+    cronFilesPath: templateRuntime.cronContext.cronFilesPath,
+    cronTaskIds: templateRuntime.cronContext.cronTaskIds,
+    appFolderPath: templateRuntime.appFolderPath,
+    workspacePermissionGranted: templateRuntime.workspacePermissionGranted,
     soulPath: promptPaths.soulPath,
     userPath: promptPaths.userPath,
     agentsPath: promptPaths.agentsPath,
@@ -184,10 +208,10 @@ export async function agentSystemPrompt(
     memoryPath: promptPaths.memoryPath,
     pluginPrompt: sections.pluginPrompt,
     skillsPrompt: sections.skillsPrompt,
-    parentAgentId: context.parentAgentId ?? "",
+    parentAgentId: templateRuntime.parentAgentId,
     configDir,
     skillsPath,
-    isForeground,
+    isForeground: templateRuntime.agentKind !== "background",
     soul: promptFiles.soul,
     user: promptFiles.user,
     agents: promptFiles.agents,
@@ -218,6 +242,100 @@ export async function agentSystemPrompt(
   return rendered.trim();
 }
 
+async function resolveTemplateRuntimeContext(
+  context: AgentSystemPromptContext,
+  runtime: AgentSystemPromptRuntime
+): Promise<AgentSystemPromptTemplateRuntime> {
+  const permissions = context.permissions;
+  const connectorContext = resolveConnectorContext(context.descriptor, runtime.connectorRegistry);
+  const cronContext = await resolveCronContext(context.descriptor, runtime.crons);
+  const appFolderPath = runtime.config && context.descriptor
+    ? (agentAppFolderPathResolve(context.descriptor, runtime.config.workspaceDir) ?? "")
+    : "";
+  return {
+    workspace: permissions?.workingDir ?? "unknown",
+    writeDirs: permissions?.writeDirs ?? [],
+    network: permissions?.network ?? false,
+    events: permissions?.events ?? false,
+    appFolderPath,
+    workspacePermissionGranted: permissions ? permissionWorkspaceGranted(permissions) : false,
+    agentKind: resolveAgentKind(context.descriptor),
+    parentAgentId: resolveParentAgentId(context.descriptor),
+    connectorContext,
+    cronContext
+  };
+}
+
+function resolveConnectorContext(
+  descriptor: AgentDescriptor | undefined,
+  connectorRegistry: AgentSystemPromptConnectorRegistry | null
+): AgentSystemPromptConnectorContext {
+  const connector =
+    descriptor?.type === "user"
+      ? descriptor.connector
+      : descriptor?.type === "system"
+        ? descriptor.tag
+        : descriptor?.type ?? "unknown";
+  const capabilities = connectorRegistry?.get(connector)?.capabilities ?? null;
+  const fileSendModes = capabilities?.sendFiles?.modes ?? [];
+  return {
+    connector,
+    canSendFiles: fileSendModes.length > 0,
+    fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
+    messageFormatPrompt: capabilities?.messageFormatPrompt ?? "",
+    channelId: descriptor?.type === "user" ? descriptor.channelId : "unknown",
+    userId: descriptor?.type === "user" ? descriptor.userId : "unknown"
+  };
+}
+
+async function resolveCronContext(
+  descriptor: AgentDescriptor | undefined,
+  crons: AgentSystemPromptCrons | null
+): Promise<AgentSystemPromptCronContext> {
+  if (!crons) {
+    return {
+      cronTaskId: "",
+      cronTaskName: "",
+      cronMemoryPath: "",
+      cronFilesPath: "",
+      cronTaskIds: ""
+    };
+  }
+  const tasks = await crons.listTasks();
+  const cronTaskIds = tasks.map((task) => task.id).join(", ");
+  if (!descriptor || !agentDescriptorIsCron(descriptor)) {
+    return {
+      cronTaskId: "",
+      cronTaskName: "",
+      cronMemoryPath: "",
+      cronFilesPath: "",
+      cronTaskIds
+    };
+  }
+  const cronTask = tasks.find((task) => task.taskUid === descriptor.id) ?? null;
+  return {
+    cronTaskId: cronTask?.id ?? "",
+    cronTaskName: cronTask?.name ?? "",
+    cronMemoryPath: cronTask?.memoryPath ?? "",
+    cronFilesPath: cronTask?.filesPath ?? "",
+    cronTaskIds
+  };
+}
+
+function resolveAgentKind(descriptor: AgentDescriptor | undefined): "background" | "foreground" {
+  return descriptor?.type === "user" ? "foreground" : "background";
+}
+
+function resolveParentAgentId(descriptor: AgentDescriptor | undefined): string {
+  if (!descriptor) {
+    return "";
+  }
+  if (descriptor.type !== "subagent" && descriptor.type !== "app") {
+    return "";
+  }
+  return descriptor.parentAgentId ?? "";
+}
+
 function resolveRuntime(context: AgentSystemPromptContext): AgentSystemPromptRuntime {
   const config = context.agentSystem?.config.current ?? null;
   const configDir = config?.configDir ?? "";
@@ -233,6 +351,8 @@ function resolveRuntime(context: AgentSystemPromptContext): AgentSystemPromptRun
     features,
     skillsPath,
     pluginManager: context.agentSystem?.pluginManager ?? null,
+    connectorRegistry: context.agentSystem?.connectorRegistry ?? null,
+    crons: context.agentSystem?.crons ?? null,
     availableTools: context.agentSystem?.toolResolver.listTools() ?? []
   };
 }

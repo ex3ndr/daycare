@@ -52,16 +52,25 @@ describe("agentSystemPrompt", () => {
       const rendered = await agentSystemPrompt({
         provider: "openai",
         model: "gpt-4.1",
-        workspace: "/tmp/workspace",
-        connector: "telegram",
-        channelId: "channel-1",
-        userId: "user-1",
+        permissions: {
+          workspaceDir: "/tmp/workspace",
+          workingDir: "/tmp/workspace",
+          writeDirs: ["/tmp/workspace"],
+          readDirs: ["/tmp/workspace"],
+          network: false,
+          events: false
+        },
+        descriptor: {
+          type: "user",
+          connector: "telegram",
+          channelId: "channel-1",
+          userId: "user-1"
+        },
         soulPath,
         userPath,
         agentsPath,
         toolsPath,
-        memoryPath,
-        agentKind: "foreground"
+        memoryPath
       });
 
       expect(rendered).toContain("## Skills");
@@ -102,6 +111,7 @@ describe("agentSystemPrompt", () => {
           current: {
             configDir,
             agentsDir,
+            workspaceDir: "/tmp/workspace",
             features: {
               noTools: true,
               rlm: true,
@@ -112,6 +122,12 @@ describe("agentSystemPrompt", () => {
         pluginManager: {
           getSystemPrompts: async () => ["Plugin prompt from runtime context"],
           listRegisteredSkills: () => []
+        },
+        connectorRegistry: {
+          get: () => null
+        },
+        crons: {
+          listTasks: async () => []
         },
         toolResolver: {
           listTools: () => [
@@ -127,16 +143,19 @@ describe("agentSystemPrompt", () => {
       const rendered = await agentSystemPrompt({
         provider: "openai",
         model: "gpt-4.1",
-        workspace: "/tmp/workspace",
-        connector: "telegram",
-        channelId: "channel-1",
-        userId: "user-1",
+        permissions: {
+          workspaceDir: "/tmp/workspace",
+          workingDir: "/tmp/workspace",
+          writeDirs: ["/tmp/workspace"],
+          readDirs: ["/tmp/workspace"],
+          network: false,
+          events: false
+        },
         soulPath,
         userPath,
         agentsPath,
         toolsPath,
         memoryPath,
-        agentKind: "foreground",
         descriptor: {
           type: "permanent",
           id: "agent-id",

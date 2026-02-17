@@ -22,7 +22,6 @@ import { permissionClone } from "../permissions/permissionClone.js";
 import { permissionEnsureDefaultFile } from "../permissions/permissionEnsureDefaultFile.js";
 import { permissionMergeDefault } from "../permissions/permissionMergeDefault.js";
 import { permissionTagsApply } from "../permissions/permissionTagsApply.js";
-import { permissionWorkspaceGranted } from "../permissions/permissionWorkspaceGranted.js";
 import { Skills } from "../skills/skills.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { agentDescriptorIsCron } from "./ops/agentDescriptorIsCron.js";
@@ -54,7 +53,6 @@ import { agentRestoreContextResolve } from "./ops/agentRestoreContextResolve.js"
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryPendingRlmResolve } from "./ops/agentHistoryPendingRlmResolve.js";
 import { agentHistoryPendingToolResults } from "./ops/agentHistoryPendingToolResults.js";
-import { agentAppFolderPathResolve } from "./ops/agentAppFolderPathResolve.js";
 import { rlmErrorTextBuild } from "../modules/rlm/rlmErrorTextBuild.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
@@ -339,22 +337,6 @@ export class Agent {
     const providerId = this.resolveAgentProvider(providers);
 
     const connector = this.agentSystem.connectorRegistry.get(source);
-    const connectorCapabilities = connector?.capabilities ?? null;
-    const fileSendModes = connectorCapabilities?.sendFiles?.modes ?? [];
-    const cronTasks = await this.agentSystem.crons.listTasks();
-    const cronTaskIds = cronTasks.map((task) => task.id);
-    const descriptor = this.descriptor;
-    const cronTask = agentDescriptorIsCron(descriptor)
-      ? cronTasks.find((task) => task.taskUid === descriptor.id) ?? null
-      : null;
-    const descriptorContext =
-      descriptor.type === "user"
-        ? {
-            connector: descriptor.connector,
-            channelId: descriptor.channelId,
-            userId: descriptor.userId
-          }
-        : { connector: source };
     const pluginManager = this.agentSystem.pluginManager;
     const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
     const skills = new Skills({
@@ -390,32 +372,10 @@ export class Agent {
         : undefined;
 
     logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
-    const appFolderPath = agentAppFolderPathResolve(this.descriptor, this.agentSystem.config.current.workspaceDir);
-    const workspacePermissionGranted = permissionWorkspaceGranted(this.state.permissions);
     const systemPrompt = await agentSystemPrompt({
       provider: providerSettings?.id,
       model: providerSettings?.model,
-      workspace: this.state.permissions.workingDir,
-      appFolderPath: appFolderPath ?? "",
-      workspacePermissionGranted,
-      writeDirs: this.state.permissions.writeDirs,
-      network: this.state.permissions.network,
-      events: this.state.permissions.events,
-      connector: descriptorContext.connector,
-      canSendFiles: fileSendModes.length > 0,
-      fileSendModes: fileSendModes.length > 0 ? fileSendModes.join(", ") : "",
-      messageFormatPrompt: connectorCapabilities?.messageFormatPrompt ?? "",
-      channelId: descriptorContext.channelId,
-      userId: descriptorContext.userId,
-      cronTaskId: cronTask?.id,
-      cronTaskName: cronTask?.name,
-      cronMemoryPath: cronTask?.memoryPath,
-      cronFilesPath: cronTask?.filesPath,
-      cronTaskIds: cronTaskIds.length > 0 ? cronTaskIds.join(", ") : "",
-      agentKind,
-      parentAgentId: this.descriptor.type === "subagent" || this.descriptor.type === "app"
-        ? this.descriptor.parentAgentId ?? ""
-        : "",
+      permissions: this.state.permissions,
       descriptor: this.descriptor,
       agentSystem: this.agentSystem,
       ensurePromptFiles: true
