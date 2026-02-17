@@ -224,8 +224,10 @@ describe("AgentSystem", () => {
           { type: "reset", message: "dead check" }
         )
       ).rejects.toThrow(`Agent is dead: ${agentId}`);
-      const state = await agentStateRead(harness.config, agentId);
-      expect(state?.state).toBe("dead");
+      await vi.waitFor(async () => {
+        const state = await agentStateRead(harness.config, agentId);
+        expect(state?.state).toBe("dead");
+      });
     } finally {
       delayedSignals?.stop();
       await rm(dir, { recursive: true, force: true });
