@@ -18,6 +18,7 @@ describe("rlmNoToolsPromptBuild", () => {
     expect(prompt).toContain("Emit at most one Python block per assistant response.");
     expect(prompt).toContain("write one multi-line script in that block");
     expect(prompt).toContain("Do not split one task into multiple separate scripts");
+    expect(prompt).toContain("Tools return plain LLM strings");
     expect(prompt).toContain("first `<run_python>` and last `</run_python>`");
     expect(prompt).toContain("`<say>` blocks must come before `<run_python>`");
     expect(prompt).toContain("```python");

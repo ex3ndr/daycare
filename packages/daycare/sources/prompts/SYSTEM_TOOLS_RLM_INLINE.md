@@ -14,6 +14,7 @@ No escaping is needed.
 Call functions directly (no `await`).
 Use `try/except ToolError` for tool failures.
 Use `print()` for debug output.
+Tools return plain LLM strings. Do not assume structured objects, arrays, or typed payloads.
 The value of the final expression is returned.
 Put the value you want to return as the final expression line; do not use `print()` for the final return value.
 Execution results are sent back as user messages wrapped in `<python_result>...</python_result>`.
@@ -23,9 +24,12 @@ If you already emitted `<say>` before `<run_python>`, do not repeat the same mes
 Example:
 ```text
 <run_python>
-records = tool_list_records(limit=200)
-error_records = [record for record in records if record.get("level") == "error"]
-{"count": len(error_records), "top": error_records[:5]}
+report = tool_errorline_read(file_path="logs/app.log")
+if "ERROR" in report:
+    summary = report
+else:
+    summary = "No error lines found."
+summary
 </run_python>
 ```
 

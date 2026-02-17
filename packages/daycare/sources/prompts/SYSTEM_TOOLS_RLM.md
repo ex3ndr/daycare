@@ -11,11 +11,15 @@ The following functions are available:
 Call tool functions directly (no `await`).
 Use `try/except ToolError` for tool failures.
 Use `print()` for debug output.
+Tools return plain LLM strings. Do not assume structured objects, arrays, or typed payloads.
 The value of the final expression is returned.
 
 Example multi-line script (single run):
 ```python
-records = tool_list_records(limit=200)
-error_records = [record for record in records if record.get("level") == "error"]
-{"count": len(error_records), "top": error_records[:5]}
+report = tool_errorline_read(file_path="logs/app.log")
+if "ERROR" in report:
+    summary = report
+else:
+    summary = "No error lines found."
+summary
 ```
