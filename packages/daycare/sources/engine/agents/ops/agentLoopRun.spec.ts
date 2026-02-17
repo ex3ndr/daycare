@@ -434,6 +434,31 @@ describe("agentLoopRun say tag", () => {
     });
   });
 
+  it("does not fall back to raw text when say send fails", async () => {
+    const connectorSend = vi.fn(async () => {
+      throw new Error("send failed");
+    });
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([{ type: "text", text: "thinking... <say>hello user</say> done" }])
+    ]);
+    const toolResolver = toolResolverBuild(async () => {
+      throw new Error("unexpected");
+    });
+
+    await agentLoopRun(
+      optionsBuild({ entry, context, connector, inferenceRouter, toolResolver, say: true })
+    );
+
+    expect(connectorSend).toHaveBeenCalledTimes(1);
+    expect(connectorSend).toHaveBeenCalledWith("channel-1", {
+      text: "hello user",
+      replyToMessageId: undefined
+    });
+  });
+
   it("sends multiple say blocks as separate messages", async () => {
     const connectorSend = vi.fn(async () => undefined);
     const connector = connectorBuild(connectorSend);

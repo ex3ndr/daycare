@@ -71,6 +71,7 @@ When `features.say` is enabled, foreground agents use `<say>` tags to control wh
 - Text outside `<say>` tags is internal reasoning (never sent)
 - Multiple `<say>` blocks in one response are sent as separate messages
 - If no `<say>` tags are present, the entire response is suppressed
+- When `<say>` blocks are present, raw assistant text fallback is always suppressed
 - Message history is kept unmodified (model sees its own reasoning)
 - Background agents are not affected (say feature is foreground-only)
 
@@ -84,6 +85,10 @@ flowchart TD
   E --> F{Any say blocks?}
   F -->|No| G[Suppress output]
   F -->|Yes| H[Send each block as separate message]
-  H --> I[Keep original text in history]
-  G --> I
+  H --> I{Send succeeded?}
+  I -->|Yes| J[Keep original text in history]
+  I -->|No| J
+  I -->|No| K[No raw-text fallback send]
+  K --> J
+  G --> J
 ```

@@ -278,7 +278,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         if (sayBlocks.length > 0) {
           effectiveResponseText = null; // suppress full text
           finalResponseText = sayBlocks[sayBlocks.length - 1]!;
-          lastResponseTextSent = false;
+          // Never fall back to raw assistant text when <say> blocks exist.
+          lastResponseTextSent = true;
           if (connector && targetId) {
             try {
               for (let index = 0; index < sayBlocks.length; index += 1) {
@@ -302,7 +303,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                   context: entry.context
                 });
               }
-              lastResponseTextSent = true;
             } catch (error) {
               logger.warn({ connector: source, error }, "error: Failed to send <say> response text");
             }
