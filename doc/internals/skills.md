@@ -32,7 +32,7 @@ Core examples in this repo include:
 - `app-creator`
 
 The skills section prompt (`SYSTEM_SKILLS.md`) contains mandatory invocation guidance.
-`skillPromptFormat()` contributes only the dynamic XML list (`<available_skills>...</available_skills>`).
+`skillPromptFormat()` contributes only the dynamic XML list (`<available_skills>...</available_skills>`), appended after section render.
 
 ## Skills catalog flow (code)
 

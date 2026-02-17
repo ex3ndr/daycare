@@ -72,8 +72,8 @@ describe("system prompt skills rendering", () => {
       isForeground: false
     });
 
-    expect(prompt).toContain("## Skills");
-    expect(prompt).toContain("Invoke skills via the `skill` tool.");
+    expect(prompt).toContain("## Skills (mandatory)");
+    expect(prompt).toContain("Before replying, scan the skill descriptions below:");
     expect(prompt).not.toContain("For local skill authoring:");
   });
 });
@@ -142,7 +142,11 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
       return [base, noTools].filter((section) => section.length > 0).join("\n\n");
     })(),
     sectionRender("SYSTEM_TOPOLOGY.md", sectionContext),
-    sectionRender("SYSTEM_SKILLS.md", sectionContext),
+    (async () => {
+      const base = await sectionRender("SYSTEM_SKILLS.md", sectionContext);
+      const dynamicSkills = options.skillsPrompt.trim();
+      return [base, dynamicSkills].filter((section) => section.length > 0).join("\n\n");
+    })(),
     sectionRender("SYSTEM_FORMATTING.md", sectionContext),
     sectionRender("SYSTEM_FILES.md", sectionContext)
   ]);

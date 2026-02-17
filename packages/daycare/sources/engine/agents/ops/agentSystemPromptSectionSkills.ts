@@ -29,8 +29,10 @@ export async function agentSystemPromptSectionSkills(
   })();
 
   const template = await agentPromptBundledRead("SYSTEM_SKILLS.md");
-  const section = Handlebars.compile(template)({
-    skillsPrompt
-  });
-  return section.trim();
+  const section = Handlebars.compile(template)({}).trim();
+  const dynamicSkills = skillsPrompt.trim();
+  return [section, dynamicSkills]
+    .filter((part) => part.length > 0)
+    .join("\n\n")
+    .trim();
 }
