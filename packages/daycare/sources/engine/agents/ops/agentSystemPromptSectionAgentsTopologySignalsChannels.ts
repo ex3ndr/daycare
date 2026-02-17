@@ -1,7 +1,5 @@
 import Handlebars from "handlebars";
 
-import { agentPermanentList } from "./agentPermanentList.js";
-import { agentPermanentPrompt } from "./agentPermanentPrompt.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
@@ -10,16 +8,9 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionAgentsTopologySignalsChannels(
-  context: AgentSystemPromptContext = {}
+  _context: AgentSystemPromptContext = {}
 ): Promise<string> {
-  const config = context.agentSystem?.config?.current;
-  const permanentAgentsPrompt = config
-    ? agentPermanentPrompt(await agentPermanentList(config))
-    : "";
-
   const template = await agentPromptBundledRead("SYSTEM_TOPOLOGY.md");
-  const section = Handlebars.compile(template)({
-    permanentAgentsPrompt
-  });
+  const section = Handlebars.compile(template)({});
   return section.trim();
 }

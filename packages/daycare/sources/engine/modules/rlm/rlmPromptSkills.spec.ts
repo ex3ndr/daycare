@@ -117,7 +117,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     tools: options.toolsText,
     memory: "memory",
     additionalWriteDirs: [],
-    permanentAgentsPrompt: "",
     agentPrompt: "",
     noToolsPrompt: options.noToolsPrompt ?? ""
   };
