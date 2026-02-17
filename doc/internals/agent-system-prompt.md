@@ -14,8 +14,8 @@ System prompt rendering is centralized in `agentSystemPrompt()` and called from 
 
 `agentSystemPrompt()` renders deterministic sections by calling section functions with the same `AgentSystemPromptContext` input. Each section loads and renders its own data internally:
 - Preamble
-- Permissions
 - Autonomous operation
+- Permissions
 - Workspace
 - Tool Calling
 - Agents, Topology, Signals, Channels
@@ -46,7 +46,7 @@ flowchart TD
   B --> C[Check replace-system prompt]
   B --> D[Call 9 section functions with same context]
   D --> D1[Preamble section loads its own data]
-  D --> D2[Permissions section loads its own data]
+  D --> D2[Autonomous section loads its own data]
   D --> D3[...]
   D --> D4[Files section loads memory files]
   D --> E[Concatenate sections with separators]

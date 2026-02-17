@@ -123,8 +123,8 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
   };
   const [
     preambleSection,
-    permissionsSection,
     autonomousOperationSection,
+    permissionsSection,
     workspaceSection,
     toolCallingSection,
     agentsTopologySignalsChannelsSection,
@@ -133,8 +133,8 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     filesSection
   ] = await Promise.all([
     sectionRender("SYSTEM.md", sectionContext),
-    sectionRender("SYSTEM_PERMISSIONS.md", sectionContext),
     sectionRender("SYSTEM_AUTONOMOUS_OPERATION.md", sectionContext),
+    sectionRender("SYSTEM_PERMISSIONS.md", sectionContext),
     sectionRender("SYSTEM_WORKSPACE.md", sectionContext),
     (async () => {
       const base = await sectionRender("SYSTEM_TOOLS.md", sectionContext);
@@ -148,8 +148,8 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
   ]);
   return [
     preambleSection,
-    permissionsSection,
     autonomousOperationSection,
+    permissionsSection,
     workspaceSection,
     toolCallingSection,
     agentsTopologySignalsChannelsSection,
