@@ -68,8 +68,7 @@ describe("upgradeRun", () => {
     );
     expect(sendStatus.mock.calls.map((call) => call[0])).toEqual([
       "Upgrading Daycare CLI (npm install -g daycare-cli)...",
-      "Restarting process \"daycare\" via pm2...",
-      "Upgrade complete. PM2 process \"daycare\" restarted."
+      "Restarting process \"daycare\" via pm2..."
     ]);
   });
 
@@ -96,7 +95,7 @@ describe("upgradeRun", () => {
     );
   });
 
-  it("reports restart failures after install succeeds", async () => {
+  it("ignores restart failures after install succeeds", async () => {
     execSucceed();
     const error = Object.assign(new Error("restart failed"), {
       stderr: "pm2 not found"
@@ -110,13 +109,11 @@ describe("upgradeRun", () => {
         processName: "daycare",
         sendStatus
       })
-    ).rejects.toThrow(
-      'Upgrade failed while restarting PM2 process "daycare": pm2 not found'
-    );
+    ).resolves.toBeUndefined();
 
     expect(execFileMock).toHaveBeenCalledTimes(2);
     expect(sendStatus).toHaveBeenCalledWith(
-      'Upgrade failed while restarting PM2 process "daycare": pm2 not found'
+      'Restart reported an error for PM2 process "daycare" and was ignored: pm2 not found'
     );
   });
 });

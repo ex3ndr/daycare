@@ -5,4 +5,5 @@ export type UpgradeRestartPending = {
   context: MessageContext;
   requestedAtMs: number;
   requesterPid: number;
+  previousVersion?: string;
 };

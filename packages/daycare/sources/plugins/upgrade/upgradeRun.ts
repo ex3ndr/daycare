@@ -8,6 +8,7 @@ type UpgradeRunOptions = {
 
 /**
  * Runs a full CLI upgrade and restart flow for the configured runtime strategy.
+ * PM2 restart command errors are reported and ignored so postStart can confirm by version delta.
  * Expects: strategy is supported and processName is a non-empty PM2 process identifier.
  */
 export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
@@ -32,12 +33,10 @@ export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
   try {
     await commandRun("pm2", ["restart", options.processName]);
   } catch (error) {
-    const text = `Upgrade failed while restarting PM2 process \"${options.processName}\": ${errorTextBuild(error)}`;
+    const text = `Restart reported an error for PM2 process \"${options.processName}\" and was ignored: ${errorTextBuild(error)}`;
     await options.sendStatus(text);
-    throw new Error(text);
+    return;
   }
-
-  await options.sendStatus(`Upgrade complete. PM2 process \"${options.processName}\" restarted.`);
 }
 
 function commandRun(command: string, args: string[]): Promise<void> {
