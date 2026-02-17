@@ -1,6 +1,6 @@
 {{!-- Template for run_python tool description in RLM tool-call mode. --}}
 Execute Python code to complete the task.
-For ErrorLine and Line in ErrorLine workflows, prefer one multi-line Python script for the full task.
+Prefer one multi-line Python script for the full task.
 Do not split one task into multiple separate Python scripts unless you are reacting to new execution results.
 
 The following functions are available:
@@ -16,7 +16,7 @@ The value of the final expression is returned.
 
 Example multi-line script (single run):
 ```python
-report = tool_errorline_read(file_path="logs/app.log")
+report = "ERROR: timeout while processing"
 if "ERROR" in report:
     summary = report
 else:

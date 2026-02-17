@@ -6,7 +6,7 @@ To execute Python, write code inside `<run_python>...</run_python>` tags.
 You may include multiple `<run_python>` blocks in one response.
 Blocks are executed sequentially from top to bottom.
 If one block fails, all remaining `<run_python>` blocks in that response are skipped.
-For ErrorLine and Line in ErrorLine workflows, still prefer one multi-line script when possible.
+Prefer one multi-line script when possible.
 If you include `<say>` in the same response, put all `<say>` blocks before the first `<run_python>`.
 Any `<say>` block after the first `<run_python>` is ignored.
 When ignored, the system adds this line in `<python_result>`: `<say> after <run_python> was ignored`.
@@ -25,16 +25,10 @@ Example:
 ```text
 <say>Starting checks</say>
 <run_python>
-report = tool_errorline_read(file_path="logs/app.log")
-if "ERROR" in report:
-    summary = report
-else:
-    summary = "No error lines found."
-summary
+"step 1 complete"
 </run_python>
 <run_python>
-tool_errorline_store(note=summary)
-"saved"
+"step 2 complete"
 </run_python>
 <say>This will be ignored</say>
 ```

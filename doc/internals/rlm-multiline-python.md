@@ -1,6 +1,6 @@
 # RLM Multiline Python Guidance
 
-Updated prompt guidance for ErrorLine and Line in ErrorLine to prefer one multiline Python script per task.
+Updated prompt guidance for inline RLM Python execution and response-tag handling.
 
 ## Summary
 - Added inline-mode support for multiple `<run_python>` tags per assistant response.
