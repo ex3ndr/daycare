@@ -56,6 +56,13 @@ describe("agentHistoryRecordsLoad", () => {
           printOutput: ["hello"],
           toolCallCount: 1,
           isError: false
+        },
+        {
+          type: "assistant_rewrite",
+          at: 6,
+          assistantAt: 1,
+          text: "<run_python>echo()</run_python>",
+          reason: "run_python_failure_trim"
         }
       ];
 

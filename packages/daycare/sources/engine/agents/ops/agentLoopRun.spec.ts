@@ -465,6 +465,89 @@ describe("agentLoopRun", () => {
     expect(connectorSend).not.toHaveBeenCalled();
   });
 
+  it("appends assistant_rewrite history events for say-after and failed run_python rewrites", async () => {
+    const appendedRecords: AgentHistoryRecord[] = [];
+    const connector = connectorBuild(vi.fn(async () => undefined));
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        {
+          type: "text",
+          text: [
+            "<say>before</say>",
+            "<run_python>echo()</run_python>",
+            "<run_python>fail()</run_python>",
+            "<run_python>tail()</run_python>",
+            "<say>after</say>"
+          ].join("")
+        }
+      ]),
+      assistantMessageBuild([])
+    ]);
+    const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+      if (toolCall.name === "echo") {
+        return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
+      }
+      if (toolCall.name === "fail") {
+        throw new Error("boom");
+      }
+      throw new Error(`Unexpected tool: ${toolCall.name}`);
+    });
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} },
+        { name: "echo", description: "", parameters: {} },
+        { name: "fail", description: "", parameters: {} },
+        { name: "tail", description: "", parameters: {} }
+      ]),
+      execute
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        noTools: true,
+        rlm: true,
+        say: true,
+        appendHistoryRecord: async (record) => {
+          appendedRecords.push(record);
+        }
+      })
+    );
+
+    const assistant = appendedRecords.find((record) => record.type === "assistant_message");
+    if (!assistant || assistant.type !== "assistant_message") {
+      throw new Error("Expected assistant history record.");
+    }
+    expect(assistant.text).toContain("<run_python>tail()</run_python>");
+    expect(assistant.text).toContain("<say>after</say>");
+
+    const rewrites = appendedRecords.filter(
+      (
+        record
+      ): record is Extract<AgentHistoryRecord, { type: "assistant_rewrite" }> =>
+        record.type === "assistant_rewrite"
+    );
+    expect(rewrites).toHaveLength(2);
+    expect(rewrites[0]).toMatchObject({
+      type: "assistant_rewrite",
+      reason: "run_python_say_after_trim"
+    });
+    expect(rewrites[1]).toMatchObject({
+      type: "assistant_rewrite",
+      reason: "run_python_failure_trim"
+    });
+    expect(rewrites[0]?.assistantAt).toBe(assistant.at);
+    expect(rewrites[1]?.assistantAt).toBe(assistant.at);
+    expect(rewrites[0]?.text).not.toContain("<say>after</say>");
+    expect(rewrites[1]?.text).not.toContain("<run_python>tail()</run_python>");
+  });
+
   it("does not execute run_python tags unless noTools, rlm, and say are all enabled", async () => {
     const connectorSend = vi.fn(async () => undefined);
     const connector = connectorBuild(connectorSend);

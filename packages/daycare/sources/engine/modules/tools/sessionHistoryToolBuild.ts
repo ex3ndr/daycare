@@ -163,6 +163,7 @@ function summaryInputBuild(agentId: string, records: AgentHistoryRecord[]): stri
       `reset=${summary.counts.reset}`,
       `user=${summary.counts.user_message}`,
       `assistant=${summary.counts.assistant_message}`,
+      `assistant_rewrite=${summary.counts.assistant_rewrite}`,
       `tool_result=${summary.counts.tool_result}`,
       `note=${summary.counts.note}`
     ].join(" "),
@@ -224,6 +225,9 @@ function recordSummaryLineBuild(record: AgentHistoryRecord): string {
   }
   if (record.type === "assistant_message") {
     return `${prefix} assistant_message text="${singleLine(stringTruncate(record.text, 700))}"`;
+  }
+  if (record.type === "assistant_rewrite") {
+    return `${prefix} assistant_rewrite assistantAt=${record.assistantAt} reason=${record.reason} text="${singleLine(stringTruncate(record.text, 700))}"`;
   }
   if (record.type === "note") {
     return `${prefix} note text="${singleLine(stringTruncate(record.text, 400))}"`;

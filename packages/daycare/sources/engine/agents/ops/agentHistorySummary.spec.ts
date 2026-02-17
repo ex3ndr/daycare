@@ -24,6 +24,7 @@ describe("agentHistorySummary", () => {
       rlm_tool_call: 0,
       rlm_tool_result: 0,
       rlm_complete: 0,
+      assistant_rewrite: 0,
       note: 0
     });
   });
@@ -39,6 +40,13 @@ describe("agentHistorySummary", () => {
         files: [],
         toolCalls: [],
         tokens: null
+      }),
+      buildRecord({
+        type: "assistant_rewrite",
+        at: 125,
+        assistantAt: 120,
+        text: "hello revised",
+        reason: "run_python_say_after_trim"
       }),
       buildRecord({
         type: "tool_result",
@@ -60,7 +68,7 @@ describe("agentHistorySummary", () => {
 
     const summary = agentHistorySummary(records);
 
-    expect(summary.recordCount).toBe(5);
+    expect(summary.recordCount).toBe(6);
     expect(summary.firstAt).toBe(100);
     expect(summary.lastAt).toBe(140);
     expect(summary.counts).toEqual({
@@ -73,10 +81,11 @@ describe("agentHistorySummary", () => {
       rlm_tool_call: 0,
       rlm_tool_result: 0,
       rlm_complete: 0,
+      assistant_rewrite: 1,
       note: 1
     });
     expect(summary.lastUserMessage).toBe("hi");
-    expect(summary.lastAssistantMessage).toBe("hello");
+    expect(summary.lastAssistantMessage).toBe("hello revised");
     expect(summary.lastNote).toBe("done");
     expect(summary.lastToolName).toBe("send_agent_message");
   });

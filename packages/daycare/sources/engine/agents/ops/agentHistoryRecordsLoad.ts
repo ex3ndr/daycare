@@ -131,6 +131,15 @@ const historyRecordSchema = z.discriminatedUnion("type", [
     .strict(),
   z
     .object({
+      type: z.literal("assistant_rewrite"),
+      at: z.number().int(),
+      assistantAt: z.number().int(),
+      text: z.string(),
+      reason: z.enum(["run_python_say_after_trim", "run_python_failure_trim"])
+    })
+    .strict(),
+  z
+    .object({
       type: z.literal("note"),
       at: z.number().int(),
       text: z.string()

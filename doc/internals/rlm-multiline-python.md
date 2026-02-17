@@ -8,6 +8,8 @@ Updated prompt guidance for inline RLM Python execution and response-tag handlin
 - Added strict post-`<run_python>` `<say>` suppression with an explicit notice line.
 - Rewrote assistant text in context history to remove `<say>` tags after `<run_python>`.
 - On first failed `<run_python>` block, rewrote context history to drop everything after the failed block.
+- Persisted explicit `assistant_rewrite` history events for each rewrite.
+- Restore now replays `assistant_rewrite` events directly (no trim recomputation on load).
 - Extracted trim logic into ops helpers:
   `agentMessageRunPythonSayAfterTrim()` and `agentMessageRunPythonFailureTrim(successfulExecutionCount)`.
 - Updated inline prompt examples to show multi-tag execution and ignored post-run `<say>`.
@@ -28,6 +30,10 @@ flowchart TD
   U --> I[Detect say tags after first run_python]
   I --> J[Ignore those say tags]
   J --> K[Rewrite assistant history text]
+  K --> N[Append assistant_rewrite event]
   K --> L[Prefix python_result: say after run_python was ignored]
   C -- No --> M[Rewrite history: cut text after failed block]
+  M --> O[Append assistant_rewrite failure event]
+  N --> P[Restore: replay assistant_rewrite events]
+  O --> P
 ```

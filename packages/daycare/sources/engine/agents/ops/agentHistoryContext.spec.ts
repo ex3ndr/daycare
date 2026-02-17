@@ -82,4 +82,94 @@ describe("agentHistoryContext", () => {
     expect(messages[2]?.role).toBe("assistant");
     expect(messages[3]?.role).toBe("toolResult");
   });
+
+  it("replays assistant_rewrite records during restore without inferring trims", async () => {
+    const records: AgentHistoryRecord[] = [
+      { type: "start", at: 1 },
+      {
+        type: "assistant_message",
+        at: 2,
+        text: "<say>before</say><run_python>echo()</run_python><say>after</say>",
+        files: [],
+        toolCalls: [],
+        tokens: null
+      },
+      {
+        type: "assistant_rewrite",
+        at: 3,
+        assistantAt: 2,
+        text: "<say>before</say><run_python>echo()</run_python>",
+        reason: "run_python_say_after_trim"
+      },
+      {
+        type: "assistant_rewrite",
+        at: 4,
+        assistantAt: 2,
+        text: "<say>before</say><run_python>echo()</run_python>",
+        reason: "run_python_failure_trim"
+      }
+    ];
+
+    const messages = await agentHistoryContext(records, "agent-1");
+
+    expect(messages).toHaveLength(1);
+    const assistant = messages[0];
+    expect(assistant?.role).toBe("assistant");
+    if (!assistant || assistant.role !== "assistant") {
+      throw new Error("Expected assistant message.");
+    }
+    const textPart = assistant.content.find((part) => part.type === "text");
+    expect(textPart && "text" in textPart ? textPart.text : "").toBe(
+      "<say>before</say><run_python>echo()</run_python>"
+    );
+  });
+
+  it("applies assistant_rewrite to the assistantAt target when newer assistant messages exist", async () => {
+    const records: AgentHistoryRecord[] = [
+      {
+        type: "assistant_message",
+        at: 10,
+        text: "first raw",
+        files: [],
+        toolCalls: [],
+        tokens: null
+      },
+      {
+        type: "assistant_message",
+        at: 20,
+        text: "second untouched",
+        files: [],
+        toolCalls: [],
+        tokens: null
+      },
+      {
+        type: "assistant_rewrite",
+        at: 30,
+        assistantAt: 10,
+        text: "first rewritten",
+        reason: "run_python_failure_trim"
+      }
+    ];
+
+    const messages = await agentHistoryContext(records, "agent-1");
+    expect(messages).toHaveLength(2);
+
+    const first = messages[0];
+    const second = messages[1];
+    if (!first || first.role !== "assistant") {
+      throw new Error("Expected first assistant message.");
+    }
+    if (!second || second.role !== "assistant") {
+      throw new Error("Expected second assistant message.");
+    }
+
+    const firstTextPart = first.content.find((part) => part.type === "text");
+    const secondTextPart = second.content.find((part) => part.type === "text");
+    expect(firstTextPart && "text" in firstTextPart ? firstTextPart.text : "").toBe(
+      "first rewritten"
+    );
+    expect(secondTextPart && "text" in secondTextPart ? secondTextPart.text : "").toBe(
+      "second untouched"
+    );
+  });
 });

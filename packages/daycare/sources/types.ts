@@ -54,6 +54,7 @@ export type {
   AgentTokenStats,
   AgentLifecycleState,
   AgentHistoryRecord,
+  AgentHistoryAssistantRewriteRecord,
   AgentHistoryRlmCompleteRecord,
   AgentHistoryRlmStartRecord,
   AgentHistoryRlmToolCallRecord,

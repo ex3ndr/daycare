@@ -88,6 +88,14 @@ export type AgentHistoryRlmCompleteRecord = {
   error?: string;
 };
 
+export type AgentHistoryAssistantRewriteRecord = {
+  type: "assistant_rewrite";
+  at: number;
+  assistantAt: number;
+  text: string;
+  reason: "run_python_say_after_trim" | "run_python_failure_trim";
+};
+
 export type AgentHistoryRecord =
   | { type: "start"; at: number }
   | { type: "reset"; at: number; message?: string }
@@ -115,6 +123,7 @@ export type AgentHistoryRecord =
   | AgentHistoryRlmToolCallRecord
   | AgentHistoryRlmToolResultRecord
   | AgentHistoryRlmCompleteRecord
+  | AgentHistoryAssistantRewriteRecord
   | { type: "note"; at: number; text: string };
 
 export type AgentInboxItem =

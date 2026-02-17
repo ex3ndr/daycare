@@ -40,6 +40,10 @@ export function agentHistorySummary(records: AgentHistoryRecord[]): AgentHistory
       lastAssistantMessage = record.text;
       continue;
     }
+    if (record.type === "assistant_rewrite") {
+      lastAssistantMessage = record.text;
+      continue;
+    }
     if (record.type === "note") {
       lastNote = record.text;
       continue;
@@ -75,6 +79,7 @@ function buildEmptyCounts(): AgentHistorySummaryCounts {
     rlm_tool_call: 0,
     rlm_tool_result: 0,
     rlm_complete: 0,
+    assistant_rewrite: 0,
     note: 0
   };
 }

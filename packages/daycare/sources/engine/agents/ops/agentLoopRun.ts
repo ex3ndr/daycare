@@ -250,6 +250,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
       const responseText = messageExtractText(response.message);
       let historyResponseText = responseText ?? "";
+      const pendingHistoryRewrites: Array<{
+        text: string;
+        reason: "run_python_say_after_trim" | "run_python_failure_trim";
+      }> = [];
       const toolCalls = messageExtractToolCalls(response.message);
       const runPythonCodes = noToolsModeEnabled
         ? rlmNoToolsExtract(responseText ?? "")
@@ -277,6 +281,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         const stripped = agentMessageRunPythonSayAfterTrim(responseText);
         if (stripped !== null) {
           historyResponseText = stripped;
+          pendingHistoryRewrites.push({
+            text: stripped,
+            reason: "run_python_say_after_trim"
+          });
           messageAssistantTextRewrite(response.message, stripped);
           logger.debug("event: Rewrote assistant message in context history after <run_python>");
         }
@@ -399,14 +407,24 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       }
 
       logger.debug(`event: Extracted tool calls from response toolCallCount=${toolCalls.length}`);
+      const assistantRecordAt = Date.now();
       await historyRecordAppend(historyRecords, {
         type: "assistant_message",
-        at: Date.now(),
-        text: historyResponseText,
+        at: assistantRecordAt,
+        text: responseText ?? "",
         files: [],
         toolCalls,
         tokens: tokensEntry
       }, appendHistoryRecord);
+      for (const rewrite of pendingHistoryRewrites) {
+        await historyRecordAppend(historyRecords, {
+          type: "assistant_rewrite",
+          at: Date.now(),
+          assistantAt: assistantRecordAt,
+          text: rewrite.text,
+          reason: rewrite.reason
+        }, appendHistoryRecord);
+      }
 
       // Child-agent <response> tag: check on every iteration, deliver each one to parent
       if (isChildAgent) {
@@ -464,6 +482,13 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
               if (truncated !== null) {
                 historyResponseText = truncated;
                 messageAssistantTextRewrite(response.message, truncated);
+                await historyRecordAppend(historyRecords, {
+                  type: "assistant_rewrite",
+                  at: Date.now(),
+                  assistantAt: assistantRecordAt,
+                  text: truncated,
+                  reason: "run_python_failure_trim"
+                }, appendHistoryRecord);
                 logger.debug(
                   "event: Rewrote assistant message in context history after failed <run_python> block"
                 );
