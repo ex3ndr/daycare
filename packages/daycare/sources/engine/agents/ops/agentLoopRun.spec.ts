@@ -347,7 +347,7 @@ describe("agentLoopRun", () => {
                 text: [
                   "<run_python>echo()</run_python>",
                   "<run_python>fail()</run_python>",
-                  "<run_python>echo()</run_python>"
+                  "<run_python>tail()</run_python>"
                 ].join("")
               }
             ]),
@@ -375,7 +375,8 @@ describe("agentLoopRun", () => {
       listTools: vi.fn(() => [
         { name: "run_python", description: "", parameters: {} },
         { name: "echo", description: "", parameters: {} },
-        { name: "fail", description: "", parameters: {} }
+        { name: "fail", description: "", parameters: {} },
+        { name: "tail", description: "", parameters: {} }
       ]),
       execute
     } as unknown as ToolResolverApi;
@@ -405,6 +406,11 @@ describe("agentLoopRun", () => {
       expect.objectContaining({ name: "fail" }),
       expect.anything()
     );
+    const assistantMessage = contexts[1]?.messages.find((message) => message.role === "assistant");
+    const assistantText = assistantMessage ? messageExtractText(assistantMessage) ?? "" : "";
+    expect(assistantText).toContain("<run_python>echo()</run_python>");
+    expect(assistantText).toContain("<run_python>fail()</run_python>");
+    expect(assistantText).not.toContain("<run_python>tail()</run_python>");
     const secondIterationMessages = contexts[1]?.messages ?? [];
     const pythonResultTexts = secondIterationMessages
       .filter((message) => message.role === "user")
@@ -754,7 +760,7 @@ describe("agentLoopRun say tag", () => {
     expect(beforeOrder).toBeLessThan(executeOrder);
   });
 
-  it("keeps post-run_python <say> in context and prepends ignored notice", async () => {
+  it("rewrites context history by removing post-run_python <say> and prepends ignored notice", async () => {
     const connectorSend = vi.fn(async (_targetId: string, _message: unknown) => undefined);
     const connector = connectorBuild(connectorSend);
     const entry = entryBuild();
@@ -807,8 +813,9 @@ describe("agentLoopRun say tag", () => {
     expect(contexts).toHaveLength(2);
     const assistantMessage = contexts[1]?.messages.find((message) => message.role === "assistant");
     const assistantText = assistantMessage ? messageExtractText(assistantMessage) ?? "" : "";
+    expect(assistantText).toContain("<say>before</say>");
     expect(assistantText).toContain("</run_python>");
-    expect(assistantText).toContain("<say>after</say>");
+    expect(assistantText).not.toContain("<say>after</say>");
 
     const pythonResultMessage = contexts[1]?.messages.find((message) => {
       if (message.role !== "user" || !Array.isArray(message.content)) {

@@ -247,6 +247,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       context.messages.push(response.message);
 
       const responseText = messageExtractText(response.message);
+      let historyResponseText = responseText ?? "";
       const toolCalls = messageExtractToolCalls(response.message);
       const runPythonCodes = noToolsModeEnabled
         ? rlmNoToolsExtract(responseText ?? "")
@@ -270,6 +271,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       const ignoredPostRunPythonSayLine = sayAfterRunPythonIgnoredNoticeBuild(
         ignoredPostRunPythonSayCount
       );
+      if (noToolsModeEnabled && hasRunPythonTag && responseText) {
+        const stripped = runPythonSayAfterStrip(responseText);
+        if (stripped !== responseText) {
+          historyResponseText = stripped;
+          messageAssistantTextRewrite(response.message, stripped);
+          logger.debug("event: Rewrote assistant message in context history after <run_python>");
+        }
+      }
 
       // <say> tag mode: only send text inside <say> blocks, suppress the rest
       if (sayEnabled && effectiveResponseText) {
@@ -391,7 +400,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       await historyRecordAppend(historyRecords, {
         type: "assistant_message",
         at: Date.now(),
-        text: responseText ?? "",
+        text: historyResponseText,
         files: [],
         toolCalls,
         tokens: tokensEntry
@@ -449,6 +458,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
               await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
+              const truncated = runPythonAfterFailureTrim(historyResponseText, index);
+              if (truncated !== historyResponseText) {
+                historyResponseText = truncated;
+                messageAssistantTextRewrite(response.message, truncated);
+                logger.debug(
+                  "event: Rewrote assistant message in context history after failed <run_python> block"
+                );
+              }
               context.messages.push(
                 rlmNoToolsResultMessageBuild({
                   error,
@@ -795,6 +812,55 @@ function sayAfterRunPythonIgnoredNoticeBuild(count: number): string | null {
     return null;
   }
   return "<say> after <run_python> was ignored";
+}
+
+function runPythonSayAfterStrip(text: string): string {
+  const split = runPythonResponseSplit(text);
+  if (!split) {
+    return text;
+  }
+  const strippedAfter = split.afterRunPython.replace(/<say(\s[^>]*)?>[\s\S]*?<\/say\s*>/gi, "");
+  return `${split.beforeRunPython}${strippedAfter}`;
+}
+
+function runPythonAfterFailureTrim(text: string, failedIndex: number): string {
+  if (failedIndex < 0) {
+    return text;
+  }
+  const blockPattern = /<run_python(\s[^>]*)?>[\s\S]*?<\/run_python\s*>/gi;
+  const blocks = [...text.matchAll(blockPattern)];
+  const failedBlock = blocks[failedIndex];
+  if (!failedBlock || failedBlock.index === undefined) {
+    return text;
+  }
+  const failedBlockEnd = failedBlock.index + failedBlock[0].length;
+  return text.slice(0, failedBlockEnd);
+}
+
+function messageAssistantTextRewrite(
+  message: Context["messages"][number],
+  text: string
+): void {
+  if (message.role !== "assistant") {
+    return;
+  }
+  const nextContent: typeof message.content = [];
+  let textRewritten = false;
+  for (const part of message.content) {
+    if (part.type !== "text") {
+      nextContent.push(part);
+      continue;
+    }
+    if (textRewritten) {
+      continue;
+    }
+    nextContent.push({ ...part, text });
+    textRewritten = true;
+  }
+  if (!textRewritten) {
+    return;
+  }
+  message.content = nextContent;
 }
 
 function isContextOverflowError(error: unknown): boolean {

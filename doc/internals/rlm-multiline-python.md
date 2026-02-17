@@ -6,6 +6,8 @@ Updated prompt guidance for inline RLM Python execution and response-tag handlin
 - Added inline-mode support for multiple `<run_python>` tags per assistant response.
 - Added sequential execution semantics: execute in order and stop at first failed block.
 - Added strict post-`<run_python>` `<say>` suppression with an explicit notice line.
+- Rewrote assistant text in context history to remove `<say>` tags after `<run_python>`.
+- On first failed `<run_python>` block, rewrote context history to drop everything after the failed block.
 - Updated inline prompt examples to show multi-tag execution and ignored post-run `<say>`.
 - Clarified that tool calls return plain LLM strings, not structured payloads.
 - Added test assertions so these instructions stay present.
@@ -23,5 +25,7 @@ flowchart TD
   F --> H[Emit python_result messages]
   U --> I[Detect say tags after first run_python]
   I --> J[Ignore those say tags]
-  J --> K[Prefix python_result: say after run_python was ignored]
+  J --> K[Rewrite assistant history text]
+  K --> L[Prefix python_result: say after run_python was ignored]
+  C -- No --> M[Rewrite history: cut text after failed block]
 ```
