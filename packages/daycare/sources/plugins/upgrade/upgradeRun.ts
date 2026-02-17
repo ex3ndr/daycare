@@ -6,9 +6,16 @@ type UpgradeRunOptions = {
   sendStatus: (text: string) => Promise<void>;
 };
 
+type Pm2ProcessSnapshot = {
+  pid: number | null;
+  status: string | null;
+  pmUptime: number | null;
+  restartCount: number | null;
+};
+
 /**
  * Runs a full CLI upgrade and restart flow for the configured runtime strategy.
- * PM2 restart command errors are reported and ignored so postStart can confirm by version delta.
+ * PM2 restart command errors are ignored only when PM2 state shows a successful restart.
  * Expects: strategy is supported and processName is a non-empty PM2 process identifier.
  */
 export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
@@ -29,13 +36,18 @@ export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
   }
 
   await options.sendStatus(`Restarting process \"${options.processName}\" via pm2...`);
+  const beforeSnapshot = await pm2ProcessSnapshotRead(options.processName);
 
   try {
     await commandRun("pm2", ["restart", options.processName]);
   } catch (error) {
-    const text = `Restart reported an error for PM2 process \"${options.processName}\" and was ignored: ${errorTextBuild(error)}`;
-    await options.sendStatus(text);
-    return;
+    const afterSnapshot = await pm2ProcessSnapshotRead(options.processName);
+    if (pm2RestartLikelySucceeded(beforeSnapshot, afterSnapshot)) {
+      return;
+    }
+    throw new Error(
+      `Upgrade failed while restarting PM2 process \"${options.processName}\": ${errorTextBuild(error)}`
+    );
   }
 }
 
@@ -74,4 +86,111 @@ function errorTextBuild(error: unknown): string {
     return details;
   }
   return error.message || "Unknown error";
+}
+
+function pm2RestartLikelySucceeded(
+  beforeSnapshot: Pm2ProcessSnapshot | null,
+  afterSnapshot: Pm2ProcessSnapshot | null
+): boolean {
+  if (!beforeSnapshot || !afterSnapshot) {
+    return false;
+  }
+  if (afterSnapshot.status !== "online") {
+    return false;
+  }
+  if (
+    typeof beforeSnapshot.restartCount === "number" &&
+    typeof afterSnapshot.restartCount === "number" &&
+    afterSnapshot.restartCount > beforeSnapshot.restartCount
+  ) {
+    return true;
+  }
+  if (
+    typeof beforeSnapshot.pmUptime === "number" &&
+    typeof afterSnapshot.pmUptime === "number" &&
+    afterSnapshot.pmUptime > beforeSnapshot.pmUptime
+  ) {
+    return true;
+  }
+  if (
+    typeof beforeSnapshot.pid === "number" &&
+    typeof afterSnapshot.pid === "number" &&
+    afterSnapshot.pid !== beforeSnapshot.pid
+  ) {
+    return true;
+  }
+  return false;
+}
+
+async function pm2ProcessSnapshotRead(processName: string): Promise<Pm2ProcessSnapshot | null> {
+  try {
+    const output = await commandOutput("pm2", ["jlist"]);
+    return pm2ProcessSnapshotParse(output, processName);
+  } catch {
+    return null;
+  }
+}
+
+function commandOutput(command: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      command,
+      args,
+      { windowsHide: true },
+      (error, stdout, stderr) => {
+        if (error) {
+          const withOutput = error as Error & {
+            stdout?: string;
+            stderr?: string;
+          };
+          withOutput.stdout = stdout;
+          withOutput.stderr = stderr;
+          reject(error);
+          return;
+        }
+        resolve(stdout);
+      }
+    );
+  });
+}
+
+function pm2ProcessSnapshotParse(
+  output: string,
+  processName: string
+): Pm2ProcessSnapshot | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(output) as unknown;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+  const match = parsed.find((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return false;
+    }
+    return (entry as { name?: unknown }).name === processName;
+  });
+  if (!match || typeof match !== "object") {
+    return null;
+  }
+  const candidate = match as {
+    pid?: unknown;
+    pm2_env?: {
+      status?: unknown;
+      pm_uptime?: unknown;
+      restart_time?: unknown;
+    };
+  };
+  return {
+    pid: typeof candidate.pid === "number" ? candidate.pid : null,
+    status: typeof candidate.pm2_env?.status === "string" ? candidate.pm2_env.status : null,
+    pmUptime: typeof candidate.pm2_env?.pm_uptime === "number" ? candidate.pm2_env.pm_uptime : null,
+    restartCount:
+      typeof candidate.pm2_env?.restart_time === "number"
+        ? candidate.pm2_env.restart_time
+        : null
+  };
 }

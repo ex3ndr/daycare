@@ -21,7 +21,7 @@ The command runs:
 ## Slash commands
 - `/upgrade` - upgrades Daycare CLI and restarts the configured PM2 process.
   - Persists the requester and the pre-upgrade Daycare version before restart.
-  - PM2 restart errors are reported but ignored.
+  - PM2 restart command errors are ignored only when PM2 state indicates restart succeeded.
   - On next process boot, plugin `postStart()` compares previous/current versions and sends completion only when the version actually changed.
 - `/restart` - restarts the configured PM2 process without running the upgrade install step.
   - The command writes a pending marker before `pm2 restart`.

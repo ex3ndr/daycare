@@ -7,7 +7,7 @@ The upgrade flow now confirms completion based on a version delta observed after
   - requester descriptor/context
   - request timestamp/pid
   - pre-upgrade Daycare version
-- Restart command errors from `/upgrade` are logged to the requester but ignored.
+- Restart command errors from `/upgrade` are ignored only if PM2 process snapshots show a successful restart.
 - In `postStart()`, the plugin reads pending metadata and compares `previousVersion` vs current version.
 - It sends an upgrade completion message only when versions differ.
 - The pending marker is a single file, so the most recent requester is always the notification target.
