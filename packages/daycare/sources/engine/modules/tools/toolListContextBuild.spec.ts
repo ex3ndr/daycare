@@ -123,6 +123,22 @@ describe("toolListContextBuild", () => {
     expect(names).toContain("send_user_message");
   });
 
+  it("returns no tools in noTools mode", () => {
+    const result = toolListContextBuild({
+      tools: baseTools,
+      source: "slack",
+      noTools: true,
+      rlm: true,
+      connectorRegistry: {
+        get: () => null,
+        list: () => []
+      },
+      imageRegistry: { list: () => [] }
+    });
+
+    expect(result).toEqual([]);
+  });
+
   it("returns only run_python in rlm mode", () => {
     const result = toolListContextBuild({
       tools: baseTools,

@@ -268,6 +268,163 @@ describe("agentLoopRun", () => {
       expect.anything()
     );
   });
+
+  it("executes run_python tags and injects python_result user messages in noTools mode", async () => {
+    const appendHistoryTypes: string[] = [];
+    const contexts: Context[] = [];
+    const connector = connectorBuild(vi.fn(async () => undefined));
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = {
+      complete: vi.fn(async (incomingContext: Context) => {
+        contexts.push(structuredClone(incomingContext));
+        if (contexts.length === 1) {
+          return {
+            message: assistantMessageBuild([
+              { type: "text", text: "<run_python>value = echo()\nvalue</run_python>" }
+            ]),
+            providerId: "provider-1",
+            modelId: "model-1"
+          };
+        }
+        return {
+          message: assistantMessageBuild([{ type: "text", text: "done" }]),
+          providerId: "provider-1",
+          modelId: "model-1"
+        };
+      })
+    } as unknown as InferenceRouter;
+    const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+      if (toolCall.name !== "echo") {
+        throw new Error(`Unexpected tool: ${toolCall.name}`);
+      }
+      return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
+    });
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} },
+        { name: "echo", description: "", parameters: {} }
+      ]),
+      execute
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        noTools: true,
+        rlm: true,
+        say: true,
+        appendHistoryRecord: async (record) => {
+          appendHistoryTypes.push(record.type);
+        }
+      })
+    );
+
+    expect(inferenceRouter.complete).toHaveBeenCalledTimes(2);
+    expect(contexts[0]?.tools).toEqual([]);
+    expect(execute).toHaveBeenCalledTimes(1);
+    const secondIterationMessages = contexts[1]?.messages ?? [];
+    const hasPythonResultMessage = secondIterationMessages.some((message) => {
+      if (message.role !== "user" || !Array.isArray(message.content)) {
+        return false;
+      }
+      return message.content.some(
+        (part) =>
+          part.type === "text" &&
+          typeof part.text === "string" &&
+          part.text.includes("<python_result>") &&
+          part.text.includes("Python execution completed.")
+      );
+    });
+    expect(hasPythonResultMessage).toBe(true);
+    expect(appendHistoryTypes).toContain("rlm_start");
+    expect(appendHistoryTypes).toContain("rlm_tool_call");
+    expect(appendHistoryTypes).toContain("rlm_tool_result");
+    expect(appendHistoryTypes).toContain("rlm_complete");
+  });
+
+  it("suppresses raw run_python text delivery in noTools mode", async () => {
+    const connectorSend = vi.fn(async () => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        { type: "text", text: "<run_python>echo()</run_python>" }
+      ]),
+      assistantMessageBuild([])
+    ]);
+    const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+      return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
+    });
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} },
+        { name: "echo", description: "", parameters: {} }
+      ]),
+      execute
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        noTools: true,
+        rlm: true,
+        say: true
+      })
+    );
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(connectorSend).not.toHaveBeenCalled();
+  });
+
+  it("does not execute run_python tags unless noTools, rlm, and say are all enabled", async () => {
+    const connectorSend = vi.fn(async () => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([{ type: "text", text: "<run_python>echo()</run_python>" }])
+    ]);
+    const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+      return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
+    });
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} },
+        { name: "echo", description: "", parameters: {} }
+      ]),
+      execute
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        noTools: true,
+        rlm: true,
+        say: false
+      })
+    );
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(connectorSend).toHaveBeenCalledTimes(1);
+    expect(connectorSend).toHaveBeenCalledWith("channel-1", {
+      text: "<run_python>echo()</run_python>",
+      replyToMessageId: undefined
+    });
+  });
 });
 
 describe("agentLoopRun say tag", () => {
@@ -390,6 +547,59 @@ describe("agentLoopRun say tag", () => {
       replyToMessageId: undefined
     });
   });
+
+  it("processes say tags before run_python execution when noTools is enabled", async () => {
+    const connectorSend = vi.fn(async () => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        {
+          type: "text",
+          text: "thinking <say>working</say> <run_python>echo()</run_python>"
+        }
+      ]),
+      assistantMessageBuild([{ type: "text", text: "<say>done</say>" }])
+    ]);
+    const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+      return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
+    });
+    const toolResolver = {
+      listTools: vi.fn(() => [
+        { name: "run_python", description: "", parameters: {} },
+        { name: "echo", description: "", parameters: {} }
+      ]),
+      execute
+    } as unknown as ToolResolverApi;
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        say: true,
+        noTools: true,
+        rlm: true
+      })
+    );
+
+    expect(connectorSend).toHaveBeenNthCalledWith(1, "channel-1", {
+      text: "working",
+      replyToMessageId: undefined
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    const firstSendOrder = connectorSend.mock.invocationCallOrder[0];
+    const firstExecuteOrder = execute.mock.invocationCallOrder[0];
+    expect(firstSendOrder).toBeDefined();
+    expect(firstExecuteOrder).toBeDefined();
+    if (firstSendOrder === undefined || firstExecuteOrder === undefined) {
+      throw new Error("Expected both send and execute calls to be recorded.");
+    }
+    expect(firstSendOrder).toBeLessThan(firstExecuteOrder);
+  });
 });
 
 function optionsBuild(params: {
@@ -401,6 +611,7 @@ function optionsBuild(params: {
   skills?: Skills;
   rlm?: boolean;
   say?: boolean;
+  noTools?: boolean;
   agentType?: "user" | "subagent";
   abortSignal?: AbortSignal;
   appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
@@ -450,7 +661,15 @@ function optionsBuild(params: {
     eventBus: { emit: vi.fn() } as unknown as EngineEventBus,
     assistant: null,
     agentSystem: {
-      config: { current: { features: { rlm: params.rlm ?? false, say: params.say ?? false } } },
+      config: {
+        current: {
+          features: {
+            rlm: params.rlm ?? false,
+            say: params.say ?? false,
+            noTools: params.noTools ?? false
+          }
+        }
+      },
       imageRegistry: { list: () => [] }
     } as unknown as AgentSystem,
     heartbeats: {} as Heartbeats,

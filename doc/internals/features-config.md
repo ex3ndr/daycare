@@ -8,16 +8,18 @@ Feature flags live under `features` in `settings.json`. All flags default to `fa
 {
   "features": {
     "say": true,
-    "rlm": true
+    "rlm": true,
+    "noTools": false
   }
 }
 ```
 
 ## Available flags
 
-| Flag  | Default | Description |
-|-------|---------|-------------|
-| `rlm` | `false` | Enable RLM mode (Python execution via `run_python` tool) |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `rlm` | `false` | Enable RLM tool-call mode (Python execution via `run_python` tool) |
+| `noTools` | `false` | Enable tag-based RLM mode (`<run_python>` / `<python_result>`) with zero exposed tools |
 | `say` | `false` | Enable `<say>` tag mode for foreground agents |
 
 ## Resolution
@@ -32,7 +34,34 @@ flowchart LR
 
 Features are resolved to `ResolvedFeaturesConfig` (all fields required, defaults applied) during
 `configResolve()`. The resolved features object is available both on `Config.features` and in
-the Handlebars template context as `{{features.say}}`, `{{features.rlm}}`, etc.
+the Handlebars template context as `{{features.say}}`, `{{features.rlm}}`, `{{features.noTools}}`, etc.
+
+## noTools RLM mode
+
+Tag-based RLM mode is enabled only when all three flags are true:
+
+- `features.noTools`
+- `features.rlm`
+- `features.say`
+
+When all three are enabled:
+
+- The model receives zero tools in context
+- The system prompt injects Python stubs and `<run_python>` instructions
+- Python execution results are injected back into model context as `<python_result>` user messages
+- Tag-based execution is active and context tools are hidden
+
+```mermaid
+flowchart TD
+  A[Assistant response text] --> B{noTools && rlm && say?}
+  B -->|No| C[Normal tool-call flow]
+  B -->|Yes| D[Extract first <run_python> to last </run_python>]
+  D --> E{Code found?}
+  E -->|No| F[Continue normal loop exit logic]
+  E -->|Yes| G[Run rlmExecute with generated preamble]
+  G --> H[Inject user message: <python_result>...</python_result>]
+  H --> I[Continue inference loop]
+```
 
 ## `<say>` tag mode
 

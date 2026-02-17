@@ -13,6 +13,7 @@ type ToolListOptions = {
   agentKind?: "background" | "foreground";
   allowCronTools?: boolean;
   rlm?: boolean;
+  noTools?: boolean;
   connectorRegistry: Pick<ConnectorRegistry, "get" | "list">;
   imageRegistry: Pick<ImageGenerationRegistry, "list">;
 };
@@ -31,6 +32,10 @@ const FOREGROUND_TOOL_DENYLIST = new Set([
  * Expects: tool names are unique; connector registry is available for capability checks.
  */
 export function toolListContextBuild(options: ToolListOptions): Tool[] {
+  if (options.noTools) {
+    return [];
+  }
+
   if (options.rlm) {
     return toolListRlmBuild(options.tools, options.skills ?? []);
   }

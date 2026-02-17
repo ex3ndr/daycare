@@ -72,6 +72,8 @@ import { agentAppFolderPathResolve } from "./ops/agentAppFolderPathResolve.js";
 import { rlmErrorTextBuild } from "../modules/rlm/rlmErrorTextBuild.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
+import { rlmNoToolsModeIs } from "../modules/rlm/rlmNoToolsModeIs.js";
+import { rlmNoToolsPromptBuild } from "../modules/rlm/rlmNoToolsPromptBuild.js";
 import { rlmRestore } from "../modules/rlm/rlmRestore.js";
 import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
 import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
@@ -406,9 +408,14 @@ export class Agent {
     logger.debug(`event: handleMessage ensuring prompt files agentId=${this.id}`);
     await agentPromptFilesEnsure();
 
+    const toolResolver = item.toolResolverOverride ?? this.agentSystem.toolResolver;
     const providerSettings = providerId
       ? providers.find((provider) => provider.id === providerId)
       : providers[0];
+    const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);
+    const noToolsPrompt = noToolsModeEnabled
+      ? rlmNoToolsPromptBuild(toolResolver.listTools(), availableSkills)
+      : undefined;
 
     logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
     const appFolderPath = agentAppFolderPathResolve(this.descriptor, this.agentSystem.config.current.workspaceDir);
@@ -442,6 +449,7 @@ export class Agent {
       skillsPrompt,
       permanentAgentsPrompt,
       agentPrompt,
+      noToolsPrompt,
       replaceSystemPrompt,
       agentKind,
       parentAgentId: this.descriptor.type === "subagent" || this.descriptor.type === "app"
@@ -459,7 +467,6 @@ export class Agent {
       logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
     }
 
-    const toolResolver = item.toolResolverOverride ?? this.agentSystem.toolResolver;
     const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
     const contextTools = this.listContextTools(toolResolver, source, {
       agentKind,
@@ -1095,6 +1102,7 @@ export class Agent {
       source,
       agentKind: options?.agentKind,
       allowCronTools: options?.allowCronTools,
+      noTools: rlmNoToolsModeIs(this.agentSystem.config.current.features),
       rlm: this.agentSystem.config.current.features.rlm,
       connectorRegistry: this.agentSystem.connectorRegistry,
       imageRegistry: this.agentSystem.imageRegistry
@@ -1268,6 +1276,7 @@ export class Agent {
       additionalWriteDirs,
       permanentAgentsPrompt: context.permanentAgentsPrompt ?? "",
       agentPrompt: context.agentPrompt ?? "",
+      noToolsPrompt: context.noToolsPrompt ?? "",
       features: this.agentSystem.config.current.features
     };
 
@@ -1324,6 +1333,7 @@ type AgentSystemPromptContext = {
   skillsPrompt?: string;
   permanentAgentsPrompt?: string;
   agentPrompt?: string;
+  noToolsPrompt?: string;
   replaceSystemPrompt?: boolean;
   agentKind?: "background" | "foreground";
   parentAgentId?: string;

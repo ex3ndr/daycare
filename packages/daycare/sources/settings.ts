@@ -46,6 +46,7 @@ export type SecuritySettings = {
 export type FeaturesConfig = {
   say?: boolean;
   rlm?: boolean;
+  noTools?: boolean;
 };
 
 export type ResolvedFeaturesConfig = Required<FeaturesConfig>;

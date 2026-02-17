@@ -63,7 +63,8 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
     },
     features: {
       say: settings.features?.say ?? false,
-      rlm: settings.features?.rlm ?? false
+      rlm: settings.features?.rlm ?? false,
+      noTools: settings.features?.noTools ?? false
     }
   };
 }

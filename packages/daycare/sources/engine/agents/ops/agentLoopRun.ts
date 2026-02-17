@@ -1,4 +1,5 @@
 import type { Context } from "@mariozechner/pi-ai";
+import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
 import type { FileStore } from "../../../files/store.js";
@@ -15,6 +16,12 @@ import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import { toolResultFormatVerbose } from "../../modules/tools/toolResultFormatVerbose.js";
 import { toolListContextBuild } from "../../modules/tools/toolListContextBuild.js";
+import { rlmExecute } from "../../modules/rlm/rlmExecute.js";
+import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
+import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
+import { rlmNoToolsModeIs } from "../../modules/rlm/rlmNoToolsModeIs.js";
+import { rlmNoToolsResultMessageBuild } from "../../modules/rlm/rlmNoToolsResultMessageBuild.js";
+import { rlmPreambleBuild } from "../../modules/rlm/rlmPreambleBuild.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Agent } from "../agent.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
@@ -122,6 +129,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   try {
     logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      const noToolsModeEnabled = rlmNoToolsModeIs(agentSystem.config.current.features);
       try {
         activeSkills = await skills.list();
         context.tools = toolListContextBuild({
@@ -130,6 +138,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           source,
           agentKind,
           allowCronTools,
+          noTools: noToolsModeEnabled,
           rlm: agentSystem.config.current.features.rlm,
           connectorRegistry,
           imageRegistry: agentSystem.imageRegistry
@@ -232,6 +241,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
       const responseText = messageExtractText(response.message);
       const toolCalls = messageExtractToolCalls(response.message);
+      const runPythonCode = noToolsModeEnabled
+        ? rlmNoToolsExtract(responseText ?? "")
+        : null;
       lastResponseHadToolCalls = toolCalls.length > 0;
       const suppressUserOutput = messageNoMessageIs(responseText);
       if (suppressUserOutput) {
@@ -276,11 +288,19 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           logger.debug("event: <say> feature enabled but no <say> tags found; suppressing output");
         }
       } else {
+        const hasRunPythonTag = runPythonCode !== null;
         const trimmedText = effectiveResponseText?.trim() ?? "";
         const hasResponseText = trimmedText.length > 0;
-        finalResponseText = hasResponseText ? effectiveResponseText : null;
-        lastResponseTextSent = false;
-        if (hasResponseText && connector && targetId) {
+        if (hasRunPythonTag) {
+          // Hide raw <run_python> payloads from end users; execution result is injected next turn.
+          finalResponseText = null;
+          lastResponseTextSent = true;
+          logger.debug("event: noTools run_python tag detected; suppressing raw response text");
+        } else {
+          finalResponseText = hasResponseText ? effectiveResponseText : null;
+          lastResponseTextSent = false;
+        }
+        if (hasResponseText && !hasRunPythonTag && connector && targetId) {
           try {
             await connector.sendMessage(targetId, {
               text: effectiveResponseText,
@@ -316,6 +336,53 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           finalResponseText = extracted;
           childAgentResponded = true;
           await subagentDeliverResponse(agentSystem, agent, extracted, logger);
+        }
+      }
+
+      if (noToolsModeEnabled) {
+        if (runPythonCode !== null) {
+          const toolCallId = createId();
+          const preamble = rlmPreambleBuild(toolResolver.listTools());
+          const executionContext = {
+            connectorRegistry,
+            fileStore,
+            auth: authStore,
+            logger,
+            assistant,
+            permissions: agent.state.permissions,
+            agent,
+            source,
+            messageContext: entry.context,
+            agentSystem,
+            heartbeats,
+            toolResolver,
+            skills: activeSkills,
+            permissionRequestRegistry: agentSystem.permissionRequestRegistry,
+            appendHistoryRecord,
+            rlmToolOnly: false
+          };
+
+          try {
+            const result = await rlmExecute(
+              runPythonCode,
+              preamble,
+              executionContext,
+              toolResolver,
+              toolCallId,
+              appendHistoryRecord
+            );
+            context.messages.push(rlmNoToolsResultMessageBuild({ result }));
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
+            context.messages.push(rlmNoToolsResultMessageBuild({ error }));
+          }
+
+          if (iteration === MAX_TOOL_ITERATIONS - 1) {
+            logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
+            toolLoopExceeded = true;
+          }
+          continue;
         }
       }
 

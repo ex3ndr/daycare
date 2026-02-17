@@ -47,6 +47,7 @@ import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { Crons } from "./cron/crons.js";
 import { Heartbeats } from "./heartbeat/heartbeats.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
+import { rlmNoToolsModeIs } from "./modules/rlm/rlmNoToolsModeIs.js";
 import { rlmToolBuild } from "./modules/rlm/rlmTool.js";
 import { EngineEventBus } from "./ipc/events.js";
 import { ProviderManager } from "../providers/manager.js";
@@ -488,6 +489,7 @@ export class Engine {
       source,
       agentKind: options?.agentKind,
       allowCronTools: options?.allowCronTools,
+      noTools: rlmNoToolsModeIs(this.config.current.features),
       rlm: this.config.current.features.rlm,
       connectorRegistry: this.modules.connectors,
       imageRegistry: this.modules.images

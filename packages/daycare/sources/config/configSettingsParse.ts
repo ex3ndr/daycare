@@ -41,7 +41,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
   const settingsSchema = z.object({
     features: z.object({
       say: z.boolean().optional(),
-      rlm: z.boolean().optional()
+      rlm: z.boolean().optional(),
+      noTools: z.boolean().optional()
     }).passthrough().optional(),
     engine: z.object({
       socketPath: z.string().min(1).optional(),

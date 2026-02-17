@@ -26,7 +26,7 @@ describe("configResolve", () => {
   it("defaults features to all false", () => {
     const configPath = path.join("/tmp/daycare", "settings.json");
     const config = configResolve({}, configPath);
-    expect(config.features).toEqual({ say: false, rlm: false });
+    expect(config.features).toEqual({ say: false, rlm: false, noTools: false });
   });
 
   it("resolves features.rlm from settings", () => {
@@ -34,12 +34,22 @@ describe("configResolve", () => {
     const config = configResolve({ features: { rlm: true } }, configPath);
     expect(config.features.rlm).toBe(true);
     expect(config.features.say).toBe(false);
+    expect(config.features.noTools).toBe(false);
   });
 
   it("resolves features.say from settings", () => {
     const configPath = path.join("/tmp/daycare", "settings.json");
     const config = configResolve({ features: { say: true } }, configPath);
     expect(config.features.say).toBe(true);
+    expect(config.features.rlm).toBe(false);
+    expect(config.features.noTools).toBe(false);
+  });
+
+  it("resolves features.noTools from settings", () => {
+    const configPath = path.join("/tmp/daycare", "settings.json");
+    const config = configResolve({ features: { noTools: true } }, configPath);
+    expect(config.features.noTools).toBe(true);
+    expect(config.features.say).toBe(false);
     expect(config.features.rlm).toBe(false);
   });
 

@@ -67,6 +67,13 @@ Workspace: `{{workspace}}`. Read/write freely. Shared with other agents.{{#if is
 
 Default: don't narrate routine tool calls. Narrate only for multi-step work, complex problems, sensitive actions, or when asked. Keep it brief.
 
+{{#if noToolsPrompt}}
+
+---
+
+{{{noToolsPrompt}}}
+{{/if}}
+
 ---
 
 ## Runtime

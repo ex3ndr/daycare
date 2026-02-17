@@ -1,15 +1,49 @@
 # RLM (run_python)
 
-RLM mode exposes a single `run_python` tool to the model. The model writes Monty-compatible
-Python and calls normal Daycare tools through generated sync stubs.
+Daycare supports two RLM modes:
+
+- tool-call mode (`features.rlm`) exposes a single `run_python` tool
+- tag mode (`features.noTools && features.rlm && features.say`) exposes zero tools and uses `<run_python>` tags in assistant text
+
+Both modes execute Monty-compatible Python and dispatch normal Daycare tools through generated
+sync stubs.
 
 ## Enable
 
-Set `rlm: true` in `settings.json`.
+Set feature flags under `features` in `settings.json`.
 
-When enabled:
+Tool-call mode:
+
+```json
+{
+  "features": {
+    "rlm": true
+  }
+}
+```
+
 - only `run_python` is exposed to inference contexts
 - all regular tools stay registered internally and are callable by Python code
+
+Tag mode:
+
+```json
+{
+  "features": {
+    "noTools": true,
+    "rlm": true,
+    "say": true
+  }
+}
+```
+
+- no tools are exposed to inference contexts
+- system prompt includes Python stubs and `<run_python>` usage instructions
+- model execution results are injected back as user messages wrapped in `<python_result>`
+
+Tag mode is active only when all three are enabled: `noTools`, `rlm`, and `say`.
+
+In both modes, regular tools stay registered internally and are callable by Python code.
 
 ## Tool Stub Generation
 
@@ -22,12 +56,14 @@ def tool_name(arg1: type, arg2: type) -> str:
     ...
 ```
 
-The preamble is embedded in the `run_python` tool description and regenerated from the
-current tool set when context tools are built.
+The preamble is regenerated from the current tool set when context tools are built:
 
-At execution time, `run_python` uses the **runtime** tool resolver from the current tool
-execution context when available (for example app/subagent tool overrides). This keeps
-Python tool stubs and dispatch aligned with the active sandboxed tool view.
+- tool-call mode: embedded into the `run_python` tool description
+- tag mode: embedded into the system prompt no-tools Python section
+
+At execution time, the active runtime tool resolver from current tool execution context is used
+when available (for example app/subagent tool overrides). This keeps Python tool stubs and
+dispatch aligned with the active sandboxed tool view.
 
 ## Execution Flow
 
