@@ -29,10 +29,10 @@ export type CronSchedulerOptions = {
   resolvePermissions?: (task: CronTaskWithPaths) => Promise<SessionPermissions> | SessionPermissions;
   onTask: (context: CronTaskContext, messageContext: MessageContext) => void | Promise<void>;
   onError?: (error: unknown, taskId: string) => void | Promise<void>;
-  onGatePermissionSkip?: (
+  onGatePermissionRequest?: (
     task: CronTaskWithPaths,
     missing: string[]
-  ) => void | Promise<void>;
+  ) => Promise<boolean>;
   onTaskComplete?: (task: CronTaskWithPaths, runAt: Date) => void | Promise<void>;
   gateCheck?: (input: ExecGateCheckInput) => Promise<ExecGateCheckResult>;
 };
@@ -48,7 +48,7 @@ export class CronScheduler {
   private stopped = false;
   private onTask: CronSchedulerOptions["onTask"];
   private onError?: CronSchedulerOptions["onError"];
-  private onGatePermissionSkip?: CronSchedulerOptions["onGatePermissionSkip"];
+  private onGatePermissionRequest?: CronSchedulerOptions["onGatePermissionRequest"];
   private onTaskComplete?: CronSchedulerOptions["onTaskComplete"];
   private defaultPermissions: SessionPermissions;
   private resolvePermissions?: CronSchedulerOptions["resolvePermissions"];
@@ -61,7 +61,7 @@ export class CronScheduler {
     this.store = options.store;
     this.onTask = options.onTask;
     this.onError = options.onError;
-    this.onGatePermissionSkip = options.onGatePermissionSkip;
+    this.onGatePermissionRequest = options.onGatePermissionRequest;
     this.onTaskComplete = options.onTaskComplete;
     this.defaultPermissions = options.defaultPermissions;
     this.resolvePermissions = options.resolvePermissions;
@@ -270,17 +270,42 @@ export class CronScheduler {
     if (!task.gate) {
       return { allowed: true };
     }
-    const basePermissions = await this.resolvePermissions?.(task)
+    let basePermissions = await this.resolvePermissions?.(task)
       ?? permissionBuildCron(this.defaultPermissions, task.filesPath);
-    const permissions = permissionClone(basePermissions);
-    const permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
+    let permissions = permissionClone(basePermissions);
+    let permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
     if (!permissionCheck.allowed) {
       logger.warn(
         { taskId: task.id, missing: permissionCheck.missing },
-        "event: Cron gate permissions not satisfied; continuing without gate"
+        "event: Cron gate permissions missing; requesting user approval"
       );
-      await this.onGatePermissionSkip?.(task, permissionCheck.missing);
-      return { allowed: true };
+      let granted = false;
+      try {
+        granted = await this.onGatePermissionRequest?.(task, permissionCheck.missing) ?? false;
+      } catch (error) {
+        logger.warn({ taskId: task.id, error }, "error: Cron gate permission request failed");
+        await this.reportError(error, task.id);
+        return { allowed: false };
+      }
+      if (!granted) {
+        logger.debug(
+          { taskId: task.id, missing: permissionCheck.missing },
+          "skip: Cron task skipped because gate permissions were denied or timed out"
+        );
+        return { allowed: false };
+      }
+
+      basePermissions = await this.resolvePermissions?.(task)
+        ?? permissionBuildCron(this.defaultPermissions, task.filesPath);
+      permissions = permissionClone(basePermissions);
+      permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
+      if (!permissionCheck.allowed) {
+        logger.warn(
+          { taskId: task.id, missing: permissionCheck.missing },
+          "skip: Cron task skipped because requested gate permissions are still missing"
+        );
+        return { allowed: false };
+      }
     }
     const result = await this.gateCheck?.({
       gate: task.gate,

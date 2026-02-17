@@ -313,7 +313,9 @@ export class Engine {
     this.crons = new Crons({
       config: this.config,
       eventBus: this.eventBus,
-      agentSystem: this.agentSystem
+      agentSystem: this.agentSystem,
+      connectorRegistry: this.modules.connectors,
+      permissionRequestRegistry: this.permissionRequestRegistry
     });
     this.agentSystem.setCrons(this.crons);
     this.agentSystem.setSignals(this.signals);
@@ -322,7 +324,9 @@ export class Engine {
       config: this.config,
       eventBus: this.eventBus,
       intervalMs: 30 * 60 * 1000,
-      agentSystem: this.agentSystem
+      agentSystem: this.agentSystem,
+      connectorRegistry: this.modules.connectors,
+      permissionRequestRegistry: this.permissionRequestRegistry
     });
     this.heartbeats = heartbeats;
     this.agentSystem.setHeartbeats(heartbeats);

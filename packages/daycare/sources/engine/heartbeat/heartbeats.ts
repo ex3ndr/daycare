@@ -9,6 +9,9 @@ import { HeartbeatStore } from "./ops/heartbeatStore.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition } from "./heartbeatTypes.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import type { ConfigModule } from "../config/configModule.js";
+import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
+import type { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
+import { gatePermissionRequest } from "../scheduling/gatePermissionRequest.js";
 
 const logger = getLogger("heartbeat.facade");
 
@@ -16,6 +19,8 @@ export type HeartbeatsOptions = {
   config: ConfigModule;
   eventBus: EngineEventBus;
   agentSystem: AgentSystem;
+  connectorRegistry: ConnectorRegistry;
+  permissionRequestRegistry: PermissionRequestRegistry;
   intervalMs?: number;
 };
 
@@ -69,20 +74,19 @@ export class Heartbeats {
       onError: async (error, taskIds) => {
         logger.warn({ taskIds, error }, "error: Heartbeat task failed");
       },
-      onGatePermissionSkip: async (task, missing) => {
-        const label = task.title ? `"${task.title}" (${task.id})` : task.id;
-        const notice =
-          `Heartbeat gate permissions not allowed for ${label}: ${missing.join(", ")}. ` +
-          "The gate check was skipped and the heartbeat ran anyway.";
-        await this.agentSystem.post(
-          { descriptor: { type: "system", tag: "heartbeat" } },
-          {
-            type: "system_message",
-            text: notice,
-            origin: "system",
-            silent: true
-          }
-        );
+      onGatePermissionRequest: async (task, missing) => {
+        const label = task.title ? `heartbeat task "${task.title}" (${task.id})` : `heartbeat task ${task.id}`;
+        const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
+        const agentId = await this.agentSystem.agentIdForTarget(target);
+        const result = await gatePermissionRequest({
+          missing,
+          taskLabel: label,
+          agentSystem: this.agentSystem,
+          connectorRegistry: options.connectorRegistry,
+          permissionRequestRegistry: options.permissionRequestRegistry,
+          agentId
+        });
+        return result.granted;
       },
       onTaskComplete: (task, runAt) => {
         this.eventBus.emit("heartbeat.task.ran", { taskId: task.id, runAt: runAt.toISOString() });

@@ -22,13 +22,6 @@ async function cleanupTempStore(dir: string) {
 
 describe("HeartbeatScheduler", () => {
   const temps: string[] = [];
-  const defaultPermissions = (workingDir: string): SessionPermissions => ({
-    workingDir,
-    writeDirs: [],
-    readDirs: [],
-    network: false,
-    events: false
-  });
   const configModule = (workingDir: string): ConfigModule =>
     new ConfigModule(
       configResolve(
@@ -166,4 +159,97 @@ describe("HeartbeatScheduler", () => {
     const task = (runTasks as { prompt: string }[])[0];
     expect(task?.prompt).toBe("Base prompt\n\n[Gate output]\nok");
   });
+
+  it("requests missing gate permissions and runs gate after approval", async () => {
+    const { dir, store } = await createTempStore();
+    temps.push(dir);
+    await store.createTask({
+      title: "Needs network",
+      prompt: "Check network.",
+      gate: { command: "echo gate", permissions: ["@network"] }
+    });
+    const onRun = vi.fn();
+    const gateCheck = vi.fn().mockResolvedValue({
+      shouldRun: true,
+      exitCode: 0,
+      stdout: "",
+      stderr: ""
+    });
+    let networkGranted = false;
+    const resolvePermissions = vi.fn(async () =>
+      defaultPermissions(dir, { network: networkGranted })
+    );
+    const onGatePermissionRequest = vi.fn(async () => {
+      networkGranted = true;
+      return true;
+    });
+
+    const scheduler = new HeartbeatScheduler({
+      config: configModule(dir),
+      store,
+      onRun,
+      gateCheck,
+      resolvePermissions,
+      onGatePermissionRequest,
+      defaultPermissions: defaultPermissions(dir)
+    });
+
+    const result = await scheduler.runNow();
+
+    expect(result.ran).toBe(1);
+    expect(onGatePermissionRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Needs network" }),
+      ["@network"]
+    );
+    expect(resolvePermissions).toHaveBeenCalledTimes(2);
+    expect(gateCheck).toHaveBeenCalledTimes(1);
+    expect(onRun).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips task when missing gate permissions are denied", async () => {
+    const { dir, store } = await createTempStore();
+    temps.push(dir);
+    await store.createTask({
+      title: "Needs network",
+      prompt: "Check network.",
+      gate: { command: "echo gate", permissions: ["@network"] }
+    });
+    const onRun = vi.fn();
+    const gateCheck = vi.fn().mockResolvedValue({
+      shouldRun: true,
+      exitCode: 0,
+      stdout: "",
+      stderr: ""
+    });
+
+    const scheduler = new HeartbeatScheduler({
+      config: configModule(dir),
+      store,
+      onRun,
+      gateCheck,
+      onGatePermissionRequest: vi.fn(async () => false),
+      defaultPermissions: defaultPermissions(dir)
+    });
+
+    const result = await scheduler.runNow();
+
+    expect(result.ran).toBe(0);
+    expect(result.taskIds).toEqual([]);
+    expect(gateCheck).not.toHaveBeenCalled();
+    expect(onRun).not.toHaveBeenCalled();
+  });
 });
+
+function defaultPermissions(
+  workingDir: string,
+  overrides: Partial<SessionPermissions> = {}
+): SessionPermissions {
+  return {
+    workingDir,
+    writeDirs: [],
+    readDirs: [],
+    network: false,
+    events: false,
+    ...overrides
+  };
+}

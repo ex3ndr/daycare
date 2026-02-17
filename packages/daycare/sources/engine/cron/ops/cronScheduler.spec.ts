@@ -12,13 +12,6 @@ import { ConfigModule } from "../../config/configModule.js";
 describe("CronScheduler", () => {
   let tempDir: string;
   let store: CronStore;
-  const defaultPermissions = (workingDir: string): SessionPermissions => ({
-    workingDir,
-    writeDirs: [],
-    readDirs: [],
-    network: false,
-    events: false
-  });
   const configModule = (workingDir: string): ConfigModule =>
     new ConfigModule(
       configResolve(
@@ -306,4 +299,102 @@ describe("CronScheduler", () => {
 
     scheduler.stop();
   });
+
+  it("requests missing gate permissions and runs task after approval", async () => {
+    vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+
+    await store.createTask("gate-permission-approved", {
+      name: "Gate Permission Approved",
+      schedule: "* * * * *",
+      prompt: "Needs network",
+      gate: { command: "echo gate", permissions: ["@network"] }
+    });
+
+    let networkGranted = false;
+    const resolvePermissions = vi.fn(async () =>
+      defaultPermissions(tempDir, { network: networkGranted })
+    );
+    const onGatePermissionRequest = vi.fn(async () => {
+      networkGranted = true;
+      return true;
+    });
+    const gateCheck = vi.fn().mockResolvedValue({
+      shouldRun: true,
+      exitCode: 0,
+      stdout: "",
+      stderr: ""
+    });
+    const onTask = vi.fn();
+    const scheduler = new CronScheduler({
+      config: configModule(tempDir),
+      store,
+      onTask,
+      resolvePermissions,
+      onGatePermissionRequest,
+      gateCheck,
+      defaultPermissions: defaultPermissions(tempDir)
+    });
+
+    await scheduler.start();
+    await vi.advanceTimersByTimeAsync(60 * 1000);
+
+    expect(onGatePermissionRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "gate-permission-approved" }),
+      ["@network"]
+    );
+    expect(resolvePermissions).toHaveBeenCalledTimes(2);
+    expect(gateCheck).toHaveBeenCalledTimes(1);
+    expect(onTask).toHaveBeenCalledTimes(1);
+
+    scheduler.stop();
+  });
+
+  it("skips task when missing gate permissions are denied", async () => {
+    vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+
+    await store.createTask("gate-permission-denied", {
+      name: "Gate Permission Denied",
+      schedule: "* * * * *",
+      prompt: "Needs network",
+      gate: { command: "echo gate", permissions: ["@network"] }
+    });
+
+    const gateCheck = vi.fn().mockResolvedValue({
+      shouldRun: true,
+      exitCode: 0,
+      stdout: "",
+      stderr: ""
+    });
+    const onTask = vi.fn();
+    const scheduler = new CronScheduler({
+      config: configModule(tempDir),
+      store,
+      onTask,
+      onGatePermissionRequest: vi.fn(async () => false),
+      gateCheck,
+      defaultPermissions: defaultPermissions(tempDir)
+    });
+
+    await scheduler.start();
+    await vi.advanceTimersByTimeAsync(60 * 1000);
+
+    expect(gateCheck).not.toHaveBeenCalled();
+    expect(onTask).not.toHaveBeenCalled();
+
+    scheduler.stop();
+  });
 });
+
+function defaultPermissions(
+  workingDir: string,
+  overrides: Partial<SessionPermissions> = {}
+): SessionPermissions {
+  return {
+    workingDir,
+    writeDirs: [],
+    readDirs: [],
+    network: false,
+    events: false,
+    ...overrides
+  };
+}

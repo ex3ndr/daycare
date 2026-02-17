@@ -10,6 +10,9 @@ import type { CronTaskDefinition, CronTaskWithPaths } from "./cronTypes.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { permissionBuildCron } from "../permissions/permissionBuildCron.js";
 import type { ConfigModule } from "../config/configModule.js";
+import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
+import type { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
+import { gatePermissionRequest } from "../scheduling/gatePermissionRequest.js";
 
 const logger = getLogger("cron.facade");
 
@@ -17,6 +20,8 @@ export type CronsOptions = {
   config: ConfigModule;
   eventBus: EngineEventBus;
   agentSystem: AgentSystem;
+  connectorRegistry: ConnectorRegistry;
+  permissionRequestRegistry: PermissionRequestRegistry;
 };
 
 /**
@@ -89,20 +94,21 @@ export class Crons {
       onError: async (error, taskId) => {
         logger.warn({ taskId, error }, "error: Cron task failed");
       },
-      onGatePermissionSkip: async (task, missing) => {
-        const label = task.name ? `"${task.name}" (${task.id})` : task.id;
-        const notice = `Cron gate permissions not allowed for ${label}: ${missing.join(
-          ", "
-        )}. The gate check was skipped and the task ran anyway.`;
+      onGatePermissionRequest: async (task, missing) => {
         const target = task.agentId
           ? { agentId: task.agentId }
-          : { descriptor: { type: "system" as const, tag: "cron" } };
-        await this.agentSystem.post(target, {
-          type: "system_message",
-          text: notice,
-          origin: "system",
-          silent: true
+          : { descriptor: { type: "cron" as const, id: task.taskUid, name: task.name } };
+        const agentId = await this.agentSystem.agentIdForTarget(target);
+        const label = task.name ? `cron task "${task.name}" (${task.id})` : `cron task ${task.id}`;
+        const result = await gatePermissionRequest({
+          missing,
+          taskLabel: label,
+          agentSystem: this.agentSystem,
+          connectorRegistry: options.connectorRegistry,
+          permissionRequestRegistry: options.permissionRequestRegistry,
+          agentId
         });
+        return result.granted;
       },
       onTaskComplete: (task, runAt) => {
         this.eventBus.emit("cron.task.ran", { taskId: task.id, runAt: runAt.toISOString() });
