@@ -105,6 +105,7 @@ sequenceDiagram
 - `local-expose` plugin accepts a configured hostname and exposes it over plain HTTP.
 - On first endpoint create, plugin starts a managed forwarder process bound to configured `0.0.0.0:<port>` (default `18221`).
 - Forwarder process is created with sandbox `allowLocalBinding: true`.
+- Forwarder script reads command arguments as `argv[2]=proxyPort`, `argv[3]=listenPort`.
 - Forwarder process proxies requests to expose proxy (`127.0.0.1:<proxyPort>`) preserving host header routing.
 
 ```mermaid

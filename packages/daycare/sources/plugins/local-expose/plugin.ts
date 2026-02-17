@@ -24,8 +24,8 @@ const LOCAL_FORWARDER_SCRIPT = `
 import http from "node:http";
 import { pipeline } from "node:stream/promises";
 
-const proxyPort = parsePort(process.argv[1], "proxy port");
-const listenPort = parsePort(process.argv[2], "listen port");
+const proxyPort = parsePort(process.argv[2], "proxy port");
+const listenPort = parsePort(process.argv[3], "listen port");
 
 const server = http.createServer((request, response) => {
   const headers = { ...request.headers };
