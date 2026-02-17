@@ -9,6 +9,4 @@ Invoke skills via the `skill` tool. Do not read `SKILL.md` files directly.
 {{{skillsPrompt}}}
 {{/if}}
 
-{{#if pluginPrompt}}
 {{{pluginPrompt}}}
-{{/if}}
