@@ -28,6 +28,14 @@ Top-level composition is plain concatenation with section separators (no Handleb
 Template naming:
 - `SYSTEM.md` is the preamble section template.
 - All other section templates use the `SYSTEM_*.md` prefix.
+- Topology section template is `SYSTEM_TOPOLOGY.md`.
+- Topology rendering no longer injects `cronTaskIds`; current cron state is expected to be read via the `topology` tool.
+
+```mermaid
+flowchart LR
+  A[agentSystemPromptSectionAgentsTopologySignalsChannels] --> B[SYSTEM_TOPOLOGY.md]
+  B --> C[Rendered topology section]
+```
 
 ```mermaid
 flowchart TD

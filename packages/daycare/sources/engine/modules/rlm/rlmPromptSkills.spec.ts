@@ -99,7 +99,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     cronTaskName: "",
     cronMemoryPath: "",
     cronFilesPath: "",
-    cronTaskIds: "",
     appFolderPath: "",
     workspacePermissionGranted: false,
     soulPath: "/tmp/SOUL.md",
@@ -138,7 +137,7 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
     sectionRender("SYSTEM_AUTONOMOUS_OPERATION.md", sectionContext),
     sectionRender("SYSTEM_WORKSPACE.md", sectionContext),
     sectionRender("SYSTEM_TOOL_CALLING.md", sectionContext),
-    sectionRender("SYSTEM_AGENTS_TOPOLOGY_SIGNALS_CHANNELS.md", sectionContext),
+    sectionRender("SYSTEM_TOPOLOGY.md", sectionContext),
     sectionRender("SYSTEM_SKILLS.md", sectionContext),
     sectionRender("SYSTEM_MESSAGES.md", sectionContext),
     sectionRender("SYSTEM_FILES.md", sectionContext)
