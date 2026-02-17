@@ -52,7 +52,7 @@ export function exposeListToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

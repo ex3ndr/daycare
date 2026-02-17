@@ -162,7 +162,6 @@ function permissionResultBuild(input: { approved: boolean; text?: string }) {
       details: { approved: input.approved },
       isError: false,
       timestamp: Date.now()
-    },
-    files: []
+    }
   };
 }

@@ -70,8 +70,7 @@ describe("agentHistoryContextBuild", () => {
             content: [{ type: "text", text: "Python execution completed." }],
             isError: false,
             timestamp: 9
-          },
-          files: []
+          }
         }
       }
     ];

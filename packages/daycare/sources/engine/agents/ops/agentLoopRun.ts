@@ -3,7 +3,7 @@ import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
 import type { FileStore } from "../../../files/store.js";
-import type { AgentSkill, FileReference } from "@/types";
+import type { AgentSkill } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import type { Connector } from "@/types";
@@ -33,6 +33,8 @@ import { tokensResolve } from "./tokensResolve.js";
 import type { Skills } from "../../skills/skills.js";
 import { agentHistoryPendingToolResultsBuild } from "./agentHistoryPendingToolResultsBuild.js";
 import { tagExtract, tagExtractAll } from "../../../util/tagExtract.js";
+import { sayFileExtract } from "../../modules/say/sayFileExtract.js";
+import { sayFileResolve } from "../../modules/say/sayFileResolve.js";
 
 const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
 
@@ -109,7 +111,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   let response: Awaited<ReturnType<InferenceRouter["complete"]>> | null = null;
   let toolLoopExceeded = false;
   let lastResponseHadToolCalls = false;
-  const generatedFiles: FileReference[] = [];
   let lastResponseTextSent = false;
   let finalResponseText: string | null = null;
   let lastResponseNoMessage = false;
@@ -257,27 +258,71 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       // <say> tag mode: only send text inside <say> blocks, suppress the rest
       if (sayEnabled && effectiveResponseText) {
         const sayBlocks = tagExtractAll(effectiveResponseText, "say");
+        const sayFiles = sayFileExtract(effectiveResponseText);
+        const resolvedSayFiles =
+          sayFiles.length > 0
+            ? await sayFileResolve({
+                files: sayFiles,
+                fileStore,
+                permissions: agent.state.permissions,
+                logger
+              })
+            : [];
+
         if (sayBlocks.length > 0) {
           effectiveResponseText = null; // suppress full text
           finalResponseText = sayBlocks[sayBlocks.length - 1]!;
           lastResponseTextSent = false;
           if (connector && targetId) {
             try {
-              for (const block of sayBlocks) {
+              for (let index = 0; index < sayBlocks.length; index += 1) {
+                const block = sayBlocks[index]!;
+                const filesForMessage =
+                  index === sayBlocks.length - 1 && resolvedSayFiles.length > 0
+                    ? resolvedSayFiles
+                    : undefined;
                 await connector.sendMessage(targetId, {
                   text: block,
+                  files: filesForMessage,
                   replyToMessageId: entry.context.messageId
                 });
                 eventBus.emit("agent.outgoing", {
                   agentId: agent.id,
                   source,
-                  message: { text: block },
+                  message: {
+                    text: block,
+                    files: filesForMessage
+                  },
                   context: entry.context
                 });
               }
               lastResponseTextSent = true;
             } catch (error) {
               logger.warn({ connector: source, error }, "error: Failed to send <say> response text");
+            }
+          }
+        } else if (resolvedSayFiles.length > 0) {
+          effectiveResponseText = null;
+          finalResponseText = null;
+          lastResponseTextSent = true; // prevent post-loop fallback send
+          if (connector && targetId) {
+            try {
+              await connector.sendMessage(targetId, {
+                text: null,
+                files: resolvedSayFiles,
+                replyToMessageId: entry.context.messageId
+              });
+              eventBus.emit("agent.outgoing", {
+                agentId: agent.id,
+                source,
+                message: {
+                  text: null,
+                  files: resolvedSayFiles
+                },
+                context: entry.context
+              });
+            } catch (error) {
+              logger.warn({ connector: source, error }, "error: Failed to send <file> response files");
             }
           }
         } else {
@@ -448,7 +493,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           rlmToolOnly: agentSystem.config.current.features.rlm
         });
         logger.debug(
-          `event: Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError} fileCount=${toolResult.files.length}`
+          `event: Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError}`
         );
 
         if (verbose && !suppressUserOutput && connector && targetId) {
@@ -465,10 +510,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           toolCallId: toolCall.id,
           output: toolResult
         }, appendHistoryRecord);
-        if (toolResult.files.length > 0) {
-          generatedFiles.push(...toolResult.files);
-          logger.debug(`event: Tool generated files count=${toolResult.files.length}`);
-        }
       }
 
       if (iteration === MAX_TOOL_ITERATIONS - 1) {
@@ -572,10 +613,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   const responseText = messageExtractText(response.message);
   const hasResponseText = !!responseText && responseText.trim().length > 0;
   logger.debug(
-    `event: Extracted assistant text hasText=${hasResponseText} textLength=${responseText?.length ?? 0} generatedFileCount=${generatedFiles.length}`
+    `event: Extracted assistant text hasText=${hasResponseText} textLength=${responseText?.length ?? 0}`
   );
 
-  if (!hasResponseText && generatedFiles.length === 0) {
+  if (!hasResponseText) {
     if (toolLoopExceeded && lastResponseHadToolCalls) {
       const message = "Tool execution limit reached.";
       logger.debug("error: Tool loop exceeded, sending error message");
@@ -601,16 +642,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
   }
 
   const shouldSendText = hasResponseText && !lastResponseTextSent && !lastResponseNoMessage;
-  const shouldSendFiles = generatedFiles.length > 0 && !lastResponseNoMessage;
   const outgoingText = shouldSendText ? responseText : null;
   logger.debug(
-    `send: Sending response to user textLength=${outgoingText?.length ?? 0} fileCount=${generatedFiles.length} targetId=${targetId ?? "none"}`
+    `send: Sending response to user textLength=${outgoingText?.length ?? 0} targetId=${targetId ?? "none"}`
   );
   try {
-    if (connector && targetId && (outgoingText || shouldSendFiles)) {
+    if (connector && targetId && outgoingText) {
       await connector.sendMessage(targetId, {
         text: outgoingText,
-        files: shouldSendFiles ? generatedFiles : undefined,
         replyToMessageId: entry.context.messageId
       });
       logger.debug("send: Response sent successfully");
@@ -618,8 +657,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         agentId: agent.id,
         source,
         message: {
-          text: outgoingText,
-          files: shouldSendFiles ? generatedFiles : undefined
+          text: outgoingText
         },
         context: entry.context
       });

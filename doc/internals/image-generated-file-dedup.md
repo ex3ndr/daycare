@@ -1,22 +1,22 @@
 # Generated Image Reply Behavior
 
-`agentLoopRun` now sends generated files without the synthetic `Generated files.` caption, and the system prompt explicitly tells models not to resend those files with `send_file` unless asked.
+Auto-attach for tool-generated files was removed.
 
-## Problem
+## Current Behavior
 
-The fallback caption made image replies noisy, and models could still produce duplicate sends by calling `send_file` again.
-
-## Behavior
-
-- When a tool returns files and no final text is present, Daycare sends files with `text: null`.
-- `SYSTEM.md` now instructs models: files returned by tools (including `generate_image`) are auto-attached, so do not re-send with `send_file` unless the user explicitly asks.
+- `generate_image` and `generate_mermaid_png` return file paths in text.
+- Daycare does not auto-send those files after tool execution.
+- Models must explicitly send files:
+  - Normal mode: use `send_file`.
+  - Say mode: use `<file>` tags (optionally with `mode`).
 
 ## Flow
 
 ```mermaid
 flowchart TD
-  A[Tool returns files] --> B{Assistant final text exists?}
-  B -->|Yes| C[Send text + files]
-  B -->|No| D[Send files with no fallback caption]
-  D --> E[Model guidance: avoid duplicate send_file for same file]
+  A[Tool generates file] --> B[Tool returns text path]
+  B --> C{Response mode}
+  C -->|Normal| D[Model calls send_file]
+  C -->|Say| E[Model emits file tags]
+  E --> F[Runtime resolves + sends files]
 ```

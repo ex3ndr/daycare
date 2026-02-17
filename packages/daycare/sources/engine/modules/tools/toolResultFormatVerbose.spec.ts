@@ -13,21 +13,18 @@ const baseToolMessage = {
 };
 
 describe("toolResultFormatVerbose", () => {
-  it("formats success results with file counts", () => {
+  it("formats success results", () => {
     const result: ToolExecutionResult = {
-      toolMessage: baseToolMessage,
-      files: [{ id: "file-1", name: "file.txt", mimeType: "text/plain", size: 10, path: "/tmp/file.txt" }]
+      toolMessage: baseToolMessage
     };
 
     const text = toolResultFormatVerbose(result);
     expect(text).toContain("[result]");
-    expect(text).toContain("1 file");
   });
 
   it("formats error results", () => {
     const result: ToolExecutionResult = {
-      toolMessage: { ...baseToolMessage, isError: true },
-      files: []
+      toolMessage: { ...baseToolMessage, isError: true }
     };
 
     const text = toolResultFormatVerbose(result);

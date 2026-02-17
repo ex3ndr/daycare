@@ -79,5 +79,5 @@ function toolExecutionResultBuild(
     isError: true,
     timestamp: at
   };
-  return { toolMessage, files: [] };
+  return { toolMessage };
 }

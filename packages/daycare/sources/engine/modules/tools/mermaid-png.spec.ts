@@ -45,16 +45,13 @@ describe("buildMermaidPngTool", () => {
       mimeType: "image/png",
       source: "generate_mermaid_png"
     });
-    expect(result.files).toEqual([
+    expect(result.toolMessage.isError).toBe(false);
+    expect(result.toolMessage.content).toEqual([
       {
-        id: "file-1",
-        name: "pipeline.png",
-        mimeType: "image/png",
-        size: expect.any(Number),
-        path: "/tmp/file-1.png"
+        type: "text",
+        text: "Generated Mermaid PNG: /tmp/file-1.png"
       }
     ]);
-    expect(result.toolMessage.isError).toBe(false);
   });
 
   it("rejects fenced markdown input", async () => {

@@ -69,7 +69,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         content: [
           {
             type: "text",
-            text: `Generated Mermaid PNG ${stored.name}.`
+            text: `Generated Mermaid PNG: ${stored.path}`
           }
         ],
         details: {
@@ -85,16 +85,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
       };
 
       return {
-        toolMessage,
-        files: [
-          {
-            id: stored.id,
-            name: stored.name,
-            mimeType: stored.mimeType,
-            size: stored.size,
-            path: stored.path
-          }
-        ]
+        toolMessage
       };
     }
   };

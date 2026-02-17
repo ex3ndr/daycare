@@ -145,7 +145,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -194,7 +194,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -226,7 +226,7 @@ export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -261,7 +261,7 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -293,7 +293,7 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

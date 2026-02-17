@@ -157,7 +157,7 @@ export function topologyToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

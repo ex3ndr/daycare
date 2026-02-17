@@ -53,7 +53,7 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

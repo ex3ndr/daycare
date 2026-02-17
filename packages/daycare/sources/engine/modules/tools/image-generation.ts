@@ -109,8 +109,7 @@ export function buildImageGenerationTool(
       };
 
       return {
-        toolMessage,
-        files: result.files
+        toolMessage
       };
     }
   };

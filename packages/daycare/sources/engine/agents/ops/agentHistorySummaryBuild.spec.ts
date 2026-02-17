@@ -52,8 +52,7 @@ describe("agentHistorySummaryBuild", () => {
             content: [{ type: "text", text: "sent" }],
             isError: false,
             timestamp: 130
-          },
-          files: []
+          }
         }
       }),
       buildRecord({ type: "note", at: 140, text: "done" })

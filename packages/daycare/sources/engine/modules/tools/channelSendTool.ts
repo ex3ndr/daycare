@@ -52,7 +52,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

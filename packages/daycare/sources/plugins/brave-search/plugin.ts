@@ -148,7 +148,7 @@ export const plugin = definePlugin({
               timestamp: Date.now()
             };
 
-            return { toolMessage, files: [] };
+            return { toolMessage };
           }
         });
       },

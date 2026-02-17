@@ -94,7 +94,7 @@ export function buildHeartbeatRunTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -138,7 +138,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -171,7 +171,7 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

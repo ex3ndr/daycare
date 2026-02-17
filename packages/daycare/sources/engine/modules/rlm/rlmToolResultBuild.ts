@@ -20,8 +20,5 @@ export function rlmToolResultBuild(
     timestamp: Date.now()
   };
 
-  return {
-    toolMessage,
-    files: []
-  };
+  return { toolMessage };
 }

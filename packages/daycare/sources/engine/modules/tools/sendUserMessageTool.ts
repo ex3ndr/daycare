@@ -64,7 +64,7 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

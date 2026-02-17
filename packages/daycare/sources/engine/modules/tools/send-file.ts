@@ -113,10 +113,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         timestamp: Date.now()
       };
 
-      return {
-        toolMessage,
-        files: []
-      };
+      return { toolMessage };
     }
   };
 }

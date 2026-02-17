@@ -1,7 +1,7 @@
 import type { Tool, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 
-import type { FileReference, MessageContext } from "@/types";
+import type { MessageContext } from "@/types";
 import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { FileStore } from "../../../files/store.js";
@@ -37,7 +37,6 @@ export type ToolExecutionContext<State = Record<string, unknown>> = {
 
 export type ToolExecutionResult = {
   toolMessage: ToolResultMessage;
-  files: FileReference[];
 };
 
 export type ToolDefinition<TParams extends TSchema = TSchema> = {

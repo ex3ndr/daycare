@@ -151,7 +151,7 @@ function buildResult(
     timestamp: Date.now()
   };
 
-  return { toolMessage, files: [] };
+  return { toolMessage };
 }
 
 function formatMontyException(exception: MontyExceptionLike, fallback: string): string {

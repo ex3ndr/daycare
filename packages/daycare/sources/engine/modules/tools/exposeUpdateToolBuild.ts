@@ -61,7 +61,7 @@ export function exposeUpdateToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

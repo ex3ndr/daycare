@@ -68,7 +68,7 @@ export function exposeCreateToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

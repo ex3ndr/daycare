@@ -91,7 +91,7 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

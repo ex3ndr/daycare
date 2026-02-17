@@ -77,7 +77,7 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

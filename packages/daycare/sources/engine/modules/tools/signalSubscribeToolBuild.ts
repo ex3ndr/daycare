@@ -52,7 +52,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

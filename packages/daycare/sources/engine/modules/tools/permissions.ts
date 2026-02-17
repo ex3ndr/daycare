@@ -146,7 +146,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
           isError: false,
           timestamp: Date.now()
         };
-        return { toolMessage, files: [] };
+        return { toolMessage };
       }
 
       const permissionsToRequest = missingPermissions;
@@ -253,7 +253,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
           isError: true,
           timestamp: Date.now()
         };
-        return { toolMessage, files: [] };
+        return { toolMessage };
       }
 
       const targetAgentId = decision.agentId || requestedAgentId;
@@ -310,7 +310,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -361,7 +361,7 @@ export function buildPermissionGrantTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

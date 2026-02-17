@@ -103,8 +103,7 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
           pid: processInfo.pid,
           keepAlive: processInfo.keepAlive,
           status: processInfo.status
-        }),
-        files: []
+        })
       };
     }
   };
@@ -137,8 +136,7 @@ export function buildProcessListTool(processes: Processes): ToolDefinition {
               2
             );
       return {
-        toolMessage: buildToolMessage(toolCall, text, false, { count: items.length }),
-        files: []
+        toolMessage: buildToolMessage(toolCall, text, false, { count: items.length })
       };
     }
   };
@@ -174,8 +172,7 @@ export function buildProcessGetTool(processes: Processes): ToolDefinition {
           pid: item.pid,
           status: item.status,
           path: item.logPath
-        }),
-        files: []
+        })
       };
     }
   };
@@ -203,8 +200,7 @@ export function buildProcessStopTool(processes: Processes): ToolDefinition {
           processId: processInfo.id,
           signal,
           status: processInfo.status
-        }),
-        files: []
+        })
       };
     }
   };
@@ -226,8 +222,7 @@ export function buildProcessStopAllTool(processes: Processes): ToolDefinition {
         toolMessage: buildToolMessage(toolCall, text, false, {
           count: stopped.length,
           signal
-        }),
-        files: []
+        })
       };
     }
   };

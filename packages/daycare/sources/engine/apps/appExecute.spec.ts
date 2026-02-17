@@ -70,8 +70,7 @@ describe("appExecute", () => {
             content: [{ type: "text", text: "ok" }],
             isError: false,
             timestamp: Date.now()
-          },
-          files: []
+          }
         }) as ToolExecutionResult
     };
 
@@ -221,8 +220,7 @@ describe("appExecute", () => {
             content: [{ type: "text", text: "ok" }],
             isError: false,
             timestamp: Date.now()
-          },
-          files: []
+          }
         }) as ToolExecutionResult
     };
 

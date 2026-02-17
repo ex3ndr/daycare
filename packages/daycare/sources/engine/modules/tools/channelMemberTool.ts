@@ -52,7 +52,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -87,7 +87,7 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

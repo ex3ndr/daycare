@@ -182,8 +182,7 @@ function okResult(name: string, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError: false,
       timestamp: Date.now()
-    },
-    files: []
+    }
   };
 }
 
@@ -196,7 +195,6 @@ function errorResult(name: string, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError: true,
       timestamp: Date.now()
-    },
-    files: []
+    }
   };
 }

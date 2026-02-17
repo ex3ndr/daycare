@@ -90,8 +90,7 @@ describe("rlmResultConvert", () => {
         ],
         isError: false,
         timestamp: Date.now()
-      },
-      files: []
+      }
     };
 
     expect(rlmResultConvert(result)).toBe("hello\nworld");
@@ -106,8 +105,7 @@ describe("rlmResultConvert", () => {
         content: [],
         isError: true,
         timestamp: Date.now()
-      },
-      files: []
+      }
     };
 
     expect(rlmResultConvert(result)).toBe("Tool execution failed.");

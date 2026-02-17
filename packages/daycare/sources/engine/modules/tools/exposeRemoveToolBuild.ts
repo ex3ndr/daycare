@@ -45,7 +45,7 @@ export function exposeRemoveToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

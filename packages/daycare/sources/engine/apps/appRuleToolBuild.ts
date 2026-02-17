@@ -92,7 +92,7 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

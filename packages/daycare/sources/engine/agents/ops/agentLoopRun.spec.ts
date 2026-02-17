@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { agentLoopRun } from "./agentLoopRun.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import type { Agent } from "../agent.js";
-import type { Connector, FileReference, ToolExecutionResult } from "@/types";
+import type { Connector, ToolExecutionResult } from "@/types";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import type { AgentSkill } from "@/types";
 import type { InferenceRouter } from "../../modules/inference/router.js";
@@ -17,14 +17,7 @@ import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Skills } from "../../skills/skills.js";
 
 describe("agentLoopRun", () => {
-  it("auto-sends generated files without fallback text when model has no final text", async () => {
-    const generatedFile: FileReference = {
-      id: "generated-file-1",
-      name: "image.png",
-      mimeType: "image/png",
-      size: 16,
-      path: "/tmp/provider/image.png"
-    };
+  it("does not auto-send files from tool results when model has no final text", async () => {
     const connectorSend = vi.fn(
       async (_targetId: string, _message: unknown) => undefined
     );
@@ -42,12 +35,7 @@ describe("agentLoopRun", () => {
       if (toolCall.name !== "generate_image") {
         throw new Error(`Unexpected tool: ${toolCall.name}`);
       }
-      return toolResultGeneratedBuild(
-        generatedFile,
-        "/workspace/files/generated-image.png",
-        toolCall.id,
-        toolCall.name
-      );
+      return toolResultGeneratedBuild("/workspace/files/generated-image.png", toolCall.id, toolCall.name);
     });
 
     await agentLoopRun(
@@ -60,14 +48,7 @@ describe("agentLoopRun", () => {
       })
     );
 
-    expect(connectorSend).toHaveBeenCalledTimes(1);
-    expect(connectorSend).toHaveBeenCalledWith(
-      "channel-1",
-      expect.objectContaining({
-        text: null,
-        files: [generatedFile]
-      })
-    );
+    expect(connectorSend).not.toHaveBeenCalled();
   });
 
   it("reads skills via facade before each inference call", async () => {
@@ -600,6 +581,107 @@ describe("agentLoopRun say tag", () => {
     }
     expect(firstSendOrder).toBeLessThan(firstExecuteOrder);
   });
+
+  it("attaches <file> tags to the final <say> block", async () => {
+    const connectorSend = vi.fn(async () => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        {
+          type: "text",
+          text: [
+            "<say>first</say>",
+            "<say>second</say>",
+            '<file mode="doc">/tmp/file-1__report.pdf</file>'
+          ].join("")
+        }
+      ])
+    ]);
+    const toolResolver = toolResolverBuild(async () => {
+      throw new Error("unexpected");
+    });
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        say: true,
+        fileStore: fileStoreBuild()
+      })
+    );
+
+    expect(connectorSend).toHaveBeenCalledTimes(2);
+    expect(connectorSend).toHaveBeenNthCalledWith(1, "channel-1", {
+      text: "first",
+      files: undefined,
+      replyToMessageId: undefined
+    });
+    expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", {
+      text: "second",
+      files: [
+        {
+          id: "file-1",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          size: 10,
+          path: "/tmp/file-1__report.pdf",
+          sendAs: "document"
+        }
+      ],
+      replyToMessageId: undefined
+    });
+  });
+
+  it("sends files with null text when only <file> tags exist in say mode", async () => {
+    const connectorSend = vi.fn(async () => undefined);
+    const connector = connectorBuild(connectorSend);
+    const entry = entryBuild();
+    const context = contextBuild();
+    const inferenceRouter = inferenceRouterBuild([
+      assistantMessageBuild([
+        {
+          type: "text",
+          text: "thinking... <file>/tmp/file-1__report.pdf</file>"
+        }
+      ])
+    ]);
+    const toolResolver = toolResolverBuild(async () => {
+      throw new Error("unexpected");
+    });
+
+    await agentLoopRun(
+      optionsBuild({
+        entry,
+        context,
+        connector,
+        inferenceRouter,
+        toolResolver,
+        say: true,
+        fileStore: fileStoreBuild()
+      })
+    );
+
+    expect(connectorSend).toHaveBeenCalledTimes(1);
+    expect(connectorSend).toHaveBeenCalledWith("channel-1", {
+      text: null,
+      files: [
+        {
+          id: "file-1",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          size: 10,
+          path: "/tmp/file-1__report.pdf",
+          sendAs: "auto"
+        }
+      ],
+      replyToMessageId: undefined
+    });
+  });
 });
 
 function optionsBuild(params: {
@@ -616,6 +698,7 @@ function optionsBuild(params: {
   abortSignal?: AbortSignal;
   appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
   inferenceSessionId?: string;
+  fileStore?: FileStore;
 }) {
   const logger = {
     debug: vi.fn(),
@@ -656,7 +739,7 @@ function optionsBuild(params: {
     connectorRegistry,
     inferenceRouter: params.inferenceRouter,
     toolResolver: params.toolResolver,
-    fileStore: {} as FileStore,
+    fileStore: params.fileStore ?? ({} as FileStore),
     authStore: {} as AuthStore,
     eventBus: { emit: vi.fn() } as unknown as EngineEventBus,
     assistant: null,
@@ -783,7 +866,6 @@ function toolCallBuild(
 }
 
 function toolResultGeneratedBuild(
-  file: FileReference,
   workspacePath: string,
   toolCallId: string,
   toolName: string
@@ -801,8 +883,7 @@ function toolResultGeneratedBuild(
       },
       isError: false,
       timestamp: Date.now()
-    },
-    files: [file]
+    }
   };
 }
 
@@ -819,7 +900,25 @@ function toolResultTextBuild(
       content: [{ type: "text", text }],
       isError: false,
       timestamp: Date.now()
-    },
-    files: []
+    }
   };
+}
+
+function fileStoreBuild(): FileStore {
+  return {
+    get: async (id: string) => {
+      if (id !== "file-1") {
+        return null;
+      }
+      return {
+        id: "file-1",
+        name: "report.pdf",
+        path: "/tmp/file-1__report.pdf",
+        mimeType: "application/pdf",
+        size: 10,
+        source: "test",
+        createdAt: "2026-01-01T00:00:00.000Z"
+      };
+    }
+  } as unknown as FileStore;
 }

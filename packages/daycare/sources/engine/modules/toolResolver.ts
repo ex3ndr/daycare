@@ -51,8 +51,7 @@ export class ToolResolver {
       const availableTools = Array.from(this.tools.keys()).join(",");
       logger.debug(`event: Tool not found toolName=${toolCall.name} availableTools=${availableTools}`);
       return {
-        toolMessage: buildToolError(toolCall, `Unknown tool: ${toolCall.name}`),
-        files: []
+        toolMessage: buildToolError(toolCall, `Unknown tool: ${toolCall.name}`)
       };
     }
 
@@ -66,7 +65,7 @@ export class ToolResolver {
       const startTime = Date.now();
       const result = await entry.execute(args, context, toolCall);
       const duration = Date.now() - startTime;
-      logger.debug(`event: Tool execution completed toolName=${toolCall.name} durationMs=${duration} isError=${result.toolMessage.isError} fileCount=${result.files.length}`);
+      logger.debug(`event: Tool execution completed toolName=${toolCall.name} durationMs=${duration} isError=${result.toolMessage.isError}`);
       if (!result.toolMessage.toolCallId) {
         result.toolMessage.toolCallId = toolCall.id;
       }
@@ -78,7 +77,7 @@ export class ToolResolver {
       const message = error instanceof Error ? error.message : "Tool execution failed.";
       logger.debug(`error: Tool execution threw error toolName=${toolCall.name} error=${String(error)}`);
       logger.warn({ tool: toolCall.name, error }, "error: Tool execution failed");
-      return { toolMessage: buildToolError(toolCall, message), files: [] };
+      return { toolMessage: buildToolError(toolCall, message) };
     }
   }
 }

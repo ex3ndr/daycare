@@ -52,8 +52,7 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
           toolMessage: appToolErrorBuild(
             toolCall,
             `Tool "${toolCall.name}" is not available in app sandbox.`
-          ),
-          files: []
+          )
         };
       }
 
@@ -93,8 +92,7 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
           "review: App tool call denied"
         );
         return {
-          toolMessage: appToolErrorBuild(toolCall, `App review denied this tool call: ${reason}`),
-          files: []
+          toolMessage: appToolErrorBuild(toolCall, `App review denied this tool call: ${reason}`)
         };
       }
 

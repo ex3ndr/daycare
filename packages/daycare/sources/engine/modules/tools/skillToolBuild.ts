@@ -88,7 +88,7 @@ export function skillToolBuild(): ToolDefinition {
           toolCall.name,
           `Skill executed in sandbox. Result:\n\n---\n\n${body}`
         );
-        return { toolMessage, files: [] };
+        return { toolMessage };
       }
 
       const body = skillBody.length > 0 ? skillBody : "(Skill body is empty.)";
@@ -97,7 +97,7 @@ export function skillToolBuild(): ToolDefinition {
         toolCall.name,
         `Skill loaded (embedded). Follow the instructions below:\n\n---\n\n${body}`
       );
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

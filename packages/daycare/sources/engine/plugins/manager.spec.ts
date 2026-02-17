@@ -377,8 +377,7 @@ export const plugin = {
             content: [{ type: "text", text: "ok" }],
             isError: false,
             timestamp: Date.now()
-          },
-          files: []
+          }
         })
       });
     }

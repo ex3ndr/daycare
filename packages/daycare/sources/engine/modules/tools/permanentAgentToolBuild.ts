@@ -145,7 +145,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

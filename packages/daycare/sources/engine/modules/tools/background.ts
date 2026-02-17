@@ -75,7 +75,7 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }
@@ -121,7 +121,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage, files: [] };
+      return { toolMessage };
     }
   };
 }

@@ -247,7 +247,7 @@ export function buildExecTool(): ToolDefinition {
         const toolMessage = buildToolMessage(toolCall, text, false, {
           cwd: path.relative(workingDir, cwd) || "."
         });
-        return { toolMessage, files: [] };
+        return { toolMessage };
       } catch (error) {
         const execError = error as ExecException & {
           stdout?: string | Buffer;
@@ -263,7 +263,7 @@ export function buildExecTool(): ToolDefinition {
           exitCode: execError.code ?? null,
           signal: execError.signal ?? null
         });
-        return { toolMessage, files: [] };
+        return { toolMessage };
       }
     }
   };
@@ -306,7 +306,7 @@ async function handleReadSecure(
       { type: "text", text },
       { type: "image", data: imageBuffer.toString("base64"), mimeType }
     ];
-    return { toolMessage, files: [] };
+    return { toolMessage };
   }
 
   const textContent = await readTextFileSecure(resolvedPath);
@@ -359,7 +359,7 @@ async function handleReadSecure(
     offset: offset ?? null,
     limit: limit ?? null
   });
-  return { toolMessage, files: [] };
+  return { toolMessage };
 }
 
 /**
@@ -406,7 +406,7 @@ async function handleWriteSecure(
     bytes,
     append
   });
-  return { toolMessage, files: [] };
+  return { toolMessage };
 }
 
 /**
@@ -456,7 +456,7 @@ async function handleEditSecure(
       path: displayPath,
       edits: counts
     });
-    return { toolMessage, files: [] };
+    return { toolMessage };
   } finally {
     await handle.close();
   }
