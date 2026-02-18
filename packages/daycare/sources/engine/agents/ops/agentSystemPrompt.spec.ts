@@ -180,6 +180,8 @@ describe("agentSystemPrompt", () => {
       expect(rendered).toContain("## Agent Prompt");
       expect(rendered).toContain("Handle long-running research.");
       expect(rendered).toContain("## Python Execution");
+      expect(rendered).not.toContain("If you include `<say>` in the same response");
+      expect(rendered).not.toContain("emit `<say>` only if you have new user-facing information");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

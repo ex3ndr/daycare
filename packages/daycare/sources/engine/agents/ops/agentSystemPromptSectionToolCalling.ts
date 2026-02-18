@@ -13,9 +13,10 @@ export async function agentSystemPromptSectionToolCalling(
 ): Promise<string> {
   const config = context.agentSystem?.config?.current;
   const availableTools = context.agentSystem?.toolResolver?.listTools() ?? [];
+  const isForeground = context.descriptor?.type === "user";
   const noToolsPrompt =
     config?.features.noTools && availableTools.length > 0
-      ? await rlmNoToolsPromptBuild(availableTools)
+      ? await rlmNoToolsPromptBuild(availableTools, { isForeground })
       : "";
   const template = await agentPromptBundledRead("SYSTEM_TOOLS.md");
   const section = Handlebars.compile(template)({}).trim();

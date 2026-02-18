@@ -33,4 +33,18 @@ describe("rlmNoToolsPromptBuild", () => {
     );
     expect(prompt.match(/Use `try\/except ToolError` for tool failures\./g)?.length ?? 0).toBe(1);
   });
+
+  it("omits say-tag instructions for non-foreground agents", async () => {
+    const tools = [
+      { name: "run_python", description: "", parameters: {} },
+      { name: "echo", description: "Echo text", parameters: {} }
+    ] as unknown as Tool[];
+
+    const prompt = await rlmNoToolsPromptBuild(tools, { isForeground: false });
+
+    expect(prompt).not.toContain("If you include `<say>` in the same response");
+    expect(prompt).not.toContain("emit `<say>` only if you have new user-facing information");
+    expect(prompt).not.toContain("<say>Starting checks</say>");
+    expect(prompt).toContain("<run_python>...</run_python>");
+  });
 });

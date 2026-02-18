@@ -6,6 +6,7 @@ import { rlmPreambleBuild } from "./rlmPreambleBuild.js";
 
 type RlmNoToolsPromptTemplateContext = {
   preamble: string;
+  isForeground: boolean;
 };
 
 let rlmNoToolsPromptTemplatePromise:
@@ -15,10 +16,13 @@ let rlmNoToolsPromptTemplatePromise:
  * Builds no-tools RLM instructions for the system prompt using <run_python> tags.
  * Expects: tools contains the full runtime tool list used for Monty dispatch.
  */
-export async function rlmNoToolsPromptBuild(tools: Tool[]): Promise<string> {
+export async function rlmNoToolsPromptBuild(
+  tools: Tool[],
+  options: { isForeground: boolean } = { isForeground: true }
+): Promise<string> {
   const preamble = rlmPreambleBuild(tools);
   const template = await rlmNoToolsPromptTemplateCompile();
-  return template({ preamble }).trim();
+  return template({ preamble, isForeground: options.isForeground }).trim();
 }
 
 async function rlmNoToolsPromptTemplateCompile(): Promise<

@@ -76,6 +76,20 @@ describe("system prompt skills rendering", () => {
     expect(prompt).toContain("Before replying, scan the skill descriptions below:");
     expect(prompt).not.toContain("For local skill authoring:");
   });
+
+  it("does not include say-tag instructions in no-tools mode for background agents", async () => {
+    const prompt = await renderSystemPrompt({
+      toolsText: "Tool notes",
+      skillsPrompt: "",
+      noToolsPrompt: await rlmNoToolsPromptBuild(tools, { isForeground: false }),
+      isForeground: false,
+      featuresSay: true
+    });
+
+    expect(prompt).toContain("## Python Execution");
+    expect(prompt).not.toContain("If you include `<say>` in the same response");
+    expect(prompt).not.toContain("emit `<say>` only if you have new user-facing information");
+  });
 });
 
 async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<string> {
