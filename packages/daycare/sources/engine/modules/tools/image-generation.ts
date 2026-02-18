@@ -1,12 +1,11 @@
 import { Type } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
 import type { ImageGenerationRequest } from "../images/types.js";
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 
 const schema = Type.Object(
   {
@@ -19,6 +18,28 @@ const schema = Type.Object(
   { additionalProperties: false }
 );
 
+const imageGenerationResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    provider: Type.String(),
+    fileCount: Type.Number(),
+    workspaceDir: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type ImageGenerationResult = {
+  summary: string;
+  provider: string;
+  fileCount: number;
+  workspaceDir: string;
+};
+
+const imageGenerationReturns: ToolResultContract<ImageGenerationResult> = {
+  schema: imageGenerationResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildImageGenerationTool(
   imageRegistry: ImageGenerationRegistry
 ): ToolDefinition {
@@ -28,7 +49,7 @@ export function buildImageGenerationTool(
       description: "Generate one or more images using the configured image provider.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: imageGenerationReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ImageGenerationRequest & { provider?: string };
       const providers = imageRegistry.list();
@@ -66,10 +87,11 @@ export function buildImageGenerationTool(
       const createdAt = new Date();
       const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
 
+      const summary = `Generated ${result.files.length} image(s) with ${providerId}. Saved under ${workspaceFilesDir}.`;
       const content: Array<{ type: "text"; text: string }> = [
         {
           type: "text",
-          text: `Generated ${result.files.length} image(s) with ${providerId}. Saved under ${workspaceFilesDir}.`
+          text: summary
         }
       ];
       const workspaceFiles: Array<{ name: string; path: string; mimeType: string }> = [];
@@ -110,7 +132,15 @@ export function buildImageGenerationTool(
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          provider: providerId,
+          fileCount: workspaceFiles.length,
+          workspaceDir: workspaceFilesDir
+        }
+      };
     }
   };
 }

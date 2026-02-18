@@ -1,9 +1,8 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 
 const envSchema = Type.Record(
   Type.String({ minLength: 1 }),
@@ -68,6 +67,53 @@ type RunHeartbeatArgs = Static<typeof runSchema>;
 type AddHeartbeatArgs = Static<typeof addSchema>;
 type RemoveHeartbeatArgs = Static<typeof removeSchema>;
 
+const heartbeatRunResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    ran: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type HeartbeatRunResult = Static<typeof heartbeatRunResultSchema>;
+
+const heartbeatRunReturns: ToolResultContract<HeartbeatRunResult> = {
+  schema: heartbeatRunResultSchema,
+  toLLMText: (result) => result.summary
+};
+
+const heartbeatAddResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    taskId: Type.String(),
+    title: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type HeartbeatAddResult = Static<typeof heartbeatAddResultSchema>;
+
+const heartbeatAddReturns: ToolResultContract<HeartbeatAddResult> = {
+  schema: heartbeatAddResultSchema,
+  toLLMText: (result) => result.summary
+};
+
+const heartbeatRemoveResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    taskId: Type.String(),
+    removed: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type HeartbeatRemoveResult = Static<typeof heartbeatRemoveResultSchema>;
+
+const heartbeatRemoveReturns: ToolResultContract<HeartbeatRemoveResult> = {
+  schema: heartbeatRemoveResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildHeartbeatRunTool(): ToolDefinition {
   return {
     tool: {
@@ -75,11 +121,14 @@ export function buildHeartbeatRunTool(): ToolDefinition {
       description: "Run heartbeat tasks immediately as a single batch instead of waiting for the next interval.",
       parameters: runSchema
     },
-    returns: toolReturnText,
+    returns: heartbeatRunReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as RunHeartbeatArgs;
       const result = await toolContext.heartbeats.runNow({ ids: payload.ids });
 
+      const summary = result.ran > 0
+        ? `Heartbeat ran ${result.ran} task(s): ${result.taskIds.join(", ")}.`
+        : "No heartbeat tasks ran.";
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -87,16 +136,20 @@ export function buildHeartbeatRunTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: result.ran > 0
-              ? `Heartbeat ran ${result.ran} task(s): ${result.taskIds.join(", ")}.`
-              : "No heartbeat tasks ran."
+            text: summary
           }
         ],
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          ran: result.ran
+        }
+      };
     }
   };
 }
@@ -108,7 +161,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
       description: "Create or update a heartbeat prompt stored in config/heartbeat (optional gate).",
       parameters: addSchema
     },
-    returns: toolReturnText,
+    returns: heartbeatAddReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddHeartbeatArgs;
 
@@ -121,6 +174,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
         overwrite: payload.overwrite
       });
 
+      const summary = `Heartbeat saved: ${result.id} (${result.title}).`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -128,7 +182,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Heartbeat saved: ${result.id} (${result.title}).`
+            text: summary
           }
         ],
         details: {
@@ -141,7 +195,14 @@ export function buildHeartbeatAddTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId: result.id,
+          title: result.title
+        }
+      };
     }
   };
 }
@@ -153,11 +214,14 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
       description: "Delete a heartbeat task.",
       parameters: removeSchema
     },
-    returns: toolReturnText,
+    returns: heartbeatRemoveReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as RemoveHeartbeatArgs;
       const removed = await toolContext.heartbeats.removeTask(payload.id);
 
+      const summary = removed
+        ? `Removed heartbeat ${payload.id}.`
+        : `Heartbeat not found: ${payload.id}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -165,9 +229,7 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: removed
-              ? `Removed heartbeat ${payload.id}.`
-              : `Heartbeat not found: ${payload.id}.`
+            text: summary
           }
         ],
         details: { id: payload.id, removed },
@@ -175,7 +237,14 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId: payload.id,
+          removed
+        }
+      };
     }
   };
 }

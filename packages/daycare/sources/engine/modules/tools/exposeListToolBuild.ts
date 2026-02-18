@@ -1,11 +1,30 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Exposes } from "../../expose/exposes.js";
 
 const schema = Type.Object({}, { additionalProperties: false });
+
+const exposeListResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    endpointCount: Type.Number(),
+    providerCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type ExposeListResult = {
+  summary: string;
+  endpointCount: number;
+  providerCount: number;
+};
+
+const exposeListReturns: ToolResultContract<ExposeListResult> = {
+  schema: exposeListResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 /**
  * Builds the expose_list tool for listing active expose endpoints.
@@ -20,14 +39,14 @@ export function exposeListToolBuild(
       description: "List all expose endpoints and available providers.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: exposeListReturns,
     execute: async (_args, _toolContext, toolCall) => {
       const [endpoints, providers] = await Promise.all([
         exposes.list(),
         Promise.resolve(exposes.listProviders())
       ]);
 
-      const text = [
+      const summary = [
         `Expose endpoints: ${endpoints.length}`,
         ...endpoints.map((endpoint) => {
           const target = endpoint.target.type === "port"
@@ -45,7 +64,7 @@ export function exposeListToolBuild(
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           endpoints,
           providers
@@ -54,7 +73,14 @@ export function exposeListToolBuild(
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          endpointCount: endpoints.length,
+          providerCount: providers.length
+        }
+      };
     }
   };
 }

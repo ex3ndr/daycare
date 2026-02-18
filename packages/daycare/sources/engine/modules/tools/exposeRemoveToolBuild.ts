@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Exposes } from "../../expose/exposes.js";
 
 const schema = Type.Object(
@@ -13,6 +12,21 @@ const schema = Type.Object(
 );
 
 type ExposeRemoveArgs = Static<typeof schema>;
+
+const exposeRemoveResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    endpointId: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type ExposeRemoveResult = Static<typeof exposeRemoveResultSchema>;
+
+const exposeRemoveReturns: ToolResultContract<ExposeRemoveResult> = {
+  schema: exposeRemoveResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 /**
  * Builds the expose_remove tool for deleting expose endpoints.
@@ -27,7 +41,7 @@ export function exposeRemoveToolBuild(
       description: "Remove an expose endpoint and tear down its tunnel.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: exposeRemoveReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ExposeRemoveArgs;
       const endpointId = payload.endpointId.trim();
@@ -37,17 +51,24 @@ export function exposeRemoveToolBuild(
 
       await exposes.remove(endpointId);
 
+      const summary = `Expose endpoint removed: ${endpointId}`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text: `Expose endpoint removed: ${endpointId}` }],
+        content: [{ type: "text", text: summary }],
         details: { endpointId },
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          endpointId
+        }
+      };
     }
   };
 }

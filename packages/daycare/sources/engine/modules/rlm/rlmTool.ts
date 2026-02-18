@@ -1,5 +1,4 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../tools/toolReturnText.js";
 
 import type { ToolDefinition } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
@@ -9,7 +8,7 @@ import { RLM_TOOL_NAME } from "./rlmConstants.js";
 import { rlmErrorTextBuild } from "./rlmErrorTextBuild.js";
 import { rlmPreambleBuild } from "./rlmPreambleBuild.js";
 import { rlmResultTextBuild } from "./rlmResultTextBuild.js";
-import { rlmToolResultBuild } from "./rlmToolResultBuild.js";
+import { rlmToolResultBuild, rlmToolReturns } from "./rlmToolResultBuild.js";
 
 const schema = Type.Object(
   {
@@ -32,7 +31,7 @@ export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
         "Execute Python code to complete the task. Available function stubs are injected in this tool description at runtime.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: rlmToolReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as RlmArgs;
       const runtimeResolver = context.toolResolver ?? toolResolver;

@@ -1,9 +1,8 @@
 import { Type } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { THEMES, renderMermaid } from "beautiful-mermaid";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { renderToPng } from "../../../util/renderToPng.js";
 
 const schema = Type.Object(
@@ -23,6 +22,30 @@ type MermaidPngArgs = {
   width?: number;
 };
 
+const mermaidPngResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    fileId: Type.String(),
+    fileName: Type.String(),
+    theme: Type.String(),
+    width: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type MermaidPngResult = {
+  summary: string;
+  fileId: string;
+  fileName: string;
+  theme: string;
+  width: number;
+};
+
+const mermaidPngReturns: ToolResultContract<MermaidPngResult> = {
+  schema: mermaidPngResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds a tool that renders Mermaid diagram source into a PNG file.
  * Expects: args.mermaid contains raw Mermaid source without markdown fences.
@@ -35,7 +58,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         "Render raw Mermaid diagram source into a PNG file and return it as a generated artifact.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: mermaidPngReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as MermaidPngArgs;
       const themeName = payload.theme ?? "github-light";
@@ -64,6 +87,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         source: "generate_mermaid_png"
       });
 
+      const summary = `Generated Mermaid PNG: ${stored.path}`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -71,7 +95,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         content: [
           {
             type: "text",
-            text: `Generated Mermaid PNG: ${stored.path}`
+            text: summary
           }
         ],
         details: {
@@ -86,7 +110,16 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          fileId: stored.id,
+          fileName: stored.name,
+          theme: themeName,
+          width: payload.width ?? 1600
+        }
+      };
     }
   };
 }

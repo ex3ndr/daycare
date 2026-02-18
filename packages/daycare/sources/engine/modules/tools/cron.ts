@@ -1,12 +1,11 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { cronExpressionParse as parseCronExpression } from "../../cron/ops/cronExpressionParse.js";
 import type { Crons } from "../../cron/crons.js";
 import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
-import type { ToolDefinition, ToolExecutionContext } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 
 const envSchema = Type.Record(
   Type.String({ minLength: 1 }),
@@ -93,6 +92,26 @@ type CronReadMemoryArgs = Static<typeof readCronMemorySchema>;
 type CronWriteMemoryArgs = Static<typeof writeCronMemorySchema>;
 type CronDeleteTaskArgs = Static<typeof deleteCronTaskSchema>;
 
+const cronResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    taskId: Type.String(),
+    name: Type.Optional(Type.String()),
+    schedule: Type.Optional(Type.String()),
+    deleted: Type.Optional(Type.Boolean()),
+    bytes: Type.Optional(Type.Number()),
+    recordCount: Type.Optional(Type.Number())
+  },
+  { additionalProperties: false }
+);
+
+type CronResult = Static<typeof cronResultSchema>;
+
+const cronReturns: ToolResultContract<CronResult> = {
+  schema: cronResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildCronTool(crons: Crons): ToolDefinition {
   return {
     tool: {
@@ -101,7 +120,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         "Create a scheduled cron task from a prompt stored in config/cron (optional agentId + gate).",
       parameters: addCronSchema
     },
-    returns: toolReturnText,
+    returns: cronReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddCronToolArgs;
 
@@ -126,6 +145,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         deleteAfterRun: payload.deleteAfterRun
       });
 
+      const summary = `Scheduled cron task ${task.id} (${task.name}) with schedule ${task.schedule}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -133,7 +153,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Scheduled cron task ${task.id} (${task.name}) with schedule ${task.schedule}.`
+            text: summary
           }
         ],
         details: {
@@ -147,7 +167,15 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId: task.id,
+          name: task.name,
+          schedule: task.schedule
+        }
+      };
     }
   };
 }
@@ -159,7 +187,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
       description: "Read a cron task's description and prompt.",
       parameters: readCronTaskSchema
     },
-    returns: toolReturnText,
+    returns: cronReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as CronReadTaskArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
@@ -168,6 +196,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
         throw new Error(`Cron task not found: ${taskId}`);
       }
 
+      const summary = [task.description ?? "", task.prompt].filter((line) => line.length > 0).join("\n");
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -197,7 +226,15 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId: task.id,
+          name: task.name,
+          schedule: task.schedule
+        }
+      };
     }
   };
 }
@@ -209,12 +246,13 @@ export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
       description: "Read the memory for a cron task.",
       parameters: readCronMemorySchema
     },
-    returns: toolReturnText,
+    returns: cronReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as CronReadMemoryArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
       const memory = await crons.readMemory(taskId);
 
+      const summary = memory;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -222,7 +260,7 @@ export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
         content: [
           {
             type: "text",
-            text: memory
+            text: summary
           }
         ],
         details: { taskId },
@@ -230,7 +268,13 @@ export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId
+        }
+      };
     }
   };
 }
@@ -242,7 +286,7 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
       description: "Write or append memory for a cron task.",
       parameters: writeCronMemorySchema
     },
-    returns: toolReturnText,
+    returns: cronReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as CronWriteMemoryArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
@@ -251,6 +295,7 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
         : payload.content;
       await crons.writeMemory(taskId, content);
 
+      const summary = `Cron memory updated for task ${taskId}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -258,7 +303,7 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Cron memory updated for task ${taskId}.`
+            text: summary
           }
         ],
         details: { taskId, bytes: content.length },
@@ -266,7 +311,14 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId,
+          bytes: content.length
+        }
+      };
     }
   };
 }
@@ -278,12 +330,13 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
       description: "Delete a cron task from disk and scheduler.",
       parameters: deleteCronTaskSchema
     },
-    returns: toolReturnText,
+    returns: cronReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as CronDeleteTaskArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
       const deleted = await crons.deleteTask(taskId);
 
+      const summary = deleted ? `Deleted cron task ${taskId}.` : `Cron task not found: ${taskId}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -291,7 +344,7 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
         content: [
           {
             type: "text",
-            text: deleted ? `Deleted cron task ${taskId}.` : `Cron task not found: ${taskId}.`
+            text: summary
           }
         ],
         details: { taskId, deleted },
@@ -299,7 +352,14 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          taskId,
+          deleted
+        }
+      };
     }
   };
 }

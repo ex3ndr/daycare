@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Channels } from "../../channels/channels.js";
 
 const schema = Type.Object(
@@ -15,6 +14,23 @@ const schema = Type.Object(
 
 type ChannelCreateArgs = Static<typeof schema>;
 
+const channelCreateResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    channelId: Type.String(),
+    channelName: Type.String(),
+    leaderAgentId: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type ChannelCreateResult = Static<typeof channelCreateResultSchema>;
+
+const channelCreateReturns: ToolResultContract<ChannelCreateResult> = {
+  schema: channelCreateResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function channelCreateToolBuild(channels: Channels): ToolDefinition {
   return {
     tool: {
@@ -22,10 +38,11 @@ export function channelCreateToolBuild(channels: Channels): ToolDefinition {
       description: "Create a channel with a designated leader agent.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: channelCreateReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelCreateArgs;
       const channel = await channels.create(payload.name, payload.leaderAgentId);
+      const summary = `Channel created: #${channel.name} (leader=${channel.leader}).`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -33,15 +50,22 @@ export function channelCreateToolBuild(channels: Channels): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Channel created: #${channel.name} (leader=${channel.leader}).`
+            text: summary
           }
         ],
         details: { channel },
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          channelId: channel.id,
+          channelName: channel.name,
+          leaderAgentId: channel.leader
+        }
+      };
     }
   };
 }
-

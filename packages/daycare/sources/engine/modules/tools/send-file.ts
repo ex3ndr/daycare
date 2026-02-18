@@ -1,5 +1,4 @@
 import { Type } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
@@ -8,7 +7,8 @@ import type {
   ConnectorFileDisposition,
   FileReference,
   ToolDefinition,
-  ToolExecutionContext
+  ToolExecutionContext,
+  ToolResultContract
 } from "@/types";
 import { pathResolveSecure, openSecure } from "../../permissions/pathResolveSecure.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
@@ -45,6 +45,32 @@ type SendFileArgs = {
   channelId?: string;
 };
 
+const sendFileResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    fileId: Type.String(),
+    fileName: Type.String(),
+    mimeType: Type.String(),
+    size: Type.Number(),
+    sendAs: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type SendFileResult = {
+  summary: string;
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  sendAs: string;
+};
+
+const sendFileReturns: ToolResultContract<SendFileResult> = {
+  schema: sendFileResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildSendFileTool(): ToolDefinition<typeof schema> {
   return {
     tool: {
@@ -53,7 +79,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         "Send a file to the current channel via the active connector. Supports photo/video/document modes when available.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: sendFileReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as SendFileArgs;
       if (!context.connectorRegistry) {
@@ -95,6 +121,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         files: [{ ...file, sendAs }]
       });
 
+      const summary = `Sent file ${file.name}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -102,7 +129,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         content: [
           {
             type: "text",
-            text: `Sent file ${file.name}.`
+            text: summary
           }
         ],
         details: {
@@ -115,7 +142,17 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          fileId: file.id,
+          fileName: file.name,
+          mimeType: file.mimeType,
+          size: file.size,
+          sendAs
+        }
+      };
     }
   };
 }

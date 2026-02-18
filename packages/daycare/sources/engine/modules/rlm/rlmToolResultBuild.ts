@@ -1,7 +1,22 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "../tools/toolReturnText.js";
+import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolExecutionResult } from "@/types";
+import type { ToolExecutionResult, ToolResultContract } from "@/types";
+
+export const rlmToolResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    isError: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+export type RlmToolResult = Static<typeof rlmToolResultSchema>;
+
+export const rlmToolReturns: ToolResultContract<RlmToolResult> = {
+  schema: rlmToolResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 /**
  * Builds a run_python tool execution result using a plain text payload.
@@ -21,5 +36,11 @@ export function rlmToolResultBuild(
     timestamp: Date.now()
   };
 
-  return toolExecutionResultText(toolMessage);
+  return {
+    toolMessage,
+    typedResult: {
+      summary: text,
+      isError
+    }
+  };
 }

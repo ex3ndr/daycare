@@ -15,6 +15,29 @@ Tool execution now supports a typed return contract that keeps outputs both:
   - validates `typedResult` against the tool's return schema
   - injects LLM text via `returns.toLLMText` when no text block is present
 - `rlmResultConvert` now prefers `typedResult` (then `toolMessage.details`) before text.
+- Fallback `{ text }` contracts were replaced across production tools with
+  per-tool structured schemas (for example `read`, `write`, `exec`, process tools,
+  app tools, expose tools, signal tools, and search/fetch plugins).
+
+## Per-tool return mapping
+
+Each tool now declares its own typed output object and keeps LLM rendering explicit.
+
+```mermaid
+flowchart LR
+  A[Tool logic] --> B[Build structured typedResult]
+  B --> C[Return schema check in ToolResolver]
+  C --> D[toLLMText(typedResult)]
+  D --> E[Assistant-visible text]
+  C --> F[RLM typed object]
+```
+
+Example pattern:
+
+- `read` -> `{ summary, action, content, path, size, truncated... }`
+- `process_start` -> `{ summary, action, processId, status... }`
+- `web_search` -> `{ summary, query, resultCount }`
+- `app_rules` -> `{ summary, appId, action, changed, approved }`
 
 ## Data Flow
 

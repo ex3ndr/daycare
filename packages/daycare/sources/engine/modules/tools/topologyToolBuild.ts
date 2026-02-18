@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import { agentList } from "../../agents/ops/agentList.js";
 import type { Channels } from "../../channels/channels.js";
@@ -11,6 +10,34 @@ import type { Exposes } from "../../expose/exposes.js";
 import type { Signals } from "../../signals/signals.js";
 
 const schema = Type.Object({}, { additionalProperties: false });
+
+const topologyResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    agentCount: Type.Number(),
+    cronCount: Type.Number(),
+    heartbeatCount: Type.Number(),
+    signalSubscriptionCount: Type.Number(),
+    channelCount: Type.Number(),
+    exposeCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type TopologyResult = {
+  summary: string;
+  agentCount: number;
+  cronCount: number;
+  heartbeatCount: number;
+  signalSubscriptionCount: number;
+  channelCount: number;
+  exposeCount: number;
+};
+
+const topologyReturns: ToolResultContract<TopologyResult> = {
+  schema: topologyResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 /**
  * Builds the topology tool that snapshots agents, cron tasks, heartbeat tasks,
@@ -29,7 +56,7 @@ export function topologyToolBuild(
         "Return a full system topology snapshot (agents, cron tasks, heartbeat tasks, and signal subscriptions).",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: topologyReturns,
     execute: async (_args, toolContext, toolCall) => {
       const callerAgentId = toolContext.agent.id;
 
@@ -121,7 +148,7 @@ export function topologyToolBuild(
           authenticated: Boolean(endpoint.auth)
         }));
 
-      const text = [
+      const summary = [
         `## Agents (${agents.length})`,
         ...listAgentsLinesBuild(agents),
         "",
@@ -145,7 +172,7 @@ export function topologyToolBuild(
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           callerAgentId,
           agents,
@@ -159,7 +186,18 @@ export function topologyToolBuild(
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          agentCount: agents.length,
+          cronCount: cronsSummary.length,
+          heartbeatCount: heartbeats.length,
+          signalSubscriptionCount: signalSubscriptionsSummary.length,
+          channelCount: channelsSummary.length,
+          exposeCount: exposeSummary.length
+        }
+      };
     }
   };
 }

@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
-import { toolReturnText } from "./tools/toolReturnText.js";
 import { ToolResolver } from "./toolResolver.js";
+
+const textResultSchema = Type.Object({ text: Type.String() }, { additionalProperties: false });
+const textReturns = {
+  schema: textResultSchema,
+  toLLMText: (result: { text: string }) => result.text
+};
 
 describe("ToolResolver", () => {
   it('rejects non-run_python tool calls when rlmToolOnly is enabled', async () => {
@@ -14,7 +19,7 @@ describe("ToolResolver", () => {
         description: "Read file.",
         parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
       },
-      returns: toolReturnText,
+      returns: textReturns,
       execute: async () => okResult("read_file", "ok")
     });
 
@@ -40,7 +45,7 @@ describe("ToolResolver", () => {
         description: "Run python.",
         parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
       },
-      returns: toolReturnText,
+      returns: textReturns,
       execute: async () => okResult("run_python", "ok")
     });
 
@@ -66,7 +71,7 @@ describe("ToolResolver", () => {
         description: "Read file.",
         parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
       },
-      returns: toolReturnText,
+      returns: textReturns,
       execute: async () => okResult("read_file", "ok")
     });
 
@@ -92,7 +97,7 @@ describe("ToolResolver", () => {
         description: "Read file.",
         parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
       },
-      returns: toolReturnText,
+      returns: textReturns,
       execute: async () => ({
         toolMessage: {
           role: "toolResult",

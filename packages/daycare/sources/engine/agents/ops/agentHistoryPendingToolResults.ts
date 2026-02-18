@@ -1,5 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "../../modules/tools/toolReturnText.js";
+import { toolExecutionResultOutcome, toolReturnOutcome } from "../../modules/tools/toolReturnOutcome.js";
 
 import type { AgentHistoryRecord, ToolExecutionResult } from "@/types";
 
@@ -80,5 +80,5 @@ function toolExecutionResultBuild(
     isError: true,
     timestamp: at
   };
-  return toolExecutionResultText(toolMessage);
+  return toolExecutionResultOutcome(toolMessage);
 }

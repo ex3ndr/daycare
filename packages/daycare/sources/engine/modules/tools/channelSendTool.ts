@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { AgentDescriptor, ToolDefinition } from "@/types";
+import type { AgentDescriptor, ToolDefinition, ToolResultContract } from "@/types";
 import type { Channels } from "../../channels/channels.js";
 
 const schema = Type.Object(
@@ -16,6 +15,23 @@ const schema = Type.Object(
 
 type ChannelSendArgs = Static<typeof schema>;
 
+const channelSendResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    channelName: Type.String(),
+    senderUsername: Type.String(),
+    deliveredCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type ChannelSendResult = Static<typeof channelSendResultSchema>;
+
+const channelSendReturns: ToolResultContract<ChannelSendResult> = {
+  schema: channelSendResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function channelSendToolBuild(channels: Channels): ToolDefinition {
   return {
     tool: {
@@ -23,7 +39,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
       description: "Send a message to a channel. Mentioned usernames receive it plus the leader.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: channelSendReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ChannelSendArgs;
       const senderUsername = senderUsernameResolve(toolContext.agent.descriptor);
@@ -34,6 +50,9 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         payload.mentions ?? []
       );
 
+      const summary =
+        `Sent message to #${sent.message.channelName} as @${senderUsername}. ` +
+        `Delivered to ${sent.deliveredAgentIds.length} agent(s).`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -41,9 +60,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         content: [
           {
             type: "text",
-            text:
-              `Sent message to #${sent.message.channelName} as @${senderUsername}. ` +
-              `Delivered to ${sent.deliveredAgentIds.length} agent(s).`
+            text: summary
           }
         ],
         details: {
@@ -54,7 +71,15 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          channelName: sent.message.channelName,
+          senderUsername,
+          deliveredCount: sent.deliveredAgentIds.length
+        }
+      };
     }
   };
 }

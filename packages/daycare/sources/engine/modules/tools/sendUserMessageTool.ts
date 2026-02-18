@@ -1,8 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { messageBuildUserFacing } from "../../messages/messageBuildUserFacing.js";
 
 const schema = Type.Object(
@@ -13,6 +12,22 @@ const schema = Type.Object(
 );
 
 type SendUserMessageArgs = Static<typeof schema>;
+
+const sendUserMessageResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    targetAgentId: Type.String(),
+    originAgentId: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type SendUserMessageResult = Static<typeof sendUserMessageResultSchema>;
+
+const sendUserMessageReturns: ToolResultContract<SendUserMessageResult> = {
+  schema: sendUserMessageResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 /**
  * Builds the send_user_message tool for background agents.
@@ -29,7 +44,7 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         "Use for user-facing updates, results, or notifications.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: sendUserMessageReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SendUserMessageArgs;
       const descriptor = toolContext.agent.descriptor;
@@ -52,6 +67,7 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         { type: "system_message", text: wrappedText, origin }
       );
 
+      const summary = "Message queued for user delivery.";
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -59,14 +75,21 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: "Message queued for user delivery."
+            text: summary
           }
         ],
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          targetAgentId: resolvedTarget,
+          originAgentId: origin
+        }
+      };
     }
   };
 }

@@ -96,7 +96,13 @@ function toolResultErrorRecordBuild(
         isError: true,
         timestamp: at
       },
-      typedResult: { text }
+      typedResult: {
+        toolCallId,
+        toolName,
+        isError: true,
+        timestamp: at,
+        text
+      }
     }
   };
 }

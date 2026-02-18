@@ -1,11 +1,11 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import { getOAuthApiKey, type OAuthCredentials, type OAuthProviderId } from "@mariozechner/pi-ai";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
 import type { AuthEntry, AuthStore } from "../../auth/store.js";
+import type { ToolResultContract } from "@/types";
 
 const settingsSchema = z
   .object({
@@ -22,6 +22,23 @@ const searchSchema = Type.Object(
 );
 
 type SearchArgs = Static<typeof searchSchema>;
+
+const searchResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    query: Type.String(),
+    model: Type.String(),
+    blockCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type SearchResult = Static<typeof searchResultSchema>;
+
+const searchReturns: ToolResultContract<SearchResult> = {
+  schema: searchResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 type AnthropicContentBlock =
   | { type: "text"; text: string }
@@ -186,7 +203,7 @@ export const plugin = definePlugin({
               "Search the web using Claude with web search. Returns AI-generated answer with search results.",
             parameters: searchSchema
           },
-          returns: toolReturnText,
+          returns: searchReturns,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -243,17 +260,26 @@ export const plugin = definePlugin({
               data.content?.filter((block): block is { type: "text"; text: string } => block.type === "text") ?? [];
             const text = textBlocks.map((block) => block.text).join("\n\n") || "No results found.";
 
+            const summary = text;
             const toolMessage: ToolResultMessage = {
               role: "toolResult",
               toolCallId: toolCall.id,
               toolName: toolCall.name,
-              content: [{ type: "text", text }],
+              content: [{ type: "text", text: summary }],
               details: { model },
               isError: false,
               timestamp: Date.now()
             };
 
-            return toolExecutionResultText(toolMessage);
+            return {
+              toolMessage,
+              typedResult: {
+                summary,
+                query: payload.query,
+                model,
+                blockCount: textBlocks.length
+              }
+            };
           }
         });
       },

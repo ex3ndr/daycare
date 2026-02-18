@@ -1,9 +1,9 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
+import type { ToolResultContract } from "@/types";
 
 const settingsSchema = z
   .object({
@@ -31,6 +31,23 @@ const fetchSchema = Type.Object(
 );
 
 type FetchArgs = Static<typeof fetchSchema>;
+
+const fetchResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    url: Type.String(),
+    title: Type.String(),
+    hasContent: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type FetchResult = Static<typeof fetchResultSchema>;
+
+const fetchReturns: ToolResultContract<FetchResult> = {
+  schema: fetchResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 type FirecrawlResponse = {
   success?: boolean;
@@ -105,7 +122,7 @@ export const plugin = definePlugin({
               "Fetch web page content using Firecrawl. Returns clean markdown or HTML content.",
             parameters: fetchSchema
           },
-          returns: toolReturnText,
+          returns: fetchReturns,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -164,11 +181,12 @@ export const plugin = definePlugin({
               text += "No content extracted.";
             }
 
+            const summary = text;
             const toolMessage: ToolResultMessage = {
               role: "toolResult",
               toolCallId: toolCall.id,
               toolName: toolCall.name,
-              content: [{ type: "text", text }],
+              content: [{ type: "text", text: summary }],
               details: {
                 title,
                 url: payload.url,
@@ -178,7 +196,15 @@ export const plugin = definePlugin({
               timestamp: Date.now()
             };
 
-            return toolExecutionResultText(toolMessage);
+            return {
+              toolMessage,
+              typedResult: {
+                summary,
+                url: payload.url,
+                title,
+                hasContent: Boolean(content)
+              }
+            };
           }
         });
       },

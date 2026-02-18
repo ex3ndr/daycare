@@ -1,12 +1,11 @@
 import { promises as fs } from "node:fs";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import path from "node:path";
 
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { AgentState, SessionPermissions } from "@/types";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { permissionClone } from "../../permissions/permissionClone.js";
@@ -36,6 +35,23 @@ const schema = Type.Object(
 
 type PermanentAgentArgs = Static<typeof schema>;
 
+const permanentAgentResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    agentId: Type.String(),
+    name: Type.String(),
+    action: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type PermanentAgentResult = Static<typeof permanentAgentResultSchema>;
+
+const permanentAgentReturns: ToolResultContract<PermanentAgentResult> = {
+  schema: permanentAgentResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds the create_permanent_agent tool to create or update permanent agents.
  * Expects: agent name + system prompt are provided; workspaceDir stays within the main workspace.
@@ -47,7 +63,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
       description: "Create or update a permanent background agent with a stable name and system prompt.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: permanentAgentReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as PermanentAgentArgs;
       const name = payload.name.trim();
@@ -133,6 +149,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
       }
 
       const action = resolvedAgent ? "updated" : "created";
+      const summary = `Permanent agent ${action}: ${agentId} (name: ${name}).`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -140,14 +157,22 @@ export function permanentAgentToolBuild(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Permanent agent ${action}: ${agentId} (name: ${name}).`
+            text: summary
           }
         ],
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          agentId,
+          name,
+          action
+        }
+      };
     }
   };
 }

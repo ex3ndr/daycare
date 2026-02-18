@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Signals } from "../../signals/signals.js";
 
 const schema = Type.Object(
@@ -16,6 +15,23 @@ const schema = Type.Object(
 
 type SubscribeSignalArgs = Static<typeof schema>;
 
+const signalSubscribeResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    agentId: Type.String(),
+    pattern: Type.String(),
+    silent: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type SignalSubscribeResult = Static<typeof signalSubscribeResultSchema>;
+
+const signalSubscribeReturns: ToolResultContract<SignalSubscribeResult> = {
+  schema: signalSubscribeResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
   return {
     tool: {
@@ -24,7 +40,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         "Subscribe to signals matching a pattern. Pattern uses colon-separated segments with `*` as a single-segment wildcard (e.g. `build:*:done` matches `build:alpha:done` but not `build:alpha:beta:done`). Defaults to silent delivery (won't wake a sleeping agent); set `silent=false` to wake on signal. Pass `agentId` to subscribe another agent.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: signalSubscribeReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SubscribeSignalArgs;
       const targetAgentId = payload.agentId?.trim() ?? toolContext.agent.id;
@@ -39,6 +55,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         silent: payload.silent
       });
 
+      const summary = `Signal subscription saved for ${subscription.agentId}: ${subscription.pattern} (silent=${subscription.silent}).`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -46,7 +63,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Signal subscription saved for ${subscription.agentId}: ${subscription.pattern} (silent=${subscription.silent}).`
+            text: summary
           }
         ],
         details: { subscription },
@@ -54,7 +71,15 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          agentId: subscription.agentId,
+          pattern: subscription.pattern,
+          silent: subscription.silent
+        }
+      };
     }
   };
 }

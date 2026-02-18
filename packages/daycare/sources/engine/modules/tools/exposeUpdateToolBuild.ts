@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Exposes } from "../../expose/exposes.js";
 
 const schema = Type.Object(
@@ -14,6 +13,23 @@ const schema = Type.Object(
 );
 
 type ExposeUpdateArgs = Static<typeof schema>;
+
+const exposeUpdateResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    endpointId: Type.String(),
+    domain: Type.String(),
+    authenticated: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type ExposeUpdateResult = Static<typeof exposeUpdateResultSchema>;
+
+const exposeUpdateReturns: ToolResultContract<ExposeUpdateResult> = {
+  schema: exposeUpdateResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 /**
  * Builds the expose_update tool for toggling endpoint authentication.
@@ -29,7 +45,7 @@ export function exposeUpdateToolBuild(
         "Update expose endpoint authentication; enabling auth returns a new password.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: exposeUpdateReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ExposeUpdateArgs;
       const endpointId = payload.endpointId.trim();
@@ -44,7 +60,7 @@ export function exposeUpdateToolBuild(
       const authText = updated.password
         ? `Auth enabled. Username: daycare Password: ${updated.password}`
         : `Auth ${updated.endpoint.auth ? "enabled" : "disabled"}.`;
-      const text = [
+      const summary = [
         `Expose endpoint updated: ${updated.endpoint.id}`,
         `Domain: ${updated.endpoint.domain}`,
         authText
@@ -54,7 +70,7 @@ export function exposeUpdateToolBuild(
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           endpoint: updated.endpoint,
           password: updated.password
@@ -63,7 +79,15 @@ export function exposeUpdateToolBuild(
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          endpointId: updated.endpoint.id,
+          domain: updated.endpoint.domain,
+          authenticated: Boolean(updated.endpoint.auth)
+        }
+      };
     }
   };
 }

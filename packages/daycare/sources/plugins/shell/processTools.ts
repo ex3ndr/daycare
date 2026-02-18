@@ -1,8 +1,11 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
+import {
+  toolExecutionResultOutcomeWithTyped,
+  toolMessageTextExtract
+} from "../../engine/modules/tools/toolReturnOutcome.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { SessionPermissions } from "@/types";
 import type { Processes } from "../../engine/processes/processes.js";
 import { permissionTagsApply } from "../../engine/permissions/permissionTagsApply.js";
@@ -75,6 +78,25 @@ type ProcessStopArgs = Static<typeof processStopSchema>;
 type ProcessStopAllArgs = Static<typeof processStopAllSchema>;
 type ProcessGetArgs = Static<typeof processGetSchema>;
 
+const processToolResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    action: Type.String(),
+    processId: Type.Optional(Type.String()),
+    count: Type.Optional(Type.Number()),
+    status: Type.Optional(Type.String()),
+    signal: Type.Optional(Type.String())
+  },
+  { additionalProperties: false }
+);
+
+type ProcessToolResult = Static<typeof processToolResultSchema>;
+
+const processToolReturns: ToolResultContract<ProcessToolResult> = {
+  schema: processToolResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildProcessStartTool(processes: Processes): ToolDefinition {
   return {
     tool: {
@@ -83,7 +105,7 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
         "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. By default it starts with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Explicit permission tags can only re-enable caller-held permissions; @read tags are ignored.",
       parameters: processStartSchema
     },
-    returns: toolReturnText,
+    returns: processToolReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ProcessStartArgs;
       const permissions = await resolveProcessPermissions(
@@ -99,14 +121,13 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
         `status: ${processInfo.status}`,
         `logPath: ${processInfo.logPath}`
       ].join("\n");
-      return toolExecutionResultText(
-        buildToolMessage(toolCall, text, false, {
+      const toolMessage = buildToolMessage(toolCall, text, false, {
           processId: processInfo.id,
           pid: processInfo.pid,
           keepAlive: processInfo.keepAlive,
           status: processInfo.status
-        })
-      );
+        });
+      return toolExecutionResultOutcomeWithTyped(toolMessage, processResultBuild(toolMessage, "start"));
     }
   };
 }
@@ -118,7 +139,7 @@ export function buildProcessListTool(processes: Processes): ToolDefinition {
       description: "List durable managed processes and their current state.",
       parameters: Type.Object({}, { additionalProperties: false })
     },
-    returns: toolReturnText,
+    returns: processToolReturns,
     execute: async (_args, _toolContext, toolCall) => {
       const items = await processes.list();
       const text =
@@ -138,7 +159,8 @@ export function buildProcessListTool(processes: Processes): ToolDefinition {
               null,
               2
             );
-      return toolExecutionResultText(buildToolMessage(toolCall, text, false, { count: items.length }));
+      const toolMessage = buildToolMessage(toolCall, text, false, { count: items.length });
+      return toolExecutionResultOutcomeWithTyped(toolMessage, processResultBuild(toolMessage, "list"));
     }
   };
 }
@@ -150,7 +172,7 @@ export function buildProcessGetTool(processes: Processes): ToolDefinition {
       description: "Get one durable managed process by id.",
       parameters: processGetSchema
     },
-    returns: toolReturnText,
+    returns: processToolReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ProcessGetArgs;
       const item = await processes.get(payload.processId);
@@ -168,14 +190,13 @@ export function buildProcessGetTool(processes: Processes): ToolDefinition {
         null,
         2
       );
-      return toolExecutionResultText(
-        buildToolMessage(toolCall, text, false, {
+      const toolMessage = buildToolMessage(toolCall, text, false, {
           processId: item.id,
           pid: item.pid,
           status: item.status,
           path: item.logPath
-        })
-      );
+        });
+      return toolExecutionResultOutcomeWithTyped(toolMessage, processResultBuild(toolMessage, "get"));
     }
   };
 }
@@ -187,7 +208,7 @@ export function buildProcessStopTool(processes: Processes): ToolDefinition {
       description: "Stop a managed durable process by id.",
       parameters: processStopSchema
     },
-    returns: toolReturnText,
+    returns: processToolReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ProcessStopArgs;
       const signal = payload.signal ?? "SIGTERM";
@@ -198,13 +219,12 @@ export function buildProcessStopTool(processes: Processes): ToolDefinition {
         `signal: ${signal}`,
         `status: ${processInfo.status}`
       ].join("\n");
-      return toolExecutionResultText(
-        buildToolMessage(toolCall, text, false, {
+      const toolMessage = buildToolMessage(toolCall, text, false, {
           processId: processInfo.id,
           signal,
           status: processInfo.status
-        })
-      );
+        });
+      return toolExecutionResultOutcomeWithTyped(toolMessage, processResultBuild(toolMessage, "stop"));
     }
   };
 }
@@ -216,20 +236,52 @@ export function buildProcessStopAllTool(processes: Processes): ToolDefinition {
       description: "Stop all managed durable processes.",
       parameters: processStopAllSchema
     },
-    returns: toolReturnText,
+    returns: processToolReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ProcessStopAllArgs;
       const signal = payload.signal ?? "SIGTERM";
       const stopped = await processes.stopAll(signal);
       const text = `Stopped ${stopped.length} process${stopped.length === 1 ? "" : "es"} with ${signal}.`;
-      return toolExecutionResultText(
-        buildToolMessage(toolCall, text, false, {
+      const toolMessage = buildToolMessage(toolCall, text, false, {
           count: stopped.length,
           signal
-        })
-      );
+        });
+      return toolExecutionResultOutcomeWithTyped(toolMessage, processResultBuild(toolMessage, "stop_all"));
     }
   };
+}
+
+function processResultBuild(toolMessage: ToolResultMessage, action: string): ProcessToolResult {
+  const details = detailRecordGet(toolMessage.details);
+  const processId = detailStringGet(details, "processId");
+  const count = detailNumberGet(details, "count");
+  const status = detailStringGet(details, "status");
+  const signal = detailStringGet(details, "signal");
+  return {
+    summary: toolMessageTextExtract(toolMessage),
+    action,
+    ...(processId ? { processId } : {}),
+    ...(count !== undefined ? { count } : {}),
+    ...(status ? { status } : {}),
+    ...(signal ? { signal } : {})
+  };
+}
+
+function detailRecordGet(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function detailStringGet(details: Record<string, unknown>, key: string): string | undefined {
+  const value = details[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function detailNumberGet(details: Record<string, unknown>, key: string): number | undefined {
+  const value = details[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function buildToolMessage(

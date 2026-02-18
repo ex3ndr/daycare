@@ -1,5 +1,4 @@
 import { promises as fs } from "node:fs";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { Type, type Static } from "@sinclair/typebox";
@@ -7,6 +6,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
+import type { ToolResultContract } from "@/types";
 
 const settingsSchema = z.object({}).passthrough();
 
@@ -27,6 +27,23 @@ const querySchema = Type.Object(
 );
 
 type QueryArgs = Static<typeof querySchema>;
+
+const queryResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    sqlType: Type.String(),
+    rows: Type.Number(),
+    affectedRows: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type QueryResult = Static<typeof queryResultSchema>;
+
+const queryReturns: ToolResultContract<QueryResult> = {
+  schema: queryResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 const DB_TEMPLATE = `# Database Memory
 
@@ -123,22 +140,27 @@ export const plugin = definePlugin({
               "Execute SQL against the plugin Postgres (PGlite) database. Provide an optional description to document the change.",
             parameters: querySchema
           },
-          returns: toolReturnText,
+          returns: queryReturns,
           execute: async (args, _context, toolCall) => {
             const payload = args as QueryArgs;
             const dbInstance = await openDb();
             const params = payload.params ?? [];
             let text = "";
             let details: Record<string, unknown> = {};
+            let rows = 0;
+            let affectedRows = 0;
+            let sqlType = "write";
 
             if (isReadSql(payload.sql)) {
+              sqlType = "read";
               const result = await dbInstance.query(payload.sql, params);
-              const rows = result.rows ?? [];
-              text = rows.length === 0 ? "No rows returned." : JSON.stringify(rows, null, 2);
-              details = { rows: rows.length };
+              const rowList = result.rows ?? [];
+              rows = rowList.length;
+              text = rowList.length === 0 ? "No rows returned." : JSON.stringify(rowList, null, 2);
+              details = { rows: rowList.length };
             } else {
               const result = await dbInstance.query(payload.sql, params);
-              const affectedRows = result.affectedRows ?? 0;
+              affectedRows = result.affectedRows ?? 0;
               await updateDoc(payload.description ?? summarizeSql(payload.sql));
               text = `OK. affectedRows=${affectedRows}`;
               details = {
@@ -146,17 +168,26 @@ export const plugin = definePlugin({
               };
             }
 
+            const summary = text;
             const toolMessage: ToolResultMessage = {
               role: "toolResult",
               toolCallId: toolCall.id,
               toolName: toolCall.name,
-              content: [{ type: "text", text }],
+              content: [{ type: "text", text: summary }],
               details,
               isError: false,
               timestamp: Date.now()
             };
 
-            return toolExecutionResultText(toolMessage);
+            return {
+              toolMessage,
+              typedResult: {
+                summary,
+                sqlType,
+                rows,
+                affectedRows
+              }
+            };
           }
         });
       },

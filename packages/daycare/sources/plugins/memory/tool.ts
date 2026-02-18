@@ -1,8 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { MemoryStore } from "./store.js";
 
 const createEntitySchema = Type.Object(
@@ -34,6 +33,38 @@ type CreateEntityArgs = Static<typeof createEntitySchema>;
 type UpsertRecordArgs = Static<typeof upsertRecordSchema>;
 type ListEntitiesArgs = Static<typeof listEntitiesSchema>;
 
+const memoryMutationResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    entity: Type.String(),
+    record: Type.Optional(Type.String()),
+    created: Type.Boolean(),
+    path: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+const memoryListResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    count: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type MemoryMutationResult = Static<typeof memoryMutationResultSchema>;
+type MemoryListResult = Static<typeof memoryListResultSchema>;
+
+const memoryMutationReturns: ToolResultContract<MemoryMutationResult> = {
+  schema: memoryMutationResultSchema,
+  toLLMText: (result) => result.summary
+};
+
+const memoryListReturns: ToolResultContract<MemoryListResult> = {
+  schema: memoryListResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition {
   return {
     tool: {
@@ -42,7 +73,7 @@ export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition 
         "Create or update a memory entity type (lowercase a-z only, no underscores).",
       parameters: createEntitySchema
     },
-    returns: toolReturnText,
+    returns: memoryMutationReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as CreateEntityArgs;
       const result = await store.createEntity(
@@ -51,6 +82,9 @@ export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition 
         payload.description
       );
 
+      const summary = result.created
+        ? `Created memory entity ${result.entity}.`
+        : `Memory entity ${result.entity} updated.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -58,9 +92,7 @@ export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition 
         content: [
           {
             type: "text",
-            text: result.created
-              ? `Created memory entity ${result.entity}.`
-              : `Memory entity ${result.entity} updated.`
+            text: summary
           }
         ],
         details: {
@@ -72,7 +104,15 @@ export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition 
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          entity: result.entity,
+          created: result.created,
+          path: result.path
+        }
+      };
     }
   };
 }
@@ -85,7 +125,7 @@ export function buildMemoryUpsertRecordTool(store: MemoryStore): ToolDefinition 
         "Add or update a memory record as markdown under an entity.",
       parameters: upsertRecordSchema
     },
-    returns: toolReturnText,
+    returns: memoryMutationReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as UpsertRecordArgs;
       const result = await store.upsertRecord(
@@ -94,6 +134,9 @@ export function buildMemoryUpsertRecordTool(store: MemoryStore): ToolDefinition 
         payload.content
       );
 
+      const summary = result.created
+        ? `Added record ${result.record} to ${result.entity}.`
+        : `Updated record ${result.record} in ${result.entity}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -101,9 +144,7 @@ export function buildMemoryUpsertRecordTool(store: MemoryStore): ToolDefinition 
         content: [
           {
             type: "text",
-            text: result.created
-              ? `Added record ${result.record} to ${result.entity}.`
-              : `Updated record ${result.record} in ${result.entity}.`
+            text: summary
           }
         ],
         details: {
@@ -116,7 +157,16 @@ export function buildMemoryUpsertRecordTool(store: MemoryStore): ToolDefinition 
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          entity: result.entity,
+          record: result.record,
+          created: result.created,
+          path: result.path
+        }
+      };
     }
   };
 }
@@ -129,7 +179,7 @@ export function buildMemoryListEntitiesTool(store: MemoryStore): ToolDefinition 
         "List memory entities with their short name and description.",
       parameters: listEntitiesSchema
     },
-    returns: toolReturnText,
+    returns: memoryListReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ListEntitiesArgs;
       const entries = await store.listEntitySummaries(payload.limit);
@@ -139,11 +189,12 @@ export function buildMemoryListEntitiesTool(store: MemoryStore): ToolDefinition 
             .map((entry) => `- ${entry.entity}: ${entry.name} — ${entry.description}`)
             .join("\n");
 
+      const summary = text;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           count: entries.length,
           entities: entries
@@ -152,7 +203,13 @@ export function buildMemoryListEntitiesTool(store: MemoryStore): ToolDefinition 
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          count: entries.length
+        }
+      };
     }
   };
 }

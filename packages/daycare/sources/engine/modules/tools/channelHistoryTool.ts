@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Channels } from "../../channels/channels.js";
 
 const schema = Type.Object(
@@ -15,6 +14,32 @@ const schema = Type.Object(
 
 type ChannelHistoryArgs = Static<typeof schema>;
 
+const channelHistoryRowSchema = Type.Object(
+  {
+    createdAt: Type.Number(),
+    senderUsername: Type.String(),
+    text: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+const channelHistoryResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    channelName: Type.String(),
+    count: Type.Number(),
+    messages: Type.Array(channelHistoryRowSchema)
+  },
+  { additionalProperties: false }
+);
+
+type ChannelHistoryResult = Static<typeof channelHistoryResultSchema>;
+
+const channelHistoryReturns: ToolResultContract<ChannelHistoryResult> = {
+  schema: channelHistoryResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
   return {
     tool: {
@@ -22,17 +47,19 @@ export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
       description: "Read recent message history for a channel.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: channelHistoryReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelHistoryArgs;
       const history = await channels.getHistory(payload.channelName, payload.limit);
       const lines = history.map((message) =>
         `[${message.createdAt}] @${message.senderUsername}: ${message.text}`
       );
-      const text =
+      const summary =
         lines.length === 0
           ? `No messages in #${payload.channelName}.`
           : lines.join("\n");
+      const text =
+        summary;
 
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
@@ -47,8 +74,19 @@ export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          channelName: payload.channelName,
+          count: history.length,
+          messages: history.map((message) => ({
+            createdAt: message.createdAt,
+            senderUsername: message.senderUsername,
+            text: message.text
+          }))
+        }
+      };
     }
   };
 }
-

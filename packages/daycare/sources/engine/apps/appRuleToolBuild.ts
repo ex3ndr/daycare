@@ -1,9 +1,9 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "../modules/tools/toolReturnText.js";
+import { toolMessageTextExtract } from "../modules/tools/toolReturnOutcome.js";
 import { Type, type Static } from "@sinclair/typebox";
 import path from "node:path";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Apps } from "./appManager.js";
 import { appRuleApply, type AppRuleAction } from "./appRuleApply.js";
 
@@ -23,6 +23,24 @@ const schema = Type.Object(
 
 type AppRuleArgs = Static<typeof schema>;
 
+const appRuleResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    appId: Type.String(),
+    action: Type.String(),
+    changed: Type.Boolean(),
+    approved: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type AppRuleResult = Static<typeof appRuleResultSchema>;
+
+const appRuleReturns: ToolResultContract<AppRuleResult> = {
+  schema: appRuleResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds the app_rules tool for mutable app allow/deny policies.
  * Expects: target app id exists in the app manager index.
@@ -34,7 +52,7 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
       description: "Manage app allow/deny rules. All mutations require permission approval.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: appRuleReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as AppRuleArgs;
       const appId = payload.app_id.trim();
@@ -66,7 +84,16 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
       );
       const approved = permissionApprovedRead(permissionResult.toolMessage.details);
       if (permissionResult.toolMessage.isError || !approved) {
-        return permissionResult;
+        return {
+          toolMessage: permissionResult.toolMessage,
+          typedResult: {
+            summary: toolMessageTextExtract(permissionResult.toolMessage),
+            appId,
+            action: payload.action,
+            changed: false,
+            approved: false
+          }
+        };
       }
 
       const result = await appRuleApply({
@@ -94,7 +121,16 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary: result.message,
+          appId,
+          action: payload.action,
+          changed: result.changed,
+          approved: true
+        }
+      };
     }
   };
 }

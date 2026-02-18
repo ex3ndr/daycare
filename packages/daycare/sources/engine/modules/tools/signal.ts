@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Signals } from "../../signals/signals.js";
 
 const sourceSchema = Type.Union([
@@ -46,6 +45,23 @@ const schema = Type.Object(
 
 type GenerateSignalArgs = Static<typeof schema>;
 
+const signalGenerateResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    signalId: Type.String(),
+    signalType: Type.String(),
+    source: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type SignalGenerateResult = Static<typeof signalGenerateResultSchema>;
+
+const signalGenerateReturns: ToolResultContract<SignalGenerateResult> = {
+  schema: signalGenerateResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
   return {
     tool: {
@@ -54,7 +70,7 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         "Broadcast a signal event. Any agent subscribed to a matching pattern receives it. Use colon-separated type segments (e.g. `build:project-x:done`). Signals are fire-and-forget — you don't need to know who listens.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: signalGenerateReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as GenerateSignalArgs;
       const source = payload.source ?? { type: "agent", id: toolContext.agent.id };
@@ -64,6 +80,8 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         data: payload.data
       });
 
+      const sourceLabel = signalSourceLabel(signal.source);
+      const summary = `Signal generated: ${signal.id} (${signal.type}, source=${sourceLabel}).`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -71,7 +89,7 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Signal generated: ${signal.id} (${signal.type}, source=${signalSourceLabel(signal.source)}).`
+            text: summary
           }
         ],
         details: { signal },
@@ -79,7 +97,15 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          signalId: signal.id,
+          signalType: signal.type,
+          source: sourceLabel
+        }
+      };
     }
   };
 }

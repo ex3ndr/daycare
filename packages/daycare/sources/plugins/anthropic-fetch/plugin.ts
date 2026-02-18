@@ -1,11 +1,11 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import { getOAuthApiKey, type OAuthCredentials, type OAuthProviderId } from "@mariozechner/pi-ai";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
 import type { AuthEntry, AuthStore } from "../../auth/store.js";
+import type { ToolResultContract } from "@/types";
 
 const settingsSchema = z
   .object({
@@ -25,6 +25,23 @@ const fetchSchema = Type.Object(
 );
 
 type FetchArgs = Static<typeof fetchSchema>;
+
+const fetchResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    url: Type.String(),
+    model: Type.String(),
+    blockCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type FetchResult = Static<typeof fetchResultSchema>;
+
+const fetchReturns: ToolResultContract<FetchResult> = {
+  schema: fetchResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 type AnthropicContentBlock =
   | { type: "text"; text: string }
@@ -189,7 +206,7 @@ export const plugin = definePlugin({
               "Fetch and process web page content using Claude with web search. Returns extracted and summarized content.",
             parameters: fetchSchema
           },
-          returns: toolReturnText,
+          returns: fetchReturns,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -252,17 +269,26 @@ export const plugin = definePlugin({
             // Prepend URL info
             text = `URL: ${payload.url}\n\n---\n\n${text}`;
 
+            const summary = text;
             const toolMessage: ToolResultMessage = {
               role: "toolResult",
               toolCallId: toolCall.id,
               toolName: toolCall.name,
-              content: [{ type: "text", text }],
+              content: [{ type: "text", text: summary }],
               details: { url: payload.url, model },
               isError: false,
               timestamp: Date.now()
             };
 
-            return toolExecutionResultText(toolMessage);
+            return {
+              toolMessage,
+              typedResult: {
+                summary,
+                url: payload.url,
+                model,
+                blockCount: textBlocks.length
+              }
+            };
           }
         });
       },

@@ -1,8 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
 const schema = Type.Object(
@@ -16,6 +15,23 @@ const schema = Type.Object(
 
 type ReactionArgs = Static<typeof schema>;
 
+const reactionResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    reaction: Type.String(),
+    messageId: Type.String(),
+    source: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type ReactionResult = Static<typeof reactionResultSchema>;
+
+const reactionReturns: ToolResultContract<ReactionResult> = {
+  schema: reactionResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildReactionTool(): ToolDefinition {
   return {
     tool: {
@@ -23,7 +39,7 @@ export function buildReactionTool(): ToolDefinition {
       description: "Set a reaction emoji on a message in the active connector.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: reactionReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ReactionArgs;
       if (!toolContext.connectorRegistry) {
@@ -47,16 +63,25 @@ export function buildReactionTool(): ToolDefinition {
       }
       await connector.setReaction(target.targetId, String(messageId), payload.reaction);
 
+      const summary = `Reaction set: ${payload.reaction}`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text: `Reaction set: ${payload.reaction}` }],
+        content: [{ type: "text", text: summary }],
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          reaction: payload.reaction,
+          messageId: String(messageId),
+          source
+        }
+      };
     }
   };
 }

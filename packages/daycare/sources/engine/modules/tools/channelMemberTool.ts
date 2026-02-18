@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Channels } from "../../channels/channels.js";
 
 const addMemberSchema = Type.Object(
@@ -25,6 +24,24 @@ const removeMemberSchema = Type.Object(
 type ChannelAddMemberArgs = Static<typeof addMemberSchema>;
 type ChannelRemoveMemberArgs = Static<typeof removeMemberSchema>;
 
+const channelMemberResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    channelName: Type.String(),
+    agentId: Type.String(),
+    username: Type.Optional(Type.String()),
+    removed: Type.Optional(Type.Boolean())
+  },
+  { additionalProperties: false }
+);
+
+type ChannelMemberResult = Static<typeof channelMemberResultSchema>;
+
+const channelMemberReturns: ToolResultContract<ChannelMemberResult> = {
+  schema: channelMemberResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
   return {
     tool: {
@@ -32,7 +49,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
       description: "Add an agent member to a channel with a username handle.",
       parameters: addMemberSchema
     },
-    returns: toolReturnText,
+    returns: channelMemberReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelAddMemberArgs;
       const channel = await channels.addMember(
@@ -40,6 +57,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
         payload.agentId,
         payload.username
       );
+      const summary = `Added @${payload.username} (${payload.agentId}) to #${channel.name}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -47,14 +65,22 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Added @${payload.username} (${payload.agentId}) to #${channel.name}.`
+            text: summary
           }
         ],
         details: { channel },
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          channelName: channel.name,
+          agentId: payload.agentId,
+          username: payload.username
+        }
+      };
     }
   };
 }
@@ -66,10 +92,13 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
       description: "Remove an agent member from a channel.",
       parameters: removeMemberSchema
     },
-    returns: toolReturnText,
+    returns: channelMemberReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelRemoveMemberArgs;
       const removed = await channels.removeMember(payload.channelName, payload.agentId);
+      const summary = removed
+        ? `Removed ${payload.agentId} from #${payload.channelName}.`
+        : `${payload.agentId} is not a member of #${payload.channelName}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -77,9 +106,7 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
         content: [
           {
             type: "text",
-            text: removed
-              ? `Removed ${payload.agentId} from #${payload.channelName}.`
-              : `${payload.agentId} is not a member of #${payload.channelName}.`
+            text: summary
           }
         ],
         details: {
@@ -90,8 +117,15 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          channelName: payload.channelName,
+          agentId: payload.agentId,
+          removed
+        }
+      };
     }
   };
 }
-

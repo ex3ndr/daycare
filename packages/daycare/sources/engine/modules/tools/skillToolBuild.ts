@@ -1,11 +1,11 @@
 import path from "node:path";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
+import { toolMessageTextExtract } from "./toolReturnOutcome.js";
 
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { permissionAccessParse } from "../../permissions/permissionAccessParse.js";
 import { permissionTagsNormalize } from "../../permissions/permissionTagsNormalize.js";
 import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
@@ -23,6 +23,23 @@ const schema = Type.Object(
 
 type SkillToolArgs = Static<typeof schema>;
 
+const skillResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    skillName: Type.String(),
+    mode: Type.String(),
+    sandboxed: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type SkillResult = Static<typeof skillResultSchema>;
+
+const skillReturns: ToolResultContract<SkillResult> = {
+  schema: skillResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function skillToolBuild(): ToolDefinition {
   return {
     tool: {
@@ -30,7 +47,7 @@ export function skillToolBuild(): ToolDefinition {
       description: "Load and run a skill by name or SKILL.md path.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: skillReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SkillToolArgs;
       const requested = payload.name.trim();
@@ -90,7 +107,15 @@ export function skillToolBuild(): ToolDefinition {
           toolCall.name,
           `Skill executed in sandbox. Result:\n\n---\n\n${body}`
         );
-        return toolExecutionResultText(toolMessage);
+        return {
+          toolMessage,
+          typedResult: {
+            summary: toolMessageTextExtract(toolMessage),
+            skillName: skill.name,
+            mode: "sandbox",
+            sandboxed: true
+          }
+        };
       }
 
       const body = skillBody.length > 0 ? skillBody : "(Skill body is empty.)";
@@ -99,7 +124,15 @@ export function skillToolBuild(): ToolDefinition {
         toolCall.name,
         `Skill loaded (embedded). Follow the instructions below:\n\n---\n\n${body}`
       );
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary: toolMessageTextExtract(toolMessage),
+          skillName: skill.name,
+          mode: "embedded",
+          sandboxed: false
+        }
+      };
     }
   };
 }

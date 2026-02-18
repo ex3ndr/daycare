@@ -1,12 +1,11 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import type { ToolDefinition, ToolExecutionResult } from "@/types";
+import type { ToolDefinition, ToolExecutionResult, ToolResultContract } from "@/types";
 import { stringTruncate } from "../../utils/stringTruncate.js";
 
 const MAX_OUTPUT_CHARS = 50_000;
@@ -76,6 +75,22 @@ type MontyTypingErrorLike = {
 
 let cachedMontyRuntime: Promise<MontyRuntime> | null = null;
 
+const pythonResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    isError: Type.Boolean(),
+    output: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type PythonResult = Static<typeof pythonResultSchema>;
+
+const pythonReturns: ToolResultContract<PythonResult> = {
+  schema: pythonResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildMontyPythonTool(name = "python"): ToolDefinition {
   return {
     tool: {
@@ -84,7 +99,7 @@ export function buildMontyPythonTool(name = "python"): ToolDefinition {
         "Run sandboxed Python code via @pydantic/monty. Supports optional inputs, type checking, and resource limits.",
       parameters: pythonSchema
     },
-    returns: toolReturnText,
+    returns: pythonReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as PythonArgs;
 
@@ -153,7 +168,14 @@ function buildResult(
     timestamp: Date.now()
   };
 
-  return toolExecutionResultText(toolMessage);
+  return {
+    toolMessage,
+    typedResult: {
+      summary: text,
+      isError,
+      output: text
+    }
+  };
 }
 
 function formatMontyException(exception: MontyExceptionLike, fallback: string): string {

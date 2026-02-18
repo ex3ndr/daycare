@@ -1,9 +1,8 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { permissionAccessParse } from "../../permissions/permissionAccessParse.js";
 import { permissionTagsNormalize } from "../../permissions/permissionTagsNormalize.js";
 import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
@@ -28,6 +27,22 @@ const sendSchema = Type.Object(
 type StartBackgroundArgs = Static<typeof startSchema>;
 type SendAgentMessageArgs = Static<typeof sendSchema>;
 
+const backgroundResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    targetAgentId: Type.String(),
+    originAgentId: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type BackgroundResult = Static<typeof backgroundResultSchema>;
+
+const backgroundReturns: ToolResultContract<BackgroundResult> = {
+  schema: backgroundResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildStartBackgroundAgentTool(): ToolDefinition {
   return {
     tool: {
@@ -35,7 +50,7 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
       description: "Start a background agent to work on a task.",
       parameters: startSchema
     },
-    returns: toolReturnText,
+    returns: backgroundReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as StartBackgroundArgs;
       const prompt = payload.prompt.trim();
@@ -63,6 +78,7 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
         { type: "message", message: { text: prompt }, context: {} }
       );
 
+      const summary = `Background agent started: ${agentId}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -70,14 +86,21 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Background agent started: ${agentId}.`
+            text: summary
           }
         ],
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          targetAgentId: agentId,
+          originAgentId: toolContext.agent.id
+        }
+      };
     }
   };
 }
@@ -90,7 +113,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         "Send a system message to another agent (defaults to the most recent foreground agent).",
       parameters: sendSchema
     },
-    returns: toolReturnText,
+    returns: backgroundReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SendAgentMessageArgs;
       const descriptor = toolContext.agent.descriptor;
@@ -110,6 +133,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         { type: "system_message", text: payload.text, origin }
       );
 
+      const summary = "System message sent.";
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -117,14 +141,21 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: "System message sent."
+            text: summary
           }
         ],
         isError: false,
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          targetAgentId: resolvedTarget,
+          originAgentId: origin
+        }
+      };
     }
   };
 }

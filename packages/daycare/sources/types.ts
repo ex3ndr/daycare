@@ -85,7 +85,7 @@ export type {
   ToolResultPrimitive,
   ToolResultRow,
   ToolResultShallowObject,
-  ToolResultTextObject
+  ToolResultOutcomeObject
 } from "./engine/modules/tools/types.js";
 
 // Skills

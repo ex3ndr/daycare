@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "../modules/tools/toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { AppDescriptor } from "./appTypes.js";
 import { appExecute } from "./appExecute.js";
 import { appToolNameFormat } from "./appToolNameFormat.js";
@@ -17,6 +16,23 @@ const schema = Type.Object(
 
 type AppToolBuildArgs = Static<typeof schema>;
 
+const appToolResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    appId: Type.String(),
+    agentId: Type.String(),
+    waitForResponse: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type AppToolResult = Static<typeof appToolResultSchema>;
+
+const appToolReturns: ToolResultContract<AppToolResult> = {
+  schema: appToolResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds the per-app `app_<name>` tool definition.
  * Expects: descriptor is a validated discovered app.
@@ -29,7 +45,7 @@ export function appToolBuild(app: AppDescriptor): ToolDefinition {
       description: app.manifest.description,
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: appToolReturns,
     execute: async (args, context, toolCall) => {
       const payload = args as AppToolBuildArgs;
       const prompt = payload.prompt.trim();
@@ -49,6 +65,7 @@ export function appToolBuild(app: AppDescriptor): ToolDefinition {
           ? `${responseText}\n\nApp agent id: ${result.agentId}`
           : `App "${app.manifest.title}" completed without a text response. App agent id: ${result.agentId}`)
         : `App "${app.manifest.title}" started asynchronously. App agent id: ${result.agentId}`;
+      const summary = text;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -58,7 +75,15 @@ export function appToolBuild(app: AppDescriptor): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          appId: app.id,
+          agentId: result.agentId,
+          waitForResponse
+        }
+      };
     }
   };
 }

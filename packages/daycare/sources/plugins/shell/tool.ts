@@ -1,12 +1,15 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
+import {
+  toolExecutionResultOutcomeWithTyped,
+  toolMessageTextExtract
+} from "../../engine/modules/tools/toolReturnOutcome.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import type { ExecException } from "node:child_process";
 
-import type { ToolDefinition, ToolExecutionResult } from "@/types";
+import type { ToolDefinition, ToolExecutionResult, ToolResultContract } from "@/types";
 import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../../engine/permissions.js";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
@@ -110,6 +113,30 @@ const execSchema = Type.Object(
 
 type ExecArgs = Static<typeof execSchema>;
 
+const shellResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    action: Type.String(),
+    isError: Type.Boolean(),
+    content: Type.Optional(Type.String()),
+    path: Type.Optional(Type.String()),
+    cwd: Type.Optional(Type.String()),
+    bytes: Type.Optional(Type.Number()),
+    size: Type.Optional(Type.Number()),
+    count: Type.Optional(Type.Number()),
+    exitCode: Type.Optional(Type.Number()),
+    signal: Type.Optional(Type.String())
+  },
+  { additionalProperties: false }
+);
+
+type ShellResult = Static<typeof shellResultSchema>;
+
+const shellReturns: ToolResultContract<ShellResult> = {
+  schema: shellResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildWorkspaceReadTool(): ToolDefinition {
   return {
     tool: {
@@ -118,7 +145,7 @@ export function buildWorkspaceReadTool(): ToolDefinition {
         `Read file contents (text or images). Supports relative and absolute paths, offset/limit pagination, and truncates text output at ${READ_MAX_LINES} lines or ${Math.floor(READ_MAX_BYTES / 1024)}KB (whichever comes first).`,
       parameters: readSchema
     },
-    returns: toolReturnText,
+    returns: shellReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ReadArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -147,7 +174,7 @@ export function buildWorkspaceWriteTool(): ToolDefinition {
         "Write UTF-8 text to a file within the agent workspace or an allowed write directory. Creates parent directories as needed. If append is true, appends to the file. Paths must be absolute and within the allowed write set.",
       parameters: writeSchema
     },
-    returns: toolReturnText,
+    returns: shellReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as WriteArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -175,7 +202,7 @@ export function buildWorkspaceEditTool(): ToolDefinition {
         "Apply one or more find/replace edits to a file in the agent workspace or an allowed write directory. Edits are applied sequentially and must match at least once. Paths must be absolute and within the allowed write set.",
       parameters: editSchema
     },
-    returns: toolReturnText,
+    returns: shellReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as EditArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -197,7 +224,7 @@ export function buildExecTool(): ToolDefinition {
         "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. By default exec runs with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Use explicit permission tags to re-enable caller-held network, events, or writable path access; @read tags are ignored. Writes are sandboxed to the allowed write directories. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
       parameters: execSchema
     },
-    returns: toolReturnText,
+    returns: shellReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ExecArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -252,7 +279,7 @@ export function buildExecTool(): ToolDefinition {
         const toolMessage = buildToolMessage(toolCall, text, false, {
           cwd: path.relative(workingDir, cwd) || "."
         });
-        return toolExecutionResultText(toolMessage);
+        return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "exec"));
       } catch (error) {
         const execError = error as ExecException & {
           stdout?: string | Buffer;
@@ -268,7 +295,7 @@ export function buildExecTool(): ToolDefinition {
           exitCode: execError.code ?? null,
           signal: execError.signal ?? null
         });
-        return toolExecutionResultText(toolMessage);
+        return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "exec"));
       }
     }
   };
@@ -311,7 +338,7 @@ async function handleReadSecure(
       { type: "text", text },
       { type: "image", data: imageBuffer.toString("base64"), mimeType }
     ];
-    return toolExecutionResultText(toolMessage);
+    return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "read"));
   }
 
   const textContent = await readTextFileSecure(resolvedPath);
@@ -364,7 +391,7 @@ async function handleReadSecure(
     offset: offset ?? null,
     limit: limit ?? null
   });
-  return toolExecutionResultText(toolMessage);
+  return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "read"));
 }
 
 /**
@@ -411,7 +438,7 @@ async function handleWriteSecure(
     bytes,
     append
   });
-  return toolExecutionResultText(toolMessage);
+  return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "write"));
 }
 
 /**
@@ -461,7 +488,7 @@ async function handleEditSecure(
       path: displayPath,
       edits: counts
     });
-    return toolExecutionResultText(toolMessage);
+    return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "edit"));
   } finally {
     await handle.close();
   }
@@ -500,6 +527,46 @@ function buildToolMessage(
     isError,
     timestamp: Date.now()
   };
+}
+
+function shellResultBuild(toolMessage: ToolResultMessage, fallbackAction: string): ShellResult {
+  const details = detailRecordGet(toolMessage.details);
+  const pathValue = detailStringGet(details, "path");
+  const cwd = detailStringGet(details, "cwd");
+  const bytes = detailNumberGet(details, "bytes");
+  const count = detailNumberGet(details, "count");
+  const exitCode = detailNumberGet(details, "exitCode");
+  const signal = detailStringGet(details, "signal");
+  return {
+    summary: toolMessageTextExtract(toolMessage),
+    action: detailStringGet(details, "action") ?? fallbackAction,
+    isError: Boolean(toolMessage.isError),
+    ...(fallbackAction === "read" ? { content: toolMessageTextExtract(toolMessage) } : {}),
+    ...(pathValue ? { path: pathValue } : {}),
+    ...(cwd ? { cwd } : {}),
+    ...(bytes !== undefined ? { bytes } : {}),
+    ...(bytes !== undefined ? { size: bytes } : {}),
+    ...(count !== undefined ? { count } : {}),
+    ...(exitCode !== undefined ? { exitCode } : {}),
+    ...(signal ? { signal } : {})
+  };
+}
+
+function detailRecordGet(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function detailStringGet(details: Record<string, unknown>, key: string): string | undefined {
+  const value = details[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function detailNumberGet(details: Record<string, unknown>, key: string): number | undefined {
+  const value = details[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function toText(value: string | Buffer | undefined): string {

@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ExposeMode, ExposeTarget, ToolDefinition } from "@/types";
+import type { ExposeMode, ExposeTarget, ToolDefinition, ToolResultContract } from "@/types";
 import type { Exposes } from "../../expose/exposes.js";
 
 const schema = Type.Object(
@@ -18,6 +17,25 @@ const schema = Type.Object(
 
 type ExposeCreateArgs = Static<typeof schema>;
 
+const exposeCreateResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    endpointId: Type.String(),
+    domain: Type.String(),
+    provider: Type.String(),
+    mode: Type.String(),
+    authenticated: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type ExposeCreateResult = Static<typeof exposeCreateResultSchema>;
+
+const exposeCreateReturns: ToolResultContract<ExposeCreateResult> = {
+  schema: exposeCreateResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds the expose_create tool for creating public or LAN endpoints.
  * Expects: exactly one target input is provided (port or unixSocket).
@@ -32,7 +50,7 @@ export function exposeCreateToolBuild(
         "Expose a local HTTP port or unix socket through a tunnel provider.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: exposeCreateReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ExposeCreateArgs;
       const target = targetResolve(payload);
@@ -48,7 +66,7 @@ export function exposeCreateToolBuild(
       const authText = created.password
         ? `Auth enabled. Username: daycare Password: ${created.password}`
         : "Auth disabled.";
-      const text = [
+      const summary = [
         `Expose endpoint created: ${created.endpoint.id}`,
         `Domain: ${created.endpoint.domain}`,
         `Provider: ${created.endpoint.provider}`,
@@ -61,7 +79,7 @@ export function exposeCreateToolBuild(
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           endpoint: created.endpoint,
           password: created.password
@@ -70,7 +88,17 @@ export function exposeCreateToolBuild(
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          endpointId: created.endpoint.id,
+          domain: created.endpoint.domain,
+          provider: created.endpoint.provider,
+          mode: created.endpoint.mode,
+          authenticated: Boolean(created.endpoint.auth)
+        }
+      };
     }
   };
 }

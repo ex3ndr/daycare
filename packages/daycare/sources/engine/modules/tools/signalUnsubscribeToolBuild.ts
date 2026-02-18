@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Signals } from "../../signals/signals.js";
 
 const schema = Type.Object(
@@ -15,6 +14,23 @@ const schema = Type.Object(
 
 type UnsubscribeSignalArgs = Static<typeof schema>;
 
+const signalUnsubscribeResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    agentId: Type.String(),
+    pattern: Type.String(),
+    removed: Type.Boolean()
+  },
+  { additionalProperties: false }
+);
+
+type SignalUnsubscribeResult = Static<typeof signalUnsubscribeResultSchema>;
+
+const signalUnsubscribeReturns: ToolResultContract<SignalUnsubscribeResult> = {
+  schema: signalUnsubscribeResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
   return {
     tool: {
@@ -23,7 +39,7 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
         "Remove a signal subscription. The pattern must exactly match the one used in `signal_subscribe`. Pass `agentId` to unsubscribe another agent.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: signalUnsubscribeReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as UnsubscribeSignalArgs;
       const targetAgentId = payload.agentId?.trim() ?? toolContext.agent.id;
@@ -37,6 +53,9 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
         pattern: payload.pattern
       });
 
+      const summary = removed
+        ? `Signal subscription removed for ${targetAgentId}: ${payload.pattern}.`
+        : `No signal subscription found for ${targetAgentId}: ${payload.pattern}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -44,9 +63,7 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
         content: [
           {
             type: "text",
-            text: removed
-              ? `Signal subscription removed for ${targetAgentId}: ${payload.pattern}.`
-              : `No signal subscription found for ${targetAgentId}: ${payload.pattern}.`
+            text: summary
           }
         ],
         details: { removed, agentId: targetAgentId, pattern: payload.pattern },
@@ -54,7 +71,15 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          agentId: targetAgentId,
+          pattern: payload.pattern,
+          removed
+        }
+      };
     }
   };
 }

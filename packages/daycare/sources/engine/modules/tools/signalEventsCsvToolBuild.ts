@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Signal } from "@/types";
 import type { Signals } from "../../signals/signals.js";
 
@@ -21,6 +20,24 @@ type SignalEventsCsvTimeRange = {
   toAt: number | null;
 };
 
+const signalEventsCsvResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    recordCount: Type.Number(),
+    fromAt: Type.Optional(Type.Number()),
+    toAt: Type.Optional(Type.Number()),
+    filterTypeCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type SignalEventsCsvResult = Static<typeof signalEventsCsvResultSchema>;
+
+const signalEventsCsvReturns: ToolResultContract<SignalEventsCsvResult> = {
+  schema: signalEventsCsvResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds the signal_events_csv tool for CSV-friendly event inspection.
  * Expects: filters are optional; when both fromAt/toAt are provided, fromAt <= toAt.
@@ -33,7 +50,7 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
         "Read signal events as CSV. Optional filters: fromAt/toAt (unix ms) and types (exact event type matches). Columns: event_type,args,unix_time,ai_friendly_time.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: signalEventsCsvReturns,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as SignalEventsCsvArgs;
       const timeRange = signalEventsCsvTimeRangeNormalize(payload.fromAt, payload.toAt);
@@ -41,11 +58,12 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
       const records = signalEventsFilter(await signals.listAll(), timeRange, types);
       const text = signalEventsCsvBuild(records);
 
+      const summary = text;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           fromAt: timeRange.fromAt,
           toAt: timeRange.toAt,
@@ -55,7 +73,16 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          recordCount: records.length,
+          ...(timeRange.fromAt !== null ? { fromAt: timeRange.fromAt } : {}),
+          ...(timeRange.toAt !== null ? { toAt: timeRange.toAt } : {}),
+          filterTypeCount: types.length
+        }
+      };
     }
   };
 }

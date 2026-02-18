@@ -1,10 +1,10 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
 import { stringTruncate } from "../../utils/stringTruncate.js";
+import type { ToolResultContract } from "@/types";
 
 const settingsSchema = z
   .object({
@@ -27,6 +27,24 @@ const fetchSchema = Type.Object(
 
 type FetchArgs = Static<typeof fetchSchema>;
 
+const fetchResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    url: Type.String(),
+    status: Type.Number(),
+    contentType: Type.String(),
+    contentSize: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type FetchResult = Static<typeof fetchResultSchema>;
+
+const fetchReturns: ToolResultContract<FetchResult> = {
+  schema: fetchResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 export const plugin = definePlugin({
   settingsSchema,
   create: (api) => {
@@ -41,7 +59,7 @@ export const plugin = definePlugin({
               "Fetch web page content with a plain HTTP request (no JavaScript rendering).",
             parameters: fetchSchema
           },
-          returns: toolReturnText,
+          returns: fetchReturns,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -99,17 +117,27 @@ export const plugin = definePlugin({
               content || "No content returned."
             ].join("\n");
 
+            const summary = text;
             const toolMessage: ToolResultMessage = {
               role: "toolResult",
               toolCallId: toolCall.id,
               toolName: toolCall.name,
-              content: [{ type: "text", text }],
+              content: [{ type: "text", text: summary }],
               details: { url: parsedUrl.toString(), contentType, status: response.status },
               isError: false,
               timestamp: Date.now()
             };
 
-            return toolExecutionResultText(toolMessage);
+            return {
+              toolMessage,
+              typedResult: {
+                summary,
+                url: parsedUrl.toString(),
+                status: response.status,
+                contentType,
+                contentSize: content.length
+              }
+            };
           }
         });
       },

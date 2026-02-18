@@ -1,11 +1,10 @@
 import { Type } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import path from "node:path";
 
-import type { ToolDefinition } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import type {
   PermissionAccess,
   PermissionDecision,
@@ -43,7 +42,27 @@ const grantSchema = Type.Object(
 
 type PermissionGrantArgs = Static<typeof grantSchema>;
 
-export function buildPermissionRequestTool(): ToolDefinition {
+const permissionToolResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    approved: Type.Boolean(),
+    agentId: Type.String(),
+    permissionCount: Type.Number(),
+    scope: Type.Optional(Type.String()),
+    token: Type.Optional(Type.String()),
+    timedOut: Type.Optional(Type.Boolean())
+  },
+  { additionalProperties: false }
+);
+
+type PermissionToolResult = Static<typeof permissionToolResultSchema>;
+
+const permissionToolReturns: ToolResultContract<PermissionToolResult> = {
+  schema: permissionToolResultSchema,
+  toLLMText: (result) => result.summary
+};
+
+export function buildPermissionRequestTool(): ToolDefinition<typeof schema, PermissionToolResult> {
   return {
     tool: {
       name: "request_permission",
@@ -51,7 +70,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
         "Request additional permissions from the user. App agents may set scope='always' to persist grants for future runs.",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: permissionToolReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as PermissionArgs;
       const descriptor = toolContext.agent.descriptor;
@@ -148,7 +167,15 @@ export function buildPermissionRequestTool(): ToolDefinition {
           isError: false,
           timestamp: Date.now()
         };
-        return toolExecutionResultText(toolMessage);
+        return {
+          toolMessage,
+          typedResult: {
+            summary: `${permissionNoun} already granted for ${permissionLabel}.`,
+            approved: true,
+            agentId: requestedAgentId,
+            permissionCount: permissionTags.length
+          }
+        };
       }
 
       const permissionsToRequest = missingPermissions;
@@ -255,7 +282,17 @@ export function buildPermissionRequestTool(): ToolDefinition {
           isError: true,
           timestamp: Date.now()
         };
-        return toolExecutionResultText(toolMessage);
+        return {
+          toolMessage,
+          typedResult: {
+            summary: timeoutText,
+            approved: false,
+            agentId: requestedAgentId,
+            permissionCount: permissionTags.length,
+            token: request.token,
+            timedOut: true
+          }
+        };
       }
 
       const targetAgentId = decision.agentId || requestedAgentId;
@@ -312,12 +349,22 @@ export function buildPermissionRequestTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary: scopedResultText,
+          approved: decision.approved,
+          agentId: targetAgentId,
+          permissionCount: decision.permissions.length,
+          ...(descriptor.type === "app" ? { scope: resolvedScope } : {}),
+          token: request.token
+        }
+      };
     }
   };
 }
 
-export function buildPermissionGrantTool(): ToolDefinition {
+export function buildPermissionGrantTool(): ToolDefinition<typeof grantSchema, PermissionToolResult> {
   return {
     tool: {
       name: "grant_permission",
@@ -325,7 +372,7 @@ export function buildPermissionGrantTool(): ToolDefinition {
         "Grant a permission you already have to another agent (requires a justification).",
       parameters: grantSchema
     },
-    returns: toolReturnText,
+    returns: permissionToolReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as PermissionGrantArgs;
       const permission = payload.permission.trim();
@@ -345,6 +392,7 @@ export function buildPermissionGrantTool(): ToolDefinition {
         access
       );
 
+      const summary = `Permission granted to agent ${payload.agentId}.`;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -352,7 +400,7 @@ export function buildPermissionGrantTool(): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Permission granted to agent ${payload.agentId}.`
+            text: summary
           }
         ],
         details: {
@@ -364,7 +412,15 @@ export function buildPermissionGrantTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          approved: true,
+          agentId: payload.agentId,
+          permissionCount: 1
+        }
+      };
     }
   };
 }

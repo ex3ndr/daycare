@@ -1,5 +1,4 @@
 import { createId } from "@paralleldrive/cuid2";
-import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { Context } from "@mariozechner/pi-ai";
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
@@ -7,7 +6,8 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import type {
   AgentHistoryRecord,
   ToolDefinition,
-  ToolExecutionContext
+  ToolExecutionContext,
+  ToolResultContract
 } from "@/types";
 import { listActiveInferenceProviders, getProviderDefinition } from "../../../providers/catalog.js";
 import { providerModelSelectBySize } from "../../../providers/providerModelSelectBySize.js";
@@ -38,6 +38,23 @@ type SessionHistoryTimeRange = {
 const MAX_SUMMARY_RECORDS = 400;
 const MAX_SUMMARY_INPUT_CHARS = 120_000;
 
+const sessionHistoryResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    agentId: Type.String(),
+    summarized: Type.Boolean(),
+    recordCount: Type.Number()
+  },
+  { additionalProperties: false }
+);
+
+type SessionHistoryResult = Static<typeof sessionHistoryResultSchema>;
+
+const sessionHistoryReturns: ToolResultContract<SessionHistoryResult> = {
+  schema: sessionHistoryResultSchema,
+  toLLMText: (result) => result.summary
+};
+
 /**
  * Builds the read_session_history tool for cross-session visibility.
  * Expects: agentId references another persisted agent/session id.
@@ -50,7 +67,7 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         "Read another session's history by agentId. Returns a summary by default (summarized=true). Optional fromAt/toAt filters by record timestamp (unix ms).",
       parameters: schema
     },
-    returns: toolReturnText,
+    returns: sessionHistoryReturns,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SessionHistoryArgs;
       const agentId = payload.agentId.trim();
@@ -77,11 +94,12 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         ? await summaryTextGenerate(agentId, records, toolContext)
         : rawHistoryTextBuild(agentId, records);
 
+      const summary = text;
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text: summary }],
         details: {
           agentId,
           summarized,
@@ -93,7 +111,15 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return toolExecutionResultText(toolMessage);
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          agentId,
+          summarized,
+          recordCount: records.length
+        }
+      };
     }
   };
 }

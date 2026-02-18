@@ -1,9 +1,9 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
+import type { ToolResultContract } from "@/types";
 
 const settingsSchema = z
   .object({
@@ -20,6 +20,23 @@ const searchSchema = Type.Object(
 );
 
 type SearchArgs = Static<typeof searchSchema>;
+
+const searchResultSchema = Type.Object(
+  {
+    summary: Type.String(),
+    query: Type.String(),
+    citationCount: Type.Number(),
+    model: Type.String()
+  },
+  { additionalProperties: false }
+);
+
+type SearchResult = Static<typeof searchResultSchema>;
+
+const searchReturns: ToolResultContract<SearchResult> = {
+  schema: searchResultSchema,
+  toLLMText: (result) => result.summary
+};
 
 type PerplexityResponse = {
   choices?: Array<{
@@ -92,7 +109,7 @@ export const plugin = definePlugin({
               "Search the web using Perplexity AI. Returns an AI-generated answer with citations.",
             parameters: searchSchema
           },
-          returns: toolReturnText,
+          returns: searchReturns,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -134,17 +151,26 @@ export const plugin = definePlugin({
               text += "\n\nSources:\n" + citations.map((url, i) => `${i + 1}. ${url}`).join("\n");
             }
 
+            const summary = text;
             const toolMessage: ToolResultMessage = {
               role: "toolResult",
               toolCallId: toolCall.id,
               toolName: toolCall.name,
-              content: [{ type: "text", text }],
+              content: [{ type: "text", text: summary }],
               details: { citationsCount: citations.length },
               isError: false,
               timestamp: Date.now()
             };
 
-            return toolExecutionResultText(toolMessage);
+            return {
+              toolMessage,
+              typedResult: {
+                summary,
+                query: payload.query,
+                citationCount: citations.length,
+                model
+              }
+            };
           }
         });
       },

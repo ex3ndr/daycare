@@ -10,6 +10,7 @@ import type {
   ToolExecutionResult
 } from "@/types";
 import { toolResultTruncate } from "./tools/toolResultTruncate.js";
+import { toolExecutionResultOutcome } from "./tools/toolReturnOutcome.js";
 import { RLM_TOOL_NAME } from "./rlm/rlmConstants.js";
 
 type RegisteredTool = ToolDefinition & { pluginId: string };
@@ -107,10 +108,7 @@ function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
     isError: true,
     timestamp: Date.now()
   };
-  return {
-    toolMessage,
-    typedResult: { text }
-  };
+  return toolExecutionResultOutcome(toolMessage);
 }
 
 function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
