@@ -245,7 +245,7 @@ export default function AgentsPage() {
                       <TableRow key={agent.agentId} className="hover:bg-muted/50">
                         <TableCell>
                           <Link
-                            href={`/agents/${agent.agentId}`}
+                            href={`/agent?agentId=${encodeURIComponent(agent.agentId)}`}
                             className="text-sm font-medium text-foreground hover:underline"
                           >
                             {agent.agentId}

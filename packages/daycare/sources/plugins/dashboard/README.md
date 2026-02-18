@@ -18,7 +18,7 @@ Runs a local Daycare dashboard server directly inside the Daycare runtime.
 - Stores only the bcrypt hash in plugin settings.
 
 ## Runtime behavior
-- Serves bundled static dashboard assets from the plugin package.
+- Serves bundled static dashboard assets from the Next export build (`packages/daycare-dashboard`).
 - Proxies `/api/*` requests to the local Daycare engine unix socket.
 - Uses streaming proxy behavior so SSE endpoints (for example `/api/v1/engine/events`) continue working.
 - Shuts down the HTTP server when the plugin unloads.

@@ -1,6 +1,7 @@
 node_modules
 dist
 .next
+packages/daycare-dashboard/out
 *.log
 .daycare
 *.tsbuildinfo

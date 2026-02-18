@@ -4,6 +4,8 @@ The `dashboard` plugin runs a local dashboard server fully inside `daycare-cli`.
 
 It serves bundled static assets and proxies `/api/*` requests to the engine unix socket.
 
+The bundled static assets are produced from `packages/daycare-dashboard` via Next static export during `daycare-cli` build/publish.
+
 ## Runtime flow
 
 ```mermaid

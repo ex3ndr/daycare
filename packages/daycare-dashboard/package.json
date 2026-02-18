@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "next build",
+    "build:export": "DAYCARE_DASHBOARD_EXPORT=1 next build",
     "dev": "PORT=7331 next dev",
     "start": "PORT=7331 next start",
     "test": "echo \"No tests for daycare-dashboard\"",

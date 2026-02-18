@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Bell, BellOff, Cable, Clock, MessageSquare, Moon, RefreshCw, Skull } from "lucide-react";
 
@@ -20,14 +21,9 @@ import {
 } from "@/lib/engine-client";
 import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
 
-type AgentDetailPageProps = {
-  params: {
-    agentId: string;
-  };
-};
-
-export default function AgentDetailPage({ params }: AgentDetailPageProps) {
-  const { agentId } = params;
+export default function AgentDetailPage() {
+  const searchParams = useSearchParams();
+  const agentId = searchParams.get("agentId")?.trim() ?? "";
   const [summary, setSummary] = useState<AgentSummary | null>(null);
   const [records, setRecords] = useState<AgentHistoryRecord[]>([]);
   const [subscriptions, setSubscriptions] = useState<SignalSubscription[]>([]);
@@ -44,6 +40,12 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
 
   const refresh = useCallback(
     async (options: { silent?: boolean } = {}) => {
+      if (!agentId) {
+        setSummary(null);
+        setRecords([]);
+        setSubscriptions([]);
+        return;
+      }
       const silent = options.silent ?? false;
       if (!silent) {
         setLoading(true);
@@ -169,7 +171,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
 
   return (
     <DashboardShell
-      title={summary?.agentId ?? agentId}
+      title={(summary?.agentId ?? agentId) || "Agent detail"}
       subtitle="Inspect the full conversation history for this agent."
       toolbar={
         <>
@@ -221,6 +223,14 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
       }
     >
       <div className="flex flex-1 flex-col gap-6 overflow-hidden px-4 py-6 lg:px-6">
+        {!agentId && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Select an agent</CardTitle>
+              <CardDescription>Open this page from the agents table to inspect a specific thread.</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="overflow-hidden bg-gradient-to-br from-primary/10 via-card to-card/80">
             <CardHeader className="flex flex-row items-center justify-between">

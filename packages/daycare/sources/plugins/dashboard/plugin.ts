@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { promises as fs, createReadStream } from "node:fs";
 import http from "node:http";
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -16,7 +16,11 @@ const DASHBOARD_DEFAULT_PORT = 7331;
 const DASHBOARD_DEFAULT_USERNAME = "daycare";
 const DASHBOARD_BASIC_AUTH_REALM = "Daycare Dashboard";
 
-const siteDirectory = fileURLToPath(new URL("./site", import.meta.url));
+const bundledSiteDirectory = fileURLToPath(new URL("./site", import.meta.url));
+const workspaceDashboardExportDirectory = path.resolve(
+  fileURLToPath(new URL(".", import.meta.url)),
+  "../../../../daycare-dashboard/out"
+);
 
 const settingsSchema = z
   .object({
@@ -33,12 +37,6 @@ const settingsSchema = z
   .strict();
 
 type DashboardSettings = z.infer<typeof settingsSchema>;
-
-type DashboardAssets = {
-  indexHtml: Buffer;
-  styleCss: Buffer;
-  appJs: Buffer;
-};
 
 export const plugin = definePlugin({
   settingsSchema,
@@ -164,7 +162,7 @@ export const plugin = definePlugin({
   create: (api) => {
     const settings = api.settings as DashboardSettings;
     const socketPath = resolveEngineSocketPath(api.engineSettings.engine?.socketPath);
-    const assetsPromise = dashboardAssetsLoad();
+    const siteDirectoryPromise = dashboardSiteDirectoryResolve();
 
     let server: http.Server | null = null;
 
@@ -189,13 +187,18 @@ export const plugin = definePlugin({
         return;
       }
 
-      const assets = await assetsPromise;
-      dashboardServeAsset(response, requestUrl.pathname, assets);
+      const siteDirectory = await siteDirectoryPromise;
+      const assetPath = await dashboardStaticPathResolve(siteDirectory, requestUrl.pathname);
+      if (!assetPath) {
+        dashboardSendJson(response, 404, { ok: false, error: "Dashboard route not found." });
+        return;
+      }
+      await dashboardServeFile(response, assetPath);
     };
 
     return {
       load: async () => {
-        await assetsPromise;
+        const resolvedSiteDirectory = await siteDirectoryPromise;
 
         server = http.createServer((request, response) => {
           void handleRequest(request, response).catch((error: unknown) => {
@@ -216,7 +219,7 @@ export const plugin = definePlugin({
           ? `basic auth enabled (user: ${settings.basicAuth.username})`
           : "basic auth disabled";
         api.logger.info(
-          { host: settings.host, port: settings.port },
+          { host: settings.host, port: settings.port, siteDir: resolvedSiteDirectory },
           `Dashboard listening on http://${settings.host}:${settings.port} (${authMessage})`
         );
       },
@@ -269,47 +272,96 @@ function dashboardPasswordIsStrong(password: string): boolean {
   return hasLower && hasUpper && hasDigit;
 }
 
-async function dashboardAssetsLoad(): Promise<DashboardAssets> {
-  const [indexHtml, styleCss, appJs] = await Promise.all([
-    fs.readFile(path.join(siteDirectory, "index.html")),
-    fs.readFile(path.join(siteDirectory, "dashboard.css")),
-    fs.readFile(path.join(siteDirectory, "dashboard.js"))
-  ]);
-
-  return {
-    indexHtml,
-    styleCss,
-    appJs
-  };
+async function dashboardSiteDirectoryResolve(): Promise<string> {
+  const candidates = [workspaceDashboardExportDirectory, bundledSiteDirectory];
+  for (const candidate of candidates) {
+    const indexPath = path.join(candidate, "index.html");
+    if (await dashboardFileExists(indexPath)) {
+      return candidate;
+    }
+  }
+  throw new Error(
+    `Dashboard bundle missing. Expected index.html at ${workspaceDashboardExportDirectory} or ${bundledSiteDirectory}.`
+  );
 }
 
-function dashboardServeAsset(
+async function dashboardStaticPathResolve(
+  siteDirectory: string,
+  pathname: string
+): Promise<string | null> {
+  const decoded = dashboardPathDecode(pathname);
+  if (!decoded || decoded.includes("\0")) {
+    return null;
+  }
+
+  const normalized = decoded.replace(/^\/+/, "");
+  const candidates = dashboardPathCandidates(normalized);
+
+  for (const candidate of candidates) {
+    const targetPath = path.resolve(siteDirectory, candidate);
+    if (!dashboardPathIsWithin(siteDirectory, targetPath)) {
+      continue;
+    }
+    if (await dashboardFileExists(targetPath)) {
+      return targetPath;
+    }
+  }
+
+  return null;
+}
+
+function dashboardPathDecode(pathname: string): string | null {
+  try {
+    return decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+}
+
+function dashboardPathCandidates(pathname: string): string[] {
+  if (!pathname || pathname === "/") {
+    return ["index.html"];
+  }
+
+  const posixPath = pathname.replace(/\\/g, "/");
+  if (posixPath.endsWith("/")) {
+    return [path.posix.join(posixPath, "index.html")];
+  }
+
+  const candidates = [posixPath];
+  if (!path.extname(posixPath)) {
+    candidates.push(`${posixPath}.html`, path.posix.join(posixPath, "index.html"));
+  }
+  return candidates;
+}
+
+function dashboardPathIsWithin(basePath: string, targetPath: string): boolean {
+  // Guard against traversal so URL paths cannot escape the dashboard bundle root.
+  const relative = path.relative(basePath, targetPath);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+async function dashboardFileExists(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function dashboardServeFile(
   response: http.ServerResponse,
-  pathname: string,
-  assets: DashboardAssets
-): void {
-  if (pathname === "/" || pathname === "/index.html") {
-    dashboardSendBytes(response, 200, "text/html; charset=utf-8", assets.indexHtml);
-    return;
-  }
-
-  if (pathname === "/dashboard.css") {
-    dashboardSendBytes(response, 200, "text/css; charset=utf-8", assets.styleCss);
-    return;
-  }
-
-  if (pathname === "/dashboard.js") {
-    dashboardSendBytes(response, 200, "application/javascript; charset=utf-8", assets.appJs);
-    return;
-  }
-
-  if (pathname === "/favicon.ico") {
-    response.writeHead(204);
-    response.end();
-    return;
-  }
-
-  dashboardSendBytes(response, 200, "text/html; charset=utf-8", assets.indexHtml);
+  filePath: string
+): Promise<void> {
+  response.writeHead(200, {
+    "content-type": dashboardContentTypeResolve(filePath),
+    "cache-control": dashboardCacheControlResolve(filePath)
+  });
+  await pipeline(createReadStream(filePath), response);
 }
 
 async function dashboardProxyRequest(
@@ -418,17 +470,50 @@ function dashboardSendJson(
   response.end(`${JSON.stringify(payload)}\n`);
 }
 
-function dashboardSendBytes(
-  response: http.ServerResponse,
-  statusCode: number,
-  contentType: string,
-  body: Buffer
-): void {
-  response.writeHead(statusCode, {
-    "content-type": contentType,
-    "cache-control": "no-store"
-  });
-  response.end(body);
+function dashboardContentTypeResolve(filePath: string): string {
+  const extension = path.extname(filePath).toLowerCase();
+  if (extension === ".html") {
+    return "text/html; charset=utf-8";
+  }
+  if (extension === ".css") {
+    return "text/css; charset=utf-8";
+  }
+  if (extension === ".js") {
+    return "application/javascript; charset=utf-8";
+  }
+  if (extension === ".json") {
+    return "application/json; charset=utf-8";
+  }
+  if (extension === ".svg") {
+    return "image/svg+xml";
+  }
+  if (extension === ".png") {
+    return "image/png";
+  }
+  if (extension === ".jpg" || extension === ".jpeg") {
+    return "image/jpeg";
+  }
+  if (extension === ".ico") {
+    return "image/x-icon";
+  }
+  if (extension === ".woff2") {
+    return "font/woff2";
+  }
+  if (extension === ".woff") {
+    return "font/woff";
+  }
+  if (extension === ".txt") {
+    return "text/plain; charset=utf-8";
+  }
+  return "application/octet-stream";
+}
+
+function dashboardCacheControlResolve(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  if (normalized.includes("/_next/static/")) {
+    return "public, max-age=31536000, immutable";
+  }
+  return "no-store";
 }
 
 function dashboardServerListen(server: http.Server, host: string, port: number): Promise<void> {
