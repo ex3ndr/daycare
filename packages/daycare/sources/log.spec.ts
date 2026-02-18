@@ -1,6 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPrettyMessage } from "./log.js";
+import { formatPrettyMessage, initLogging, resetLogging } from "./log.js";
+
+describe("initLogging", () => {
+  it("defaults to silent level when running in vitest", () => {
+    const previousVitest = process.env.VITEST;
+    const previousDaycareLogLevel = process.env.DAYCARE_LOG_LEVEL;
+    const previousLogLevel = process.env.LOG_LEVEL;
+
+    try {
+      process.env.VITEST = "true";
+      delete process.env.DAYCARE_LOG_LEVEL;
+      delete process.env.LOG_LEVEL;
+
+      resetLogging();
+      const logger = initLogging();
+
+      expect(logger.level).toBe("silent");
+    } finally {
+      resetLogging();
+      if (previousVitest === undefined) {
+        delete process.env.VITEST;
+      } else {
+        process.env.VITEST = previousVitest;
+      }
+      if (previousDaycareLogLevel === undefined) {
+        delete process.env.DAYCARE_LOG_LEVEL;
+      } else {
+        process.env.DAYCARE_LOG_LEVEL = previousDaycareLogLevel;
+      }
+      if (previousLogLevel === undefined) {
+        delete process.env.LOG_LEVEL;
+      } else {
+        process.env.LOG_LEVEL = previousLogLevel;
+      }
+    }
+  });
+});
 
 describe("formatPrettyMessage", () => {
   it("includes structured fields in pretty text output", () => {

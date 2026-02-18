@@ -105,11 +105,12 @@ export function resetLogging(): void {
 
 function resolveLogConfig(overrides: Partial<LogConfig>): LogConfig {
   const isDev = process.env.NODE_ENV !== "production";
+  const isUnitTest = isUnitTestRun();
   const level =
     overrides.level ??
     envValue("DAYCARE_LOG_LEVEL") ??
     envValue("LOG_LEVEL") ??
-    (isDev ? "debug" : "info");
+    (isUnitTest ? "silent" : isDev ? "debug" : "info");
   const destination =
     overrides.destination ??
     envValue("DAYCARE_LOG_DEST") ??
@@ -536,4 +537,8 @@ function mergeRedactList(base: string[], extra: string | null): string[] {
 
 function isStdDestination(destination: LogDestination): boolean {
   return destination === "stdout" || destination === "stderr";
+}
+
+function isUnitTestRun(): boolean {
+  return process.env.VITEST === "true" || process.env.VITEST === "1";
 }

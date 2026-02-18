@@ -79,6 +79,21 @@ To disable verbose logging in dev mode:
 DAYCARE_LOG_LEVEL=info yarn dev
 ```
 
+## Unit Test Logging
+
+When logs are not explicitly configured, Vitest runs now default to `silent` level so unit test output stays clean.
+
+```mermaid
+flowchart TD
+  Start[resolveLogConfig] --> Override{DAYCARE_LOG_LEVEL or LOG_LEVEL set?}
+  Override -->|yes| Explicit[use explicit level]
+  Override -->|no| Vitest{VITEST=true/1?}
+  Vitest -->|yes| Silent[silent]
+  Vitest -->|no| Env{NODE_ENV=production?}
+  Env -->|yes| Info[info]
+  Env -->|no| Debug[debug]
+```
+
 ### Verbose Log Components
 
 Debug logs include key data embedded in the message text using `key=value` format:
