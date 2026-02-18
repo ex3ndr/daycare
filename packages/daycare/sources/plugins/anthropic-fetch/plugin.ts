@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import { getOAuthApiKey, type OAuthCredentials, type OAuthProviderId } from "@mariozechner/pi-ai";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
@@ -188,6 +189,7 @@ export const plugin = definePlugin({
               "Fetch and process web page content using Claude with web search. Returns extracted and summarized content.",
             parameters: fetchSchema
           },
+          returns: toolReturnText,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -260,7 +262,7 @@ export const plugin = definePlugin({
               timestamp: Date.now()
             };
 
-            return { toolMessage };
+            return toolExecutionResultText(toolMessage);
           }
         });
       },

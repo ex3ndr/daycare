@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../tools/toolReturnText.js";
 
 import type { ToolDefinition } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
@@ -31,6 +32,7 @@ export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
         "Execute Python code to complete the task. Available function stubs are injected in this tool description at runtime.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as RlmArgs;
       const runtimeResolver = context.toolResolver ?? toolResolver;

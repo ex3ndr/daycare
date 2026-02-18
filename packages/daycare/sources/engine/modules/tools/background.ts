@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -34,6 +35,7 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
       description: "Start a background agent to work on a task.",
       parameters: startSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as StartBackgroundArgs;
       const prompt = payload.prompt.trim();
@@ -75,7 +77,7 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -88,6 +90,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         "Send a system message to another agent (defaults to the most recent foreground agent).",
       parameters: sendSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SendAgentMessageArgs;
       const descriptor = toolContext.agent.descriptor;
@@ -121,7 +124,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

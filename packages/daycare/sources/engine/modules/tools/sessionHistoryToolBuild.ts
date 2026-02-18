@@ -1,4 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { Context } from "@mariozechner/pi-ai";
 import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
@@ -49,6 +50,7 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         "Read another session's history by agentId. Returns a summary by default (summarized=true). Optional fromAt/toAt filters by record timestamp (unix ms).",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SessionHistoryArgs;
       const agentId = payload.agentId.trim();
@@ -91,7 +93,7 @@ export function sessionHistoryToolBuild(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

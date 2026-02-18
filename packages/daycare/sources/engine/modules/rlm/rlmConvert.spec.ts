@@ -79,7 +79,7 @@ describe("rlmArgsConvert", () => {
 
 describe("rlmResultConvert", () => {
   it("prefers typed results for python return values", () => {
-    const result: ToolExecutionResult = {
+    const result: ToolExecutionResult<{ ok: boolean; rows: Array<{ name: string }> }> = {
       toolMessage: {
         role: "toolResult",
         toolCallId: "1",
@@ -112,10 +112,11 @@ describe("rlmResultConvert", () => {
         ],
         isError: false,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: "hello\nworld" }
     };
 
-    expect(rlmResultConvert(result)).toBe("hello\nworld");
+    expect(rlmResultConvert(result)).toEqual({ text: "hello\nworld" });
   });
 
   it("returns fallback error text for empty error payloads", () => {
@@ -127,9 +128,10 @@ describe("rlmResultConvert", () => {
         content: [],
         isError: true,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: "" }
     };
 
-    expect(rlmResultConvert(result)).toBe("Tool execution failed.");
+    expect(rlmResultConvert(result)).toEqual({ text: "" });
   });
 });

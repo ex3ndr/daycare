@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ExposeMode, ExposeTarget, ToolDefinition } from "@/types";
@@ -31,6 +32,7 @@ export function exposeCreateToolBuild(
         "Expose a local HTTP port or unix socket through a tunnel provider.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ExposeCreateArgs;
       const target = targetResolve(payload);
@@ -68,7 +70,7 @@ export function exposeCreateToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
@@ -74,6 +75,7 @@ export function buildHeartbeatRunTool(): ToolDefinition {
       description: "Run heartbeat tasks immediately as a single batch instead of waiting for the next interval.",
       parameters: runSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as RunHeartbeatArgs;
       const result = await toolContext.heartbeats.runNow({ ids: payload.ids });
@@ -94,7 +96,7 @@ export function buildHeartbeatRunTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -106,6 +108,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
       description: "Create or update a heartbeat prompt stored in config/heartbeat (optional gate).",
       parameters: addSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddHeartbeatArgs;
 
@@ -138,7 +141,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -150,6 +153,7 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
       description: "Delete a heartbeat task.",
       parameters: removeSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as RemoveHeartbeatArgs;
       const removed = await toolContext.heartbeats.removeTask(payload.id);
@@ -171,7 +175,7 @@ export function buildHeartbeatRemoveTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

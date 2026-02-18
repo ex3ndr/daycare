@@ -71,7 +71,8 @@ function toolResultRecordBuild(at: number, toolCallId: string, toolName: string)
         content: [{ type: "text", text: "ok" }],
         isError: false,
         timestamp: at
-      }
+      },
+      typedResult: { text: "ok" }
     }
   };
 }
@@ -94,7 +95,8 @@ function toolResultErrorRecordBuild(
         content: [{ type: "text", text }],
         isError: true,
         timestamp: at
-      }
+      },
+      typedResult: { text }
     }
   };
 }

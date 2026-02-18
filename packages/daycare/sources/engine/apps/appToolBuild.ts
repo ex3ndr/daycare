@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "../modules/tools/toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -28,6 +29,7 @@ export function appToolBuild(app: AppDescriptor): ToolDefinition {
       description: app.manifest.description,
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as AppToolBuildArgs;
       const prompt = payload.prompt.trim();
@@ -56,7 +58,7 @@ export function appToolBuild(app: AppDescriptor): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

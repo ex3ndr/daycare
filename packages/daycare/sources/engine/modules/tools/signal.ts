@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -53,6 +54,7 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         "Broadcast a signal event. Any agent subscribed to a matching pattern receives it. Use colon-separated type segments (e.g. `build:project-x:done`). Signals are fire-and-forget — you don't need to know who listens.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as GenerateSignalArgs;
       const source = payload.source ?? { type: "agent", id: toolContext.agent.id };
@@ -77,7 +79,7 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { THEMES, renderMermaid } from "beautiful-mermaid";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
@@ -34,6 +35,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         "Render raw Mermaid diagram source into a PNG file and return it as a generated artifact.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as MermaidPngArgs;
       const themeName = payload.theme ?? "github-light";
@@ -84,9 +86,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
         timestamp: Date.now()
       };
 
-      return {
-        toolMessage
-      };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -21,6 +22,7 @@ export function channelCreateToolBuild(channels: Channels): ToolDefinition {
       description: "Create a channel with a designated leader agent.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelCreateArgs;
       const channel = await channels.create(payload.name, payload.leaderAgentId);
@@ -38,7 +40,7 @@ export function channelCreateToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

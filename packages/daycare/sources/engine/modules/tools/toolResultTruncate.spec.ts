@@ -14,7 +14,8 @@ describe("toolResultTruncate", () => {
         content: [{ type: "text", text: longText }],
         isError: false,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: longText }
     };
 
     const truncated = toolResultTruncate(result);
@@ -33,7 +34,8 @@ describe("toolResultTruncate", () => {
         content: [{ type: "text", text: "ok" }],
         isError: false,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: "ok" }
     };
 
     const truncated = toolResultTruncate(result);

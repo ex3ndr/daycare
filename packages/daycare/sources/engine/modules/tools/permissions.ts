@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
@@ -50,6 +51,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
         "Request additional permissions from the user. App agents may set scope='always' to persist grants for future runs.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as PermissionArgs;
       const descriptor = toolContext.agent.descriptor;
@@ -146,7 +148,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
           isError: false,
           timestamp: Date.now()
         };
-        return { toolMessage };
+        return toolExecutionResultText(toolMessage);
       }
 
       const permissionsToRequest = missingPermissions;
@@ -253,7 +255,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
           isError: true,
           timestamp: Date.now()
         };
-        return { toolMessage };
+        return toolExecutionResultText(toolMessage);
       }
 
       const targetAgentId = decision.agentId || requestedAgentId;
@@ -310,7 +312,7 @@ export function buildPermissionRequestTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -323,6 +325,7 @@ export function buildPermissionGrantTool(): ToolDefinition {
         "Grant a permission you already have to another agent (requires a justification).",
       parameters: grantSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as PermissionGrantArgs;
       const permission = payload.permission.trim();
@@ -361,7 +364,7 @@ export function buildPermissionGrantTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

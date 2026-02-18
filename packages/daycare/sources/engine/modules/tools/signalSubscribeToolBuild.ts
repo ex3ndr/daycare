@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -23,6 +24,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         "Subscribe to signals matching a pattern. Pattern uses colon-separated segments with `*` as a single-segment wildcard (e.g. `build:*:done` matches `build:alpha:done` but not `build:alpha:beta:done`). Defaults to silent delivery (won't wake a sleeping agent); set `silent=false` to wake on signal. Pass `agentId` to subscribe another agent.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SubscribeSignalArgs;
       const targetAgentId = payload.agentId?.trim() ?? toolContext.agent.id;
@@ -52,7 +54,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

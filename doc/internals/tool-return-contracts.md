@@ -7,15 +7,13 @@ Tool execution now supports a typed return contract that keeps outputs both:
 
 ## What changed
 
-- `ToolDefinition` now supports `returns`:
+- `ToolDefinition` now requires `returns`:
   - `schema` (TypeBox)
-  - `toLlmText(result)` converter
-- `ToolExecutionResult` now supports `typedResult`.
+  - `toLLMText(result)` converter
+- `ToolExecutionResult` now requires `typedResult`.
 - `ToolResolver` now:
-  - normalizes missing contracts with a shallow-object fallback schema
   - validates `typedResult` against the tool's return schema
-  - injects LLM text via `returns.toLlmText` when no text block is present
-  - falls back to `toolMessage.details` or `{ text }` when `typedResult` is omitted
+  - injects LLM text via `returns.toLLMText` when no text block is present
 - `rlmResultConvert` now prefers `typedResult` (then `toolMessage.details`) before text.
 
 ## Data Flow
@@ -31,7 +29,7 @@ flowchart TD
   E --> G
   F --> G
   G --> H{toolMessage has text?}
-  H -->|no| I[Render text via returns.toLlmText]
+  H -->|no| I[Render text via returns.toLLMText]
   H -->|yes| J[Keep existing content]
   I --> K[ToolExecutionResult with typedResult]
   J --> K

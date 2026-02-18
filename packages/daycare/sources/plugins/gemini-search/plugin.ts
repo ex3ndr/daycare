@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
@@ -124,6 +125,7 @@ export const plugin = definePlugin({
               "Search the web using Google Gemini with Search Grounding. Returns AI-generated answer with source citations.",
             parameters: searchSchema
           },
+          returns: toolReturnText,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -196,7 +198,7 @@ export const plugin = definePlugin({
               timestamp: Date.now()
             };
 
-            return { toolMessage };
+            return toolExecutionResultText(toolMessage);
           }
         });
       },

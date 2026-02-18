@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -32,6 +33,7 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
         "Read signal events as CSV. Optional filters: fromAt/toAt (unix ms) and types (exact event type matches). Columns: event_type,args,unix_time,ai_friendly_time.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as SignalEventsCsvArgs;
       const timeRange = signalEventsCsvTimeRangeNormalize(payload.fromAt, payload.toAt);
@@ -53,7 +55,7 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

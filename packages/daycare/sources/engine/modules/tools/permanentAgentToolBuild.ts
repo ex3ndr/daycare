@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import path from "node:path";
 
 import { Type, type Static } from "@sinclair/typebox";
@@ -46,6 +47,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
       description: "Create or update a permanent background agent with a stable name and system prompt.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as PermanentAgentArgs;
       const name = payload.name.trim();
@@ -145,7 +147,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

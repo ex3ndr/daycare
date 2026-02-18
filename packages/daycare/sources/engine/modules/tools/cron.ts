@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
@@ -100,6 +101,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         "Create a scheduled cron task from a prompt stored in config/cron (optional agentId + gate).",
       parameters: addCronSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as AddCronToolArgs;
 
@@ -145,7 +147,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -157,6 +159,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
       description: "Read a cron task's description and prompt.",
       parameters: readCronTaskSchema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as CronReadTaskArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
@@ -194,7 +197,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -206,6 +209,7 @@ export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
       description: "Read the memory for a cron task.",
       parameters: readCronMemorySchema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as CronReadMemoryArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
@@ -226,7 +230,7 @@ export function buildCronReadMemoryTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -238,6 +242,7 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
       description: "Write or append memory for a cron task.",
       parameters: writeCronMemorySchema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as CronWriteMemoryArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
@@ -261,7 +266,7 @@ export function buildCronWriteMemoryTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -273,6 +278,7 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
       description: "Delete a cron task from disk and scheduler.",
       parameters: deleteCronTaskSchema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as CronDeleteTaskArgs;
       const taskId = await resolveTaskId(payload.taskId, context);
@@ -293,7 +299,7 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

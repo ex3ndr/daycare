@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -83,6 +84,7 @@ export function buildMontyPythonTool(name = "python"): ToolDefinition {
         "Run sandboxed Python code via @pydantic/monty. Supports optional inputs, type checking, and resource limits.",
       parameters: pythonSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as PythonArgs;
 
@@ -151,7 +153,7 @@ function buildResult(
     timestamp: Date.now()
   };
 
-  return { toolMessage };
+  return toolExecutionResultText(toolMessage);
 }
 
 function formatMontyException(exception: MontyExceptionLike, fallback: string): string {

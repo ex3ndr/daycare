@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -19,6 +20,7 @@ export function exposeListToolBuild(
       description: "List all expose endpoints and available providers.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (_args, _toolContext, toolCall) => {
       const [endpoints, providers] = await Promise.all([
         exposes.list(),
@@ -52,7 +54,7 @@ export function exposeListToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

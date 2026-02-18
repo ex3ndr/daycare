@@ -1,4 +1,5 @@
 import path from "node:path";
+import { toolExecutionResultText, toolReturnText } from "../modules/tools/toolReturnText.js";
 
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type, type Static } from "@sinclair/typebox";
@@ -27,6 +28,7 @@ export function appInstallToolBuild(apps: Apps): ToolDefinition {
       description: "Install an app from a local directory containing APP.md and PERMISSIONS.md.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as AppInstallArgs;
       const source = payload.source.trim();
@@ -49,7 +51,7 @@ export function appInstallToolBuild(apps: Apps): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

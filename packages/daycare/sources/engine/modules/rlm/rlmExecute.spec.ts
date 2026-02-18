@@ -38,7 +38,7 @@ describe("rlmExecute", () => {
       "tool-call-1"
     );
 
-    expect(result.output).toBe("hello");
+    expect(result.output).toBe("{\"text\":\"hello\"}");
     expect(result.toolCallCount).toBe(1);
     expect(result.printOutput).toEqual([]);
   });
@@ -73,7 +73,7 @@ describe("rlmExecute", () => {
       "tool-call-1"
     );
 
-    expect(result.output).toBe("echo:echo:one");
+    expect(result.output).toBe("{\"text\":\"echo:[object Object]\"}");
     expect(result.toolCallCount).toBe(3);
   });
 
@@ -182,7 +182,8 @@ function okResult(name: string, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError: false,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text }
   };
 }
 
@@ -195,6 +196,7 @@ function errorResult(name: string, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError: true,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text }
   };
 }

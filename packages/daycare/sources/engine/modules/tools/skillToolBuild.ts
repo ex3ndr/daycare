@@ -1,4 +1,5 @@
 import path from "node:path";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
@@ -29,6 +30,7 @@ export function skillToolBuild(): ToolDefinition {
       description: "Load and run a skill by name or SKILL.md path.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as SkillToolArgs;
       const requested = payload.name.trim();
@@ -88,7 +90,7 @@ export function skillToolBuild(): ToolDefinition {
           toolCall.name,
           `Skill executed in sandbox. Result:\n\n---\n\n${body}`
         );
-        return { toolMessage };
+        return toolExecutionResultText(toolMessage);
       }
 
       const body = skillBody.length > 0 ? skillBody : "(Skill body is empty.)";
@@ -97,7 +99,7 @@ export function skillToolBuild(): ToolDefinition {
         toolCall.name,
         `Skill loaded (embedded). Follow the instructions below:\n\n---\n\n${body}`
       );
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

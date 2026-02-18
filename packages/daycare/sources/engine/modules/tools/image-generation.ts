@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
@@ -27,6 +28,7 @@ export function buildImageGenerationTool(
       description: "Generate one or more images using the configured image provider.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ImageGenerationRequest & { provider?: string };
       const providers = imageRegistry.list();
@@ -108,9 +110,7 @@ export function buildImageGenerationTool(
         timestamp: Date.now()
       };
 
-      return {
-        toolMessage
-      };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

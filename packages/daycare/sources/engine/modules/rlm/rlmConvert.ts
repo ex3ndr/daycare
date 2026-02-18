@@ -1,7 +1,12 @@
 import type { JsMontyObject } from "@pydantic/monty";
 import type { Tool } from "@mariozechner/pi-ai";
 
-import type { ToolExecutionResult, ToolResultPrimitive, ToolResultRow, ToolResultShallowObject } from "@/types";
+import type {
+  ToolExecutionResult,
+  ToolResultPrimitive,
+  ToolResultRow,
+  ToolResultShallowObject
+} from "@/types";
 import { rlmParameterEntriesBuild } from "./rlmParameterEntriesBuild.js";
 
 /**
@@ -39,7 +44,9 @@ export function rlmArgsConvert(
  * Converts a tool execution result into a Python-friendly string value.
  * Expects: tool result content follows the ToolResultMessage text block convention.
  */
-export function rlmResultConvert(toolResult: ToolExecutionResult): JsMontyObject {
+export function rlmResultConvert(
+  toolResult: ToolExecutionResult<ToolResultShallowObject>
+): JsMontyObject {
   if (toolResultShallowObjectIs(toolResult.typedResult)) {
     return toolResult.typedResult;
   }

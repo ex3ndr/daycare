@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -117,6 +118,7 @@ export function buildWorkspaceReadTool(): ToolDefinition {
         `Read file contents (text or images). Supports relative and absolute paths, offset/limit pagination, and truncates text output at ${READ_MAX_LINES} lines or ${Math.floor(READ_MAX_BYTES / 1024)}KB (whichever comes first).`,
       parameters: readSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ReadArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -145,6 +147,7 @@ export function buildWorkspaceWriteTool(): ToolDefinition {
         "Write UTF-8 text to a file within the agent workspace or an allowed write directory. Creates parent directories as needed. If append is true, appends to the file. Paths must be absolute and within the allowed write set.",
       parameters: writeSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as WriteArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -172,6 +175,7 @@ export function buildWorkspaceEditTool(): ToolDefinition {
         "Apply one or more find/replace edits to a file in the agent workspace or an allowed write directory. Edits are applied sequentially and must match at least once. Paths must be absolute and within the allowed write set.",
       parameters: editSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as EditArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -193,6 +197,7 @@ export function buildExecTool(): ToolDefinition {
         "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. By default exec runs with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Use explicit permission tags to re-enable caller-held network, events, or writable path access; @read tags are ignored. Writes are sandboxed to the allowed write directories. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
       parameters: execSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ExecArgs;
       const workingDir = toolContext.permissions.workingDir;
@@ -247,7 +252,7 @@ export function buildExecTool(): ToolDefinition {
         const toolMessage = buildToolMessage(toolCall, text, false, {
           cwd: path.relative(workingDir, cwd) || "."
         });
-        return { toolMessage };
+        return toolExecutionResultText(toolMessage);
       } catch (error) {
         const execError = error as ExecException & {
           stdout?: string | Buffer;
@@ -263,7 +268,7 @@ export function buildExecTool(): ToolDefinition {
           exitCode: execError.code ?? null,
           signal: execError.signal ?? null
         });
-        return { toolMessage };
+        return toolExecutionResultText(toolMessage);
       }
     }
   };
@@ -306,7 +311,7 @@ async function handleReadSecure(
       { type: "text", text },
       { type: "image", data: imageBuffer.toString("base64"), mimeType }
     ];
-    return { toolMessage };
+    return toolExecutionResultText(toolMessage);
   }
 
   const textContent = await readTextFileSecure(resolvedPath);
@@ -359,7 +364,7 @@ async function handleReadSecure(
     offset: offset ?? null,
     limit: limit ?? null
   });
-  return { toolMessage };
+  return toolExecutionResultText(toolMessage);
 }
 
 /**
@@ -406,7 +411,7 @@ async function handleWriteSecure(
     bytes,
     append
   });
-  return { toolMessage };
+  return toolExecutionResultText(toolMessage);
 }
 
 /**
@@ -456,7 +461,7 @@ async function handleEditSecure(
       path: displayPath,
       edits: counts
     });
-    return { toolMessage };
+    return toolExecutionResultText(toolMessage);
   } finally {
     await handle.close();
   }

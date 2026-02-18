@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
@@ -41,6 +42,7 @@ export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition 
         "Create or update a memory entity type (lowercase a-z only, no underscores).",
       parameters: createEntitySchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as CreateEntityArgs;
       const result = await store.createEntity(
@@ -70,7 +72,7 @@ export function buildMemoryCreateEntityTool(store: MemoryStore): ToolDefinition 
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -83,6 +85,7 @@ export function buildMemoryUpsertRecordTool(store: MemoryStore): ToolDefinition 
         "Add or update a memory record as markdown under an entity.",
       parameters: upsertRecordSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as UpsertRecordArgs;
       const result = await store.upsertRecord(
@@ -113,7 +116,7 @@ export function buildMemoryUpsertRecordTool(store: MemoryStore): ToolDefinition 
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -126,6 +129,7 @@ export function buildMemoryListEntitiesTool(store: MemoryStore): ToolDefinition 
         "List memory entities with their short name and description.",
       parameters: listEntitiesSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ListEntitiesArgs;
       const entries = await store.listEntitySummaries(payload.limit);
@@ -148,7 +152,7 @@ export function buildMemoryListEntitiesTool(store: MemoryStore): ToolDefinition 
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

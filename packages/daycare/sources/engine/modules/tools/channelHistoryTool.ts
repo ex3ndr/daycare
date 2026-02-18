@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -21,6 +22,7 @@ export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
       description: "Read recent message history for a channel.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelHistoryArgs;
       const history = await channels.getHistory(payload.channelName, payload.limit);
@@ -45,7 +47,7 @@ export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

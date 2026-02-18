@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { z } from "zod";
 
@@ -89,6 +90,7 @@ export const plugin = definePlugin({
             description: "Search the web using Brave Search and return concise results.",
             parameters: searchSchema
           },
+          returns: toolReturnText,
           execute: async (args, toolContext, toolCall) => {
             if (!toolContext.permissions.network) {
               throw new Error("Network access not granted. Request @network permission.");
@@ -148,7 +150,7 @@ export const plugin = definePlugin({
               timestamp: Date.now()
             };
 
-            return { toolMessage };
+            return toolExecutionResultText(toolMessage);
           }
         });
       },

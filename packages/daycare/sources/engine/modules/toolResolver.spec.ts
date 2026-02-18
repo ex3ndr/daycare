@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
+import { toolReturnText } from "./tools/toolReturnText.js";
 import { ToolResolver } from "./toolResolver.js";
 
 describe("ToolResolver", () => {
@@ -13,6 +14,7 @@ describe("ToolResolver", () => {
         description: "Read file.",
         parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
       },
+      returns: toolReturnText,
       execute: async () => okResult("read_file", "ok")
     });
 
@@ -38,6 +40,7 @@ describe("ToolResolver", () => {
         description: "Run python.",
         parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
       },
+      returns: toolReturnText,
       execute: async () => okResult("run_python", "ok")
     });
 
@@ -63,6 +66,7 @@ describe("ToolResolver", () => {
         description: "Read file.",
         parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
       },
+      returns: toolReturnText,
       execute: async () => okResult("read_file", "ok")
     });
 
@@ -80,7 +84,7 @@ describe("ToolResolver", () => {
     expect(messageText(result)).toContain("ok");
   });
 
-  it("exposes typed results from tool details when typedResult is omitted", async () => {
+  it("keeps typed results from tool executions", async () => {
     const resolver = new ToolResolver();
     resolver.register("test", {
       tool: {
@@ -88,6 +92,7 @@ describe("ToolResolver", () => {
         description: "Read file.",
         parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
       },
+      returns: toolReturnText,
       execute: async () => ({
         toolMessage: {
           role: "toolResult",
@@ -97,7 +102,8 @@ describe("ToolResolver", () => {
           details: { path: "/tmp/a.txt", found: true },
           isError: false,
           timestamp: Date.now()
-        }
+        },
+        typedResult: { text: "ok" }
       })
     });
 
@@ -111,10 +117,10 @@ describe("ToolResolver", () => {
       contextBuild({ rlmToolOnly: false })
     );
 
-    expect(result.typedResult).toEqual({ path: "/tmp/a.txt", found: true });
+    expect(result.typedResult).toEqual({ text: "ok" });
   });
 
-  it("uses returns.toLlmText when tool response contains no text block", async () => {
+  it("uses returns.toLLMText when tool response contains no text block", async () => {
     const resolver = new ToolResolver();
     resolver.register("test", {
       tool: {
@@ -123,8 +129,8 @@ describe("ToolResolver", () => {
         parameters: Type.Object({}, { additionalProperties: false })
       },
       returns: {
-        schema: Type.Object({ count: Type.Number() }, { additionalProperties: false }),
-        toLlmText: (result) => `Rows: ${result.count}`
+        schema: Type.Object({ text: Type.String() }, { additionalProperties: false }),
+        toLLMText: () => "Rows: 3"
       },
       execute: async () => ({
         toolMessage: {
@@ -135,7 +141,7 @@ describe("ToolResolver", () => {
           isError: false,
           timestamp: Date.now()
         },
-        typedResult: { count: 3 }
+        typedResult: { text: "" }
       })
     });
 
@@ -150,7 +156,7 @@ describe("ToolResolver", () => {
     );
 
     expect(messageText(result)).toContain("Rows: 3");
-    expect(result.typedResult).toEqual({ count: 3 });
+    expect(result.typedResult).toEqual({ text: "" });
   });
 
   it("rejects tool output that does not match declared return schema", async () => {
@@ -162,8 +168,8 @@ describe("ToolResolver", () => {
         parameters: Type.Object({}, { additionalProperties: false })
       },
       returns: {
-        schema: Type.Object({ count: Type.Number() }, { additionalProperties: false }),
-        toLlmText: (result) => `Rows: ${result.count}`
+        schema: Type.Object({ text: Type.String() }, { additionalProperties: false }),
+        toLLMText: () => "Rows: 3"
       },
       execute: async () => ({
         toolMessage: {
@@ -174,7 +180,7 @@ describe("ToolResolver", () => {
           isError: false,
           timestamp: Date.now()
         },
-        typedResult: { count: "oops" } as unknown as { count: number }
+        typedResult: { text: 123 as unknown as string }
       })
     });
 
@@ -227,7 +233,8 @@ function okResult(name: string, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError: false,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text }
   };
 }
 

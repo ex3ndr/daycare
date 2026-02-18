@@ -70,7 +70,8 @@ describe("agentHistoryContext", () => {
             content: [{ type: "text", text: "Python execution completed." }],
             isError: false,
             timestamp: 9
-          }
+          },
+          typedResult: { text: "Python execution completed." }
         }
       }
     ];

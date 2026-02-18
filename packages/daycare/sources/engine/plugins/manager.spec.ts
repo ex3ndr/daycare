@@ -369,6 +369,17 @@ export const plugin = {
           description: "dynamic tool",
           parameters: z.object({})
         },
+        returns: {
+          schema: {
+            type: "object",
+            properties: {
+              text: { type: "string" }
+            },
+            required: ["text"],
+            additionalProperties: false
+          },
+          toLLMText: (result) => result.text
+        },
         execute: async () => ({
           toolMessage: {
             role: "toolResult",
@@ -377,7 +388,8 @@ export const plugin = {
             content: [{ type: "text", text: "ok" }],
             isError: false,
             timestamp: Date.now()
-          }
+          },
+          typedResult: { text: "ok" }
         })
       });
     }

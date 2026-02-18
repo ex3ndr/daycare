@@ -15,7 +15,8 @@ const baseToolMessage = {
 describe("toolResultFormatVerbose", () => {
   it("formats success results", () => {
     const result: ToolExecutionResult = {
-      toolMessage: baseToolMessage
+      toolMessage: baseToolMessage,
+      typedResult: { text: "ok" }
     };
 
     const text = toolResultFormatVerbose(result);
@@ -24,7 +25,8 @@ describe("toolResultFormatVerbose", () => {
 
   it("formats error results", () => {
     const result: ToolExecutionResult = {
-      toolMessage: { ...baseToolMessage, isError: true }
+      toolMessage: { ...baseToolMessage, isError: true },
+      typedResult: { text: "ok" }
     };
 
     const text = toolResultFormatVerbose(result);

@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -26,6 +27,7 @@ export function exposeRemoveToolBuild(
       description: "Remove an expose endpoint and tear down its tunnel.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ExposeRemoveArgs;
       const endpointId = payload.endpointId.trim();
@@ -45,7 +47,7 @@ export function exposeRemoveToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

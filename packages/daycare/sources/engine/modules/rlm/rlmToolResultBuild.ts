@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "../tools/toolReturnText.js";
 
 import type { ToolExecutionResult } from "@/types";
 
@@ -20,5 +21,5 @@ export function rlmToolResultBuild(
     timestamp: Date.now()
   };
 
-  return { toolMessage };
+  return toolExecutionResultText(toolMessage);
 }

@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
@@ -22,6 +23,7 @@ export function buildReactionTool(): ToolDefinition {
       description: "Set a reaction emoji on a message in the active connector.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ReactionArgs;
       if (!toolContext.connectorRegistry) {
@@ -54,7 +56,7 @@ export function buildReactionTool(): ToolDefinition {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

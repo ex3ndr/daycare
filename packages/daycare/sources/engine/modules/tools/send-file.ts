@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
@@ -52,6 +53,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         "Send a file to the current channel via the active connector. Supports photo/video/document modes when available.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as SendFileArgs;
       if (!context.connectorRegistry) {
@@ -113,7 +115,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

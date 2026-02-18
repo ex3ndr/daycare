@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { AgentDescriptor, ToolDefinition } from "@/types";
@@ -22,6 +23,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
       description: "Send a message to a channel. Mentioned usernames receive it plus the leader.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ChannelSendArgs;
       const senderUsername = senderUsernameResolve(toolContext.agent.descriptor);
@@ -52,7 +54,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

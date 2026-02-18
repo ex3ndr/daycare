@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -28,6 +29,7 @@ export function exposeUpdateToolBuild(
         "Update expose endpoint authentication; enabling auth returns a new password.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ExposeUpdateArgs;
       const endpointId = payload.endpointId.trim();
@@ -61,7 +63,7 @@ export function exposeUpdateToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

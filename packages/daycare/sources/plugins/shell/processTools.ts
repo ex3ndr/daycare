@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition } from "@/types";
@@ -82,6 +83,7 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
         "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. By default it starts with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Explicit permission tags can only re-enable caller-held permissions; @read tags are ignored.",
       parameters: processStartSchema
     },
+    returns: toolReturnText,
     execute: async (args, toolContext, toolCall) => {
       const payload = args as ProcessStartArgs;
       const permissions = await resolveProcessPermissions(
@@ -97,14 +99,14 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
         `status: ${processInfo.status}`,
         `logPath: ${processInfo.logPath}`
       ].join("\n");
-      return {
-        toolMessage: buildToolMessage(toolCall, text, false, {
+      return toolExecutionResultText(
+        buildToolMessage(toolCall, text, false, {
           processId: processInfo.id,
           pid: processInfo.pid,
           keepAlive: processInfo.keepAlive,
           status: processInfo.status
         })
-      };
+      );
     }
   };
 }
@@ -116,6 +118,7 @@ export function buildProcessListTool(processes: Processes): ToolDefinition {
       description: "List durable managed processes and their current state.",
       parameters: Type.Object({}, { additionalProperties: false })
     },
+    returns: toolReturnText,
     execute: async (_args, _toolContext, toolCall) => {
       const items = await processes.list();
       const text =
@@ -135,9 +138,7 @@ export function buildProcessListTool(processes: Processes): ToolDefinition {
               null,
               2
             );
-      return {
-        toolMessage: buildToolMessage(toolCall, text, false, { count: items.length })
-      };
+      return toolExecutionResultText(buildToolMessage(toolCall, text, false, { count: items.length }));
     }
   };
 }
@@ -149,6 +150,7 @@ export function buildProcessGetTool(processes: Processes): ToolDefinition {
       description: "Get one durable managed process by id.",
       parameters: processGetSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ProcessGetArgs;
       const item = await processes.get(payload.processId);
@@ -166,14 +168,14 @@ export function buildProcessGetTool(processes: Processes): ToolDefinition {
         null,
         2
       );
-      return {
-        toolMessage: buildToolMessage(toolCall, text, false, {
+      return toolExecutionResultText(
+        buildToolMessage(toolCall, text, false, {
           processId: item.id,
           pid: item.pid,
           status: item.status,
           path: item.logPath
         })
-      };
+      );
     }
   };
 }
@@ -185,6 +187,7 @@ export function buildProcessStopTool(processes: Processes): ToolDefinition {
       description: "Stop a managed durable process by id.",
       parameters: processStopSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ProcessStopArgs;
       const signal = payload.signal ?? "SIGTERM";
@@ -195,13 +198,13 @@ export function buildProcessStopTool(processes: Processes): ToolDefinition {
         `signal: ${signal}`,
         `status: ${processInfo.status}`
       ].join("\n");
-      return {
-        toolMessage: buildToolMessage(toolCall, text, false, {
+      return toolExecutionResultText(
+        buildToolMessage(toolCall, text, false, {
           processId: processInfo.id,
           signal,
           status: processInfo.status
         })
-      };
+      );
     }
   };
 }
@@ -213,17 +216,18 @@ export function buildProcessStopAllTool(processes: Processes): ToolDefinition {
       description: "Stop all managed durable processes.",
       parameters: processStopAllSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ProcessStopAllArgs;
       const signal = payload.signal ?? "SIGTERM";
       const stopped = await processes.stopAll(signal);
       const text = `Stopped ${stopped.length} process${stopped.length === 1 ? "" : "es"} with ${signal}.`;
-      return {
-        toolMessage: buildToolMessage(toolCall, text, false, {
+      return toolExecutionResultText(
+        buildToolMessage(toolCall, text, false, {
           count: stopped.length,
           signal
         })
-      };
+      );
     }
   };
 }

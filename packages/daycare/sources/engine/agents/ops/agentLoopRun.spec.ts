@@ -1231,7 +1231,8 @@ function toolResultGeneratedBuild(
       },
       isError: false,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text: "generated" }
   };
 }
 
@@ -1248,7 +1249,8 @@ function toolResultTextBuild(
       content: [{ type: "text", text }],
       isError: false,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text }
   };
 }
 

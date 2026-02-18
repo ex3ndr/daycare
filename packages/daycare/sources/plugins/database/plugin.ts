@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { toolExecutionResultText, toolReturnText } from "../../engine/modules/tools/toolReturnText.js";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { Type, type Static } from "@sinclair/typebox";
@@ -122,6 +123,7 @@ export const plugin = definePlugin({
               "Execute SQL against the plugin Postgres (PGlite) database. Provide an optional description to document the change.",
             parameters: querySchema
           },
+          returns: toolReturnText,
           execute: async (args, _context, toolCall) => {
             const payload = args as QueryArgs;
             const dbInstance = await openDb();
@@ -154,7 +156,7 @@ export const plugin = definePlugin({
               timestamp: Date.now()
             };
 
-            return { toolMessage };
+            return toolExecutionResultText(toolMessage);
           }
         });
       },

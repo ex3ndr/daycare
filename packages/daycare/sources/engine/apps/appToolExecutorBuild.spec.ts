@@ -225,7 +225,8 @@ function toolResultBuild(isError: boolean, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text }
   };
 }
 

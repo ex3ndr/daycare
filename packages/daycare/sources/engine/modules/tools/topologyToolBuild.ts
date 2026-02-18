@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -28,6 +29,7 @@ export function topologyToolBuild(
         "Return a full system topology snapshot (agents, cron tasks, heartbeat tasks, and signal subscriptions).",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (_args, toolContext, toolCall) => {
       const callerAgentId = toolContext.agent.id;
 
@@ -157,7 +159,7 @@ export function topologyToolBuild(
         timestamp: Date.now()
       };
 
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

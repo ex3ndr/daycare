@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "./toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
@@ -31,6 +32,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
       description: "Add an agent member to a channel with a username handle.",
       parameters: addMemberSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelAddMemberArgs;
       const channel = await channels.addMember(
@@ -52,7 +54,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }
@@ -64,6 +66,7 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
       description: "Remove an agent member from a channel.",
       parameters: removeMemberSchema
     },
+    returns: toolReturnText,
     execute: async (args, _toolContext, toolCall) => {
       const payload = args as ChannelRemoveMemberArgs;
       const removed = await channels.removeMember(payload.channelName, payload.agentId);
@@ -87,7 +90,7 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

@@ -54,7 +54,7 @@ describe("rlmRestore", () => {
       }
     );
 
-    expect(result.output).toBe("recovered");
+    expect(result.output).toBe("{\"text\":\"recovered\"}");
     expect(result.toolCallCount).toBe(1);
     expect(callbackRecords).toEqual(["rlm_tool_call", "rlm_tool_result", "rlm_complete"]);
   });
@@ -166,6 +166,7 @@ function okResult(name: string, text: string): ToolExecutionResult {
       content: [{ type: "text", text }],
       isError: false,
       timestamp: Date.now()
-    }
+    },
+    typedResult: { text }
   };
 }

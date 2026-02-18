@@ -5,6 +5,7 @@ import type { ProviderSettings } from "../../settings.js";
 import { getLogger } from "../../log.js";
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
+import { toolExecutionResultText } from "../modules/tools/toolReturnText.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
 import type { AppRuleSet } from "./appTypes.js";
@@ -48,12 +49,12 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
           { appId: input.appId, tool: toolCall.name },
           "deny: App tool denied because tool is outside the app allowlist"
         );
-        return {
-          toolMessage: appToolErrorBuild(
+        return toolExecutionResultText(
+          appToolErrorBuild(
             toolCall,
             `Tool "${toolCall.name}" is not available in app sandbox.`
           )
-        };
+        );
       }
 
       const availableTools = input.toolResolver
@@ -91,9 +92,9 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
           { appId: input.appId, tool: toolCall.name, allowed: false, reason },
           "review: App tool call denied"
         );
-        return {
-          toolMessage: appToolErrorBuild(toolCall, `App review denied this tool call: ${reason}`)
-        };
+        return toolExecutionResultText(
+          appToolErrorBuild(toolCall, `App review denied this tool call: ${reason}`)
+        );
       }
 
       appLogger.info(

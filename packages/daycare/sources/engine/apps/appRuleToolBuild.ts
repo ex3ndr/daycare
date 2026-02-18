@@ -1,4 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { toolExecutionResultText, toolReturnText } from "../modules/tools/toolReturnText.js";
 import { Type, type Static } from "@sinclair/typebox";
 import path from "node:path";
 
@@ -33,6 +34,7 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
       description: "Manage app allow/deny rules. All mutations require permission approval.",
       parameters: schema
     },
+    returns: toolReturnText,
     execute: async (args, context, toolCall) => {
       const payload = args as AppRuleArgs;
       const appId = payload.app_id.trim();
@@ -92,7 +94,7 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
         isError: false,
         timestamp: Date.now()
       };
-      return { toolMessage };
+      return toolExecutionResultText(toolMessage);
     }
   };
 }

@@ -23,7 +23,8 @@ describe("contextEstimateTokens", () => {
         content: [{ type: "text", text: toolOutputText }],
         isError: false,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: toolOutputText }
     };
 
     const history: AgentHistoryRecord[] = [
@@ -70,7 +71,8 @@ describe("contextEstimateTokens", () => {
         content: [{ type: "image", data: smallImage, mimeType: "image/png" }],
         isError: false,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: "" }
     };
     const largeResult: ToolExecutionResult = {
       toolMessage: {
@@ -80,7 +82,8 @@ describe("contextEstimateTokens", () => {
         content: [{ type: "image", data: largeImage, mimeType: "image/png" }],
         isError: false,
         timestamp: Date.now()
-      }
+      },
+      typedResult: { text: "" }
     };
     const smallHistory: AgentHistoryRecord[] = [
       { type: "tool_result", at: 1, toolCallId: "tool-1", output: smallResult }
