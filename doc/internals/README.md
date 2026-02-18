@@ -9,6 +9,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `plugins.md` - plugin system and built-in plugins
 - `monty-python-tool.md` - Monty-backed sandboxed Python tool
 - `dashboard.md` - daycare-dashboard app and pages
+- `dashboard-plugin.md` - built-in dashboard plugin (static site + socket proxy + optional basic auth)
 - `dashboard-history.md` - dashboard conversation history view
 - `daycare-factory.md` - docker-based factory build flow for TASK.md + out mounts
 - `agent-list-tools.md` - tools for listing agent/session ids and metadata

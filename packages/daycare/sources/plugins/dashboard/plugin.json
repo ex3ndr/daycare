@@ -1,0 +1,6 @@
+{
+  "id": "dashboard",
+  "name": "Dashboard",
+  "description": "Runs a local dashboard web server with engine API proxying.",
+  "entry": "./plugin.js"
+}

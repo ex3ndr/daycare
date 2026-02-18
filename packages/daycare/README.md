@@ -43,6 +43,10 @@ The Daycare CLI command surface:
 - `daycare doctor`
 - `daycare event <type> [payload]`
 
+Dashboard is available as a built-in plugin. Enable it via:
+
+- `daycare add` -> `Plugin` -> `Dashboard`
+
 ## Development (Monorepo)
 
 From repository root:

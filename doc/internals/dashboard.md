@@ -3,6 +3,8 @@
 `daycare-dashboard` is a Next.js app router UI styled with shadcn components.
 API route handlers proxy `/api/*` requests to the local engine socket.
 
+For npm-installed `daycare-cli`, the built-in `dashboard` plugin serves a bundled static UI and proxy directly from the CLI runtime. The Next.js app in `packages/daycare-dashboard` remains the development dashboard server.
+
 Default port: `7331` (set via `PORT` in the workspace scripts).
 
 ```mermaid

@@ -34,7 +34,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/skills dist/skills && find sources/plugins -name 'plugin.json' -exec sh -c 'mkdir -p dist/plugins/$(basename $(dirname \"$1\")) && cp \"$1\" dist/plugins/$(basename $(dirname \"$1\"))/' _ {} \\;",
+    "build": "tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/skills dist/skills && find sources/plugins -name 'plugin.json' -exec sh -c 'mkdir -p dist/plugins/$(basename $(dirname \"$1\")) && cp \"$1\" dist/plugins/$(basename $(dirname \"$1\"))/' _ {} \\; && mkdir -p dist/plugins/dashboard/site && cp -r sources/plugins/dashboard/site/* dist/plugins/dashboard/site/",
     "dev": "tsx sources/main.ts",
     "release": "tsx sources/release/releaseRun.ts",
     "recipe": "tsx sources/recipe/recipeRun.ts",

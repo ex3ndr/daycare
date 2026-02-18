@@ -64,6 +64,7 @@ Common commands:
 - `yarn dev auth set <id> <key> <value>` - set auth credential
 - `yarn dev doctor` - provider health checks
 - `yarn dev event <type> [payload]` - send engine event via local socket
+- `yarn dev add` -> `Plugin` -> `Dashboard` - enable bundled dashboard server
 
 ## Configuration And Data
 

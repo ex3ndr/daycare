@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Daycare Dashboard</title>
+    <link rel="stylesheet" href="/dashboard.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <main class="layout">
+      <header class="hero card">
+        <div>
+          <p class="eyebrow">Daycare</p>
+          <h1>Control Deck</h1>
+          <p class="subtitle">Local runtime telemetry and automation state.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="refresh-button" type="button">Refresh</button>
+          <div id="live-chip" class="chip chip-offline">Offline</div>
+        </div>
+      </header>
+
+      <section class="stats" aria-label="Engine stats">
+        <article class="stat card">
+          <h2>Plugins</h2>
+          <p id="plugins-count" class="value">-</p>
+        </article>
+        <article class="stat card">
+          <h2>Providers</h2>
+          <p id="providers-count" class="value">-</p>
+        </article>
+        <article class="stat card">
+          <h2>Connectors</h2>
+          <p id="connectors-count" class="value">-</p>
+        </article>
+        <article class="stat card">
+          <h2>Tools</h2>
+          <p id="tools-count" class="value">-</p>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="panel card">
+          <div class="panel-title">
+            <h3>Agents</h3>
+            <span id="agents-count" class="meta">-</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Type</th>
+                  <th>State</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="agents-body">
+                <tr><td colspan="4" class="empty">Waiting for data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel card">
+          <div class="panel-title">
+            <h3>Cron</h3>
+            <span id="cron-count" class="meta">-</span>
+          </div>
+          <ul id="cron-list" class="list">
+            <li class="empty">Waiting for data...</li>
+          </ul>
+        </article>
+
+        <article class="panel card">
+          <div class="panel-title">
+            <h3>Heartbeats</h3>
+            <span id="heartbeat-count" class="meta">-</span>
+          </div>
+          <ul id="heartbeat-list" class="list">
+            <li class="empty">Waiting for data...</li>
+          </ul>
+        </article>
+
+        <article class="panel card">
+          <div class="panel-title">
+            <h3>Processes</h3>
+            <span id="processes-count" class="meta">-</span>
+          </div>
+          <ul id="process-list" class="list">
+            <li class="empty">Waiting for data...</li>
+          </ul>
+        </article>
+      </section>
+
+      <footer class="foot card">
+        <p id="status-message">Initializing dashboard...</p>
+        <p id="updated-at">Never updated</p>
+      </footer>
+    </main>
+    <script src="/dashboard.js" defer></script>
+  </body>
+</html>
