@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { resolveEngineSocketPath } from "../../engine/ipc/socket.js";
 import { definePlugin } from "../../engine/plugins/types.js";
+import { dashboardProxyPathResolve } from "./dashboardProxyPathResolve.js";
 
 const DASHBOARD_DEFAULT_HOST = "127.0.0.1";
 const DASHBOARD_DEFAULT_PORT = 7331;
@@ -374,7 +375,7 @@ async function dashboardProxyRequest(
   delete headers.host;
   delete headers.connection;
 
-  const upstreamPath = `${url.pathname}${url.search}`;
+  const upstreamPath = dashboardProxyPathResolve(url.pathname, url.search);
 
   await new Promise<void>((resolve) => {
     const upstream = http.request(

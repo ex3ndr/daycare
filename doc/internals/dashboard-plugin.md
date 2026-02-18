@@ -16,6 +16,24 @@ flowchart LR
   Dashboard -->|unix socket proxy| Engine[Daycare engine server]
 ```
 
+## API prefix rewrite
+
+The dashboard frontend calls `/api/v1/*`, while the engine socket server exposes `/v1/*`.
+The proxy rewrites only the leading `/api` prefix before forwarding upstream.
+
+```mermaid
+sequenceDiagram
+  participant Browser
+  participant Dashboard as Dashboard plugin
+  participant Engine
+
+  Browser->>Dashboard: GET /api/v1/engine/heartbeat/tasks
+  Dashboard->>Dashboard: rewrite path /api/v1/... -> /v1/...
+  Dashboard->>Engine: GET /v1/engine/heartbeat/tasks
+  Engine-->>Dashboard: 200 JSON
+  Dashboard-->>Browser: 200 JSON
+```
+
 ## Authentication flow
 
 If `basicAuth` is configured in plugin settings, every dashboard request requires HTTP Basic auth.
