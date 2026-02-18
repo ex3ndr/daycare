@@ -79,6 +79,118 @@ describe("ToolResolver", () => {
     expect(result.toolMessage.isError).toBe(false);
     expect(messageText(result)).toContain("ok");
   });
+
+  it("exposes typed results from tool details when typedResult is omitted", async () => {
+    const resolver = new ToolResolver();
+    resolver.register("test", {
+      tool: {
+        name: "read_file",
+        description: "Read file.",
+        parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+      },
+      execute: async () => ({
+        toolMessage: {
+          role: "toolResult",
+          toolCallId: "tool-call-1",
+          toolName: "read_file",
+          content: [{ type: "text", text: "ok" }],
+          details: { path: "/tmp/a.txt", found: true },
+          isError: false,
+          timestamp: Date.now()
+        }
+      })
+    });
+
+    const result = await resolver.execute(
+      {
+        type: "toolCall",
+        id: "call-1",
+        name: "read_file",
+        arguments: { path: "/tmp/a.txt" }
+      },
+      contextBuild({ rlmToolOnly: false })
+    );
+
+    expect(result.typedResult).toEqual({ path: "/tmp/a.txt", found: true });
+  });
+
+  it("uses returns.toLlmText when tool response contains no text block", async () => {
+    const resolver = new ToolResolver();
+    resolver.register("test", {
+      tool: {
+        name: "count_rows",
+        description: "Counts rows.",
+        parameters: Type.Object({}, { additionalProperties: false })
+      },
+      returns: {
+        schema: Type.Object({ count: Type.Number() }, { additionalProperties: false }),
+        toLlmText: (result) => `Rows: ${result.count}`
+      },
+      execute: async () => ({
+        toolMessage: {
+          role: "toolResult",
+          toolCallId: "tool-call-1",
+          toolName: "count_rows",
+          content: [],
+          isError: false,
+          timestamp: Date.now()
+        },
+        typedResult: { count: 3 }
+      })
+    });
+
+    const result = await resolver.execute(
+      {
+        type: "toolCall",
+        id: "call-2",
+        name: "count_rows",
+        arguments: {}
+      },
+      contextBuild()
+    );
+
+    expect(messageText(result)).toContain("Rows: 3");
+    expect(result.typedResult).toEqual({ count: 3 });
+  });
+
+  it("rejects tool output that does not match declared return schema", async () => {
+    const resolver = new ToolResolver();
+    resolver.register("test", {
+      tool: {
+        name: "count_rows",
+        description: "Counts rows.",
+        parameters: Type.Object({}, { additionalProperties: false })
+      },
+      returns: {
+        schema: Type.Object({ count: Type.Number() }, { additionalProperties: false }),
+        toLlmText: (result) => `Rows: ${result.count}`
+      },
+      execute: async () => ({
+        toolMessage: {
+          role: "toolResult",
+          toolCallId: "tool-call-1",
+          toolName: "count_rows",
+          content: [{ type: "text", text: "n/a" }],
+          isError: false,
+          timestamp: Date.now()
+        },
+        typedResult: { count: "oops" } as unknown as { count: number }
+      })
+    });
+
+    const result = await resolver.execute(
+      {
+        type: "toolCall",
+        id: "call-2",
+        name: "count_rows",
+        arguments: {}
+      },
+      contextBuild()
+    );
+
+    expect(result.toolMessage.isError).toBe(true);
+    expect(messageText(result)).toContain("does not match its return schema");
+  });
 });
 
 function contextBuild(

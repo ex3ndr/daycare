@@ -78,6 +78,28 @@ describe("rlmArgsConvert", () => {
 });
 
 describe("rlmResultConvert", () => {
+  it("prefers typed results for python return values", () => {
+    const result: ToolExecutionResult = {
+      toolMessage: {
+        role: "toolResult",
+        toolCallId: "1",
+        toolName: "x",
+        content: [{ type: "text", text: "fallback text" }],
+        isError: false,
+        timestamp: Date.now()
+      },
+      typedResult: {
+        ok: true,
+        rows: [{ name: "alice" }]
+      }
+    };
+
+    expect(rlmResultConvert(result)).toEqual({
+      ok: true,
+      rows: [{ name: "alice" }]
+    });
+  });
+
   it("returns joined text content", () => {
     const result: ToolExecutionResult = {
       toolMessage: {

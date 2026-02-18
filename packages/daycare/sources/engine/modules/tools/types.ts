@@ -35,15 +35,38 @@ export type ToolExecutionContext<State = Record<string, unknown>> = {
   rlmToolOnly?: boolean;
 };
 
-export type ToolExecutionResult = {
-  toolMessage: ToolResultMessage;
+export type ToolResultPrimitive = string | number | boolean | null;
+
+export type ToolResultRow = Record<string, ToolResultPrimitive>;
+
+export type ToolResultShallowObject = Record<
+  string,
+  ToolResultPrimitive | ToolResultRow[]
+>;
+
+export type ToolResultContract<
+  TResult extends ToolResultShallowObject = ToolResultShallowObject
+> = {
+  schema: TSchema;
+  toLlmText: (result: TResult) => string;
 };
 
-export type ToolDefinition<TParams extends TSchema = TSchema> = {
+export type ToolExecutionResult<
+  TResult extends ToolResultShallowObject = ToolResultShallowObject
+> = {
+  toolMessage: ToolResultMessage;
+  typedResult?: TResult;
+};
+
+export type ToolDefinition<
+  TParams extends TSchema = TSchema,
+  TResult extends ToolResultShallowObject = ToolResultShallowObject
+> = {
   tool: Tool<TParams>;
+  returns?: ToolResultContract<TResult>;
   execute: (
     args: unknown,
     context: ToolExecutionContext,
     toolCall: { id: string; name: string }
-  ) => Promise<ToolExecutionResult>;
+  ) => Promise<ToolExecutionResult<TResult>>;
 };

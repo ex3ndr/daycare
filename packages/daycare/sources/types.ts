@@ -79,8 +79,12 @@ export type { ImageGenerationProvider } from "./engine/modules/images/types.js";
 // Tools
 export type {
   ToolDefinition,
+  ToolResultContract,
   ToolExecutionContext,
-  ToolExecutionResult
+  ToolExecutionResult,
+  ToolResultPrimitive,
+  ToolResultRow,
+  ToolResultShallowObject
 } from "./engine/modules/tools/types.js";
 
 // Skills

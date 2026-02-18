@@ -1,7 +1,7 @@
 import type { JsMontyObject } from "@pydantic/monty";
 import type { Tool } from "@mariozechner/pi-ai";
 
-import type { ToolExecutionResult } from "@/types";
+import type { ToolExecutionResult, ToolResultPrimitive, ToolResultRow, ToolResultShallowObject } from "@/types";
 import { rlmParameterEntriesBuild } from "./rlmParameterEntriesBuild.js";
 
 /**
@@ -40,6 +40,12 @@ export function rlmArgsConvert(
  * Expects: tool result content follows the ToolResultMessage text block convention.
  */
 export function rlmResultConvert(toolResult: ToolExecutionResult): JsMontyObject {
+  if (toolResultShallowObjectIs(toolResult.typedResult)) {
+    return toolResult.typedResult;
+  }
+  if (toolResultShallowObjectIs(toolResult.toolMessage.details)) {
+    return toolResult.toolMessage.details;
+  }
   const text = toolResult.toolMessage.content
     .filter((part) => part.type === "text")
     .map((part) => ("text" in part && typeof part.text === "string" ? part.text : ""))
@@ -90,4 +96,35 @@ function montyValueConvert(value: unknown): unknown {
 
 function recordIs(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toolResultShallowObjectIs(value: unknown): value is ToolResultShallowObject {
+  if (!recordIs(value)) {
+    return false;
+  }
+  return Object.values(value).every((entry) => toolResultValueIs(entry));
+}
+
+function toolResultValueIs(value: unknown): value is ToolResultPrimitive | ToolResultRow[] {
+  if (toolResultPrimitiveIs(value)) {
+    return true;
+  }
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  return value.every((row) => toolResultRowIs(row));
+}
+
+function toolResultRowIs(value: unknown): value is ToolResultRow {
+  if (!recordIs(value)) {
+    return false;
+  }
+  return Object.values(value).every((entry) => toolResultPrimitiveIs(entry));
+}
+
+function toolResultPrimitiveIs(value: unknown): value is ToolResultPrimitive {
+  return value === null
+    || typeof value === "string"
+    || typeof value === "number"
+    || typeof value === "boolean";
 }
