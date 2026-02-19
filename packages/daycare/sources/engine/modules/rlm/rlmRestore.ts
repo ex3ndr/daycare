@@ -9,7 +9,7 @@ import type {
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "./rlmConstants.js";
-import type { RlmExecuteResult, RlmHistoryCallback } from "./rlmExecute.js";
+import type { RlmExecuteResult, RlmHistoryCallback, RlmCheckSteeringCallback } from "./rlmExecute.js";
 
 const RLM_RESTART_MESSAGE = "Process was restarted";
 
@@ -22,7 +22,8 @@ export async function rlmRestore(
   startRecord: AgentHistoryRlmStartRecord,
   toolResolver: ToolResolverApi,
   context: ToolExecutionContext,
-  historyCallback?: RlmHistoryCallback
+  historyCallback?: RlmHistoryCallback,
+  checkSteering?: RlmCheckSteeringCallback
 ): Promise<RlmExecuteResult> {
   const availableTools = toolResolver
     .listTools()
@@ -133,6 +134,33 @@ export async function rlmRestore(
       toolResult: toolResultText,
       toolIsError
     });
+
+    // Check for steering after each tool completes
+    const steering = checkSteering?.();
+    if (steering) {
+      const steeringResult: RlmExecuteResult = {
+        output: `<steering_interrupt>
+Message from ${steering.origin ?? "system"}: ${steering.text}
+</steering_interrupt>`,
+        printOutput,
+        toolCallCount,
+        steeringInterrupt: {
+          text: steering.text,
+          origin: steering.origin
+        }
+      };
+      await historyCallback?.({
+        type: "rlm_complete",
+        at: Date.now(),
+        toolCallId: startRecord.toolCallId,
+        output: steeringResult.output,
+        printOutput: [...steeringResult.printOutput],
+        toolCallCount: steeringResult.toolCallCount,
+        isError: false
+      });
+      return steeringResult;
+    }
+
     progress = snapshotResumeWithDurationReset(snapshotDump, resumeOptions);
   }
 

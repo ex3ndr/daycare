@@ -27,6 +27,17 @@ const sendSchema = Type.Object(
 type StartBackgroundArgs = Static<typeof startSchema>;
 type SendAgentMessageArgs = Static<typeof sendSchema>;
 
+const steerSchema = Type.Object(
+  {
+    text: Type.String({ minLength: 1 }),
+    agentId: Type.Optional(Type.String({ minLength: 1 })),
+    cancelReason: Type.Optional(Type.String({ minLength: 1 }))
+  },
+  { additionalProperties: false }
+);
+
+type SteerAgentArgs = Static<typeof steerSchema>;
+
 const backgroundResultSchema = Type.Object(
   {
     summary: Type.String(),
@@ -134,6 +145,69 @@ export function buildSendAgentMessageTool(): ToolDefinition {
       );
 
       const summary = "System message sent.";
+      const toolMessage: ToolResultMessage = {
+        role: "toolResult",
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: [
+          {
+            type: "text",
+            text: summary
+          }
+        ],
+        isError: false,
+        timestamp: Date.now()
+      };
+
+      return {
+        toolMessage,
+        typedResult: {
+          summary,
+          targetAgentId: resolvedTarget,
+          originAgentId: origin
+        }
+      };
+    }
+  };
+}
+
+export function buildSteerAgentTool(): ToolDefinition {
+  return {
+    tool: {
+      name: "steer_agent",
+      description:
+        "Send an urgent steering message that interrupts an agent's current work. The current tool completes but remaining queued tools are cancelled.",
+      parameters: steerSchema
+    },
+    returns: backgroundReturns,
+    execute: async (args, toolContext, toolCall) => {
+      const payload = args as SteerAgentArgs;
+      const descriptor = toolContext.agent.descriptor;
+      const origin = toolContext.agent.id;
+      const targetAgentId =
+        payload.agentId ??
+        (descriptor.type === "subagent" || descriptor.type === "app"
+          ? descriptor.parentAgentId
+          : undefined);
+      const resolvedTarget =
+        targetAgentId ?? toolContext.agentSystem.agentFor("most-recent-foreground");
+      if (!resolvedTarget) {
+        throw new Error("No recent foreground agent found.");
+      }
+      
+      const exists = await toolContext.agentSystem.agentExists(resolvedTarget);
+      if (!exists) {
+        throw new Error(`Agent not found: ${resolvedTarget}`);
+      }
+
+      await toolContext.agentSystem.steer(resolvedTarget, {
+        type: "steering",
+        text: payload.text,
+        origin,
+        cancelReason: payload.cancelReason
+      });
+
+      const summary = "Steering message delivered.";
       const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,

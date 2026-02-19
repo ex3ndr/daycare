@@ -4,7 +4,8 @@ import type {
   AgentInboxCompletion,
   AgentInboxEntry,
   AgentInboxItem,
-  AgentInboxMessage
+  AgentInboxMessage,
+  AgentInboxSteering
 } from "./agentTypes.js";
 
 /**
@@ -16,6 +17,7 @@ export class AgentInbox {
   private items: AgentInboxEntry[] = [];
   private waiters: Array<(entry: AgentInboxEntry) => void> = [];
   private attached = false;
+  private steeringMessage: AgentInboxSteering | null = null;
 
   constructor(agentId: string) {
     this.agentId = agentId;
@@ -96,6 +98,29 @@ export class AgentInbox {
     const pending = this.items;
     this.items = [];
     return pending;
+  }
+
+  /**
+   * Store a steering message. Replaces any previous steering message.
+   */
+  steer(item: AgentInboxSteering): void {
+    this.steeringMessage = item;
+  }
+
+  /**
+   * Returns and clears the current steering message.
+   */
+  consumeSteering(): AgentInboxSteering | null {
+    const message = this.steeringMessage;
+    this.steeringMessage = null;
+    return message;
+  }
+
+  /**
+   * Check if there is a pending steering message.
+   */
+  hasSteering(): boolean {
+    return this.steeringMessage !== null;
   }
 }
 

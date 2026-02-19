@@ -39,13 +39,22 @@ export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
       const appendHistoryRecord = context.appendHistoryRecord;
 
       try {
+        // Create steering check callback that consumes steering if present
+        const checkSteering = () => {
+          const steering = context.agent.inbox.consumeSteering();
+          if (steering) {
+            return { text: steering.text, origin: steering.origin };
+          }
+          return null;
+        };
         const result = await rlmExecute(
           payload.code,
           preamble,
           context,
           runtimeResolver,
           toolCall.id,
-          appendHistoryRecord
+          appendHistoryRecord,
+          checkSteering
         );
         return rlmToolResultBuild(toolCall, rlmResultTextBuild(result), false);
       } catch (error) {

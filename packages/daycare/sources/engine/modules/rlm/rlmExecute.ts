@@ -17,9 +17,20 @@ export type RlmExecuteResult = {
   output: string;
   printOutput: string[];
   toolCallCount: number;
+  steeringInterrupt?: {
+    text: string;
+    origin?: string;
+  };
 };
 
 export type RlmHistoryCallback = (record: AgentHistoryRecord) => Promise<void>;
+
+export type RlmSteeringInfo = {
+  text: string;
+  origin?: string;
+};
+
+export type RlmCheckSteeringCallback = () => RlmSteeringInfo | null;
 
 /**
  * Executes Monty Python code by routing external function calls into ToolResolver.
@@ -31,7 +42,8 @@ export async function rlmExecute(
   context: ToolExecutionContext,
   toolResolver: ToolResolverApi,
   toolCallId: string,
-  historyCallback?: RlmHistoryCallback
+  historyCallback?: RlmHistoryCallback,
+  checkSteering?: RlmCheckSteeringCallback
 ): Promise<RlmExecuteResult> {
   const availableTools = toolResolver
     .listTools()
@@ -153,6 +165,32 @@ export async function rlmExecute(
       toolResult: toolResultText,
       toolIsError
     });
+
+    // Check for steering after each tool completes
+    const steering = checkSteering?.();
+    if (steering) {
+      const steeringResult: RlmExecuteResult = {
+        output: `<steering_interrupt>
+Message from ${steering.origin ?? "system"}: ${steering.text}
+</steering_interrupt>`,
+        printOutput,
+        toolCallCount,
+        steeringInterrupt: {
+          text: steering.text,
+          origin: steering.origin
+        }
+      };
+      await historyCallback?.({
+        type: "rlm_complete",
+        at: Date.now(),
+        toolCallId,
+        output: steeringResult.output,
+        printOutput: [...steeringResult.printOutput],
+        toolCallCount: steeringResult.toolCallCount,
+        isError: false
+      });
+      return steeringResult;
+    }
 
     // Reload snapshot before resume so maxDurationSecs applies to active interpreter work only.
     progress = snapshotResumeWithDurationReset(snapshotDump, resumeOptions);

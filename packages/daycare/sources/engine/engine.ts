@@ -40,7 +40,7 @@ import {
   buildHeartbeatRemoveTool,
   buildHeartbeatRunTool
 } from "./modules/tools/heartbeat.js";
-import { buildSendAgentMessageTool, buildStartBackgroundAgentTool } from "./modules/tools/background.js";
+import { buildSendAgentMessageTool, buildStartBackgroundAgentTool, buildSteerAgentTool } from "./modules/tools/background.js";
 import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
 import { topologyToolBuild } from "./modules/tools/topologyToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
@@ -378,6 +378,7 @@ export class Engine {
     this.modules.tools.register("core", buildHeartbeatRemoveTool());
     this.modules.tools.register("core", buildStartBackgroundAgentTool());
     this.modules.tools.register("core", buildSendAgentMessageTool());
+    this.modules.tools.register("core", buildSteerAgentTool());
     this.modules.tools.register("core", sendUserMessageToolBuild());
     this.modules.tools.register("core", skillToolBuild());
     this.modules.tools.register(

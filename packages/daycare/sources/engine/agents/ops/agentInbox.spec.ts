@@ -83,4 +83,50 @@ describe("AgentInbox", () => {
     expect(rejectFirst).not.toHaveBeenCalled();
     expect(rejectSecond).not.toHaveBeenCalled();
   });
+
+  describe("steering", () => {
+    it("steer() stores a steering message", () => {
+      const inbox = new AgentInbox("agent-6");
+      inbox.steer({ type: "steering", text: "stop what you are doing" });
+
+      expect(inbox.hasSteering()).toBe(true);
+    });
+
+    it("consumeSteering() returns and clears the steering message", () => {
+      const inbox = new AgentInbox("agent-7");
+      inbox.steer({ type: "steering", text: "redirect", origin: "user-123" });
+
+      const steering = inbox.consumeSteering();
+
+      expect(steering).toEqual({
+        type: "steering",
+        text: "redirect",
+        origin: "user-123"
+      });
+      expect(inbox.hasSteering()).toBe(false);
+      expect(inbox.consumeSteering()).toBeNull();
+    });
+
+    it("hasSteering() returns false when no steering is pending", () => {
+      const inbox = new AgentInbox("agent-8");
+
+      expect(inbox.hasSteering()).toBe(false);
+    });
+
+    it("multiple steer() calls keep only the last one", () => {
+      const inbox = new AgentInbox("agent-9");
+      inbox.steer({ type: "steering", text: "first" });
+      inbox.steer({ type: "steering", text: "second" });
+      inbox.steer({ type: "steering", text: "third", cancelReason: "user cancelled" });
+
+      const steering = inbox.consumeSteering();
+
+      expect(steering).toEqual({
+        type: "steering",
+        text: "third",
+        cancelReason: "user cancelled"
+      });
+      expect(inbox.hasSteering()).toBe(false);
+    });
+  });
 });
