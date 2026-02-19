@@ -1,7 +1,9 @@
 import type { Tool } from "@mariozechner/pi-ai";
 
 import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
-import { montyParameterEntriesBuild } from "./montyParameterEntriesBuild.js";
+import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
+import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
+import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
 
 /**
  * Builds a Python preamble containing synchronous tool stubs for the current tool surface.
@@ -30,13 +32,13 @@ export function montyPreambleBuild(tools: Tool[]): string {
     if (tool.name === RLM_TOOL_NAME) {
       continue;
     }
-    if (!pythonIdentifierIs(tool.name)) {
+    if (!montyPythonIdentifierIs(tool.name)) {
       continue;
     }
 
     stubCount += 1;
-    const signature = pythonSignatureBuild(tool);
-    const description = pythonDocstringEscape(tool.description?.trim() || "No description.");
+    const signature = montyPythonSignatureBuild(tool);
+    const description = montyPythonDocstringEscape(tool.description?.trim() || "No description.");
 
     lines.push(`    def ${tool.name}(${signature}) -> str:`);
     lines.push(`        \"\"\"${description}\"\"\"`);
@@ -49,93 +51,4 @@ export function montyPreambleBuild(tools: Tool[]): string {
   }
 
   return lines.join("\n").trimEnd();
-}
-
-function pythonSignatureBuild(tool: Tool): string {
-  const parameterEntries = montyParameterEntriesBuild(tool);
-  const signatureEntries: string[] = [];
-
-  for (const { name, schema, required } of parameterEntries) {
-    const typeHint = pythonTypeFromSchema(schema);
-    if (required) {
-      signatureEntries.push(`${name}: ${typeHint}`);
-      continue;
-    }
-    signatureEntries.push(`${name}: ${typeHint} | None = None`);
-  }
-
-  return signatureEntries.join(", ");
-}
-
-function pythonTypeFromSchema(schema: unknown): string {
-  if (!recordIs(schema)) {
-    return "Any";
-  }
-
-  const anyOf = schema.anyOf;
-  if (Array.isArray(anyOf) && anyOf.length > 0) {
-    const union = anyOf
-      .map((candidate) => pythonTypeFromSchema(candidate))
-      .filter((candidate, index, all) => all.indexOf(candidate) === index);
-    return union.length > 0 ? union.join(" | ") : "Any";
-  }
-
-  const oneOf = schema.oneOf;
-  if (Array.isArray(oneOf) && oneOf.length > 0) {
-    const union = oneOf
-      .map((candidate) => pythonTypeFromSchema(candidate))
-      .filter((candidate, index, all) => all.indexOf(candidate) === index);
-    return union.length > 0 ? union.join(" | ") : "Any";
-  }
-
-  const type = schema.type;
-  if (typeof type === "string") {
-    if (type === "string") {
-      return "str";
-    }
-    if (type === "integer") {
-      return "int";
-    }
-    if (type === "number") {
-      return "float";
-    }
-    if (type === "boolean") {
-      return "bool";
-    }
-    if (type === "null") {
-      return "None";
-    }
-    if (type === "array") {
-      return `list[${pythonTypeFromSchema(schema.items)}]`;
-    }
-    if (type === "object") {
-      const additional = schema.additionalProperties;
-      if (additional === false) {
-        return "dict[str, Any]";
-      }
-      return "dict[str, Any]";
-    }
-  }
-
-  if (Array.isArray(type) && type.length > 0) {
-    const union = type
-      .filter((entry): entry is string => typeof entry === "string")
-      .map((entry) => pythonTypeFromSchema({ type: entry }))
-      .filter((candidate, index, all) => all.indexOf(candidate) === index);
-    return union.length > 0 ? union.join(" | ") : "Any";
-  }
-
-  return "Any";
-}
-
-function pythonIdentifierIs(value: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
-}
-
-function pythonDocstringEscape(value: string): string {
-  return value.replace(/\"\"\"/g, '\\"\\"\\"');
-}
-
-function recordIs(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

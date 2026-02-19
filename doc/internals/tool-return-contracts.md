@@ -73,20 +73,19 @@ flowchart TD
 
 ## RLM preamble test coverage
 
-RLM preamble tests now validate each runtime tool one by one by building a
-single-tool preamble and asserting:
+Monty preamble tests now validate conversion functions directly with exact
+string equality assertions:
 
-- Python function name generation (`def <tool>(...)`)
-- Input mapping from schema parameters (required before optional)
-- Output marker in stubs (`-> str`)
+- `montyPythonTypeFromSchema` converts schema fragments to exact Python hints
+- `montyPythonSignatureBuild` emits exact required/optional signatures
+- `montyPreambleBuild` renders exact full preamble text (not partial `contains`)
 
 ```mermaid
 flowchart LR
-  A[List runtime tools] --> B[Pick one tool]
-  B --> C[Build single-tool preamble]
-  C --> D{Valid Python identifier and not run_python?}
-  D -->|yes| E[Assert def signature and parameter ordering]
-  D -->|no| F[Assert no generated stub]
-  E --> G[Next tool]
-  F --> G
+  A[JSON schema fragment] --> B[montyPythonTypeFromSchema]
+  B --> C[Exact type hint string]
+  C --> D[montyPythonSignatureBuild]
+  D --> E[Exact signature string]
+  E --> F[montyPreambleBuild]
+  F --> G[Exact full preamble string]
 ```

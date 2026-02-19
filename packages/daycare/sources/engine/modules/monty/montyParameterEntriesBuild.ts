@@ -1,4 +1,5 @@
 import type { Tool } from "@mariozechner/pi-ai";
+import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 
 type MontyParameterEntry = {
   name: string;
@@ -19,7 +20,7 @@ export function montyParameterEntriesBuild(tool: Tool): MontyParameterEntry[] {
   const optionalEntries: MontyParameterEntry[] = [];
 
   for (const [name, schema] of Object.entries(properties)) {
-    if (!pythonIdentifierIs(name)) {
+    if (!montyPythonIdentifierIs(name)) {
       continue;
     }
 
@@ -61,10 +62,6 @@ function requiredListResolve(value: unknown): string[] {
     return [];
   }
   return value.filter((entry): entry is string => typeof entry === "string");
-}
-
-function pythonIdentifierIs(value: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
 }
 
 function recordIs(value: unknown): value is Record<string, unknown> {
