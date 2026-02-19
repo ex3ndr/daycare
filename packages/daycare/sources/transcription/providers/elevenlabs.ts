@@ -3,10 +3,12 @@
  * Uses the ElevenLabs Speech-to-Text API for transcription.
  */
 
+import { promises as fs } from "node:fs";
+
 import type {
   TranscriptionProvider,
   TranscriptionResult,
-  TranscriptionOptions,
+  TranscriptionOptions
 } from "../types.js";
 
 export type ElevenLabsTranscriptionConfig = {
@@ -15,14 +17,17 @@ export type ElevenLabsTranscriptionConfig = {
   model?: "scribe_v1" | "scribe_v2";
 };
 
+const DEFAULT_MODEL = "scribe_v2";
+const BASE_URL = "https://api.elevenlabs.io/v1";
+
 /**
- * Create an ElevenLabs Scribe transcription provider.
+ * Creates an ElevenLabs Scribe transcription provider.
+ * Supports 90+ languages with word-level timestamps.
  */
 export function createElevenLabsTranscriptionProvider(
   config: ElevenLabsTranscriptionConfig
 ): TranscriptionProvider {
-  const model = config.model ?? "scribe_v2";
-  const baseUrl = "https://api.elevenlabs.io/v1";
+  const { apiKey, model = DEFAULT_MODEL } = config;
 
   return {
     id: "elevenlabs",
@@ -33,47 +38,44 @@ export function createElevenLabsTranscriptionProvider(
       mimeType: string,
       options?: TranscriptionOptions
     ): Promise<TranscriptionResult> {
-      // Prepare form data
-      const formData = new FormData();
+      // Read file if path provided
+      let audioBuffer: Buffer;
+      if (typeof audio === "string") {
+        audioBuffer = await fs.readFile(audio);
+      } else {
+        audioBuffer = audio;
+      }
 
-      // Handle audio input
-      const audioBuffer =
-        typeof audio === "string" ? Buffer.from(audio, "base64") : audio;
       const extension = mimeTypeToExtension(mimeType);
-      const blob = new Blob([audioBuffer], { type: mimeType });
-      formData.append("file", blob, `audio.${extension}`);
+      const filename = `audio.${extension}`;
 
-      // Model selection
+      // Build multipart form data
+      const formData = new FormData();
+      const blob = new Blob([audioBuffer], { type: mimeType });
+      formData.append("file", blob, filename);
       formData.append("model_id", model);
 
-      // Map language code (ElevenLabs uses 3-letter codes like "eng", "spa")
-      // but also accepts 2-letter codes
+      // Add language if specified
       if (options?.language && options.language !== "auto") {
         formData.append("language_code", options.language);
       }
 
-      // Make request
-      const response = await fetch(`${baseUrl}/speech-to-text`, {
+      const response = await fetch(`${BASE_URL}/speech-to-text`, {
         method: "POST",
         headers: {
-          "xi-api-key": config.apiKey,
+          "xi-api-key": apiKey
         },
-        body: formData,
+        body: formData
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        const error = new Error(
-          `ElevenLabs transcription failed: ${response.status} ${errorText}`
-        ) as Error & { code?: string; provider?: string };
-        error.code = `HTTP_${response.status}`;
-        error.provider = "elevenlabs";
-        throw error;
+        throw new Error(`ElevenLabs transcription failed: ${response.status} ${errorText}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as ElevenLabsResponse;
 
-      // Calculate duration from word timestamps if available
+      // Calculate duration from last word timestamp if available
       let duration: number | undefined;
       if (data.words && data.words.length > 0) {
         const lastWord = data.words[data.words.length - 1];
@@ -82,26 +84,26 @@ export function createElevenLabsTranscriptionProvider(
         }
       }
 
-      // Build result
-      const result: TranscriptionResult = {
+      return {
         text: data.text,
         language: data.language_code ?? data.languageCode,
         duration,
         confidence: data.language_probability ?? data.languageProbability,
-        raw: data,
+        raw: data
       };
-
-      return result;
-    },
+    }
   };
 }
 
-/**
- * Map MIME type to file extension.
- * ElevenLabs supports: audio/x-m4a, audio/aiff, audio/mp4, audio/x-flac,
- * audio/flac, audio/webm, audio/x-wav, audio/wav, audio/opus, audio/mpeg,
- * video/mp4, video/webm, etc.
- */
+type ElevenLabsResponse = {
+  text: string;
+  language_code?: string;
+  languageCode?: string;
+  language_probability?: number;
+  languageProbability?: number;
+  words?: Array<{ end?: number }>;
+};
+
 function mimeTypeToExtension(mimeType: string): string {
   const map: Record<string, string> = {
     "audio/mpeg": "mp3",
@@ -110,6 +112,7 @@ function mimeTypeToExtension(mimeType: string): string {
     "audio/x-m4a": "m4a",
     "audio/m4a": "m4a",
     "audio/wav": "wav",
+    "audio/wave": "wav",
     "audio/x-wav": "wav",
     "audio/webm": "webm",
     "audio/ogg": "ogg",
@@ -118,7 +121,9 @@ function mimeTypeToExtension(mimeType: string): string {
     "audio/x-flac": "flac",
     "audio/aiff": "aiff",
     "video/mp4": "mp4",
-    "video/webm": "webm",
+    "video/webm": "webm"
   };
   return map[mimeType] ?? "mp3";
 }
+
+export default createElevenLabsTranscriptionProvider;

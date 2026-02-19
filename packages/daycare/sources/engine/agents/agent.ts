@@ -64,6 +64,7 @@ import { rlmRestore } from "../modules/rlm/rlmRestore.js";
 import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
 import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
+import { transcribeAudioFiles } from "../messages/transcribeAudioFiles.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
@@ -305,9 +306,13 @@ export class Agent {
     const receivedAt = Date.now();
     const messageId = createId();
     const context = { ...item.context };
+
+    // Transcribe audio files if transcription is available
+    const messageWithTranscription = await this.transcribeMessageAudio(item.message);
+
     const entry: AgentMessage = {
       id: messageId,
-      message: messageFormatIncoming(item.message, context, new Date(receivedAt)),
+      message: messageFormatIncoming(messageWithTranscription, context, new Date(receivedAt)),
       context,
       receivedAt
     };
@@ -607,6 +612,47 @@ export class Agent {
     return this.handleMessage(messageItem);
   }
 
+  /**
+   * Transcribe audio files in a message and append transcription text.
+   */
+  private async transcribeMessageAudio(
+    message: import("@/types").ConnectorMessage
+  ): Promise<import("@/types").ConnectorMessage> {
+    const transcription = this.agentSystem.transcription;
+    if (!transcription) {
+      return message;
+    }
+    const files = message.files;
+    if (!files || files.length === 0) {
+      return message;
+    }
+    const fileRefs = files.map((f) => ({
+      id: f.id,
+      name: f.name,
+      mimeType: f.mimeType,
+      size: f.size,
+      path: f.path
+    }));
+    const transcriptions = await transcribeAudioFiles(fileRefs, transcription);
+    if (transcriptions.length === 0) {
+      return message;
+    }
+    // Build transcription text block
+    const transcriptionTexts = transcriptions.map((t) => {
+      const header = t.file.name ? `[Voice: ${t.file.name}]` : "[Voice message]";
+      return `${header}\n${t.text}`;
+    });
+    const transcriptionBlock = transcriptionTexts.join("\n\n");
+    const originalText = message.text ?? "";
+    const newText = originalText
+      ? `${originalText}\n\n${transcriptionBlock}`
+      : transcriptionBlock;
+    return {
+      ...message,
+      text: newText
+    };
+  }
+
   private async handleSignal(
     item: AgentInboxSignal
   ): Promise<{ delivered: boolean; responseText: string | null }> {
@@ -881,12 +927,21 @@ export class Agent {
               ? this.descriptor.tag
               : this.descriptor.type;
         try {
+          // Create steering check callback that consumes steering if present
+          const checkSteering = () => {
+            const steering = this.inbox.consumeSteering();
+            if (steering) {
+              return { text: steering.text, origin: steering.origin };
+            }
+            return null;
+          };
           const restored = await rlmRestore(
             pendingRlm.lastSnapshot,
             pendingRlm.start,
             this.agentSystem.toolResolver,
             this.rlmRestoreContextBuild(source),
-            appendRecord
+            appendRecord,
+            checkSteering
           );
           toolResultText = rlmResultTextBuild(restored);
           restoreMessage = `RLM execution completed after restart. Output: ${

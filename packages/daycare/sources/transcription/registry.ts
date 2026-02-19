@@ -1,88 +1,124 @@
 import { getLogger } from "../log.js";
-import type { TranscriptionProvider, TranscriptionOptions, TranscriptionResult } from "./types.js";
+import type {
+  TranscriptionProvider,
+  TranscriptionOptions,
+  TranscriptionResult
+} from "./types.js";
 
-type RegisteredTranscriptionProvider = TranscriptionProvider & { pluginId: string };
+const logger = getLogger("transcription");
 
+/**
+ * Registry for transcription providers.
+ * Manages provider registration and provides a unified transcription interface.
+ */
 export class TranscriptionRegistry {
-  private providers = new Map<string, RegisteredTranscriptionProvider>();
-  private logger = getLogger("transcription.registry");
+  private providers = new Map<string, TranscriptionProvider>();
+  private defaultProviderId: string | null = null;
 
   /**
    * Register a transcription provider.
    */
-  register(pluginId: string, provider: TranscriptionProvider): void {
-    this.logger.debug(
-      `register: Registering transcription provider pluginId=${pluginId} providerId=${provider.id} label=${provider.label}`
-    );
-    this.providers.set(provider.id, { ...provider, pluginId });
-    this.logger.debug(
-      `register: Transcription provider registered totalProviders=${this.providers.size}`
-    );
-  }
-
-  /**
-   * Unregister a transcription provider by ID.
-   */
-  unregister(id: string): void {
-    this.logger.debug(`unregister: Unregistering transcription provider providerId=${id}`);
-    this.providers.delete(id);
-  }
-
-  /**
-   * Unregister all transcription providers associated with a plugin.
-   */
-  unregisterByPlugin(pluginId: string): void {
-    this.logger.debug(
-      `unregister: Unregistering transcription providers by plugin pluginId=${pluginId}`
-    );
-    let count = 0;
-    for (const [id, entry] of this.providers.entries()) {
-      if (entry.pluginId === pluginId) {
-        this.providers.delete(id);
-        count++;
-      }
+  register(provider: TranscriptionProvider): void {
+    if (this.providers.has(provider.id)) {
+      logger.warn({ providerId: provider.id }, "warn: Replacing existing transcription provider");
     }
-    this.logger.debug(
-      `unregister: Transcription providers unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`
-    );
+    this.providers.set(provider.id, provider);
+    logger.debug({ providerId: provider.id, providerName: provider.name }, "event: Transcription provider registered");
+    
+    // Set first registered provider as default
+    if (!this.defaultProviderId) {
+      this.defaultProviderId = provider.id;
+    }
   }
 
   /**
-   * Get a transcription provider by ID.
+   * Unregister a transcription provider.
    */
-  get(id: string): TranscriptionProvider | null {
-    const provider = this.providers.get(id) ?? null;
-    this.logger.debug(`event: get() transcription provider providerId=${id} found=${!!provider}`);
-    return provider;
+  unregister(providerId: string): boolean {
+    const removed = this.providers.delete(providerId);
+    if (removed && this.defaultProviderId === providerId) {
+      // Reset default to first available or null
+      const first = this.providers.keys().next();
+      this.defaultProviderId = first.done ? null : first.value;
+    }
+    return removed;
   }
 
   /**
-   * List all registered transcription providers.
+   * Get a provider by ID.
+   */
+  get(providerId: string): TranscriptionProvider | undefined {
+    return this.providers.get(providerId);
+  }
+
+  /**
+   * List all registered providers.
    */
   list(): TranscriptionProvider[] {
     return Array.from(this.providers.values());
   }
 
   /**
-   * Transcribe audio using a specific provider.
+   * List provider IDs.
+   */
+  listIds(): string[] {
+    return Array.from(this.providers.keys());
+  }
+
+  /**
+   * Set the default provider.
+   */
+  setDefault(providerId: string): void {
+    if (!this.providers.has(providerId)) {
+      throw new Error(`Transcription provider not found: ${providerId}`);
+    }
+    this.defaultProviderId = providerId;
+  }
+
+  /**
+   * Get the default provider ID.
+   */
+  getDefaultId(): string | null {
+    return this.defaultProviderId;
+  }
+
+  /**
+   * Transcribe audio using a specific or default provider.
    */
   async transcribe(
-    providerId: string,
     audio: Buffer | string,
     mimeType: string,
-    options?: TranscriptionOptions
+    options?: TranscriptionOptions & { providerId?: string }
   ): Promise<TranscriptionResult> {
-    const provider = this.get(providerId);
+    const providerId = options?.providerId ?? this.defaultProviderId;
+    if (!providerId) {
+      throw new Error("No transcription provider available");
+    }
+    
+    const provider = this.providers.get(providerId);
     if (!provider) {
       throw new Error(`Transcription provider not found: ${providerId}`);
     }
-    this.logger.debug(
-      `transcribe: Starting transcription providerId=${providerId} mimeType=${mimeType}`
+
+    logger.debug(
+      { providerId, mimeType, hasBuffer: Buffer.isBuffer(audio) },
+      "event: Starting transcription"
     );
-    const result = await provider.transcribe({ audio, mimeType, options });
-    this.logger.debug(
-      `transcribe: Transcription complete providerId=${providerId} textLength=${result.text.length}`
+
+    const result = await provider.transcribe(audio, mimeType, options);
+
+    logger.debug(
+      { providerId, textLength: result.text.length, language: result.language },
+      "event: Transcription completed"
     );
+
     return result;
+  }
+
+  /**
+   * Check if any provider is registered.
+   */
+  hasProviders(): boolean {
+    return this.providers.size > 0;
   }
 }

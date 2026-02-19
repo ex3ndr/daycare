@@ -1,77 +1,46 @@
 /**
- * Options for transcription requests.
+ * Core transcription types and interfaces.
+ * Provider-agnostic definitions for audio transcription.
  */
+
 export type TranscriptionOptions = {
-  /**
-   * Language hint for transcription (e.g., "en", "es", "auto").
-   * If not specified, the provider will attempt to detect the language.
-   */
+  /** Language code (ISO 639-1), e.g., "en", "es". Use "auto" for auto-detection. */
   language?: string;
-  /**
-   * Context hint to improve transcription accuracy.
-   */
+  /** Optional context hint to improve transcription accuracy. */
   prompt?: string;
+  /** Response format preference. */
+  format?: "text" | "json" | "verbose";
 };
 
-/**
- * Result of a transcription request.
- */
 export type TranscriptionResult = {
-  /**
-   * The transcribed text.
-   */
+  /** The transcribed text. */
   text: string;
-  /**
-   * Detected or specified language code.
-   */
+  /** Detected or specified language code. */
   language?: string;
-  /**
-   * Audio duration in seconds.
-   */
+  /** Audio duration in seconds. */
   duration?: number;
-  /**
-   * Confidence score (0-1) if provided by the provider.
-   */
+  /** Confidence score (0-1) if available. */
   confidence?: number;
+  /** Raw provider response for debugging. */
+  raw?: unknown;
 };
 
-/**
- * Function signature for transcription execution.
- */
-export type TranscriptionExecutor = (args: {
-  /**
-   * Audio data as a Buffer or file path.
-   */
-  audio: Buffer | string;
-  /**
-   * MIME type of the audio (e.g., "audio/ogg", "audio/mp3", "audio/wav").
-   */
-  mimeType: string;
-  /**
-   * Optional transcription options.
-   */
-  options?: TranscriptionOptions;
-}) => Promise<TranscriptionResult>;
-
-/**
- * A transcription provider that can convert audio to text.
- */
 export type TranscriptionProvider = {
-  /**
-   * Unique identifier for the provider.
-   */
+  /** Unique provider identifier, e.g., "openai", "deepgram". */
   id: string;
-  /**
-   * Human-readable label for the provider.
-   */
-  label: string;
-  /**
-   * Supported MIME types (e.g., ["audio/ogg", "audio/mp3", "audio/wav"]).
-   * If not specified, the provider accepts any audio format.
-   */
-  supportedFormats?: string[];
-  /**
-   * The transcription executor function.
-   */
-  transcribe: TranscriptionExecutor;
+  /** Human-readable provider name. */
+  name: string;
+  /** Transcribe audio to text. */
+  transcribe: (
+    audio: Buffer | string,
+    mimeType: string,
+    options?: TranscriptionOptions
+  ) => Promise<TranscriptionResult>;
+};
+
+export type TranscriptionProviderFactory = (config: unknown) => TranscriptionProvider;
+
+export type TranscriptionError = Error & {
+  code?: string;
+  provider?: string;
 };

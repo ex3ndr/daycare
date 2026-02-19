@@ -31,6 +31,7 @@ import type {
   AgentInboxCompletion,
   AgentInboxItem,
   AgentInboxResult,
+  AgentInboxSteering,
   AgentPostTarget
 } from "./ops/agentTypes.js";
 import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
@@ -47,6 +48,7 @@ import { permissionFormatTag } from "../permissions/permissionFormatTag.js";
 import { appPermissionStateGrant } from "../apps/appPermissionStateGrant.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Signals } from "../signals/signals.js";
+import type { TranscriptionRegistry } from "../../transcription/registry.js";
 import { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
 
 const logger = getLogger("engine.agent-system");
@@ -82,6 +84,7 @@ export type AgentSystemOptions = {
   authStore: AuthStore;
   delayedSignals?: DelayedSignalsFacade;
   permissionRequestRegistry?: PermissionRequestRegistry;
+  transcription?: TranscriptionRegistry;
 };
 
 export class AgentSystem {
@@ -95,6 +98,7 @@ export class AgentSystem {
   readonly fileStore: FileStore;
   readonly authStore: AuthStore;
   readonly permissionRequestRegistry: PermissionRequestRegistry;
+  readonly transcription: TranscriptionRegistry | null;
   private readonly delayedSignals: DelayedSignalsFacade | null;
   private _crons: Crons | null = null;
   private _heartbeats: Heartbeats | null = null;
@@ -116,6 +120,7 @@ export class AgentSystem {
     this.delayedSignals = options.delayedSignals ?? null;
     this.permissionRequestRegistry =
       options.permissionRequestRegistry ?? new PermissionRequestRegistry();
+    this.transcription = options.transcription ?? null;
     this.eventBus.onEvent((event) => {
       if (event.type !== "signal.generated") {
         return;
@@ -345,6 +350,28 @@ export class AgentSystem {
         }
       })
     );
+  }
+
+  /**
+   * Delivers a steering message to an agent, interrupting its current work.
+   * The current tool completes but remaining queued tools are cancelled.
+   * Wakes the agent if sleeping.
+   */
+  async steer(agentId: string, steering: AgentInboxSteering): Promise<void> {
+    const entry = this.entries.get(agentId);
+    if (!entry) {
+      throw new Error(`Agent not found: ${agentId}`);
+    }
+    let woke = false;
+    await entry.lock.inLock(async () => {
+      woke = await this.wakeEntryIfSleeping(entry);
+      entry.inbox.steer(steering);
+    });
+    if (woke) {
+      await this.signalLifecycle(entry.agentId, "wake");
+    }
+    logger.info({ agentId, origin: steering.origin }, "event: Steering message delivered");
+    this.startEntryIfRunning(entry);
   }
 
   /**
