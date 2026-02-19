@@ -14,9 +14,13 @@ Use `delete_message` to remove messages when needed:
 - Mistaken or incorrect messages that should be cleaned up
 - User requests to remove specific messages
 
-The tool removes messages from both the channel (if supported) and your conversation history. Limitations:
+Behavior:
+- Channel: Actually deletes the message (if connector supports it)
+- Context/History: Replaces content with `<deleted>` to maintain conversation flow
+
+Limitations:
 - Telegram: messages can only be deleted within 48 hours
-- Some connectors may not support deletion
+- Some connectors may not support channel deletion
 - Only use for legitimate cleanup - don't hide normal conversation
 
 {{#if featuresSay}}

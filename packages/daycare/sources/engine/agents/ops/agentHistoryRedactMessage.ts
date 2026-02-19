@@ -6,12 +6,12 @@ import { agentPath } from "./agentPath.js";
 import { agentHistoryRecordsLoad } from "./agentHistoryRecordsLoad.js";
 
 /**
- * Removes a message from agent history by messageId.
- * Rewrites the history file excluding the matching user_message record.
+ * Redacts a message from agent history by messageId.
+ * Replaces the message text with <deleted> to maintain conversation flow.
  * Expects: messageId is a non-empty string.
- * Returns: true if a record was found and deleted, false otherwise.
+ * Returns: true if a record was found and redacted, false otherwise.
  */
-export async function agentHistoryDeleteMessage(
+export async function agentHistoryRedactMessage(
   config: Config,
   agentId: string,
   messageId: string
@@ -25,22 +25,26 @@ export async function agentHistoryDeleteMessage(
     return false;
   }
 
-  const originalLength = records.length;
-  const filteredRecords = records.filter((record) => {
-    if (record.type !== "user_message") {
-      return true;
+  let found = false;
+  const updatedRecords = records.map((record) => {
+    if (record.type === "user_message" && record.messageId === messageId) {
+      found = true;
+      return {
+        ...record,
+        text: "<deleted>"
+      };
     }
-    return record.messageId !== messageId;
+    return record;
   });
 
-  if (filteredRecords.length === originalLength) {
+  if (!found) {
     return false;
   }
 
   const basePath = agentPath(config, agentId);
   const filePath = path.join(basePath, "history.jsonl");
 
-  const lines = filteredRecords.map((record) => JSON.stringify(record)).join("\n") + "\n";
+  const lines = updatedRecords.map((record) => JSON.stringify(record)).join("\n") + "\n";
   await fs.writeFile(filePath, lines, "utf8");
 
   return true;

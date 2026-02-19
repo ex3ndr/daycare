@@ -3,7 +3,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
-import { agentHistoryDeleteMessage } from "../../agents/ops/agentHistoryDeleteMessage.js";
+import { agentHistoryRedactMessage } from "../../agents/ops/agentHistoryRedactMessage.js";
 
 const deleteMessageSchema = Type.Object(
   {
@@ -20,8 +20,8 @@ const deleteMessageResultSchema = Type.Object(
     success: Type.Boolean(),
     message: Type.String(),
     deletedFromChannel: Type.Boolean(),
-    deletedFromContext: Type.Boolean(),
-    deletedFromHistory: Type.Boolean()
+    redactedFromContext: Type.Boolean(),
+    redactedFromHistory: Type.Boolean()
   },
   { additionalProperties: false }
 );
@@ -34,15 +34,18 @@ const deleteMessageReturns: ToolResultContract<DeleteMessageResult> = {
 };
 
 /**
- * Tool for deleting messages from channel history and agent context.
+ * Tool for deleting messages from channel history and redacting from agent context.
  * Use for removing accidentally shared secrets or sensitive information.
+ * 
+ * Channel: Actually deletes the message (if connector supports it)
+ * Context/History: Replaces content with <deleted> to maintain conversation flow
  */
 export function buildDeleteMessageTool(): ToolDefinition {
   return {
     tool: {
       name: "delete_message",
       description:
-        "Delete a message from channel history and agent context. Use for removing accidentally shared secrets or sensitive information.",
+        "Delete a message from channel history and redact from agent context. Use for removing accidentally shared secrets or sensitive information.",
       parameters: deleteMessageSchema
     },
     returns: deleteMessageReturns,
@@ -51,8 +54,8 @@ export function buildDeleteMessageTool(): ToolDefinition {
       const { messageId, source } = payload;
 
       let deletedFromChannel = false;
-      let deletedFromContext = false;
-      let deletedFromHistory = false;
+      let redactedFromContext = false;
+      let redactedFromHistory = false;
 
       // Get the connector from source or current context
       const target = agentDescriptorTargetResolve(toolContext.agent.descriptor);
@@ -67,7 +70,7 @@ export function buildDeleteMessageTool(): ToolDefinition {
             try {
               deletedFromChannel = await connector.deleteMessage(targetId, messageId);
             } catch (error) {
-              // Log but continue - deletion from other sources is still valuable
+              // Log but continue - redaction from other sources is still valuable
               toolContext.logger.warn(
                 { error, messageId, source: connectorSource },
                 "delete_message: Failed to delete from channel"
@@ -77,46 +80,42 @@ export function buildDeleteMessageTool(): ToolDefinition {
         }
       }
 
-      // Delete from agent in-memory context
+      // Redact from agent in-memory context (replace content with <deleted>)
       try {
-        deletedFromContext = deleteFromAgentContext(toolContext.agent, messageId);
+        redactedFromContext = redactFromAgentContext(toolContext.agent, messageId);
       } catch (error) {
         toolContext.logger.warn(
           { error, messageId },
-          "delete_message: Failed to delete from agent context"
+          "delete_message: Failed to redact from agent context"
         );
       }
 
-      // Delete from persistent history
+      // Redact from persistent history (replace content with <deleted>)
       try {
-        const config = toolContext.agentSystem.config.current;
-        deletedFromHistory = await agentHistoryDeleteMessage(
-          config,
+        redactedFromHistory = await agentHistoryRedactMessage(
+          toolContext.agent.config,
           toolContext.agent.id,
           messageId
         );
       } catch (error) {
         toolContext.logger.warn(
           { error, messageId },
-          "delete_message: Failed to delete from agent history"
+          "delete_message: Failed to redact from agent history"
         );
       }
 
-      const success = deletedFromChannel || deletedFromContext || deletedFromHistory;
+      const success = deletedFromChannel || redactedFromContext || redactedFromHistory;
       const parts: string[] = [];
 
       if (deletedFromChannel) {
-        parts.push("channel");
+        parts.push("deleted from channel");
       }
-      if (deletedFromContext) {
-        parts.push("context");
-      }
-      if (deletedFromHistory) {
-        parts.push("history");
+      if (redactedFromContext || redactedFromHistory) {
+        parts.push("redacted from context");
       }
 
       const message = success
-        ? `Message deleted from ${parts.join(" and ")}.`
+        ? `Message ${parts.join(" and ")}.`
         : "Message not found or could not be deleted.";
 
       const toolMessage: ToolResultMessage = {
@@ -134,8 +133,8 @@ export function buildDeleteMessageTool(): ToolDefinition {
           success,
           message,
           deletedFromChannel,
-          deletedFromContext,
-          deletedFromHistory
+          redactedFromContext,
+          redactedFromHistory
         }
       };
     }
@@ -143,31 +142,29 @@ export function buildDeleteMessageTool(): ToolDefinition {
 }
 
 /**
- * Delete a message from agent's in-memory context.
- * Scans messages for the messageId tag and removes matching entries.
+ * Redact a message from agent's in-memory context.
+ * Replaces message content with <deleted> to maintain conversation flow.
  */
-function deleteFromAgentContext(
+function redactFromAgentContext(
   agent: import("../../agents/agent.js").Agent,
   messageId: string
 ): boolean {
   const messages = agent.state.context.messages ?? [];
-  const originalLength = messages.length;
+  let found = false;
 
-  agent.state.context.messages = messages.filter((msg) => {
-    // Check if this message has the matching messageId in its content
-    // Messages from connectors include messageId in <message_id> tags
+  for (const msg of messages) {
     if ("content" in msg && Array.isArray(msg.content)) {
       for (const block of msg.content) {
         if (block.type === "text" && typeof block.text === "string") {
-          // Check for messageId in formatted message
           if (block.text.includes(`<message_id>${messageId}</message_id>`)) {
-            return false; // Remove this message
+            // Replace the entire text content with <deleted>
+            block.text = "<deleted>";
+            found = true;
           }
         }
       }
     }
-    return true; // Keep the message
-  });
+  }
 
-  return agent.state.context.messages.length < originalLength;
+  return found;
 }
