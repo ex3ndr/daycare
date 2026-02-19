@@ -50,20 +50,23 @@ In both modes, regular tools stay registered internally and are callable by Pyth
 
 ## Tool Stub Generation
 
-`montyPreambleBuild()` (in `engine/modules/monty`) generates Python stubs from the current
+`montyPreambleBuild()` (in `engine/modules/monty`) generates Python prompt stubs from the current
 `ToolResolver.listTools()` output.
 Each stub is rendered as:
 
 ```python
-def tool_name(arg1: type, arg2: type) -> str:
+def tool_name(arg1: type, arg2: type) -> ToolResponse:
     """Tool description"""
-    ...
+    raise NotImplementedError(...)
 ```
 
 The preamble is regenerated from the current tool set when context tools are built:
 
 - tool-call mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM.md` into the `run_python` description
 - tag mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM_INLINE.md` into the no-tools system section
+
+Execution uses a separate runtime preamble from `montyRuntimePreambleBuild()` that only defines
+runtime essentials (for example `ToolError`) and intentionally excludes prompt comments/stubs.
 
 RLM prompt builders no longer embed skill lists. Skills are injected once via
 `skillPromptFormat()` into the dedicated skills section during system-prompt section rendering.
@@ -76,7 +79,7 @@ dispatch aligned with the active sandboxed tool view.
 
 `rlmExecute()` uses Monty's iterative `start()`/`resume()` loop:
 
-1. Start Monty with `preamble + user code`
+1. Start Monty with `runtime_preamble + user code`
 2. On `MontySnapshot`, dispatch `functionName` through `ToolResolver.execute()`
 3. Resume with `returnValue` or a `ToolError` exception
 4. Return final output, captured prints, and tool-call count

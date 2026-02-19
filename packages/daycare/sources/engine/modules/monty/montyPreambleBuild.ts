@@ -27,10 +27,9 @@ export function montyPreambleBuild(tools: Tool[]): string {
     "",
     "ToolError = RuntimeError",
     "",
-    "# Typed tool stubs for code assistance only (not executed).",
-    "if False:",
-    `    def ${RLM_PRINT_FUNCTION_NAME}(*values: Any) -> None:`,
-    "        ...",
+    "# Typed tool stubs for code assistance only.",
+    `def ${RLM_PRINT_FUNCTION_NAME}(*values: Any) -> None:`,
+    `    raise NotImplementedError("${RLM_PRINT_FUNCTION_NAME} is provided by runtime.")`,
     ""
   ];
 
@@ -42,7 +41,7 @@ export function montyPreambleBuild(tools: Tool[]): string {
     const responseSchema = responseSchemaResolve(tool);
     const typedDictLines = montyResponseTypedDictLinesBuild(responseTypeName, responseSchema);
     for (const typedDictLine of typedDictLines) {
-      lines.push(typedDictLine.length === 0 ? "" : `    ${typedDictLine}`);
+      lines.push(typedDictLine);
     }
     lines.push("");
   }
@@ -55,14 +54,10 @@ export function montyPreambleBuild(tools: Tool[]): string {
     const signature = montyPythonSignatureBuild(tool);
     const description = montyPythonDocstringEscape(tool.description?.trim() || "No description.");
 
-    lines.push(`    def ${tool.name}(${signature}) -> ${responseTypeName}:`);
-    lines.push(`        \"\"\"${description}\"\"\"`);
-    lines.push("        ...");
+    lines.push(`def ${tool.name}(${signature}) -> ${responseTypeName}:`);
+    lines.push(`    \"\"\"${description}\"\"\"`);
+    lines.push(`    raise NotImplementedError("${tool.name} is provided by runtime.")`);
     lines.push("");
-  }
-
-  if (callableTools.length === 0) {
-    lines.push("    pass");
   }
 
   return lines.join("\n").trimEnd();

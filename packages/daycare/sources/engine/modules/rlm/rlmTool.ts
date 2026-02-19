@@ -1,7 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
 
 import type { ToolDefinition } from "@/types";
-import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
+import { montyRuntimePreambleBuild } from "../monty/montyRuntimePreambleBuild.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "./rlmHistoryCompleteErrorRecordBuild.js";
@@ -35,7 +35,7 @@ export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
     execute: async (args, context, toolCall) => {
       const payload = args as RlmArgs;
       const runtimeResolver = context.toolResolver ?? toolResolver;
-      const preamble = montyPreambleBuild(runtimeResolver.listTools());
+      const preamble = montyRuntimePreambleBuild();
       const appendHistoryRecord = context.appendHistoryRecord;
 
       try {

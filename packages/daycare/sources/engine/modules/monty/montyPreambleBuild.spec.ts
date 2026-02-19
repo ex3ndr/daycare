@@ -41,16 +41,15 @@ describe("montyPreambleBuild", () => {
       "",
       "ToolError = RuntimeError",
       "",
-      "# Typed tool stubs for code assistance only (not executed).",
-      "if False:",
-      "    def __daycare_print__(*values: Any) -> None:",
-      "        ...",
+      "# Typed tool stubs for code assistance only.",
+      "def __daycare_print__(*values: Any) -> None:",
+      "    raise NotImplementedError(\"__daycare_print__ is provided by runtime.\")",
       "",
-      "    ReadFileResponse = TypedDict(\"ReadFileResponse\", { \"summary\": str, \"size\": int })",
+      "ReadFileResponse = TypedDict(\"ReadFileResponse\", { \"summary\": str, \"size\": int })",
       "",
-      "    def read_file(path: str, retries: int | None = None, verbose: bool | None = None) -> ReadFileResponse:",
-      "        \"\"\"Read a file from disk.\"\"\"",
-      "        ..."
+      "def read_file(path: str, retries: int | None = None, verbose: bool | None = None) -> ReadFileResponse:",
+      "    \"\"\"Read a file from disk.\"\"\"",
+      "    raise NotImplementedError(\"read_file is provided by runtime.\")"
     ].join("\n");
 
     expect(result).toBe(expected);
@@ -112,18 +111,17 @@ describe("montyPreambleBuild", () => {
       "",
       "ToolError = RuntimeError",
       "",
-      "# Typed tool stubs for code assistance only (not executed).",
-      "if False:",
-      "    def __daycare_print__(*values: Any) -> None:",
-      "        ...",
+      "# Typed tool stubs for code assistance only.",
+      "def __daycare_print__(*values: Any) -> None:",
+      "    raise NotImplementedError(\"__daycare_print__ is provided by runtime.\")",
       "",
-      "    SearchV2ResponseRowsItem = TypedDict(\"SearchV2ResponseRowsItem\", { \"title\": str, \"score\": float })",
+      "SearchV2ResponseRowsItem = TypedDict(\"SearchV2ResponseRowsItem\", { \"title\": str, \"score\": float })",
       "",
-      "    SearchV2Response = TypedDict(\"SearchV2Response\", { \"rows\": list[SearchV2ResponseRowsItem] })",
+      "SearchV2Response = TypedDict(\"SearchV2Response\", { \"rows\": list[SearchV2ResponseRowsItem] })",
       "",
-      "    def search_v2(query: str) -> SearchV2Response:",
-      "        \"\"\"valid python name\"\"\"",
-      "        ..."
+      "def search_v2(query: str) -> SearchV2Response:",
+      "    \"\"\"valid python name\"\"\"",
+      "    raise NotImplementedError(\"search_v2 is provided by runtime.\")"
     ].join("\n");
 
     expect(result).toBe(expected);
@@ -150,12 +148,9 @@ describe("montyPreambleBuild", () => {
       "",
       "ToolError = RuntimeError",
       "",
-      "# Typed tool stubs for code assistance only (not executed).",
-      "if False:",
-      "    def __daycare_print__(*values: Any) -> None:",
-      "        ...",
-      "",
-      "    pass"
+      "# Typed tool stubs for code assistance only.",
+      "def __daycare_print__(*values: Any) -> None:",
+      "    raise NotImplementedError(\"__daycare_print__ is provided by runtime.\")"
     ].join("\n");
 
     expect(result).toBe(expected);

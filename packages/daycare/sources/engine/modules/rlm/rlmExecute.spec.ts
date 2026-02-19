@@ -4,7 +4,7 @@ import { MontySnapshot } from "@pydantic/monty";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
-import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
+import { montyRuntimePreambleBuild } from "../monty/montyRuntimePreambleBuild.js";
 import { rlmExecute } from "./rlmExecute.js";
 
 const baseTools = [
@@ -32,7 +32,7 @@ describe("rlmExecute", () => {
 
     const result = await rlmExecute(
       "value = echo('hello')\nvalue",
-      montyPreambleBuild(resolver.listTools()),
+      montyRuntimePreambleBuild(),
       createContext(),
       resolver,
       "tool-call-1"
@@ -67,7 +67,7 @@ describe("rlmExecute", () => {
 
     const result = await rlmExecute(
       code,
-      montyPreambleBuild(resolver.listTools()),
+      montyRuntimePreambleBuild(),
       createContext(),
       resolver,
       "tool-call-1"
@@ -84,7 +84,7 @@ describe("rlmExecute", () => {
 
     const result = await rlmExecute(
       "print('hello', 'world')\n'done'",
-      montyPreambleBuild(resolver.listTools()),
+      montyRuntimePreambleBuild(),
       createContext(),
       resolver,
       "tool-call-1"
@@ -107,7 +107,7 @@ describe("rlmExecute", () => {
 
     await rlmExecute(
       "value = echo('hello')\nvalue",
-      montyPreambleBuild(resolver.listTools()),
+      montyRuntimePreambleBuild(),
       createContext(),
       resolver,
       "tool-call-1"
@@ -129,7 +129,7 @@ describe("rlmExecute", () => {
 
     await rlmExecute(
       "value = echo('hello')\nvalue",
-      montyPreambleBuild(resolver.listTools()),
+      montyRuntimePreambleBuild(),
       createContext(),
       resolver,
       "outer-run-python",
