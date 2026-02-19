@@ -744,6 +744,42 @@ export class TelegramConnector implements Connector {
       }
     }
 
+    // Handle voice messages (Telegram voice notes)
+    if (message.voice?.file_id) {
+      const stored = await this.downloadFile(
+        message.voice.file_id,
+        `voice-${message.voice.file_id}.ogg`,
+        "audio/ogg"
+      );
+      if (stored) {
+        files.push(stored);
+      }
+    }
+
+    // Handle audio messages (music/audio files)
+    if (message.audio?.file_id) {
+      const stored = await this.downloadFile(
+        message.audio.file_id,
+        message.audio.file_name ?? `audio-${message.audio.file_id}.mp3`,
+        message.audio.mime_type ?? "audio/mpeg"
+      );
+      if (stored) {
+        files.push(stored);
+      }
+    }
+
+    // Handle video notes (round video messages)
+    if (message.video_note?.file_id) {
+      const stored = await this.downloadFile(
+        message.video_note.file_id,
+        `video_note-${message.video_note.file_id}.mp4`,
+        "video/mp4"
+      );
+      if (stored) {
+        files.push(stored);
+      }
+    }
+
     return files;
   }
 

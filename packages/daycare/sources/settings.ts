@@ -43,6 +43,11 @@ export type SecuritySettings = {
   appReviewerEnabled?: boolean;
 };
 
+export type TranscriptionSettings = {
+  enabled?: boolean;
+  provider?: string;  // Default provider ID (e.g., "openai", "deepgram")
+};
+
 export type FeaturesConfig = {
   say?: boolean;
   rlm?: boolean;
@@ -78,6 +83,7 @@ export type SettingsConfig = {
     enabled?: boolean;
     maxEntries?: number;
   };
+  transcription?: TranscriptionSettings;
 };
 
 export type AssistantSettings = {
