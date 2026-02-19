@@ -1,0 +1,61 @@
+name: NPM Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # Tagged release: v2026.02.3 -> 2026.02.3
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=latest" >> $GITHUB_OUTPUT
+            echo "Publishing stable release: $VERSION"
+          else
+            # Canary release on main: 0.0.0-canary.<sha>
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            VERSION="0.0.0-canary.${SHORT_SHA}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=canary" >> $GITHUB_OUTPUT
+            echo "Publishing canary release: $VERSION"
+          fi
+
+      - name: Update package version
+        working-directory: packages/daycare
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Publish to NPM
+        working-directory: packages/daycare
+        run: npm publish --tag ${{ steps.version.outputs.tag }} --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
