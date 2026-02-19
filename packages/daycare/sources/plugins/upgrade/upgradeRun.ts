@@ -4,6 +4,7 @@ type UpgradeRunOptions = {
   strategy: "pm2";
   processName: string;
   sendStatus: (text: string) => Promise<void>;
+  version?: string;
 };
 
 type Pm2ProcessSnapshot = {
@@ -19,12 +20,16 @@ type Pm2ProcessSnapshot = {
  * Expects: strategy is supported and processName is a non-empty PM2 process identifier.
  */
 export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
-  await options.sendStatus("Upgrading Daycare CLI (npm install -g daycare-cli)...");
+  const packageSpec = options.version
+    ? `daycare-cli@${options.version}`
+    : "daycare-cli";
+
+  await options.sendStatus(`Upgrading Daycare CLI (npm install -g ${packageSpec})...`);
 
   try {
-    await commandRun("npm", ["install", "-g", "daycare-cli"]);
+    await commandRun("npm", ["install", "-g", packageSpec]);
   } catch (error) {
-    const text = `Upgrade failed while installing daycare-cli: ${errorTextBuild(error)}`;
+    const text = `Upgrade failed while installing ${packageSpec}: ${errorTextBuild(error)}`;
     await options.sendStatus(text);
     throw new Error(text);
   }
@@ -35,7 +40,7 @@ export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
     throw new Error(text);
   }
 
-  await options.sendStatus(`Restarting process \"${options.processName}\" via pm2...`);
+  await options.sendStatus(`Restarting process "${options.processName}" via pm2...`);
   const beforeSnapshot = await pm2ProcessSnapshotRead(options.processName);
 
   try {
@@ -46,7 +51,7 @@ export async function upgradeRun(options: UpgradeRunOptions): Promise<void> {
       return;
     }
     throw new Error(
-      `Upgrade failed while restarting PM2 process \"${options.processName}\": ${errorTextBuild(error)}`
+      `Upgrade failed while restarting PM2 process "${options.processName}": ${errorTextBuild(error)}`
     );
   }
 }
@@ -155,42 +160,34 @@ function commandOutput(command: string, args: string[]): Promise<string> {
 }
 
 function pm2ProcessSnapshotParse(
-  output: string,
+  jlistOutput: string,
   processName: string
 ): Pm2ProcessSnapshot | null {
-  let parsed: unknown;
+  let parsed: unknown[];
   try {
-    parsed = JSON.parse(output) as unknown;
+    parsed = JSON.parse(jlistOutput);
   } catch {
     return null;
   }
   if (!Array.isArray(parsed)) {
     return null;
   }
-  const match = parsed.find((entry) => {
-    if (!entry || typeof entry !== "object") {
-      return false;
-    }
-    return (entry as { name?: unknown }).name === processName;
-  });
-  if (!match || typeof match !== "object") {
+  const entry = parsed.find(
+    (item: unknown) =>
+      typeof item === "object" &&
+      item !== null &&
+      "name" in item &&
+      (item as Record<string, unknown>).name === processName
+  ) as Record<string, unknown> | undefined;
+  if (!entry) {
     return null;
   }
-  const candidate = match as {
-    pid?: unknown;
-    pm2_env?: {
-      status?: unknown;
-      pm_uptime?: unknown;
-      restart_time?: unknown;
-    };
-  };
+  const pm2Env = entry.pm2_env as Record<string, unknown> | undefined;
   return {
-    pid: typeof candidate.pid === "number" ? candidate.pid : null,
-    status: typeof candidate.pm2_env?.status === "string" ? candidate.pm2_env.status : null,
-    pmUptime: typeof candidate.pm2_env?.pm_uptime === "number" ? candidate.pm2_env.pm_uptime : null,
+    pid: typeof entry.pid === "number" ? entry.pid : null,
+    status: typeof pm2Env?.status === "string" ? pm2Env.status : null,
+    pmUptime: typeof pm2Env?.pm_uptime === "number" ? pm2Env.pm_uptime : null,
     restartCount:
-      typeof candidate.pm2_env?.restart_time === "number"
-        ? candidate.pm2_env.restart_time
-        : null
+      typeof pm2Env?.restart_time === "number" ? pm2Env.restart_time : null
   };
 }

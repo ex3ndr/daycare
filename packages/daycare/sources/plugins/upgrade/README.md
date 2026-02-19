@@ -1,11 +1,44 @@
 # Upgrade plugin
 
 ## Overview
-Adds a user slash command `/upgrade` for runtime upgrades.
+Provides upgrade and restart capabilities for Daycare runtime.
 
-The command runs:
-1. `npm install -g daycare-cli`
-2. `pm2 restart <processName>`
+## Commands
+- `/upgrade` - Upgrades Daycare CLI and restarts the PM2 process
+- `/restart` - Restarts the PM2 process without upgrading
+
+## Tool
+- `self_upgrade` - Programmatic upgrade tool for agents
+
+### self_upgrade Tool
+
+Allows the agent to upgrade Daycare to a newer version.
+
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `version` | string | No | Specific version to install (e.g. '2026.2.1'). If omitted, installs latest. |
+
+**Constraints:**
+- Only available in foreground sessions (direct user chat)
+- Not available in background agents, subagents, or group chats
+- After upgrade, the process restarts and agent context is reset
+
+**Example usage by agent:**
+```
+self_upgrade()                    # Upgrade to latest
+self_upgrade(version="2026.2.1")  # Upgrade to specific version
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Upgrade to latest initiated. The process is restarting.",
+  "previousVersion": "2026.2.0",
+  "requestedVersion": "latest"
+}
+```
 
 ## Settings
 - `strategy` (required): currently only `"pm2"`.
@@ -18,16 +51,20 @@ The command runs:
   - `strategy: "pm2"`
   - `processName: "daycare"`
 
-## Slash commands
-- `/upgrade` - upgrades Daycare CLI and restarts the configured PM2 process.
-  - Persists the requester and the pre-upgrade Daycare version before restart.
-  - PM2 restart command errors are ignored only when PM2 state indicates restart succeeded.
-  - On next process boot, plugin `postStart()` compares previous/current versions and sends completion only when the version actually changed.
-- `/restart` - restarts the configured PM2 process without running the upgrade install step.
-  - The command writes a pending marker before `pm2 restart`.
-  - If PM2 returns an error, the plugin probes `pm2 jlist` before failing; if restart indicators changed (pid/uptime/restart count), the command is treated as successful.
-  - On next process boot, plugin `postStart()` checks the marker (pid/time heuristic) and sends restart completion status.
+## How it works
+
+### Upgrade flow
+1. Runs `npm install -g daycare-cli` (or `daycare-cli@<version>`)
+2. Runs `pm2 restart <processName>`
+3. Persists the requester and pre-upgrade version before restart
+4. On next boot, compares versions and sends completion message
+
+### Restart flow
+1. Runs `pm2 restart <processName>`
+2. Persists a restart marker
+3. On next boot, sends restart completion status
 
 ## Notes
-- Slash commands are user-facing and are not exposed as model tools.
-- The plugin sends progress/failure status messages back to the invoking channel.
+- Commands (`/upgrade`, `/restart`) are user-facing slash commands
+- The `self_upgrade` tool is available to the model in foreground sessions
+- Progress/failure status messages are sent back to the invoking channel
