@@ -20,7 +20,7 @@ import {
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { buildReactionTool } from "./modules/tools/reaction.js";
-import { buildDeleteMessageTool } from "./modules/tools/deleteMessageTool.js";
+import { buildDeleteAfterTool } from "./modules/tools/deleteAfterTool.js";
 import { buildPermissionGrantTool, buildPermissionRequestTool } from "./modules/tools/permissions.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { buildSignalGenerateTool } from "./modules/tools/signal.js";
@@ -395,7 +395,7 @@ export class Engine {
     this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
     this.modules.tools.register("core", buildMermaidPngTool());
     this.modules.tools.register("core", buildReactionTool());
-    this.modules.tools.register("core", buildDeleteMessageTool());
+    this.modules.tools.register("core", buildDeleteAfterTool());
     this.modules.tools.register("core", buildSendFileTool());
     this.modules.tools.register("core", buildSignalGenerateTool(this.signals));
     this.modules.tools.register("core", signalEventsCsvToolBuild(this.signals));
@@ -415,7 +415,7 @@ export class Engine {
     await this.apps.discover();
     this.apps.registerTools(this.modules.tools);
     logger.debug(
-      "register: Core tools registered: cron, cron_memory, heartbeat, topology, background, send_user_message, skill, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, delete_message, send_file, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, request_permission, grant_permission, install_app, app_rules"
+      "register: Core tools registered: cron, cron_memory, heartbeat, topology, background, send_user_message, skill, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, delete_after, send_file, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, request_permission, grant_permission, install_app, app_rules"
     );
 
     await this.pluginManager.preStartAll();
