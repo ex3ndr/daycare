@@ -140,6 +140,22 @@ describe("rlmExecute", () => {
 
     expect(records).toEqual(["rlm_start", "rlm_tool_call", "rlm_tool_result", "rlm_complete"]);
   });
+
+  it("fails fast when Monty type checking finds invalid tool argument types", async () => {
+    const resolver = createResolver(async (name) => {
+      throw new Error(`Unexpected tool ${name}`);
+    });
+
+    await expect(
+      rlmExecute(
+        "echo(1)",
+        montyRuntimePreambleBuild(baseTools),
+        createContext(),
+        resolver,
+        "tool-call-typing"
+      )
+    ).rejects.toThrow("TypeError");
+  });
 });
 
 function createResolver(

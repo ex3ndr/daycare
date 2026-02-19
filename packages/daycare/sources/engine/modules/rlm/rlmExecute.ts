@@ -50,7 +50,8 @@ export async function rlmExecute(
   });
   const monty = new Monty(script, {
     scriptName: "run_python.py",
-    externalFunctions
+    externalFunctions,
+    typeCheck: true
   });
 
   const printOutput: string[] = [];

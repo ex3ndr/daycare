@@ -71,6 +71,20 @@ describe("rlmToolBuild", () => {
     expect(messageText(result)).toContain("ZeroDivisionError");
   });
 
+  it("returns type-check diagnostics for invalid tool argument types", async () => {
+    const tool = rlmToolBuild(createResolver(async () => okResult("x", "ok")));
+
+    const result = await tool.execute(
+      { code: "echo(1)" },
+      createContext(),
+      { id: "tool-call-typing", name: "run_python" }
+    );
+
+    expect(result.toolMessage.isError).toBe(true);
+    expect(messageText(result)).toContain("Python type check failed.");
+    expect(messageText(result)).toContain("invalid-argument-type");
+  });
+
   it("uses the runtime tool resolver from execution context when provided", async () => {
     const fallbackExecute = vi.fn(async () => okResult("echo", "fallback"));
     const fallbackResolver: ToolResolverApi = {

@@ -12,6 +12,7 @@ the generated function list in `SYSTEM_TOOLS_RLM_INLINE.md`.
 
 Runtime execution now uses a separate minimal Monty preamble (`montyRuntimePreambleBuild`)
 without prompt comments and with compact `TYPE_CHECKING`-guarded runtime stubs.
+RLM execution enables Monty static type checking (`typeCheck: true`) before execution starts.
 
 ```mermaid
 flowchart TD
@@ -23,9 +24,10 @@ flowchart TD
   C --> E[rlmToolDescriptionBuild]
   D --> F[rlmNoToolsPromptBuild]
   R --> X[rlmTool + no-tools run_python execution]
+  X --> T[Monty static type check]
   E --> G[toolListContextBuild rlm mode]
   F --> H[Agent noToolsPrompt]
-  X --> L[rlmExecute]
+  T --> L[rlmExecute]
   I[skillPromptFormat<br/>dynamic available_skills list only] --> J[Appended after SYSTEM_SKILLS.md render]
   G --> K[Rendered system prompt]
   H --> K

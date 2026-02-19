@@ -1,4 +1,4 @@
-import { MontyRuntimeError, MontySyntaxError } from "@pydantic/monty";
+import { MontyRuntimeError, MontySyntaxError, MontyTypingError } from "@pydantic/monty";
 
 /**
  * Formats an RLM execution error into the user-facing run_python tool text.
@@ -15,6 +15,16 @@ export function rlmErrorTextBuild(error: unknown): string {
     return [
       "Python runtime error.",
       error.display("traceback")
+    ].join("\n\n");
+  }
+  if (error instanceof MontyTypingError) {
+    const details = error.displayDiagnostics("concise", false).trim();
+    if (details.length === 0) {
+      return "Python type check failed.";
+    }
+    return [
+      "Python type check failed.",
+      details
     ].join("\n\n");
   }
 
