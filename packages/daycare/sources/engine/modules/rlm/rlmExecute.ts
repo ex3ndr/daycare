@@ -169,10 +169,21 @@ export async function rlmExecute(
     // Check for steering after each tool completes
     const steering = checkSteering?.();
     if (steering) {
-      const steeringResult: RlmExecuteResult = {
-        output: `<steering_interrupt>
+      // Build result showing work done before interruption
+      const printOutputSoFar = printOutput.length > 0
+        ? `Print output so far:\n${printOutput.join("\n")}\n\n`
+        : "";
+      
+      const steeringOutput = `<python_result>
+Python execution interrupted by steering.
+
+${printOutputSoFar}<steering_interrupt>
 Message from ${steering.origin ?? "system"}: ${steering.text}
-</steering_interrupt>`,
+</steering_interrupt>
+</python_result>`;
+
+      const steeringResult: RlmExecuteResult = {
+        output: steeringOutput,
         printOutput,
         toolCallCount,
         steeringInterrupt: {
