@@ -24,6 +24,6 @@ export async function agentDescriptorWrite(
     stats: existing?.stats ?? {},
     lifecycle: existing?.lifecycle ?? "active",
     createdAt: existing?.createdAt ?? now,
-    updatedAt: existing?.updatedAt ?? now
+    updatedAt: now
   });
 }
