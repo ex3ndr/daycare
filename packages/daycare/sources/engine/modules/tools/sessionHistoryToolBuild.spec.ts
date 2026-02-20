@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentHistoryAppend } from "../../agents/ops/agentHistoryAppend.js";
 import { sessionHistoryToolBuild } from "./sessionHistoryToolBuild.js";
@@ -183,6 +184,7 @@ function buildContext(
         modelId: string;
     }>
 ): ToolExecutionContext {
+    const storage = storageResolve(config);
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         fileStore: null as unknown as ToolExecutionContext["fileStore"],
@@ -196,6 +198,7 @@ function buildContext(
         messageContext: {},
         agentSystem: {
             config: { current: config },
+            storage,
             inferenceRouter: {
                 complete: completeMock
             }

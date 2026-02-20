@@ -4,7 +4,6 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 import type { AgentState, SessionPermissions, ToolDefinition, ToolResultContract } from "@/types";
-import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
@@ -83,7 +82,8 @@ export function permanentAgentToolBuild(): ToolDefinition {
             await permissionTagsValidate(toolContext.permissions, permissionTags);
 
             const config = toolContext.agentSystem.config.current;
-            const existingAgents = await agentPermanentList(config);
+            const storage = toolContext.agentSystem.storage;
+            const existingAgents = await agentPermanentList(storage);
             const resolvedAgent = resolveExistingAgent(existingAgents, payload.agentId, name);
             const agentId = resolvedAgent?.agentId ?? createId();
             const resolvedWorkspaceDir = payload.workspaceDir
@@ -109,10 +109,10 @@ export function permanentAgentToolBuild(): ToolDefinition {
             }
 
             if (resolvedAgent) {
-                await agentDescriptorWrite(config, agentId, descriptor, ownerUserId);
+                await agentDescriptorWrite(storage, agentId, descriptor, ownerUserId, config.defaultPermissions);
                 toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
 
-                const state = await agentStateRead(config, agentId);
+                const state = await agentStateRead(storage, agentId);
                 if (!state) {
                     throw new Error("Permanent agent state not found.");
                 }
@@ -123,7 +123,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     permissions,
                     updatedAt: Date.now()
                 };
-                await agentStateWrite(config, agentId, nextState);
+                await agentStateWrite(storage, agentId, nextState);
                 toolContext.agentSystem.updateAgentPermissions(agentId, nextState.permissions, nextState.updatedAt);
             } else {
                 const now = Date.now();
@@ -140,14 +140,14 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     updatedAt: now,
                     state: "active"
                 };
-                await agentDescriptorWrite(config, agentId, descriptor, ownerUserId);
-                await agentStateWrite(config, agentId, state);
-                state.activeSessionId = await sessionDbCreate(config, {
+                await agentDescriptorWrite(storage, agentId, descriptor, ownerUserId, config.defaultPermissions);
+                await agentStateWrite(storage, agentId, state);
+                state.activeSessionId = await storage.sessions.create({
                     agentId,
                     inferenceSessionId: state.inferenceSessionId,
                     createdAt: now
                 });
-                await agentStateWrite(config, agentId, state);
+                await agentStateWrite(storage, agentId, state);
                 toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
                 toolContext.agentSystem.updateAgentPermissions(agentId, permissions, now);
             }

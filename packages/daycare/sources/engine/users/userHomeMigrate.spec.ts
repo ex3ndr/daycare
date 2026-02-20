@@ -5,9 +5,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { configResolve } from "../../config/configResolve.js";
+import { storageResolve } from "../../storage/storageResolve.js";
 import { storageUpgrade } from "../../storage/storageUpgrade.js";
-import { userDbList } from "../../storage/userDbList.js";
-import { userDbWrite } from "../../storage/userDbWrite.js";
 import { UserHome } from "./userHome.js";
 import { userHomeMigrate } from "./userHomeMigrate.js";
 
@@ -33,6 +32,7 @@ describe("userHomeMigrate", () => {
             path.join(rootDir, "settings.json")
         );
         await storageUpgrade(config);
+        const storage = storageResolve(config);
 
         await writeFile(path.join(dataDir, "SOUL.md"), "legacy soul\n", "utf8");
         await writeFile(path.join(dataDir, "USER.md"), "legacy user\n", "utf8");
@@ -77,7 +77,7 @@ describe("userHomeMigrate", () => {
 
         await userHomeMigrate(config);
 
-        const users = await userDbList(config);
+        const users = await storage.users.findMany();
         const owner = users.find((entry) => entry.isOwner) ?? users[0];
         expect(owner?.id).toBeTruthy();
         if (!owner) {
@@ -112,10 +112,11 @@ describe("userHomeMigrate", () => {
             path.join(rootDir, "settings.json")
         );
         await storageUpgrade(config);
+        const storage = storageResolve(config);
         await writeFile(path.join(dataDir, "SOUL.md"), "legacy soul\n", "utf8");
 
         await userHomeMigrate(config);
-        const users = await userDbList(config);
+        const users = await storage.users.findMany();
         const owner = users.find((entry) => entry.isOwner) ?? users[0];
         if (!owner) {
             throw new Error("Owner user missing");
@@ -139,17 +140,16 @@ describe("userHomeMigrate", () => {
             path.join(rootDir, "settings.json")
         );
         await storageUpgrade(config);
-        const users = await userDbList(config);
+        const storage = storageResolve(config);
+        const users = await storage.users.findMany();
         const firstUser = users[0];
         if (!firstUser) {
             throw new Error("Bootstrap user missing");
         }
 
         // Simulate inconsistent table where no user is marked owner.
-        await userDbWrite(config, {
-            id: firstUser.id,
+        await storage.users.update(firstUser.id, {
             isOwner: false,
-            createdAt: firstUser.createdAt,
             updatedAt: Date.now()
         });
 
@@ -161,7 +161,7 @@ describe("userHomeMigrate", () => {
 
         await userHomeMigrate(config);
 
-        const afterUsers = await userDbList(config);
+        const afterUsers = await storage.users.findMany();
         const owner = afterUsers.find((entry) => entry.isOwner) ?? null;
         expect(owner?.id).toBe(firstUser.id);
         expect(await readFile(path.join(fallbackHome.desktop, "note.txt"), "utf8")).toBe("existing target\n");

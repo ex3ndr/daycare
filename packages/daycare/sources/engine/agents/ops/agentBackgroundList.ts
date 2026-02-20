@@ -1,13 +1,15 @@
 import type { Config } from "@/types";
-import { agentDbList } from "../../../storage/agentDbList.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import type { BackgroundAgentState } from "./agentTypes.js";
 
 /**
  * Lists persisted background agents with coarse status (no in-memory queue data).
  * Expects: storage migrations are applied before listing.
  */
-export async function agentBackgroundList(config: Config): Promise<BackgroundAgentState[]> {
-    const records = await agentDbList(config);
+export async function agentBackgroundList(storageOrConfig: Storage | Config): Promise<BackgroundAgentState[]> {
+    const storage = storageResolve(storageOrConfig);
+    const records = await storage.agents.findMany();
     const results: BackgroundAgentState[] = [];
 
     for (const record of records) {

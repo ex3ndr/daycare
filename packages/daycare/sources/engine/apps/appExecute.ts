@@ -30,6 +30,7 @@ export type AppExecuteResult = {
 export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResult> {
     const agentSystem = input.context.agentSystem;
     const config = agentSystem.config.current;
+    const storage = agentSystem.storage;
     const waitForResponse = input.waitForResponse ?? false;
     const appsDir = input.context.agentContext?.userId
         ? agentSystem.userHomeForUserId(input.context.agentContext.userId).apps
@@ -52,7 +53,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
     };
 
     const agentId = await agentSystem.agentIdForTarget({ descriptor });
-    const state = await agentStateRead(config, agentId);
+    const state = await agentStateRead(storage, agentId);
     if (!state) {
         throw new Error(`App agent state not found: ${agentId}`);
     }
@@ -62,7 +63,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
         permissions: appPermissions,
         updatedAt
     };
-    await agentStateWrite(config, agentId, nextState);
+    await agentStateWrite(storage, agentId, nextState);
     agentSystem.updateAgentPermissions(agentId, appPermissions, updatedAt);
 
     const reviewProviders = appReviewProvidersResolve(config, appDescriptor.manifest.model);

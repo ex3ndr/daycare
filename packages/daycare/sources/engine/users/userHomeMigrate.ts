@@ -3,8 +3,8 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import type { Config } from "@/types";
 import { getLogger } from "../../log.js";
-import { userDbList } from "../../storage/userDbList.js";
-import { userDbWrite } from "../../storage/userDbWrite.js";
+import type { Storage } from "../../storage/storage.js";
+import { storageResolve } from "../../storage/storageResolve.js";
 import { agentPromptPathsResolve } from "../agents/ops/agentPromptPathsResolve.js";
 import { UserHome } from "./userHome.js";
 import { userHomeEnsure } from "./userHomeEnsure.js";
@@ -16,13 +16,14 @@ const logger = getLogger("engine.users.migrate");
  * Migrates legacy shared files/apps into the owner user's UserHome tree once.
  * Expects: storage migrations have already run and config paths are absolute.
  */
-export async function userHomeMigrate(config: Config): Promise<void> {
+export async function userHomeMigrate(config: Config, storageOrConfig?: Storage | Config): Promise<void> {
+    const storage = storageResolve(storageOrConfig ?? config);
     const markerPath = path.join(config.usersDir, MARKER_FILENAME);
     if (await pathExists(markerPath)) {
         return;
     }
 
-    const ownerUserId = await ownerUserIdEnsure(config);
+    const ownerUserId = await ownerUserIdEnsure(storage);
     const ownerHome = new UserHome(config.usersDir, ownerUserId);
     await userHomeEnsure(ownerHome);
     await knowledgeFilesCopy(config, ownerHome);
@@ -32,8 +33,8 @@ export async function userHomeMigrate(config: Config): Promise<void> {
     await fs.writeFile(markerPath, `${JSON.stringify({ migratedAt: Date.now(), ownerUserId }, null, 2)}\n`, "utf8");
 }
 
-async function ownerUserIdEnsure(config: Config): Promise<string> {
-    const users = await userDbList(config);
+async function ownerUserIdEnsure(storage: Storage): Promise<string> {
+    const users = await storage.users.findMany();
     const owner = users.find((entry) => entry.isOwner);
     if (owner) {
         return owner.id;
@@ -44,17 +45,12 @@ async function ownerUserIdEnsure(config: Config): Promise<string> {
             { userId: fallbackOwner.id },
             "warn: User table had no owner; promoting earliest user to owner for migration"
         );
-        await userDbWrite(config, {
-            id: fallbackOwner.id,
-            isOwner: true,
-            createdAt: fallbackOwner.createdAt,
-            updatedAt: Date.now()
-        });
+        await storage.users.update(fallbackOwner.id, { isOwner: true, updatedAt: Date.now() });
         return fallbackOwner.id;
     }
     const now = Date.now();
     const ownerId = createId();
-    await userDbWrite(config, {
+    await storage.users.create({
         id: ownerId,
         isOwner: true,
         createdAt: now,

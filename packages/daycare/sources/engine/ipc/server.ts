@@ -263,14 +263,14 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
 
     app.get("/v1/engine/agents/background", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/agents/background");
-        const agents = await agentBackgroundList(options.runtime.config.current);
+        const agents = await agentBackgroundList(options.runtime.storage);
         logger.debug(`event: Background agents retrieved agentCount=${agents.length}`);
         return reply.send({ ok: true, agents });
     });
 
     app.get("/v1/engine/agents", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/agents");
-        const agents = await agentList(options.runtime.config.current);
+        const agents = await agentList(options.runtime.storage);
         logger.debug(`event: Agents retrieved agentCount=${agents.length}`);
         return reply.send({ ok: true, agents });
     });
@@ -278,7 +278,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
     app.get("/v1/engine/agents/:agentId/history", async (request, reply) => {
         const agentId = (request.params as { agentId: string }).agentId;
         logger.debug(`event: GET /v1/engine/agents/:agentId/history agentId=${agentId}`);
-        const records = await agentHistoryLoadAll(options.runtime.config.current, agentId);
+        const records = await agentHistoryLoadAll(options.runtime.storage, agentId);
         logger.debug(`event: Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
         return reply.send({ ok: true, records });
     });
@@ -516,7 +516,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
                 status: options.runtime.getStatus(),
                 cron: options.runtime.crons.listScheduledTasks(),
                 heartbeat: await options.runtime.heartbeats.listTasks(),
-                backgroundAgents: await agentBackgroundList(options.runtime.config.current)
+                backgroundAgents: await agentBackgroundList(options.runtime.storage)
             },
             timestamp: new Date().toISOString()
         });

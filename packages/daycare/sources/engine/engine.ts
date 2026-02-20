@@ -7,7 +7,7 @@ import { FileStore } from "../files/store.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
-import { storageUpgrade } from "../storage/storageUpgrade.js";
+import { Storage } from "../storage/storage.js";
 import { InvalidateSync } from "../util/sync.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
@@ -89,6 +89,7 @@ export class Engine {
     readonly pluginRegistry: PluginRegistry;
     readonly pluginManager: PluginManager;
     readonly providerManager: ProviderManager;
+    readonly storage: Storage;
     readonly agentSystem: AgentSystem;
     readonly crons: Crons;
     readonly heartbeats: Heartbeats;
@@ -107,6 +108,7 @@ export class Engine {
     constructor(options: EngineOptions) {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
         this.config = new ConfigModule(options.config);
+        this.storage = Storage.open(this.config.current.dbPath);
         this.eventBus = options.eventBus;
         this.signals = new Signals({
             eventBus: this.eventBus,
@@ -304,6 +306,7 @@ export class Engine {
         this.agentSystem = new AgentSystem({
             config: this.config,
             eventBus: this.eventBus,
+            storage: this.storage,
             connectorRegistry: this.modules.connectors,
             imageRegistry: this.modules.images,
             toolResolver: this.modules.tools,
@@ -349,8 +352,7 @@ export class Engine {
     async start(): Promise<void> {
         logger.debug("start: Engine.start() beginning");
         await ensureWorkspaceDir(this.config.current.defaultPermissions.workingDir);
-        await storageUpgrade(this.config.current);
-        await userHomeMigrate(this.config.current);
+        await userHomeMigrate(this.config.current, this.storage);
 
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
@@ -449,6 +451,7 @@ export class Engine {
         this.processes.unload();
         await this.exposes.stop();
         await this.pluginManager.unloadAll();
+        this.storage.close();
     }
 
     getStatus() {

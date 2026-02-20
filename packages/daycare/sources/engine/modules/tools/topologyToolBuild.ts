@@ -62,7 +62,7 @@ export function topologyTool(
             const callerUserId = toolContext.agentContext?.userId ?? null;
 
             const [agentEntries, cronTasks, heartbeatTasks, exposeEndpoints] = await Promise.all([
-                agentList(toolContext.agentSystem.config.current),
+                agentList(toolContext.agentSystem.storage),
                 crons.listTasks(),
                 toolContext.heartbeats.listTasks(),
                 exposes.list()

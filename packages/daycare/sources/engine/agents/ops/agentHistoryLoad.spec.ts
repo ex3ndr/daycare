@@ -5,7 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
-import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import { storageUpgrade } from "../../../storage/storageUpgrade.js";
 import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentHistoryAppend } from "./agentHistoryAppend.js";
@@ -34,7 +34,7 @@ describe("agentHistoryLoad", () => {
                 throw new Error("State missing");
             }
 
-            const firstSession = await sessionDbCreate(config, { agentId, createdAt: 1 });
+            const firstSession = await storageResolve(config).sessions.create({ agentId, createdAt: 1 });
             await agentStateWrite(config, agentId, { ...initial, activeSessionId: firstSession });
             await agentHistoryAppend(config, agentId, {
                 type: "user_message",
@@ -43,7 +43,7 @@ describe("agentHistoryLoad", () => {
                 files: []
             });
 
-            const secondSession = await sessionDbCreate(config, { agentId, createdAt: 3 });
+            const secondSession = await storageResolve(config).sessions.create({ agentId, createdAt: 3 });
             await agentStateWrite(config, agentId, {
                 ...initial,
                 activeSessionId: secondSession,

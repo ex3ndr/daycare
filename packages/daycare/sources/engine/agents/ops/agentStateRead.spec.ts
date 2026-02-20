@@ -5,7 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
-import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentStateRead } from "./agentStateRead.js";
 import { agentStateWrite } from "./agentStateWrite.js";
@@ -25,7 +25,7 @@ describe("agentStateRead", () => {
                 id: agentId,
                 name: "state"
             });
-            const sessionId = await sessionDbCreate(config, {
+            const sessionId = await storageResolve(config).sessions.create({
                 agentId,
                 inferenceSessionId: "session-1",
                 createdAt: 1

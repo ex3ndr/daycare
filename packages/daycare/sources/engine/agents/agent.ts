@@ -6,7 +6,6 @@ import type { MessageContext, ToolExecutionContext } from "@/types";
 import { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
-import { sessionDbCreate } from "../../storage/sessionDbCreate.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import { messageBuildSystemSilentText } from "../messages/messageBuildSystemSilentText.js";
@@ -139,14 +138,20 @@ export class Agent {
         };
 
         const agent = new Agent(agentId, userId, descriptor, state, inbox, agentSystem, userHome);
-        await agentDescriptorWrite(agentSystem.config.current, agentId, descriptor, userId);
-        await agentStateWrite(agentSystem.config.current, agentId, state);
-        state.activeSessionId = await sessionDbCreate(agentSystem.config.current, {
+        await agentDescriptorWrite(
+            agentSystem.storage,
+            agentId,
+            descriptor,
+            userId,
+            agentSystem.config.current.defaultPermissions
+        );
+        await agentStateWrite(agentSystem.storage, agentId, state);
+        state.activeSessionId = await agentSystem.storage.sessions.create({
             agentId,
             inferenceSessionId: state.inferenceSessionId,
             createdAt: now
         });
-        await agentStateWrite(agentSystem.config.current, agentId, state);
+        await agentStateWrite(agentSystem.storage, agentId, state);
 
         agent.agentSystem.eventBus.emit("agent.created", {
             agentId,
@@ -405,7 +410,7 @@ export class Agent {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
 
-        const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
         const contextTools = await this.listContextTools(toolResolver, source, {
             agentKind,
             allowCronTools,
@@ -480,7 +485,7 @@ export class Agent {
             if (compactionAt !== null) {
                 pendingUserRecord = { ...pendingUserRecord, at: compactionAt + 1 };
             }
-            await agentHistoryAppend(this.agentSystem.config.current, this.id, pendingUserRecord);
+            await agentHistoryAppend(this.agentSystem.storage, this.id, pendingUserRecord);
         }
 
         const agentContext = this.state.context;
@@ -525,8 +530,7 @@ export class Agent {
                     verbose: this.agentSystem.config.current.verbose,
                     logger,
                     abortSignal: inferenceAbortController.signal,
-                    appendHistoryRecord: (record) =>
-                        agentHistoryAppend(this.agentSystem.config.current, this.id, record),
+                    appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.id, record),
                     notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error)
                 });
             } finally {
@@ -571,7 +575,7 @@ export class Agent {
 
         this.state.context = { messages: contextForRun.messages };
         this.state.updatedAt = Date.now();
-        await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
+        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
 
         return result.responseText ?? null;
     }
@@ -582,7 +586,7 @@ export class Agent {
             : messageBuildSystemText(item.text, item.origin);
         if (item.silent) {
             const receivedAt = Date.now();
-            await agentHistoryAppend(this.agentSystem.config.current, this.id, {
+            await agentHistoryAppend(this.agentSystem.storage, this.id, {
                 type: "user_message",
                 at: receivedAt,
                 text,
@@ -603,7 +607,7 @@ export class Agent {
             }
             this.state.context.messages.push(userMessage);
             this.state.updatedAt = receivedAt;
-            await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
+            await agentStateWrite(this.agentSystem.storage, this.id, this.state);
             return null;
         }
 
@@ -653,7 +657,7 @@ export class Agent {
             this.state.context = { messages: [] };
         }
         this.state.inferenceSessionId = createId();
-        this.state.activeSessionId = await sessionDbCreate(this.agentSystem.config.current, {
+        this.state.activeSessionId = await this.agentSystem.storage.sessions.create({
             agentId: this.id,
             inferenceSessionId: this.state.inferenceSessionId,
             createdAt: now,
@@ -661,7 +665,7 @@ export class Agent {
         });
         this.state.tokens = null;
         this.state.updatedAt = now;
-        await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
+        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
         this.agentSystem.eventBus.emit("agent.reset", {
             agentId: this.id,
             context: item.context ?? {}
@@ -717,7 +721,7 @@ export class Agent {
      */
     private async handleEmergencyReset(entry: AgentMessage, source: string): Promise<void> {
         // Estimate token usage before resetting context
-        const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
         const estimatedTokens = contextEstimateTokens(history);
 
         const reset: AgentInboxReset = {
@@ -753,13 +757,13 @@ export class Agent {
 
     private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
         await this.completePendingToolCalls("session_crashed");
-        const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
         const historyMessages = await this.buildHistoryContext(history);
         this.state.context = {
             messages: historyMessages
         };
         this.state.updatedAt = Date.now();
-        await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
+        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
         this.agentSystem.eventBus.emit("agent.restored", { agentId: this.id });
         return true;
     }
@@ -797,7 +801,7 @@ export class Agent {
             }
             const compactionAt = await this.applyCompactionSummary(summaryText);
             this.state.updatedAt = compactionAt;
-            await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
+            await agentStateWrite(this.agentSystem.storage, this.id, this.state);
             return { ok: true };
         } catch (error) {
             if (isAbortError(error, compactionAbortController.signal)) {
@@ -837,7 +841,7 @@ export class Agent {
      * Expects: called before rebuilding context or starting a new inference loop.
      */
     private async completePendingToolCalls(reason: "session_crashed" | "user_aborted"): Promise<void> {
-        const records = await agentHistoryLoad(this.agentSystem.config.current, this.id);
+        const records = await agentHistoryLoad(this.agentSystem.storage, this.id);
         const pendingRlm = reason === "session_crashed" ? agentHistoryPendingRlmResolve(records) : null;
         const pendingRlmToolCallId = pendingRlm?.start.toolCallId ?? null;
         const completionRecords = agentHistoryPendingToolResults(records, reason, Date.now()).filter(
@@ -846,14 +850,14 @@ export class Agent {
         );
         let completedToolCalls = 0;
         for (const record of completionRecords) {
-            await agentHistoryAppend(this.agentSystem.config.current, this.id, record);
+            await agentHistoryAppend(this.agentSystem.storage, this.id, record);
             records.push(record);
             completedToolCalls += 1;
         }
 
         if (pendingRlm) {
             const appendRecord = async (record: AgentHistoryRecord): Promise<void> => {
-                await agentHistoryAppend(this.agentSystem.config.current, this.id, record);
+                await agentHistoryAppend(this.agentSystem.storage, this.id, record);
                 records.push(record);
             };
             const toolCall = pendingRlm.start.toolCallId;
@@ -928,13 +932,13 @@ export class Agent {
         }
 
         if (completedToolCalls > 0) {
-            const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
+            const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
             const historyMessages = await this.buildHistoryContext(history);
             this.state.context = {
                 messages: historyMessages
             };
             this.state.updatedAt = Date.now();
-            await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
+            await agentStateWrite(this.agentSystem.storage, this.id, this.state);
             logger.warn(
                 {
                     agentId: this.id,
@@ -1122,15 +1126,15 @@ export class Agent {
             ]
         };
         this.state.inferenceSessionId = createId();
-        this.state.activeSessionId = await sessionDbCreate(this.agentSystem.config.current, {
+        this.state.activeSessionId = await this.agentSystem.storage.sessions.create({
             agentId: this.id,
             inferenceSessionId: this.state.inferenceSessionId,
             createdAt: compactionAt,
             resetMessage
         });
         this.state.tokens = null;
-        await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
-        await agentHistoryAppend(this.agentSystem.config.current, this.id, {
+        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+        await agentHistoryAppend(this.agentSystem.storage, this.id, {
             type: "user_message",
             at: compactionAt,
             text: summaryWithContinue,

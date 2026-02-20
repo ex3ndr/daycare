@@ -1,23 +1,24 @@
 import type { Config } from "@/types";
-import { agentDbRead } from "../../../storage/agentDbRead.js";
-import { agentDbWrite } from "../../../storage/agentDbWrite.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import type { AgentState } from "./agentTypes.js";
 
 /**
  * Writes agent state to SQLite storage.
  * Expects: descriptor has been persisted before state writes.
  */
-export async function agentStateWrite(config: Config, agentId: string, state: AgentState): Promise<void> {
-    const existing = await agentDbRead(config, agentId);
+export async function agentStateWrite(
+    storageOrConfig: Storage | Config,
+    agentId: string,
+    state: AgentState
+): Promise<void> {
+    const storage = storageResolve(storageOrConfig);
+    const existing = await storage.agents.findById(agentId);
     if (!existing) {
         throw new Error(`Agent descriptor missing for state write: ${agentId}`);
     }
 
-    await agentDbWrite(config, {
-        id: agentId,
-        userId: existing.userId,
-        type: existing.type,
-        descriptor: existing.descriptor,
+    await storage.agents.update(agentId, {
         activeSessionId: state.activeSessionId ?? existing.activeSessionId ?? null,
         permissions: state.permissions,
         tokens: state.tokens,

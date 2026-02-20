@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+import { Storage } from "./storage.js";
+import { UsersRepository } from "./usersRepository.js";
+
+describe("UsersRepository", () => {
+    it("supports CRUD and connector key operations", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const users = new UsersRepository(storage.db);
+            const created = await users.create({
+                isOwner: false,
+                createdAt: 1,
+                updatedAt: 2,
+                connectorKey: "telegram:1"
+            });
+            expect(created.isOwner).toBe(false);
+            expect(created.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
+
+            const byId = await users.findById(created.id);
+            expect(byId?.id).toBe(created.id);
+
+            const byKey = await users.findByConnectorKey("telegram:1");
+            expect(byKey?.id).toBe(created.id);
+
+            await users.addConnectorKey(created.id, "slack:1");
+            const updated = await users.findById(created.id);
+            expect(updated?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1", "slack:1"]);
+
+            await users.update(created.id, { isOwner: false, updatedAt: 3 });
+            const updatedOwner = await users.findById(created.id);
+            expect(updatedOwner?.isOwner).toBe(false);
+            expect(updatedOwner?.updatedAt).toBe(3);
+
+            const owner = await users.findOwner();
+            expect(owner).toBeTruthy();
+            expect(owner?.id).not.toBe(created.id);
+
+            await users.delete(created.id);
+            expect(await users.findById(created.id)).toBeNull();
+            expect(await users.findByConnectorKey("telegram:1")).toBeNull();
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("returns cached user on repeated read", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const users = new UsersRepository(storage.db);
+            const created = await users.create({ createdAt: 1, updatedAt: 1 });
+
+            const first = await users.findById(created.id);
+            expect(first?.id).toBe(created.id);
+
+            storage.db.prepare("DELETE FROM users WHERE id = ?").run(created.id);
+            const second = await users.findById(created.id);
+            expect(second?.id).toBe(created.id);
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("loads from db on cache miss and invalidates after delete", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const users = new UsersRepository(storage.db);
+            storage.db
+                .prepare("INSERT INTO users (id, is_owner, created_at, updated_at) VALUES (?, ?, ?, ?)")
+                .run("user-1", 0, 10, 11);
+            storage.db
+                .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?)")
+                .run("user-1", "telegram:1");
+
+            const loaded = await users.findById("user-1");
+            expect(loaded?.id).toBe("user-1");
+            expect(loaded?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
+
+            await users.delete("user-1");
+            expect(await users.findById("user-1")).toBeNull();
+            expect(await users.findByConnectorKey("telegram:1")).toBeNull();
+        } finally {
+            storage.close();
+        }
+    });
+});

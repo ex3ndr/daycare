@@ -72,14 +72,14 @@ export function sessionHistoryToolBuild(): ToolDefinition {
                 throw new Error("agentId must refer to another session.");
             }
 
-            const config = toolContext.agentSystem.config.current;
-            const descriptor = await agentDescriptorRead(config, agentId);
+            const storage = toolContext.agentSystem.storage;
+            const descriptor = await agentDescriptorRead(storage, agentId);
             if (!descriptor) {
                 throw new Error(`Agent session not found: ${agentId}`);
             }
 
             const timeRange = sessionHistoryTimeRangeNormalize(payload.fromAt, payload.toAt);
-            const records = agentHistoryFilterByTime(await agentHistoryLoad(config, agentId), timeRange);
+            const records = agentHistoryFilterByTime(await agentHistoryLoad(storage, agentId), timeRange);
             const summarized = payload.summarized ?? true;
             const text = summarized
                 ? await summaryTextGenerate(agentId, records, toolContext)

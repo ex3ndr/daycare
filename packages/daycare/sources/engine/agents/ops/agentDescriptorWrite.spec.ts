@@ -6,7 +6,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
-import { agentDbRead } from "../../../storage/agentDbRead.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 
 describe("agentDescriptorWrite", () => {
@@ -35,7 +35,7 @@ describe("agentDescriptorWrite", () => {
                 id: agentId,
                 name: "first"
             });
-            const firstRecord = await agentDbRead(config, agentId);
+            const firstRecord = await storageResolve(config).agents.findById(agentId);
 
             await agentDescriptorWrite(config, agentId, {
                 type: "cron",
@@ -43,7 +43,7 @@ describe("agentDescriptorWrite", () => {
                 name: "second"
             });
 
-            const secondRecord = await agentDbRead(config, agentId);
+            const secondRecord = await storageResolve(config).agents.findById(agentId);
             expect(firstRecord?.createdAt).toBe(firstRecord?.updatedAt);
             expect(secondRecord?.createdAt).toBe(firstRecord?.createdAt);
             expect(secondRecord?.updatedAt).toBeGreaterThan(firstRecord?.updatedAt ?? 0);

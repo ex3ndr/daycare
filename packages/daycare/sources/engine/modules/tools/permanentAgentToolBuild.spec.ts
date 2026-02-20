@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import { Storage } from "../../../storage/storage.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
 import { permanentAgentToolBuild } from "./permanentAgentToolBuild.js";
@@ -23,10 +24,12 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
+            const storage = Storage.open(config.dbPath);
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
             const context = contextBuild(buildPermissions({ network: true, readDirs: ["/tmp"] }), {
                 config: { current: config },
+                storage,
                 updateAgentDescriptor,
                 updateAgentPermissions
             });
@@ -51,6 +54,7 @@ describe("permanentAgentToolBuild", () => {
             expect(state?.permissions.readDirs).toContain(path.resolve("/tmp"));
             expect(updateAgentDescriptor).toHaveBeenCalledTimes(1);
             expect(updateAgentPermissions).toHaveBeenCalledTimes(1);
+            storage.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -66,8 +70,10 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
+            const storage = Storage.open(config.dbPath);
             const context = contextBuild(buildPermissions({ network: false }), {
                 config: { current: config },
+                storage,
                 updateAgentDescriptor: vi.fn(),
                 updateAgentPermissions: vi.fn()
             });
@@ -85,6 +91,7 @@ describe("permanentAgentToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow("Cannot attach permission");
+            storage.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -100,9 +107,11 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
+            const storage = Storage.open(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = contextBuild(buildPermissions({ network: false }), {
                 config: { current: config },
+                storage,
                 updateAgentDescriptor: vi.fn(),
                 updateAgentPermissions: vi.fn()
             });
@@ -121,6 +130,7 @@ describe("permanentAgentToolBuild", () => {
             const agents = await agentPermanentList(config);
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created?.descriptor.username).toBe("opsbot");
+            storage.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -142,6 +152,7 @@ function contextBuild(
     permissions: SessionPermissions,
     agentSystem: {
         config: { current: ReturnType<typeof configResolve> };
+        storage: Storage;
         updateAgentDescriptor: (agentId: string, descriptor: unknown) => void;
         updateAgentPermissions: (agentId: string, nextPermissions: SessionPermissions, updatedAt: number) => void;
     }

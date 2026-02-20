@@ -96,6 +96,40 @@ Runtime DB settings (`packages/daycare/sources/storage/databaseOpen.ts`):
 - `PRAGMA journal_mode=WAL;` (file DB only)
 - `PRAGMA foreign_keys=ON;`
 
+### Storage Facade and Repositories
+
+All runtime SQLite access goes through `Storage` (`packages/daycare/sources/storage/storage.ts`), which owns one
+persistent `DatabaseSync` connection and repository instances.
+
+```mermaid
+flowchart TD
+    A[Storage.open dbPath] --> B[DatabaseSync connection]
+    A --> C[UsersRepository cache: users + connector index]
+    A --> D[AgentsRepository cache: agents]
+    A --> E[SessionsRepository no cache]
+    A --> F[HistoryRepository no cache]
+```
+
+Repository files:
+
+- `packages/daycare/sources/storage/usersRepository.ts`
+- `packages/daycare/sources/storage/agentsRepository.ts`
+- `packages/daycare/sources/storage/sessionsRepository.ts`
+- `packages/daycare/sources/storage/historyRepository.ts`
+
+Facade-level operations:
+
+- `Storage.createUser(...)`
+- `Storage.resolveUserByConnectorKey(...)`
+- `Storage.createAgentWithSession(...)`
+- `Storage.appendHistory(...)`
+
+Cache behavior:
+
+- `UsersRepository` keeps write-through caches for `userId -> user` and `connectorKey -> userId`
+- `AgentsRepository` keeps a write-through `agentId -> agent` cache
+- `SessionsRepository` and `HistoryRepository` are DB-only (no cache)
+
 ### SQL Schemas
 
 ```sql

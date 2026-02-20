@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
-import { agentDbWrite } from "../../storage/agentDbWrite.js";
+import { Storage } from "../../storage/storage.js";
 import { agentStateRead } from "../agents/ops/agentStateRead.js";
 import { appExecute } from "./appExecute.js";
 import type { AppDescriptor } from "./appTypes.js";
@@ -27,9 +27,10 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") }, assistant: { workspaceDir: rootDir } },
             path.join(rootDir, "settings.json")
         );
+        const storage = Storage.open(config.dbPath);
         const agentId = "agent-app-1";
         const now = Date.now();
-        await agentDbWrite(config, {
+        await storage.agents.create({
             id: agentId,
             userId: "user-1",
             type: "app",
@@ -102,6 +103,7 @@ describe("appExecute", () => {
             messageContext: {},
             agentSystem: {
                 config: { current: config },
+                storage,
                 agentIdForTarget,
                 updateAgentPermissions,
                 post,
@@ -175,6 +177,7 @@ describe("appExecute", () => {
         const updated = await agentStateRead(config, agentId);
         expect(updated?.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));
         expect(updated?.permissions.writeDirs).toEqual([path.join(rootDir, "apps", "github-reviewer", "data")]);
+        storage.close();
     });
 
     it("posts app task asynchronously by default", async () => {
@@ -182,9 +185,10 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") }, assistant: { workspaceDir: rootDir } },
             path.join(rootDir, "settings.json")
         );
+        const storage = Storage.open(config.dbPath);
         const agentId = "agent-app-2";
         const now = Date.now();
-        await agentDbWrite(config, {
+        await storage.agents.create({
             id: agentId,
             userId: "user-1",
             type: "app",
@@ -256,6 +260,7 @@ describe("appExecute", () => {
             messageContext: {},
             agentSystem: {
                 config: { current: config },
+                storage,
                 agentIdForTarget,
                 updateAgentPermissions,
                 post,
@@ -301,5 +306,6 @@ describe("appExecute", () => {
         expect(item.type).toBe("message");
         expect(item.message?.text).toContain("Task:");
         expect(item.message?.text).toContain("Review PR #99");
+        storage.close();
     });
 });

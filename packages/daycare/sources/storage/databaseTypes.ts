@@ -87,3 +87,29 @@ export type SessionDbRecord = {
     createdAt: number;
     resetMessage: string | null;
 };
+
+export type CreateUserInput = {
+    id?: string;
+    isOwner?: boolean;
+    createdAt?: number;
+    updatedAt?: number;
+    connectorKey?: string;
+};
+
+export type UpdateUserInput = {
+    isOwner?: boolean;
+    createdAt?: number;
+    updatedAt?: number;
+};
+
+export type CreateSessionInput = {
+    agentId: string;
+    inferenceSessionId?: string | null;
+    createdAt?: number;
+    resetMessage?: string | null;
+};
+
+export type CreateAgentInput = {
+    record: AgentDbRecord;
+    session?: Omit<CreateSessionInput, "agentId">;
+};

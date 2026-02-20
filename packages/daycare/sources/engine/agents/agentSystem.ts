@@ -14,14 +14,9 @@ import type {
 import type { AuthStore } from "../../auth/store.js";
 import type { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
-import { agentDbList } from "../../storage/agentDbList.js";
-import { agentDbRead } from "../../storage/agentDbRead.js";
+import type { Storage } from "../../storage/storage.js";
+import { storageResolve } from "../../storage/storageResolve.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
-import { userDbConnectorKeyAdd } from "../../storage/userDbConnectorKeyAdd.js";
-import { userDbDelete } from "../../storage/userDbDelete.js";
-import { userDbList } from "../../storage/userDbList.js";
-import { userDbReadByConnectorKey } from "../../storage/userDbReadByConnectorKey.js";
-import { userDbWrite } from "../../storage/userDbWrite.js";
 import { AsyncLock } from "../../util/lock.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { appPermissionStateGrant } from "../apps/appPermissionStateGrant.js";
@@ -83,6 +78,7 @@ type AgentEntry = {
 export type AgentSystemOptions = {
     config: ConfigModule;
     eventBus: EngineEventBus;
+    storage?: Storage;
     connectorRegistry: ConnectorRegistry;
     imageRegistry: ImageGenerationRegistry;
     toolResolver: ToolResolver;
@@ -97,6 +93,7 @@ export type AgentSystemOptions = {
 export class AgentSystem {
     readonly config: ConfigModule;
     readonly eventBus: EngineEventBus;
+    readonly storage: Storage;
     readonly connectorRegistry: ConnectorRegistry;
     readonly imageRegistry: ImageGenerationRegistry;
     readonly toolResolver: ToolResolver;
@@ -116,6 +113,7 @@ export class AgentSystem {
     constructor(options: AgentSystemOptions) {
         this.config = options.config;
         this.eventBus = options.eventBus;
+        this.storage = options.storage ?? storageResolve(this.config.current);
         this.connectorRegistry = options.connectorRegistry;
         this.imageRegistry = options.imageRegistry;
         this.toolResolver = options.toolResolver;
@@ -178,13 +176,13 @@ export class AgentSystem {
             return;
         }
         await fs.mkdir(this.config.current.dataDir, { recursive: true });
-        const records = await agentDbList(this.config.current);
+        const records = await this.storage.agents.findMany();
 
         for (const record of records) {
             const agentId = record.id;
             let state: Awaited<ReturnType<typeof agentStateRead>> = null;
             try {
-                state = await agentStateRead(this.config.current, agentId);
+                state = await agentStateRead(this.storage, agentId);
             } catch (error) {
                 logger.warn({ agentId, error }, "restore: Agent restore skipped due to invalid persisted data");
                 continue;
@@ -306,7 +304,7 @@ export class AgentSystem {
             return true;
         }
         try {
-            const descriptor = await agentDescriptorRead(this.config.current, agentId);
+            const descriptor = await agentDescriptorRead(this.storage, agentId);
             return !!descriptor;
         } catch {
             return false;
@@ -322,7 +320,7 @@ export class AgentSystem {
         if (loaded) {
             return new AgentContext(loaded.agentId, loaded.userId);
         }
-        const record = await agentDbRead(this.config.current, agentId);
+        const record = await this.storage.agents.findById(agentId);
         if (!record) {
             return null;
         }
@@ -414,7 +412,7 @@ export class AgentSystem {
         if (!applied) {
             throw new Error("Permission could not be applied.");
         }
-        await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+        await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
         const decision: PermissionDecision = options?.decision ?? {
             token: "direct",
             agentId: entry.agentId,
@@ -460,7 +458,7 @@ export class AgentSystem {
                 throw new Error("Permission could not be applied.");
             }
             entry.agent.state.updatedAt = Date.now();
-            await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+            await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
             const decision: PermissionDecision = options?.decision
                 ? {
                       ...options.decision,
@@ -509,7 +507,7 @@ export class AgentSystem {
                 return;
             }
             entry.agent.state.state = "sleeping";
-            await agentStateWrite(this.config.current, agentId, entry.agent.state);
+            await agentStateWrite(this.storage, agentId, entry.agent.state);
             this.eventBus.emit("agent.sleep", { agentId, reason });
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
             // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
@@ -716,7 +714,7 @@ export class AgentSystem {
         await this.cancelIdleSignal(entry.agentId);
         await this.cancelPoisonPill(entry.agentId, { descriptor: entry.descriptor });
         entry.agent.state.state = "active";
-        await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+        await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
         this.eventBus.emit("agent.woke", { agentId: entry.agentId });
         logger.debug({ agentId: entry.agentId }, "event: Agent woke from sleep");
         return true;
@@ -852,8 +850,8 @@ export class AgentSystem {
         let descriptor: AgentDescriptor | null = null;
         let state: Awaited<ReturnType<typeof agentStateRead>> = null;
         try {
-            descriptor = await agentDescriptorRead(this.config.current, agentId);
-            state = await agentStateRead(this.config.current, agentId);
+            descriptor = await agentDescriptorRead(this.storage, agentId);
+            state = await agentStateRead(this.storage, agentId);
         } catch (error) {
             logger.warn({ agentId, error }, "error: Poison-pill read failed");
             return;
@@ -867,7 +865,7 @@ export class AgentSystem {
         await this.cancelPoisonPill(agentId, { descriptor });
         state.state = "dead";
         state.updatedAt = Date.now();
-        await agentStateWrite(this.config.current, agentId, state);
+        await agentStateWrite(this.storage, agentId, state);
         this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
     }
 
@@ -884,7 +882,7 @@ export class AgentSystem {
             await this.cancelPoisonPill(entry.agentId, { descriptor: entry.descriptor });
             entry.agent.state.state = "dead";
             entry.agent.state.updatedAt = Date.now();
-            await agentStateWrite(this.config.current, entry.agentId, entry.agent.state);
+            await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
             pending = entry.inbox.drainPending();
             changed = true;
         });
@@ -907,9 +905,9 @@ export class AgentSystem {
         let state: Awaited<ReturnType<typeof agentStateRead>> = null;
         let recordUserId = "";
         try {
-            descriptor = await agentDescriptorRead(this.config.current, agentId);
-            state = await agentStateRead(this.config.current, agentId);
-            const record = await agentDbRead(this.config.current, agentId);
+            descriptor = await agentDescriptorRead(this.storage, agentId);
+            state = await agentStateRead(this.storage, agentId);
+            const record = await this.storage.agents.findById(agentId);
             recordUserId = record?.userId ?? "";
         } catch (error) {
             logger.warn({ agentId, error }, "error: Agent restore failed due to invalid persisted data");
@@ -955,46 +953,19 @@ export class AgentSystem {
     }
 
     private async resolveUserIdForConnectorKey(connectorKey: string): Promise<string> {
-        const existing = await userDbReadByConnectorKey(this.config.current, connectorKey);
-        if (existing) {
-            return existing.id;
-        }
-        const users = await userDbList(this.config.current);
-        const now = Date.now();
-        const userId = createId();
-        await userDbWrite(this.config.current, {
-            id: userId,
-            isOwner: users.length === 0,
-            createdAt: now,
-            updatedAt: now
-        });
-        try {
-            await userDbConnectorKeyAdd(this.config.current, userId, connectorKey);
-            return userId;
-        } catch (error) {
-            const raced = await userDbReadByConnectorKey(this.config.current, connectorKey);
-            if (raced) {
-                return raced.id;
-            }
-            try {
-                await userDbDelete(this.config.current, userId);
-            } catch (deleteError) {
-                logger.warn({ userId, connectorKey, error: deleteError }, "warn: Failed to clean orphaned user row");
-            }
-            throw error;
-        }
+        const user = await this.storage.resolveUserByConnectorKey(connectorKey);
+        return user.id;
     }
 
     private async ownerUserIdEnsure(): Promise<string> {
-        const users = await userDbList(this.config.current);
-        const owner = users.find((entry) => entry.isOwner);
+        const owner = await this.storage.users.findOwner();
         if (owner) {
             return owner.id;
         }
         const now = Date.now();
         const ownerId = createId();
         try {
-            await userDbWrite(this.config.current, {
+            await this.storage.users.create({
                 id: ownerId,
                 isOwner: true,
                 createdAt: now,
@@ -1002,8 +973,7 @@ export class AgentSystem {
             });
             return ownerId;
         } catch {
-            const reread = await userDbList(this.config.current);
-            const recovered = reread.find((entry) => entry.isOwner);
+            const recovered = await this.storage.users.findOwner();
             if (recovered) {
                 return recovered.id;
             }

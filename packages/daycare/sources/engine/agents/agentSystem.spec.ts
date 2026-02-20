@@ -8,7 +8,8 @@ import type { AgentDescriptor } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { FileStore } from "../../files/store.js";
-import { userDbReadByConnectorKey } from "../../storage/userDbReadByConnectorKey.js";
+import type { Storage } from "../../storage/storage.js";
+import { storageResolve } from "../../storage/storageResolve.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { Heartbeats } from "../heartbeat/heartbeats.js";
@@ -340,7 +341,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init user" });
             const agentId = await harness.agentSystem.agentIdForTarget({ descriptor });
             const agentContext = await harness.agentSystem.agentContextForAgentId(agentId);
-            const linked = await userDbReadByConnectorKey(harness.config, "telegram:connector-user-1");
+            const linked = await harness.storage.users.findByConnectorKey("telegram:connector-user-1");
 
             expect(agentContext?.userId).toBeTruthy();
             expect(linked?.id).toBe(agentContext?.userId);
@@ -481,6 +482,7 @@ async function harnessCreate(
     options?: { inferenceRouter?: InferenceRouter }
 ): Promise<{
     config: ReturnType<typeof configResolve>;
+    storage: Storage;
     eventBus: EngineEventBus;
     signals: Signals;
     delayedSignals: DelayedSignals;
@@ -495,6 +497,7 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
+    const storage = storageResolve(config);
     const eventBus = new EngineEventBus();
     const signals = new Signals({ eventBus, configDir: config.configDir });
     const delayedSignals = new DelayedSignals({
@@ -515,6 +518,7 @@ async function harnessCreate(
     const agentSystem = new AgentSystem({
         config: configModule,
         eventBus,
+        storage,
         connectorRegistry: new ConnectorRegistry({
             onMessage: async () => undefined
         }),
@@ -531,7 +535,7 @@ async function harnessCreate(
     } as unknown as Crons);
     agentSystem.setHeartbeats({} as unknown as Heartbeats);
     agentSystem.setSignals(signals);
-    return { config, eventBus, signals, delayedSignals, agentSystem };
+    return { config, storage, eventBus, signals, delayedSignals, agentSystem };
 }
 
 async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus): Promise<string> {

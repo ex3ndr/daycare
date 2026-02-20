@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AgentState, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import { storageResolve } from "../../../storage/storageResolve.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
 import type { Crons } from "../../cron/crons.js";
@@ -317,6 +318,7 @@ function contextBuild(
         heartbeatTasks: HeartbeatDefinition[];
     }
 ): ToolExecutionContext {
+    const storage = storageResolve(config);
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         fileStore: null as unknown as ToolExecutionContext["fileStore"],
@@ -332,7 +334,8 @@ function contextBuild(
         source: "test",
         messageContext: {},
         agentSystem: {
-            config: { current: config }
+            config: { current: config },
+            storage
         } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: {
             listTasks: async () => options.heartbeatTasks
