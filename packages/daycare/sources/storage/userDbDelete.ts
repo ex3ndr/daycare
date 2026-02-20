@@ -6,10 +6,10 @@ import { databaseOpenEnsured } from "./databaseOpenEnsured.js";
  * Expects: caller handles referential effects (connector keys cascade on delete).
  */
 export async function userDbDelete(config: Config, userId: string): Promise<void> {
-  const db = databaseOpenEnsured(config.dbPath);
-  try {
-    db.prepare("DELETE FROM users WHERE id = ?").run(userId);
-  } finally {
-    db.close();
-  }
+    const db = databaseOpenEnsured(config.dbPath);
+    try {
+        db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+    } finally {
+        db.close();
+    }
 }

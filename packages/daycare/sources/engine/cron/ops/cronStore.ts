@@ -6,16 +6,11 @@ import { createId } from "@paralleldrive/cuid2";
 import { getLogger } from "../../../log.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
-import type {
-  CronTaskDefinition,
-  CronTaskWithPaths,
-  CronTaskState,
-  Frontmatter
-} from "../cronTypes.js";
-import { cronTaskUidResolve } from "./cronTaskUidResolve.js";
+import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
+import type { CronTaskDefinition, CronTaskState, CronTaskWithPaths, Frontmatter } from "../cronTypes.js";
 import { cronFrontmatterParse } from "./cronFrontmatterParse.js";
 import { cronFrontmatterSerialize } from "./cronFrontmatterSerialize.js";
-import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
+import { cronTaskUidResolve } from "./cronTaskUidResolve.js";
 
 const logger = getLogger("cron.store");
 
@@ -28,352 +23,344 @@ const logger = getLogger("cron.store");
  * - /cron/<task-id>/files/ - workspace for task files
  */
 export class CronStore {
-  private basePath: string;
+    private basePath: string;
 
-  constructor(basePath: string) {
-    this.basePath = basePath;
-  }
+    constructor(basePath: string) {
+        this.basePath = basePath;
+    }
 
-  async ensureDir(): Promise<void> {
-    await fs.mkdir(this.basePath, { recursive: true });
-  }
+    async ensureDir(): Promise<void> {
+        await fs.mkdir(this.basePath, { recursive: true });
+    }
 
-  async listTasks(): Promise<CronTaskWithPaths[]> {
-    await this.ensureDir();
+    async listTasks(): Promise<CronTaskWithPaths[]> {
+        await this.ensureDir();
 
-    const entries = await fs.readdir(this.basePath, { withFileTypes: true });
-    const tasks: CronTaskWithPaths[] = [];
+        const entries = await fs.readdir(this.basePath, { withFileTypes: true });
+        const tasks: CronTaskWithPaths[] = [];
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
+        for (const entry of entries) {
+            if (!entry.isDirectory()) {
+                continue;
+            }
 
-      const taskId = entry.name;
+            const taskId = entry.name;
 
-      try {
-        const task = await this.loadTask(taskId);
-        if (task) {
-          tasks.push(task);
+            try {
+                const task = await this.loadTask(taskId);
+                if (task) {
+                    tasks.push(task);
+                }
+            } catch (error) {
+                logger.warn({ taskId, error }, "error: Failed to load cron task");
+            }
         }
-      } catch (error) {
-        logger.warn({ taskId, error }, "error: Failed to load cron task");
-      }
+
+        return tasks;
     }
 
-    return tasks;
-  }
+    async loadTask(taskId: string): Promise<CronTaskWithPaths | null> {
+        const taskDir = path.join(this.basePath, taskId);
+        const taskPath = path.join(taskDir, "TASK.md");
+        const memoryPath = path.join(taskDir, "MEMORY.md");
+        const filesPath = path.join(taskDir, "files");
+        const state = await this.readState(taskId);
 
-  async loadTask(taskId: string): Promise<CronTaskWithPaths | null> {
-    const taskDir = path.join(this.basePath, taskId);
-    const taskPath = path.join(taskDir, "TASK.md");
-    const memoryPath = path.join(taskDir, "MEMORY.md");
-    const filesPath = path.join(taskDir, "files");
-    const state = await this.readState(taskId);
+        try {
+            const content = await fs.readFile(taskPath, "utf8");
+            const parsed = cronFrontmatterParse(content);
+            // Cron task ids must come from frontmatter; do not guess or backfill missing ids.
+            const taskUid = cronTaskUidResolve(parsed.frontmatter);
+            if (!cuid2Is(taskUid)) {
+                logger.warn({ taskId, taskUid }, "event: Cron task missing valid taskId");
+                return null;
+            }
 
-    try {
-      const content = await fs.readFile(taskPath, "utf8");
-      const parsed = cronFrontmatterParse(content);
-      // Cron task ids must come from frontmatter; do not guess or backfill missing ids.
-      const taskUid = cronTaskUidResolve(parsed.frontmatter);
-      if (!cuid2Is(taskUid)) {
-        logger.warn({ taskId, taskUid }, "event: Cron task missing valid taskId");
-        return null;
-      }
+            const schedule = parsed.frontmatter.schedule ?? parsed.frontmatter.cron;
+            const deleteAfterRun =
+                parsed.frontmatter.deleteAfterRun ??
+                parsed.frontmatter.delete_after_run ??
+                parsed.frontmatter.oneOff ??
+                parsed.frontmatter.one_off ??
+                parsed.frontmatter.once;
+            if (!parsed.frontmatter.name || !schedule) {
+                logger.warn({ taskId }, "event: Cron task missing required frontmatter fields");
+                return null;
+            }
 
-      const schedule =
-        parsed.frontmatter.schedule ?? parsed.frontmatter.cron;
-      const deleteAfterRun =
-        parsed.frontmatter.deleteAfterRun ??
-        parsed.frontmatter.delete_after_run ??
-        parsed.frontmatter.oneOff ??
-        parsed.frontmatter.one_off ??
-        parsed.frontmatter.once;
-      if (!parsed.frontmatter.name || !schedule) {
-        logger.warn({ taskId }, "event: Cron task missing required frontmatter fields");
-        return null;
-      }
+            const gate = execGateNormalize(parsed.frontmatter.gate);
 
-      const gate = execGateNormalize(parsed.frontmatter.gate);
-
-      return {
-        id: taskId,
-        taskUid,
-        name: String(parsed.frontmatter.name),
-        description: parsed.frontmatter.description
-          ? String(parsed.frontmatter.description)
-          : undefined,
-        schedule: String(schedule),
-        prompt: parsed.body.trim(),
-        agentId: resolveAgentId(parsed.frontmatter),
-        userId: resolveUserId(parsed.frontmatter),
-        gate,
-        enabled: parsed.frontmatter.enabled !== false,
-        deleteAfterRun: deleteAfterRun === true,
-        taskPath,
-        memoryPath,
-        filesPath,
-        lastRunAt: state.lastRunAt
-      };
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return null;
-      }
-      throw error;
-    }
-  }
-
-  async createTask(
-    taskId: string,
-    definition: Omit<CronTaskDefinition, "id">
-  ): Promise<CronTaskWithPaths> {
-    const taskDir = path.join(this.basePath, taskId);
-    const taskPath = path.join(taskDir, "TASK.md");
-    const memoryPath = path.join(taskDir, "MEMORY.md");
-    const filesPath = path.join(taskDir, "files");
-
-    // Ensure task directory exists
-    await fs.mkdir(taskDir, { recursive: true });
-    await fs.mkdir(filesPath, { recursive: true });
-
-    // Write TASK.md
-    const taskUid = cuid2Is(definition.taskUid) ? definition.taskUid : createId();
-    const gate = execGateNormalize(definition.gate);
-    const frontmatter: Frontmatter = {
-      name: definition.name,
-      schedule: definition.schedule,
-      enabled: definition.enabled ?? true,
-      taskId: taskUid
-    };
-    if (definition.agentId) {
-      frontmatter.agentId = definition.agentId;
-    }
-    if (definition.userId) {
-      frontmatter.userId = definition.userId;
-    }
-    if (gate) {
-      frontmatter.gate = gate;
-    }
-    if (definition.description) {
-      frontmatter.description = definition.description;
-    }
-    if (definition.deleteAfterRun) {
-      frontmatter.deleteAfterRun = true;
-    }
-    const content = cronFrontmatterSerialize(frontmatter, definition.prompt);
-    await fs.writeFile(taskPath, content, "utf8");
-
-    // Write initial MEMORY.md
-    await fs.writeFile(memoryPath, "No memory\n", "utf8");
-
-    logger.info({ taskId, name: definition.name }, "create: Cron task created");
-
-    return {
-      id: taskId,
-      taskUid,
-      name: definition.name,
-      description: definition.description,
-      schedule: definition.schedule,
-      prompt: definition.prompt,
-      agentId: definition.agentId,
-      userId: definition.userId,
-      gate,
-      enabled: definition.enabled ?? true,
-      deleteAfterRun: definition.deleteAfterRun ?? false,
-      taskPath,
-      memoryPath,
-      filesPath,
-      lastRunAt: undefined
-    };
-  }
-
-  async updateTask(
-    taskId: string,
-    updates: Partial<Omit<CronTaskDefinition, "id">>
-  ): Promise<CronTaskWithPaths | null> {
-    const existing = await this.loadTask(taskId);
-    if (!existing) {
-      return null;
+            return {
+                id: taskId,
+                taskUid,
+                name: String(parsed.frontmatter.name),
+                description: parsed.frontmatter.description ? String(parsed.frontmatter.description) : undefined,
+                schedule: String(schedule),
+                prompt: parsed.body.trim(),
+                agentId: resolveAgentId(parsed.frontmatter),
+                userId: resolveUserId(parsed.frontmatter),
+                gate,
+                enabled: parsed.frontmatter.enabled !== false,
+                deleteAfterRun: deleteAfterRun === true,
+                taskPath,
+                memoryPath,
+                filesPath,
+                lastRunAt: state.lastRunAt
+            };
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+                return null;
+            }
+            throw error;
+        }
     }
 
-    const gate = updates.gate !== undefined
-      ? execGateNormalize(updates.gate)
-      : existing.gate;
-    const updated: CronTaskDefinition = {
-      id: taskId,
-      taskUid: existing.taskUid,
-      name: updates.name ?? existing.name,
-      description: updates.description ?? existing.description,
-      schedule: updates.schedule ?? existing.schedule,
-      prompt: updates.prompt ?? existing.prompt,
-      agentId: updates.agentId ?? existing.agentId,
-      userId: updates.userId ?? existing.userId,
-      gate,
-      enabled: updates.enabled ?? existing.enabled,
-      deleteAfterRun: updates.deleteAfterRun ?? existing.deleteAfterRun
-    };
+    async createTask(taskId: string, definition: Omit<CronTaskDefinition, "id">): Promise<CronTaskWithPaths> {
+        const taskDir = path.join(this.basePath, taskId);
+        const taskPath = path.join(taskDir, "TASK.md");
+        const memoryPath = path.join(taskDir, "MEMORY.md");
+        const filesPath = path.join(taskDir, "files");
 
-    const frontmatter: Frontmatter = {
-      name: updated.name,
-      schedule: updated.schedule,
-      enabled: updated.enabled ?? true,
-      taskId: existing.taskUid
-    };
-    if (updated.agentId) {
-      frontmatter.agentId = updated.agentId;
-    }
-    if (updated.userId) {
-      frontmatter.userId = updated.userId;
-    }
-    if (updated.gate) {
-      frontmatter.gate = updated.gate;
-    }
-    if (updated.description) {
-      frontmatter.description = updated.description;
-    }
-    if (updated.deleteAfterRun) {
-      frontmatter.deleteAfterRun = true;
-    }
-    const content = cronFrontmatterSerialize(frontmatter, updated.prompt);
-    await fs.writeFile(existing.taskPath, content, "utf8");
+        // Ensure task directory exists
+        await fs.mkdir(taskDir, { recursive: true });
+        await fs.mkdir(filesPath, { recursive: true });
 
-    logger.info({ taskId }, "update: Cron task updated");
-
-    return {
-      ...updated,
-      taskUid: existing.taskUid,
-      taskPath: existing.taskPath,
-      memoryPath: existing.memoryPath,
-      filesPath: existing.filesPath,
-      lastRunAt: existing.lastRunAt
-    };
-  }
-
-  async deleteTask(taskId: string): Promise<boolean> {
-    const taskDir = path.join(this.basePath, taskId);
-
-    try {
-      await fs.rm(taskDir, { recursive: true, force: true });
-      logger.info({ taskId }, "delete: Cron task deleted");
-      return true;
-    } catch (error) {
-      logger.warn({ taskId, error }, "error: Failed to delete cron task");
-      return false;
-    }
-  }
-
-  async readMemory(taskId: string): Promise<string> {
-    const memoryPath = path.join(this.basePath, taskId, "MEMORY.md");
-
-    try {
-      return await fs.readFile(memoryPath, "utf8");
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return "No memory";
-      }
-      throw error;
-    }
-  }
-
-  async writeMemory(taskId: string, content: string): Promise<void> {
-    const taskDir = path.join(this.basePath, taskId);
-    const memoryPath = path.join(taskDir, "MEMORY.md");
-
-    // Ensure directory exists
-    await fs.mkdir(taskDir, { recursive: true });
-    await fs.writeFile(memoryPath, content, "utf8");
-
-    logger.debug({ taskId }, "update: Cron task memory updated");
-  }
-
-  async recordRun(taskId: string, runAt: Date): Promise<void> {
-    await this.ensureDir();
-    const state = await this.readState(taskId);
-    state.lastRunAt = runAt.toISOString();
-    await this.writeState(taskId, state);
-  }
-
-  getTaskPaths(taskId: string): { taskPath: string; memoryPath: string; filesPath: string } {
-    const taskDir = path.join(this.basePath, taskId);
-    return {
-      taskPath: path.join(taskDir, "TASK.md"),
-      memoryPath: path.join(taskDir, "MEMORY.md"),
-      filesPath: path.join(taskDir, "files")
-    };
-  }
-
-  async generateTaskIdFromName(name: string): Promise<string> {
-    const base = stringSlugify(name) || "cron-task";
-    let candidate = base;
-    let suffix = 2;
-    while (!(await this.isTaskIdAvailable(candidate))) {
-      candidate = `${base}-${suffix}`;
-      suffix += 1;
-    }
-    return candidate;
-  }
-
-  private async isTaskIdAvailable(taskId: string): Promise<boolean> {
-    const taskDir = path.join(this.basePath, taskId);
-    try {
-      const stat = await fs.stat(taskDir);
-      return !stat.isDirectory();
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return true;
-      }
-      throw error;
-    }
-  }
-
-  private getStatePath(taskId: string): string {
-    return path.join(this.basePath, taskId, "STATE.json");
-  }
-
-  private async readState(taskId: string): Promise<CronTaskState> {
-    const statePath = this.getStatePath(taskId);
-    try {
-      const raw = await fs.readFile(statePath, "utf8");
-      const parsed = JSON.parse(raw) as CronTaskState;
-      if (parsed && typeof parsed === "object") {
-        return {
-          lastRunAt: typeof parsed.lastRunAt === "string" ? parsed.lastRunAt : undefined
+        // Write TASK.md
+        const taskUid = cuid2Is(definition.taskUid) ? definition.taskUid : createId();
+        const gate = execGateNormalize(definition.gate);
+        const frontmatter: Frontmatter = {
+            name: definition.name,
+            schedule: definition.schedule,
+            enabled: definition.enabled ?? true,
+            taskId: taskUid
         };
-      }
-      return {};
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return {};
-      }
-      logger.warn({ taskId, error }, "error: Failed to read cron task state");
-      return {};
-    }
-  }
+        if (definition.agentId) {
+            frontmatter.agentId = definition.agentId;
+        }
+        if (definition.userId) {
+            frontmatter.userId = definition.userId;
+        }
+        if (gate) {
+            frontmatter.gate = gate;
+        }
+        if (definition.description) {
+            frontmatter.description = definition.description;
+        }
+        if (definition.deleteAfterRun) {
+            frontmatter.deleteAfterRun = true;
+        }
+        const content = cronFrontmatterSerialize(frontmatter, definition.prompt);
+        await fs.writeFile(taskPath, content, "utf8");
 
-  private async writeState(taskId: string, state: CronTaskState): Promise<void> {
-    const statePath = this.getStatePath(taskId);
-    try {
-      await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-    } catch (error) {
-      logger.warn({ taskId, error }, "error: Failed to write cron task state");
+        // Write initial MEMORY.md
+        await fs.writeFile(memoryPath, "No memory\n", "utf8");
+
+        logger.info({ taskId, name: definition.name }, "create: Cron task created");
+
+        return {
+            id: taskId,
+            taskUid,
+            name: definition.name,
+            description: definition.description,
+            schedule: definition.schedule,
+            prompt: definition.prompt,
+            agentId: definition.agentId,
+            userId: definition.userId,
+            gate,
+            enabled: definition.enabled ?? true,
+            deleteAfterRun: definition.deleteAfterRun ?? false,
+            taskPath,
+            memoryPath,
+            filesPath,
+            lastRunAt: undefined
+        };
     }
-  }
+
+    async updateTask(
+        taskId: string,
+        updates: Partial<Omit<CronTaskDefinition, "id">>
+    ): Promise<CronTaskWithPaths | null> {
+        const existing = await this.loadTask(taskId);
+        if (!existing) {
+            return null;
+        }
+
+        const gate = updates.gate !== undefined ? execGateNormalize(updates.gate) : existing.gate;
+        const updated: CronTaskDefinition = {
+            id: taskId,
+            taskUid: existing.taskUid,
+            name: updates.name ?? existing.name,
+            description: updates.description ?? existing.description,
+            schedule: updates.schedule ?? existing.schedule,
+            prompt: updates.prompt ?? existing.prompt,
+            agentId: updates.agentId ?? existing.agentId,
+            userId: updates.userId ?? existing.userId,
+            gate,
+            enabled: updates.enabled ?? existing.enabled,
+            deleteAfterRun: updates.deleteAfterRun ?? existing.deleteAfterRun
+        };
+
+        const frontmatter: Frontmatter = {
+            name: updated.name,
+            schedule: updated.schedule,
+            enabled: updated.enabled ?? true,
+            taskId: existing.taskUid
+        };
+        if (updated.agentId) {
+            frontmatter.agentId = updated.agentId;
+        }
+        if (updated.userId) {
+            frontmatter.userId = updated.userId;
+        }
+        if (updated.gate) {
+            frontmatter.gate = updated.gate;
+        }
+        if (updated.description) {
+            frontmatter.description = updated.description;
+        }
+        if (updated.deleteAfterRun) {
+            frontmatter.deleteAfterRun = true;
+        }
+        const content = cronFrontmatterSerialize(frontmatter, updated.prompt);
+        await fs.writeFile(existing.taskPath, content, "utf8");
+
+        logger.info({ taskId }, "update: Cron task updated");
+
+        return {
+            ...updated,
+            taskUid: existing.taskUid,
+            taskPath: existing.taskPath,
+            memoryPath: existing.memoryPath,
+            filesPath: existing.filesPath,
+            lastRunAt: existing.lastRunAt
+        };
+    }
+
+    async deleteTask(taskId: string): Promise<boolean> {
+        const taskDir = path.join(this.basePath, taskId);
+
+        try {
+            await fs.rm(taskDir, { recursive: true, force: true });
+            logger.info({ taskId }, "delete: Cron task deleted");
+            return true;
+        } catch (error) {
+            logger.warn({ taskId, error }, "error: Failed to delete cron task");
+            return false;
+        }
+    }
+
+    async readMemory(taskId: string): Promise<string> {
+        const memoryPath = path.join(this.basePath, taskId, "MEMORY.md");
+
+        try {
+            return await fs.readFile(memoryPath, "utf8");
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+                return "No memory";
+            }
+            throw error;
+        }
+    }
+
+    async writeMemory(taskId: string, content: string): Promise<void> {
+        const taskDir = path.join(this.basePath, taskId);
+        const memoryPath = path.join(taskDir, "MEMORY.md");
+
+        // Ensure directory exists
+        await fs.mkdir(taskDir, { recursive: true });
+        await fs.writeFile(memoryPath, content, "utf8");
+
+        logger.debug({ taskId }, "update: Cron task memory updated");
+    }
+
+    async recordRun(taskId: string, runAt: Date): Promise<void> {
+        await this.ensureDir();
+        const state = await this.readState(taskId);
+        state.lastRunAt = runAt.toISOString();
+        await this.writeState(taskId, state);
+    }
+
+    getTaskPaths(taskId: string): { taskPath: string; memoryPath: string; filesPath: string } {
+        const taskDir = path.join(this.basePath, taskId);
+        return {
+            taskPath: path.join(taskDir, "TASK.md"),
+            memoryPath: path.join(taskDir, "MEMORY.md"),
+            filesPath: path.join(taskDir, "files")
+        };
+    }
+
+    async generateTaskIdFromName(name: string): Promise<string> {
+        const base = stringSlugify(name) || "cron-task";
+        let candidate = base;
+        let suffix = 2;
+        while (!(await this.isTaskIdAvailable(candidate))) {
+            candidate = `${base}-${suffix}`;
+            suffix += 1;
+        }
+        return candidate;
+    }
+
+    private async isTaskIdAvailable(taskId: string): Promise<boolean> {
+        const taskDir = path.join(this.basePath, taskId);
+        try {
+            const stat = await fs.stat(taskDir);
+            return !stat.isDirectory();
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+                return true;
+            }
+            throw error;
+        }
+    }
+
+    private getStatePath(taskId: string): string {
+        return path.join(this.basePath, taskId, "STATE.json");
+    }
+
+    private async readState(taskId: string): Promise<CronTaskState> {
+        const statePath = this.getStatePath(taskId);
+        try {
+            const raw = await fs.readFile(statePath, "utf8");
+            const parsed = JSON.parse(raw) as CronTaskState;
+            if (parsed && typeof parsed === "object") {
+                return {
+                    lastRunAt: typeof parsed.lastRunAt === "string" ? parsed.lastRunAt : undefined
+                };
+            }
+            return {};
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+                return {};
+            }
+            logger.warn({ taskId, error }, "error: Failed to read cron task state");
+            return {};
+        }
+    }
+
+    private async writeState(taskId: string, state: CronTaskState): Promise<void> {
+        const statePath = this.getStatePath(taskId);
+        try {
+            await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+        } catch (error) {
+            logger.warn({ taskId, error }, "error: Failed to write cron task state");
+        }
+    }
 }
 
 function resolveAgentId(frontmatter: Frontmatter): string | undefined {
-  const raw = frontmatter.agentId ?? frontmatter.agent_id;
-  if (typeof raw !== "string") {
-    return undefined;
-  }
-  const trimmed = raw.trim();
-  return trimmed ? trimmed : undefined;
+    const raw = frontmatter.agentId ?? frontmatter.agent_id;
+    if (typeof raw !== "string") {
+        return undefined;
+    }
+    const trimmed = raw.trim();
+    return trimmed ? trimmed : undefined;
 }
 
 function resolveUserId(frontmatter: Frontmatter): string | undefined {
-  const raw = frontmatter.userId ?? frontmatter.user_id;
-  if (typeof raw !== "string") {
-    return undefined;
-  }
-  const trimmed = raw.trim();
-  return trimmed ? trimmed : undefined;
+    const raw = frontmatter.userId ?? frontmatter.user_id;
+    if (typeof raw !== "string") {
+        return undefined;
+    }
+    const trimmed = raw.trim();
+    return trimmed ? trimmed : undefined;
 }

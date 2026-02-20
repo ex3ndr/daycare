@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { releaseVersionPrompt } from "./releaseVersionPrompt.js";
 
 type PackageManifest = {
-  version?: string;
+    version?: string;
 };
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -21,133 +21,116 @@ const npmRegistry = "https://registry.npmjs.org/";
  * Expects: git repository is clean; npm credentials are already configured.
  */
 export async function releaseRun(): Promise<void> {
-  assertWorkingTreeIsClean();
+    assertWorkingTreeIsClean();
 
-  const currentVersion = packageVersionRead();
-  const nextVersion = await releaseVersionPrompt(currentVersion);
-  const tagName = `daycare-cli@${nextVersion}`;
-  const commitMessage = `chore(release): daycare-cli ${nextVersion}`;
-  let releaseCommitHash: string | null = null;
-  let tagCreated = false;
+    const currentVersion = packageVersionRead();
+    const nextVersion = await releaseVersionPrompt(currentVersion);
+    const tagName = `daycare-cli@${nextVersion}`;
+    const commitMessage = `chore(release): daycare-cli ${nextVersion}`;
+    let releaseCommitHash: string | null = null;
+    let tagCreated = false;
 
-  assertTagMissing(tagName);
+    assertTagMissing(tagName);
 
-  try {
-    commandRun("yarn", ["install", "--frozen-lockfile"], repositoryDirectory);
-    commandRunNpm(["whoami", "--registry", npmRegistry], packageDirectory);
-    commandRunNpm(
-      [
-        "version",
-        nextVersion,
-        "--no-git-tag-version",
-        "--registry",
-        npmRegistry,
-        "--no-package-lock"
-      ],
-      packageDirectory
-    );
-    commandRun("git", ["add", packageManifestRelativePath], repositoryDirectory);
-    commandRun("git", ["commit", "-m", commitMessage], repositoryDirectory);
-    releaseCommitHash = commandOutput("git", ["rev-parse", "HEAD"], repositoryDirectory);
+    try {
+        commandRun("yarn", ["install", "--frozen-lockfile"], repositoryDirectory);
+        commandRunNpm(["whoami", "--registry", npmRegistry], packageDirectory);
+        commandRunNpm(
+            ["version", nextVersion, "--no-git-tag-version", "--registry", npmRegistry, "--no-package-lock"],
+            packageDirectory
+        );
+        commandRun("git", ["add", packageManifestRelativePath], repositoryDirectory);
+        commandRun("git", ["commit", "-m", commitMessage], repositoryDirectory);
+        releaseCommitHash = commandOutput("git", ["rev-parse", "HEAD"], repositoryDirectory);
 
-    commandRun("yarn", ["test"], repositoryDirectory);
-    commandRun("yarn", ["build"], repositoryDirectory);
+        commandRun("yarn", ["test"], repositoryDirectory);
+        commandRun("yarn", ["build"], repositoryDirectory);
 
-    commandRun("git", ["tag", tagName], repositoryDirectory);
-    tagCreated = true;
+        commandRun("git", ["tag", tagName], repositoryDirectory);
+        tagCreated = true;
 
-    commandRunNpm(
-      ["publish", "--access", "public", "--registry", npmRegistry, "--no-package-lock"],
-      packageDirectory
-    );
-  } catch (error) {
-    releaseRollback(releaseCommitHash, tagName, tagCreated);
-    throw error;
-  }
-  commandRun("git", ["push", "origin", "HEAD"], repositoryDirectory);
-  commandRun("git", ["push", "origin", tagName], repositoryDirectory);
+        commandRunNpm(
+            ["publish", "--access", "public", "--registry", npmRegistry, "--no-package-lock"],
+            packageDirectory
+        );
+    } catch (error) {
+        releaseRollback(releaseCommitHash, tagName, tagCreated);
+        throw error;
+    }
+    commandRun("git", ["push", "origin", "HEAD"], repositoryDirectory);
+    commandRun("git", ["push", "origin", tagName], repositoryDirectory);
 
-  console.log(`Released daycare-cli ${nextVersion} with tag ${tagName}`);
+    console.log(`Released daycare-cli ${nextVersion} with tag ${tagName}`);
 }
 
 function packageVersionRead(): string {
-  const raw = readFileSync(packageManifestPath, "utf8");
-  const parsed = JSON.parse(raw) as PackageManifest;
-  const version = parsed.version?.trim();
+    const raw = readFileSync(packageManifestPath, "utf8");
+    const parsed = JSON.parse(raw) as PackageManifest;
+    const version = parsed.version?.trim();
 
-  if (!version) {
-    throw new Error("Could not read current version from packages/daycare/package.json");
-  }
+    if (!version) {
+        throw new Error("Could not read current version from packages/daycare/package.json");
+    }
 
-  return version;
+    return version;
 }
 
 function assertWorkingTreeIsClean(): void {
-  const output = commandOutput("git", ["status", "--porcelain"], repositoryDirectory);
-  if (output.length > 0) {
-    throw new Error(
-      "Release requires a clean git working tree. Commit or stash pending changes first."
-    );
-  }
+    const output = commandOutput("git", ["status", "--porcelain"], repositoryDirectory);
+    if (output.length > 0) {
+        throw new Error("Release requires a clean git working tree. Commit or stash pending changes first.");
+    }
 }
 
 function assertTagMissing(tagName: string): void {
-  const output = commandOutput(
-    "git",
-    ["tag", "--list", "--format=%(refname:strip=2)", tagName],
-    repositoryDirectory
-  );
+    const output = commandOutput("git", ["tag", "--list", "--format=%(refname:strip=2)", tagName], repositoryDirectory);
 
-  if (output.split("\n").some((line) => line.trim() === tagName)) {
-    throw new Error(`Tag ${tagName} already exists.`);
-  }
+    if (output.split("\n").some((line) => line.trim() === tagName)) {
+        throw new Error(`Tag ${tagName} already exists.`);
+    }
 }
 
 function commandRun(
-  command: string,
-  args: string[],
-  cwd: string,
-  envOverrides: Record<string, string | undefined> = {}
+    command: string,
+    args: string[],
+    cwd: string,
+    envOverrides: Record<string, string | undefined> = {}
 ): void {
-  execFileSync(command, args, {
-    cwd,
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      ...envOverrides
-    }
-  });
+    execFileSync(command, args, {
+        cwd,
+        stdio: "inherit",
+        env: {
+            ...process.env,
+            ...envOverrides
+        }
+    });
 }
 
 function commandOutput(command: string, args: string[], cwd: string): string {
-  return execFileSync(command, args, {
-    cwd,
-    stdio: ["ignore", "pipe", "inherit"],
-    encoding: "utf8"
-  }).trim();
+    return execFileSync(command, args, {
+        cwd,
+        stdio: ["ignore", "pipe", "inherit"],
+        encoding: "utf8"
+    }).trim();
 }
 
 function commandRunNpm(args: string[], cwd: string): void {
-  commandRun("npm", args, cwd, {
-    npm_config_package_lock: "false",
-    NPM_CONFIG_PACKAGE_LOCK: "false"
-  });
+    commandRun("npm", args, cwd, {
+        npm_config_package_lock: "false",
+        NPM_CONFIG_PACKAGE_LOCK: "false"
+    });
 }
 
-function releaseRollback(
-  releaseCommitHash: string | null,
-  tagName: string,
-  tagCreated: boolean
-): void {
-  if (!releaseCommitHash) {
-    return;
-  }
+function releaseRollback(releaseCommitHash: string | null, tagName: string, tagCreated: boolean): void {
+    if (!releaseCommitHash) {
+        return;
+    }
 
-  if (tagCreated) {
-    commandRun("git", ["tag", "-d", tagName], repositoryDirectory);
-  }
+    if (tagCreated) {
+        commandRun("git", ["tag", "-d", tagName], repositoryDirectory);
+    }
 
-  commandRun("git", ["reset", "--hard", `${releaseCommitHash}^`], repositoryDirectory);
+    commandRun("git", ["reset", "--hard", `${releaseCommitHash}^`], repositoryDirectory);
 }
 
 await releaseRun();

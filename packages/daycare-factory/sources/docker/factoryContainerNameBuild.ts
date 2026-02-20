@@ -5,11 +5,11 @@ import { basename } from "node:path";
  * Expects: taskDirectory is an absolute or relative path string.
  */
 export function factoryContainerNameBuild(taskDirectory: string): string {
-  const slug = basename(taskDirectory)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
+    const slug = basename(taskDirectory)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+/, "")
+        .replace(/-+$/, "");
 
-  return `daycare-factory-${slug || "build"}`;
+    return `daycare-factory-${slug || "build"}`;
 }

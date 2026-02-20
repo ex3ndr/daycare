@@ -8,12 +8,12 @@ import { appPermissionStateWrite } from "./appPermissionStateWrite.js";
  * Expects: workspaceDir/appId point to an installed app workspace.
  */
 export async function appPermissionStateGrant(
-  workspaceDir: string,
-  appId: string,
-  access: PermissionAccess
+    workspaceDir: string,
+    appId: string,
+    access: PermissionAccess
 ): Promise<string[]> {
-  const current = await appPermissionStateRead(workspaceDir, appId);
-  const next = Array.from(new Set([...current, permissionFormatTag(access)]));
-  await appPermissionStateWrite(workspaceDir, appId, next);
-  return next;
+    const current = await appPermissionStateRead(workspaceDir, appId);
+    const next = Array.from(new Set([...current, permissionFormatTag(access)]));
+    await appPermissionStateWrite(workspaceDir, appId, next);
+    return next;
 }

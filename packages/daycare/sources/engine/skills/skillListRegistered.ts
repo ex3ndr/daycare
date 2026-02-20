@@ -9,27 +9,25 @@ import type { AgentSkill, PluginSkillRegistration } from "./skillTypes.js";
  *
  * Expects: registration paths can be relative; they are resolved before lookup.
  */
-export async function skillListRegistered(
-  registrations: PluginSkillRegistration[]
-): Promise<AgentSkill[]> {
-  const skills: AgentSkill[] = [];
-  const seen = new Set<string>();
+export async function skillListRegistered(registrations: PluginSkillRegistration[]): Promise<AgentSkill[]> {
+    const skills: AgentSkill[] = [];
+    const seen = new Set<string>();
 
-  for (const registration of registrations) {
-    const resolvedPath = path.resolve(registration.path);
-    const key = `${registration.pluginId}:${resolvedPath}`;
-    if (seen.has(key)) {
-      continue;
+    for (const registration of registrations) {
+        const resolvedPath = path.resolve(registration.path);
+        const key = `${registration.pluginId}:${resolvedPath}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        const skill = await skillResolve(resolvedPath, {
+            source: "plugin",
+            pluginId: registration.pluginId
+        });
+        if (skill) {
+            skills.push(skill);
+        }
     }
-    seen.add(key);
-    const skill = await skillResolve(resolvedPath, {
-      source: "plugin",
-      pluginId: registration.pluginId
-    });
-    if (skill) {
-      skills.push(skill);
-    }
-  }
 
-  return skillSort(skills);
+    return skillSort(skills);
 }

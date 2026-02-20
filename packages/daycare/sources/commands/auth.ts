@@ -1,19 +1,15 @@
 import { setAuth } from "../engine/ipc/client.js";
 
-export async function setAuthCommand(
-  id: string,
-  key: string,
-  value: string
-): Promise<void> {
-  intro("daycare auth");
-  await setAuth(id, key, value);
-  outro(`Stored ${key} for ${id}.`);
+export async function setAuthCommand(id: string, key: string, value: string): Promise<void> {
+    intro("daycare auth");
+    await setAuth(id, key, value);
+    outro(`Stored ${key} for ${id}.`);
 }
 
 function intro(message: string): void {
-  console.log(message);
+    console.log(message);
 }
 
 function outro(message: string): void {
-  console.log(message);
+    console.log(message);
 }

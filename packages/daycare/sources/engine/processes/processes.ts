@@ -1,24 +1,23 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-
-import { createId } from "@paralleldrive/cuid2";
 import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
+import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
-import type { SessionPermissions, SandboxPackageManager } from "@/types";
-import { resolveWorkspacePath } from "../permissions.js";
+import type { SandboxPackageManager, SessionPermissions } from "@/types";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
-import { envNormalize } from "../../util/envNormalize.js";
-import { AsyncLock } from "../../util/lock.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import { atomicWrite } from "../../util/atomicWrite.js";
-import { processBootTimeRead } from "./processBootTimeRead.js";
+import { envNormalize } from "../../util/envNormalize.js";
+import { AsyncLock } from "../../util/lock.js";
 import { resolveEngineSocketPath } from "../ipc/socket.js";
+import { resolveWorkspacePath } from "../permissions.js";
+import { processBootTimeRead } from "./processBootTimeRead.js";
 
 const RECORD_VERSION = 2;
 const MONITOR_INTERVAL_MS = 2_000;
@@ -36,68 +35,68 @@ const SIGNALS = ["SIGTERM", "SIGINT", "SIGHUP", "SIGKILL"] as const;
 export type ProcessSignal = (typeof SIGNALS)[number];
 
 export type ProcessOwner = {
-  type: "plugin";
-  id: string;
+    type: "plugin";
+    id: string;
 };
 
 export type ProcessCreateInput = {
-  command: string;
-  name?: string;
-  cwd?: string;
-  env?: Record<string, string | number | boolean>;
-  home?: string;
-  packageManagers?: SandboxPackageManager[];
-  allowedDomains?: string[];
-  keepAlive?: boolean;
-  allowLocalBinding?: boolean;
-  owner?: ProcessOwner;
+    command: string;
+    name?: string;
+    cwd?: string;
+    env?: Record<string, string | number | boolean>;
+    home?: string;
+    packageManagers?: SandboxPackageManager[];
+    allowedDomains?: string[];
+    keepAlive?: boolean;
+    allowLocalBinding?: boolean;
+    owner?: ProcessOwner;
 };
 
 export type ProcessInfo = {
-  id: string;
-  name: string;
-  command: string;
-  cwd: string;
-  home: string | null;
-  pid: number | null;
-  keepAlive: boolean;
-  desiredState: "running" | "stopped";
-  status: "running" | "stopped" | "exited";
-  restartCount: number;
-  createdAt: number;
-  updatedAt: number;
-  lastStartedAt: number | null;
-  lastExitedAt: number | null;
-  logPath: string;
+    id: string;
+    name: string;
+    command: string;
+    cwd: string;
+    home: string | null;
+    pid: number | null;
+    keepAlive: boolean;
+    desiredState: "running" | "stopped";
+    status: "running" | "stopped" | "exited";
+    restartCount: number;
+    createdAt: number;
+    updatedAt: number;
+    lastStartedAt: number | null;
+    lastExitedAt: number | null;
+    logPath: string;
 };
 
 type ProcessRecord = {
-  version: number;
-  id: string;
-  name: string;
-  command: string;
-  cwd: string;
-  home: string | null;
-  env: Record<string, string>;
-  packageManagers: SandboxPackageManager[];
-  allowedDomains: string[];
-  allowLocalBinding: boolean;
-  permissions: SessionPermissions;
-  owner: ProcessOwner | null;
-  keepAlive: boolean;
-  desiredState: "running" | "stopped";
-  status: "running" | "stopped" | "exited";
-  pid: number | null;
-  bootTimeMs: number | null;
-  restartCount: number;
-  restartFailureCount: number;
-  nextRestartAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-  lastStartedAt: number | null;
-  lastExitedAt: number | null;
-  settingsPath: string;
-  logPath: string;
+    version: number;
+    id: string;
+    name: string;
+    command: string;
+    cwd: string;
+    home: string | null;
+    env: Record<string, string>;
+    packageManagers: SandboxPackageManager[];
+    allowedDomains: string[];
+    allowLocalBinding: boolean;
+    permissions: SessionPermissions;
+    owner: ProcessOwner | null;
+    keepAlive: boolean;
+    desiredState: "running" | "stopped";
+    status: "running" | "stopped" | "exited";
+    pid: number | null;
+    bootTimeMs: number | null;
+    restartCount: number;
+    restartFailureCount: number;
+    nextRestartAt: number | null;
+    createdAt: number;
+    updatedAt: number;
+    lastStartedAt: number | null;
+    lastExitedAt: number | null;
+    settingsPath: string;
+    logPath: string;
 };
 
 /**
@@ -105,812 +104,779 @@ type ProcessRecord = {
  * Expects: all state writes happen through this facade to keep pid/status files in sync.
  */
 export class Processes {
-  private readonly baseDir: string;
-  private readonly recordsDir: string;
-  private readonly lock = new AsyncLock();
-  private readonly logger: Logger;
-  private readonly bootTimeProvider: () => Promise<number | null>;
-  private readonly socketPath: string;
-  private readonly records = new Map<string, ProcessRecord>();
-  private readonly children = new Map<string, ChildProcess>();
-  private currentBootTimeMs: number | null = null;
-  private currentBootTimeKnown = false;
-  private monitorHandle: NodeJS.Timeout | null = null;
+    private readonly baseDir: string;
+    private readonly recordsDir: string;
+    private readonly lock = new AsyncLock();
+    private readonly logger: Logger;
+    private readonly bootTimeProvider: () => Promise<number | null>;
+    private readonly socketPath: string;
+    private readonly records = new Map<string, ProcessRecord>();
+    private readonly children = new Map<string, ChildProcess>();
+    private currentBootTimeMs: number | null = null;
+    private currentBootTimeKnown = false;
+    private monitorHandle: NodeJS.Timeout | null = null;
 
-  constructor(
-    baseDir: string,
-    logger: Logger,
-    options: { bootTimeProvider?: () => Promise<number | null>; socketPath?: string } = {}
-  ) {
-    this.baseDir = path.resolve(baseDir);
-    this.recordsDir = path.join(this.baseDir, "processes");
-    this.logger = logger;
-    this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
-    this.socketPath = resolveEngineSocketPath(options.socketPath);
-  }
-
-  async load(): Promise<void> {
-    await fs.mkdir(this.recordsDir, { recursive: true });
-    this.currentBootTimeMs = await this.bootTimeProvider();
-    this.currentBootTimeKnown = true;
-    await this.lock.inLock(async () => {
-      this.records.clear();
-      const entries = await fs.readdir(this.recordsDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) {
-          continue;
-        }
-        const recordPath = this.recordPath(entry.name);
-        const record = await readRecord(recordPath);
-        if (!record) {
-          continue;
-        }
-        this.clearStalePidForBootMismatch(record);
-        this.records.set(record.id, record);
-      }
-      await this.refreshRecordStatusLocked();
-    });
-    this.startMonitor();
-  }
-
-  unload(): void {
-    if (!this.monitorHandle) {
-      return;
+    constructor(
+        baseDir: string,
+        logger: Logger,
+        options: { bootTimeProvider?: () => Promise<number | null>; socketPath?: string } = {}
+    ) {
+        this.baseDir = path.resolve(baseDir);
+        this.recordsDir = path.join(this.baseDir, "processes");
+        this.logger = logger;
+        this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
+        this.socketPath = resolveEngineSocketPath(options.socketPath);
     }
-    // Interval cleanup is required to avoid keeping timers alive after runtime shutdown.
-    clearInterval(this.monitorHandle);
-    this.monitorHandle = null;
-  }
 
-  async create(
-    input: ProcessCreateInput,
-    permissions: SessionPermissions
-  ): Promise<ProcessInfo> {
-    return this.lock.inLock(async () => {
-      const now = Date.now();
-      const workingDir = permissions.workingDir;
-      if (!workingDir) {
-        throw new Error("Workspace is not configured.");
-      }
+    async load(): Promise<void> {
+        await fs.mkdir(this.recordsDir, { recursive: true });
+        this.currentBootTimeMs = await this.bootTimeProvider();
+        this.currentBootTimeKnown = true;
+        await this.lock.inLock(async () => {
+            this.records.clear();
+            const entries = await fs.readdir(this.recordsDir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (!entry.isDirectory()) {
+                    continue;
+                }
+                const recordPath = this.recordPath(entry.name);
+                const record = await readRecord(recordPath);
+                if (!record) {
+                    continue;
+                }
+                this.clearStalePidForBootMismatch(record);
+                this.records.set(record.id, record);
+            }
+            await this.refreshRecordStatusLocked();
+        });
+        this.startMonitor();
+    }
 
-      const command = input.command.trim();
-      if (!command) {
-        throw new Error("Command is required.");
-      }
+    unload(): void {
+        if (!this.monitorHandle) {
+            return;
+        }
+        // Interval cleanup is required to avoid keeping timers alive after runtime shutdown.
+        clearInterval(this.monitorHandle);
+        this.monitorHandle = null;
+    }
 
-      if (input.cwd && !path.isAbsolute(input.cwd)) {
-        throw new Error("Path must be absolute.");
-      }
-      if (input.home && !path.isAbsolute(input.home)) {
-        throw new Error("Path must be absolute.");
-      }
+    async create(input: ProcessCreateInput, permissions: SessionPermissions): Promise<ProcessInfo> {
+        return this.lock.inLock(async () => {
+            const now = Date.now();
+            const workingDir = permissions.workingDir;
+            if (!workingDir) {
+                throw new Error("Workspace is not configured.");
+            }
 
-      const cwd = input.cwd
-        ? resolveWorkspacePath(workingDir, input.cwd)
-        : workingDir;
-      const home = input.home
-        ? await sandboxCanWrite(permissions, input.home)
-        : null;
+            const command = input.command.trim();
+            if (!command) {
+                throw new Error("Command is required.");
+            }
 
-      const allowedDomains = sandboxAllowedDomainsResolve(
-        input.allowedDomains,
-        input.packageManagers
-      );
-      const domainIssues = sandboxAllowedDomainsValidate(
-        allowedDomains,
-        permissions.network
-      );
-      if (domainIssues.length > 0) {
-        throw new Error(domainIssues.join(" "));
-      }
+            if (input.cwd && !path.isAbsolute(input.cwd)) {
+                throw new Error("Path must be absolute.");
+            }
+            if (input.home && !path.isAbsolute(input.home)) {
+                throw new Error("Path must be absolute.");
+            }
 
-      const envInput = envNormalize(input.env) ?? {};
-      const id = createId();
-      const recordDir = this.processDir(id);
-      const settingsPath = path.join(recordDir, "sandbox.json");
-      const logPath = path.join(recordDir, "process.log");
-      const bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
-      await fs.mkdir(recordDir, { recursive: true });
+            const cwd = input.cwd ? resolveWorkspacePath(workingDir, input.cwd) : workingDir;
+            const home = input.home ? await sandboxCanWrite(permissions, input.home) : null;
 
-      const record: ProcessRecord = {
-        version: RECORD_VERSION,
-        id,
-        name: (input.name?.trim() || id).slice(0, 80),
-        command,
-        cwd,
-        home,
-        env: envInput,
-        packageManagers: [...(input.packageManagers ?? [])],
-        allowedDomains,
-        allowLocalBinding: input.allowLocalBinding === true,
-        permissions: clonePermissions(permissions),
-        owner: input.owner ? ownerNormalize(input.owner) : null,
-        keepAlive: input.keepAlive ?? false,
-        desiredState: "running",
-        status: "stopped",
-        pid: null,
-        bootTimeMs,
-        restartCount: 0,
-        restartFailureCount: 0,
-        nextRestartAt: null,
-        createdAt: now,
-        updatedAt: now,
-        lastStartedAt: null,
-        lastExitedAt: null,
-        settingsPath,
-        logPath
-      };
+            const allowedDomains = sandboxAllowedDomainsResolve(input.allowedDomains, input.packageManagers);
+            const domainIssues = sandboxAllowedDomainsValidate(allowedDomains, permissions.network);
+            if (domainIssues.length > 0) {
+                throw new Error(domainIssues.join(" "));
+            }
 
-      await this.startRecordLocked(record, { incrementRestart: false });
-      this.records.set(record.id, record);
-      await this.writeRecordLocked(record);
-      return toProcessInfo(record);
-    });
-  }
+            const envInput = envNormalize(input.env) ?? {};
+            const id = createId();
+            const recordDir = this.processDir(id);
+            const settingsPath = path.join(recordDir, "sandbox.json");
+            const logPath = path.join(recordDir, "process.log");
+            const bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
+            await fs.mkdir(recordDir, { recursive: true });
 
-  async listByOwner(owner: ProcessOwner): Promise<ProcessInfo[]> {
-    return this.lock.inLock(async () => {
-      const normalizedOwner = ownerNormalize(owner);
-      await this.refreshRecordStatusLocked();
-      return Array.from(this.records.values())
-        .filter((record) => ownerIs(record.owner, normalizedOwner))
-        .sort((a, b) => a.createdAt - b.createdAt)
-        .map((record) => toProcessInfo(record));
-    });
-  }
+            const record: ProcessRecord = {
+                version: RECORD_VERSION,
+                id,
+                name: (input.name?.trim() || id).slice(0, 80),
+                command,
+                cwd,
+                home,
+                env: envInput,
+                packageManagers: [...(input.packageManagers ?? [])],
+                allowedDomains,
+                allowLocalBinding: input.allowLocalBinding === true,
+                permissions: clonePermissions(permissions),
+                owner: input.owner ? ownerNormalize(input.owner) : null,
+                keepAlive: input.keepAlive ?? false,
+                desiredState: "running",
+                status: "stopped",
+                pid: null,
+                bootTimeMs,
+                restartCount: 0,
+                restartFailureCount: 0,
+                nextRestartAt: null,
+                createdAt: now,
+                updatedAt: now,
+                lastStartedAt: null,
+                lastExitedAt: null,
+                settingsPath,
+                logPath
+            };
 
-  async list(): Promise<ProcessInfo[]> {
-    return this.lock.inLock(async () => {
-      await this.refreshRecordStatusLocked();
-      return Array.from(this.records.values())
-        .sort((a, b) => a.createdAt - b.createdAt)
-        .map((record) => toProcessInfo(record));
-    });
-  }
+            await this.startRecordLocked(record, { incrementRestart: false });
+            this.records.set(record.id, record);
+            await this.writeRecordLocked(record);
+            return toProcessInfo(record);
+        });
+    }
 
-  async get(processId: string): Promise<ProcessInfo> {
-    return this.lock.inLock(async () => {
-      await this.refreshRecordStatusLocked();
-      const record = this.records.get(processId);
-      if (!record) {
-        throw new Error(`Unknown process id: ${processId}`);
-      }
-      return toProcessInfo(record);
-    });
-  }
+    async listByOwner(owner: ProcessOwner): Promise<ProcessInfo[]> {
+        return this.lock.inLock(async () => {
+            const normalizedOwner = ownerNormalize(owner);
+            await this.refreshRecordStatusLocked();
+            return Array.from(this.records.values())
+                .filter((record) => ownerIs(record.owner, normalizedOwner))
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .map((record) => toProcessInfo(record));
+        });
+    }
 
-  async stop(processId: string, signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo> {
-    return this.lock.inLock(async () => {
-      const record = this.records.get(processId);
-      if (!record) {
-        throw new Error(`Unknown process id: ${processId}`);
-      }
-      record.desiredState = "stopped";
-      await this.stopRecordLocked(record, signal);
-      await this.writeRecordLocked(record);
-      return toProcessInfo(record);
-    });
-  }
+    async list(): Promise<ProcessInfo[]> {
+        return this.lock.inLock(async () => {
+            await this.refreshRecordStatusLocked();
+            return Array.from(this.records.values())
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .map((record) => toProcessInfo(record));
+        });
+    }
 
-  async remove(processId: string, signal: ProcessSignal = "SIGTERM"): Promise<void> {
-    await this.lock.inLock(async () => {
-      const record = this.records.get(processId);
-      if (!record) {
-        throw new Error(`Unknown process id: ${processId}`);
-      }
-      await this.removeRecordLocked(record, signal);
-    });
-  }
+    async get(processId: string): Promise<ProcessInfo> {
+        return this.lock.inLock(async () => {
+            await this.refreshRecordStatusLocked();
+            const record = this.records.get(processId);
+            if (!record) {
+                throw new Error(`Unknown process id: ${processId}`);
+            }
+            return toProcessInfo(record);
+        });
+    }
 
-  async removeByOwner(
-    owner: ProcessOwner,
-    signal: ProcessSignal = "SIGTERM"
-  ): Promise<number> {
-    return this.lock.inLock(async () => {
-      const normalizedOwner = ownerNormalize(owner);
-      const records = Array.from(this.records.values()).filter((record) =>
-        ownerIs(record.owner, normalizedOwner)
-      );
-      for (const record of records) {
-        await this.removeRecordLocked(record, signal);
-      }
-      return records.length;
-    });
-  }
+    async stop(processId: string, signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo> {
+        return this.lock.inLock(async () => {
+            const record = this.records.get(processId);
+            if (!record) {
+                throw new Error(`Unknown process id: ${processId}`);
+            }
+            record.desiredState = "stopped";
+            await this.stopRecordLocked(record, signal);
+            await this.writeRecordLocked(record);
+            return toProcessInfo(record);
+        });
+    }
 
-  async stopAll(signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo[]> {
-    return this.lock.inLock(async () => {
-      const results: ProcessInfo[] = [];
-      for (const record of this.records.values()) {
+    async remove(processId: string, signal: ProcessSignal = "SIGTERM"): Promise<void> {
+        await this.lock.inLock(async () => {
+            const record = this.records.get(processId);
+            if (!record) {
+                throw new Error(`Unknown process id: ${processId}`);
+            }
+            await this.removeRecordLocked(record, signal);
+        });
+    }
+
+    async removeByOwner(owner: ProcessOwner, signal: ProcessSignal = "SIGTERM"): Promise<number> {
+        return this.lock.inLock(async () => {
+            const normalizedOwner = ownerNormalize(owner);
+            const records = Array.from(this.records.values()).filter((record) =>
+                ownerIs(record.owner, normalizedOwner)
+            );
+            for (const record of records) {
+                await this.removeRecordLocked(record, signal);
+            }
+            return records.length;
+        });
+    }
+
+    async stopAll(signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo[]> {
+        return this.lock.inLock(async () => {
+            const results: ProcessInfo[] = [];
+            for (const record of this.records.values()) {
+                record.desiredState = "stopped";
+                await this.stopRecordLocked(record, signal);
+                await this.writeRecordLocked(record);
+                results.push(toProcessInfo(record));
+            }
+            return results;
+        });
+    }
+
+    private startMonitor(): void {
+        if (this.monitorHandle) {
+            return;
+        }
+        this.monitorHandle = setInterval(() => {
+            void this.lock
+                .inLock(async () => {
+                    await this.refreshRecordStatusLocked();
+                })
+                .catch((error) => {
+                    this.logger.warn({ error }, "error: Process monitor tick failed");
+                });
+        }, MONITOR_INTERVAL_MS);
+        this.monitorHandle.unref();
+    }
+
+    private async refreshRecordStatusLocked(): Promise<void> {
+        for (const record of this.records.values()) {
+            const running = record.pid !== null && isProcessRunning(record.pid);
+            if (running) {
+                const now = Date.now();
+                if (record.desiredState === "stopped") {
+                    await this.stopRecordLocked(record, "SIGTERM");
+                    await this.writeRecordLocked(record);
+                    continue;
+                }
+
+                if (
+                    record.restartFailureCount > 0 &&
+                    record.lastStartedAt !== null &&
+                    now - record.lastStartedAt >= RESTART_STABLE_UPTIME_MS
+                ) {
+                    record.restartFailureCount = 0;
+                    record.nextRestartAt = null;
+                    record.updatedAt = now;
+                    await this.writeRecordLocked(record);
+                }
+
+                if (record.status !== "running") {
+                    record.status = "running";
+                    record.updatedAt = now;
+                    await this.writeRecordLocked(record);
+                }
+                continue;
+            }
+
+            if (record.pid !== null) {
+                record.pid = null;
+                record.lastExitedAt = Date.now();
+            }
+
+            if (record.desiredState === "running") {
+                if (record.keepAlive) {
+                    await this.restartRecordWithBackoffLocked(record);
+                    continue;
+                }
+                if (record.status !== "exited") {
+                    record.status = "exited";
+                    record.updatedAt = Date.now();
+                    await this.writeRecordLocked(record);
+                }
+                continue;
+            }
+
+            if (record.status !== "stopped") {
+                record.status = "stopped";
+                record.restartFailureCount = 0;
+                record.nextRestartAt = null;
+                record.updatedAt = Date.now();
+                await this.writeRecordLocked(record);
+            }
+        }
+    }
+
+    private async restartRecordWithBackoffLocked(record: ProcessRecord): Promise<void> {
+        const now = Date.now();
+        if (record.status !== "exited") {
+            record.status = "exited";
+            record.updatedAt = now;
+            await this.writeRecordLocked(record);
+        }
+
+        if (record.nextRestartAt === null) {
+            scheduleRestart(record, now);
+            await this.writeRecordLocked(record);
+            return;
+        }
+        if (now < record.nextRestartAt) {
+            return;
+        }
+
+        try {
+            await this.startRecordLocked(record, { incrementRestart: true });
+            record.nextRestartAt = null;
+            await this.writeRecordLocked(record);
+        } catch (error) {
+            this.logger.warn(
+                { error, processId: record.id, restartFailureCount: record.restartFailureCount + 1 },
+                "error: Process restart failed; backoff applied"
+            );
+            const failedAt = Date.now();
+            record.pid = null;
+            record.status = "exited";
+            record.lastExitedAt = failedAt;
+            scheduleRestart(record, failedAt);
+            await this.writeRecordLocked(record);
+        }
+    }
+
+    private async removeRecordLocked(record: ProcessRecord, signal: ProcessSignal): Promise<void> {
         record.desiredState = "stopped";
         await this.stopRecordLocked(record, signal);
-        await this.writeRecordLocked(record);
-        results.push(toProcessInfo(record));
-      }
-      return results;
-    });
-  }
-
-  private startMonitor(): void {
-    if (this.monitorHandle) {
-      return;
+        this.records.delete(record.id);
+        this.children.delete(record.id);
+        await fs.rm(this.processDir(record.id), { recursive: true, force: true });
+        this.logger.info({ processId: record.id, signal }, "remove: Process removed");
     }
-    this.monitorHandle = setInterval(() => {
-      void this.lock.inLock(async () => {
-        await this.refreshRecordStatusLocked();
-      }).catch((error) => {
-        this.logger.warn({ error }, "error: Process monitor tick failed");
-      });
-    }, MONITOR_INTERVAL_MS);
-    this.monitorHandle.unref();
-  }
 
-  private async refreshRecordStatusLocked(): Promise<void> {
-    for (const record of this.records.values()) {
-      const running = record.pid !== null && isProcessRunning(record.pid);
-      if (running) {
+    private async startRecordLocked(record: ProcessRecord, options: { incrementRestart: boolean }): Promise<void> {
+        const sandboxConfig = buildSandboxConfig(
+            record.allowedDomains,
+            record.permissions,
+            this.socketPath,
+            record.allowLocalBinding
+        );
+        await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
+        const baseEnv = { ...process.env, ...record.env };
+        const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
+
+        await fs.mkdir(path.dirname(record.logPath), { recursive: true });
+        const logHandle = await fs.open(record.logPath, "a");
+        const spawnResult = await spawnProcess({
+            command: process.execPath,
+            args: [sandboxCliPath, "--settings", record.settingsPath, "-c", record.command],
+            cwd: record.cwd,
+            env: envResult.env,
+            logFd: logHandle.fd
+        }).finally(async () => {
+            await logHandle.close();
+        });
+
+        const child = spawnResult.child;
+        const pid = child.pid;
+        if (!pid) {
+            throw new Error("Failed to capture process pid.");
+        }
+
+        child.unref();
+        this.children.set(record.id, child);
+        this.attachChildListeners(record.id, child);
+
         const now = Date.now();
-        if (record.desiredState === "stopped") {
-          await this.stopRecordLocked(record, "SIGTERM");
-          await this.writeRecordLocked(record);
-          continue;
+        record.bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
+        record.pid = pid;
+        record.status = "running";
+        record.lastStartedAt = now;
+        record.updatedAt = now;
+        if (options.incrementRestart) {
+            record.restartCount += 1;
         }
 
-        if (
-          record.restartFailureCount > 0 &&
-          record.lastStartedAt !== null &&
-          now - record.lastStartedAt >= RESTART_STABLE_UPTIME_MS
-        ) {
-          record.restartFailureCount = 0;
-          record.nextRestartAt = null;
-          record.updatedAt = now;
-          await this.writeRecordLocked(record);
+        this.logger.info(
+            {
+                processId: record.id,
+                pid: record.pid,
+                keepAlive: record.keepAlive,
+                cwd: record.cwd
+            },
+            "start: Process started"
+        );
+    }
+
+    private attachChildListeners(processId: string, child: ChildProcess): void {
+        child.on("exit", () => {
+            void this.lock
+                .inLock(async () => {
+                    const record = this.records.get(processId);
+                    if (!record) {
+                        return;
+                    }
+                    if (record.pid !== child.pid) {
+                        return;
+                    }
+                    this.children.delete(processId);
+                    record.pid = null;
+                    record.lastExitedAt = Date.now();
+                    if (record.desiredState === "stopped") {
+                        record.status = "stopped";
+                    } else {
+                        record.status = "exited";
+                    }
+                    record.updatedAt = Date.now();
+                    await this.writeRecordLocked(record);
+                })
+                .catch((error) => {
+                    this.logger.warn({ error, processId }, "error: Process exit handler failed");
+                });
+        });
+    }
+
+    private async stopRecordLocked(record: ProcessRecord, signal: ProcessSignal): Promise<void> {
+        const pid = record.pid;
+        if (pid !== null) {
+            killProcessTree(pid, signal);
+            await waitForStop(pid, PROCESS_STOP_TIMEOUT_MS);
         }
 
-        if (record.status !== "running") {
-          record.status = "running";
-          record.updatedAt = now;
-          await this.writeRecordLocked(record);
-        }
-        continue;
-      }
-
-      if (record.pid !== null) {
+        const now = Date.now();
         record.pid = null;
-        record.lastExitedAt = Date.now();
-      }
-
-      if (record.desiredState === "running") {
-        if (record.keepAlive) {
-          await this.restartRecordWithBackoffLocked(record);
-          continue;
-        }
-        if (record.status !== "exited") {
-          record.status = "exited";
-          record.updatedAt = Date.now();
-          await this.writeRecordLocked(record);
-        }
-        continue;
-      }
-
-      if (record.status !== "stopped") {
         record.status = "stopped";
-        record.restartFailureCount = 0;
         record.nextRestartAt = null;
-        record.updatedAt = Date.now();
-        await this.writeRecordLocked(record);
-      }
-    }
-  }
+        record.restartFailureCount = 0;
+        record.lastExitedAt = now;
+        record.updatedAt = now;
+        this.children.delete(record.id);
 
-  private async restartRecordWithBackoffLocked(record: ProcessRecord): Promise<void> {
-    const now = Date.now();
-    if (record.status !== "exited") {
-      record.status = "exited";
-      record.updatedAt = now;
-      await this.writeRecordLocked(record);
+        this.logger.info({ processId: record.id, signal }, "stop: Process stopped");
     }
 
-    if (record.nextRestartAt === null) {
-      scheduleRestart(record, now);
-      await this.writeRecordLocked(record);
-      return;
-    }
-    if (now < record.nextRestartAt) {
-      return;
+    private async writeRecordLocked(record: ProcessRecord): Promise<void> {
+        await fs.mkdir(path.dirname(this.recordPath(record.id)), { recursive: true });
+        const serialized = JSON.stringify(record, null, 2);
+        await atomicWrite(this.recordPath(record.id), serialized);
     }
 
-    try {
-      await this.startRecordLocked(record, { incrementRestart: true });
-      record.nextRestartAt = null;
-      await this.writeRecordLocked(record);
-    } catch (error) {
-      this.logger.warn(
-        { error, processId: record.id, restartFailureCount: record.restartFailureCount + 1 },
-        "error: Process restart failed; backoff applied"
-      );
-      const failedAt = Date.now();
-      record.pid = null;
-      record.status = "exited";
-      record.lastExitedAt = failedAt;
-      scheduleRestart(record, failedAt);
-      await this.writeRecordLocked(record);
-    }
-  }
-
-  private async removeRecordLocked(
-    record: ProcessRecord,
-    signal: ProcessSignal
-  ): Promise<void> {
-    record.desiredState = "stopped";
-    await this.stopRecordLocked(record, signal);
-    this.records.delete(record.id);
-    this.children.delete(record.id);
-    await fs.rm(this.processDir(record.id), { recursive: true, force: true });
-    this.logger.info({ processId: record.id, signal }, "remove: Process removed");
-  }
-
-  private async startRecordLocked(
-    record: ProcessRecord,
-    options: { incrementRestart: boolean }
-  ): Promise<void> {
-    const sandboxConfig = buildSandboxConfig(
-      record.allowedDomains,
-      record.permissions,
-      this.socketPath,
-      record.allowLocalBinding
-    );
-    await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
-    const baseEnv = { ...process.env, ...record.env };
-    const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
-
-    await fs.mkdir(path.dirname(record.logPath), { recursive: true });
-    const logHandle = await fs.open(record.logPath, "a");
-    const spawnResult = await spawnProcess({
-      command: process.execPath,
-      args: [sandboxCliPath, "--settings", record.settingsPath, "-c", record.command],
-      cwd: record.cwd,
-      env: envResult.env,
-      logFd: logHandle.fd
-    }).finally(async () => {
-      await logHandle.close();
-    });
-
-    const child = spawnResult.child;
-    const pid = child.pid;
-    if (!pid) {
-      throw new Error("Failed to capture process pid.");
+    private processDir(processId: string): string {
+        return path.join(this.recordsDir, processId);
     }
 
-    child.unref();
-    this.children.set(record.id, child);
-    this.attachChildListeners(record.id, child);
-
-    const now = Date.now();
-    record.bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
-    record.pid = pid;
-    record.status = "running";
-    record.lastStartedAt = now;
-    record.updatedAt = now;
-    if (options.incrementRestart) {
-      record.restartCount += 1;
+    private recordPath(processId: string): string {
+        return path.join(this.processDir(processId), "record.json");
     }
 
-    this.logger.info(
-      {
-        processId: record.id,
-        pid: record.pid,
-        keepAlive: record.keepAlive,
-        cwd: record.cwd
-      },
-      "start: Process started"
-    );
-  }
-
-  private attachChildListeners(processId: string, child: ChildProcess): void {
-    child.on("exit", () => {
-      void this.lock.inLock(async () => {
-        const record = this.records.get(processId);
-        if (!record) {
-          return;
+    private async resolveCurrentBootTimeMsLocked(): Promise<number | null> {
+        if (this.currentBootTimeKnown) {
+            return this.currentBootTimeMs;
         }
-        if (record.pid !== child.pid) {
-          return;
+        this.currentBootTimeMs = await this.bootTimeProvider();
+        this.currentBootTimeKnown = true;
+        return this.currentBootTimeMs;
+    }
+
+    private clearStalePidForBootMismatch(record: ProcessRecord): void {
+        if (
+            record.pid === null ||
+            record.bootTimeMs === null ||
+            this.currentBootTimeMs === null ||
+            record.bootTimeMs === this.currentBootTimeMs
+        ) {
+            if (record.bootTimeMs === null && this.currentBootTimeMs !== null) {
+                record.bootTimeMs = this.currentBootTimeMs;
+            }
+            return;
         }
-        this.children.delete(processId);
+
+        this.logger.info(
+            {
+                processId: record.id,
+                pid: record.pid,
+                recordBootTimeMs: record.bootTimeMs,
+                currentBootTimeMs: this.currentBootTimeMs
+            },
+            "event: Process pid cleared after boot mismatch detection"
+        );
         record.pid = null;
-        record.lastExitedAt = Date.now();
-        if (record.desiredState === "stopped") {
-          record.status = "stopped";
-        } else {
-          record.status = "exited";
-        }
-        record.updatedAt = Date.now();
-        await this.writeRecordLocked(record);
-      }).catch((error) => {
-        this.logger.warn({ error, processId }, "error: Process exit handler failed");
-      });
-    });
-  }
-
-  private async stopRecordLocked(record: ProcessRecord, signal: ProcessSignal): Promise<void> {
-    const pid = record.pid;
-    if (pid !== null) {
-      killProcessTree(pid, signal);
-      await waitForStop(pid, PROCESS_STOP_TIMEOUT_MS);
-    }
-
-    const now = Date.now();
-    record.pid = null;
-    record.status = "stopped";
-    record.nextRestartAt = null;
-    record.restartFailureCount = 0;
-    record.lastExitedAt = now;
-    record.updatedAt = now;
-    this.children.delete(record.id);
-
-    this.logger.info({ processId: record.id, signal }, "stop: Process stopped");
-  }
-
-  private async writeRecordLocked(record: ProcessRecord): Promise<void> {
-    await fs.mkdir(path.dirname(this.recordPath(record.id)), { recursive: true });
-    const serialized = JSON.stringify(record, null, 2);
-    await atomicWrite(this.recordPath(record.id), serialized);
-  }
-
-  private processDir(processId: string): string {
-    return path.join(this.recordsDir, processId);
-  }
-
-  private recordPath(processId: string): string {
-    return path.join(this.processDir(processId), "record.json");
-  }
-
-  private async resolveCurrentBootTimeMsLocked(): Promise<number | null> {
-    if (this.currentBootTimeKnown) {
-      return this.currentBootTimeMs;
-    }
-    this.currentBootTimeMs = await this.bootTimeProvider();
-    this.currentBootTimeKnown = true;
-    return this.currentBootTimeMs;
-  }
-
-  private clearStalePidForBootMismatch(record: ProcessRecord): void {
-    if (
-      record.pid === null ||
-      record.bootTimeMs === null ||
-      this.currentBootTimeMs === null ||
-      record.bootTimeMs === this.currentBootTimeMs
-    ) {
-      if (record.bootTimeMs === null && this.currentBootTimeMs !== null) {
         record.bootTimeMs = this.currentBootTimeMs;
-      }
-      return;
+        // Force refresh loop to persist a normalized terminal status.
+        record.status = "running";
+        record.lastExitedAt = Date.now();
+        record.updatedAt = Date.now();
+        record.nextRestartAt = null;
+        this.children.delete(record.id);
     }
-
-    this.logger.info(
-      {
-        processId: record.id,
-        pid: record.pid,
-        recordBootTimeMs: record.bootTimeMs,
-        currentBootTimeMs: this.currentBootTimeMs
-      },
-      "event: Process pid cleared after boot mismatch detection"
-    );
-    record.pid = null;
-    record.bootTimeMs = this.currentBootTimeMs;
-    // Force refresh loop to persist a normalized terminal status.
-    record.status = "running";
-    record.lastExitedAt = Date.now();
-    record.updatedAt = Date.now();
-    record.nextRestartAt = null;
-    this.children.delete(record.id);
-  }
 }
 
 function buildSandboxConfig(
-  allowedDomains: string[],
-  permissions: SessionPermissions,
-  socketPath: string,
-  allowLocalBinding: boolean
+    allowedDomains: string[],
+    permissions: SessionPermissions,
+    socketPath: string,
+    allowLocalBinding: boolean
 ): SandboxRuntimeConfig {
-  return {
-    filesystem: sandboxFilesystemPolicyBuild({ permissions }),
-    network: {
-      allowedDomains,
-      deniedDomains: [],
-      ...(allowLocalBinding ? { allowLocalBinding: true } : {})
-    },
-    ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
-    enableWeakerNestedSandbox: true
-  };
+    return {
+        filesystem: sandboxFilesystemPolicyBuild({ permissions }),
+        network: {
+            allowedDomains,
+            deniedDomains: [],
+            ...(allowLocalBinding ? { allowLocalBinding: true } : {})
+        },
+        ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
+        enableWeakerNestedSandbox: true
+    };
 }
 
 function toProcessInfo(record: ProcessRecord): ProcessInfo {
-  return {
-    id: record.id,
-    name: record.name,
-    command: record.command,
-    cwd: record.cwd,
-    home: record.home,
-    pid: record.pid,
-    keepAlive: record.keepAlive,
-    desiredState: record.desiredState,
-    status: record.status,
-    restartCount: record.restartCount,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-    lastStartedAt: record.lastStartedAt,
-    lastExitedAt: record.lastExitedAt,
-    logPath: record.logPath
-  };
+    return {
+        id: record.id,
+        name: record.name,
+        command: record.command,
+        cwd: record.cwd,
+        home: record.home,
+        pid: record.pid,
+        keepAlive: record.keepAlive,
+        desiredState: record.desiredState,
+        status: record.status,
+        restartCount: record.restartCount,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        lastStartedAt: record.lastStartedAt,
+        lastExitedAt: record.lastExitedAt,
+        logPath: record.logPath
+    };
 }
 
 async function readRecord(recordPath: string): Promise<ProcessRecord | null> {
-  try {
-    const raw = await fs.readFile(recordPath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<ProcessRecord>;
-    if (parsed.version !== RECORD_VERSION) {
-      return null;
-    }
-    if (
-      !parsed.id ||
-      !parsed.command ||
-      !parsed.cwd ||
-      !parsed.settingsPath ||
-      !parsed.logPath ||
-      !parsed.name
-    ) {
-      return null;
-    }
-    const permissions = parsePermissions(parsed.permissions);
-    if (!permissions) {
-      return null;
-    }
-    const keepAlive = parsed.keepAlive === true;
-    const desiredState = parsed.desiredState === "stopped" ? "stopped" : "running";
-    const status =
-      parsed.status === "running" || parsed.status === "stopped" || parsed.status === "exited"
-        ? parsed.status
-        : "stopped";
+    try {
+        const raw = await fs.readFile(recordPath, "utf8");
+        const parsed = JSON.parse(raw) as Partial<ProcessRecord>;
+        if (parsed.version !== RECORD_VERSION) {
+            return null;
+        }
+        if (!parsed.id || !parsed.command || !parsed.cwd || !parsed.settingsPath || !parsed.logPath || !parsed.name) {
+            return null;
+        }
+        const permissions = parsePermissions(parsed.permissions);
+        if (!permissions) {
+            return null;
+        }
+        const keepAlive = parsed.keepAlive === true;
+        const desiredState = parsed.desiredState === "stopped" ? "stopped" : "running";
+        const status =
+            parsed.status === "running" || parsed.status === "stopped" || parsed.status === "exited"
+                ? parsed.status
+                : "stopped";
 
-    const packageManagers = Array.isArray(parsed.packageManagers)
-      ? parsed.packageManagers.filter(isPackageManager)
-      : [];
-    const allowedDomains = Array.isArray(parsed.allowedDomains)
-      ? parsed.allowedDomains.filter((entry): entry is string => typeof entry === "string")
-      : [];
-    const env =
-      parsed.env && typeof parsed.env === "object"
-        ? Object.fromEntries(
-            Object.entries(parsed.env)
-              .filter(([key, value]) => key.trim().length > 0 && typeof value === "string")
-              .map(([key, value]) => [key.trim(), value])
-          )
-        : {};
-    const owner = parseOwner(parsed.owner);
+        const packageManagers = Array.isArray(parsed.packageManagers)
+            ? parsed.packageManagers.filter(isPackageManager)
+            : [];
+        const allowedDomains = Array.isArray(parsed.allowedDomains)
+            ? parsed.allowedDomains.filter((entry): entry is string => typeof entry === "string")
+            : [];
+        const env =
+            parsed.env && typeof parsed.env === "object"
+                ? Object.fromEntries(
+                      Object.entries(parsed.env)
+                          .filter(([key, value]) => key.trim().length > 0 && typeof value === "string")
+                          .map(([key, value]) => [key.trim(), value])
+                  )
+                : {};
+        const owner = parseOwner(parsed.owner);
 
-    return {
-      version: RECORD_VERSION,
-      id: parsed.id,
-      name: parsed.name,
-      command: parsed.command,
-      cwd: parsed.cwd,
-      home: typeof parsed.home === "string" ? parsed.home : null,
-      env,
-      packageManagers,
-      allowedDomains,
-      allowLocalBinding: parsed.allowLocalBinding === true,
-      permissions,
-      owner,
-      keepAlive,
-      desiredState,
-      status,
-      pid: typeof parsed.pid === "number" ? parsed.pid : null,
-      bootTimeMs: typeof parsed.bootTimeMs === "number" ? parsed.bootTimeMs : null,
-      restartCount: typeof parsed.restartCount === "number" ? parsed.restartCount : 0,
-      restartFailureCount:
-        typeof parsed.restartFailureCount === "number" ? parsed.restartFailureCount : 0,
-      nextRestartAt: typeof parsed.nextRestartAt === "number" ? parsed.nextRestartAt : null,
-      createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : Date.now(),
-      updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
-      lastStartedAt: typeof parsed.lastStartedAt === "number" ? parsed.lastStartedAt : null,
-      lastExitedAt: typeof parsed.lastExitedAt === "number" ? parsed.lastExitedAt : null,
-      settingsPath: parsed.settingsPath,
-      logPath: parsed.logPath
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return null;
+        return {
+            version: RECORD_VERSION,
+            id: parsed.id,
+            name: parsed.name,
+            command: parsed.command,
+            cwd: parsed.cwd,
+            home: typeof parsed.home === "string" ? parsed.home : null,
+            env,
+            packageManagers,
+            allowedDomains,
+            allowLocalBinding: parsed.allowLocalBinding === true,
+            permissions,
+            owner,
+            keepAlive,
+            desiredState,
+            status,
+            pid: typeof parsed.pid === "number" ? parsed.pid : null,
+            bootTimeMs: typeof parsed.bootTimeMs === "number" ? parsed.bootTimeMs : null,
+            restartCount: typeof parsed.restartCount === "number" ? parsed.restartCount : 0,
+            restartFailureCount: typeof parsed.restartFailureCount === "number" ? parsed.restartFailureCount : 0,
+            nextRestartAt: typeof parsed.nextRestartAt === "number" ? parsed.nextRestartAt : null,
+            createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : Date.now(),
+            updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
+            lastStartedAt: typeof parsed.lastStartedAt === "number" ? parsed.lastStartedAt : null,
+            lastExitedAt: typeof parsed.lastExitedAt === "number" ? parsed.lastExitedAt : null,
+            settingsPath: parsed.settingsPath,
+            logPath: parsed.logPath
+        };
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+            return null;
+        }
+        throw error;
     }
-    throw error;
-  }
 }
 
 function parsePermissions(value: unknown): SessionPermissions | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Partial<SessionPermissions>;
-  if (
-    typeof candidate.workingDir !== "string" ||
-    !Array.isArray(candidate.writeDirs) ||
-    !Array.isArray(candidate.readDirs) ||
-    typeof candidate.network !== "boolean" ||
-    typeof candidate.events !== "boolean"
-  ) {
-    return null;
-  }
-  const writeDirs = candidate.writeDirs.filter(
-    (entry): entry is string => typeof entry === "string"
-  );
-  const readDirs = candidate.readDirs.filter(
-    (entry): entry is string => typeof entry === "string"
-  );
-  return {
-    workingDir: candidate.workingDir,
-    writeDirs,
-    readDirs,
-    network: candidate.network,
-    events: candidate.events
-  };
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+    const candidate = value as Partial<SessionPermissions>;
+    if (
+        typeof candidate.workingDir !== "string" ||
+        !Array.isArray(candidate.writeDirs) ||
+        !Array.isArray(candidate.readDirs) ||
+        typeof candidate.network !== "boolean" ||
+        typeof candidate.events !== "boolean"
+    ) {
+        return null;
+    }
+    const writeDirs = candidate.writeDirs.filter((entry): entry is string => typeof entry === "string");
+    const readDirs = candidate.readDirs.filter((entry): entry is string => typeof entry === "string");
+    return {
+        workingDir: candidate.workingDir,
+        writeDirs,
+        readDirs,
+        network: candidate.network,
+        events: candidate.events
+    };
 }
 
 function clonePermissions(permissions: SessionPermissions): SessionPermissions {
-  return {
-    workingDir: permissions.workingDir,
-    writeDirs: [...permissions.writeDirs],
-    readDirs: [...permissions.readDirs],
-    network: permissions.network,
-    events: permissions.events
-  };
+    return {
+        workingDir: permissions.workingDir,
+        writeDirs: [...permissions.writeDirs],
+        readDirs: [...permissions.readDirs],
+        network: permissions.network,
+        events: permissions.events
+    };
 }
 
 function ownerNormalize(owner: ProcessOwner): ProcessOwner {
-  const id = owner.id.trim();
-  if (!id) {
-    throw new Error("Process owner id is required.");
-  }
-  return { type: owner.type, id };
+    const id = owner.id.trim();
+    if (!id) {
+        throw new Error("Process owner id is required.");
+    }
+    return { type: owner.type, id };
 }
 
-function ownerIs(
-  candidate: ProcessOwner | null,
-  owner: ProcessOwner
-): boolean {
-  if (!candidate) {
-    return false;
-  }
-  return candidate.type === owner.type && candidate.id === owner.id;
+function ownerIs(candidate: ProcessOwner | null, owner: ProcessOwner): boolean {
+    if (!candidate) {
+        return false;
+    }
+    return candidate.type === owner.type && candidate.id === owner.id;
 }
 
 function parseOwner(value: unknown): ProcessOwner | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as { type?: unknown; id?: unknown };
-  if (candidate.type !== "plugin" || typeof candidate.id !== "string") {
-    return null;
-  }
-  const id = candidate.id.trim();
-  if (!id) {
-    return null;
-  }
-  return { type: "plugin", id };
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+    const candidate = value as { type?: unknown; id?: unknown };
+    if (candidate.type !== "plugin" || typeof candidate.id !== "string") {
+        return null;
+    }
+    const id = candidate.id.trim();
+    if (!id) {
+        return null;
+    }
+    return { type: "plugin", id };
 }
 
 function isPackageManager(value: unknown): value is SandboxPackageManager {
-  return (
-    value === "dart" ||
-    value === "dotnet" ||
-    value === "go" ||
-    value === "java" ||
-    value === "node" ||
-    value === "php" ||
-    value === "python" ||
-    value === "ruby" ||
-    value === "rust"
-  );
+    return (
+        value === "dart" ||
+        value === "dotnet" ||
+        value === "go" ||
+        value === "java" ||
+        value === "node" ||
+        value === "php" ||
+        value === "python" ||
+        value === "ruby" ||
+        value === "rust"
+    );
 }
 
 function isProcessRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 function killProcessTree(pid: number, signal: ProcessSignal): void {
-  try {
-    process.kill(-pid, signal);
-    return;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== "ESRCH" && code !== "EPERM") {
-      throw error;
+    try {
+        process.kill(-pid, signal);
+        return;
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH" && code !== "EPERM") {
+            throw error;
+        }
     }
-  }
 
-  try {
-    process.kill(pid, signal);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== "ESRCH") {
-      throw error;
+    try {
+        process.kill(pid, signal);
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH") {
+            throw error;
+        }
     }
-  }
 }
 
 async function waitForStop(pid: number, timeoutMs: number): Promise<void> {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    if (!isProcessRunning(pid)) {
-      return;
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+        if (!isProcessRunning(pid)) {
+            return;
+        }
+        await sleep(PROCESS_STOP_POLL_MS);
     }
-    await sleep(PROCESS_STOP_POLL_MS);
-  }
-  if (isProcessRunning(pid)) {
-    killProcessTree(pid, "SIGKILL");
-  }
+    if (isProcessRunning(pid)) {
+        killProcessTree(pid, "SIGKILL");
+    }
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
 }
 
 async function spawnProcess(options: {
-  command: string;
-  args: string[];
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-  logFd: number;
+    command: string;
+    args: string[];
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    logFd: number;
 }): Promise<{ child: ChildProcess }> {
-  const child = spawn(options.command, options.args, {
-    cwd: options.cwd,
-    env: options.env,
-    detached: true,
-    stdio: ["ignore", options.logFd, options.logFd]
-  });
+    const child = spawn(options.command, options.args, {
+        cwd: options.cwd,
+        env: options.env,
+        detached: true,
+        stdio: ["ignore", options.logFd, options.logFd]
+    });
 
-  return new Promise((resolve, reject) => {
-    child.once("error", (error) => {
-      reject(error);
+    return new Promise((resolve, reject) => {
+        child.once("error", (error) => {
+            reject(error);
+        });
+        child.once("spawn", () => {
+            resolve({ child });
+        });
     });
-    child.once("spawn", () => {
-      resolve({ child });
-    });
-  });
 }
 
 function scheduleRestart(record: ProcessRecord, now: number): void {
-  const uptimeMs = resolveUptimeMs(record, now);
-  if (uptimeMs >= RESTART_STABLE_UPTIME_MS) {
-    record.restartFailureCount = 0;
-  }
-  record.restartFailureCount += 1;
-  const delayMs = restartBackoffMs(record.restartFailureCount);
-  record.nextRestartAt = now + delayMs;
-  record.updatedAt = now;
+    const uptimeMs = resolveUptimeMs(record, now);
+    if (uptimeMs >= RESTART_STABLE_UPTIME_MS) {
+        record.restartFailureCount = 0;
+    }
+    record.restartFailureCount += 1;
+    const delayMs = restartBackoffMs(record.restartFailureCount);
+    record.nextRestartAt = now + delayMs;
+    record.updatedAt = now;
 }
 
 function resolveUptimeMs(record: ProcessRecord, now: number): number {
-  const startedAt = record.lastStartedAt;
-  if (startedAt === null) {
-    return 0;
-  }
-  const exitedAt = record.lastExitedAt ?? now;
-  if (exitedAt < startedAt) {
-    return 0;
-  }
-  return exitedAt - startedAt;
+    const startedAt = record.lastStartedAt;
+    if (startedAt === null) {
+        return 0;
+    }
+    const exitedAt = record.lastExitedAt ?? now;
+    if (exitedAt < startedAt) {
+        return 0;
+    }
+    return exitedAt - startedAt;
 }
 
 function restartBackoffMs(restartFailureCount: number): number {
-  const exponent = Math.max(0, restartFailureCount - 1);
-  const delay = RESTART_BACKOFF_BASE_MS * 2 ** exponent;
-  return Math.min(delay, RESTART_BACKOFF_MAX_MS);
+    const exponent = Math.max(0, restartFailureCount - 1);
+    const delay = RESTART_BACKOFF_BASE_MS * 2 ** exponent;
+    return Math.min(delay, RESTART_BACKOFF_MAX_MS);
 }

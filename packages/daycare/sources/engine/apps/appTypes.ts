@@ -1,34 +1,34 @@
 export type AppRule = {
-  text: string;
-  addedBy?: string;
+    text: string;
+    addedBy?: string;
 };
 
 export type AppRuleSet = {
-  allow: AppRule[];
-  deny: AppRule[];
+    allow: AppRule[];
+    deny: AppRule[];
 };
 
 export type AppManifest = {
-  name: string;
-  title: string;
-  description: string;
-  model?: string;
-  systemPrompt: string;
+    name: string;
+    title: string;
+    description: string;
+    model?: string;
+    systemPrompt: string;
 };
 
 export type AppPermissions = {
-  sourceIntent: string;
-  rules: AppRuleSet;
+    sourceIntent: string;
+    rules: AppRuleSet;
 };
 
 export type AppDescriptor = {
-  id: string;
-  path: string;
-  manifest: AppManifest;
-  permissions: AppPermissions;
+    id: string;
+    path: string;
+    manifest: AppManifest;
+    permissions: AppPermissions;
 };
 
 export type AppReviewDecision = {
-  allowed: boolean;
-  reason?: string;
+    allowed: boolean;
+    reason?: string;
 };

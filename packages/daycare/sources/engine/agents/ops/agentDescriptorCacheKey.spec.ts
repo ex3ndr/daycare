@@ -3,46 +3,46 @@ import { describe, expect, it } from "vitest";
 import { agentDescriptorCacheKey } from "./agentDescriptorCacheKey.js";
 
 describe("agentDescriptorCacheKey", () => {
-  it("returns stable keys for user, cron, and system descriptors", () => {
-    expect(
-      agentDescriptorCacheKey({
-        type: "user",
-        connector: "telegram",
-        userId: "u-1",
-        channelId: "c-1"
-      })
-    ).toBe("/connectors/telegram/u-1/c-1");
-    expect(agentDescriptorCacheKey({ type: "cron", id: "cron-1" })).toBe("/cron/cron-1");
-    expect(agentDescriptorCacheKey({ type: "system", tag: "scheduler" })).toBe("/system/scheduler");
-  });
+    it("returns stable keys for user, cron, and system descriptors", () => {
+        expect(
+            agentDescriptorCacheKey({
+                type: "user",
+                connector: "telegram",
+                userId: "u-1",
+                channelId: "c-1"
+            })
+        ).toBe("/connectors/telegram/u-1/c-1");
+        expect(agentDescriptorCacheKey({ type: "cron", id: "cron-1" })).toBe("/cron/cron-1");
+        expect(agentDescriptorCacheKey({ type: "system", tag: "scheduler" })).toBe("/system/scheduler");
+    });
 
-  it("returns stable keys for subagent, app, and permanent descriptors", () => {
-    expect(
-      agentDescriptorCacheKey({
-        type: "subagent",
-        id: "a-1",
-        parentAgentId: "system",
-        name: "sub"
-      })
-    ).toBe("/subagent/a-1");
-    expect(
-      agentDescriptorCacheKey({
-        type: "app",
-        id: "a-2",
-        parentAgentId: "system",
-        name: "reviewer",
-        systemPrompt: "prompt",
-        appId: "github-reviewer"
-      })
-    ).toBe("/app/a-2");
-    expect(
-      agentDescriptorCacheKey({
-        type: "permanent",
-        id: "a-3",
-        name: "ops",
-        description: "desc",
-        systemPrompt: "prompt"
-      })
-    ).toBe("/permanent/a-3");
-  });
+    it("returns stable keys for subagent, app, and permanent descriptors", () => {
+        expect(
+            agentDescriptorCacheKey({
+                type: "subagent",
+                id: "a-1",
+                parentAgentId: "system",
+                name: "sub"
+            })
+        ).toBe("/subagent/a-1");
+        expect(
+            agentDescriptorCacheKey({
+                type: "app",
+                id: "a-2",
+                parentAgentId: "system",
+                name: "reviewer",
+                systemPrompt: "prompt",
+                appId: "github-reviewer"
+            })
+        ).toBe("/app/a-2");
+        expect(
+            agentDescriptorCacheKey({
+                type: "permanent",
+                id: "a-3",
+                name: "ops",
+                description: "desc",
+                systemPrompt: "prompt"
+            })
+        ).toBe("/permanent/a-3");
+    });
 });

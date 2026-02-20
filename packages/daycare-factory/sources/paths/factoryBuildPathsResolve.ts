@@ -6,24 +6,24 @@ import type { FactoryBuildPaths } from "../types.js";
  * Expects: taskDirectory and environmentDirectory are different directories.
  */
 export function factoryBuildPathsResolve(
-  taskDirectory: string,
-  environmentDirectory: string,
-  configPath: string,
-  outPath: string
+    taskDirectory: string,
+    environmentDirectory: string,
+    configPath: string,
+    outPath: string
 ): FactoryBuildPaths {
-  const taskDirectoryResolved = resolve(taskDirectory);
-  const environmentDirectoryResolved = resolve(environmentDirectory);
+    const taskDirectoryResolved = resolve(taskDirectory);
+    const environmentDirectoryResolved = resolve(environmentDirectory);
 
-  if (taskDirectoryResolved === environmentDirectoryResolved) {
-    throw new Error("task directory and environment directory must be different");
-  }
+    if (taskDirectoryResolved === environmentDirectoryResolved) {
+        throw new Error("task directory and environment directory must be different");
+    }
 
-  return {
-    taskDirectory: taskDirectoryResolved,
-    environmentDirectory: environmentDirectoryResolved,
-    taskFilePath: resolve(taskDirectoryResolved, "TASK.md"),
-    templateDirectory: resolve(environmentDirectoryResolved, "template"),
-    configPath: resolve(environmentDirectoryResolved, configPath),
-    outDirectory: resolve(taskDirectoryResolved, outPath)
-  };
+    return {
+        taskDirectory: taskDirectoryResolved,
+        environmentDirectory: environmentDirectoryResolved,
+        taskFilePath: resolve(taskDirectoryResolved, "TASK.md"),
+        templateDirectory: resolve(environmentDirectoryResolved, "template"),
+        configPath: resolve(environmentDirectoryResolved, configPath),
+        outDirectory: resolve(taskDirectoryResolved, outPath)
+    };
 }

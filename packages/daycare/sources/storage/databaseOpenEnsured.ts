@@ -10,11 +10,11 @@ const migratedDbPaths = new Set<string>();
  * Expects: dbPath is stable for the lifetime of a process.
  */
 export function databaseOpenEnsured(dbPath: string): DatabaseSyncType {
-  const db = databaseOpen(dbPath);
-  if (migratedDbPaths.has(dbPath)) {
+    const db = databaseOpen(dbPath);
+    if (migratedDbPaths.has(dbPath)) {
+        return db;
+    }
+    migrationRun(db);
+    migratedDbPaths.add(dbPath);
     return db;
-  }
-  migrationRun(db);
-  migratedDbPaths.add(dbPath);
-  return db;
 }

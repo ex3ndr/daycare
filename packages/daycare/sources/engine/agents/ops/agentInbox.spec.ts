@@ -4,129 +4,129 @@ import { AgentInbox } from "./agentInbox.js";
 
 const buildReset = () => ({ type: "reset" as const });
 const buildMessage = (text: string, messageId: string, tags: string[] = []) => ({
-  type: "message" as const,
-  message: { text },
-  context: {
-    messageId,
-    ...(tags.length > 0 ? { permissionTags: tags } : {})
-  }
+    type: "message" as const,
+    message: { text },
+    context: {
+        messageId,
+        ...(tags.length > 0 ? { permissionTags: tags } : {})
+    }
 });
 
 describe("AgentInbox", () => {
-  it("delivers queued entries in order", async () => {
-    const inbox = new AgentInbox("agent-1");
-    const first = inbox.post(buildReset());
-    const second = inbox.post(buildReset());
+    it("delivers queued entries in order", async () => {
+        const inbox = new AgentInbox("agent-1");
+        const first = inbox.post(buildReset());
+        const second = inbox.post(buildReset());
 
-    const entry1 = await inbox.next();
-    const entry2 = await inbox.next();
+        const entry1 = await inbox.next();
+        const entry2 = await inbox.next();
 
-    expect(entry1.id).toBe(first.id);
-    expect(entry2.id).toBe(second.id);
-  });
-
-  it("awaits until an entry is posted", async () => {
-    const inbox = new AgentInbox("agent-2");
-    const pending = inbox.next();
-    const posted = inbox.post(buildReset());
-    const entry = await pending;
-
-    expect(entry.id).toBe(posted.id);
-  });
-
-  it("allows reattach after detach", () => {
-    const inbox = new AgentInbox("agent-3");
-    inbox.attach();
-    inbox.detach();
-    expect(() => inbox.attach()).not.toThrow();
-  });
-
-  it("combines queued message items into one inbox entry", async () => {
-    const inbox = new AgentInbox("agent-4");
-    inbox.post(buildMessage("first", "1", ["@read:/tmp"]));
-    const second = inbox.post(buildMessage("second", "2", ["@write:/tmp", "@read:/tmp"]));
-
-    expect(inbox.size()).toBe(1);
-    const entry = await inbox.next();
-    expect(entry.id).toBe(second.id);
-    expect(entry.item.type).toBe("message");
-    if (entry.item.type !== "message") {
-      throw new Error("Expected merged message entry");
-    }
-    expect(entry.item.message.text).toBe("first\nsecond");
-    expect(entry.item.context).toEqual({
-      messageId: "2",
-      permissionTags: ["@read:/tmp", "@write:/tmp"]
-    });
-  });
-
-  it("resolves completion handlers for all merged messages", async () => {
-    const inbox = new AgentInbox("agent-5");
-    const resolveFirst = vi.fn();
-    const resolveSecond = vi.fn();
-    const rejectFirst = vi.fn();
-    const rejectSecond = vi.fn();
-    inbox.post(buildMessage("one", "1"), {
-      resolve: resolveFirst,
-      reject: rejectFirst
-    });
-    inbox.post(buildMessage("two", "2"), {
-      resolve: resolveSecond,
-      reject: rejectSecond
+        expect(entry1.id).toBe(first.id);
+        expect(entry2.id).toBe(second.id);
     });
 
-    const entry = await inbox.next();
-    entry.completion?.resolve({ type: "message", responseText: "ok" });
+    it("awaits until an entry is posted", async () => {
+        const inbox = new AgentInbox("agent-2");
+        const pending = inbox.next();
+        const posted = inbox.post(buildReset());
+        const entry = await pending;
 
-    expect(resolveFirst).toHaveBeenCalledWith({ type: "message", responseText: "ok" });
-    expect(resolveSecond).toHaveBeenCalledWith({ type: "message", responseText: "ok" });
-    expect(rejectFirst).not.toHaveBeenCalled();
-    expect(rejectSecond).not.toHaveBeenCalled();
-  });
-
-  describe("steering", () => {
-    it("steer() stores a steering message", () => {
-      const inbox = new AgentInbox("agent-6");
-      inbox.steer({ type: "steering", text: "stop what you are doing" });
-
-      expect(inbox.hasSteering()).toBe(true);
+        expect(entry.id).toBe(posted.id);
     });
 
-    it("consumeSteering() returns and clears the steering message", () => {
-      const inbox = new AgentInbox("agent-7");
-      inbox.steer({ type: "steering", text: "redirect", origin: "user-123" });
-
-      const steering = inbox.consumeSteering();
-
-      expect(steering).toEqual({
-        type: "steering",
-        text: "redirect",
-        origin: "user-123"
-      });
-      expect(inbox.hasSteering()).toBe(false);
-      expect(inbox.consumeSteering()).toBeNull();
+    it("allows reattach after detach", () => {
+        const inbox = new AgentInbox("agent-3");
+        inbox.attach();
+        inbox.detach();
+        expect(() => inbox.attach()).not.toThrow();
     });
 
-    it("hasSteering() returns false when no steering is pending", () => {
-      const inbox = new AgentInbox("agent-8");
+    it("combines queued message items into one inbox entry", async () => {
+        const inbox = new AgentInbox("agent-4");
+        inbox.post(buildMessage("first", "1", ["@read:/tmp"]));
+        const second = inbox.post(buildMessage("second", "2", ["@write:/tmp", "@read:/tmp"]));
 
-      expect(inbox.hasSteering()).toBe(false);
+        expect(inbox.size()).toBe(1);
+        const entry = await inbox.next();
+        expect(entry.id).toBe(second.id);
+        expect(entry.item.type).toBe("message");
+        if (entry.item.type !== "message") {
+            throw new Error("Expected merged message entry");
+        }
+        expect(entry.item.message.text).toBe("first\nsecond");
+        expect(entry.item.context).toEqual({
+            messageId: "2",
+            permissionTags: ["@read:/tmp", "@write:/tmp"]
+        });
     });
 
-    it("multiple steer() calls keep only the last one", () => {
-      const inbox = new AgentInbox("agent-9");
-      inbox.steer({ type: "steering", text: "first" });
-      inbox.steer({ type: "steering", text: "second" });
-      inbox.steer({ type: "steering", text: "third", cancelReason: "user cancelled" });
+    it("resolves completion handlers for all merged messages", async () => {
+        const inbox = new AgentInbox("agent-5");
+        const resolveFirst = vi.fn();
+        const resolveSecond = vi.fn();
+        const rejectFirst = vi.fn();
+        const rejectSecond = vi.fn();
+        inbox.post(buildMessage("one", "1"), {
+            resolve: resolveFirst,
+            reject: rejectFirst
+        });
+        inbox.post(buildMessage("two", "2"), {
+            resolve: resolveSecond,
+            reject: rejectSecond
+        });
 
-      const steering = inbox.consumeSteering();
+        const entry = await inbox.next();
+        entry.completion?.resolve({ type: "message", responseText: "ok" });
 
-      expect(steering).toEqual({
-        type: "steering",
-        text: "third",
-        cancelReason: "user cancelled"
-      });
-      expect(inbox.hasSteering()).toBe(false);
+        expect(resolveFirst).toHaveBeenCalledWith({ type: "message", responseText: "ok" });
+        expect(resolveSecond).toHaveBeenCalledWith({ type: "message", responseText: "ok" });
+        expect(rejectFirst).not.toHaveBeenCalled();
+        expect(rejectSecond).not.toHaveBeenCalled();
     });
-  });
+
+    describe("steering", () => {
+        it("steer() stores a steering message", () => {
+            const inbox = new AgentInbox("agent-6");
+            inbox.steer({ type: "steering", text: "stop what you are doing" });
+
+            expect(inbox.hasSteering()).toBe(true);
+        });
+
+        it("consumeSteering() returns and clears the steering message", () => {
+            const inbox = new AgentInbox("agent-7");
+            inbox.steer({ type: "steering", text: "redirect", origin: "user-123" });
+
+            const steering = inbox.consumeSteering();
+
+            expect(steering).toEqual({
+                type: "steering",
+                text: "redirect",
+                origin: "user-123"
+            });
+            expect(inbox.hasSteering()).toBe(false);
+            expect(inbox.consumeSteering()).toBeNull();
+        });
+
+        it("hasSteering() returns false when no steering is pending", () => {
+            const inbox = new AgentInbox("agent-8");
+
+            expect(inbox.hasSteering()).toBe(false);
+        });
+
+        it("multiple steer() calls keep only the last one", () => {
+            const inbox = new AgentInbox("agent-9");
+            inbox.steer({ type: "steering", text: "first" });
+            inbox.steer({ type: "steering", text: "second" });
+            inbox.steer({ type: "steering", text: "third", cancelReason: "user cancelled" });
+
+            const steering = inbox.consumeSteering();
+
+            expect(steering).toEqual({
+                type: "steering",
+                text: "third",
+                cancelReason: "user cancelled"
+            });
+            expect(inbox.hasSteering()).toBe(false);
+        });
+    });
 });

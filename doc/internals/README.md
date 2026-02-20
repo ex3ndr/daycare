@@ -59,6 +59,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `testing.md` - current test coverage
 - `util.md` - shared utility helpers
 - `conventions.md` - import and compatibility rules
+- `biome-codestyle.md` - Biome formatter/linter commands, style baseline, and dev workflow
 - `telegram-message-splitting.md` - telegram message splitting logic
 - `telegram-polling-retry.md` - telegram polling retry behavior
 - `telegram-reset-command.md` - telegram `/reset` acknowledgment flow

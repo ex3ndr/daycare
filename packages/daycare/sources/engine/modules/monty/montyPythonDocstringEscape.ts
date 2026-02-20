@@ -3,5 +3,5 @@
  * Expects: value is plain text description content.
  */
 export function montyPythonDocstringEscape(value: string): string {
-  return value.replace(/\"\"\"/g, '\\"\\"\\"');
+    return value.replace(/"""/g, '\\"\\"\\"');
 }

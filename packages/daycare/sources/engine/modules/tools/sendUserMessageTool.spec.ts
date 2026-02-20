@@ -6,91 +6,86 @@ import { sendUserMessageToolBuild } from "./sendUserMessageTool.js";
 const toolCall = { id: "tool-1", name: "send_user_message" };
 
 describe("sendUserMessageToolBuild", () => {
-  it("posts message_for_user to parent agent for subagents", async () => {
-    const post = vi.fn();
-    const tool = sendUserMessageToolBuild();
-    const ctx = contextBuild({
-      agentId: "bg-1",
-      descriptor: { type: "subagent", id: "bg-1", parentAgentId: "fg-1", name: "worker" },
-      post
+    it("posts message_for_user to parent agent for subagents", async () => {
+        const post = vi.fn();
+        const tool = sendUserMessageToolBuild();
+        const ctx = contextBuild({
+            agentId: "bg-1",
+            descriptor: { type: "subagent", id: "bg-1", parentAgentId: "fg-1", name: "worker" },
+            post
+        });
+
+        const result = await tool.execute({ text: "task done" }, ctx, toolCall);
+
+        expect(post).toHaveBeenCalledWith(
+            { agentId: "fg-1" },
+            {
+                type: "system_message",
+                text: '<message_for_user origin="bg-1">task done</message_for_user>',
+                origin: "bg-1"
+            }
+        );
+        expect(result.toolMessage.isError).toBe(false);
     });
 
-    const result = await tool.execute({ text: "task done" }, ctx, toolCall);
+    it("falls back to most-recent-foreground when no parent", async () => {
+        const post = vi.fn();
+        const tool = sendUserMessageToolBuild();
+        const ctx = contextBuild({
+            agentId: "bg-2",
+            descriptor: { type: "permanent", id: "bg-2", name: "bot" },
+            post,
+            foregroundAgentId: "fg-main"
+        });
 
-    expect(post).toHaveBeenCalledWith(
-      { agentId: "fg-1" },
-      {
-        type: "system_message",
-        text: '<message_for_user origin="bg-1">task done</message_for_user>',
-        origin: "bg-1"
-      }
-    );
-    expect(result.toolMessage.isError).toBe(false);
-  });
+        await tool.execute({ text: "hello user" }, ctx, toolCall);
 
-  it("falls back to most-recent-foreground when no parent", async () => {
-    const post = vi.fn();
-    const tool = sendUserMessageToolBuild();
-    const ctx = contextBuild({
-      agentId: "bg-2",
-      descriptor: { type: "permanent", id: "bg-2", name: "bot" },
-      post,
-      foregroundAgentId: "fg-main"
+        expect(post).toHaveBeenCalledWith({ agentId: "fg-main" }, expect.objectContaining({ type: "system_message" }));
     });
 
-    await tool.execute({ text: "hello user" }, ctx, toolCall);
+    it("throws when no foreground agent is found", async () => {
+        const tool = sendUserMessageToolBuild();
+        const ctx = contextBuild({
+            agentId: "bg-3",
+            descriptor: { type: "permanent", id: "bg-3", name: "bot" },
+            post: vi.fn(),
+            foregroundAgentId: null
+        });
 
-    expect(post).toHaveBeenCalledWith(
-      { agentId: "fg-main" },
-      expect.objectContaining({ type: "system_message" })
-    );
-  });
-
-  it("throws when no foreground agent is found", async () => {
-    const tool = sendUserMessageToolBuild();
-    const ctx = contextBuild({
-      agentId: "bg-3",
-      descriptor: { type: "permanent", id: "bg-3", name: "bot" },
-      post: vi.fn(),
-      foregroundAgentId: null
+        await expect(tool.execute({ text: "hi" }, ctx, toolCall)).rejects.toThrow("No foreground agent found");
     });
-
-    await expect(tool.execute({ text: "hi" }, ctx, toolCall)).rejects.toThrow(
-      "No foreground agent found"
-    );
-  });
 });
 
 function contextBuild(opts: {
-  agentId: string;
-  descriptor: Record<string, unknown>;
-  post: ReturnType<typeof vi.fn>;
-  foregroundAgentId?: string | null;
+    agentId: string;
+    descriptor: Record<string, unknown>;
+    post: ReturnType<typeof vi.fn>;
+    foregroundAgentId?: string | null;
 }): ToolExecutionContext {
-  return {
-    connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-    fileStore: null as unknown as ToolExecutionContext["fileStore"],
-    auth: null as unknown as ToolExecutionContext["auth"],
-    logger: console as unknown as ToolExecutionContext["logger"],
-    assistant: null,
-    permissions: {
-      workingDir: "/tmp",
-      writeDirs: ["/tmp"],
-      readDirs: ["/tmp"],
-      network: false,
-      events: false
-    },
-    agent: {
-      id: opts.agentId,
-      descriptor: opts.descriptor
-    } as unknown as ToolExecutionContext["agent"],
-    agentContext: null as unknown as ToolExecutionContext["agentContext"],
-    source: "test",
-    messageContext: {},
-    agentSystem: {
-      post: opts.post,
-      agentFor: () => opts.foregroundAgentId ?? undefined
-    } as unknown as ToolExecutionContext["agentSystem"],
-    heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
-  };
+    return {
+        connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
+        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        auth: null as unknown as ToolExecutionContext["auth"],
+        logger: console as unknown as ToolExecutionContext["logger"],
+        assistant: null,
+        permissions: {
+            workingDir: "/tmp",
+            writeDirs: ["/tmp"],
+            readDirs: ["/tmp"],
+            network: false,
+            events: false
+        },
+        agent: {
+            id: opts.agentId,
+            descriptor: opts.descriptor
+        } as unknown as ToolExecutionContext["agent"],
+        agentContext: null as unknown as ToolExecutionContext["agentContext"],
+        source: "test",
+        messageContext: {},
+        agentSystem: {
+            post: opts.post,
+            agentFor: () => opts.foregroundAgentId ?? undefined
+        } as unknown as ToolExecutionContext["agentSystem"],
+        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+    };
 }

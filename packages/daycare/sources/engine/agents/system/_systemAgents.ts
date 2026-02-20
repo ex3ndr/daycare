@@ -5,19 +5,19 @@ import type { SystemAgentDefinition } from "./systemAgentTypes.js";
  * Expects: tags stay lowercase english words.
  */
 export const SYSTEM_AGENTS: readonly SystemAgentDefinition[] = [
-  {
-    tag: "heartbeat",
-    promptFile: "HEARTBEAT.md",
-    replaceSystemPrompt: false
-  },
-  {
-    tag: "cron",
-    promptFile: "CRON.md",
-    replaceSystemPrompt: false
-  },
-  {
-    tag: "architect",
-    promptFile: "ARCHITECT.md",
-    replaceSystemPrompt: true
-  }
+    {
+        tag: "heartbeat",
+        promptFile: "HEARTBEAT.md",
+        replaceSystemPrompt: false
+    },
+    {
+        tag: "cron",
+        promptFile: "CRON.md",
+        replaceSystemPrompt: false
+    },
+    {
+        tag: "architect",
+        promptFile: "ARCHITECT.md",
+        replaceSystemPrompt: true
+    }
 ];

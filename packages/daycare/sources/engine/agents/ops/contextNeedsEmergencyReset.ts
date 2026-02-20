@@ -1,8 +1,8 @@
 import type { AgentHistoryRecord, Config } from "@/types";
 
 import {
-  contextEstimateTokensWithExtras,
-  type ContextEstimateTokensExtras
+    type ContextEstimateTokensExtras,
+    contextEstimateTokensWithExtras
 } from "./contextEstimateTokensWithExtras.js";
 
 /**
@@ -10,10 +10,10 @@ import {
  * Expects: config.settings.agents.emergencyContextLimit is a positive integer when set.
  */
 export function contextNeedsEmergencyReset(
-  config: Config,
-  history: AgentHistoryRecord[],
-  extras?: ContextEstimateTokensExtras
+    config: Config,
+    history: AgentHistoryRecord[],
+    extras?: ContextEstimateTokensExtras
 ): boolean {
-  const limit = config.settings.agents.emergencyContextLimit;
-  return contextEstimateTokensWithExtras(history, extras) >= limit;
+    const limit = config.settings.agents.emergencyContextLimit;
+    return contextEstimateTokensWithExtras(history, extras) >= limit;
 }

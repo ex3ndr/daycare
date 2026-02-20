@@ -3,54 +3,51 @@
  */
 
 import type { ExecGateDefinition, SessionPermissions } from "@/types";
-import type { ExecGateCheckInput, ExecGateCheckResult } from "../scheduling/execGateCheck.js";
 import type { ConfigModule } from "../config/configModule.js";
+import type { ExecGateCheckInput, ExecGateCheckResult } from "../scheduling/execGateCheck.js";
 
 export type HeartbeatDefinition = {
-  id: string;
-  title: string;
-  prompt: string;
-  filePath: string;
-  gate?: ExecGateDefinition;
-  lastRunAt?: string;
+    id: string;
+    title: string;
+    prompt: string;
+    filePath: string;
+    gate?: ExecGateDefinition;
+    lastRunAt?: string;
 };
 
 export type HeartbeatState = {
-  lastRunAt?: string;
+    lastRunAt?: string;
 };
 
 export type HeartbeatSchedulerOptions = {
-  config: ConfigModule;
-  store: HeartbeatStoreInterface;
-  intervalMs?: number;
-  defaultPermissions: SessionPermissions;
-  resolvePermissions?: () => Promise<SessionPermissions> | SessionPermissions;
-  onRun: (tasks: HeartbeatDefinition[], runAt: Date) => void | Promise<void>;
-  onError?: (error: unknown, taskIds?: string[]) => void | Promise<void>;
-  onGatePermissionRequest?: (
-    task: HeartbeatDefinition,
-    missing: string[]
-  ) => Promise<boolean>;
-  onTaskComplete?: (task: HeartbeatDefinition, runAt: Date) => void | Promise<void>;
-  gateCheck?: (input: ExecGateCheckInput) => Promise<ExecGateCheckResult>;
+    config: ConfigModule;
+    store: HeartbeatStoreInterface;
+    intervalMs?: number;
+    defaultPermissions: SessionPermissions;
+    resolvePermissions?: () => Promise<SessionPermissions> | SessionPermissions;
+    onRun: (tasks: HeartbeatDefinition[], runAt: Date) => void | Promise<void>;
+    onError?: (error: unknown, taskIds?: string[]) => void | Promise<void>;
+    onGatePermissionRequest?: (task: HeartbeatDefinition, missing: string[]) => Promise<boolean>;
+    onTaskComplete?: (task: HeartbeatDefinition, runAt: Date) => void | Promise<void>;
+    gateCheck?: (input: ExecGateCheckInput) => Promise<ExecGateCheckResult>;
 };
 
 export type HeartbeatCreateTaskArgs = {
-  id?: string;
-  title: string;
-  prompt: string;
-  gate?: ExecGateDefinition;
-  overwrite?: boolean;
+    id?: string;
+    title: string;
+    prompt: string;
+    gate?: ExecGateDefinition;
+    overwrite?: boolean;
 };
 
 /**
  * Interface for HeartbeatStore to allow dependency injection.
  */
 export interface HeartbeatStoreInterface {
-  ensureDir(): Promise<void>;
-  listTasks(): Promise<HeartbeatDefinition[]>;
-  createTask(definition: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition>;
-  deleteTask(taskId: string): Promise<boolean>;
-  loadTask(filePath: string, state?: HeartbeatState): Promise<HeartbeatDefinition | null>;
-  recordRun(runAt: Date): Promise<void>;
+    ensureDir(): Promise<void>;
+    listTasks(): Promise<HeartbeatDefinition[]>;
+    createTask(definition: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition>;
+    deleteTask(taskId: string): Promise<boolean>;
+    loadTask(filePath: string, state?: HeartbeatState): Promise<HeartbeatDefinition | null>;
+    recordRun(runAt: Date): Promise<void>;
 }

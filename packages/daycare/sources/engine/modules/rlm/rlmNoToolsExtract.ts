@@ -5,5 +5,5 @@ import { tagExtractAll } from "../../../util/tagExtract.js";
  * Expects: response text may include arbitrary non-tag content.
  */
 export function rlmNoToolsExtract(text: string): string[] {
-  return tagExtractAll(text, "run_python");
+    return tagExtractAll(text, "run_python");
 }

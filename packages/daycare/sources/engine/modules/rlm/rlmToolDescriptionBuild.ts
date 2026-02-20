@@ -5,29 +5,30 @@ import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 
 type RlmToolDescriptionTemplateContext = {
-  preamble: string;
+    preamble: string;
 };
 
-let rlmToolDescriptionTemplatePromise:
-  Promise<HandlebarsTemplateDelegate<RlmToolDescriptionTemplateContext>> | null = null;
+let rlmToolDescriptionTemplatePromise: Promise<HandlebarsTemplateDelegate<RlmToolDescriptionTemplateContext>> | null =
+    null;
 
 /**
  * Builds the run_python tool description with the generated Python tool preamble.
  * Expects: tools contains the full current tool list from ToolResolver.
  */
 export async function rlmToolDescriptionBuild(tools: Tool[]): Promise<string> {
-  const preamble = montyPreambleBuild(tools);
-  const template = await rlmToolDescriptionTemplateCompile();
-  return template({ preamble }).trim();
+    const preamble = montyPreambleBuild(tools);
+    const template = await rlmToolDescriptionTemplateCompile();
+    return template({ preamble }).trim();
 }
 
 async function rlmToolDescriptionTemplateCompile(): Promise<
-  HandlebarsTemplateDelegate<RlmToolDescriptionTemplateContext>
+    HandlebarsTemplateDelegate<RlmToolDescriptionTemplateContext>
 > {
-  if (rlmToolDescriptionTemplatePromise) {
+    if (rlmToolDescriptionTemplatePromise) {
+        return rlmToolDescriptionTemplatePromise;
+    }
+    rlmToolDescriptionTemplatePromise = agentPromptBundledRead("SYSTEM_TOOLS_RLM.md").then((source) =>
+        Handlebars.compile<RlmToolDescriptionTemplateContext>(source)
+    );
     return rlmToolDescriptionTemplatePromise;
-  }
-  rlmToolDescriptionTemplatePromise = agentPromptBundledRead("SYSTEM_TOOLS_RLM.md")
-    .then((source) => Handlebars.compile<RlmToolDescriptionTemplateContext>(source));
-  return rlmToolDescriptionTemplatePromise;
 }

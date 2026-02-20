@@ -5,23 +5,23 @@ import type { AgentDescriptor } from "./agentDescriptorTypes.js";
  * Expects: descriptor is validated.
  */
 export function agentDescriptorCacheKey(descriptor: AgentDescriptor): string {
-  switch (descriptor.type) {
-    case "cron":
-      return `/cron/${descriptor.id}`;
-    case "system":
-      return `/system/${descriptor.tag}`;
-    case "user":
-      return `/connectors/${descriptor.connector}/${descriptor.userId}/${descriptor.channelId}`;
-    case "subagent":
-      return `/subagent/${descriptor.id}`;
-    case "app":
-      return `/app/${descriptor.id}`;
-    case "permanent":
-      return `/permanent/${descriptor.id}`;
-  }
-  return descriptorTypeUnreachable(descriptor);
+    switch (descriptor.type) {
+        case "cron":
+            return `/cron/${descriptor.id}`;
+        case "system":
+            return `/system/${descriptor.tag}`;
+        case "user":
+            return `/connectors/${descriptor.connector}/${descriptor.userId}/${descriptor.channelId}`;
+        case "subagent":
+            return `/subagent/${descriptor.id}`;
+        case "app":
+            return `/app/${descriptor.id}`;
+        case "permanent":
+            return `/permanent/${descriptor.id}`;
+    }
+    return descriptorTypeUnreachable(descriptor);
 }
 
 function descriptorTypeUnreachable(_value: never): never {
-  throw new Error("Unhandled descriptor type");
+    throw new Error("Unhandled descriptor type");
 }

@@ -11,14 +11,14 @@ const { DatabaseSync } = nodeRequire("node:sqlite") as typeof import("node:sqlit
  * Expects: dbPath is absolute and writable by the current process.
  */
 export function databaseOpen(dbPath: string): DatabaseSyncType {
-  if (dbPath !== ":memory:") {
-    mkdirSync(path.dirname(dbPath), { recursive: true });
-  }
+    if (dbPath !== ":memory:") {
+        mkdirSync(path.dirname(dbPath), { recursive: true });
+    }
 
-  const db = new DatabaseSync(dbPath);
-  if (dbPath !== ":memory:") {
-    db.exec("PRAGMA journal_mode=WAL;");
-  }
-  db.exec("PRAGMA foreign_keys=ON;");
-  return db;
+    const db = new DatabaseSync(dbPath);
+    if (dbPath !== ":memory:") {
+        db.exec("PRAGMA journal_mode=WAL;");
+    }
+    db.exec("PRAGMA foreign_keys=ON;");
+    return db;
 }

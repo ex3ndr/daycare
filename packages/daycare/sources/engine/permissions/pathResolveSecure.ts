@@ -7,10 +7,10 @@ import { pathSanitize } from "./pathSanitize.js";
  * Result of secure path resolution.
  */
 export type SecurePathResult = {
-  /** Resolved real path (symlinks followed) */
-  realPath: string;
-  /** The allowed base directory that contains this path */
-  allowedBase: string;
+    /** Resolved real path (symlinks followed) */
+    realPath: string;
+    /** The allowed base directory that contains this path */
+    allowedBase: string;
 };
 
 /**
@@ -25,59 +25,56 @@ export type SecurePathResult = {
  * @returns The resolved real path and the base directory it's within
  * @throws Error if path is outside allowed directories or doesn't exist
  */
-export async function pathResolveSecure(
-  allowedDirs: string[],
-  target: string
-): Promise<SecurePathResult> {
-  pathSanitize(target);
+export async function pathResolveSecure(allowedDirs: string[], target: string): Promise<SecurePathResult> {
+    pathSanitize(target);
 
-  if (!path.isAbsolute(target)) {
-    throw new Error("Path must be absolute.");
-  }
+    if (!path.isAbsolute(target)) {
+        throw new Error("Path must be absolute.");
+    }
 
-  // Resolve the target path following all symlinks
-  let realPath: string;
-  try {
-    realPath = await fs.realpath(target);
-  } catch {
-    realPath = await resolveMissingPath(target);
-  }
-
-  // Check containment against each allowed directory (also resolve their real paths)
-  for (const dir of allowedDirs) {
-    let realDir: string;
+    // Resolve the target path following all symlinks
+    let realPath: string;
     try {
-      realDir = await fs.realpath(dir);
+        realPath = await fs.realpath(target);
     } catch {
-      // If the allowed dir doesn't exist, use logical resolution
-      realDir = path.resolve(dir);
+        realPath = await resolveMissingPath(target);
     }
 
-    if (isWithinSecure(realDir, realPath)) {
-      return { realPath, allowedBase: realDir };
-    }
-  }
+    // Check containment against each allowed directory (also resolve their real paths)
+    for (const dir of allowedDirs) {
+        let realDir: string;
+        try {
+            realDir = await fs.realpath(dir);
+        } catch {
+            // If the allowed dir doesn't exist, use logical resolution
+            realDir = path.resolve(dir);
+        }
 
-  throw new Error("Path is outside the allowed directories.");
+        if (isWithinSecure(realDir, realPath)) {
+            return { realPath, allowedBase: realDir };
+        }
+    }
+
+    throw new Error("Path is outside the allowed directories.");
 }
 
 async function resolveMissingPath(target: string): Promise<string> {
-  const missing: string[] = [path.basename(target)];
-  let parent = path.dirname(target);
+    const missing: string[] = [path.basename(target)];
+    let parent = path.dirname(target);
 
-  while (true) {
-    try {
-      const realParent = await fs.realpath(parent);
-      return path.join(realParent, ...missing);
-    } catch {
-      const next = path.dirname(parent);
-      if (next === parent) {
-        return path.resolve(target);
-      }
-      missing.unshift(path.basename(parent));
-      parent = next;
+    while (true) {
+        try {
+            const realParent = await fs.realpath(parent);
+            return path.join(realParent, ...missing);
+        } catch {
+            const next = path.dirname(parent);
+            if (next === parent) {
+                return path.resolve(target);
+            }
+            missing.unshift(path.basename(parent));
+            parent = next;
+        }
     }
-  }
 }
 
 /**
@@ -85,8 +82,8 @@ async function resolveMissingPath(target: string): Promise<string> {
  * Does NOT resolve symlinks - use only when you've already resolved.
  */
 export function isWithinSecure(base: string, target: string): boolean {
-  const relative = path.relative(base, target);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+    const relative = path.relative(base, target);
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 /**
@@ -97,24 +94,21 @@ export function isWithinSecure(base: string, target: string): boolean {
  * @param flags - File system flags (e.g., "r", "w", "a")
  * @returns File handle
  */
-export async function openSecure(
-  filePath: string,
-  flags: string
-): Promise<fs.FileHandle> {
-  pathSanitize(filePath);
+export async function openSecure(filePath: string, flags: string): Promise<fs.FileHandle> {
+    pathSanitize(filePath);
 
-  // Check if target is a symlink before opening
-  try {
-    const stats = await fs.lstat(filePath);
-    if (stats.isSymbolicLink()) {
-      throw new Error("Cannot open symbolic link directly.");
+    // Check if target is a symlink before opening
+    try {
+        const stats = await fs.lstat(filePath);
+        if (stats.isSymbolicLink()) {
+            throw new Error("Cannot open symbolic link directly.");
+        }
+    } catch (error) {
+        // File doesn't exist - OK for write/create operations
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+            throw error;
+        }
     }
-  } catch (error) {
-    // File doesn't exist - OK for write/create operations
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
-    }
-  }
 
-  return fs.open(filePath, flags);
+    return fs.open(filePath, flags);
 }

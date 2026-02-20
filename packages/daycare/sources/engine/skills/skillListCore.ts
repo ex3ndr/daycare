@@ -11,5 +11,5 @@ const CORE_SKILLS_ROOT = fileURLToPath(new URL("../../skills", import.meta.url))
  * Expects: packaged skills directory exists or is missing; missing returns an empty list.
  */
 export async function skillListCore(): Promise<AgentSkill[]> {
-  return skillListFromRoot(CORE_SKILLS_ROOT, { source: "core", root: CORE_SKILLS_ROOT });
+    return skillListFromRoot(CORE_SKILLS_ROOT, { source: "core", root: CORE_SKILLS_ROOT });
 }

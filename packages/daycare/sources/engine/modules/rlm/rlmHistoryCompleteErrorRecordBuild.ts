@@ -5,19 +5,19 @@ import type { AgentHistoryRecord } from "@/types";
  * Expects: toolCallId is the outer run_python tool call id.
  */
 export function rlmHistoryCompleteErrorRecordBuild(
-  toolCallId: string,
-  message: string,
-  printOutput: string[] = [],
-  toolCallCount = 0
+    toolCallId: string,
+    message: string,
+    printOutput: string[] = [],
+    toolCallCount = 0
 ): AgentHistoryRecord {
-  return {
-    type: "rlm_complete",
-    at: Date.now(),
-    toolCallId,
-    output: "",
-    printOutput: [...printOutput],
-    toolCallCount,
-    isError: true,
-    error: message
-  };
+    return {
+        type: "rlm_complete",
+        at: Date.now(),
+        toolCallId,
+        output: "",
+        printOutput: [...printOutput],
+        toolCallCount,
+        isError: true,
+        error: message
+    };
 }

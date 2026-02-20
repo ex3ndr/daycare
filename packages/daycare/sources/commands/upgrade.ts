@@ -5,27 +5,27 @@ import { DEFAULT_SETTINGS_PATH } from "../settings.js";
 import { storageUpgrade } from "../storage/storageUpgrade.js";
 
 export type UpgradeOptions = {
-  settings?: string;
+    settings?: string;
 };
 
 export async function upgradeCommand(options: UpgradeOptions): Promise<void> {
-  intro("daycare upgrade");
-  const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
-  const config = await configLoad(settingsPath);
-  const result = await storageUpgrade(config);
+    intro("daycare upgrade");
+    const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
+    const config = await configLoad(settingsPath);
+    const result = await storageUpgrade(config);
 
-  if (result.applied.length === 0) {
-    outro("Storage already up to date.");
-    return;
-  }
+    if (result.applied.length === 0) {
+        outro("Storage already up to date.");
+        return;
+    }
 
-  outro(`Applied migrations: ${result.applied.join(", ")}`);
+    outro(`Applied migrations: ${result.applied.join(", ")}`);
 }
 
 function intro(message: string): void {
-  console.log(message);
+    console.log(message);
 }
 
 function outro(message: string): void {
-  console.log(message);
+    console.log(message);
 }

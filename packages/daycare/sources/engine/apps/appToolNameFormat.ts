@@ -3,5 +3,5 @@
  * Expects: appId is a validated app manifest name.
  */
 export function appToolNameFormat(appId: string): string {
-  return `app_${appId.replace(/-/g, "_")}`;
+    return `app_${appId.replace(/-/g, "_")}`;
 }

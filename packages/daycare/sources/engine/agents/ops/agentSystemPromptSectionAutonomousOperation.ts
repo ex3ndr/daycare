@@ -9,19 +9,19 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionAutonomousOperation(
-  context: AgentSystemPromptContext = {}
+    context: AgentSystemPromptContext = {}
 ): Promise<string> {
-  const descriptor = context.descriptor;
-  const parentAgentId =
-    descriptor && (descriptor.type === "subagent" || descriptor.type === "app")
-      ? descriptor.parentAgentId ?? ""
-      : "";
-  const agentPrompt = descriptor ? (await agentPromptResolve(descriptor)).agentPrompt : "";
-  const template = await agentPromptBundledRead("SYSTEM_AGENCY.md");
-  const section = Handlebars.compile(template)({
-    isForeground: descriptor?.type === "user",
-    parentAgentId,
-    agentPrompt
-  });
-  return section.trim();
+    const descriptor = context.descriptor;
+    const parentAgentId =
+        descriptor && (descriptor.type === "subagent" || descriptor.type === "app")
+            ? (descriptor.parentAgentId ?? "")
+            : "";
+    const agentPrompt = descriptor ? (await agentPromptResolve(descriptor)).agentPrompt : "";
+    const template = await agentPromptBundledRead("SYSTEM_AGENCY.md");
+    const section = Handlebars.compile(template)({
+        isForeground: descriptor?.type === "user",
+        parentAgentId,
+        agentPrompt
+    });
+    return section.trim();
 }

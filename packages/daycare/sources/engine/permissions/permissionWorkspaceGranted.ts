@@ -9,8 +9,6 @@ import { permissionWorkspacePathResolve } from "./permissionWorkspacePathResolve
  * Expects: permissions are normalized absolute paths.
  */
 export function permissionWorkspaceGranted(permissions: SessionPermissions): boolean {
-  const workspacePath = permissionWorkspacePathResolve(permissions);
-  return permissions.writeDirs.some((entry) =>
-    isWithinSecure(path.resolve(entry), workspacePath)
-  );
+    const workspacePath = permissionWorkspacePathResolve(permissions);
+    return permissions.writeDirs.some((entry) => isWithinSecure(path.resolve(entry), workspacePath));
 }

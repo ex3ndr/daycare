@@ -1,145 +1,131 @@
 // Central type re-exports for cross-cutting concerns.
 // Import via: import type { ... } from "@/types";
 
-// Permissions
-export type { SessionPermissions } from "./engine/permissions.js";
-
-// Scheduling
-export type { ExecGateDefinition } from "./engine/scheduling/execGateTypes.js";
-export type { SandboxPackageManager } from "./sandbox/sandboxPackageManagers.js";
-
-// Connectors
-export type {
-  Connector,
-  ConnectorCapabilities,
-  ConnectorFile,
-  ConnectorFileDisposition,
-  ConnectorFileMode,
-  ConnectorMessage,
-  CommandHandler,
-  CommandUnsubscribe,
-  MessageContext,
-  MessageHandler,
-  MessageUnsubscribe,
-  PluginCommandDefinition,
-  PermissionAccess,
-  PermissionEntry,
-  PermissionDecision,
-  PermissionHandler,
-  PermissionKind,
-  PermissionRequestScope,
-  PermissionRequest,
-  SlashCommandEntry
-} from "./engine/modules/connectors/types.js";
-
-// Files
-export type { FileReference } from "./files/types.js";
-
-// Plugins
-export type {
-  PluginApi,
-  PluginInstance,
-  PluginModule,
-  PluginOnboardingApi,
-  PluginOnboardingResult
-} from "./engine/plugins/types.js";
-
+// Config
+export type { Config } from "./config/configTypes.js";
+export { AgentContext } from "./engine/agents/agentContext.js";
+export type { AgentDescriptor, AgentFetchStrategy } from "./engine/agents/ops/agentDescriptorTypes.js";
 // Agents
 export type {
-  AgentMessage,
-  AgentState,
-  AgentTokenEntry,
-  AgentTokenSize,
-  AgentTokenSnapshotSize,
-  AgentTokenStats,
-  AgentLifecycleState,
-  AgentHistoryRecord,
-  AgentHistoryAssistantRewriteRecord,
-  AgentHistoryRlmCompleteRecord,
-  AgentHistoryRlmStartRecord,
-  AgentHistoryRlmToolCallRecord,
-  AgentHistoryRlmToolResultRecord,
-  AgentInboxItem,
-  AgentInboxResult,
-  AgentPostTarget,
-  BackgroundAgentState
+    AgentHistoryAssistantRewriteRecord,
+    AgentHistoryRecord,
+    AgentHistoryRlmCompleteRecord,
+    AgentHistoryRlmStartRecord,
+    AgentHistoryRlmToolCallRecord,
+    AgentHistoryRlmToolResultRecord,
+    AgentInboxItem,
+    AgentInboxResult,
+    AgentLifecycleState,
+    AgentMessage,
+    AgentPostTarget,
+    AgentState,
+    AgentTokenEntry,
+    AgentTokenSize,
+    AgentTokenSnapshotSize,
+    AgentTokenStats,
+    BackgroundAgentState
 } from "./engine/agents/ops/agentTypes.js";
-export type { AgentDescriptor, AgentFetchStrategy } from "./engine/agents/ops/agentDescriptorTypes.js";
-export { AgentContext } from "./engine/agents/agentContext.js";
-
-// Inference
+// Apps
 export type {
-  InferenceClient,
-  InferenceProvider,
-  InferenceProviderOptions
-} from "./engine/modules/inference/types.js";
-
+    AppDescriptor,
+    AppManifest,
+    AppPermissions,
+    AppReviewDecision,
+    AppRule,
+    AppRuleSet
+} from "./engine/apps/appTypes.js";
+// Channels
+export type {
+    Channel,
+    ChannelMember,
+    ChannelMessage,
+    ChannelSignalData
+} from "./engine/channels/channelTypes.js";
+// Expose
+export type {
+    ExposeCreateInput,
+    ExposeEndpoint,
+    ExposeEndpointAuth,
+    ExposeMode,
+    ExposeProviderRegistrationApi,
+    ExposeTarget,
+    ExposeTunnelProvider,
+    ExposeUpdateInput
+} from "./engine/expose/exposeTypes.js";
+// Connectors
+export type {
+    CommandHandler,
+    CommandUnsubscribe,
+    Connector,
+    ConnectorCapabilities,
+    ConnectorFile,
+    ConnectorFileDisposition,
+    ConnectorFileMode,
+    ConnectorMessage,
+    MessageContext,
+    MessageHandler,
+    MessageUnsubscribe,
+    PermissionAccess,
+    PermissionDecision,
+    PermissionEntry,
+    PermissionHandler,
+    PermissionKind,
+    PermissionRequest,
+    PermissionRequestScope,
+    PluginCommandDefinition,
+    SlashCommandEntry
+} from "./engine/modules/connectors/types.js";
 // Images
 export type { ImageGenerationProvider } from "./engine/modules/images/types.js";
 
+// Inference
+export type {
+    InferenceClient,
+    InferenceProvider,
+    InferenceProviderOptions
+} from "./engine/modules/inference/types.js";
 // Tools
 export type {
-  ToolDefinition,
-  ToolResultContract,
-  ToolExecutionContext,
-  ToolExecutionResult,
-  ToolResultPrimitive,
-  ToolResultRow,
-  ToolResultShallowObject,
-  ToolResultOutcomeObject
+    ToolDefinition,
+    ToolExecutionContext,
+    ToolExecutionResult,
+    ToolResultContract,
+    ToolResultOutcomeObject,
+    ToolResultPrimitive,
+    ToolResultRow,
+    ToolResultShallowObject
 } from "./engine/modules/tools/types.js";
-
-// Skills
-export type { AgentSkill } from "./engine/skills/skillTypes.js";
-
-// Config
-export type { Config } from "./config/configTypes.js";
-
-// Storage
+// Permissions
+export type { SessionPermissions } from "./engine/permissions.js";
+// Plugins
 export type {
-  UserDbRecord,
-  UserConnectorKeyDbRecord
-} from "./storage/databaseTypes.js";
-
+    PluginApi,
+    PluginInstance,
+    PluginModule,
+    PluginOnboardingApi,
+    PluginOnboardingResult
+} from "./engine/plugins/types.js";
+// Scheduling
+export type { ExecGateDefinition } from "./engine/scheduling/execGateTypes.js";
 // Signals
 export type {
-  Signal,
-  DelayedSignal,
-  DelayedSignalCancelRepeatKeyInput,
-  DelayedSignalScheduleInput,
-  SignalGenerateInput,
-  SignalSource,
-  SignalSubscription,
-  SignalSubscribeInput,
-  SignalUnsubscribeInput
+    DelayedSignal,
+    DelayedSignalCancelRepeatKeyInput,
+    DelayedSignalScheduleInput,
+    Signal,
+    SignalGenerateInput,
+    SignalSource,
+    SignalSubscribeInput,
+    SignalSubscription,
+    SignalUnsubscribeInput
 } from "./engine/signals/signalTypes.js";
-
-// Channels
+// Skills
+export type { AgentSkill } from "./engine/skills/skillTypes.js";
+// Files
+export type { FileReference } from "./files/types.js";
+export type { SandboxPackageManager } from "./sandbox/sandboxPackageManagers.js";
+// Storage
 export type {
-  Channel,
-  ChannelMember,
-  ChannelMessage,
-  ChannelSignalData
-} from "./engine/channels/channelTypes.js";
-
-// Apps
-export type {
-  AppDescriptor,
-  AppManifest,
-  AppPermissions,
-  AppReviewDecision,
-  AppRule,
-  AppRuleSet
-} from "./engine/apps/appTypes.js";
-
-// Expose
-export type {
-  ExposeCreateInput,
-  ExposeEndpoint,
-  ExposeEndpointAuth,
-  ExposeMode,
-  ExposeProviderRegistrationApi,
-  ExposeTarget,
-  ExposeTunnelProvider,
-  ExposeUpdateInput
-} from "./engine/expose/exposeTypes.js";
+    UserConnectorKeyDbRecord,
+    UserDbRecord
+} from "./storage/databaseTypes.js";

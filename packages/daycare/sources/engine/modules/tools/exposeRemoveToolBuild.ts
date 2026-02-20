@@ -1,74 +1,72 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { Type, type Static } from "@sinclair/typebox";
+import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { Exposes } from "../../expose/exposes.js";
 
 const schema = Type.Object(
-  {
-    endpointId: Type.String({ minLength: 1 })
-  },
-  { additionalProperties: false }
+    {
+        endpointId: Type.String({ minLength: 1 })
+    },
+    { additionalProperties: false }
 );
 
 type ExposeRemoveArgs = Static<typeof schema>;
 
 const exposeRemoveResultSchema = Type.Object(
-  {
-    summary: Type.String(),
-    endpointId: Type.String()
-  },
-  { additionalProperties: false }
+    {
+        summary: Type.String(),
+        endpointId: Type.String()
+    },
+    { additionalProperties: false }
 );
 
 type ExposeRemoveResult = Static<typeof exposeRemoveResultSchema>;
 
 const exposeRemoveReturns: ToolResultContract<ExposeRemoveResult> = {
-  schema: exposeRemoveResultSchema,
-  toLLMText: (result) => result.summary
+    schema: exposeRemoveResultSchema,
+    toLLMText: (result) => result.summary
 };
 
 /**
  * Builds the expose_remove tool for deleting expose endpoints.
  * Expects: endpointId references an existing endpoint.
  */
-export function exposeRemoveToolBuild(
-  exposes: Pick<Exposes, "remove">
-): ToolDefinition {
-  return {
-    tool: {
-      name: "expose_remove",
-      description: "Remove an expose endpoint and tear down its tunnel.",
-      parameters: schema
-    },
-    returns: exposeRemoveReturns,
-    execute: async (args, _toolContext, toolCall) => {
-      const payload = args as ExposeRemoveArgs;
-      const endpointId = payload.endpointId.trim();
-      if (!endpointId) {
-        throw new Error("endpointId is required.");
-      }
+export function exposeRemoveToolBuild(exposes: Pick<Exposes, "remove">): ToolDefinition {
+    return {
+        tool: {
+            name: "expose_remove",
+            description: "Remove an expose endpoint and tear down its tunnel.",
+            parameters: schema
+        },
+        returns: exposeRemoveReturns,
+        execute: async (args, _toolContext, toolCall) => {
+            const payload = args as ExposeRemoveArgs;
+            const endpointId = payload.endpointId.trim();
+            if (!endpointId) {
+                throw new Error("endpointId is required.");
+            }
 
-      await exposes.remove(endpointId);
+            await exposes.remove(endpointId);
 
-      const summary = `Expose endpoint removed: ${endpointId}`;
-      const toolMessage: ToolResultMessage = {
-        role: "toolResult",
-        toolCallId: toolCall.id,
-        toolName: toolCall.name,
-        content: [{ type: "text", text: summary }],
-        details: { endpointId },
-        isError: false,
-        timestamp: Date.now()
-      };
+            const summary = `Expose endpoint removed: ${endpointId}`;
+            const toolMessage: ToolResultMessage = {
+                role: "toolResult",
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                content: [{ type: "text", text: summary }],
+                details: { endpointId },
+                isError: false,
+                timestamp: Date.now()
+            };
 
-      return {
-        toolMessage,
-        typedResult: {
-          summary,
-          endpointId
+            return {
+                toolMessage,
+                typedResult: {
+                    summary,
+                    endpointId
+                }
+            };
         }
-      };
-    }
-  };
+    };
 }

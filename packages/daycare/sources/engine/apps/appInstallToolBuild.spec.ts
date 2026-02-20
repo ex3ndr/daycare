@@ -3,111 +3,109 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { ToolResolver } from "../modules/toolResolver.js";
 import type { ToolExecutionContext } from "@/types";
-import type { Apps } from "./appManager.js";
+import { ToolResolver } from "../modules/toolResolver.js";
 import { appInstallToolBuild } from "./appInstallToolBuild.js";
+import type { Apps } from "./appManager.js";
 
 describe("appInstallToolBuild", () => {
-  let workspaceDir: string;
-  let sourceRoot: string;
+    let workspaceDir: string;
+    let sourceRoot: string;
 
-  beforeEach(async () => {
-    workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-install-tool-workspace-"));
-    sourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-install-tool-source-"));
-  });
+    beforeEach(async () => {
+        workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-install-tool-workspace-"));
+        sourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-install-tool-source-"));
+    });
 
-  afterEach(async () => {
-    await fs.rm(workspaceDir, { recursive: true, force: true });
-    await fs.rm(sourceRoot, { recursive: true, force: true });
-  });
+    afterEach(async () => {
+        await fs.rm(workspaceDir, { recursive: true, force: true });
+        await fs.rm(sourceRoot, { recursive: true, force: true });
+    });
 
-  it("installs app from source and refreshes app manager", async () => {
-    const sourceDir = path.join(sourceRoot, "github-reviewer");
-    await fs.mkdir(sourceDir, { recursive: true });
-    await fs.writeFile(
-      path.join(sourceDir, "APP.md"),
-      [
-        "---",
-        "name: github-reviewer",
-        "title: GitHub Reviewer",
-        "description: Reviews pull requests",
-        "---",
-        "",
-        "## System Prompt",
-        "",
-        "You are a focused PR review assistant."
-      ].join("\n")
-    );
-    await fs.writeFile(
-      path.join(sourceDir, "PERMISSIONS.md"),
-      [
-        "## Source Intent",
-        "",
-        "Review pull requests safely.",
-        "",
-        "## Rules",
-        "",
-        "### Allow",
-        "- Read files",
-        "",
-        "### Deny",
-        "- Delete files"
-      ].join("\n")
-    );
+    it("installs app from source and refreshes app manager", async () => {
+        const sourceDir = path.join(sourceRoot, "github-reviewer");
+        await fs.mkdir(sourceDir, { recursive: true });
+        await fs.writeFile(
+            path.join(sourceDir, "APP.md"),
+            [
+                "---",
+                "name: github-reviewer",
+                "title: GitHub Reviewer",
+                "description: Reviews pull requests",
+                "---",
+                "",
+                "## System Prompt",
+                "",
+                "You are a focused PR review assistant."
+            ].join("\n")
+        );
+        await fs.writeFile(
+            path.join(sourceDir, "PERMISSIONS.md"),
+            [
+                "## Source Intent",
+                "",
+                "Review pull requests safely.",
+                "",
+                "## Rules",
+                "",
+                "### Allow",
+                "- Read files",
+                "",
+                "### Deny",
+                "- Delete files"
+            ].join("\n")
+        );
 
-    const discover = vi.fn(async () => []);
-    const registerTools = vi.fn();
-    const apps = { discover, registerTools } as unknown as Apps;
-    const tool = appInstallToolBuild(apps);
+        const discover = vi.fn(async () => []);
+        const registerTools = vi.fn();
+        const apps = { discover, registerTools } as unknown as Apps;
+        const tool = appInstallToolBuild(apps);
 
-    const result = await tool.execute(
-      { source: sourceDir },
-      contextBuild(workspaceDir),
-      { id: "tool-1", name: "install_app" }
-    );
+        const result = await tool.execute({ source: sourceDir }, contextBuild(workspaceDir), {
+            id: "tool-1",
+            name: "install_app"
+        });
 
-    expect(result.toolMessage.isError).toBe(false);
-    expect(contentText(result.toolMessage.content)).toContain('Installed app "github-reviewer"');
-    expect(discover).toHaveBeenCalledTimes(1);
-    expect(registerTools).toHaveBeenCalledTimes(1);
-  });
+        expect(result.toolMessage.isError).toBe(false);
+        expect(contentText(result.toolMessage.content)).toContain('Installed app "github-reviewer"');
+        expect(discover).toHaveBeenCalledTimes(1);
+        expect(registerTools).toHaveBeenCalledTimes(1);
+    });
 });
 
 function contextBuild(workspaceDir: string): ToolExecutionContext {
-  const toolResolver = new ToolResolver();
-  return {
-    connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-    fileStore: null as unknown as ToolExecutionContext["fileStore"],
-    auth: null as unknown as ToolExecutionContext["auth"],
-    logger: console as unknown as ToolExecutionContext["logger"],
-    assistant: null,
-    permissions: {
-      workingDir: workspaceDir,
-      writeDirs: [workspaceDir],
-      readDirs: [workspaceDir],
-      network: false,
-      events: false
-    },
-    agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
-    agentContext: null as unknown as ToolExecutionContext["agentContext"],
-    source: "test",
-    messageContext: {},
-    agentSystem: {
-      config: { current: { workspaceDir } },
-      toolResolver
-    } as unknown as ToolExecutionContext["agentSystem"],
-    heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
-  };
+    const toolResolver = new ToolResolver();
+    return {
+        connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
+        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        auth: null as unknown as ToolExecutionContext["auth"],
+        logger: console as unknown as ToolExecutionContext["logger"],
+        assistant: null,
+        permissions: {
+            workingDir: workspaceDir,
+            writeDirs: [workspaceDir],
+            readDirs: [workspaceDir],
+            network: false,
+            events: false
+        },
+        agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
+        agentContext: null as unknown as ToolExecutionContext["agentContext"],
+        source: "test",
+        messageContext: {},
+        agentSystem: {
+            config: { current: { workspaceDir } },
+            toolResolver
+        } as unknown as ToolExecutionContext["agentSystem"],
+        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+    };
 }
 
 function contentText(content: unknown): string {
-  if (!Array.isArray(content)) {
-    return "";
-  }
-  return content
-    .filter((entry) => typeof entry === "object" && entry !== null && (entry as { type?: unknown }).type === "text")
-    .map((entry) => (entry as { text?: string }).text ?? "")
-    .join("\n");
+    if (!Array.isArray(content)) {
+        return "";
+    }
+    return content
+        .filter((entry) => typeof entry === "object" && entry !== null && (entry as { type?: unknown }).type === "text")
+        .map((entry) => (entry as { text?: string }).text ?? "")
+        .join("\n");
 }

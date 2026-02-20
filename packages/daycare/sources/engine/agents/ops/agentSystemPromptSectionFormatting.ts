@@ -7,22 +7,20 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders message formatting and delivery guidance from connector capabilities.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionFormatting(
-  context: AgentSystemPromptContext = {}
-): Promise<string> {
-  const descriptor = context.descriptor;
-  const isForeground = descriptor?.type === "user";
-  const connector = isForeground ? descriptor.connector : "";
-  const messageFormatPrompt = connector
-    ? (context.agentSystem?.connectorRegistry?.get(connector)?.capabilities.messageFormatPrompt ?? "")
-    : "";
-  const featuresSay = isForeground && (context.agentSystem?.config?.current.features.say ?? false);
-  const template = await agentPromptBundledRead("SYSTEM_FORMATTING.md");
-  const section = Handlebars.compile(template)({
-    isForeground,
-    featuresSay,
-    messageFormatPrompt,
-    workspace: context.permissions?.workingDir ?? "unknown"
-  });
-  return section.trim();
+export async function agentSystemPromptSectionFormatting(context: AgentSystemPromptContext = {}): Promise<string> {
+    const descriptor = context.descriptor;
+    const isForeground = descriptor?.type === "user";
+    const connector = isForeground ? descriptor.connector : "";
+    const messageFormatPrompt = connector
+        ? (context.agentSystem?.connectorRegistry?.get(connector)?.capabilities.messageFormatPrompt ?? "")
+        : "";
+    const featuresSay = isForeground && (context.agentSystem?.config?.current.features.say ?? false);
+    const template = await agentPromptBundledRead("SYSTEM_FORMATTING.md");
+    const section = Handlebars.compile(template)({
+        isForeground,
+        featuresSay,
+        messageFormatPrompt,
+        workspace: context.permissions?.workingDir ?? "unknown"
+    });
+    return section.trim();
 }

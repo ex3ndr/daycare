@@ -6,38 +6,38 @@ import { permissionAccessParse } from "./permissionAccessParse.js";
  * Expects: entries are @network, @events, @workspace, @read:<path>, or @write:<path>.
  */
 export function permissionTagsNormalize(value: unknown): string[] {
-  if (!value) {
-    return [];
-  }
-  const entries = Array.isArray(value) ? value : [value];
-  const normalized: string[] = [];
-  const seen = new Set<string>();
+    if (!value) {
+        return [];
+    }
+    const entries = Array.isArray(value) ? value : [value];
+    const normalized: string[] = [];
+    const seen = new Set<string>();
 
-  for (const entry of entries) {
-    if (typeof entry !== "string") {
-      continue;
+    for (const entry of entries) {
+        if (typeof entry !== "string") {
+            continue;
+        }
+        const trimmed = entry.trim();
+        if (!trimmed) {
+            continue;
+        }
+        const access: PermissionAccess = permissionAccessParse(trimmed);
+        let tag: string;
+        if (access.kind === "network") {
+            tag = "@network";
+        } else if (access.kind === "events") {
+            tag = "@events";
+        } else if (access.kind === "workspace") {
+            tag = "@workspace";
+        } else {
+            tag = `${access.kind === "read" ? "@read" : "@write"}:${access.path}`;
+        }
+        if (seen.has(tag)) {
+            continue;
+        }
+        seen.add(tag);
+        normalized.push(tag);
     }
-    const trimmed = entry.trim();
-    if (!trimmed) {
-      continue;
-    }
-    const access: PermissionAccess = permissionAccessParse(trimmed);
-    let tag: string;
-    if (access.kind === "network") {
-      tag = "@network";
-    } else if (access.kind === "events") {
-      tag = "@events";
-    } else if (access.kind === "workspace") {
-      tag = "@workspace";
-    } else {
-      tag = `${access.kind === "read" ? "@read" : "@write"}:${access.path}`;
-    }
-    if (seen.has(tag)) {
-      continue;
-    }
-    seen.add(tag);
-    normalized.push(tag);
-  }
 
-  return normalized;
+    return normalized;
 }

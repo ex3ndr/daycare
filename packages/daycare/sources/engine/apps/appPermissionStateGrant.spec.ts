@@ -9,32 +9,32 @@ import { appPermissionStatePathBuild } from "./appPermissionStatePathBuild.js";
 import { appPermissionStateRead } from "./appPermissionStateRead.js";
 
 describe("appPermissionStateGrant", () => {
-  let workspaceDir: string;
+    let workspaceDir: string;
 
-  beforeEach(async () => {
-    workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-state-"));
-  });
-
-  afterEach(async () => {
-    await fs.rm(workspaceDir, { recursive: true, force: true });
-  });
-
-  it("persists shared app permissions in app workspace state.json", async () => {
-    await appPermissionStateGrant(workspaceDir, "github-reviewer", { kind: "workspace" });
-    await appPermissionStateGrant(workspaceDir, "github-reviewer", { kind: "network" });
-    await appPermissionStateGrant(workspaceDir, "github-reviewer", {
-      kind: "read",
-      path: "/tmp/daycare-app-read"
-    });
-    await appPermissionStateGrant(workspaceDir, "github-reviewer", {
-      kind: "network"
+    beforeEach(async () => {
+        workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-state-"));
     });
 
-    const statePath = appPermissionStatePathBuild(workspaceDir, "github-reviewer");
-    const stat = await fs.stat(statePath);
-    expect(stat.isFile()).toBe(true);
+    afterEach(async () => {
+        await fs.rm(workspaceDir, { recursive: true, force: true });
+    });
 
-    const tags = await appPermissionStateRead(workspaceDir, "github-reviewer");
-    expect(tags).toEqual(["@workspace", "@network", "@read:/tmp/daycare-app-read"]);
-  });
+    it("persists shared app permissions in app workspace state.json", async () => {
+        await appPermissionStateGrant(workspaceDir, "github-reviewer", { kind: "workspace" });
+        await appPermissionStateGrant(workspaceDir, "github-reviewer", { kind: "network" });
+        await appPermissionStateGrant(workspaceDir, "github-reviewer", {
+            kind: "read",
+            path: "/tmp/daycare-app-read"
+        });
+        await appPermissionStateGrant(workspaceDir, "github-reviewer", {
+            kind: "network"
+        });
+
+        const statePath = appPermissionStatePathBuild(workspaceDir, "github-reviewer");
+        const stat = await fs.stat(statePath);
+        expect(stat.isFile()).toBe(true);
+
+        const tags = await appPermissionStateRead(workspaceDir, "github-reviewer");
+        expect(tags).toEqual(["@workspace", "@network", "@read:/tmp/daycare-app-read"]);
+    });
 });

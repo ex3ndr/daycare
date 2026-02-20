@@ -85,6 +85,8 @@ See `doc/internals/config.md` and `doc/internals/auth.md` for exact schema/behav
 
 ```sh
 yarn build        # build daycare package
+yarn lint         # biome check (format + lint)
+yarn lint:fix     # biome check --write
 yarn test         # run workspace tests
 yarn typecheck    # typecheck workspaces
 yarn release      # release daycare-cli (no package-lock, test/build, tag, publish, rollback)

@@ -1,182 +1,181 @@
-import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { type Static, Type } from "@sinclair/typebox";
 import { z } from "zod";
-
-import { definePlugin } from "../../engine/plugins/types.js";
 import type { ToolResultContract } from "@/types";
+import { definePlugin } from "../../engine/plugins/types.js";
 
 const settingsSchema = z
-  .object({
-    toolName: z.string().min(1).optional(),
-    model: z.string().min(1).optional()
-  })
-  .passthrough();
+    .object({
+        toolName: z.string().min(1).optional(),
+        model: z.string().min(1).optional()
+    })
+    .passthrough();
 
 const searchSchema = Type.Object(
-  {
-    query: Type.String({ minLength: 1, description: "The search query" })
-  },
-  { additionalProperties: false }
+    {
+        query: Type.String({ minLength: 1, description: "The search query" })
+    },
+    { additionalProperties: false }
 );
 
 type SearchArgs = Static<typeof searchSchema>;
 
 const searchResultSchema = Type.Object(
-  {
-    summary: Type.String(),
-    query: Type.String(),
-    citationCount: Type.Number(),
-    model: Type.String()
-  },
-  { additionalProperties: false }
+    {
+        summary: Type.String(),
+        query: Type.String(),
+        citationCount: Type.Number(),
+        model: Type.String()
+    },
+    { additionalProperties: false }
 );
 
 type SearchResult = Static<typeof searchResultSchema>;
 
 const searchReturns: ToolResultContract<SearchResult> = {
-  schema: searchResultSchema,
-  toLLMText: (result) => result.summary
+    schema: searchResultSchema,
+    toLLMText: (result) => result.summary
 };
 
 type PerplexityResponse = {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-  citations?: string[];
+    choices?: Array<{
+        message?: {
+            content?: string;
+        };
+    }>;
+    citations?: string[];
 };
 
 async function validateApiKey(apiKey: string): Promise<void> {
-  const response = await fetch("https://api.perplexity.ai/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "sonar",
-      messages: [
-        {
-          role: "user",
-          content: "Test request."
-        }
-      ]
-    })
-  });
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: "sonar",
+            messages: [
+                {
+                    role: "user",
+                    content: "Test request."
+                }
+            ]
+        })
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Perplexity validation failed: ${response.status} - ${errorText}`);
-  }
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Perplexity validation failed: ${response.status} - ${errorText}`);
+    }
 }
 
 export const plugin = definePlugin({
-  settingsSchema,
-  onboarding: async (api) => {
-    const existingKey = await api.auth.getApiKey(api.instanceId);
-    if (existingKey) {
-      try {
-        await validateApiKey(existingKey);
-        api.note("Using existing Perplexity credentials.", "Setup");
-        return { settings: {} };
-      } catch (error) {
-        api.note("Existing Perplexity key failed validation, prompting for a new key.", "Setup");
-      }
-    }
-
-    const apiKey = await api.prompt.input({
-      message: "Perplexity API key"
-    });
-    if (!apiKey) {
-      return null;
-    }
-    await validateApiKey(apiKey);
-    await api.auth.setApiKey(api.instanceId, apiKey);
-    return { settings: {} };
-  },
-  create: (api) => {
-    const toolName = api.settings.toolName ?? "perplexity_search";
-    const model = api.settings.model ?? "sonar";
-    const instanceId = api.instance.instanceId;
-
-    return {
-      load: async () => {
-        api.registrar.registerTool({
-          tool: {
-            name: toolName,
-            description:
-              "Search the web using Perplexity AI. Returns an AI-generated answer with citations.",
-            parameters: searchSchema
-          },
-          returns: searchReturns,
-          execute: async (args, toolContext, toolCall) => {
-            if (!toolContext.permissions.network) {
-              throw new Error("Network access not granted. Request @network permission.");
+    settingsSchema,
+    onboarding: async (api) => {
+        const existingKey = await api.auth.getApiKey(api.instanceId);
+        if (existingKey) {
+            try {
+                await validateApiKey(existingKey);
+                api.note("Using existing Perplexity credentials.", "Setup");
+                return { settings: {} };
+            } catch (error) {
+                api.note("Existing Perplexity key failed validation, prompting for a new key.", "Setup");
             }
-            const payload = args as SearchArgs;
-            const apiKey = await api.auth.getApiKey(instanceId);
-            if (!apiKey) {
-              throw new Error("Missing perplexity-search apiKey in auth store");
-            }
+        }
 
-            const response = await fetch("https://api.perplexity.ai/chat/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`
-              },
-              body: JSON.stringify({
-                model,
-                messages: [
-                  {
-                    role: "user",
-                    content: payload.query
-                  }
-                ]
-              })
-            });
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`Perplexity search failed: ${response.status} - ${errorText}`);
-            }
-
-            const data = (await response.json()) as PerplexityResponse;
-            const content = data.choices?.[0]?.message?.content ?? "No results found.";
-            const citations = data.citations ?? [];
-
-            let text = content;
-            if (citations.length > 0) {
-              text += "\n\nSources:\n" + citations.map((url, i) => `${i + 1}. ${url}`).join("\n");
-            }
-
-            const summary = text;
-            const toolMessage: ToolResultMessage = {
-              role: "toolResult",
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              content: [{ type: "text", text: summary }],
-              details: { citationsCount: citations.length },
-              isError: false,
-              timestamp: Date.now()
-            };
-
-            return {
-              toolMessage,
-              typedResult: {
-                summary,
-                query: payload.query,
-                citationCount: citations.length,
-                model
-              }
-            };
-          }
+        const apiKey = await api.prompt.input({
+            message: "Perplexity API key"
         });
-      },
-      unload: async () => {
-        api.registrar.unregisterTool(toolName);
-      }
-    };
-  }
+        if (!apiKey) {
+            return null;
+        }
+        await validateApiKey(apiKey);
+        await api.auth.setApiKey(api.instanceId, apiKey);
+        return { settings: {} };
+    },
+    create: (api) => {
+        const toolName = api.settings.toolName ?? "perplexity_search";
+        const model = api.settings.model ?? "sonar";
+        const instanceId = api.instance.instanceId;
+
+        return {
+            load: async () => {
+                api.registrar.registerTool({
+                    tool: {
+                        name: toolName,
+                        description:
+                            "Search the web using Perplexity AI. Returns an AI-generated answer with citations.",
+                        parameters: searchSchema
+                    },
+                    returns: searchReturns,
+                    execute: async (args, toolContext, toolCall) => {
+                        if (!toolContext.permissions.network) {
+                            throw new Error("Network access not granted. Request @network permission.");
+                        }
+                        const payload = args as SearchArgs;
+                        const apiKey = await api.auth.getApiKey(instanceId);
+                        if (!apiKey) {
+                            throw new Error("Missing perplexity-search apiKey in auth store");
+                        }
+
+                        const response = await fetch("https://api.perplexity.ai/chat/completions", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model,
+                                messages: [
+                                    {
+                                        role: "user",
+                                        content: payload.query
+                                    }
+                                ]
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`Perplexity search failed: ${response.status} - ${errorText}`);
+                        }
+
+                        const data = (await response.json()) as PerplexityResponse;
+                        const content = data.choices?.[0]?.message?.content ?? "No results found.";
+                        const citations = data.citations ?? [];
+
+                        let text = content;
+                        if (citations.length > 0) {
+                            text += "\n\nSources:\n" + citations.map((url, i) => `${i + 1}. ${url}`).join("\n");
+                        }
+
+                        const summary = text;
+                        const toolMessage: ToolResultMessage = {
+                            role: "toolResult",
+                            toolCallId: toolCall.id,
+                            toolName: toolCall.name,
+                            content: [{ type: "text", text: summary }],
+                            details: { citationsCount: citations.length },
+                            isError: false,
+                            timestamp: Date.now()
+                        };
+
+                        return {
+                            toolMessage,
+                            typedResult: {
+                                summary,
+                                query: payload.query,
+                                citationCount: citations.length,
+                                model
+                            }
+                        };
+                    }
+                });
+            },
+            unload: async () => {
+                api.registrar.unregisterTool(toolName);
+            }
+        };
+    }
 });

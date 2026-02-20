@@ -1,411 +1,406 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { FileStore } from "../../files/store.js";
 import type { AgentDescriptor, MessageContext, PermissionRequest } from "@/types";
+import type { FileStore } from "../../files/store.js";
 
 type Handler = (payload: unknown) => void | Promise<void>;
 type MockFn = ReturnType<typeof vi.fn>;
 type TelegramBotMock = {
-  handlers: Map<string, Handler[]>;
-  sendMessage: MockFn;
-  setMyCommands: MockFn;
-  sendPhoto: MockFn;
-  sendVideo: MockFn;
-  sendDocument: MockFn;
-  editMessageText: MockFn;
-  answerCallbackQuery: MockFn;
-  startPolling: MockFn;
-  deleteWebHook: MockFn;
+    handlers: Map<string, Handler[]>;
+    sendMessage: MockFn;
+    setMyCommands: MockFn;
+    sendPhoto: MockFn;
+    sendVideo: MockFn;
+    sendDocument: MockFn;
+    editMessageText: MockFn;
+    answerCallbackQuery: MockFn;
+    startPolling: MockFn;
+    deleteWebHook: MockFn;
 };
 
 const telegramInstances: TelegramBotMock[] = [];
 
 vi.mock("node-telegram-bot-api", () => {
-  class TelegramBotMockClass {
-    handlers = new Map<string, Handler[]>();
-    sendMessage = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
-    setMyCommands = vi.fn(async () => true);
-    sendPhoto = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
-    sendVideo = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
-    sendDocument = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
-    editMessageText = vi.fn(async () => undefined);
-    answerCallbackQuery = vi.fn(async () => undefined);
-    isPolling = vi.fn(() => false);
-    startPolling = vi.fn(async () => undefined);
-    stopPolling = vi.fn(async () => undefined);
-    deleteWebHook = vi.fn(async () => undefined);
+    class TelegramBotMockClass {
+        handlers = new Map<string, Handler[]>();
+        sendMessage = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
+        setMyCommands = vi.fn(async () => true);
+        sendPhoto = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
+        sendVideo = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
+        sendDocument = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
+        editMessageText = vi.fn(async () => undefined);
+        answerCallbackQuery = vi.fn(async () => undefined);
+        isPolling = vi.fn(() => false);
+        startPolling = vi.fn(async () => undefined);
+        stopPolling = vi.fn(async () => undefined);
+        deleteWebHook = vi.fn(async () => undefined);
 
-    constructor() {
-      telegramInstances.push(this as unknown as TelegramBotMock);
+        constructor() {
+            telegramInstances.push(this as unknown as TelegramBotMock);
+        }
+
+        on(event: string, handler: Handler): void {
+            const handlers = this.handlers.get(event) ?? [];
+            handlers.push(handler);
+            this.handlers.set(event, handlers);
+        }
+
+        processUpdate(_update: unknown): void {}
     }
 
-    on(event: string, handler: Handler): void {
-      const handlers = this.handlers.get(event) ?? [];
-      handlers.push(handler);
-      this.handlers.set(event, handlers);
-    }
-
-    processUpdate(_update: unknown): void {}
-  }
-
-  return { default: TelegramBotMockClass };
+    return { default: TelegramBotMockClass };
 });
 
 import { TelegramConnector } from "./connector.js";
 
 describe("TelegramConnector permissions", () => {
-  beforeEach(() => {
-    telegramInstances.length = 0;
-  });
-
-  it("edits the permission prompt when approved", async () => {
-    const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-    const connector = new TelegramConnector({
-      token: "token",
-      allowedUids: ["123"],
-      polling: false,
-      clearWebhook: false,
-      statePath: null,
-      fileStore,
-      dataDir: "/tmp",
-      enableGracefulShutdown: false
+    beforeEach(() => {
+        telegramInstances.length = 0;
     });
 
-    const request: PermissionRequest = {
-      token: "perm-1",
-      agentId: "agent-1",
-      reason: "Need read access",
-      message: "Permission request",
-      permissions: [{ permission: "@read:/tmp", access: { kind: "read", path: "/tmp" } }],
-      requester: {
-        id: "agent-1",
-        type: "subagent",
-        label: "file-checker",
-        kind: "background"
-      }
-    };
-    const context: MessageContext = { messageId: "msg-1" };
-    const descriptor: AgentDescriptor = {
-      type: "user",
-      connector: "telegram",
-      userId: "123",
-      channelId: "123"
-    };
-    const permissionHandler = vi.fn(async () => undefined);
-    connector.onPermission(permissionHandler);
+    it("edits the permission prompt when approved", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
 
-    await connector.requestPermission("123", request, context, descriptor);
+        const request: PermissionRequest = {
+            token: "perm-1",
+            agentId: "agent-1",
+            reason: "Need read access",
+            message: "Permission request",
+            permissions: [{ permission: "@read:/tmp", access: { kind: "read", path: "/tmp" } }],
+            requester: {
+                id: "agent-1",
+                type: "subagent",
+                label: "file-checker",
+                kind: "background"
+            }
+        };
+        const context: MessageContext = { messageId: "msg-1" };
+        const descriptor: AgentDescriptor = {
+            type: "user",
+            connector: "telegram",
+            userId: "123",
+            channelId: "123"
+        };
+        const permissionHandler = vi.fn(async () => undefined);
+        connector.onPermission(permissionHandler);
 
-    const bot = telegramInstances[0];
-    expect(bot).toBeTruthy();
-    expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
-    const call = bot!.sendMessage.mock.calls[0];
-    expect(call).toBeTruthy();
-    const options = call?.[2] as {
-      parse_mode?: string;
-      reply_markup?: { inline_keyboard?: Array<Array<{ text?: string }>> };
-    };
-    expect(options.parse_mode).toBe("HTML");
-    expect(options.reply_markup?.inline_keyboard?.[0]?.[0]?.text).toBe("Allow");
+        await connector.requestPermission("123", request, context, descriptor);
 
-    const handler = bot!.handlers.get("callback_query")?.[0];
-    expect(handler).toBeTruthy();
-    await handler?.({
-      id: "cb-1",
-      from: { id: 123 },
-      data: "perm:allow:perm-1",
-      message: { message_id: 44, chat: { id: 123 } }
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const call = bot!.sendMessage.mock.calls[0];
+        expect(call).toBeTruthy();
+        const options = call?.[2] as {
+            parse_mode?: string;
+            reply_markup?: { inline_keyboard?: Array<Array<{ text?: string }>> };
+        };
+        expect(options.parse_mode).toBe("HTML");
+        expect(options.reply_markup?.inline_keyboard?.[0]?.[0]?.text).toBe("Allow");
+
+        const handler = bot!.handlers.get("callback_query")?.[0];
+        expect(handler).toBeTruthy();
+        await handler?.({
+            id: "cb-1",
+            from: { id: 123 },
+            data: "perm:allow:perm-1",
+            message: { message_id: 44, chat: { id: 123 } }
+        });
+
+        expect(bot!.editMessageText).toHaveBeenCalledTimes(1);
+        const editCall = bot!.editMessageText.mock.calls[0];
+        expect(editCall).toBeTruthy();
+        const editText = editCall?.[0];
+        const editOptions = editCall?.[1];
+        expect(String(editText)).toContain("Permission granted");
+        expect(editOptions).toMatchObject({
+            chat_id: 123,
+            message_id: 44,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: [] }
+        });
+        expect(permissionHandler).toHaveBeenCalledTimes(1);
+        expect(permissionHandler).toHaveBeenCalledWith(
+            {
+                token: "perm-1",
+                agentId: "agent-1",
+                approved: true,
+                permissions: [{ permission: "@read:/tmp", access: { kind: "read", path: "/tmp" } }]
+            },
+            context,
+            descriptor
+        );
     });
 
-    expect(bot!.editMessageText).toHaveBeenCalledTimes(1);
-    const editCall = bot!.editMessageText.mock.calls[0];
-    expect(editCall).toBeTruthy();
-    const editText = editCall?.[0];
-    const editOptions = editCall?.[1];
-    expect(String(editText)).toContain("Permission granted");
-    expect(editOptions).toMatchObject({
-      chat_id: 123,
-      message_id: 44,
-      parse_mode: "HTML",
-      reply_markup: { inline_keyboard: [] }
+    it("renders scope with human-readable labels", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        const request: PermissionRequest = {
+            token: "perm-1",
+            agentId: "agent-1",
+            reason: "Need network access",
+            message: "Permission request",
+            permissions: [{ permission: "@network", access: { kind: "network" } }],
+            scope: "now",
+            requester: {
+                id: "agent-1",
+                type: "app",
+                label: "RuTracker",
+                kind: "background"
+            }
+        };
+        const context: MessageContext = { messageId: "msg-1" };
+        const descriptor: AgentDescriptor = {
+            type: "user",
+            connector: "telegram",
+            userId: "123",
+            channelId: "123"
+        };
+
+        await connector.requestPermission("123", request, context, descriptor);
+
+        const bot = telegramInstances[0];
+        const call = bot?.sendMessage.mock.calls[0];
+        expect(call).toBeTruthy();
+        expect(String(call?.[1])).toContain("Scope");
+        expect(String(call?.[1])).toContain("One time");
     });
-    expect(permissionHandler).toHaveBeenCalledTimes(1);
-    expect(permissionHandler).toHaveBeenCalledWith(
-      {
-        token: "perm-1",
-        agentId: "agent-1",
-        approved: true,
-        permissions: [{ permission: "@read:/tmp", access: { kind: "read", path: "/tmp" } }]
-      },
-      context,
-      descriptor
-    );
-  });
-
-  it("renders scope with human-readable labels", async () => {
-    const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-    const connector = new TelegramConnector({
-      token: "token",
-      allowedUids: ["123"],
-      polling: false,
-      clearWebhook: false,
-      statePath: null,
-      fileStore,
-      dataDir: "/tmp",
-      enableGracefulShutdown: false
-    });
-
-    const request: PermissionRequest = {
-      token: "perm-1",
-      agentId: "agent-1",
-      reason: "Need network access",
-      message: "Permission request",
-      permissions: [{ permission: "@network", access: { kind: "network" } }],
-      scope: "now",
-      requester: {
-        id: "agent-1",
-        type: "app",
-        label: "RuTracker",
-        kind: "background"
-      }
-    };
-    const context: MessageContext = { messageId: "msg-1" };
-    const descriptor: AgentDescriptor = {
-      type: "user",
-      connector: "telegram",
-      userId: "123",
-      channelId: "123"
-    };
-
-    await connector.requestPermission("123", request, context, descriptor);
-
-    const bot = telegramInstances[0];
-    const call = bot?.sendMessage.mock.calls[0];
-    expect(call).toBeTruthy();
-    expect(String(call?.[1])).toContain("Scope");
-    expect(String(call?.[1])).toContain("One time");
-  });
 });
 
 describe("TelegramConnector commands", () => {
-  beforeEach(() => {
-    telegramInstances.length = 0;
-  });
-
-  it("routes /reset to command handlers", async () => {
-    const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-    const connector = new TelegramConnector({
-      token: "token",
-      allowedUids: ["123"],
-      polling: false,
-      clearWebhook: false,
-      statePath: null,
-      fileStore,
-      dataDir: "/tmp",
-      enableGracefulShutdown: false
+    beforeEach(() => {
+        telegramInstances.length = 0;
     });
 
-    const messageHandlerMock = vi.fn(async (_message, _context, _descriptor) => undefined);
-    const commandHandler = vi.fn(async (_command, _context, _descriptor) => undefined);
-    connector.onMessage(messageHandlerMock);
-    connector.onCommand(commandHandler);
+    it("routes /reset to command handlers", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
 
-    const bot = telegramInstances[0];
-    expect(bot).toBeTruthy();
-    const botMessageHandler = bot!.handlers.get("message")?.[0];
-    await botMessageHandler?.({
-      message_id: 55,
-      chat: { id: 123, type: "private" },
-      from: { id: 123 },
-      text: "/reset"
-    });
+        const messageHandlerMock = vi.fn(async (_message, _context, _descriptor) => undefined);
+        const commandHandler = vi.fn(async (_command, _context, _descriptor) => undefined);
+        connector.onMessage(messageHandlerMock);
+        connector.onCommand(commandHandler);
 
-    expect(messageHandlerMock).not.toHaveBeenCalled();
-    expect(commandHandler).toHaveBeenCalledTimes(1);
-    const [command, context, descriptor] = commandHandler.mock.calls[0] as [
-      string,
-      MessageContext,
-      AgentDescriptor
-    ];
-    expect(command).toBe("/reset");
-    expect(context).toMatchObject({ messageId: "55" });
-    expect(descriptor).toMatchObject({
-      type: "user",
-      connector: "telegram",
-      channelId: "123",
-      userId: "123"
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        await botMessageHandler?.({
+            message_id: 55,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            text: "/reset"
+        });
+
+        expect(messageHandlerMock).not.toHaveBeenCalled();
+        expect(commandHandler).toHaveBeenCalledTimes(1);
+        const [command, context, descriptor] = commandHandler.mock.calls[0] as [
+            string,
+            MessageContext,
+            AgentDescriptor
+        ];
+        expect(command).toBe("/reset");
+        expect(context).toMatchObject({ messageId: "55" });
+        expect(descriptor).toMatchObject({
+            type: "user",
+            connector: "telegram",
+            channelId: "123",
+            userId: "123"
+        });
     });
-  });
 });
 
 describe("TelegramConnector startup", () => {
-  beforeEach(() => {
-    telegramInstances.length = 0;
-  });
-
-  it("does not register slash commands before command sync starts", async () => {
-    const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-    new TelegramConnector({
-      token: "token",
-      allowedUids: ["123"],
-      polling: false,
-      clearWebhook: false,
-      statePath: null,
-      fileStore,
-      dataDir: "/tmp",
-      enableGracefulShutdown: false
+    beforeEach(() => {
+        telegramInstances.length = 0;
     });
 
-    await Promise.resolve();
+    it("does not register slash commands before command sync starts", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
 
-    const bot = telegramInstances[0];
-    expect(bot).toBeTruthy();
-    expect(bot!.setMyCommands).not.toHaveBeenCalled();
-  });
+        await Promise.resolve();
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.setMyCommands).not.toHaveBeenCalled();
+    });
 });
 
 describe("TelegramConnector command updates", () => {
-  beforeEach(() => {
-    telegramInstances.length = 0;
-  });
+    beforeEach(() => {
+        telegramInstances.length = 0;
+    });
 
-  it("debounces setMyCommands updates by 1 second", async () => {
-    vi.useFakeTimers();
-    try {
-      const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-      const connector = new TelegramConnector({
-        token: "token",
-        allowedUids: ["123"],
-        polling: false,
-        clearWebhook: false,
-        statePath: null,
-        fileStore,
-        dataDir: "/tmp",
-        enableGracefulShutdown: false
-      });
-      const bot = telegramInstances[0];
-      expect(bot).toBeTruthy();
+    it("debounces setMyCommands updates by 1 second", async () => {
+        vi.useFakeTimers();
+        try {
+            const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+            const connector = new TelegramConnector({
+                token: "token",
+                allowedUids: ["123"],
+                polling: false,
+                clearWebhook: false,
+                statePath: null,
+                fileStore,
+                dataDir: "/tmp",
+                enableGracefulShutdown: false
+            });
+            const bot = telegramInstances[0];
+            expect(bot).toBeTruthy();
 
-      connector.updateCommands([
-        { command: "reset", description: "Reset the current conversation." }
-      ]);
-      await vi.advanceTimersByTimeAsync(1000);
-      expect(bot!.setMyCommands).not.toHaveBeenCalled();
+            connector.updateCommands([{ command: "reset", description: "Reset the current conversation." }]);
+            await vi.advanceTimersByTimeAsync(1000);
+            expect(bot!.setMyCommands).not.toHaveBeenCalled();
 
-      connector.commandSyncStart();
-      connector.updateCommands([
-        { command: "reset", description: "Reset the current conversation." }
-      ]);
-      connector.updateCommands([
-        { command: "reset", description: "Reset the current conversation." },
-        { command: "upgrade", description: "Upgrade daycare to latest version" }
-      ]);
+            connector.commandSyncStart();
+            connector.updateCommands([{ command: "reset", description: "Reset the current conversation." }]);
+            connector.updateCommands([
+                { command: "reset", description: "Reset the current conversation." },
+                { command: "upgrade", description: "Upgrade daycare to latest version" }
+            ]);
 
-      await vi.advanceTimersByTimeAsync(999);
-      expect(bot!.setMyCommands).not.toHaveBeenCalled();
+            await vi.advanceTimersByTimeAsync(999);
+            expect(bot!.setMyCommands).not.toHaveBeenCalled();
 
-      await vi.advanceTimersByTimeAsync(1);
-      expect(bot!.setMyCommands).toHaveBeenCalledTimes(1);
-      expect(bot!.setMyCommands).toHaveBeenCalledWith(
-        [
-          {
-            command: "reset",
-            description: "Reset the current conversation."
-          },
-          {
-            command: "upgrade",
-            description: "Upgrade daycare to latest version"
-          }
-        ],
-        {
-          scope: {
-            type: "all_private_chats"
-          }
+            await vi.advanceTimersByTimeAsync(1);
+            expect(bot!.setMyCommands).toHaveBeenCalledTimes(1);
+            expect(bot!.setMyCommands).toHaveBeenCalledWith(
+                [
+                    {
+                        command: "reset",
+                        description: "Reset the current conversation."
+                    },
+                    {
+                        command: "upgrade",
+                        description: "Upgrade daycare to latest version"
+                    }
+                ],
+                {
+                    scope: {
+                        type: "all_private_chats"
+                    }
+                }
+            );
+
+            await connector.shutdown("test");
+        } finally {
+            vi.useRealTimers();
         }
-      );
-
-      await connector.shutdown("test");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+    });
 });
 
 describe("TelegramConnector polling", () => {
-  beforeEach(() => {
-    telegramInstances.length = 0;
-  });
-
-  it("clears the webhook on polling conflict without local retry", async () => {
-    const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-    const connector = new TelegramConnector({
-      token: "token",
-      allowedUids: ["123"],
-      polling: false,
-      clearWebhook: false,
-      statePath: null,
-      fileStore,
-      dataDir: "/tmp",
-      enableGracefulShutdown: false
+    beforeEach(() => {
+        telegramInstances.length = 0;
     });
 
-    const bot = telegramInstances[0];
-    expect(bot).toBeTruthy();
+    it("clears the webhook on polling conflict without local retry", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
 
-    const pollingErrorHandler = bot!.handlers.get("polling_error")?.[0];
-    expect(pollingErrorHandler).toBeTruthy();
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
 
-    bot!.deleteWebHook.mockClear();
-    bot!.startPolling.mockClear();
+        const pollingErrorHandler = bot!.handlers.get("polling_error")?.[0];
+        expect(pollingErrorHandler).toBeTruthy();
 
-    pollingErrorHandler?.({ code: "ETELEGRAM", response: { statusCode: 409 } });
-    await Promise.resolve();
+        bot!.deleteWebHook.mockClear();
+        bot!.startPolling.mockClear();
 
-    expect(bot!.deleteWebHook).toHaveBeenCalledTimes(1);
-    expect(bot!.startPolling).not.toHaveBeenCalled();
-    void connector;
-  });
+        pollingErrorHandler?.({ code: "ETELEGRAM", response: { statusCode: 409 } });
+        await Promise.resolve();
+
+        expect(bot!.deleteWebHook).toHaveBeenCalledTimes(1);
+        expect(bot!.startPolling).not.toHaveBeenCalled();
+        void connector;
+    });
 });
 
 describe("TelegramConnector file uploads", () => {
-  beforeEach(() => {
-    telegramInstances.length = 0;
-  });
-
-  it("sends explicit contentType and filename for document uploads", async () => {
-    const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
-    const connector = new TelegramConnector({
-      token: "token",
-      allowedUids: ["123"],
-      polling: false,
-      clearWebhook: false,
-      statePath: null,
-      fileStore,
-      dataDir: "/tmp",
-      enableGracefulShutdown: false
+    beforeEach(() => {
+        telegramInstances.length = 0;
     });
 
-    await connector.sendMessage("123", {
-      text: "Here's the file",
-      files: [
-        {
-          id: "f-1",
-          name: "report.txt",
-          mimeType: "text/plain",
-          size: 12,
-          path: "/tmp/file-without-extension",
-          sendAs: "document"
-        }
-      ]
-    });
+    it("sends explicit contentType and filename for document uploads", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
 
-    const bot = telegramInstances[0];
-    expect(bot).toBeTruthy();
-    expect(bot!.sendDocument).toHaveBeenCalledTimes(1);
-    const call = bot!.sendDocument.mock.calls[0];
-    expect(call?.[3]).toMatchObject({
-      filename: "report.txt",
-      contentType: "text/plain"
+        await connector.sendMessage("123", {
+            text: "Here's the file",
+            files: [
+                {
+                    id: "f-1",
+                    name: "report.txt",
+                    mimeType: "text/plain",
+                    size: 12,
+                    path: "/tmp/file-without-extension",
+                    sendAs: "document"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendDocument).toHaveBeenCalledTimes(1);
+        const call = bot!.sendDocument.mock.calls[0];
+        expect(call?.[3]).toMatchObject({
+            filename: "report.txt",
+            contentType: "text/plain"
+        });
     });
-  });
 });

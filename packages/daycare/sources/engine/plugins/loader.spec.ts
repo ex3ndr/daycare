@@ -1,46 +1,42 @@
-import { describe, it, expect, afterEach } from "vitest";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-
-import { PluginModuleLoader } from "./loader.js";
+import { afterEach, describe, expect, it } from "vitest";
 import { getLogger } from "../../log.js";
 import { Processes } from "../processes/processes.js";
+import { PluginModuleLoader } from "./loader.js";
 
 const tempRoots: string[] = [];
 
 async function createTempDir(): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-plugin-loader-"));
-  tempRoots.push(dir);
-  return dir;
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-plugin-loader-"));
+    tempRoots.push(dir);
+    return dir;
 }
 
 async function writeFile(target: string, contents: string): Promise<void> {
-  await fs.writeFile(target, contents, "utf8");
+    await fs.writeFile(target, contents, "utf8");
 }
 
 describe("PluginModuleLoader", () => {
-  afterEach(async () => {
-    const pending = tempRoots.splice(0, tempRoots.length);
-    await Promise.all(
-      pending.map(async (dir) => {
-        await fs.rm(dir, { recursive: true, force: true });
-      })
-    );
-  });
+    afterEach(async () => {
+        const pending = tempRoots.splice(0, tempRoots.length);
+        await Promise.all(
+            pending.map(async (dir) => {
+                await fs.rm(dir, { recursive: true, force: true });
+            })
+        );
+    });
 
-  it("loads a plugin module with local dependencies", async () => {
-    const dir = await createTempDir();
-    const helperPath = path.join(dir, "helper.js");
-    const pluginPath = path.join(dir, "plugin.js");
+    it("loads a plugin module with local dependencies", async () => {
+        const dir = await createTempDir();
+        const helperPath = path.join(dir, "helper.js");
+        const pluginPath = path.join(dir, "plugin.js");
 
-    await writeFile(
-      helperPath,
-      "export function label(value) { return `helper:${value}`; }\n"
-    );
-    await writeFile(
-      pluginPath,
-      `import { z } from "zod";
+        await writeFile(helperPath, "export function label(value) { return `helper:${value}`; }\n");
+        await writeFile(
+            pluginPath,
+            `import { z } from "zod";
 import { label } from "./helper.js";
 
 export const plugin = {
@@ -52,36 +48,36 @@ export const plugin = {
   })
 };
 `
-    );
+        );
 
-    const loader = new PluginModuleLoader("test-plugin");
-    const { module } = await loader.load(pluginPath);
-    const settings = module.settingsSchema.parse({ name: "demo" });
-    const instance = await module.create({
-      instance: { instanceId: "demo", pluginId: "demo" },
-      settings,
-      engineSettings: {},
-      logger: getLogger("test.loader"),
-      auth: {} as never,
-      dataDir: dir,
-      registrar: {} as never,
-      exposes: {
-        registerProvider: async () => undefined,
-        unregisterProvider: async () => undefined,
-        listProviders: () => []
-      },
-      fileStore: {} as never,
-      inference: {
-        complete: async () => {
-          throw new Error("Inference not available in test.");
-        }
-      },
-      processes: new Processes(dir, getLogger("test.processes.loader")),
-      mode: "runtime",
-      events: { emit: () => {} }
+        const loader = new PluginModuleLoader("test-plugin");
+        const { module } = await loader.load(pluginPath);
+        const settings = module.settingsSchema.parse({ name: "demo" });
+        const instance = await module.create({
+            instance: { instanceId: "demo", pluginId: "demo" },
+            settings,
+            engineSettings: {},
+            logger: getLogger("test.loader"),
+            auth: {} as never,
+            dataDir: dir,
+            registrar: {} as never,
+            exposes: {
+                registerProvider: async () => undefined,
+                unregisterProvider: async () => undefined,
+                listProviders: () => []
+            },
+            fileStore: {} as never,
+            inference: {
+                complete: async () => {
+                    throw new Error("Inference not available in test.");
+                }
+            },
+            processes: new Processes(dir, getLogger("test.processes.loader")),
+            mode: "runtime",
+            events: { emit: () => {} }
+        });
+
+        expect(instance).toBeTruthy();
+        expect(typeof instance.load).toBe("function");
     });
-
-    expect(instance).toBeTruthy();
-    expect(typeof instance.load).toBe("function");
-  });
 });

@@ -3,5 +3,5 @@
  * Expects: value is an unqualified function or argument name.
  */
 export function montyPythonIdentifierIs(value: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+    return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
 }

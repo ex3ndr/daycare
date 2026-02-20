@@ -1,23 +1,17 @@
-import {
-  complete,
-  type Api,
-  type AssistantMessage,
-  type Context,
-  type Model
-} from "@mariozechner/pi-ai";
+import { type Api, type AssistantMessage, type Context, complete, type Model } from "@mariozechner/pi-ai";
 
 import { recipeAssistantTextExtract } from "./recipeAssistantTextExtract.js";
 
 export type RecipeAnthropicReply = {
-  text: string;
-  message: AssistantMessage;
+    text: string;
+    message: AssistantMessage;
 };
 
 export type RecipeAnthropicReplyOptions = {
-  sessionId?: string;
-  systemPrompt?: string;
-  tools?: Context["tools"];
-  requireText?: boolean;
+    sessionId?: string;
+    systemPrompt?: string;
+    tools?: Context["tools"];
+    requireText?: boolean;
 };
 
 /**
@@ -25,32 +19,32 @@ export type RecipeAnthropicReplyOptions = {
  * Expects: messages contain valid chat turns and apiKey is authorized.
  */
 export async function recipeAnthropicReplyGet(
-  messages: Context["messages"],
-  apiKey: string,
-  model: Model<Api>,
-  options?: RecipeAnthropicReplyOptions
+    messages: Context["messages"],
+    apiKey: string,
+    model: Model<Api>,
+    options?: RecipeAnthropicReplyOptions
 ): Promise<RecipeAnthropicReply> {
-  const response = await complete(
-    model,
-    {
-      messages,
-      tools: options?.tools ?? [],
-      systemPrompt: options?.systemPrompt
-    },
-    {
-      apiKey,
-      sessionId: options?.sessionId ?? "recipe"
+    const response = await complete(
+        model,
+        {
+            messages,
+            tools: options?.tools ?? [],
+            systemPrompt: options?.systemPrompt
+        },
+        {
+            apiKey,
+            sessionId: options?.sessionId ?? "recipe"
+        }
+    );
+
+    if (response.stopReason === "error" || response.stopReason === "aborted") {
+        throw new Error(response.errorMessage ?? `Inference failed with stopReason=${response.stopReason}`);
     }
-  );
 
-  if (response.stopReason === "error" || response.stopReason === "aborted") {
-    throw new Error(response.errorMessage ?? `Inference failed with stopReason=${response.stopReason}`);
-  }
+    const text = recipeAssistantTextExtract(response);
+    if (!text && options?.requireText !== false) {
+        throw new Error("Anthropic response did not include text content.");
+    }
 
-  const text = recipeAssistantTextExtract(response);
-  if (!text && options?.requireText !== false) {
-    throw new Error("Anthropic response did not include text content.");
-  }
-
-  return { text: text ?? "", message: response };
+    return { text: text ?? "", message: response };
 }

@@ -4,19 +4,19 @@ import type { SessionPermissions } from "../permissions.js";
 import { permissionClone } from "./permissionClone.js";
 
 describe("permissionClone", () => {
-  it("clones arrays while preserving values", () => {
-    const permissions: SessionPermissions = {
-      workingDir: "/tmp/work",
-      writeDirs: ["/tmp/work"],
-      readDirs: ["/tmp/read"],
-      network: false,
-      events: false
-    };
+    it("clones arrays while preserving values", () => {
+        const permissions: SessionPermissions = {
+            workingDir: "/tmp/work",
+            writeDirs: ["/tmp/work"],
+            readDirs: ["/tmp/read"],
+            network: false,
+            events: false
+        };
 
-    const cloned = permissionClone(permissions);
+        const cloned = permissionClone(permissions);
 
-    expect(cloned).toEqual(permissions);
-    expect(cloned.writeDirs).not.toBe(permissions.writeDirs);
-    expect(cloned.readDirs).not.toBe(permissions.readDirs);
-  });
+        expect(cloned).toEqual(permissions);
+        expect(cloned.writeDirs).not.toBe(permissions.writeDirs);
+        expect(cloned.readDirs).not.toBe(permissions.readDirs);
+    });
 });

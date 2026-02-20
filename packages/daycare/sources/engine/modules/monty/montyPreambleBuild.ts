@@ -6,91 +6,91 @@ import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
 import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
 import { MONTY_RESPONSE_SCHEMA_KEY } from "./montyResponseSchemaKey.js";
-import { montyResponseTypeNameFromFunction } from "./montyResponseTypeNameFromFunction.js";
 import { montyResponseTypedDictLinesBuild } from "./montyResponseTypedDictLinesBuild.js";
+import { montyResponseTypeNameFromFunction } from "./montyResponseTypeNameFromFunction.js";
 
 /**
  * Builds a Python preamble containing synchronous tool stubs for the current tool surface.
  * Expects: tool names are unique and come from ToolResolver.listTools().
  */
 export function montyPreambleBuild(tools: Tool[]): string {
-  const callableTools = tools.filter((tool) => tool.name !== RLM_TOOL_NAME && montyPythonIdentifierIs(tool.name));
-  const responseTypeNameByTool = responseTypeNameByToolBuild(callableTools);
+    const callableTools = tools.filter((tool) => tool.name !== RLM_TOOL_NAME && montyPythonIdentifierIs(tool.name));
+    const responseTypeNameByTool = responseTypeNameByToolBuild(callableTools);
 
-  const lines: string[] = [
-    "# You have the following tools available as Python functions.",
-    "# Call tool functions directly (no await).",
-    "# Tool failures raise ToolError (alias of RuntimeError).",
-    "# Use print() for debug logs; the last expression is returned.",
-    "",
-    "from typing import Any, TypedDict",
-    "",
-    "ToolError = RuntimeError",
-    "",
-    "# Typed tool stubs for code assistance only.",
-    `def ${RLM_PRINT_FUNCTION_NAME}(*values: Any) -> None:`,
-    `    raise NotImplementedError("${RLM_PRINT_FUNCTION_NAME} is provided by runtime.")`,
-    ""
-  ];
+    const lines: string[] = [
+        "# You have the following tools available as Python functions.",
+        "# Call tool functions directly (no await).",
+        "# Tool failures raise ToolError (alias of RuntimeError).",
+        "# Use print() for debug logs; the last expression is returned.",
+        "",
+        "from typing import Any, TypedDict",
+        "",
+        "ToolError = RuntimeError",
+        "",
+        "# Typed tool stubs for code assistance only.",
+        `def ${RLM_PRINT_FUNCTION_NAME}(*values: Any) -> None:`,
+        `    raise NotImplementedError("${RLM_PRINT_FUNCTION_NAME} is provided by runtime.")`,
+        ""
+    ];
 
-  for (const tool of callableTools) {
-    const responseTypeName = responseTypeNameByTool.get(tool.name);
-    if (!responseTypeName) {
-      continue;
+    for (const tool of callableTools) {
+        const responseTypeName = responseTypeNameByTool.get(tool.name);
+        if (!responseTypeName) {
+            continue;
+        }
+        const responseSchema = responseSchemaResolve(tool);
+        const typedDictLines = montyResponseTypedDictLinesBuild(responseTypeName, responseSchema);
+        for (const typedDictLine of typedDictLines) {
+            lines.push(typedDictLine);
+        }
+        lines.push("");
     }
-    const responseSchema = responseSchemaResolve(tool);
-    const typedDictLines = montyResponseTypedDictLinesBuild(responseTypeName, responseSchema);
-    for (const typedDictLine of typedDictLines) {
-      lines.push(typedDictLine);
+
+    for (const tool of callableTools) {
+        const responseTypeName = responseTypeNameByTool.get(tool.name);
+        if (!responseTypeName) {
+            continue;
+        }
+        const signature = montyPythonSignatureBuild(tool);
+        const description = montyPythonDocstringEscape(tool.description?.trim() || "No description.");
+
+        lines.push(`def ${tool.name}(${signature}) -> ${responseTypeName}:`);
+        lines.push(`    """${description}"""`);
+        lines.push(`    raise NotImplementedError("${tool.name} is provided by runtime.")`);
+        lines.push("");
     }
-    lines.push("");
-  }
 
-  for (const tool of callableTools) {
-    const responseTypeName = responseTypeNameByTool.get(tool.name);
-    if (!responseTypeName) {
-      continue;
-    }
-    const signature = montyPythonSignatureBuild(tool);
-    const description = montyPythonDocstringEscape(tool.description?.trim() || "No description.");
-
-    lines.push(`def ${tool.name}(${signature}) -> ${responseTypeName}:`);
-    lines.push(`    \"\"\"${description}\"\"\"`);
-    lines.push(`    raise NotImplementedError("${tool.name} is provided by runtime.")`);
-    lines.push("");
-  }
-
-  return lines.join("\n").trimEnd();
+    return lines.join("\n").trimEnd();
 }
 
 function responseTypeNameByToolBuild(tools: Tool[]): Map<string, string> {
-  const usedNames = new Set<string>();
-  const map = new Map<string, string>();
+    const usedNames = new Set<string>();
+    const map = new Map<string, string>();
 
-  for (const tool of tools) {
-    const baseName = montyResponseTypeNameFromFunction(tool.name);
-    let candidate = baseName;
-    let index = 2;
-    while (usedNames.has(candidate)) {
-      candidate = `${baseName}${index}`;
-      index += 1;
+    for (const tool of tools) {
+        const baseName = montyResponseTypeNameFromFunction(tool.name);
+        let candidate = baseName;
+        let index = 2;
+        while (usedNames.has(candidate)) {
+            candidate = `${baseName}${index}`;
+            index += 1;
+        }
+        usedNames.add(candidate);
+        map.set(tool.name, candidate);
     }
-    usedNames.add(candidate);
-    map.set(tool.name, candidate);
-  }
 
-  return map;
+    return map;
 }
 
 function responseSchemaResolve(tool: Tool): TSchema | undefined {
-  const metadata = tool as Tool & { [MONTY_RESPONSE_SCHEMA_KEY]?: unknown };
-  const schema = metadata[MONTY_RESPONSE_SCHEMA_KEY];
-  if (!schemaObjectIs(schema)) {
-    return undefined;
-  }
-  return schema as TSchema;
+    const metadata = tool as Tool & { [MONTY_RESPONSE_SCHEMA_KEY]?: unknown };
+    const schema = metadata[MONTY_RESPONSE_SCHEMA_KEY];
+    if (!schemaObjectIs(schema)) {
+        return undefined;
+    }
+    return schema as TSchema;
 }
 
 function schemaObjectIs(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }

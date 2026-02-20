@@ -8,15 +8,12 @@ import { permissionAccessParse } from "./permissionAccessParse.js";
  *
  * Expects: tags are @network, @events, @workspace, @read:<path>, or @write:<path>.
  */
-export async function permissionTagsValidate(
-  permissions: SessionPermissions,
-  tags: string[]
-): Promise<void> {
-  for (const tag of tags) {
-    const access = permissionAccessParse(tag);
-    const allowed = await permissionAccessAllows(permissions, access);
-    if (!allowed) {
-      throw new Error(`Cannot attach permission '${tag}' - you don't have it.`);
+export async function permissionTagsValidate(permissions: SessionPermissions, tags: string[]): Promise<void> {
+    for (const tag of tags) {
+        const access = permissionAccessParse(tag);
+        const allowed = await permissionAccessAllows(permissions, access);
+        if (!allowed) {
+            throw new Error(`Cannot attach permission '${tag}' - you don't have it.`);
+        }
     }
-  }
 }

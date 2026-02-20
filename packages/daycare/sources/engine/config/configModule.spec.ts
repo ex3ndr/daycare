@@ -5,13 +5,13 @@ import { configResolve } from "../../config/configResolve.js";
 import { ConfigModule } from "./configModule.js";
 
 describe("ConfigModule", () => {
-  it("stores and updates current config", () => {
-    const first = configResolve({ engine: { dataDir: "/tmp/a" } }, path.join("/tmp/a", "settings.json"));
-    const second = configResolve({ engine: { dataDir: "/tmp/b" } }, path.join("/tmp/b", "settings.json"));
-    const module = new ConfigModule(first);
+    it("stores and updates current config", () => {
+        const first = configResolve({ engine: { dataDir: "/tmp/a" } }, path.join("/tmp/a", "settings.json"));
+        const second = configResolve({ engine: { dataDir: "/tmp/b" } }, path.join("/tmp/b", "settings.json"));
+        const module = new ConfigModule(first);
 
-    expect(module.current.dataDir).toBe(first.dataDir);
-    module.configSet(second);
-    expect(module.current.dataDir).toBe(second.dataDir);
-  });
+        expect(module.current.dataDir).toBe(first.dataDir);
+        module.configSet(second);
+        expect(module.current.dataDir).toBe(second.dataDir);
+    });
 });

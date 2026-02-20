@@ -17,11 +17,14 @@
 - Run `yarn install` before tests.
 - Run CLI in dev: `yarn dev`.
 - Node remains supported for running built output (`dist/*`) and production installs.
+- Lint/style check: `yarn lint` (Biome)
+- Lint/style fix: `yarn lint:fix` (Biome `--write`)
 - Type-check/build: `yarn typecheck` (tsc)
 - Tests: `yarn test` (vitest);
 
 ## Coding Style & Naming Conventions
 - Language: TypeScript (ESM). Prefer strict typing; avoid `any`.
+- Biome enforces code style (4-space indentation, 120-character line width, double quotes, semicolons, no trailing commas).
 - Never parse or write markdown frontmatter manually; always use the `gray-matter` library (including stringify/write flows).
 - Add brief code comments for tricky or non-obvious logic.
 - Keep files concise; extract helpers instead of "V2" copies.

@@ -12,22 +12,22 @@ const MAX_PATH_LENGTH = 4096;
  * - Excessively long paths (DoS potential)
  */
 export function pathSanitize(target: string): void {
-  if (target.length > MAX_PATH_LENGTH) {
-    throw new Error(`Path exceeds maximum length of ${MAX_PATH_LENGTH} characters.`);
-  }
-
-  // Check for null bytes
-  if (target.includes("\x00")) {
-    throw new Error("Path contains null byte.");
-  }
-
-  // Check for control characters (ASCII 0-31, except 9=tab and 10=newline)
-  for (let i = 0; i < target.length; i++) {
-    const code = target.charCodeAt(i);
-    if (code < 32 && code !== 9 && code !== 10) {
-      throw new Error("Path contains invalid control character.");
+    if (target.length > MAX_PATH_LENGTH) {
+        throw new Error(`Path exceeds maximum length of ${MAX_PATH_LENGTH} characters.`);
     }
-  }
+
+    // Check for null bytes
+    if (target.includes("\x00")) {
+        throw new Error("Path contains null byte.");
+    }
+
+    // Check for control characters (ASCII 0-31, except 9=tab and 10=newline)
+    for (let i = 0; i < target.length; i++) {
+        const code = target.charCodeAt(i);
+        if (code < 32 && code !== 9 && code !== 10) {
+            throw new Error("Path contains invalid control character.");
+        }
+    }
 }
 
 /**
@@ -35,9 +35,9 @@ export function pathSanitize(target: string): void {
  * Returns the resolved absolute path.
  */
 export function pathSanitizeAndResolve(target: string): string {
-  pathSanitize(target);
-  if (!path.isAbsolute(target)) {
-    throw new Error("Path must be absolute.");
-  }
-  return path.resolve(target);
+    pathSanitize(target);
+    if (!path.isAbsolute(target)) {
+        throw new Error("Path must be absolute.");
+    }
+    return path.resolve(target);
 }

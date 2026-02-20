@@ -5,5 +5,5 @@ import path from "node:path";
  * Expects: workspaceDir is absolute; appId is a validated app id.
  */
 export function appPermissionStatePathBuild(workspaceDir: string, appId: string): string {
-  return path.join(path.resolve(workspaceDir), "apps", appId, "state.json");
+    return path.join(path.resolve(workspaceDir), "apps", appId, "state.json");
 }

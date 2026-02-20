@@ -1,186 +1,185 @@
-import { Type, type Static } from "@sinclair/typebox";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { type Static, Type } from "@sinclair/typebox";
 import { z } from "zod";
-
-import { definePlugin } from "../../engine/plugins/types.js";
 import type { ToolResultContract } from "@/types";
+import { definePlugin } from "../../engine/plugins/types.js";
 
 const settingsSchema = z
-  .object({
-    toolName: z.string().min(1).optional()
-  })
-  .passthrough();
+    .object({
+        toolName: z.string().min(1).optional()
+    })
+    .passthrough();
 
 const searchSchema = Type.Object(
-  {
-    query: Type.String({ minLength: 1 }),
-    count: Type.Optional(Type.Number({ minimum: 1, maximum: 10 })),
-    country: Type.Optional(Type.String({ minLength: 2 })),
-    language: Type.Optional(Type.String({ minLength: 2 })),
-    safeSearch: Type.Optional(Type.Boolean())
-  },
-  { additionalProperties: false }
+    {
+        query: Type.String({ minLength: 1 }),
+        count: Type.Optional(Type.Number({ minimum: 1, maximum: 10 })),
+        country: Type.Optional(Type.String({ minLength: 2 })),
+        language: Type.Optional(Type.String({ minLength: 2 })),
+        safeSearch: Type.Optional(Type.Boolean())
+    },
+    { additionalProperties: false }
 );
 
 type SearchArgs = Static<typeof searchSchema>;
 
 const searchResultSchema = Type.Object(
-  {
-    summary: Type.String(),
-    query: Type.String(),
-    resultCount: Type.Number()
-  },
-  { additionalProperties: false }
+    {
+        summary: Type.String(),
+        query: Type.String(),
+        resultCount: Type.Number()
+    },
+    { additionalProperties: false }
 );
 
 type SearchResult = Static<typeof searchResultSchema>;
 
 const searchReturns: ToolResultContract<SearchResult> = {
-  schema: searchResultSchema,
-  toLLMText: (result) => result.summary
+    schema: searchResultSchema,
+    toLLMText: (result) => result.summary
 };
 
 type BraveSearchResponse = {
-  web?: {
-    results?: Array<{
-      title?: string;
-      url?: string;
-      description?: string;
-      language?: string;
-      published?: string;
-    }>;
-  };
+    web?: {
+        results?: Array<{
+            title?: string;
+            url?: string;
+            description?: string;
+            language?: string;
+            published?: string;
+        }>;
+    };
 };
 
 async function validateApiKey(apiKey: string): Promise<void> {
-  const url = new URL("https://api.search.brave.com/res/v1/web/search");
-  url.searchParams.set("q", "example");
-  url.searchParams.set("count", "1");
+    const url = new URL("https://api.search.brave.com/res/v1/web/search");
+    url.searchParams.set("q", "example");
+    url.searchParams.set("count", "1");
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Accept: "application/json",
-      "X-Subscription-Token": apiKey
+    const response = await fetch(url.toString(), {
+        headers: {
+            Accept: "application/json",
+            "X-Subscription-Token": apiKey
+        }
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Brave search validation failed: ${response.status} - ${errorText}`);
     }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Brave search validation failed: ${response.status} - ${errorText}`);
-  }
 }
 
 export const plugin = definePlugin({
-  settingsSchema,
-  onboarding: async (api) => {
-    const existingKey = await api.auth.getApiKey(api.instanceId);
-    if (existingKey) {
-      try {
-        await validateApiKey(existingKey);
-        api.note("Using existing Brave Search credentials.", "Setup");
-        return { settings: {} };
-      } catch (error) {
-        api.note("Existing Brave Search key failed validation, prompting for a new key.", "Setup");
-      }
-    }
+    settingsSchema,
+    onboarding: async (api) => {
+        const existingKey = await api.auth.getApiKey(api.instanceId);
+        if (existingKey) {
+            try {
+                await validateApiKey(existingKey);
+                api.note("Using existing Brave Search credentials.", "Setup");
+                return { settings: {} };
+            } catch (error) {
+                api.note("Existing Brave Search key failed validation, prompting for a new key.", "Setup");
+            }
+        }
 
-    const apiKey = await api.prompt.input({
-      message: "Brave Search API key"
-    });
-    if (!apiKey) {
-      return null;
-    }
-    await validateApiKey(apiKey);
-    await api.auth.setApiKey(api.instanceId, apiKey);
-    return { settings: {} };
-  },
-  create: (api) => {
-    const toolName = api.settings.toolName ?? "web_search";
-    const instanceId = api.instance.instanceId;
-
-    return {
-      load: async () => {
-        api.registrar.registerTool({
-          tool: {
-            name: toolName,
-            description: "Search the web using Brave Search and return concise results.",
-            parameters: searchSchema
-          },
-          returns: searchReturns,
-          execute: async (args, toolContext, toolCall) => {
-            if (!toolContext.permissions.network) {
-              throw new Error("Network access not granted. Request @network permission.");
-            }
-            const payload = args as SearchArgs;
-            const apiKey = await api.auth.getApiKey(instanceId);
-            if (!apiKey) {
-              throw new Error("Missing brave-search apiKey in auth store");
-            }
-
-            const url = new URL("https://api.search.brave.com/res/v1/web/search");
-            url.searchParams.set("q", payload.query);
-            if (payload.count) {
-              url.searchParams.set("count", String(payload.count));
-            }
-            if (payload.country) {
-              url.searchParams.set("country", payload.country);
-            }
-            if (payload.language) {
-              url.searchParams.set("language", payload.language);
-            }
-            if (payload.safeSearch !== undefined) {
-              url.searchParams.set("safesearch", payload.safeSearch ? "moderate" : "off");
-            }
-
-            const response = await fetch(url.toString(), {
-              headers: {
-                Accept: "application/json",
-                "X-Subscription-Token": apiKey
-              }
-            });
-            if (!response.ok) {
-              throw new Error(`Brave search failed: ${response.status}`);
-            }
-            const data = (await response.json()) as BraveSearchResponse;
-            const results = data.web?.results ?? [];
-            const limited = results.slice(0, payload.count ?? 5);
-            const text =
-              limited.length === 0
-                ? "No results found."
-                : limited
-                    .map((item, index) => {
-                      const title = item.title ?? "Untitled";
-                      const urlItem = item.url ?? "";
-                      const description = item.description ?? "";
-                      return `${index + 1}. ${title}\n${urlItem}\n${description}`.trim();
-                    })
-                    .join("\n\n");
-
-            const summary = text;
-            const toolMessage: ToolResultMessage = {
-              role: "toolResult",
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              content: [{ type: "text", text: summary }],
-              details: { count: limited.length },
-              isError: false,
-              timestamp: Date.now()
-            };
-
-            return {
-              toolMessage,
-              typedResult: {
-                summary,
-                query: payload.query,
-                resultCount: limited.length
-              }
-            };
-          }
+        const apiKey = await api.prompt.input({
+            message: "Brave Search API key"
         });
-      },
-      unload: async () => {
-        api.registrar.unregisterTool(toolName);
-      }
-    };
-  }
+        if (!apiKey) {
+            return null;
+        }
+        await validateApiKey(apiKey);
+        await api.auth.setApiKey(api.instanceId, apiKey);
+        return { settings: {} };
+    },
+    create: (api) => {
+        const toolName = api.settings.toolName ?? "web_search";
+        const instanceId = api.instance.instanceId;
+
+        return {
+            load: async () => {
+                api.registrar.registerTool({
+                    tool: {
+                        name: toolName,
+                        description: "Search the web using Brave Search and return concise results.",
+                        parameters: searchSchema
+                    },
+                    returns: searchReturns,
+                    execute: async (args, toolContext, toolCall) => {
+                        if (!toolContext.permissions.network) {
+                            throw new Error("Network access not granted. Request @network permission.");
+                        }
+                        const payload = args as SearchArgs;
+                        const apiKey = await api.auth.getApiKey(instanceId);
+                        if (!apiKey) {
+                            throw new Error("Missing brave-search apiKey in auth store");
+                        }
+
+                        const url = new URL("https://api.search.brave.com/res/v1/web/search");
+                        url.searchParams.set("q", payload.query);
+                        if (payload.count) {
+                            url.searchParams.set("count", String(payload.count));
+                        }
+                        if (payload.country) {
+                            url.searchParams.set("country", payload.country);
+                        }
+                        if (payload.language) {
+                            url.searchParams.set("language", payload.language);
+                        }
+                        if (payload.safeSearch !== undefined) {
+                            url.searchParams.set("safesearch", payload.safeSearch ? "moderate" : "off");
+                        }
+
+                        const response = await fetch(url.toString(), {
+                            headers: {
+                                Accept: "application/json",
+                                "X-Subscription-Token": apiKey
+                            }
+                        });
+                        if (!response.ok) {
+                            throw new Error(`Brave search failed: ${response.status}`);
+                        }
+                        const data = (await response.json()) as BraveSearchResponse;
+                        const results = data.web?.results ?? [];
+                        const limited = results.slice(0, payload.count ?? 5);
+                        const text =
+                            limited.length === 0
+                                ? "No results found."
+                                : limited
+                                      .map((item, index) => {
+                                          const title = item.title ?? "Untitled";
+                                          const urlItem = item.url ?? "";
+                                          const description = item.description ?? "";
+                                          return `${index + 1}. ${title}\n${urlItem}\n${description}`.trim();
+                                      })
+                                      .join("\n\n");
+
+                        const summary = text;
+                        const toolMessage: ToolResultMessage = {
+                            role: "toolResult",
+                            toolCallId: toolCall.id,
+                            toolName: toolCall.name,
+                            content: [{ type: "text", text: summary }],
+                            details: { count: limited.length },
+                            isError: false,
+                            timestamp: Date.now()
+                        };
+
+                        return {
+                            toolMessage,
+                            typedResult: {
+                                summary,
+                                query: payload.query,
+                                resultCount: limited.length
+                            }
+                        };
+                    }
+                });
+            },
+            unload: async () => {
+                api.registrar.unregisterTool(toolName);
+            }
+        };
+    }
 });

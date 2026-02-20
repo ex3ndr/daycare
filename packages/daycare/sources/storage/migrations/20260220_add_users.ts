@@ -5,9 +5,9 @@ import type { Migration } from "./migrationTypes.js";
  * Expects: db is a valid SQLite handle with exec(); repeated runs are safe via IF NOT EXISTS.
  */
 export const migration20260220AddUsers: Migration = {
-  name: "20260220_add_users",
-  up(db): void {
-    db.exec(`
+    name: "20260220_add_users",
+    up(db): void {
+        db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         is_owner INTEGER NOT NULL DEFAULT 0,
@@ -28,5 +28,5 @@ export const migration20260220AddUsers: Migration = {
         ON users(is_owner)
         WHERE is_owner = 1;
     `);
-  }
+    }
 };

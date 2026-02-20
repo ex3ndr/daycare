@@ -6,11 +6,11 @@ import { reloadEngine } from "../engine/ipc/client.js";
  * Expects: settingsPath points to the JSON settings file.
  */
 export async function engineReloadRequest(settingsPath: string): Promise<boolean> {
-  const config = await configLoad(settingsPath);
-  try {
-    await reloadEngine(config.socketPath);
-    return true;
-  } catch {
-    return false;
-  }
+    const config = await configLoad(settingsPath);
+    try {
+        await reloadEngine(config.socketPath);
+        return true;
+    } catch {
+        return false;
+    }
 }

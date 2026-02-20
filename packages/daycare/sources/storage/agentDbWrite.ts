@@ -1,16 +1,16 @@
 import type { Config } from "@/types";
-import type { AgentDbRecord } from "./databaseTypes.js";
 import { databaseOpenEnsured } from "./databaseOpenEnsured.js";
+import type { AgentDbRecord } from "./databaseTypes.js";
 
 /**
  * Upserts one agent row in SQLite storage.
  * Expects: descriptor/type pair is consistent for the same agent id.
  */
 export async function agentDbWrite(config: Config, record: AgentDbRecord): Promise<void> {
-  const db = databaseOpenEnsured(config.dbPath);
-  try {
-    db.prepare(
-      `
+    const db = databaseOpenEnsured(config.dbPath);
+    try {
+        db.prepare(
+            `
         INSERT INTO agents (
           id,
           user_id,
@@ -36,20 +36,20 @@ export async function agentDbWrite(config: Config, record: AgentDbRecord): Promi
           created_at = excluded.created_at,
           updated_at = excluded.updated_at
       `
-    ).run(
-      record.id,
-      record.userId,
-      record.type,
-      JSON.stringify(record.descriptor),
-      record.activeSessionId,
-      JSON.stringify(record.permissions),
-      record.tokens ? JSON.stringify(record.tokens) : null,
-      JSON.stringify(record.stats),
-      record.lifecycle,
-      record.createdAt,
-      record.updatedAt
-    );
-  } finally {
-    db.close();
-  }
+        ).run(
+            record.id,
+            record.userId,
+            record.type,
+            JSON.stringify(record.descriptor),
+            record.activeSessionId,
+            JSON.stringify(record.permissions),
+            record.tokens ? JSON.stringify(record.tokens) : null,
+            JSON.stringify(record.stats),
+            record.lifecycle,
+            record.createdAt,
+            record.updatedAt
+        );
+    } finally {
+        db.close();
+    }
 }

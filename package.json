@@ -10,10 +10,15 @@
     "dashboard": "yarn workspace daycare-dashboard dev",
     "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare-cli run dev",
     "factory:build": "node ./scripts/daycareFactoryBuildPrompt.mjs",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
     "release": "yarn workspace daycare-cli run release",
     "recipe": "yarn workspace daycare-cli run recipe",
     "test": "yarn workspaces run test",
     "test:watch": "yarn workspaces run test:watch",
     "typecheck": "yarn workspaces run typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.2"
   }
 }

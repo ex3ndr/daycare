@@ -3,5 +3,5 @@
  * Expects: raw unquoted string input; output is wrapped in single quotes.
  */
 export function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\"'\"'`)}'`;
+    return `'${value.replace(/'/g, `'"'"'`)}'`;
 }

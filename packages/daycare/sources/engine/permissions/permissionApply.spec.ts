@@ -7,123 +7,123 @@ import type { SessionPermissions } from "../permissions.js";
 import { permissionApply } from "./permissionApply.js";
 
 describe("permissionApply", () => {
-  const basePermissions = (): SessionPermissions => ({
-    workingDir: "/workspace",
-    writeDirs: [],
-    readDirs: [],
-    network: false,
-    events: false
-  });
+    const basePermissions = (): SessionPermissions => ({
+        workingDir: "/workspace",
+        writeDirs: [],
+        readDirs: [],
+        network: false,
+        events: false
+    });
 
-  it("ignores unapproved decisions", () => {
-    const permissions = basePermissions();
-    const decision: PermissionDecision = {
-      token: "token-1",
-      agentId: "agent-1",
-      approved: false,
-      permissions: [{ permission: "@network", access: { kind: "network" } }]
-    };
+    it("ignores unapproved decisions", () => {
+        const permissions = basePermissions();
+        const decision: PermissionDecision = {
+            token: "token-1",
+            agentId: "agent-1",
+            approved: false,
+            permissions: [{ permission: "@network", access: { kind: "network" } }]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    expect(permissions.network).toBe(false);
-  });
+        expect(permissions.network).toBe(false);
+    });
 
-  it("applies approved events access", () => {
-    const permissions = basePermissions();
-    const decision: PermissionDecision = {
-      token: "token-events",
-      agentId: "agent-1",
-      approved: true,
-      permissions: [{ permission: "@events", access: { kind: "events" } }]
-    };
+    it("applies approved events access", () => {
+        const permissions = basePermissions();
+        const decision: PermissionDecision = {
+            token: "token-events",
+            agentId: "agent-1",
+            approved: true,
+            permissions: [{ permission: "@events", access: { kind: "events" } }]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    expect(permissions.events).toBe(true);
-  });
+        expect(permissions.events).toBe(true);
+    });
 
-  it("adds approved write paths", () => {
-    const permissions = basePermissions();
-    const target = path.resolve("tmp", "write");
-    const decision: PermissionDecision = {
-      token: "token-2",
-      agentId: "agent-1",
-      approved: true,
-      permissions: [{ permission: `@write:${target}`, access: { kind: "write", path: target } }]
-    };
+    it("adds approved write paths", () => {
+        const permissions = basePermissions();
+        const target = path.resolve("tmp", "write");
+        const decision: PermissionDecision = {
+            token: "token-2",
+            agentId: "agent-1",
+            approved: true,
+            permissions: [{ permission: `@write:${target}`, access: { kind: "write", path: target } }]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    expect(permissions.writeDirs).toEqual(expect.arrayContaining([target]));
-    expect(permissions.readDirs).toEqual(expect.arrayContaining([target]));
-  });
+        expect(permissions.writeDirs).toEqual(expect.arrayContaining([target]));
+        expect(permissions.readDirs).toEqual(expect.arrayContaining([target]));
+    });
 
-  it("skips relative paths", () => {
-    const permissions = basePermissions();
-    const decision: PermissionDecision = {
-      token: "token-3",
-      agentId: "agent-1",
-      approved: true,
-      permissions: [{ permission: "@read:relative/path", access: { kind: "read", path: "relative/path" } }]
-    };
+    it("skips relative paths", () => {
+        const permissions = basePermissions();
+        const decision: PermissionDecision = {
+            token: "token-3",
+            agentId: "agent-1",
+            approved: true,
+            permissions: [{ permission: "@read:relative/path", access: { kind: "read", path: "relative/path" } }]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    expect(permissions.readDirs).toHaveLength(0);
-  });
+        expect(permissions.readDirs).toHaveLength(0);
+    });
 
-  it("rejects paths with null bytes", () => {
-    const permissions = basePermissions();
-    const decision: PermissionDecision = {
-      token: "token-4",
-      agentId: "agent-1",
-      approved: true,
-      permissions: [
-        {
-          permission: "@read:/etc/passwd\x00.txt",
-          access: { kind: "read", path: "/etc/passwd\x00.txt" }
-        }
-      ]
-    };
+    it("rejects paths with null bytes", () => {
+        const permissions = basePermissions();
+        const decision: PermissionDecision = {
+            token: "token-4",
+            agentId: "agent-1",
+            approved: true,
+            permissions: [
+                {
+                    permission: "@read:/etc/passwd\x00.txt",
+                    access: { kind: "read", path: "/etc/passwd\x00.txt" }
+                }
+            ]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    // Path should be silently rejected
-    expect(permissions.readDirs).toHaveLength(0);
-  });
+        // Path should be silently rejected
+        expect(permissions.readDirs).toHaveLength(0);
+    });
 
-  it("rejects paths with control characters", () => {
-    const permissions = basePermissions();
-    const decision: PermissionDecision = {
-      token: "token-5",
-      agentId: "agent-1",
-      approved: true,
-      permissions: [
-        {
-          permission: "@write:/home/user\x01file",
-          access: { kind: "write", path: "/home/user\x01file" }
-        }
-      ]
-    };
+    it("rejects paths with control characters", () => {
+        const permissions = basePermissions();
+        const decision: PermissionDecision = {
+            token: "token-5",
+            agentId: "agent-1",
+            approved: true,
+            permissions: [
+                {
+                    permission: "@write:/home/user\x01file",
+                    access: { kind: "write", path: "/home/user\x01file" }
+                }
+            ]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    expect(permissions.writeDirs).toHaveLength(0);
-  });
+        expect(permissions.writeDirs).toHaveLength(0);
+    });
 
-  it("rejects excessively long paths", () => {
-    const permissions = basePermissions();
-    const longPath = "/" + "a".repeat(5000);
-    const decision: PermissionDecision = {
-      token: "token-6",
-      agentId: "agent-1",
-      approved: true,
-      permissions: [{ permission: `@read:${longPath}`, access: { kind: "read", path: longPath } }]
-    };
+    it("rejects excessively long paths", () => {
+        const permissions = basePermissions();
+        const longPath = "/" + "a".repeat(5000);
+        const decision: PermissionDecision = {
+            token: "token-6",
+            agentId: "agent-1",
+            approved: true,
+            permissions: [{ permission: `@read:${longPath}`, access: { kind: "read", path: longPath } }]
+        };
 
-    permissionApply(permissions, decision);
+        permissionApply(permissions, decision);
 
-    expect(permissions.readDirs).toHaveLength(0);
-  });
+        expect(permissions.readDirs).toHaveLength(0);
+    });
 });

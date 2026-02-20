@@ -2,23 +2,23 @@ import { constants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
-  AuthStorage,
-  createAgentSession,
-  ModelRegistry,
-  SessionManager,
-  SettingsManager
+    AuthStorage,
+    createAgentSession,
+    ModelRegistry,
+    SessionManager,
+    SettingsManager
 } from "@mariozechner/pi-coding-agent";
 import { FACTORY_PI_DIR_MOUNT_PATH } from "../constants.js";
 import { factoryBuildHistoryAppend } from "../history/factoryBuildHistoryAppend.js";
 
 export interface FactoryPiAgentPromptRunInput {
-  attempt: number;
-  feedback?: string;
-  historyPath?: string;
+    attempt: number;
+    feedback?: string;
+    historyPath?: string;
 }
 
 interface FactoryPiAgentPromptRunDependencies {
-  createAgentSessionUse?: typeof createAgentSession;
+    createAgentSessionUse?: typeof createAgentSession;
 }
 
 /**
@@ -26,127 +26,114 @@ interface FactoryPiAgentPromptRunDependencies {
  * Expects: ~/.pi is mounted in container at /root/.pi with readable auth files.
  */
 export async function factoryPiAgentPromptRun(
-  taskPath: string,
-  outDirectory: string,
-  input: FactoryPiAgentPromptRunInput = {
-    attempt: 1
-  },
-  dependencies: FactoryPiAgentPromptRunDependencies = {}
+    taskPath: string,
+    outDirectory: string,
+    input: FactoryPiAgentPromptRunInput = {
+        attempt: 1
+    },
+    dependencies: FactoryPiAgentPromptRunDependencies = {}
 ): Promise<void> {
-  const createAgentSessionUse =
-    dependencies.createAgentSessionUse ?? createAgentSession;
-  const agentDir = join(FACTORY_PI_DIR_MOUNT_PATH, "agent");
-  const authPath = join(agentDir, "auth.json");
+    const createAgentSessionUse = dependencies.createAgentSessionUse ?? createAgentSession;
+    const agentDir = join(FACTORY_PI_DIR_MOUNT_PATH, "agent");
+    const authPath = join(agentDir, "auth.json");
 
-  await access(authPath, constants.R_OK).catch(() => {
-    throw new Error(
-      `Pi auth file is required in container: ${authPath}. Mount host ~/.pi as readonly.`
-    );
-  });
-
-  const taskContents = await readFile(taskPath, "utf-8");
-  const agentsPath = join(outDirectory, "AGENTS.md");
-  const agentsContents = await readFile(agentsPath, "utf-8");
-  const historyPath = input.historyPath;
-  const authStorage = new AuthStorage(authPath);
-  const modelRegistry = new ModelRegistry(authStorage, join(agentDir, "models.json"));
-
-  if (historyPath) {
-    await factoryBuildHistoryAppend(historyPath, {
-      type: "pi.session.start",
-      attempt: input.attempt
+    await access(authPath, constants.R_OK).catch(() => {
+        throw new Error(`Pi auth file is required in container: ${authPath}. Mount host ~/.pi as readonly.`);
     });
-  }
 
-  const { session, modelFallbackMessage } = await createAgentSessionUse({
-    cwd: dirname(taskPath),
-    agentDir,
-    authStorage,
-    modelRegistry,
-    sessionManager: SessionManager.inMemory(),
-    settingsManager: SettingsManager.inMemory()
-  });
+    const taskContents = await readFile(taskPath, "utf-8");
+    const agentsPath = join(outDirectory, "AGENTS.md");
+    const agentsContents = await readFile(agentsPath, "utf-8");
+    const historyPath = input.historyPath;
+    const authStorage = new AuthStorage(authPath);
+    const modelRegistry = new ModelRegistry(authStorage, join(agentDir, "models.json"));
 
-  if (modelFallbackMessage) {
-    console.log(modelFallbackMessage);
     if (historyPath) {
-      await factoryBuildHistoryAppend(historyPath, {
-        type: "pi.model_fallback",
-        attempt: input.attempt,
-        message: modelFallbackMessage
-      });
+        await factoryBuildHistoryAppend(historyPath, {
+            type: "pi.session.start",
+            attempt: input.attempt
+        });
     }
-  }
 
-  session.subscribe((event) => {
+    const { session, modelFallbackMessage } = await createAgentSessionUse({
+        cwd: dirname(taskPath),
+        agentDir,
+        authStorage,
+        modelRegistry,
+        sessionManager: SessionManager.inMemory(),
+        settingsManager: SettingsManager.inMemory()
+    });
+
+    if (modelFallbackMessage) {
+        console.log(modelFallbackMessage);
+        if (historyPath) {
+            await factoryBuildHistoryAppend(historyPath, {
+                type: "pi.model_fallback",
+                attempt: input.attempt,
+                message: modelFallbackMessage
+            });
+        }
+    }
+
+    session.subscribe((event) => {
+        if (historyPath) {
+            void factoryBuildHistoryAppend(historyPath, {
+                type: "pi.event",
+                attempt: input.attempt,
+                event
+            }).catch((error: unknown) => {
+                const details = error instanceof Error ? error.message : "failed to write pi event";
+                console.error(`[pi] history write error: ${details}`);
+            });
+        }
+
+        if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+            process.stdout.write(event.assistantMessageEvent.delta);
+            return;
+        }
+        if (event.type === "tool_execution_start") {
+            console.log(`\n[pi] tool start: ${event.toolName}`);
+            return;
+        }
+        if (event.type === "tool_execution_end") {
+            console.log(`[pi] tool end: ${event.toolName}`);
+        }
+    });
+
+    const promptText = factoryPiPromptBuild(taskPath, outDirectory, taskContents, agentsContents, input);
     if (historyPath) {
-      void factoryBuildHistoryAppend(historyPath, {
-        type: "pi.event",
-        attempt: input.attempt,
-        event
-      }).catch((error: unknown) => {
-        const details =
-          error instanceof Error ? error.message : "failed to write pi event";
-        console.error(`[pi] history write error: ${details}`);
-      });
+        await factoryBuildHistoryAppend(historyPath, {
+            type: "pi.prompt.start",
+            attempt: input.attempt
+        });
     }
 
-    if (
-      event.type === "message_update" &&
-      event.assistantMessageEvent.type === "text_delta"
-    ) {
-      process.stdout.write(event.assistantMessageEvent.delta);
-      return;
+    await session.prompt(promptText);
+
+    if (historyPath) {
+        await factoryBuildHistoryAppend(historyPath, {
+            type: "pi.prompt.end",
+            attempt: input.attempt
+        });
     }
-    if (event.type === "tool_execution_start") {
-      console.log(`\n[pi] tool start: ${event.toolName}`);
-      return;
-    }
-    if (event.type === "tool_execution_end") {
-      console.log(`[pi] tool end: ${event.toolName}`);
-    }
-  });
 
-  const promptText = factoryPiPromptBuild(
-    taskPath,
-    outDirectory,
-    taskContents,
-    agentsContents,
-    input
-  );
-  if (historyPath) {
-    await factoryBuildHistoryAppend(historyPath, {
-      type: "pi.prompt.start",
-      attempt: input.attempt
-    });
-  }
-
-  await session.prompt(promptText);
-
-  if (historyPath) {
-    await factoryBuildHistoryAppend(historyPath, {
-      type: "pi.prompt.end",
-      attempt: input.attempt
-    });
-  }
-
-  process.stdout.write("\n");
+    process.stdout.write("\n");
 }
 
 function factoryPiPromptBuild(
-  taskPath: string,
-  outDirectory: string,
-  taskContents: string,
-  agentsContents: string,
-  input: FactoryPiAgentPromptRunInput
+    taskPath: string,
+    outDirectory: string,
+    taskContents: string,
+    agentsContents: string,
+    input: FactoryPiAgentPromptRunInput
 ): string {
-  const feedback = input.feedback
-    ? `Previous attempt feedback:
+    const feedback = input.feedback
+        ? `Previous attempt feedback:
 ${input.feedback}
 `
-    : "No previous attempt feedback yet.";
+        : "No previous attempt feedback yet.";
 
-  return `Use this task to prepare the build workspace.
+    return `Use this task to prepare the build workspace.
 
 Task file path: ${taskPath}
 Output directory: ${outDirectory}

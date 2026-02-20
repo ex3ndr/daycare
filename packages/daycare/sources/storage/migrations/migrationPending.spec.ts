@@ -9,45 +9,38 @@ import { migrations } from "./_migrations.js";
 import { migrationPending } from "./migrationPending.js";
 
 describe("migrationPending", () => {
-  it("returns all migrations when _migrations is missing", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
-    const dbPath = path.join(dir, "daycare.db");
-    try {
-      const db = databaseOpen(dbPath);
-      const pending = migrationPending(db, migrations);
-      db.close();
+    it("returns all migrations when _migrations is missing", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
+        const dbPath = path.join(dir, "daycare.db");
+        try {
+            const db = databaseOpen(dbPath);
+            const pending = migrationPending(db, migrations);
+            db.close();
 
-      expect(pending.map((entry) => entry.name)).toEqual(migrations.map((entry) => entry.name));
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            expect(pending.map((entry) => entry.name)).toEqual(migrations.map((entry) => entry.name));
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 
-  it("filters already-applied migrations", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
-    const dbPath = path.join(dir, "daycare.db");
-    try {
-      const db = databaseOpen(dbPath);
-      db.exec(
-        "CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)"
-      );
-      const firstMigration = migrations[0];
-      if (!firstMigration) {
-        throw new Error("Missing base migration");
-      }
-      db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(
-        firstMigration.name,
-        Date.now()
-      );
+    it("filters already-applied migrations", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
+        const dbPath = path.join(dir, "daycare.db");
+        try {
+            const db = databaseOpen(dbPath);
+            db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)");
+            const firstMigration = migrations[0];
+            if (!firstMigration) {
+                throw new Error("Missing base migration");
+            }
+            db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(firstMigration.name, Date.now());
 
-      const pending = migrationPending(db, migrations);
-      db.close();
+            const pending = migrationPending(db, migrations);
+            db.close();
 
-      expect(pending.map((entry) => entry.name)).toEqual(
-        migrations.slice(1).map((entry) => entry.name)
-      );
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            expect(pending.map((entry) => entry.name)).toEqual(migrations.slice(1).map((entry) => entry.name));
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });

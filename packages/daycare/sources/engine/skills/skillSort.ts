@@ -6,11 +6,11 @@ import type { AgentSkill } from "./skillTypes.js";
  * Expects: skills is any array; returns a new array sorted by name then path.
  */
 export function skillSort(skills: AgentSkill[]): AgentSkill[] {
-  return [...skills].sort((a, b) => {
-    const nameSort = a.name.localeCompare(b.name);
-    if (nameSort !== 0) {
-      return nameSort;
-    }
-    return a.path.localeCompare(b.path);
-  });
+    return [...skills].sort((a, b) => {
+        const nameSort = a.name.localeCompare(b.name);
+        if (nameSort !== 0) {
+            return nameSort;
+        }
+        return a.path.localeCompare(b.path);
+    });
 }

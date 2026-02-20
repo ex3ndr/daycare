@@ -11,28 +11,26 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders skills by loading dynamic skill definitions from config and plugins.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionSkills(
-  context: AgentSystemPromptContext = {}
-): Promise<string> {
-  const configDir = context.agentSystem?.config?.current.configDir ?? "";
-  const skillsPrompt = await (async () => {
-    if (!configDir) {
-      return "";
-    }
-    const configSkillsRoot = path.join(configDir, "skills");
-    const pluginManager = context.agentSystem?.pluginManager ?? { listRegisteredSkills: () => [] };
-    const skills = new Skills({
-      configRoot: configSkillsRoot,
-      pluginManager
-    });
-    return skillPromptFormat(await skills.list());
-  })();
+export async function agentSystemPromptSectionSkills(context: AgentSystemPromptContext = {}): Promise<string> {
+    const configDir = context.agentSystem?.config?.current.configDir ?? "";
+    const skillsPrompt = await (async () => {
+        if (!configDir) {
+            return "";
+        }
+        const configSkillsRoot = path.join(configDir, "skills");
+        const pluginManager = context.agentSystem?.pluginManager ?? { listRegisteredSkills: () => [] };
+        const skills = new Skills({
+            configRoot: configSkillsRoot,
+            pluginManager
+        });
+        return skillPromptFormat(await skills.list());
+    })();
 
-  const template = await agentPromptBundledRead("SYSTEM_SKILLS.md");
-  const section = Handlebars.compile(template)({}).trim();
-  const dynamicSkills = skillsPrompt.trim();
-  return [section, dynamicSkills]
-    .filter((part) => part.length > 0)
-    .join("\n\n")
-    .trim();
+    const template = await agentPromptBundledRead("SYSTEM_SKILLS.md");
+    const section = Handlebars.compile(template)({}).trim();
+    const dynamicSkills = skillsPrompt.trim();
+    return [section, dynamicSkills]
+        .filter((part) => part.length > 0)
+        .join("\n\n")
+        .trim();
 }

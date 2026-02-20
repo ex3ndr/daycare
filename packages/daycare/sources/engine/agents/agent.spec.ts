@@ -1,811 +1,771 @@
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-
-import { describe, expect, it, vi } from "vitest";
 import { createId } from "@paralleldrive/cuid2";
-
-import { Agent } from "./agent.js";
-import { AgentInbox } from "./ops/agentInbox.js";
-import { AgentSystem } from "./agentSystem.js";
+import { describe, expect, it, vi } from "vitest";
+import type { AgentDescriptor, Connector, Signal } from "@/types";
+import { AuthStore } from "../../auth/store.js";
+import { configResolve } from "../../config/configResolve.js";
+import { FileStore } from "../../files/store.js";
+import { ConfigModule } from "../config/configModule.js";
+import type { Crons } from "../cron/crons.js";
+import { EngineEventBus } from "../ipc/events.js";
 import { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
-import { ToolResolver } from "../modules/toolResolver.js";
-import { EngineEventBus } from "../ipc/events.js";
-import { AuthStore } from "../../auth/store.js";
-import { FileStore } from "../../files/store.js";
-import { configResolve } from "../../config/configResolve.js";
-import type { AgentDescriptor, Connector, Signal } from "@/types";
-import type { PluginManager } from "../plugins/manager.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
-import type { Crons } from "../cron/crons.js";
-import { ConfigModule } from "../config/configModule.js";
-import { Signals } from "../signals/signals.js";
+import { ToolResolver } from "../modules/toolResolver.js";
+import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
-import { agentStateRead } from "./ops/agentStateRead.js";
+import { Signals } from "../signals/signals.js";
+import { Agent } from "./agent.js";
+import { AgentSystem } from "./agentSystem.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
+import { AgentInbox } from "./ops/agentInbox.js";
+import { agentStateRead } from "./ops/agentStateRead.js";
 
 describe("Agent", () => {
-  it("persists descriptor, state, and history on create", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus: new EngineEventBus(),
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
+    it("persists descriptor, state, and history on create", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
 
-      const agentId = createId();
-      const descriptor: AgentDescriptor = {
-        type: "user",
-        connector: "slack",
-        channelId: "channel-1",
-        userId: "user-1"
-      };
-      await Agent.create(agentId, descriptor, createId(), new AgentInbox(agentId), agentSystem);
+            const agentId = createId();
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "slack",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            await Agent.create(agentId, descriptor, createId(), new AgentInbox(agentId), agentSystem);
 
-      const restoredDescriptor = await agentDescriptorRead(config, agentId);
-      expect(restoredDescriptor).toEqual(descriptor);
+            const restoredDescriptor = await agentDescriptorRead(config, agentId);
+            expect(restoredDescriptor).toEqual(descriptor);
 
-      const state = await agentStateRead(config, agentId);
-      if (!state) {
-        throw new Error("State not found");
-      }
-      expect(state.permissions.workingDir).toBe(config.defaultPermissions.workingDir);
-      expect(state?.activeSessionId).toBeTruthy();
+            const state = await agentStateRead(config, agentId);
+            if (!state) {
+                throw new Error("State not found");
+            }
+            expect(state.permissions.workingDir).toBe(config.defaultPermissions.workingDir);
+            expect(state?.activeSessionId).toBeTruthy();
 
-      const history = await agentHistoryLoad(config, agentId);
-      expect(history).toEqual([]);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("sends reset confirmation from agent for user resets with context", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const connectorRegistry = new ConnectorRegistry({
-        onMessage: async () => undefined
-      });
-      const sendMessage = vi.fn(async () => undefined);
-      const connector: Connector = {
-        capabilities: { sendText: true },
-        onMessage: () => () => undefined,
-        sendMessage
-      };
-      const registerResult = connectorRegistry.register("telegram", connector);
-      expect(registerResult).toEqual({ ok: true, status: "loaded" });
-
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus: new EngineEventBus(),
-        connectorRegistry,
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      await agentSystem.load();
-      await agentSystem.start();
-
-      const descriptor: AgentDescriptor = {
-        type: "user",
-        connector: "telegram",
-        channelId: "channel-1",
-        userId: "user-1"
-      };
-      const result = await agentSystem.postAndAwait(
-        { descriptor },
-        {
-          type: "reset",
-          message: "Manual reset requested by the user.",
-          context: { messageId: "42" }
+            const history = await agentHistoryLoad(config, agentId);
+            expect(history).toEqual([]);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-      );
+    });
 
-      expect(result).toEqual({ type: "reset", ok: true });
-      expect(sendMessage).toHaveBeenCalledWith("channel-1", {
-        text: "🔄 Session reset.",
-        replyToMessageId: "42"
-      });
+    it("sends reset confirmation from agent for user resets with context", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const sendMessage = vi.fn(async () => undefined);
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: () => () => undefined,
+                sendMessage
+            };
+            const registerResult = connectorRegistry.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
 
-      await connectorRegistry.unregisterAll("test");
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            await agentSystem.load();
+            await agentSystem.start();
 
-  it("rotates inference session id on reset", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus: new EngineEventBus(),
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      await agentSystem.load();
-      await agentSystem.start();
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            const result = await agentSystem.postAndAwait(
+                { descriptor },
+                {
+                    type: "reset",
+                    message: "Manual reset requested by the user.",
+                    context: { messageId: "42" }
+                }
+            );
 
-      const descriptor: AgentDescriptor = {
-        type: "cron",
-        id: createId(),
-        name: "Reset Session Agent"
-      };
-      await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "reset", message: "first reset" }
-      );
-      const agentId = await agentSystem.agentIdForTarget({ descriptor });
-      const firstState = await agentStateRead(config, agentId);
-      expect(firstState?.inferenceSessionId).toBeTruthy();
+            expect(result).toEqual({ type: "reset", ok: true });
+            expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+                text: "🔄 Session reset.",
+                replyToMessageId: "42"
+            });
 
-      await agentSystem.postAndAwait(
-        { agentId },
-        { type: "reset", message: "second reset" }
-      );
-      const secondState = await agentStateRead(config, agentId);
-      expect(secondState?.inferenceSessionId).toBeTruthy();
-      expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("shows typing and writes compaction logs for manual compaction", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        {
-          engine: { dataDir: dir },
-          assistant: { workspaceDir: dir },
-          providers: [{ id: "openai", model: "gpt-4.1" }]
-        },
-        path.join(dir, "settings.json")
-      );
-      const connectorRegistry = new ConnectorRegistry({
-        onMessage: async () => undefined
-      });
-      const sendMessage = vi.fn(async () => undefined);
-      const stopTyping = vi.fn(() => undefined);
-      const startTyping = vi.fn(() => stopTyping);
-      const connector: Connector = {
-        capabilities: { sendText: true, typing: true },
-        onMessage: () => () => undefined,
-        sendMessage,
-        startTyping
-      };
-      const registerResult = connectorRegistry.register("telegram", connector);
-      expect(registerResult).toEqual({ ok: true, status: "loaded" });
-
-      let receivedSessionId: string | undefined;
-      const complete = vi.fn(async (
-        _context: unknown,
-        sessionId: string
-      ) => {
-        receivedSessionId = sessionId;
-        return {
-          providerId: "openai",
-          modelId: "gpt-4.1",
-          message: {
-            role: "assistant",
-            content: [{ type: "text", text: "Compacted summary" }],
-            api: "openai-responses",
-            provider: "openai",
-            model: "gpt-4.1",
-            usage: {
-              input: 10,
-              output: 5,
-              cacheRead: 0,
-              cacheWrite: 0,
-              totalTokens: 15,
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
-            },
-            stopReason: "stop",
-            timestamp: Date.now()
-          }
-        };
-      });
-      const inferenceRouter: InferenceRouter = {
-        complete
-      } as unknown as InferenceRouter;
-
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus: new EngineEventBus(),
-        connectorRegistry,
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      await agentSystem.load();
-      await agentSystem.start();
-
-      const descriptor: AgentDescriptor = {
-        type: "user",
-        connector: "telegram",
-        channelId: "channel-1",
-        userId: "user-1"
-      };
-
-      await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "reset", message: "seed context" }
-      );
-      const agentId = await agentSystem.agentIdForTarget({ descriptor });
-      const beforeCompaction = await agentStateRead(config, agentId);
-      expect(beforeCompaction?.inferenceSessionId).toBeTruthy();
-      const result = await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "compact", context: { messageId: "88" } }
-      );
-
-      expect(result).toEqual({ type: "compact", ok: true });
-      expect(complete).toHaveBeenCalledTimes(1);
-      expect(receivedSessionId).toBe(beforeCompaction?.inferenceSessionId);
-      expect(startTyping).toHaveBeenCalledWith("channel-1");
-      expect(stopTyping).toHaveBeenCalledTimes(1);
-      expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
-        text: "Session compacted.",
-        replyToMessageId: "88"
-      });
-
-      const state = await agentStateRead(config, agentId);
-      expect(state?.activeSessionId).toBeTruthy();
-      expect(state?.activeSessionId).not.toBe(beforeCompaction?.activeSessionId);
-      const history = await agentHistoryLoad(config, agentId);
-      const firstHistoryRecord = history[0];
-      expect(firstHistoryRecord?.type).toBe("user_message");
-      if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
-        throw new Error("Expected user_message in compacted session history.");
-      }
-      expect(firstHistoryRecord.text).toContain("Compacted summary");
-      const files = await readdir(path.join(config.agentsDir, agentId));
-      expect(files.some((file) => file.startsWith("compaction_") && file.endsWith(".md"))).toBe(true);
-
-      await connectorRegistry.unregisterAll("test");
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("reports empty compaction summaries without changing context", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        {
-          engine: { dataDir: dir },
-          assistant: { workspaceDir: dir },
-          providers: [{ id: "openai", model: "gpt-4.1" }]
-        },
-        path.join(dir, "settings.json")
-      );
-      const connectorRegistry = new ConnectorRegistry({
-        onMessage: async () => undefined
-      });
-      const sendMessage = vi.fn(async () => undefined);
-      const connector: Connector = {
-        capabilities: { sendText: true, typing: true },
-        onMessage: () => () => undefined,
-        sendMessage,
-        startTyping: () => () => undefined
-      };
-      const registerResult = connectorRegistry.register("telegram", connector);
-      expect(registerResult).toEqual({ ok: true, status: "loaded" });
-
-      const inferenceRouter: InferenceRouter = {
-        complete: vi.fn(async () => ({
-          providerId: "openai",
-          modelId: "gpt-4.1",
-          message: {
-            role: "assistant",
-            content: [{ type: "text", text: "   " }],
-            api: "openai-responses",
-            provider: "openai",
-            model: "gpt-4.1",
-            usage: {
-              input: 10,
-              output: 5,
-              cacheRead: 0,
-              cacheWrite: 0,
-              totalTokens: 15,
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
-            },
-            stopReason: "stop",
-            timestamp: Date.now()
-          }
-        }))
-      } as unknown as InferenceRouter;
-
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus: new EngineEventBus(),
-        connectorRegistry,
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      await agentSystem.load();
-      await agentSystem.start();
-
-      const descriptor: AgentDescriptor = {
-        type: "user",
-        connector: "telegram",
-        channelId: "channel-1",
-        userId: "user-1"
-      };
-
-      await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "reset", message: "seed context" }
-      );
-      const result = await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "compact", context: { messageId: "89" } }
-      );
-
-      expect(result).toEqual({ type: "compact", ok: false });
-      expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
-        text: "Compaction produced an empty summary; context unchanged.",
-        replyToMessageId: "89"
-      });
-
-      await connectorRegistry.unregisterAll("test");
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("drops queued signals after unsubscribe before agent handles inbox", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const eventBus = new EngineEventBus();
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus,
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      const signals = new Signals({
-        eventBus,
-        configDir: config.configDir,
-        onDeliver: async (signal, subscriptions) => {
-          await agentSystem.signalDeliver(signal, subscriptions);
+            await connectorRegistry.unregisterAll("test");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-      });
-      agentSystem.setSignals(signals);
-      await agentSystem.load();
+    });
 
-      const agentId = createId();
-      const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
-      await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
-      const agentContext = await agentSystem.agentContextForAgentId(agentId);
-      if (!agentContext) {
-        throw new Error("Missing agent context");
-      }
-      signals.subscribe({
-        userId: agentContext.userId,
-        agentId,
-        pattern: "build:*:done",
-        silent: true
-      });
-      await signals.generate({ type: "build:alpha:done", source: { type: "system" } });
-      signals.unsubscribe({ userId: agentContext.userId, agentId, pattern: "build:*:done" });
+    it("rotates inference session id on reset", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            await agentSystem.load();
+            await agentSystem.start();
 
-      await agentSystem.start();
-      await agentSystem.postAndAwait(
-        { agentId },
-        { type: "reset", message: "flush queue" }
-      );
+            const descriptor: AgentDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "Reset Session Agent"
+            };
+            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "first reset" });
+            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            const firstState = await agentStateRead(config, agentId);
+            expect(firstState?.inferenceSessionId).toBeTruthy();
 
-      const history = await agentHistoryLoad(config, agentId);
-      expect(historyHasSignalText(history)).toBe(false);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("delivers queued signal when subscribed at handling time", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const eventBus = new EngineEventBus();
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus,
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      const signals = new Signals({
-        eventBus,
-        configDir: config.configDir,
-        onDeliver: async (signal, subscriptions) => {
-          await agentSystem.signalDeliver(signal, subscriptions);
+            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "second reset" });
+            const secondState = await agentStateRead(config, agentId);
+            expect(secondState?.inferenceSessionId).toBeTruthy();
+            expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-      });
-      agentSystem.setSignals(signals);
-      await agentSystem.load();
+    });
 
-      const agentId = createId();
-      const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
-      await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
-      const agentContext = await agentSystem.agentContextForAgentId(agentId);
-      if (!agentContext) {
-        throw new Error("Missing agent context");
-      }
-      signals.subscribe({
-        userId: agentContext.userId,
-        agentId,
-        pattern: "build:*:done",
-        silent: true
-      });
-      await signals.generate({ type: "build:alpha:done", source: { type: "system" } });
-      signals.unsubscribe({ userId: agentContext.userId, agentId, pattern: "build:*:done" });
-      signals.subscribe({
-        userId: agentContext.userId,
-        agentId,
-        pattern: "build:*:done",
-        silent: true
-      });
+    it("shows typing and writes compaction logs for manual compaction", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    assistant: { workspaceDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const sendMessage = vi.fn(async () => undefined);
+            const stopTyping = vi.fn(() => undefined);
+            const startTyping = vi.fn(() => stopTyping);
+            const connector: Connector = {
+                capabilities: { sendText: true, typing: true },
+                onMessage: () => () => undefined,
+                sendMessage,
+                startTyping
+            };
+            const registerResult = connectorRegistry.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
 
-      await agentSystem.start();
-      await agentSystem.postAndAwait(
-        { agentId },
-        { type: "reset", message: "flush queue" }
-      );
+            let receivedSessionId: string | undefined;
+            const complete = vi.fn(async (_context: unknown, sessionId: string) => {
+                receivedSessionId = sessionId;
+                return {
+                    providerId: "openai",
+                    modelId: "gpt-4.1",
+                    message: {
+                        role: "assistant",
+                        content: [{ type: "text", text: "Compacted summary" }],
+                        api: "openai-responses",
+                        provider: "openai",
+                        model: "gpt-4.1",
+                        usage: {
+                            input: 10,
+                            output: 5,
+                            cacheRead: 0,
+                            cacheWrite: 0,
+                            totalTokens: 15,
+                            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                        },
+                        stopReason: "stop",
+                        timestamp: Date.now()
+                    }
+                };
+            });
+            const inferenceRouter: InferenceRouter = {
+                complete
+            } as unknown as InferenceRouter;
 
-      const history = await agentHistoryLoadAll(config, agentId);
-      expect(historyHasSignalText(history)).toBe(true);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            await agentSystem.load();
+            await agentSystem.start();
 
-  it("does not deliver agent-sourced signals back to the same agent", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const eventBus = new EngineEventBus();
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus,
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      const signals = new Signals({
-        eventBus,
-        configDir: config.configDir,
-        onDeliver: async (signal, subscriptions) => {
-          await agentSystem.signalDeliver(signal, subscriptions);
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+
+            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "seed context" });
+            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            const beforeCompaction = await agentStateRead(config, agentId);
+            expect(beforeCompaction?.inferenceSessionId).toBeTruthy();
+            const result = await agentSystem.postAndAwait(
+                { descriptor },
+                { type: "compact", context: { messageId: "88" } }
+            );
+
+            expect(result).toEqual({ type: "compact", ok: true });
+            expect(complete).toHaveBeenCalledTimes(1);
+            expect(receivedSessionId).toBe(beforeCompaction?.inferenceSessionId);
+            expect(startTyping).toHaveBeenCalledWith("channel-1");
+            expect(stopTyping).toHaveBeenCalledTimes(1);
+            expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
+                text: "Session compacted.",
+                replyToMessageId: "88"
+            });
+
+            const state = await agentStateRead(config, agentId);
+            expect(state?.activeSessionId).toBeTruthy();
+            expect(state?.activeSessionId).not.toBe(beforeCompaction?.activeSessionId);
+            const history = await agentHistoryLoad(config, agentId);
+            const firstHistoryRecord = history[0];
+            expect(firstHistoryRecord?.type).toBe("user_message");
+            if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
+                throw new Error("Expected user_message in compacted session history.");
+            }
+            expect(firstHistoryRecord.text).toContain("Compacted summary");
+            const files = await readdir(path.join(config.agentsDir, agentId));
+            expect(files.some((file) => file.startsWith("compaction_") && file.endsWith(".md"))).toBe(true);
+
+            await connectorRegistry.unregisterAll("test");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-      });
-      agentSystem.setSignals(signals);
-      await agentSystem.load();
+    });
 
-      const sourceAgentId = createId();
-      const peerAgentId = createId();
-      await agentSystem.post(
-        { descriptor: { type: "cron", id: sourceAgentId, name: "Source agent" } },
-        { type: "reset", message: "init source" }
-      );
-      await agentSystem.post(
-        { descriptor: { type: "cron", id: peerAgentId, name: "Peer agent" } },
-        { type: "reset", message: "init peer" }
-      );
+    it("reports empty compaction summaries without changing context", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    assistant: { workspaceDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const sendMessage = vi.fn(async () => undefined);
+            const connector: Connector = {
+                capabilities: { sendText: true, typing: true },
+                onMessage: () => () => undefined,
+                sendMessage,
+                startTyping: () => () => undefined
+            };
+            const registerResult = connectorRegistry.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
 
-      const sourceAgentContext = await agentSystem.agentContextForAgentId(sourceAgentId);
-      const peerAgentContext = await agentSystem.agentContextForAgentId(peerAgentId);
-      if (!sourceAgentContext || !peerAgentContext) {
-        throw new Error("Missing signal test agent contexts");
-      }
-      signals.subscribe({
-        userId: sourceAgentContext.userId,
-        agentId: sourceAgentId,
-        pattern: "build:*:done",
-        silent: true
-      });
-      signals.subscribe({
-        userId: peerAgentContext.userId,
-        agentId: peerAgentId,
-        pattern: "build:*:done",
-        silent: true
-      });
-      await signals.generate({
-        type: "build:alpha:done",
-        source: {
-          type: "agent",
-          id: sourceAgentId,
-          userId: sourceAgentContext.userId
+            const inferenceRouter: InferenceRouter = {
+                complete: vi.fn(async () => ({
+                    providerId: "openai",
+                    modelId: "gpt-4.1",
+                    message: {
+                        role: "assistant",
+                        content: [{ type: "text", text: "   " }],
+                        api: "openai-responses",
+                        provider: "openai",
+                        model: "gpt-4.1",
+                        usage: {
+                            input: 10,
+                            output: 5,
+                            cacheRead: 0,
+                            cacheWrite: 0,
+                            totalTokens: 15,
+                            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                        },
+                        stopReason: "stop",
+                        timestamp: Date.now()
+                    }
+                }))
+            } as unknown as InferenceRouter;
+
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+
+            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "seed context" });
+            const result = await agentSystem.postAndAwait(
+                { descriptor },
+                { type: "compact", context: { messageId: "89" } }
+            );
+
+            expect(result).toEqual({ type: "compact", ok: false });
+            expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
+                text: "Compaction produced an empty summary; context unchanged.",
+                replyToMessageId: "89"
+            });
+
+            await connectorRegistry.unregisterAll("test");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-      });
+    });
 
-      await agentSystem.start();
-      await agentSystem.postAndAwait(
-        { agentId: sourceAgentId },
-        { type: "reset", message: "flush source queue" }
-      );
-      await agentSystem.postAndAwait(
-        { agentId: peerAgentId },
-        { type: "reset", message: "flush peer queue" }
-      );
+    it("drops queued signals after unsubscribe before agent handles inbox", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const eventBus = new EngineEventBus();
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus,
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            const signals = new Signals({
+                eventBus,
+                configDir: config.configDir,
+                onDeliver: async (signal, subscriptions) => {
+                    await agentSystem.signalDeliver(signal, subscriptions);
+                }
+            });
+            agentSystem.setSignals(signals);
+            await agentSystem.load();
 
-      const sourceHistory = await agentHistoryLoadAll(config, sourceAgentId);
-      expect(historyHasSignalText(sourceHistory)).toBe(false);
+            const agentId = createId();
+            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+            await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
+            const agentContext = await agentSystem.agentContextForAgentId(agentId);
+            if (!agentContext) {
+                throw new Error("Missing agent context");
+            }
+            signals.subscribe({
+                userId: agentContext.userId,
+                agentId,
+                pattern: "build:*:done",
+                silent: true
+            });
+            await signals.generate({ type: "build:alpha:done", source: { type: "system" } });
+            signals.unsubscribe({ userId: agentContext.userId, agentId, pattern: "build:*:done" });
 
-      const peerHistory = await agentHistoryLoadAll(config, peerAgentId);
-      expect(historyHasSignalText(peerHistory)).toBe(true);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            await agentSystem.start();
+            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "flush queue" });
 
-  it("emits wake and sleep lifecycle signals", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const eventBus = new EngineEventBus();
-      const agentSystem = new AgentSystem({
-        config: new ConfigModule(config),
-        eventBus,
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config)
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      const signals = new Signals({ eventBus, configDir: config.configDir });
-      agentSystem.setSignals(signals);
-      await agentSystem.load();
-      await agentSystem.start();
-
-      const lifecycleTypes: string[] = [];
-      const unsubscribe = eventBus.onEvent((event) => {
-        if (event.type !== "signal.generated") {
-          return;
+            const history = await agentHistoryLoad(config, agentId);
+            expect(historyHasSignalText(history)).toBe(false);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-        const payload = event.payload as Signal;
-        if (!payload.type.startsWith("agent:")) {
-          return;
+    });
+
+    it("delivers queued signal when subscribed at handling time", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const eventBus = new EngineEventBus();
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus,
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            const signals = new Signals({
+                eventBus,
+                configDir: config.configDir,
+                onDeliver: async (signal, subscriptions) => {
+                    await agentSystem.signalDeliver(signal, subscriptions);
+                }
+            });
+            agentSystem.setSignals(signals);
+            await agentSystem.load();
+
+            const agentId = createId();
+            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+            await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
+            const agentContext = await agentSystem.agentContextForAgentId(agentId);
+            if (!agentContext) {
+                throw new Error("Missing agent context");
+            }
+            signals.subscribe({
+                userId: agentContext.userId,
+                agentId,
+                pattern: "build:*:done",
+                silent: true
+            });
+            await signals.generate({ type: "build:alpha:done", source: { type: "system" } });
+            signals.unsubscribe({ userId: agentContext.userId, agentId, pattern: "build:*:done" });
+            signals.subscribe({
+                userId: agentContext.userId,
+                agentId,
+                pattern: "build:*:done",
+                silent: true
+            });
+
+            await agentSystem.start();
+            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "flush queue" });
+
+            const history = await agentHistoryLoadAll(config, agentId);
+            expect(historyHasSignalText(history)).toBe(true);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-        lifecycleTypes.push(payload.type);
-      });
+    });
 
-      const agentId = createId();
-      const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Lifecycle agent" };
+    it("does not deliver agent-sourced signals back to the same agent", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const eventBus = new EngineEventBus();
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus,
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            const signals = new Signals({
+                eventBus,
+                configDir: config.configDir,
+                onDeliver: async (signal, subscriptions) => {
+                    await agentSystem.signalDeliver(signal, subscriptions);
+                }
+            });
+            agentSystem.setSignals(signals);
+            await agentSystem.load();
 
-      await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "reset", message: "init lifecycle" }
-      );
-      await agentSystem.postAndAwait(
-        { agentId },
-        { type: "reset", message: "wake lifecycle" }
-      );
+            const sourceAgentId = createId();
+            const peerAgentId = createId();
+            await agentSystem.post(
+                { descriptor: { type: "cron", id: sourceAgentId, name: "Source agent" } },
+                { type: "reset", message: "init source" }
+            );
+            await agentSystem.post(
+                { descriptor: { type: "cron", id: peerAgentId, name: "Peer agent" } },
+                { type: "reset", message: "init peer" }
+            );
 
-      unsubscribe();
+            const sourceAgentContext = await agentSystem.agentContextForAgentId(sourceAgentId);
+            const peerAgentContext = await agentSystem.agentContextForAgentId(peerAgentId);
+            if (!sourceAgentContext || !peerAgentContext) {
+                throw new Error("Missing signal test agent contexts");
+            }
+            signals.subscribe({
+                userId: sourceAgentContext.userId,
+                agentId: sourceAgentId,
+                pattern: "build:*:done",
+                silent: true
+            });
+            signals.subscribe({
+                userId: peerAgentContext.userId,
+                agentId: peerAgentId,
+                pattern: "build:*:done",
+                silent: true
+            });
+            await signals.generate({
+                type: "build:alpha:done",
+                source: {
+                    type: "agent",
+                    id: sourceAgentId,
+                    userId: sourceAgentContext.userId
+                }
+            });
 
-      expect(lifecycleTypes).toContain(`agent:${agentId}:sleep`);
-      expect(lifecycleTypes).toContain(`agent:${agentId}:wake`);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            await agentSystem.start();
+            await agentSystem.postAndAwait(
+                { agentId: sourceAgentId },
+                { type: "reset", message: "flush source queue" }
+            );
+            await agentSystem.postAndAwait({ agentId: peerAgentId }, { type: "reset", message: "flush peer queue" });
 
-  it("emits idle lifecycle signal one minute after sleeping", async () => {
-    vi.useFakeTimers();
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    let delayedSignals: DelayedSignals | null = null;
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const eventBus = new EngineEventBus();
-      const configModule = new ConfigModule(config);
-      const signals = new Signals({ eventBus, configDir: config.configDir });
-      delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
-      const agentSystem = new AgentSystem({
-        config: configModule,
-        eventBus,
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config),
-        delayedSignals
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      agentSystem.setSignals(signals);
-      await delayedSignals.start();
-      await agentSystem.load();
-      await agentSystem.start();
+            const sourceHistory = await agentHistoryLoadAll(config, sourceAgentId);
+            expect(historyHasSignalText(sourceHistory)).toBe(false);
 
-      const lifecycleTypes: string[] = [];
-      const unsubscribe = eventBus.onEvent((event) => {
-        if (event.type !== "signal.generated") {
-          return;
+            const peerHistory = await agentHistoryLoadAll(config, peerAgentId);
+            expect(historyHasSignalText(peerHistory)).toBe(true);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
         }
-        const payload = event.payload as Signal;
-        lifecycleTypes.push(payload.type);
-      });
+    });
 
-      const agentId = createId();
-      const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Idle agent" };
+    it("emits wake and sleep lifecycle signals", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const eventBus = new EngineEventBus();
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus,
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            const signals = new Signals({ eventBus, configDir: config.configDir });
+            agentSystem.setSignals(signals);
+            await agentSystem.load();
+            await agentSystem.start();
 
-      await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "reset", message: "init idle lifecycle" }
-      );
+            const lifecycleTypes: string[] = [];
+            const unsubscribe = eventBus.onEvent((event) => {
+                if (event.type !== "signal.generated") {
+                    return;
+                }
+                const payload = event.payload as Signal;
+                if (!payload.type.startsWith("agent:")) {
+                    return;
+                }
+                lifecycleTypes.push(payload.type);
+            });
 
-      await vi.advanceTimersByTimeAsync(59_000);
-      expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
+            const agentId = createId();
+            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Lifecycle agent" };
 
-      await vi.advanceTimersByTimeAsync(1_000);
-      await vi.waitFor(() => {
-        expect(lifecycleTypes).toContain(`agent:${agentId}:idle`);
-      });
+            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init lifecycle" });
+            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "wake lifecycle" });
 
-      unsubscribe();
-    } finally {
-      delayedSignals?.stop();
-      vi.useRealTimers();
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            unsubscribe();
 
-  it("cancels pending idle lifecycle signal when agent wakes", async () => {
-    vi.useFakeTimers();
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
-    let delayedSignals: DelayedSignals | null = null;
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const eventBus = new EngineEventBus();
-      const configModule = new ConfigModule(config);
-      const signals = new Signals({ eventBus, configDir: config.configDir });
-      delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
-      const agentSystem = new AgentSystem({
-        config: configModule,
-        eventBus,
-        connectorRegistry: new ConnectorRegistry({
-          onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        toolResolver: new ToolResolver(),
-        pluginManager: {} as unknown as PluginManager,
-        inferenceRouter: {} as unknown as InferenceRouter,
-        fileStore: new FileStore(config),
-        authStore: new AuthStore(config),
-        delayedSignals
-      });
-      agentSystem.setCrons({} as unknown as Crons);
-      agentSystem.setSignals(signals);
-      await delayedSignals.start();
-      await agentSystem.load();
-      await agentSystem.start();
+            expect(lifecycleTypes).toContain(`agent:${agentId}:sleep`);
+            expect(lifecycleTypes).toContain(`agent:${agentId}:wake`);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 
-      const agentId = createId();
-      const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
+    it("emits idle lifecycle signal one minute after sleeping", async () => {
+        vi.useFakeTimers();
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        let delayedSignals: DelayedSignals | null = null;
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const eventBus = new EngineEventBus();
+            const configModule = new ConfigModule(config);
+            const signals = new Signals({ eventBus, configDir: config.configDir });
+            delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
+            const agentSystem = new AgentSystem({
+                config: configModule,
+                eventBus,
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config),
+                delayedSignals
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setSignals(signals);
+            await delayedSignals.start();
+            await agentSystem.load();
+            await agentSystem.start();
 
-      await agentSystem.postAndAwait(
-        { descriptor },
-        { type: "reset", message: "initial sleep" }
-      );
-      const signalType = `agent:${agentId}:idle`;
-      const firstIdle = delayedSignals.list().find((entry) => entry.type === signalType);
-      expect(firstIdle).toBeTruthy();
-      const firstDeliverAt = firstIdle?.deliverAt ?? 0;
+            const lifecycleTypes: string[] = [];
+            const unsubscribe = eventBus.onEvent((event) => {
+                if (event.type !== "signal.generated") {
+                    return;
+                }
+                const payload = event.payload as Signal;
+                lifecycleTypes.push(payload.type);
+            });
 
-      await vi.advanceTimersByTimeAsync(30_000);
+            const agentId = createId();
+            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Idle agent" };
 
-      await agentSystem.postAndAwait(
-        { agentId },
-        { type: "reset", message: "wake before idle deadline" }
-      );
+            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init idle lifecycle" });
 
-      const idleSignals = delayedSignals.list().filter((entry) => entry.type === signalType);
-      expect(idleSignals).toHaveLength(1);
-      expect((idleSignals[0]?.deliverAt ?? 0) > firstDeliverAt).toBe(true);
-    } finally {
-      delayedSignals?.stop();
-      vi.useRealTimers();
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            await vi.advanceTimersByTimeAsync(59_000);
+            expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
+
+            await vi.advanceTimersByTimeAsync(1_000);
+            await vi.waitFor(() => {
+                expect(lifecycleTypes).toContain(`agent:${agentId}:idle`);
+            });
+
+            unsubscribe();
+        } finally {
+            delayedSignals?.stop();
+            vi.useRealTimers();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("cancels pending idle lifecycle signal when agent wakes", async () => {
+        vi.useFakeTimers();
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        let delayedSignals: DelayedSignals | null = null;
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+                path.join(dir, "settings.json")
+            );
+            const eventBus = new EngineEventBus();
+            const configModule = new ConfigModule(config);
+            const signals = new Signals({ eventBus, configDir: config.configDir });
+            delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
+            const agentSystem = new AgentSystem({
+                config: configModule,
+                eventBus,
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                fileStore: new FileStore(config),
+                authStore: new AuthStore(config),
+                delayedSignals
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setSignals(signals);
+            await delayedSignals.start();
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const agentId = createId();
+            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
+
+            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "initial sleep" });
+            const signalType = `agent:${agentId}:idle`;
+            const firstIdle = delayedSignals.list().find((entry) => entry.type === signalType);
+            expect(firstIdle).toBeTruthy();
+            const firstDeliverAt = firstIdle?.deliverAt ?? 0;
+
+            await vi.advanceTimersByTimeAsync(30_000);
+
+            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "wake before idle deadline" });
+
+            const idleSignals = delayedSignals.list().filter((entry) => entry.type === signalType);
+            expect(idleSignals).toHaveLength(1);
+            expect((idleSignals[0]?.deliverAt ?? 0) > firstDeliverAt).toBe(true);
+        } finally {
+            delayedSignals?.stop();
+            vi.useRealTimers();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 function historyHasSignalText(records: Array<{ type: string; text?: string }>): boolean {
-  return records.some(
-    (record) => record.type === "user_message" && typeof record.text === "string" && record.text.includes("[signal]")
-  );
+    return records.some(
+        (record) =>
+            record.type === "user_message" && typeof record.text === "string" && record.text.includes("[signal]")
+    );
 }

@@ -9,54 +9,54 @@ import { messageBuildUser } from "./messageBuildUser.js";
 const baseContext = {};
 
 describe("messageBuildUser", () => {
-  it("returns a user message with text when no files", async () => {
-    const entry = {
-      id: "msg-1",
-      message: { text: "hello" },
-      context: baseContext,
-      receivedAt: Date.now()
-    };
+    it("returns a user message with text when no files", async () => {
+        const entry = {
+            id: "msg-1",
+            message: { text: "hello" },
+            context: baseContext,
+            receivedAt: Date.now()
+        };
 
-    const result = await messageBuildUser(entry);
+        const result = await messageBuildUser(entry);
 
-    expect(result.role).toBe("user");
-    expect(result.content).toBe("hello");
-    expect(typeof result.timestamp).toBe("number");
-  });
+        expect(result.role).toBe("user");
+        expect(result.content).toBe("hello");
+        expect(typeof result.timestamp).toBe("number");
+    });
 
-  it("represents image files as path references", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "daycare-msg-"));
-    try {
-      const filePath = path.join(dir, "image.png");
-      const buffer = Buffer.from("hello");
-      await writeFile(filePath, buffer);
+    it("represents image files as path references", async () => {
+        const dir = await mkdtemp(path.join(tmpdir(), "daycare-msg-"));
+        try {
+            const filePath = path.join(dir, "image.png");
+            const buffer = Buffer.from("hello");
+            await writeFile(filePath, buffer);
 
-      const entry = {
-        id: "msg-2",
-        message: {
-          text: "",
-          files: [
-            {
-              id: "file-1",
-              name: "image.png",
-              mimeType: "image/png",
-              size: buffer.length,
-              path: filePath
-            }
-          ]
-        },
-        context: baseContext,
-        receivedAt: Date.now()
-      };
+            const entry = {
+                id: "msg-2",
+                message: {
+                    text: "",
+                    files: [
+                        {
+                            id: "file-1",
+                            name: "image.png",
+                            mimeType: "image/png",
+                            size: buffer.length,
+                            path: filePath
+                        }
+                    ]
+                },
+                context: baseContext,
+                receivedAt: Date.now()
+            };
 
-      const result = await messageBuildUser(entry);
-      const content = result.content as Array<{ type: string; text?: string }>;
+            const result = await messageBuildUser(entry);
+            const content = result.content as Array<{ type: string; text?: string }>;
 
-      expect(content).toHaveLength(1);
-      expect(content[0]?.type).toBe("text");
-      expect(content[0]?.text).toContain(`at ${filePath}`);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
+            expect(content).toHaveLength(1);
+            expect(content[0]?.type).toBe("text");
+            expect(content[0]?.text).toContain(`at ${filePath}`);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });

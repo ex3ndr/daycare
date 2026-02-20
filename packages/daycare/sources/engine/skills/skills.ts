@@ -7,8 +7,8 @@ import { skillListRegistered } from "./skillListRegistered.js";
 import { skillListUser } from "./skillListUser.js";
 
 type SkillsOptions = {
-  configRoot: string;
-  pluginManager: Pick<PluginManager, "listRegisteredSkills">;
+    configRoot: string;
+    pluginManager: Pick<PluginManager, "listRegisteredSkills">;
 };
 
 /**
@@ -16,21 +16,21 @@ type SkillsOptions = {
  * Expects: pluginManager can list currently registered plugin skills.
  */
 export class Skills {
-  private readonly configRoot: string;
-  private readonly pluginManager: Pick<PluginManager, "listRegisteredSkills">;
+    private readonly configRoot: string;
+    private readonly pluginManager: Pick<PluginManager, "listRegisteredSkills">;
 
-  constructor(options: SkillsOptions) {
-    this.configRoot = options.configRoot;
-    this.pluginManager = options.pluginManager;
-  }
+    constructor(options: SkillsOptions) {
+        this.configRoot = options.configRoot;
+        this.pluginManager = options.pluginManager;
+    }
 
-  async list(): Promise<AgentSkill[]> {
-    const [coreSkills, configSkills, userSkills, pluginSkills] = await Promise.all([
-      skillListCore(),
-      skillListConfig(this.configRoot),
-      skillListUser(),
-      skillListRegistered(this.pluginManager.listRegisteredSkills())
-    ]);
-    return [...coreSkills, ...configSkills, ...userSkills, ...pluginSkills];
-  }
+    async list(): Promise<AgentSkill[]> {
+        const [coreSkills, configSkills, userSkills, pluginSkills] = await Promise.all([
+            skillListCore(),
+            skillListConfig(this.configRoot),
+            skillListUser(),
+            skillListRegistered(this.pluginManager.listRegisteredSkills())
+        ]);
+        return [...coreSkills, ...configSkills, ...userSkills, ...pluginSkills];
+    }
 }

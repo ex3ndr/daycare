@@ -8,9 +8,9 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionAgentsTopologySignalsChannels(
-  _context: AgentSystemPromptContext = {}
+    _context: AgentSystemPromptContext = {}
 ): Promise<string> {
-  const template = await agentPromptBundledRead("SYSTEM_TOPOLOGY.md");
-  const section = Handlebars.compile(template)({});
-  return section.trim();
+    const template = await agentPromptBundledRead("SYSTEM_TOPOLOGY.md");
+    const section = Handlebars.compile(template)({});
+    return section.trim();
 }

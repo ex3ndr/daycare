@@ -1,209 +1,210 @@
-import type { ToolCall, ToolResultMessage, Tool } from "@mariozechner/pi-ai";
+import type { Tool, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
 import { validateToolCall } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-
+import type { ToolDefinition, ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { getLogger } from "../../log.js";
-import type {
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolExecutionResult
-} from "@/types";
+import { MONTY_RESPONSE_SCHEMA_KEY } from "./monty/montyResponseSchemaKey.js";
+import { RLM_TOOL_NAME } from "./rlm/rlmConstants.js";
 import { toolResultTruncate } from "./tools/toolResultTruncate.js";
 import { toolExecutionResultOutcome } from "./tools/toolReturnOutcome.js";
-import { RLM_TOOL_NAME } from "./rlm/rlmConstants.js";
-import { MONTY_RESPONSE_SCHEMA_KEY } from "./monty/montyResponseSchemaKey.js";
 
 type RegisteredTool = ToolDefinition & { pluginId: string };
 
 const logger = getLogger("engine.modules");
 
 export class ToolResolver {
-  private tools = new Map<string, RegisteredTool>();
+    private tools = new Map<string, RegisteredTool>();
 
-  register(pluginId: string, definition: ToolDefinition): void {
-    toolResultSchemaValidate(definition.tool.name, definition.returns.schema);
-    logger.debug(`register: Registering tool pluginId=${pluginId} toolName=${definition.tool.name}`);
-    this.tools.set(definition.tool.name, { ...definition, pluginId });
-    logger.debug(`register: Tool registered totalTools=${this.tools.size}`);
-  }
+    register(pluginId: string, definition: ToolDefinition): void {
+        toolResultSchemaValidate(definition.tool.name, definition.returns.schema);
+        logger.debug(`register: Registering tool pluginId=${pluginId} toolName=${definition.tool.name}`);
+        this.tools.set(definition.tool.name, { ...definition, pluginId });
+        logger.debug(`register: Tool registered totalTools=${this.tools.size}`);
+    }
 
-  unregister(name: string): void {
-    logger.debug(`unregister: Unregistering tool toolName=${name}`);
-    this.tools.delete(name);
-  }
-
-  unregisterByPlugin(pluginId: string): void {
-    logger.debug(`unregister: Unregistering tools by plugin pluginId=${pluginId}`);
-    let count = 0;
-    for (const [name, entry] of this.tools.entries()) {
-      if (entry.pluginId === pluginId) {
+    unregister(name: string): void {
+        logger.debug(`unregister: Unregistering tool toolName=${name}`);
         this.tools.delete(name);
-        count++;
-      }
-    }
-    logger.debug(`unregister: Tools unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
-  }
-
-  listTools(): Tool[] {
-    return Array.from(this.tools.values()).map((entry) => {
-      const tool = { ...entry.tool } as Tool;
-      Object.defineProperty(tool, MONTY_RESPONSE_SCHEMA_KEY, {
-        value: entry.returns.schema,
-        enumerable: false,
-        configurable: false
-      });
-      return tool;
-    });
-  }
-
-  async execute(
-    toolCall: ToolCall,
-    context: ToolExecutionContext
-  ): Promise<ToolExecutionResult> {
-    const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 100);
-    logger.debug(`execute: execute() called toolName=${toolCall.name} toolCallId=${toolCall.id} argsPreview=${argsPreview}`);
-    const entry = this.tools.get(toolCall.name);
-    if (!entry) {
-      const availableTools = Array.from(this.tools.keys()).join(",");
-      logger.debug(`event: Tool not found toolName=${toolCall.name} availableTools=${availableTools}`);
-      return buildToolError(toolCall, `Unknown tool: ${toolCall.name}`);
     }
 
-    try {
-      if (context.rlmToolOnly && toolCall.name !== RLM_TOOL_NAME) {
-        throw new Error(`RLM mode only allows calling "${RLM_TOOL_NAME}".`);
-      }
-      logger.debug(`event: Validating tool call arguments toolName=${toolCall.name}`);
-      const args = validateToolCall([entry.tool], toolCall);
-      logger.debug(`execute: Arguments validated, executing tool toolName=${toolCall.name}`);
-      const startTime = Date.now();
-      const result = await entry.execute(args, context, toolCall);
-      const duration = Date.now() - startTime;
-      if (!Value.Check(entry.returns.schema, result.typedResult)) {
-        throw new Error(`Tool "${toolCall.name}" returned data that does not match its return schema.`);
-      }
-      if (!toolMessageHasText(result.toolMessage)) {
-        const text = entry.returns.toLLMText(result.typedResult).trim();
-        if (text.length > 0) {
-          result.toolMessage.content = [...toolMessageContentNormalize(result.toolMessage), { type: "text", text }];
+    unregisterByPlugin(pluginId: string): void {
+        logger.debug(`unregister: Unregistering tools by plugin pluginId=${pluginId}`);
+        let count = 0;
+        for (const [name, entry] of this.tools.entries()) {
+            if (entry.pluginId === pluginId) {
+                this.tools.delete(name);
+                count++;
+            }
         }
-      }
-      logger.debug(`event: Tool execution completed toolName=${toolCall.name} durationMs=${duration} isError=${result.toolMessage.isError}`);
-      if (!result.toolMessage.toolCallId) {
-        result.toolMessage.toolCallId = toolCall.id;
-      }
-      if (!result.toolMessage.toolName) {
-        result.toolMessage.toolName = toolCall.name;
-      }
-      return toolResultTruncate(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Tool execution failed.";
-      logger.debug(`error: Tool execution threw error toolName=${toolCall.name} error=${String(error)}`);
-      logger.warn({ tool: toolCall.name, error }, "error: Tool execution failed");
-      return buildToolError(toolCall, message);
+        logger.debug(`unregister: Tools unregistered by plugin pluginId=${pluginId} unregisteredCount=${count}`);
     }
-  }
+
+    listTools(): Tool[] {
+        return Array.from(this.tools.values()).map((entry) => {
+            const tool = { ...entry.tool } as Tool;
+            Object.defineProperty(tool, MONTY_RESPONSE_SCHEMA_KEY, {
+                value: entry.returns.schema,
+                enumerable: false,
+                configurable: false
+            });
+            return tool;
+        });
+    }
+
+    async execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> {
+        const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 100);
+        logger.debug(
+            `execute: execute() called toolName=${toolCall.name} toolCallId=${toolCall.id} argsPreview=${argsPreview}`
+        );
+        const entry = this.tools.get(toolCall.name);
+        if (!entry) {
+            const availableTools = Array.from(this.tools.keys()).join(",");
+            logger.debug(`event: Tool not found toolName=${toolCall.name} availableTools=${availableTools}`);
+            return buildToolError(toolCall, `Unknown tool: ${toolCall.name}`);
+        }
+
+        try {
+            if (context.rlmToolOnly && toolCall.name !== RLM_TOOL_NAME) {
+                throw new Error(`RLM mode only allows calling "${RLM_TOOL_NAME}".`);
+            }
+            logger.debug(`event: Validating tool call arguments toolName=${toolCall.name}`);
+            const args = validateToolCall([entry.tool], toolCall);
+            logger.debug(`execute: Arguments validated, executing tool toolName=${toolCall.name}`);
+            const startTime = Date.now();
+            const result = await entry.execute(args, context, toolCall);
+            const duration = Date.now() - startTime;
+            if (!Value.Check(entry.returns.schema, result.typedResult)) {
+                throw new Error(`Tool "${toolCall.name}" returned data that does not match its return schema.`);
+            }
+            if (!toolMessageHasText(result.toolMessage)) {
+                const text = entry.returns.toLLMText(result.typedResult).trim();
+                if (text.length > 0) {
+                    result.toolMessage.content = [
+                        ...toolMessageContentNormalize(result.toolMessage),
+                        { type: "text", text }
+                    ];
+                }
+            }
+            logger.debug(
+                `event: Tool execution completed toolName=${toolCall.name} durationMs=${duration} isError=${result.toolMessage.isError}`
+            );
+            if (!result.toolMessage.toolCallId) {
+                result.toolMessage.toolCallId = toolCall.id;
+            }
+            if (!result.toolMessage.toolName) {
+                result.toolMessage.toolName = toolCall.name;
+            }
+            return toolResultTruncate(result);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Tool execution failed.";
+            logger.debug(`error: Tool execution threw error toolName=${toolCall.name} error=${String(error)}`);
+            logger.warn({ tool: toolCall.name, error }, "error: Tool execution failed");
+            return buildToolError(toolCall, message);
+        }
+    }
 }
 
 export type ToolResolverApi = Pick<ToolResolver, "listTools" | "execute">;
 
 function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
-  const toolMessage: ToolResultMessage = {
-    role: "toolResult",
-    toolCallId: toolCall.id,
-    toolName: toolCall.name,
-    content: [{ type: "text", text }],
-    isError: true,
-    timestamp: Date.now()
-  };
-  return toolExecutionResultOutcome(toolMessage);
+    const toolMessage: ToolResultMessage = {
+        role: "toolResult",
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: [{ type: "text", text }],
+        isError: true,
+        timestamp: Date.now()
+    };
+    return toolExecutionResultOutcome(toolMessage);
 }
 
 function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
-  if (!schemaObjectIs(schema) || schema.type !== "object") {
-    throw new Error(`Tool "${toolName}" return schema must be a single-depth object schema.`);
-  }
-  const properties = schemaPropertyRecordGet(schema.properties);
-  for (const propertySchema of Object.values(properties)) {
-    if (!toolResultPropertySchemaIs(propertySchema)) {
-      throw new Error(
-        `Tool "${toolName}" return schema supports primitive values and arrays of shallow objects only.`
-      );
+    if (!schemaObjectIs(schema) || schema.type !== "object") {
+        throw new Error(`Tool "${toolName}" return schema must be a single-depth object schema.`);
     }
-  }
-  if ("additionalProperties" in schema && schema.additionalProperties !== undefined) {
-    const additionalProperties = schema.additionalProperties;
-    if (typeof additionalProperties === "boolean") {
-      if (additionalProperties) {
-        throw new Error(`Tool "${toolName}" return schema cannot use unrestricted additionalProperties.`);
-      }
-      return;
+    const properties = schemaPropertyRecordGet(schema.properties);
+    for (const propertySchema of Object.values(properties)) {
+        if (!toolResultPropertySchemaIs(propertySchema)) {
+            throw new Error(
+                `Tool "${toolName}" return schema supports primitive values and arrays of shallow objects only.`
+            );
+        }
     }
-    if (!toolResultPropertySchemaIs(additionalProperties)) {
-      throw new Error(
-        `Tool "${toolName}" return schema additionalProperties must be primitive or arrays of shallow objects.`
-      );
+    if ("additionalProperties" in schema && schema.additionalProperties !== undefined) {
+        const additionalProperties = schema.additionalProperties;
+        if (typeof additionalProperties === "boolean") {
+            if (additionalProperties) {
+                throw new Error(`Tool "${toolName}" return schema cannot use unrestricted additionalProperties.`);
+            }
+            return;
+        }
+        if (!toolResultPropertySchemaIs(additionalProperties)) {
+            throw new Error(
+                `Tool "${toolName}" return schema additionalProperties must be primitive or arrays of shallow objects.`
+            );
+        }
     }
-  }
 }
 
 function toolResultPropertySchemaIs(schema: unknown): boolean {
-  if (!schemaObjectIs(schema)) {
-    return false;
-  }
-  if (schemaPrimitiveIs(schema)) {
-    return true;
-  }
-  if (schema.type !== "array") {
-    return false;
-  }
-  if (!schemaObjectIs(schema.items) || schema.items.type !== "object") {
-    return false;
-  }
-  const itemProperties = schemaPropertyRecordGet(schema.items.properties);
-  if (Object.values(itemProperties).some((itemProperty) => !toolResultPropertyPrimitiveSchemaIs(itemProperty))) {
-    return false;
-  }
-  if ("additionalProperties" in schema.items && schema.items.additionalProperties !== undefined) {
-    const additionalProperties = schema.items.additionalProperties;
-    if (typeof additionalProperties === "boolean") {
-      return additionalProperties === false;
+    if (!schemaObjectIs(schema)) {
+        return false;
     }
-    return toolResultPropertyPrimitiveSchemaIs(additionalProperties);
-  }
-  return true;
+    if (schemaPrimitiveIs(schema)) {
+        return true;
+    }
+    if (schema.type !== "array") {
+        return false;
+    }
+    if (!schemaObjectIs(schema.items) || schema.items.type !== "object") {
+        return false;
+    }
+    const itemProperties = schemaPropertyRecordGet(schema.items.properties);
+    if (Object.values(itemProperties).some((itemProperty) => !toolResultPropertyPrimitiveSchemaIs(itemProperty))) {
+        return false;
+    }
+    if ("additionalProperties" in schema.items && schema.items.additionalProperties !== undefined) {
+        const additionalProperties = schema.items.additionalProperties;
+        if (typeof additionalProperties === "boolean") {
+            return additionalProperties === false;
+        }
+        return toolResultPropertyPrimitiveSchemaIs(additionalProperties);
+    }
+    return true;
 }
 
 function toolResultPropertyPrimitiveSchemaIs(schema: unknown): boolean {
-  return schemaObjectIs(schema) && schemaPrimitiveIs(schema);
+    return schemaObjectIs(schema) && schemaPrimitiveIs(schema);
 }
 
 function schemaPrimitiveIs(schema: { type?: unknown }): boolean {
-  return schema.type === "string"
-    || schema.type === "number"
-    || schema.type === "integer"
-    || schema.type === "boolean"
-    || schema.type === "null";
+    return (
+        schema.type === "string" ||
+        schema.type === "number" ||
+        schema.type === "integer" ||
+        schema.type === "boolean" ||
+        schema.type === "null"
+    );
 }
 
 function schemaObjectIs(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function schemaPropertyRecordGet(value: unknown): Record<string, unknown> {
-  if (!schemaObjectIs(value)) {
-    return {};
-  }
-  return value;
+    if (!schemaObjectIs(value)) {
+        return {};
+    }
+    return value;
 }
 
 function toolMessageHasText(message: ToolResultMessage): boolean {
-  return toolMessageContentNormalize(message).some(
-    (part) => part.type === "text" && "text" in part && typeof part.text === "string" && part.text.trim().length > 0
-  );
+    return toolMessageContentNormalize(message).some(
+        (part) => part.type === "text" && "text" in part && typeof part.text === "string" && part.text.trim().length > 0
+    );
 }
 
 function toolMessageContentNormalize(message: ToolResultMessage): ToolResultMessage["content"] {
-  return Array.isArray(message.content) ? message.content : [];
+    return Array.isArray(message.content) ? message.content : [];
 }

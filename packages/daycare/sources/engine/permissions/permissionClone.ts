@@ -5,9 +5,9 @@ import type { SessionPermissions } from "../permissions.js";
  * Expects: permissions.writeDirs/readDirs are treated as mutable arrays.
  */
 export function permissionClone(permissions: SessionPermissions): SessionPermissions {
-  return {
-    ...permissions,
-    writeDirs: [...permissions.writeDirs],
-    readDirs: [...permissions.readDirs]
-  };
+    return {
+        ...permissions,
+        writeDirs: [...permissions.writeDirs],
+        readDirs: [...permissions.readDirs]
+    };
 }

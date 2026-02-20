@@ -5,5 +5,5 @@ const SYSTEM_AGENT_TAG_PATTERN = /^[a-z]+$/;
  * Expects: lowercase english letters only.
  */
 export function systemAgentTagIs(tag: string): boolean {
-  return SYSTEM_AGENT_TAG_PATTERN.test(tag.trim());
+    return SYSTEM_AGENT_TAG_PATTERN.test(tag.trim());
 }

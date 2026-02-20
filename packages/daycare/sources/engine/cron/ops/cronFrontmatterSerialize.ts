@@ -9,5 +9,5 @@ import type { Frontmatter } from "../cronTypes.js";
  * Returns: markdown string with --- delimited frontmatter.
  */
 export function cronFrontmatterSerialize(frontmatter: Frontmatter, body: string): string {
-  return matter.stringify(body, frontmatter);
+    return matter.stringify(body, frontmatter);
 }

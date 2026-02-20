@@ -5,5 +5,5 @@ import path from "node:path";
  * Returns: a writable directory under sources/recipe/.sandbox/<name>.
  */
 export function recipePythonSandboxPathResolve(name: string): string {
-  return path.resolve(process.cwd(), "sources", "recipe", ".sandbox", name);
+    return path.resolve(process.cwd(), "sources", "recipe", ".sandbox", name);
 }

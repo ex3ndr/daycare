@@ -3,50 +3,50 @@ import { describe, expect, it } from "vitest";
 import { appReviewPromptBuild } from "./appReviewPromptBuild.js";
 
 describe("appReviewPromptBuild", () => {
-  it("includes tool details and allow/deny rules", async () => {
-    const prompt = await appReviewPromptBuild({
-      appName: "GitHub Reviewer",
-      appSystemPrompt:
-        "You are a secure review assistant. Use only approved tooling and avoid destructive actions.",
-      rlmEnabled: true,
-      sourceIntent: "Review pull requests safely.",
-      toolName: "exec",
-      args: { command: "git diff" },
-      availableTools: [
-        {
-          name: "exec",
-          description: "Run a shell command in the workspace.",
-          parameters: {
-            type: "object",
-            properties: { command: { type: "string" } },
-            required: ["command"]
-          }
-        }
-      ],
-      rules: {
-        allow: [{ text: "Run read-only git commands" }],
-        deny: [{ text: "Rewrite git history" }]
-      }
-    });
+    it("includes tool details and allow/deny rules", async () => {
+        const prompt = await appReviewPromptBuild({
+            appName: "GitHub Reviewer",
+            appSystemPrompt:
+                "You are a secure review assistant. Use only approved tooling and avoid destructive actions.",
+            rlmEnabled: true,
+            sourceIntent: "Review pull requests safely.",
+            toolName: "exec",
+            args: { command: "git diff" },
+            availableTools: [
+                {
+                    name: "exec",
+                    description: "Run a shell command in the workspace.",
+                    parameters: {
+                        type: "object",
+                        properties: { command: { type: "string" } },
+                        required: ["command"]
+                    }
+                }
+            ],
+            rules: {
+                allow: [{ text: "Run read-only git commands" }],
+                deny: [{ text: "Rewrite git history" }]
+            }
+        });
 
-    expect(prompt).toContain('app "GitHub Reviewer"');
-    expect(prompt).toContain("- Tool: exec");
-    expect(prompt).toContain('"command": "git diff"');
-    expect(prompt).toContain("## Available Tools In This Sandbox");
-    expect(prompt).toContain("Name: exec");
-    expect(prompt).toContain("not Python exec()");
-    expect(prompt).toContain("## Execution Mode");
-    expect(prompt).toContain("RLM mode is enabled.");
-    expect(prompt).toContain("`run_python` tool");
-    expect(prompt).toContain("minimal Python runtime (Monty)");
-    expect(prompt).toContain("not full CPython");
-    expect(prompt).toContain("do not assume standard-library or third-party modules are available");
-    expect(prompt).toContain("`read(...)`, `exec(...)`");
-    expect(prompt).toContain("## App System Prompt");
-    expect(prompt).toContain("You are a secure review assistant.");
-    expect(prompt).toContain("Review pull requests safely.");
-    expect(prompt).toContain("- Run read-only git commands");
-    expect(prompt).toContain("- Rewrite git history");
-    expect(prompt).toContain("DENY: <reason>");
-  });
+        expect(prompt).toContain('app "GitHub Reviewer"');
+        expect(prompt).toContain("- Tool: exec");
+        expect(prompt).toContain('"command": "git diff"');
+        expect(prompt).toContain("## Available Tools In This Sandbox");
+        expect(prompt).toContain("Name: exec");
+        expect(prompt).toContain("not Python exec()");
+        expect(prompt).toContain("## Execution Mode");
+        expect(prompt).toContain("RLM mode is enabled.");
+        expect(prompt).toContain("`run_python` tool");
+        expect(prompt).toContain("minimal Python runtime (Monty)");
+        expect(prompt).toContain("not full CPython");
+        expect(prompt).toContain("do not assume standard-library or third-party modules are available");
+        expect(prompt).toContain("`read(...)`, `exec(...)`");
+        expect(prompt).toContain("## App System Prompt");
+        expect(prompt).toContain("You are a secure review assistant.");
+        expect(prompt).toContain("Review pull requests safely.");
+        expect(prompt).toContain("- Run read-only git commands");
+        expect(prompt).toContain("- Rewrite git history");
+        expect(prompt).toContain("DENY: <reason>");
+    });
 });

@@ -5,7 +5,7 @@ import type { AgentDescriptor } from "./agentDescriptorTypes.js";
  * Expects: descriptor is validated.
  */
 export function agentDescriptorIsCron(
-  descriptor?: AgentDescriptor
+    descriptor?: AgentDescriptor
 ): descriptor is Extract<AgentDescriptor, { type: "cron" }> {
-  return descriptor?.type === "cron";
+    return descriptor?.type === "cron";
 }

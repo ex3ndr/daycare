@@ -7,5 +7,5 @@ import type { CronField } from "../cronTypes.js";
  * Returns: true if the value matches (field is "any" or value is in the set).
  */
 export function cronFieldMatch(field: CronField, value: number): boolean {
-  return field.any || field.values.has(value);
+    return field.any || field.values.has(value);
 }

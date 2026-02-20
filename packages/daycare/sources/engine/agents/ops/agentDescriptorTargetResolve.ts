@@ -5,10 +5,10 @@ import type { AgentDescriptor } from "./agentDescriptorTypes.js";
  * Expects: descriptor is validated.
  */
 export function agentDescriptorTargetResolve(
-  descriptor: AgentDescriptor
+    descriptor: AgentDescriptor
 ): { connector: string; targetId: string } | null {
-  if (descriptor.type !== "user") {
-    return null;
-  }
-  return { connector: descriptor.connector, targetId: descriptor.channelId };
+    if (descriptor.type !== "user") {
+        return null;
+    }
+    return { connector: descriptor.connector, targetId: descriptor.channelId };
 }

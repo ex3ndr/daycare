@@ -4,10 +4,7 @@
  *
  * Expects: text is non-empty; origin is the sending agent's ID.
  */
-export function messageBuildUserFacing(
-  text: string,
-  origin: string
-): string {
-  const trimmed = text.trim();
-  return `<message_for_user origin="${origin}">${trimmed}</message_for_user>`;
+export function messageBuildUserFacing(text: string, origin: string): string {
+    const trimmed = text.trim();
+    return `<message_for_user origin="${origin}">${trimmed}</message_for_user>`;
 }

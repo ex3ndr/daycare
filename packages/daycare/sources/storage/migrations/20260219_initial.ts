@@ -1,9 +1,9 @@
 import type { Migration } from "./migrationTypes.js";
 
 export const migration20260219Initial: Migration = {
-  name: "20260219_initial",
-  up(db): void {
-    db.exec(`
+    name: "20260219_initial",
+    up(db): void {
+        db.exec(`
       CREATE TABLE IF NOT EXISTS agents (
         id TEXT PRIMARY KEY,
         type TEXT NOT NULL,
@@ -39,5 +39,5 @@ export const migration20260219Initial: Migration = {
 
       CREATE INDEX IF NOT EXISTS idx_session_history_session ON session_history(session_id);
     `);
-  }
+    }
 };

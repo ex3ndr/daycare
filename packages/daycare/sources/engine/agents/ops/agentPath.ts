@@ -7,5 +7,5 @@ import type { Config } from "@/types";
  * Expects: config.agentsDir is absolute.
  */
 export function agentPath(config: Config, agentId: string): string {
-  return path.join(config.agentsDir, agentId);
+    return path.join(config.agentsDir, agentId);
 }

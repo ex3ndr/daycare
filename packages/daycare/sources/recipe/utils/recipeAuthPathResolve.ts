@@ -6,5 +6,5 @@ import path from "node:path";
  * Returns: ~/.dev/auth.json.
  */
 export function recipeAuthPathResolve(): string {
-  return path.join(os.homedir(), ".dev", "auth.json");
+    return path.join(os.homedir(), ".dev", "auth.json");
 }

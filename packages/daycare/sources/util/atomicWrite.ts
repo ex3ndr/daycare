@@ -5,7 +5,7 @@ import { promises as fs } from "node:fs";
  * Expects: parent directories exist and payload is fully serialized.
  */
 export async function atomicWrite(filePath: string, payload: string): Promise<void> {
-  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await fs.writeFile(tempPath, payload, { mode: 0o600 });
-  await fs.rename(tempPath, filePath);
+    const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+    await fs.writeFile(tempPath, payload, { mode: 0o600 });
+    await fs.rename(tempPath, filePath);
 }

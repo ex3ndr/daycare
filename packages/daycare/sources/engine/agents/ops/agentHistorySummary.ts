@@ -4,14 +4,14 @@ type AgentHistoryRecordType = AgentHistoryRecord["type"];
 type AgentHistorySummaryCounts = Record<AgentHistoryRecordType, number>;
 
 type AgentHistorySummary = {
-  recordCount: number;
-  firstAt: number | null;
-  lastAt: number | null;
-  counts: AgentHistorySummaryCounts;
-  lastUserMessage: string | null;
-  lastAssistantMessage: string | null;
-  lastNote: string | null;
-  lastToolName: string | null;
+    recordCount: number;
+    firstAt: number | null;
+    lastAt: number | null;
+    counts: AgentHistorySummaryCounts;
+    lastUserMessage: string | null;
+    lastAssistantMessage: string | null;
+    lastNote: string | null;
+    lastToolName: string | null;
 };
 
 /**
@@ -19,65 +19,65 @@ type AgentHistorySummary = {
  * Expects: records are in chronological order from oldest to newest.
  */
 export function agentHistorySummary(records: AgentHistoryRecord[]): AgentHistorySummary {
-  const counts = buildEmptyCounts();
-  let firstAt: number | null = null;
-  let lastAt: number | null = null;
-  let lastUserMessage: string | null = null;
-  let lastAssistantMessage: string | null = null;
-  let lastNote: string | null = null;
-  let lastToolName: string | null = null;
+    const counts = buildEmptyCounts();
+    let firstAt: number | null = null;
+    let lastAt: number | null = null;
+    let lastUserMessage: string | null = null;
+    let lastAssistantMessage: string | null = null;
+    let lastNote: string | null = null;
+    let lastToolName: string | null = null;
 
-  for (const record of records) {
-    counts[record.type] += 1;
-    firstAt = firstAt === null ? record.at : Math.min(firstAt, record.at);
-    lastAt = lastAt === null ? record.at : Math.max(lastAt, record.at);
+    for (const record of records) {
+        counts[record.type] += 1;
+        firstAt = firstAt === null ? record.at : Math.min(firstAt, record.at);
+        lastAt = lastAt === null ? record.at : Math.max(lastAt, record.at);
 
-    if (record.type === "user_message") {
-      lastUserMessage = record.text;
-      continue;
+        if (record.type === "user_message") {
+            lastUserMessage = record.text;
+            continue;
+        }
+        if (record.type === "assistant_message") {
+            lastAssistantMessage = record.text;
+            continue;
+        }
+        if (record.type === "assistant_rewrite") {
+            lastAssistantMessage = record.text;
+            continue;
+        }
+        if (record.type === "note") {
+            lastNote = record.text;
+            continue;
+        }
+        if (record.type === "tool_result") {
+            const toolName = record.output.toolMessage.toolName;
+            if (typeof toolName === "string" && toolName.trim().length > 0) {
+                lastToolName = toolName;
+            }
+        }
     }
-    if (record.type === "assistant_message") {
-      lastAssistantMessage = record.text;
-      continue;
-    }
-    if (record.type === "assistant_rewrite") {
-      lastAssistantMessage = record.text;
-      continue;
-    }
-    if (record.type === "note") {
-      lastNote = record.text;
-      continue;
-    }
-    if (record.type === "tool_result") {
-      const toolName = record.output.toolMessage.toolName;
-      if (typeof toolName === "string" && toolName.trim().length > 0) {
-        lastToolName = toolName;
-      }
-    }
-  }
 
-  return {
-    recordCount: records.length,
-    firstAt,
-    lastAt,
-    counts,
-    lastUserMessage,
-    lastAssistantMessage,
-    lastNote,
-    lastToolName
-  };
+    return {
+        recordCount: records.length,
+        firstAt,
+        lastAt,
+        counts,
+        lastUserMessage,
+        lastAssistantMessage,
+        lastNote,
+        lastToolName
+    };
 }
 
 function buildEmptyCounts(): AgentHistorySummaryCounts {
-  return {
-    user_message: 0,
-    assistant_message: 0,
-    tool_result: 0,
-    rlm_start: 0,
-    rlm_tool_call: 0,
-    rlm_tool_result: 0,
-    rlm_complete: 0,
-    assistant_rewrite: 0,
-    note: 0
-  };
+    return {
+        user_message: 0,
+        assistant_message: 0,
+        tool_result: 0,
+        rlm_start: 0,
+        rlm_tool_call: 0,
+        rlm_tool_result: 0,
+        rlm_complete: 0,
+        assistant_rewrite: 0,
+        note: 0
+    };
 }
