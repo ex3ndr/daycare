@@ -19,7 +19,9 @@ const startSchema = Type.Object(
 const sendSchema = Type.Object(
   {
     text: Type.String({ minLength: 1 }),
-    agentId: Type.Optional(Type.String({ minLength: 1 }))
+    agentId: Type.Optional(Type.String({ minLength: 1 })),
+    steering: Type.Optional(Type.Boolean()),
+    cancelReason: Type.Optional(Type.String({ minLength: 1 }))
   },
   { additionalProperties: false }
 );
@@ -110,7 +112,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
     tool: {
       name: "send_agent_message",
       description:
-        "Send a system message to another agent (defaults to the most recent foreground agent).",
+        "Send a system message to another agent (defaults to the most recent foreground agent). Set steering=true to interrupt the agent's current work.",
       parameters: sendSchema
     },
     returns: backgroundReturns,
@@ -128,6 +130,47 @@ export function buildSendAgentMessageTool(): ToolDefinition {
       if (!resolvedTarget) {
         throw new Error("No recent foreground agent found.");
       }
+
+      // If steering flag is set, use steering delivery
+      if (payload.steering) {
+        const exists = await toolContext.agentSystem.agentExists(resolvedTarget);
+        if (!exists) {
+          throw new Error(`Agent not found: ${resolvedTarget}`);
+        }
+
+        await toolContext.agentSystem.steer(resolvedTarget, {
+          type: "steering",
+          text: payload.text,
+          origin,
+          cancelReason: payload.cancelReason
+        });
+
+        const summary = "Steering message delivered.";
+        const toolMessage: ToolResultMessage = {
+          role: "toolResult",
+          toolCallId: toolCall.id,
+          toolName: toolCall.name,
+          content: [
+            {
+              type: "text",
+              text: summary
+            }
+          ],
+          isError: false,
+          timestamp: Date.now()
+        };
+
+        return {
+          toolMessage,
+          typedResult: {
+            summary,
+            targetAgentId: resolvedTarget,
+            originAgentId: origin
+          }
+        };
+      }
+
+      // Normal system message delivery
       await toolContext.agentSystem.post(
         { agentId: resolvedTarget },
         { type: "system_message", text: payload.text, origin }

@@ -169,6 +169,13 @@ export type AgentInboxReset = Extract<AgentInboxItem, { type: "reset" }>;
 export type AgentInboxCompact = Extract<AgentInboxItem, { type: "compact" }>;
 export type AgentInboxRestore = Extract<AgentInboxItem, { type: "restore" }>;
 
+export type AgentInboxSteering = {
+  type: "steering";
+  text: string;
+  origin?: string;
+  cancelReason?: string;  // Error message for cancelled tool calls
+};
+
 export type AgentInboxResult =
   | {
       type: "message";

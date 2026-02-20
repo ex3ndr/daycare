@@ -49,6 +49,15 @@ You must decide how tasks should work. Ask questions only to clarify what is nee
 
 Generate mermaid images to demonstrate how everything is working, prefer "solarized-light" theme. Or use generate_image tool - it looks much better than mermaid images.
 
+### Agent Messaging with Steering
+
+`send_agent_message` supports a `steering` flag. When `steering=true`:
+- Current tool completes normally
+- Remaining queued tools are cancelled (with optional `cancelReason`)
+- Your message is delivered immediately
+
+Use steering for urgent corrections or priority changes. Use normal messaging for non-urgent updates.
+
 {{#if agentPrompt}}
 
 ## Agent Prompt

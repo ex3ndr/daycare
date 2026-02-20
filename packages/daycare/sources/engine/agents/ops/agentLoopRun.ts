@@ -1,4 +1,4 @@
-import type { Context } from "@mariozechner/pi-ai";
+import type { Context, ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
@@ -16,6 +16,7 @@ import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import { toolResultFormatVerbose } from "../../modules/tools/toolResultFormatVerbose.js";
 import { toolListContextBuild } from "../../modules/tools/toolListContextBuild.js";
+import { toolExecutionResultOutcome } from "../../modules/tools/toolReturnOutcome.js";
 import { rlmExecute } from "../../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
@@ -466,15 +467,29 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             const toolCallId = createId();
 
             try {
+              // Create steering check callback that consumes steering if present
+              const checkSteering = () => {
+                const steering = agent.inbox.consumeSteering();
+                if (steering) {
+                  return { text: steering.text, origin: steering.origin };
+                }
+                return null;
+              };
               const result = await rlmExecute(
                 runPythonCode,
                 preamble,
                 executionContext,
                 toolResolver,
                 toolCallId,
-                appendHistoryRecord
+                appendHistoryRecord,
+                checkSteering
               );
               context.messages.push(rlmNoToolsResultMessageBuild({ result }));
+              
+              // If steering interrupted, break out of the loop
+              if (result.steeringInterrupt) {
+                break;
+              }
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
               await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
@@ -536,7 +551,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         break;
       }
 
-      for (const toolCall of toolCalls) {
+      for (let toolIndex = 0; toolIndex < toolCalls.length; toolIndex++) {
+        const toolCall = toolCalls[toolIndex];
         const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 200);
         logger.debug(
           `execute: Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
@@ -585,6 +601,59 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
           toolCallId: toolCall.id,
           output: toolResult
         }, appendHistoryRecord);
+
+        // Check for steering after each tool call
+        if (agent.inbox.hasSteering()) {
+          const steering = agent.inbox.consumeSteering();
+          if (steering) {
+            logger.debug(
+              `event: Steering received, cancelling remaining tool calls steeringOrigin=${steering.origin ?? "unknown"}`
+            );
+
+            // Cancel remaining tool calls with steering reason
+            const cancelReason = steering.cancelReason ?? "Task redirected by steering message";
+            for (let cancelIndex = toolIndex + 1; cancelIndex < toolCalls.length; cancelIndex++) {
+              const cancelledCall = toolCalls[cancelIndex];
+              const cancelledMessage: ToolResultMessage = {
+                role: "toolResult",
+                toolCallId: cancelledCall.id,
+                toolName: cancelledCall.name,
+                content: [{ type: "text", text: cancelReason }],
+                isError: true,
+                timestamp: Date.now()
+              };
+              const cancelledResult = toolExecutionResultOutcome(cancelledMessage);
+
+              context.messages.push(cancelledMessage);
+              await historyRecordAppend(historyRecords, {
+                type: "tool_result",
+                at: Date.now(),
+                toolCallId: cancelledCall.id,
+                output: cancelledResult
+              }, appendHistoryRecord);
+
+              logger.debug(
+                `event: Tool call cancelled by steering toolName=${cancelledCall.name} toolCallId=${cancelledCall.id}`
+              );
+            }
+
+            // Inject steering message into context as a system message
+            // The steering message will be processed by the agent's runLoop on next iteration
+            context.messages.push({
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `<system_message origin="${steering.origin ?? "steering"}">\n${steering.text}\n</system_message>`
+                }
+              ],
+              timestamp: Date.now()
+            });
+
+            // Break out of tool loop - steering message will drive next inference
+            break;
+          }
+        }
       }
 
       if (iteration === MAX_TOOL_ITERATIONS - 1) {

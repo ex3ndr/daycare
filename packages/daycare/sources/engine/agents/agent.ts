@@ -881,12 +881,21 @@ export class Agent {
               ? this.descriptor.tag
               : this.descriptor.type;
         try {
+          // Create steering check callback that consumes steering if present
+          const checkSteering = () => {
+            const steering = this.inbox.consumeSteering();
+            if (steering) {
+              return { text: steering.text, origin: steering.origin };
+            }
+            return null;
+          };
           const restored = await rlmRestore(
             pendingRlm.lastSnapshot,
             pendingRlm.start,
             this.agentSystem.toolResolver,
             this.rlmRestoreContextBuild(source),
-            appendRecord
+            appendRecord,
+            checkSteering
           );
           toolResultText = rlmResultTextBuild(restored);
           restoreMessage = `RLM execution completed after restart. Output: ${

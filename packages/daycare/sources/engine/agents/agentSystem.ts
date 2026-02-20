@@ -31,6 +31,7 @@ import type {
   AgentInboxCompletion,
   AgentInboxItem,
   AgentInboxResult,
+  AgentInboxSteering,
   AgentPostTarget
 } from "./ops/agentTypes.js";
 import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
@@ -345,6 +346,28 @@ export class AgentSystem {
         }
       })
     );
+  }
+
+  /**
+   * Delivers a steering message to an agent, interrupting its current work.
+   * The current tool completes but remaining queued tools are cancelled.
+   * Wakes the agent if sleeping.
+   */
+  async steer(agentId: string, steering: AgentInboxSteering): Promise<void> {
+    const entry = this.entries.get(agentId);
+    if (!entry) {
+      throw new Error(`Agent not found: ${agentId}`);
+    }
+    let woke = false;
+    await entry.lock.inLock(async () => {
+      woke = await this.wakeEntryIfSleeping(entry);
+      entry.inbox.steer(steering);
+    });
+    if (woke) {
+      await this.signalLifecycle(entry.agentId, "wake");
+    }
+    logger.info({ agentId, origin: steering.origin }, "event: Steering message delivered");
+    this.startEntryIfRunning(entry);
   }
 
   /**
