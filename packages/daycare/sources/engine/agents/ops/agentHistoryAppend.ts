@@ -1,22 +1,36 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import type { Config } from "@/types";
 import type { AgentHistoryRecord } from "./agentTypes.js";
-import { agentPath } from "./agentPath.js";
+import { agentDbRead } from "../../../storage/agentDbRead.js";
+import { agentDbWrite } from "../../../storage/agentDbWrite.js";
+import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
+import { sessionHistoryDbAppend } from "../../../storage/sessionHistoryDbAppend.js";
 
 /**
- * Appends a history record to the agent history log.
- * Expects: record is JSON-serializable.
+ * Appends a history record to the active session.
+ * Expects: target agent exists.
  */
 export async function agentHistoryAppend(
   config: Config,
   agentId: string,
   record: AgentHistoryRecord
 ): Promise<void> {
-  const basePath = agentPath(config, agentId);
-  await fs.mkdir(basePath, { recursive: true });
-  const filePath = path.join(basePath, "history.jsonl");
-  const line = `${JSON.stringify(record)}\n`;
-  await fs.appendFile(filePath, line, "utf8");
+  const agent = await agentDbRead(config, agentId);
+  if (!agent) {
+    throw new Error(`Agent not found for history append: ${agentId}`);
+  }
+
+  let sessionId = agent.activeSessionId;
+  if (!sessionId) {
+    sessionId = await sessionDbCreate(config, {
+      agentId,
+      createdAt: record.at
+    });
+    await agentDbWrite(config, {
+      ...agent,
+      activeSessionId: sessionId,
+      updatedAt: Math.max(agent.updatedAt, record.at)
+    });
+  }
+
+  await sessionHistoryDbAppend(config, { sessionId, record });
 }

@@ -69,7 +69,8 @@ describe("upgrade plugin onboarding", () => {
     expect(result).toEqual({
       settings: {
         strategy: "pm2",
-        processName: "daycare"
+        processName: "daycare",
+        selfUpgrade: { enabled: false }
       }
     });
     expect(note).toHaveBeenCalledWith(
@@ -111,6 +112,8 @@ describe("upgrade plugin commands", () => {
     const registrar = {
       registerCommand: vi.fn(),
       unregisterCommand: vi.fn(),
+      registerTool: vi.fn(),
+      unregisterTool: vi.fn(),
       sendMessage: vi.fn(async () => undefined)
     };
     const api = {
@@ -167,6 +170,8 @@ describe("upgrade plugin commands", () => {
     const registrar = {
       registerCommand: vi.fn(),
       unregisterCommand: vi.fn(),
+      registerTool: vi.fn(),
+      unregisterTool: vi.fn(),
       sendMessage: vi.fn(async () => undefined)
     };
     const api = {
@@ -258,6 +263,8 @@ describe("upgrade plugin commands", () => {
     const registrar = {
       registerCommand: vi.fn(),
       unregisterCommand: vi.fn(),
+      registerTool: vi.fn(),
+      unregisterTool: vi.fn(),
       sendMessage: vi.fn(async () => undefined)
     };
     const api = {
@@ -316,6 +323,8 @@ describe("upgrade plugin commands", () => {
     const registrar = {
       registerCommand: vi.fn(),
       unregisterCommand: vi.fn(),
+      registerTool: vi.fn(),
+      unregisterTool: vi.fn(),
       sendMessage: vi.fn(async () => undefined)
     };
     const api = {
@@ -370,6 +379,8 @@ describe("upgrade plugin commands", () => {
     const registrar = {
       registerCommand: vi.fn(),
       unregisterCommand: vi.fn(),
+      registerTool: vi.fn(),
+      unregisterTool: vi.fn(),
       sendMessage: vi.fn(async () => undefined)
     };
     const api = {

@@ -3,7 +3,6 @@ import { createId } from "@paralleldrive/cuid2";
 
 import type { AgentHistoryRecord, AgentMessage, MessageContext } from "@/types";
 import { messageBuildUser } from "../../messages/messageBuildUser.js";
-import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js";
 import { messageFormatIncoming } from "../../messages/messageFormatIncoming.js";
 
 /**
@@ -29,9 +28,6 @@ export async function agentHistoryContext(
     }
     if (record.type === "rlm_complete") {
       continue;
-    }
-    if (record.type === "reset" && record.message && record.message.trim().length > 0) {
-      messages.push(resetSystemMessageBuild(record.message, record.at, agentId));
     }
     if (record.type === "user_message") {
       const context: MessageContext = {};
@@ -104,18 +100,6 @@ export async function agentHistoryContext(
     }
   }
   return messages;
-}
-
-function resetSystemMessageBuild(
-  text: string,
-  at: number,
-  origin: string
-): Context["messages"][number] {
-  return {
-    role: "user",
-    content: messageBuildSystemText(text, origin),
-    timestamp: at
-  };
 }
 
 function assistantMessageTextRewrite(

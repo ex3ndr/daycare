@@ -13,8 +13,6 @@ describe("agentHistoryContext", () => {
       arguments: { code: "echo('x')" }
     };
     const records: AgentHistoryRecord[] = [
-      { type: "start", at: 1 },
-      { type: "reset", at: 2, message: "session reset" },
       { type: "user_message", at: 3, text: "run", files: [] },
       {
         type: "assistant_message",
@@ -78,15 +76,14 @@ describe("agentHistoryContext", () => {
 
     const messages = await agentHistoryContext(records, "agent-1");
 
-    expect(messages).toHaveLength(4);
-    expect(messages[1]?.role).toBe("user");
-    expect(messages[2]?.role).toBe("assistant");
-    expect(messages[3]?.role).toBe("toolResult");
+    expect(messages).toHaveLength(3);
+    expect(messages[0]?.role).toBe("user");
+    expect(messages[1]?.role).toBe("assistant");
+    expect(messages[2]?.role).toBe("toolResult");
   });
 
   it("replays assistant_rewrite records during restore without inferring trims", async () => {
     const records: AgentHistoryRecord[] = [
-      { type: "start", at: 1 },
       {
         type: "assistant_message",
         at: 2,

@@ -5,7 +5,7 @@ import { agentHistoryPendingRlmResolve } from "./agentHistoryPendingRlmResolve.j
 
 describe("agentHistoryPendingRlmResolve", () => {
   it("returns null when no RLM start record exists", () => {
-    const records: AgentHistoryRecord[] = [{ type: "start", at: 1 }];
+    const records: AgentHistoryRecord[] = [{ type: "note", at: 1, text: "noop" }];
     expect(agentHistoryPendingRlmResolve(records)).toBeNull();
   });
 

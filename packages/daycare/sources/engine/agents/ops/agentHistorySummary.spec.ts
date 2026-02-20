@@ -15,8 +15,6 @@ describe("agentHistorySummary", () => {
     expect(summary.firstAt).toBeNull();
     expect(summary.lastAt).toBeNull();
     expect(summary.counts).toEqual({
-      start: 0,
-      reset: 0,
       user_message: 0,
       assistant_message: 0,
       tool_result: 0,
@@ -31,7 +29,6 @@ describe("agentHistorySummary", () => {
 
   it("tracks counts, time range, and latest text snapshots", () => {
     const records: AgentHistoryRecord[] = [
-      buildRecord({ type: "start", at: 100 }),
       buildRecord({ type: "user_message", at: 110, text: "hi", files: [] }),
       buildRecord({
         type: "assistant_message",
@@ -69,12 +66,10 @@ describe("agentHistorySummary", () => {
 
     const summary = agentHistorySummary(records);
 
-    expect(summary.recordCount).toBe(6);
-    expect(summary.firstAt).toBe(100);
+    expect(summary.recordCount).toBe(5);
+    expect(summary.firstAt).toBe(110);
     expect(summary.lastAt).toBe(140);
     expect(summary.counts).toEqual({
-      start: 1,
-      reset: 0,
       user_message: 1,
       assistant_message: 1,
       tool_result: 1,

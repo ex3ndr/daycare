@@ -6,14 +6,16 @@ import { describe, expect, it } from "vitest";
 import { createId } from "@paralleldrive/cuid2";
 
 import { configResolve } from "../../../config/configResolve.js";
+import { storageUpgrade } from "../../../storage/storageUpgrade.js";
+import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
+import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
+import { agentStateRead } from "./agentStateRead.js";
+import { agentStateWrite } from "./agentStateWrite.js";
 import { agentHistoryAppend } from "./agentHistoryAppend.js";
 import { agentHistoryLoadAll } from "./agentHistoryLoadAll.js";
-import type { AgentHistoryRecord } from "@/types";
-
-const buildRecord = (record: AgentHistoryRecord) => record;
 
 describe("agentHistoryLoadAll", () => {
-  it("returns records across reset markers", async () => {
+  it("returns records across all sessions", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-history-all-"));
     const agentId = createId();
     try {
@@ -21,37 +23,45 @@ describe("agentHistoryLoadAll", () => {
         { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
         path.join(dir, "settings.json")
       );
+      await storageUpgrade(config);
+      await agentDescriptorWrite(config, agentId, {
+        type: "cron",
+        id: agentId,
+        name: "history"
+      });
 
-      await agentHistoryAppend(config, agentId, buildRecord({ type: "start", at: 1 }));
-      await agentHistoryAppend(
-        config,
-        agentId,
-        buildRecord({ type: "user_message", at: 2, text: "before reset", files: [] })
-      );
-      await agentHistoryAppend(config, agentId, buildRecord({ type: "reset", at: 3 }));
-      await agentHistoryAppend(
-        config,
-        agentId,
-        buildRecord({ type: "user_message", at: 4, text: "after reset", files: [] })
-      );
+      const initial = await agentStateRead(config, agentId);
+      if (!initial) {
+        throw new Error("State missing");
+      }
 
-      const records = await agentHistoryLoadAll(config, agentId);
-
-      expect(records).toHaveLength(4);
-      expect(records[0]).toEqual({ type: "start", at: 1 });
-      expect(records[1]).toEqual({
+      const firstSession = await sessionDbCreate(config, { agentId, createdAt: 1 });
+      await agentStateWrite(config, agentId, { ...initial, activeSessionId: firstSession });
+      await agentHistoryAppend(config, agentId, {
         type: "user_message",
         at: 2,
-        text: "before reset",
+        text: "before",
         files: []
       });
-      expect(records[2]).toEqual({ type: "reset", at: 3 });
-      expect(records[3]).toEqual({
+
+      const secondSession = await sessionDbCreate(config, { agentId, createdAt: 3 });
+      await agentStateWrite(config, agentId, {
+        ...initial,
+        activeSessionId: secondSession,
+        updatedAt: 3
+      });
+      await agentHistoryAppend(config, agentId, {
         type: "user_message",
         at: 4,
-        text: "after reset",
+        text: "after",
         files: []
       });
+
+      const records = await agentHistoryLoadAll(config, agentId);
+      expect(records).toEqual([
+        { type: "user_message", at: 2, text: "before", files: [] },
+        { type: "user_message", at: 4, text: "after", files: [] }
+      ]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

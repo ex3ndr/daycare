@@ -1,46 +1,20 @@
-import { promises as fs } from "node:fs";
-
 import type { Config } from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 import type { AgentLifecycleState } from "./agentTypes.js";
-import { agentDescriptorRead } from "./agentDescriptorRead.js";
-import { agentStateRead } from "./agentStateRead.js";
+import { agentDbList } from "../../../storage/agentDbList.js";
 
 /**
  * Lists persisted agents with descriptors and last-updated timestamps.
- * Expects: agentsDir may be missing when no agents have been created yet.
+ * Expects: storage migrations are applied before listing.
  */
 export async function agentList(
   config: Config
 ): Promise<Array<{ agentId: string; descriptor: AgentDescriptor; lifecycle: AgentLifecycleState; updatedAt: number }>> {
-  let entries: Array<{ name: string; isDirectory: () => boolean }> = [];
-  try {
-    entries = await fs.readdir(config.agentsDir, { withFileTypes: true });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  }
-
-  const results: Array<{ agentId: string; descriptor: AgentDescriptor; lifecycle: AgentLifecycleState; updatedAt: number }> = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-    const agentId = entry.name;
-    let descriptor: AgentDescriptor | null = null;
-    let state: Awaited<ReturnType<typeof agentStateRead>> = null;
-    try {
-      descriptor = await agentDescriptorRead(config, agentId);
-      state = await agentStateRead(config, agentId);
-    } catch {
-      continue;
-    }
-    if (!descriptor || !state) {
-      continue;
-    }
-    results.push({ agentId, descriptor, lifecycle: state.state, updatedAt: state.updatedAt });
-  }
-  return results;
+  const records = await agentDbList(config);
+  return records.map((record) => ({
+    agentId: record.id,
+    descriptor: record.descriptor,
+    lifecycle: record.lifecycle,
+    updatedAt: record.updatedAt
+  }));
 }

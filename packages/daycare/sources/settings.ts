@@ -62,6 +62,7 @@ export type SettingsConfig = {
   engine?: {
     socketPath?: string;
     dataDir?: string;
+    dbPath?: string;
   };
   assistant?: AssistantSettings;
   agents?: AgentSettings;

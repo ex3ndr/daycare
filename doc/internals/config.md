@@ -5,7 +5,7 @@ from the JSON settings file. The engine reloads by rebuilding a new Config snaps
 
 ## Snapshot fields
 
-- `settingsPath`, `configDir`, `dataDir`, `filesDir`, `authPath`, `socketPath`, `workspaceDir`
+- `settingsPath`, `configDir`, `dataDir`, `filesDir`, `authPath`, `socketPath`, `workspaceDir`, `dbPath`
 - `settings` (validated settings.json)
 - `defaultPermissions`
 - `verbose` (runtime flag)
@@ -40,6 +40,18 @@ flowchart LR
   Workspace[workspaceDir] --> Files[workspaceDir/files]
   Connectors --> Files
   ImageTools --> Files
+```
+
+## Agent DB path
+
+`dbPath` resolves to `<dataDir>/daycare.db` by default and can be overridden with
+`engine.dbPath` in settings.
+
+```mermaid
+flowchart LR
+  Settings[settings.json engine.dbPath?] --> Resolve[configResolve]
+  Resolve --> DBPath[Config.dbPath]
+  DBPath --> Storage[storage/*.ts]
 ```
 
 ## Settings defaults

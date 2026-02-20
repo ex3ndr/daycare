@@ -187,9 +187,7 @@ function summaryInputBuild(agentId: string, records: AgentHistoryRecord[]): stri
     `record_count: ${summary.recordCount}`,
     `range: ${formatTimestamp(summary.firstAt)} -> ${formatTimestamp(summary.lastAt)}`,
     [
-      `types: start=${summary.counts.start}`,
-      `reset=${summary.counts.reset}`,
-      `user=${summary.counts.user_message}`,
+      `types: user=${summary.counts.user_message}`,
       `assistant=${summary.counts.assistant_message}`,
       `assistant_rewrite=${summary.counts.assistant_rewrite}`,
       `tool_result=${summary.counts.tool_result}`,
@@ -242,12 +240,6 @@ function agentHistoryFilterByTime(
 
 function recordSummaryLineBuild(record: AgentHistoryRecord): string {
   const prefix = `[${formatTimestamp(record.at)}]`;
-  if (record.type === "start") {
-    return `${prefix} start`;
-  }
-  if (record.type === "reset") {
-    return `${prefix} reset ${record.message ? `message="${singleLine(record.message)}"` : ""}`.trim();
-  }
   if (record.type === "user_message") {
     return `${prefix} user_message text="${singleLine(stringTruncate(record.text, 700))}"`;
   }

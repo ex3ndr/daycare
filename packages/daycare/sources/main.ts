@@ -16,6 +16,7 @@ import { channelListCommand } from "./commands/channelList.js";
 import { channelAddMemberCommand } from "./commands/channelAddMember.js";
 import { channelRemoveMemberCommand } from "./commands/channelRemoveMember.js";
 import { channelSendCommand } from "./commands/channelSend.js";
+import { upgradeCommand } from "./commands/upgrade.js";
 
 const pkg = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf-8")
@@ -111,6 +112,16 @@ program
     DEFAULT_SETTINGS_PATH
   )
   .action(doctorCommand);
+
+program
+  .command("upgrade")
+  .description("Run storage migrations")
+  .option(
+    "-s, --settings <path>",
+    "Path to settings file",
+    DEFAULT_SETTINGS_PATH
+  )
+  .action(upgradeCommand);
 
 program
   .command("event")

@@ -4,6 +4,7 @@ The CLI is implemented with Commander in `sources/main.ts`. It always initialize
 
 ## Commands
 - `start` - launches the engine (default settings `.daycare/settings.json`).
+- `upgrade` - runs pending storage migrations for the configured SQLite database.
 - `status` - prints engine status if the socket is live.
 - `add` - interactive setup for a provider or plugin.
 - `plugins load <pluginId> [instanceId]` - loads a plugin instance (updates settings if engine is down).
@@ -18,6 +19,7 @@ The CLI is implemented with Commander in `sources/main.ts`. It always initialize
 ```mermaid
 flowchart TD
   main[main.ts] --> start[start]
+  main --> upgrade[upgrade]
   main --> status[status]
   main --> add[add]
   main --> plugins[plugins]
@@ -34,12 +36,27 @@ sequenceDiagram
   participant Settings
   participant Auth
   participant Plugins
+  participant Storage
   participant Engine
   User->>CLI: daycare start
   CLI->>Settings: read .daycare/settings.json
   CLI->>Auth: read .daycare/auth.json
+  CLI->>Storage: run pending DB migrations
   CLI->>Plugins: load enabled plugins
   CLI->>Engine: start local socket + SSE
+```
+
+## upgrade command flow
+```mermaid
+sequenceDiagram
+  participant User
+  participant CLI
+  participant Storage
+  participant DB as SQLite
+  User->>CLI: daycare upgrade
+  CLI->>Storage: storageUpgrade(config)
+  Storage->>DB: apply pending migrations in order
+  DB-->>CLI: applied migration names
 ```
 
 ## event command flow

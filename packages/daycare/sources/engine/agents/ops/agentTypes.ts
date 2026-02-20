@@ -38,6 +38,7 @@ export type AgentTokenStats = Record<string, Record<string, AgentTokenSize>>;
 
 export type AgentState = {
   context: Context;
+  activeSessionId?: string | null;
   inferenceSessionId?: string;
   permissions: SessionPermissions;
   tokens: AgentTokenEntry | null;
@@ -97,8 +98,6 @@ export type AgentHistoryAssistantRewriteRecord = {
 };
 
 export type AgentHistoryRecord =
-  | { type: "start"; at: number }
-  | { type: "reset"; at: number; message?: string }
   | {
       type: "user_message";
       at: number;

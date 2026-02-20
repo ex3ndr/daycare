@@ -34,7 +34,7 @@ describe("sessionHistoryToolBuild", () => {
         parentAgentId: currentAgentId,
         name: "worker"
       });
-      await agentHistoryAppend(config, targetAgentId, { type: "start", at: 10 });
+      await agentHistoryAppend(config, targetAgentId, { type: "note", at: 10, text: "start" });
       await agentHistoryAppend(config, targetAgentId, {
         type: "user_message",
         at: 20,
@@ -90,7 +90,7 @@ describe("sessionHistoryToolBuild", () => {
         parentAgentId: currentAgentId,
         name: "worker"
       });
-      await agentHistoryAppend(config, targetAgentId, { type: "start", at: 10 });
+      await agentHistoryAppend(config, targetAgentId, { type: "note", at: 10, text: "start" });
       await agentHistoryAppend(config, targetAgentId, {
         type: "note",
         at: 30,
@@ -155,7 +155,7 @@ describe("sessionHistoryToolBuild", () => {
         parentAgentId: currentAgentId,
         name: "worker"
       });
-      await agentHistoryAppend(config, targetAgentId, { type: "start", at: 10 });
+      await agentHistoryAppend(config, targetAgentId, { type: "note", at: 10, text: "start" });
 
       const tool = sessionHistoryToolBuild();
       const completeMock = vi.fn(async (..._args: unknown[]) => ({

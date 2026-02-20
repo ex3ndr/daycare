@@ -8,6 +8,8 @@ import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
 import { appExecute } from "./appExecute.js";
 import type { AppDescriptor } from "./appTypes.js";
+import { agentDbWrite } from "../../storage/agentDbWrite.js";
+import { agentStateRead } from "../agents/ops/agentStateRead.js";
 
 describe("appExecute", () => {
   let rootDir: string;
@@ -26,26 +28,32 @@ describe("appExecute", () => {
       path.join(rootDir, "settings.json")
     );
     const agentId = "agent-app-1";
-    const statePath = path.join(config.agentsDir, agentId, "state.json");
-    await fs.mkdir(path.dirname(statePath), { recursive: true });
-    await fs.writeFile(
-      statePath,
-      JSON.stringify({
-        context: { messages: [] },
-        permissions: {
-          workingDir: rootDir,
-          writeDirs: [rootDir],
-          readDirs: [rootDir],
-          network: false,
-          events: false
-        },
-        tokens: null,
-        stats: {},
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        state: "active"
-      })
-    );
+    const now = Date.now();
+    await agentDbWrite(config, {
+      id: agentId,
+      type: "app",
+      descriptor: {
+        type: "app",
+        id: agentId,
+        parentAgentId: "parent-agent",
+        name: "GitHub Reviewer",
+        systemPrompt: "You are a focused PR review assistant.",
+        appId: "github-reviewer"
+      },
+      activeSessionId: null,
+      permissions: {
+        workingDir: rootDir,
+        writeDirs: [rootDir],
+        readDirs: [rootDir],
+        network: false,
+        events: false
+      },
+      tokens: null,
+      stats: {},
+      lifecycle: "active",
+      createdAt: now,
+      updatedAt: now
+    });
 
     const post = vi.fn(async (_target: unknown, _item: unknown) => undefined);
     const postAndAwait = vi.fn(
@@ -163,10 +171,9 @@ describe("appExecute", () => {
     ).toolResolverOverride;
     expect(override.listTools().map((tool) => tool.name)).toEqual(["read", "write", "exec"]);
 
-    const updatedRaw = await fs.readFile(statePath, "utf8");
-    const updated = JSON.parse(updatedRaw) as { permissions: { workingDir: string; writeDirs: string[] } };
-    expect(updated.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));
-    expect(updated.permissions.writeDirs).toEqual([
+    const updated = await agentStateRead(config, agentId);
+    expect(updated?.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));
+    expect(updated?.permissions.writeDirs).toEqual([
       path.join(rootDir, "apps", "github-reviewer", "data")
     ]);
   });
@@ -177,26 +184,32 @@ describe("appExecute", () => {
       path.join(rootDir, "settings.json")
     );
     const agentId = "agent-app-2";
-    const statePath = path.join(config.agentsDir, agentId, "state.json");
-    await fs.mkdir(path.dirname(statePath), { recursive: true });
-    await fs.writeFile(
-      statePath,
-      JSON.stringify({
-        context: { messages: [] },
-        permissions: {
-          workingDir: rootDir,
-          writeDirs: [rootDir],
-          readDirs: [rootDir],
-          network: false,
-          events: false
-        },
-        tokens: null,
-        stats: {},
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        state: "active"
-      })
-    );
+    const now = Date.now();
+    await agentDbWrite(config, {
+      id: agentId,
+      type: "app",
+      descriptor: {
+        type: "app",
+        id: agentId,
+        parentAgentId: "parent-agent",
+        name: "GitHub Reviewer",
+        systemPrompt: "You are a focused PR review assistant.",
+        appId: "github-reviewer"
+      },
+      activeSessionId: null,
+      permissions: {
+        workingDir: rootDir,
+        writeDirs: [rootDir],
+        readDirs: [rootDir],
+        network: false,
+        events: false
+      },
+      tokens: null,
+      stats: {},
+      lifecycle: "active",
+      createdAt: now,
+      updatedAt: now
+    });
 
     const post = vi.fn(async (_target: unknown, _item: unknown) => undefined);
     const postAndAwait = vi.fn(

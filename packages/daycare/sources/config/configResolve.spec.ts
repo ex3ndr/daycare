@@ -21,6 +21,21 @@ describe("configResolve", () => {
 
     expect(config.workspaceDir).toBe(path.resolve("/tmp/daycare/workspace"));
     expect(config.filesDir).toBe(path.resolve("/tmp/daycare/workspace/files"));
+    expect(config.dbPath).toBe(path.resolve("/tmp/daycare/.daycare/daycare.db"));
+  });
+
+  it("resolves dbPath from settings", () => {
+    const configPath = path.join("/tmp/daycare", "settings.json");
+    const config = configResolve(
+      {
+        engine: {
+          dataDir: "/tmp/daycare/.daycare",
+          dbPath: "/tmp/daycare/custom/daycare.db"
+        }
+      },
+      configPath
+    );
+    expect(config.dbPath).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
   });
 
   it("defaults features to all false", () => {

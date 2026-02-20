@@ -1,13 +1,10 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import type { Config } from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
-import { agentPath } from "./agentPath.js";
-import { atomicWrite } from "../../../util/atomicWrite.js";
+import { agentDbRead } from "../../../storage/agentDbRead.js";
+import { agentDbWrite } from "../../../storage/agentDbWrite.js";
 
 /**
- * Writes an agent descriptor to disk with an atomic rename.
+ * Writes an agent descriptor into SQLite storage.
  * Expects: descriptor has been validated.
  */
 export async function agentDescriptorWrite(
@@ -15,9 +12,18 @@ export async function agentDescriptorWrite(
   agentId: string,
   descriptor: AgentDescriptor
 ): Promise<void> {
-  const basePath = agentPath(config, agentId);
-  await fs.mkdir(basePath, { recursive: true });
-  const filePath = path.join(basePath, "descriptor.json");
-  const payload = `${JSON.stringify(descriptor, null, 2)}\n`;
-  await atomicWrite(filePath, payload);
+  const existing = await agentDbRead(config, agentId);
+  const now = Date.now();
+  await agentDbWrite(config, {
+    id: agentId,
+    type: descriptor.type,
+    descriptor,
+    activeSessionId: existing?.activeSessionId ?? null,
+    permissions: existing?.permissions ?? config.defaultPermissions,
+    tokens: existing?.tokens ?? null,
+    stats: existing?.stats ?? {},
+    lifecycle: existing?.lifecycle ?? "active",
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now
+  });
 }

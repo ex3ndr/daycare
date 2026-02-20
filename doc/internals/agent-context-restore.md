@@ -1,15 +1,19 @@
 # Agent Context Restore
 
-Agent `state.json` now stores `context.messages` so restart can keep a durable context snapshot.
-On restore, history reconstruction still takes priority, but an empty history load no longer wipes the persisted context.
+Agent runtime context is no longer persisted. `context.messages` is rebuilt from
+the active SQLite session history on startup.
+
+Context restore source of truth:
+- `agents.active_session_id` selects the active session.
+- `session_history` rows for that session are loaded in append order.
+- `agentHistoryContext()` rebuilds prompt-visible messages from history records.
+- if no active session/history exists, context starts empty.
 
 ```mermaid
 flowchart LR
-  A[Agent handles message] --> B[Write state.json with context]
-  B --> C[Engine restart]
-  C --> D[Read state.json context snapshot]
-  D --> E[Load history.jsonl tail]
-  E --> F{History messages available?}
-  F -- yes --> G[Use rebuilt history context]
-  F -- no --> H[Keep persisted context snapshot]
+  A[Engine startup] --> B[Load agent row]
+  B --> C[Resolve active_session_id]
+  C --> D[Load session_history rows]
+  D --> E[agentHistoryContext]
+  E --> F[In-memory context.messages]
 ```

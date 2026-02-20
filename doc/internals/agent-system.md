@@ -1,23 +1,23 @@
 # AgentSystem
 
 AgentSystem owns inbox-backed agent lifecycle:
-- load agent descriptors/state with Zod validation + create inboxes
+- load agent descriptors/state from SQLite + create inboxes
 - route posts by agent id or descriptor
 - start background agents and dispatch messages
 - expose agent info for status/history/reset
 - enforce subagent dead-state transitions via delayed poison-pill signals
 
 AgentSystem boots in stages:
-1. **load()** scans `agents/<id>/` for `descriptor.json` + `state.json`, creates inboxes, queues restore (no execution)
+1. **load()** reads `agents` rows from SQLite, creates inboxes, queues restore (no execution)
 2. **start()** starts inbox loops for loaded agents and any newly created agents
 
 ```mermaid
 flowchart TD
   Engine[engine.ts] --> AgentSystem[agents/agentSystem.ts]
+  Engine --> Upgrade[storageUpgrade]
+  Upgrade --> SQLite[(daycare.db)]
   AgentSystem --> Ops[agents/ops/*Read.ts]
-  Ops --> Store[agents/<id>/descriptor.json
-state.json
-history.jsonl]
+  Ops --> SQLite
   AgentSystem --> Inbox[agents/ops/agentInbox.ts]
   Inbox --> Agent[agents/agent.ts]
   Agent --> Loop[agents/ops/agentLoopRun.ts]

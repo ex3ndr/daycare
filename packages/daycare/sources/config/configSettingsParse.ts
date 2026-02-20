@@ -46,7 +46,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
     }).passthrough().optional(),
     engine: z.object({
       socketPath: z.string().min(1).optional(),
-      dataDir: z.string().min(1).optional()
+      dataDir: z.string().min(1).optional(),
+      dbPath: z.string().min(1).optional()
     }).passthrough().optional(),
     assistant: z.object({
       workspaceDir: z.string().min(1).optional(),

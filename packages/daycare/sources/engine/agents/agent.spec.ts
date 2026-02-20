@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,6 +23,9 @@ import { ConfigModule } from "../config/configModule.js";
 import { Signals } from "../signals/signals.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
+import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
+import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
+import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 
 describe("Agent", () => {
   it("persists descriptor, state, and history on create", async () => {
@@ -56,19 +59,18 @@ describe("Agent", () => {
       };
       await Agent.create(agentId, descriptor, new AgentInbox(agentId), agentSystem);
 
-      const descriptorPath = path.join(config.agentsDir, agentId, "descriptor.json");
-      const statePath = path.join(config.agentsDir, agentId, "state.json");
-      const historyPath = path.join(config.agentsDir, agentId, "history.jsonl");
+      const restoredDescriptor = await agentDescriptorRead(config, agentId);
+      expect(restoredDescriptor).toEqual(descriptor);
 
-      const descriptorRaw = await readFile(descriptorPath, "utf8");
-      expect(JSON.parse(descriptorRaw)).toEqual(descriptor);
-
-      const stateRaw = await readFile(statePath, "utf8");
-      const state = JSON.parse(stateRaw) as { permissions: { workingDir: string } };
+      const state = await agentStateRead(config, agentId);
+      if (!state) {
+        throw new Error("State not found");
+      }
       expect(state.permissions.workingDir).toBe(config.defaultPermissions.workingDir);
+      expect(state?.activeSessionId).toBeTruthy();
 
-      const historyRaw = await readFile(historyPath, "utf8");
-      expect(historyRaw).toContain("\"type\":\"start\"");
+      const history = await agentHistoryLoad(config, agentId);
+      expect(history).toEqual([]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -287,10 +289,15 @@ describe("Agent", () => {
       });
 
       const state = await agentStateRead(config, agentId);
-      const firstContextMessage = state?.context.messages?.[0];
-      expect(firstContextMessage?.role).toBe("user");
-      expect(typeof firstContextMessage?.content).toBe("string");
-      expect(String(firstContextMessage?.content)).toContain("Session context compacted.");
+      expect(state?.activeSessionId).toBeTruthy();
+      expect(state?.activeSessionId).not.toBe(beforeCompaction?.activeSessionId);
+      const history = await agentHistoryLoad(config, agentId);
+      const firstHistoryRecord = history[0];
+      expect(firstHistoryRecord?.type).toBe("user_message");
+      if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
+        throw new Error("Expected user_message in compacted session history.");
+      }
+      expect(firstHistoryRecord.text).toContain("Compacted summary");
       const files = await readdir(path.join(config.agentsDir, agentId));
       expect(files.some((file) => file.startsWith("compaction_") && file.endsWith(".md"))).toBe(true);
 
@@ -436,9 +443,8 @@ describe("Agent", () => {
         { type: "reset", message: "flush queue" }
       );
 
-      const historyPath = path.join(config.agentsDir, agentId, "history.jsonl");
-      const historyRaw = await readFile(historyPath, "utf8");
-      expect(historyRaw.includes("[signal]")).toBe(false);
+      const history = await agentHistoryLoad(config, agentId);
+      expect(historyHasSignalText(history)).toBe(false);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -490,9 +496,8 @@ describe("Agent", () => {
         { type: "reset", message: "flush queue" }
       );
 
-      const historyPath = path.join(config.agentsDir, agentId, "history.jsonl");
-      const historyRaw = await readFile(historyPath, "utf8");
-      expect(historyRaw.includes("[signal]")).toBe(true);
+      const history = await agentHistoryLoadAll(config, agentId);
+      expect(historyHasSignalText(history)).toBe(true);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -558,13 +563,11 @@ describe("Agent", () => {
         { type: "reset", message: "flush peer queue" }
       );
 
-      const sourceHistoryPath = path.join(config.agentsDir, sourceAgentId, "history.jsonl");
-      const sourceHistoryRaw = await readFile(sourceHistoryPath, "utf8");
-      expect(sourceHistoryRaw.includes("[signal]")).toBe(false);
+      const sourceHistory = await agentHistoryLoadAll(config, sourceAgentId);
+      expect(historyHasSignalText(sourceHistory)).toBe(false);
 
-      const peerHistoryPath = path.join(config.agentsDir, peerAgentId, "history.jsonl");
-      const peerHistoryRaw = await readFile(peerHistoryPath, "utf8");
-      expect(peerHistoryRaw.includes("[signal]")).toBe(true);
+      const peerHistory = await agentHistoryLoadAll(config, peerAgentId);
+      expect(historyHasSignalText(peerHistory)).toBe(true);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -729,15 +732,6 @@ describe("Agent", () => {
       await agentSystem.load();
       await agentSystem.start();
 
-      const lifecycleTypes: string[] = [];
-      const unsubscribe = eventBus.onEvent((event) => {
-        if (event.type !== "signal.generated") {
-          return;
-        }
-        const payload = event.payload as Signal;
-        lifecycleTypes.push(payload.type);
-      });
-
       const agentId = createId();
       const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
 
@@ -745,6 +739,10 @@ describe("Agent", () => {
         { descriptor },
         { type: "reset", message: "initial sleep" }
       );
+      const signalType = `agent:${agentId}:idle`;
+      const firstIdle = delayedSignals.list().find((entry) => entry.type === signalType);
+      expect(firstIdle).toBeTruthy();
+      const firstDeliverAt = firstIdle?.deliverAt ?? 0;
 
       await vi.advanceTimersByTimeAsync(30_000);
 
@@ -753,14 +751,9 @@ describe("Agent", () => {
         { type: "reset", message: "wake before idle deadline" }
       );
 
-      await vi.advanceTimersByTimeAsync(30_000);
-      expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
-
-      await vi.advanceTimersByTimeAsync(30_000);
-      await vi.waitFor(() => {
-        expect(lifecycleTypes).toContain(`agent:${agentId}:idle`);
-      });
-      unsubscribe();
+      const idleSignals = delayedSignals.list().filter((entry) => entry.type === signalType);
+      expect(idleSignals).toHaveLength(1);
+      expect((idleSignals[0]?.deliverAt ?? 0) > firstDeliverAt).toBe(true);
     } finally {
       delayedSignals?.stop();
       vi.useRealTimers();
@@ -768,3 +761,9 @@ describe("Agent", () => {
     }
   });
 });
+
+function historyHasSignalText(records: Array<{ type: string; text?: string }>): boolean {
+  return records.some(
+    (record) => record.type === "user_message" && typeof record.text === "string" && record.text.includes("[signal]")
+  );
+}

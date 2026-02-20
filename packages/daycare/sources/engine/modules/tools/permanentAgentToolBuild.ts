@@ -14,11 +14,11 @@ import { permissionTagsNormalize } from "../../permissions/permissionTagsNormali
 import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 import { pathResolveSecure } from "../../permissions/pathResolveSecure.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
-import { agentHistoryAppend } from "../../agents/ops/agentHistoryAppend.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import type { PermanentAgentSummary } from "../../agents/ops/agentPermanentTypes.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
+import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
 
 const schema = Type.Object(
   {
@@ -133,6 +133,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
         permissionTagsApply(permissions, permissionTags);
         const state: AgentState = {
           context: { messages: [] },
+          activeSessionId: null,
           inferenceSessionId: createId(),
           permissions,
           tokens: null,
@@ -143,7 +144,12 @@ export function permanentAgentToolBuild(): ToolDefinition {
         };
         await agentDescriptorWrite(config, agentId, descriptor);
         await agentStateWrite(config, agentId, state);
-        await agentHistoryAppend(config, agentId, { type: "start", at: now });
+        state.activeSessionId = await sessionDbCreate(config, {
+          agentId,
+          inferenceSessionId: state.inferenceSessionId,
+          createdAt: now
+        });
+        await agentStateWrite(config, agentId, state);
         toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
         toolContext.agentSystem.updateAgentPermissions(agentId, permissions, now);
       }

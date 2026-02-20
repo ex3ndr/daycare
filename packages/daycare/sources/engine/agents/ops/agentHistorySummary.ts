@@ -70,8 +70,6 @@ export function agentHistorySummary(records: AgentHistoryRecord[]): AgentHistory
 
 function buildEmptyCounts(): AgentHistorySummaryCounts {
   return {
-    start: 0,
-    reset: 0,
     user_message: 0,
     assistant_message: 0,
     tool_result: 0,

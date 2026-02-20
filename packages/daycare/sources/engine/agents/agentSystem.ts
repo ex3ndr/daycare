@@ -1,5 +1,4 @@
 import { promises as fs } from "node:fs";
-import type { Dirent } from "node:fs";
 
 import { createId } from "@paralleldrive/cuid2";
 
@@ -49,6 +48,7 @@ import { appPermissionStateGrant } from "../apps/appPermissionStateGrant.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Signals } from "../signals/signals.js";
 import { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
+import { agentDbList } from "../../storage/agentDbList.js";
 
 const logger = getLogger("engine.agent-system");
 const AGENT_IDLE_DELAY_MS = 60_000;
@@ -169,31 +169,22 @@ export class AgentSystem {
     if (this.stage !== "idle") {
       return;
     }
-    await fs.mkdir(this.config.current.agentsDir, { recursive: true });
-    let entries: Dirent[] = [];
-    try {
-      entries = await fs.readdir(this.config.current.agentsDir, { withFileTypes: true });
-    } catch {
-      entries = [];
-    }
+    await fs.mkdir(this.config.current.dataDir, { recursive: true });
+    const records = await agentDbList(this.config.current);
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      const agentId = entry.name;
-      let descriptor: AgentDescriptor | null = null;
+    for (const record of records) {
+      const agentId = record.id;
       let state: Awaited<ReturnType<typeof agentStateRead>> = null;
       try {
-        descriptor = await agentDescriptorRead(this.config.current, agentId);
         state = await agentStateRead(this.config.current, agentId);
       } catch (error) {
         logger.warn({ agentId, error }, "restore: Agent restore skipped due to invalid persisted data");
         continue;
       }
-      if (!descriptor || !state) {
+      if (!state) {
         continue;
       }
+      const descriptor = record.descriptor;
       if (state.state === "dead") {
         await this.cancelPoisonPill(agentId, { descriptor });
         logger.info({ agentId }, "restore: Agent restore skipped (dead)");

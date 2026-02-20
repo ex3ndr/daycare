@@ -47,11 +47,9 @@ import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
-import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
-import { agentRestoreContextResolve } from "./ops/agentRestoreContextResolve.js";
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryPendingRlmResolve } from "./ops/agentHistoryPendingRlmResolve.js";
 import { agentHistoryPendingToolResults } from "./ops/agentHistoryPendingToolResults.js";
@@ -67,6 +65,7 @@ import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import type { AgentSystem } from "./agentSystem.js";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
+import { sessionDbCreate } from "../../storage/sessionDbCreate.js";
 
 const logger = getLogger("engine.agent");
 
@@ -96,7 +95,7 @@ export class Agent {
   }
 
   /**
-   * Creates a new agent and persists descriptor + state + history start.
+   * Creates a new agent and persists descriptor + state + initial session row.
    * Expects: agentId is a cuid2 value; descriptor is validated.
    */
   static async create(
@@ -111,6 +110,7 @@ export class Agent {
     const now = Date.now();
     const state: AgentState = {
       context: { messages: [] },
+      activeSessionId: null,
       inferenceSessionId: createId(),
       permissions: permissionClone(agentSystem.config.current.defaultPermissions),
       tokens: null,
@@ -123,10 +123,12 @@ export class Agent {
     const agent = new Agent(agentId, descriptor, state, inbox, agentSystem);
     await agentDescriptorWrite(agentSystem.config.current, agentId, descriptor);
     await agentStateWrite(agentSystem.config.current, agentId, state);
-    await agentHistoryAppend(agentSystem.config.current, agentId, {
-      type: "start",
-      at: now
+    state.activeSessionId = await sessionDbCreate(agentSystem.config.current, {
+      agentId,
+      inferenceSessionId: state.inferenceSessionId,
+      createdAt: now
     });
+    await agentStateWrite(agentSystem.config.current, agentId, state);
 
     agent.agentSystem.eventBus.emit("agent.created", {
       agentId,
@@ -646,13 +648,14 @@ export class Agent {
       this.state.context = { messages: [] };
     }
     this.state.inferenceSessionId = createId();
+    this.state.activeSessionId = await sessionDbCreate(this.agentSystem.config.current, {
+      agentId: this.id,
+      inferenceSessionId: this.state.inferenceSessionId,
+      createdAt: now,
+      resetMessage: resetMessage.length > 0 ? resetMessage : null
+    });
     this.state.tokens = null;
     this.state.updatedAt = now;
-    await agentHistoryAppend(this.agentSystem.config.current, this.id, {
-      type: "reset",
-      at: now,
-      ...(resetMessage.length > 0 ? { message: resetMessage } : {})
-    });
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
     this.agentSystem.eventBus.emit("agent.reset", {
       agentId: this.id,
@@ -751,10 +754,7 @@ export class Agent {
     const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
     const historyMessages = await this.buildHistoryContext(history);
     this.state.context = {
-      messages: agentRestoreContextResolve(
-        this.state.context.messages ?? [],
-        historyMessages
-      )
+      messages: historyMessages
     };
     this.state.updatedAt = Date.now();
     await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
@@ -839,7 +839,7 @@ export class Agent {
   private async completePendingToolCalls(
     reason: "session_crashed" | "user_aborted"
   ): Promise<void> {
-    const records = await agentHistoryLoadAll(this.agentSystem.config.current, this.id);
+    const records = await agentHistoryLoad(this.agentSystem.config.current, this.id);
     const pendingRlm = reason === "session_crashed" ? agentHistoryPendingRlmResolve(records) : null;
     const pendingRlmToolCallId = pendingRlm?.start.toolCallId ?? null;
     const completionRecords = agentHistoryPendingToolResults(records, reason, Date.now()).filter(
@@ -941,7 +941,7 @@ export class Agent {
       const history = await agentHistoryLoad(this.agentSystem.config.current, this.id);
       const historyMessages = await this.buildHistoryContext(history);
       this.state.context = {
-        messages: agentRestoreContextResolve(this.state.context.messages ?? [], historyMessages)
+        messages: historyMessages
       };
       this.state.updatedAt = Date.now();
       await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
@@ -1112,12 +1112,15 @@ export class Agent {
         }
       ]
     };
-    this.state.tokens = null;
-    await agentHistoryAppend(this.agentSystem.config.current, this.id, {
-      type: "reset",
-      at: compactionAt,
-      message: resetMessage
+    this.state.inferenceSessionId = createId();
+    this.state.activeSessionId = await sessionDbCreate(this.agentSystem.config.current, {
+      agentId: this.id,
+      inferenceSessionId: this.state.inferenceSessionId,
+      createdAt: compactionAt,
+      resetMessage
     });
+    this.state.tokens = null;
+    await agentStateWrite(this.agentSystem.config.current, this.id, this.state);
     await agentHistoryAppend(this.agentSystem.config.current, this.id, {
       type: "user_message",
       at: compactionAt,

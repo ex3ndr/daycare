@@ -1,94 +1,35 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import type { Context } from "@mariozechner/pi-ai";
-import { z } from "zod";
 
 import type { Config } from "@/types";
 import type { AgentState } from "./agentTypes.js";
-import { agentPath } from "./agentPath.js";
-
-const permissionsSchema = z
-  .object({
-    workspaceDir: z.string().min(1).optional(),
-    workingDir: z.string().min(1),
-    writeDirs: z.array(z.string()),
-    readDirs: z.array(z.string()),
-    network: z.boolean(),
-    events: z.boolean()
-  })
-  .strict();
-
-const tokenSizeSchema = z
-  .object({
-    input: z.number().int().nonnegative(),
-    output: z.number().int().nonnegative(),
-    cacheRead: z.number().int().nonnegative(),
-    cacheWrite: z.number().int().nonnegative(),
-    total: z.number().int().nonnegative()
-  })
-  .strict();
-
-const tokenSnapshotSizeSchema = tokenSizeSchema;
-
-const tokensSchema = z
-  .object({
-    provider: z.string().min(1),
-    model: z.string().min(1),
-    size: tokenSnapshotSizeSchema
-  })
-  .strict()
-  .nullable();
-
-const statsSchema = z.record(z.record(tokenSizeSchema));
-
-const agentStateSchema = z
-  .object({
-    context: z
-      .object({
-        messages: z.array(z.unknown())
-      })
-      .optional(),
-    inferenceSessionId: z.string().min(1).optional(),
-    permissions: permissionsSchema,
-    tokens: tokensSchema,
-    stats: statsSchema,
-    createdAt: z.number().int(),
-    updatedAt: z.number().int(),
-    state: z.enum(["active", "sleeping", "dead"]).optional(),
-    sleeping: z.boolean().optional()
-  })
-  .strip();
+import { agentDbRead } from "../../../storage/agentDbRead.js";
+import { sessionDbRead } from "../../../storage/sessionDbRead.js";
 
 /**
- * Reads and validates agent state from disk.
- * Expects: state.json exists and contains JSON data.
+ * Reads agent state from SQLite storage.
+ * Expects: migrations have been applied before reads.
  */
 export async function agentStateRead(config: Config, agentId: string): Promise<AgentState | null> {
-  const basePath = agentPath(config, agentId);
-  const filePath = path.join(basePath, "state.json");
-  let raw = "";
-  try {
-    raw = await fs.readFile(filePath, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return null;
-    }
-    throw error;
+  const record = await agentDbRead(config, agentId);
+  if (!record) {
+    return null;
   }
-  const parsed = JSON.parse(raw) as unknown;
-  const persisted = agentStateSchema.parse(parsed);
-  const lifecycle = persisted.state ?? (persisted.sleeping ? "sleeping" : "active");
+
+  const activeSession = record.activeSessionId
+    ? await sessionDbRead(config, record.activeSessionId)
+    : null;
+
   return {
     context: {
-      messages: (persisted.context?.messages ?? []) as Context["messages"]
+      messages: [] as Context["messages"]
     },
-    inferenceSessionId: persisted.inferenceSessionId,
-    permissions: persisted.permissions,
-    tokens: persisted.tokens,
-    stats: persisted.stats,
-    createdAt: persisted.createdAt,
-    updatedAt: persisted.updatedAt,
-    state: lifecycle
+    activeSessionId: record.activeSessionId ?? null,
+    inferenceSessionId: activeSession?.inferenceSessionId ?? undefined,
+    permissions: record.permissions,
+    tokens: record.tokens,
+    stats: record.stats,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    state: record.lifecycle
   };
 }

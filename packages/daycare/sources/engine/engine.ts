@@ -75,6 +75,7 @@ import { exposeCreateToolBuild } from "./modules/tools/exposeCreateToolBuild.js"
 import { exposeListToolBuild } from "./modules/tools/exposeListToolBuild.js";
 import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js";
 import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js";
+import { storageUpgrade } from "../storage/storageUpgrade.js";
 
 const logger = getLogger("engine.runtime");
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
@@ -345,6 +346,7 @@ export class Engine {
   async start(): Promise<void> {
     logger.debug("start: Engine.start() beginning");
     await ensureWorkspaceDir(this.config.current.defaultPermissions.workingDir);
+    await storageUpgrade(this.config.current);
 
     logger.debug("load: Loading agents");
     await this.agentSystem.load();

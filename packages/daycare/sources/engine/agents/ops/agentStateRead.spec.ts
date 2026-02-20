@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -6,12 +6,14 @@ import { describe, expect, it } from "vitest";
 import { createId } from "@paralleldrive/cuid2";
 
 import { configResolve } from "../../../config/configResolve.js";
+import { sessionDbCreate } from "../../../storage/sessionDbCreate.js";
+import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentStateRead } from "./agentStateRead.js";
 import { agentStateWrite } from "./agentStateWrite.js";
 import type { AgentState } from "./agentTypes.js";
 
 describe("agentStateRead", () => {
-  it("reads persisted context messages", async () => {
+  it("reads persisted state and resolves inference session id from active session", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-state-"));
     const agentId = createId();
     try {
@@ -19,11 +21,22 @@ describe("agentStateRead", () => {
         { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
         path.join(dir, "settings.json")
       );
+      await agentDescriptorWrite(config, agentId, {
+        type: "cron",
+        id: agentId,
+        name: "state"
+      });
+      const sessionId = await sessionDbCreate(config, {
+        agentId,
+        inferenceSessionId: "session-1",
+        createdAt: 1
+      });
+
       const state: AgentState = {
         context: {
           messages: [{ role: "user", content: "hello", timestamp: 1 }]
         },
-        inferenceSessionId: "session-1",
+        activeSessionId: sessionId,
         permissions: { ...config.defaultPermissions },
         tokens: null,
         stats: {},
@@ -32,60 +45,18 @@ describe("agentStateRead", () => {
         state: "active"
       };
       await agentStateWrite(config, agentId, state);
-
-      const restored = await agentStateRead(config, agentId);
-
-      expect(restored?.context.messages).toEqual(state.context.messages);
-      expect(restored?.inferenceSessionId).toBe("session-1");
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("defaults to empty context for legacy state payloads", async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-state-"));
-    const agentId = createId();
-    try {
-      const config = configResolve(
-        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
-        path.join(dir, "settings.json")
-      );
-      const state: AgentState = {
-        context: { messages: [] },
-        permissions: { ...config.defaultPermissions },
-        tokens: null,
-        stats: {},
-        createdAt: 1,
-        updatedAt: 2,
-        state: "active"
-      };
-      await agentStateWrite(config, agentId, state);
-
-      const statePath = path.join(config.agentsDir, agentId, "state.json");
-      const payload = JSON.stringify(
-        {
-          permissions: state.permissions,
-          tokens: state.tokens,
-          stats: state.stats,
-          createdAt: state.createdAt,
-          updatedAt: state.updatedAt,
-          state: state.state
-        },
-        null,
-        2
-      );
-      await writeFile(statePath, `${payload}\n`, "utf8");
 
       const restored = await agentStateRead(config, agentId);
 
       expect(restored?.context.messages).toEqual([]);
-      expect(restored?.inferenceSessionId).toBeUndefined();
+      expect(restored?.inferenceSessionId).toBe("session-1");
+      expect(restored?.activeSessionId).toBe(sessionId);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 
-  it("parses dead lifecycle state from disk", async () => {
+  it("returns null when state does not exist", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-state-"));
     const agentId = createId();
     try {
@@ -93,6 +64,27 @@ describe("agentStateRead", () => {
         { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
         path.join(dir, "settings.json")
       );
+
+      const restored = await agentStateRead(config, agentId);
+      expect(restored).toBeNull();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reads dead lifecycle state", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-state-"));
+    const agentId = createId();
+    try {
+      const config = configResolve(
+        { engine: { dataDir: dir }, assistant: { workspaceDir: dir } },
+        path.join(dir, "settings.json")
+      );
+      await agentDescriptorWrite(config, agentId, {
+        type: "cron",
+        id: agentId,
+        name: "state"
+      });
       const state: AgentState = {
         context: { messages: [] },
         permissions: { ...config.defaultPermissions },

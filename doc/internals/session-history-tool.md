@@ -10,17 +10,17 @@
 - `toAt`: optional upper bound (inclusive) for record timestamp, unix milliseconds
 - when both `fromAt` and `toAt` are provided, `fromAt` must be `<= toAt`
 - summarized mode selects the normal-sized model when provider metadata is available
+- source data comes from SQLite `session_history` joined through `sessions`
 
 ```mermaid
 sequenceDiagram
   participant Agent as Calling Agent
   participant Tool as read_session_history
-  participant Disk as Agent Store
+  participant DB as SQLite
   participant Router as InferenceRouter
   participant Model as Summarization Model
   Agent->>Tool: agentId + summarized?
-  Tool->>Disk: read descriptor.json
-  Tool->>Disk: read history.jsonl
+  Tool->>DB: read agent + all session history
   Tool->>Tool: filter by fromAt/toAt (if provided)
   alt summarized=true (default)
     Tool->>Router: complete(summary context)
