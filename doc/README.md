@@ -1,5 +1,9 @@
 # Daycare Documentation
 
+## References
+
+- [Storage Types Reference](STORAGE.md) - Complete persistence-layer types, schemas, paths, and diagrams
+
 ## Concepts
 
 Core concepts and systems that power Daycare.
