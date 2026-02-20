@@ -552,7 +552,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
       }
 
       for (let toolIndex = 0; toolIndex < toolCalls.length; toolIndex++) {
-        const toolCall = toolCalls[toolIndex];
+        const toolCall = toolCalls[toolIndex]!;
         const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 200);
         logger.debug(
           `execute: Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
@@ -613,7 +613,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             // Cancel remaining tool calls with steering reason
             const cancelReason = steering.cancelReason ?? "Task redirected by steering message";
             for (let cancelIndex = toolIndex + 1; cancelIndex < toolCalls.length; cancelIndex++) {
-              const cancelledCall = toolCalls[cancelIndex];
+              const cancelledCall = toolCalls[cancelIndex]!;
               const cancelledMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: cancelledCall.id,
