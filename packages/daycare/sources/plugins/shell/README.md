@@ -1,6 +1,6 @@
 # Shell Plugin
 
-The shell plugin provides workspace file tools (`read`, `write`, `edit`, `pdf_process`), one-shot command execution (`exec`), and durable process management tools.
+The shell plugin provides workspace file tools (`read`, `write`, `edit`), one-shot command execution (`exec`), and durable process management tools.
 
 ## Read Tool Notes
 
@@ -8,7 +8,6 @@ The shell plugin provides workspace file tools (`read`, `write`, `edit`, `pdf_pr
 - Text output supports `offset` (1-indexed line start) and `limit` (line count) for pagination.
 - Text output is truncated to `2000` lines or `50KB` (whichever is hit first), with continuation hints.
 - Supported image files (`jpg`, `png`, `gif`, `webp`) are returned as image content blocks.
-- `pdf_process` extracts PDF text via `pdfjs-dist` and, for text-sparse/scanned files, can attach rendered page images.
 
 ## Durable Process Tools
 
