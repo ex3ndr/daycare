@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { definePlugin } from "../../engine/plugins/types.js";
+import { pdfProcessTool } from "./pdfProcessTool.js";
 import {
     buildProcessGetTool,
     buildProcessListTool,
@@ -22,6 +23,7 @@ export const plugin = definePlugin({
                 api.registrar.registerTool(buildWorkspaceWriteTool());
                 api.registrar.registerTool(buildWorkspaceEditTool());
                 api.registrar.registerTool(buildExecTool());
+                api.registrar.registerTool(pdfProcessTool());
                 api.registrar.registerTool(buildProcessStartTool(processes));
                 api.registrar.registerTool(buildProcessListTool(processes));
                 api.registrar.registerTool(buildProcessGetTool(processes));
@@ -33,6 +35,7 @@ export const plugin = definePlugin({
                 api.registrar.unregisterTool("write");
                 api.registrar.unregisterTool("edit");
                 api.registrar.unregisterTool("exec");
+                api.registrar.unregisterTool("pdf_process");
                 api.registrar.unregisterTool("process_start");
                 api.registrar.unregisterTool("process_list");
                 api.registrar.unregisterTool("process_get");

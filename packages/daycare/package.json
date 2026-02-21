@@ -65,6 +65,7 @@
     "pino": "^10.3.0",
     "pino-pretty": "^11.0.0",
     "playwright": "^1.58.2",
+    "pdfjs-dist": "^5.4.296",
     "qrcode-terminal": "^0.12.0",
     "zod": "^3.25.0"
   },
