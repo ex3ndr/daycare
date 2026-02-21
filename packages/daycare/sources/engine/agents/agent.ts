@@ -33,7 +33,6 @@ import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
 import { Context } from "./context.js";
-import { agentDescriptorIsCron } from "./ops/agentDescriptorIsCron.js";
 import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
 import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
@@ -1027,20 +1026,6 @@ export class Agent {
                 "error: Child agent failure notification failed"
             );
         }
-    }
-
-    /**
-     * Resolves the cron task id for this agent when available.
-     * Expects: cron task uid maps to a task on disk.
-     */
-    async resolveCronTaskId(): Promise<string | null> {
-        const descriptor = this.descriptor;
-        if (!agentDescriptorIsCron(descriptor)) {
-            return null;
-        }
-        const tasks = await this.agentSystem.crons.listTasks();
-        const task = tasks.find((entry) => entry.taskUid === descriptor.id) ?? null;
-        return task?.id ?? null;
     }
 
     private async messageFilesNormalize(

@@ -24,15 +24,35 @@ describe("agentSystemPrompt", () => {
         expect(rendered).toBe(expected);
     });
 
-    it("throws when system agent tag is unknown", async () => {
-        await expect(
-            agentSystemPrompt({
-                descriptor: {
-                    type: "system",
-                    tag: "unknown-system-agent"
-                }
-            })
-        ).rejects.toThrow("Unknown system agent tag: unknown-system-agent");
+    it("renders base prompt for system agent without a registered definition", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-unknown-"));
+        try {
+            const userHome = new UserHome(path.join(dir, "users"), "user-1");
+            await mkdir(userHome.knowledge, { recursive: true });
+            await writeFile(path.join(userHome.knowledge, "SOUL.md"), "soul\n", "utf8");
+            await writeFile(path.join(userHome.knowledge, "USER.md"), "user\n", "utf8");
+            await writeFile(path.join(userHome.knowledge, "AGENTS.md"), "agents\n", "utf8");
+            await writeFile(path.join(userHome.knowledge, "TOOLS.md"), "tools\n", "utf8");
+
+            const rendered = await agentSystemPrompt({
+                descriptor: { type: "system", tag: "cron" },
+                userHome,
+                agentSystem: {
+                    config: {
+                        current: {
+                            configDir: dir,
+                            features: { noTools: false, rlm: false, say: false }
+                        }
+                    },
+                    toolResolver: { listTools: () => [] }
+                } as unknown as NonNullable<AgentSystemPromptParameter["agentSystem"]>
+            });
+
+            expect(rendered.length).toBeGreaterThan(0);
+            expect(rendered).not.toContain("## Agent Prompt");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
     });
 
     it("renders bundled templates with prompt files from agent system data dir", async () => {
@@ -137,9 +157,6 @@ describe("agentSystemPrompt", () => {
                 },
                 connectorRegistry: {
                     get: () => null
-                },
-                crons: {
-                    listTasks: async () => []
                 },
                 toolResolver: {
                     listTools: () => [

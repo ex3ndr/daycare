@@ -4,7 +4,7 @@ import type { AgentSystem } from "../agentSystem.js";
 
 export type AgentSystemPromptAgentSystem = Pick<
     AgentSystem,
-    "config" | "pluginManager" | "toolResolver" | "connectorRegistry" | "crons"
+    "config" | "pluginManager" | "toolResolver" | "connectorRegistry"
 >;
 
 export type AgentSystemPromptContext = {

@@ -58,12 +58,15 @@ describe("agentPromptResolve", () => {
         expect(resolved.replaceSystemPrompt).toBe(false);
     });
 
-    it("throws when system tag is unknown", async () => {
-        await expect(
-            agentPromptResolve({
-                type: "system",
-                tag: "unknown"
-            })
-        ).rejects.toThrow("Unknown system agent tag: unknown");
+    it("returns empty prompt for unknown system tags", async () => {
+        const resolved = await agentPromptResolve({
+            type: "system",
+            tag: "unknown"
+        });
+
+        expect(resolved).toEqual({
+            agentPrompt: "",
+            replaceSystemPrompt: false
+        });
     });
 });

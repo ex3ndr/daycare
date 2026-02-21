@@ -11,11 +11,6 @@ export const SYSTEM_AGENTS: readonly SystemAgentDefinition[] = [
         replaceSystemPrompt: false
     },
     {
-        tag: "cron",
-        promptFile: "CRON.md",
-        replaceSystemPrompt: false
-    },
-    {
         tag: "architect",
         promptFile: "ARCHITECT.md",
         replaceSystemPrompt: true

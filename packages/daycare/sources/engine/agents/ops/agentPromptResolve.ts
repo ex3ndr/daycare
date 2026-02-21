@@ -26,7 +26,10 @@ export async function agentPromptResolve(descriptor: AgentDescriptor): Promise<A
 
     const resolved = await systemAgentPromptResolve(descriptor.tag);
     if (!resolved) {
-        throw new Error(`Unknown system agent tag: ${descriptor.tag}`);
+        return {
+            agentPrompt: "",
+            replaceSystemPrompt: false
+        };
     }
     return {
         agentPrompt: resolved.systemPrompt,

@@ -1,6 +1,6 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { Crons } from "../../cron/crons.js";
 import { cronExpressionParse as parseCronExpression } from "../../cron/ops/cronExpressionParse.js";
@@ -57,14 +57,14 @@ const addCronSchema = Type.Object(
 
 const readCronTaskSchema = Type.Object(
     {
-        taskId: Type.Optional(Type.String({ minLength: 1 }))
+        taskId: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
 );
 
 const deleteCronTaskSchema = Type.Object(
     {
-        taskId: Type.Optional(Type.String({ minLength: 1 }))
+        taskId: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
 );
@@ -168,9 +168,12 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
             parameters: readCronTaskSchema
         },
         returns: cronReturns,
-        execute: async (args, context, toolCall) => {
+        execute: async (args, _context, toolCall) => {
             const payload = args as CronReadTaskArgs;
-            const taskId = await resolveTaskId(payload.taskId, context);
+            const taskId = payload.taskId;
+            if (!taskIdIsSafe(taskId)) {
+                throw new Error("Cron task id contains invalid characters.");
+            }
             const task = await crons.loadTask(taskId);
             if (!task) {
                 throw new Error(`Cron task not found: ${taskId}`);
@@ -229,7 +232,10 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
         returns: cronReturns,
         execute: async (args, context, toolCall) => {
             const payload = args as CronDeleteTaskArgs;
-            const taskId = await resolveTaskId(payload.taskId, context);
+            const taskId = payload.taskId;
+            if (!taskIdIsSafe(taskId)) {
+                throw new Error("Cron task id contains invalid characters.");
+            }
             const deleted = await crons.deleteTask(context.ctx, taskId);
 
             const summary = deleted ? `Deleted cron task ${taskId}.` : `Cron task not found: ${taskId}.`;
@@ -258,15 +264,4 @@ export function buildCronDeleteTaskTool(crons: Crons): ToolDefinition {
             };
         }
     };
-}
-
-async function resolveTaskId(provided: string | undefined, context: ToolExecutionContext): Promise<string> {
-    const taskId = provided ?? (await context.agent.resolveCronTaskId());
-    if (!taskId) {
-        throw new Error("Cron task id is required.");
-    }
-    if (provided && !taskIdIsSafe(taskId)) {
-        throw new Error("Cron task id contains invalid characters.");
-    }
-    return taskId;
 }
