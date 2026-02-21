@@ -37,9 +37,13 @@ export class HistoryRepository {
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
 
-    async append(sessionId: string, record: AgentHistoryRecord): Promise<void> {
+    /**
+     * Appends a history record and returns the new auto-increment id.
+     * Expects: sessionId references an existing session.
+     */
+    async append(sessionId: string, record: AgentHistoryRecord): Promise<number> {
         const { type, at, ...data } = record;
-        this.db
+        const result = this.db
             .prepare(
                 `
               INSERT INTO session_history (session_id, type, at, data)
@@ -47,6 +51,29 @@ export class HistoryRepository {
             `
             )
             .run(sessionId, type, at, JSON.stringify(data));
+        return Number(result.lastInsertRowid);
+    }
+
+    /**
+     * Counts history records after a given id for a session.
+     * Expects: afterId >= 0; returns 0 when no records exist after afterId.
+     */
+    async countSinceId(sessionId: string, afterId: number): Promise<number> {
+        const row = this.db
+            .prepare("SELECT COUNT(*) AS count FROM session_history WHERE session_id = ? AND id > ?")
+            .get(sessionId, afterId) as { count: number | bigint };
+        return Number(row.count);
+    }
+
+    /**
+     * Returns the maximum history record id for a session.
+     * Returns null when the session has no history records.
+     */
+    async maxId(sessionId: string): Promise<number | null> {
+        const row = this.db
+            .prepare("SELECT MAX(id) AS max_id FROM session_history WHERE session_id = ?")
+            .get(sessionId) as { max_id: number | bigint | null };
+        return row.max_id !== null ? Number(row.max_id) : null;
     }
 }
 

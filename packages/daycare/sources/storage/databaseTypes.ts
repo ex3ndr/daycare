@@ -31,6 +31,8 @@ export type DatabaseSessionRow = {
     inference_session_id: string | null;
     created_at: number;
     reset_message: string | null;
+    invalidated_at: number | null;
+    processed_until: number | null;
 };
 
 export type DatabaseSessionHistoryRow = {
@@ -368,6 +370,8 @@ export type SessionDbRecord = {
     inferenceSessionId: string | null;
     createdAt: number;
     resetMessage: string | null;
+    invalidatedAt: number | null;
+    processedUntil: number | null;
 };
 
 export type CreateUserInput = {

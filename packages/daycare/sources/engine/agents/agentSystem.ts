@@ -408,6 +408,14 @@ export class AgentSystem {
             await agentStateWrite(this.storage, agentId, entry.agent.state);
             this.eventBus.emit("agent.sleep", { agentId, reason });
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
+            // Mark session for memory processing on idle
+            const sessionId = entry.agent.state.activeSessionId;
+            if (sessionId) {
+                const maxHistoryId = await this.storage.history.maxId(sessionId);
+                if (maxHistoryId !== null) {
+                    await this.storage.sessions.invalidate(sessionId, maxHistoryId);
+                }
+            }
             // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
             // interleaving that could leave stale idle lifecycle signals behind.
             await this.scheduleIdleSignal(agentId);

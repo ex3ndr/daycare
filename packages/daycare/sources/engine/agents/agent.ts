@@ -681,6 +681,14 @@ export class Agent {
 
     private async handleReset(item: AgentInboxReset): Promise<boolean> {
         const now = Date.now();
+        // Invalidate old session for memory processing before creating new one
+        const oldSessionId = this.state.activeSessionId;
+        if (oldSessionId) {
+            const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
+            if (maxHistoryId !== null) {
+                await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
+            }
+        }
         const resetMessage = item.message?.trim() ?? "";
         if (resetMessage.length > 0) {
             this.state.context = {
@@ -1131,6 +1139,14 @@ export class Agent {
         const summaryWithContinue = `${summaryText}\n\nPlease continue with the user's latest request.`;
         const compactionAt = Date.now();
         const resetMessage = "Session context compacted.";
+        // Invalidate old session for memory processing before creating new one
+        const oldSessionId = this.state.activeSessionId;
+        if (oldSessionId) {
+            const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
+            if (maxHistoryId !== null) {
+                await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
+            }
+        }
         this.state.context = {
             messages: [
                 buildResetSystemMessage(resetMessage, compactionAt, this.id),

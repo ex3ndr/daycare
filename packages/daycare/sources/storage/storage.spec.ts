@@ -125,4 +125,84 @@ describe("Storage", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("appendHistory invalidates session after more than 5 unprocessed records", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const owner = (await storage.users.findMany())[0];
+            if (!owner) {
+                throw new Error("Owner user missing");
+            }
+            const agentId = createId();
+            await storage.agents.create({
+                id: agentId,
+                userId: owner.id,
+                type: "cron",
+                descriptor: { type: "cron", id: agentId, name: "job" },
+                activeSessionId: null,
+                permissions: { workingDir: "/w", writeDirs: ["/w"] },
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            // Append 5 records - should NOT invalidate
+            for (let i = 1; i <= 5; i++) {
+                await storage.appendHistory(agentId, { type: "note", at: i * 100, text: `msg-${i}` });
+            }
+            const agent5 = await storage.agents.findById(agentId);
+            const session5 = await storage.sessions.findById(agent5?.activeSessionId ?? "");
+            expect(session5?.invalidatedAt).toBeNull();
+
+            // Append 6th record - should invalidate
+            await storage.appendHistory(agentId, { type: "note", at: 600, text: "msg-6" });
+            const agent6 = await storage.agents.findById(agentId);
+            const session6 = await storage.sessions.findById(agent6?.activeSessionId ?? "");
+            expect(session6?.invalidatedAt).not.toBeNull();
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("appendHistory does not re-invalidate when already invalidated at same or higher id", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const owner = (await storage.users.findMany())[0];
+            if (!owner) {
+                throw new Error("Owner user missing");
+            }
+            const agentId = createId();
+            await storage.agents.create({
+                id: agentId,
+                userId: owner.id,
+                type: "cron",
+                descriptor: { type: "cron", id: agentId, name: "job" },
+                activeSessionId: null,
+                permissions: { workingDir: "/w", writeDirs: ["/w"] },
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            // Append 7 records to trigger invalidation
+            for (let i = 1; i <= 7; i++) {
+                await storage.appendHistory(agentId, { type: "note", at: i * 100, text: `msg-${i}` });
+            }
+            const agent = await storage.agents.findById(agentId);
+            const session = await storage.sessions.findById(agent?.activeSessionId ?? "");
+            const firstInvalidatedAt = session?.invalidatedAt;
+            expect(firstInvalidatedAt).not.toBeNull();
+
+            // Append 8th record - invalidated_at should grow to the latest id
+            await storage.appendHistory(agentId, { type: "note", at: 800, text: "msg-8" });
+            const sessionAfter = await storage.sessions.findById(agent?.activeSessionId ?? "");
+            expect(sessionAfter?.invalidatedAt).toBeGreaterThan(firstInvalidatedAt!);
+        } finally {
+            storage.close();
+        }
+    });
 });

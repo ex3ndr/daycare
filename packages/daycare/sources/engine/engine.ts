@@ -22,6 +22,7 @@ import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Heartbeats } from "./heartbeat/heartbeats.js";
 import type { EngineEventBus } from "./ipc/events.js";
+import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
@@ -92,6 +93,7 @@ export class Engine {
     readonly eventBus: EngineEventBus;
     readonly apps: Apps;
     readonly exposes: Exposes;
+    private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
     private readonly incomingMessages: IncomingMessages;
 
@@ -99,6 +101,7 @@ export class Engine {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
         this.config = new ConfigModule(options.config);
         this.storage = Storage.open(this.config.current.dbPath);
+        this.memoryWorker = new MemoryWorker({ storage: this.storage });
         this.eventBus = options.eventBus;
         const fallbackUserIdResolve = async (): Promise<string> => {
             const owner = await this.storage.users.findOwner();
@@ -387,11 +390,14 @@ export class Engine {
         await this.heartbeats.start();
         logger.debug("start: Starting delayed signal scheduler");
         await this.delayedSignals.start();
+        logger.debug("start: Starting memory worker");
+        this.memoryWorker.start();
         await this.pluginManager.postStartAll();
         logger.debug("start: Engine.start() complete");
     }
 
     async shutdown(): Promise<void> {
+        this.memoryWorker.stop();
         this.reloadSync.stop();
         await this.modules.connectors.unregisterAll("shutdown");
         await this.incomingMessages.flush();

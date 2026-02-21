@@ -9,28 +9,32 @@ const permissions: SessionPermissions = {
     writeDirs: ["/workspace"]
 };
 
+async function createTestStorage() {
+    const storage = Storage.open(":memory:");
+    const owner = (await storage.users.findMany())[0];
+    if (!owner) {
+        throw new Error("Owner user missing");
+    }
+    await storage.agents.create({
+        id: "agent-1",
+        userId: owner.id,
+        type: "cron",
+        descriptor: { type: "cron", id: "agent-1", name: "job" },
+        activeSessionId: null,
+        permissions,
+        tokens: null,
+        stats: {},
+        lifecycle: "active",
+        createdAt: 1,
+        updatedAt: 1
+    });
+    return storage;
+}
+
 describe("HistoryRepository", () => {
     it("appends and finds by session and agent", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = await createTestStorage();
         try {
-            const owner = (await storage.users.findMany())[0];
-            if (!owner) {
-                throw new Error("Owner user missing");
-            }
-            await storage.agents.create({
-                id: "agent-1",
-                userId: owner.id,
-                type: "cron",
-                descriptor: { type: "cron", id: "agent-1", name: "job" },
-                activeSessionId: null,
-                permissions,
-                tokens: null,
-                stats: {},
-                lifecycle: "active",
-                createdAt: 1,
-                updatedAt: 1
-            });
-
             const sessionA = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
             const sessionB = await storage.sessions.create({ agentId: "agent-1", createdAt: 20 });
             const history = new HistoryRepository(storage.db);
@@ -49,5 +53,102 @@ describe("HistoryRepository", () => {
         } finally {
             storage.close();
         }
+    });
+
+    it("append returns new record id", async () => {
+        const storage = await createTestStorage();
+        try {
+            const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
+            const history = new HistoryRepository(storage.db);
+
+            const id1 = await history.append(sessionId, { type: "note", at: 11, text: "first" });
+            const id2 = await history.append(sessionId, { type: "note", at: 12, text: "second" });
+
+            expect(id1).toBeGreaterThan(0);
+            expect(id2).toBeGreaterThan(id1);
+        } finally {
+            storage.close();
+        }
+    });
+
+    describe("countSinceId", () => {
+        it("counts records after a given id", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
+                const history = new HistoryRepository(storage.db);
+
+                const id1 = await history.append(sessionId, { type: "note", at: 11, text: "a" });
+                await history.append(sessionId, { type: "note", at: 12, text: "b" });
+                await history.append(sessionId, { type: "note", at: 13, text: "c" });
+
+                const count = await history.countSinceId(sessionId, id1);
+                expect(count).toBe(2);
+            } finally {
+                storage.close();
+            }
+        });
+
+        it("returns 0 when no records exist after id", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
+                const history = new HistoryRepository(storage.db);
+
+                const lastId = await history.append(sessionId, { type: "note", at: 11, text: "a" });
+
+                const count = await history.countSinceId(sessionId, lastId);
+                expect(count).toBe(0);
+            } finally {
+                storage.close();
+            }
+        });
+
+        it("counts all records when afterId is 0", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
+                const history = new HistoryRepository(storage.db);
+
+                await history.append(sessionId, { type: "note", at: 11, text: "a" });
+                await history.append(sessionId, { type: "note", at: 12, text: "b" });
+
+                const count = await history.countSinceId(sessionId, 0);
+                expect(count).toBe(2);
+            } finally {
+                storage.close();
+            }
+        });
+    });
+
+    describe("maxId", () => {
+        it("returns max history record id", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
+                const history = new HistoryRepository(storage.db);
+
+                await history.append(sessionId, { type: "note", at: 11, text: "a" });
+                const id2 = await history.append(sessionId, { type: "note", at: 12, text: "b" });
+
+                const maxId = await history.maxId(sessionId);
+                expect(maxId).toBe(id2);
+            } finally {
+                storage.close();
+            }
+        });
+
+        it("returns null for empty session", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
+                const history = new HistoryRepository(storage.db);
+
+                const maxId = await history.maxId(sessionId);
+                expect(maxId).toBeNull();
+            } finally {
+                storage.close();
+            }
+        });
     });
 });

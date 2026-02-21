@@ -41,12 +41,60 @@ export class SessionsRepository {
                 agent_id,
                 inference_session_id,
                 created_at,
-                reset_message
-              ) VALUES (?, ?, ?, ?, ?)
+                reset_message,
+                invalidated_at,
+                processed_until
+              ) VALUES (?, ?, ?, ?, ?, NULL, NULL)
             `
             )
             .run(sessionId, input.agentId, input.inferenceSessionId ?? null, createdAt, input.resetMessage ?? null);
         return sessionId;
+    }
+
+    /**
+     * Marks a session as needing memory processing.
+     * Sets invalidated_at only if null or if historyId is larger.
+     * Expects: sessionId and historyId are valid.
+     */
+    async invalidate(sessionId: string, historyId: number): Promise<void> {
+        this.db
+            .prepare(
+                `
+              UPDATE sessions
+              SET invalidated_at = ?
+              WHERE id = ? AND (invalidated_at IS NULL OR invalidated_at < ?)
+            `
+            )
+            .run(historyId, sessionId, historyId);
+    }
+
+    /**
+     * Returns sessions that need memory processing, ordered by invalidated_at ASC.
+     * Expects: limit > 0.
+     */
+    async findInvalidated(limit: number): Promise<SessionDbRecord[]> {
+        const rows = this.db
+            .prepare("SELECT * FROM sessions WHERE invalidated_at IS NOT NULL ORDER BY invalidated_at ASC LIMIT ?")
+            .all(limit) as DatabaseSessionRow[];
+        return rows.map((row) => this.sessionParse(row));
+    }
+
+    /**
+     * CAS update: clears invalidated_at and sets processed_until,
+     * but only if invalidated_at still matches the expected value.
+     * Returns true if the update was applied.
+     */
+    async markProcessed(sessionId: string, processedUntil: number, expectedInvalidatedAt: number): Promise<boolean> {
+        const result = this.db
+            .prepare(
+                `
+              UPDATE sessions
+              SET invalidated_at = NULL, processed_until = ?
+              WHERE id = ? AND invalidated_at = ?
+            `
+            )
+            .run(processedUntil, sessionId, expectedInvalidatedAt);
+        return result.changes === 1;
     }
 
     private sessionParse(row: DatabaseSessionRow): SessionDbRecord {
@@ -55,7 +103,9 @@ export class SessionsRepository {
             agentId: row.agent_id,
             inferenceSessionId: row.inference_session_id,
             createdAt: row.created_at,
-            resetMessage: row.reset_message
+            resetMessage: row.reset_message,
+            invalidatedAt: row.invalidated_at ?? null,
+            processedUntil: row.processed_until ?? null
         };
     }
 }
