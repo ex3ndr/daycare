@@ -4,7 +4,6 @@ import { migration20260220AddTasks } from "./20260220_add_tasks.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 import { migration20260220ImportTasks } from "./20260220_import_tasks.js";
 import { migration20260220UsersBootstrap } from "./20260220_users_bootstrap.js";
-import { migration20260221AddPermissionRequests } from "./20260221_add_permission_requests.js";
 import { migration20260221BackfillCronUsers } from "./20260221_backfill_cron_users.js";
 import { migration20260222AddChannels } from "./20260222_add_channels.js";
 import { migration20260222AddExpose } from "./20260222_add_expose.js";
@@ -24,7 +23,6 @@ export const migrations: Migration[] = [
     migration20260220UsersBootstrap,
     migration20260220AddTasks,
     migration20260220ImportTasks,
-    migration20260221AddPermissionRequests,
     migration20260221BackfillCronUsers,
     migration20260222AddSignals,
     migration20260222ImportSignals,
