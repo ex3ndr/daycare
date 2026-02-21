@@ -104,9 +104,9 @@ export class Signals {
     }
 
     async subscribe(input: SignalSubscribeInput): Promise<SignalSubscription> {
-        const { userId, pattern, agentId } = signalSubscriptionInputNormalize(input);
+        const { ctx, pattern } = signalSubscriptionInputNormalize(input);
         const now = Date.now();
-        const existing = await this.signalSubscriptions.findByUserAndAgent(contextFromUserId(userId), agentId, pattern);
+        const existing = await this.signalSubscriptions.findByUserAndAgent(ctx, pattern);
         const subscription: SignalSubscription = existing
             ? {
                   ...signalSubscriptionBuild(existing),
@@ -114,8 +114,10 @@ export class Signals {
                   updatedAt: now
               }
             : {
-                  userId,
-                  agentId,
+                  ctx: {
+                      userId: ctx.userId,
+                      agentId: ctx.agentId
+                  },
                   pattern,
                   silent: input.silent ?? true,
                   createdAt: now,
@@ -123,8 +125,8 @@ export class Signals {
               };
         await this.signalSubscriptions.create({
             id: existing?.id ?? createId(),
-            userId: subscription.userId,
-            agentId: subscription.agentId,
+            userId: subscription.ctx.userId,
+            agentId: subscription.ctx.agentId,
             pattern: subscription.pattern,
             silent: subscription.silent,
             createdAt: subscription.createdAt,
@@ -138,12 +140,8 @@ export class Signals {
      * Returns: null when no subscription exists.
      */
     async subscriptionGet(input: SignalUnsubscribeInput): Promise<SignalSubscription | null> {
-        const { userId, pattern, agentId } = signalSubscriptionInputNormalize(input);
-        const subscription = await this.signalSubscriptions.findByUserAndAgent(
-            contextFromUserId(userId),
-            agentId,
-            pattern
-        );
+        const { ctx, pattern } = signalSubscriptionInputNormalize(input);
+        const subscription = await this.signalSubscriptions.findByUserAndAgent(ctx, pattern);
         return subscription ? signalSubscriptionBuild(subscription) : null;
     }
 
@@ -152,8 +150,8 @@ export class Signals {
      * Returns: true when a subscription existed and was removed.
      */
     async unsubscribe(input: SignalUnsubscribeInput): Promise<boolean> {
-        const { userId, pattern, agentId } = signalSubscriptionInputNormalize(input);
-        return this.signalSubscriptions.delete(userId, agentId, pattern);
+        const { ctx, pattern } = signalSubscriptionInputNormalize(input);
+        return this.signalSubscriptions.delete(ctx, pattern);
     }
 
     /**
@@ -249,8 +247,10 @@ function signalRecordBuild(signal: Signal, userId: string): SignalEventDbRecord 
 
 function signalSubscriptionBuild(record: SignalSubscriptionDbRecord): SignalSubscription {
     return {
-        userId: record.userId,
-        agentId: record.agentId,
+        ctx: {
+            userId: record.userId,
+            agentId: record.agentId
+        },
         pattern: record.pattern,
         silent: record.silent,
         createdAt: record.createdAt,
@@ -258,12 +258,11 @@ function signalSubscriptionBuild(record: SignalSubscriptionDbRecord): SignalSubs
     };
 }
 
-function signalSubscriptionInputNormalize(input: { userId: string; agentId: string; pattern: string }): {
-    userId: string;
-    agentId: string;
+function signalSubscriptionInputNormalize(input: { ctx: Context; pattern: string }): {
+    ctx: Context;
     pattern: string;
 } {
-    const userId = input.userId.trim();
+    const userId = (input.ctx.userId ?? "").trim();
     if (!userId) {
         throw new Error("Signal subscription userId is required");
     }
@@ -271,11 +270,11 @@ function signalSubscriptionInputNormalize(input: { userId: string; agentId: stri
     if (!pattern) {
         throw new Error("Signal subscription pattern is required");
     }
-    const agentId = input.agentId.trim();
+    const agentId = (input.ctx.agentId ?? "").trim();
     if (!agentId) {
         throw new Error("Signal subscription agentId is required");
     }
-    return { userId, pattern, agentId };
+    return { ctx: { userId, agentId }, pattern };
 }
 
 function signalSourceUserIdNormalize(userId: unknown): string {
@@ -290,5 +289,5 @@ function signalSourceUserIdNormalize(userId: unknown): string {
 }
 
 function contextFromUserId(userId: string): Context {
-    return { agentId: "signal", userId };
+    return { agentId: "signal", userId: signalSourceUserIdNormalize(userId) };
 }

@@ -624,8 +624,7 @@ export class Agent {
         const subscription = isInternalSignal
             ? null
             : await this.agentSystem.signals.subscriptionGet({
-                  userId: this.userId,
-                  agentId: this.id,
+                  ctx: { userId: this.userId, agentId: this.id },
                   pattern: item.subscriptionPattern
               });
         if (!isInternalSignal && !subscription) {

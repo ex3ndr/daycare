@@ -330,16 +330,16 @@ export class AgentSystem {
     async signalDeliver(signal: Signal, subscriptions: SignalSubscription[]): Promise<void> {
         await Promise.all(
             subscriptions.map(async (subscription) => {
-                if (signal.source.type === "agent" && signal.source.id === subscription.agentId) {
+                if (signal.source.type === "agent" && signal.source.id === subscription.ctx.agentId) {
                     return;
                 }
-                const context = await this.contextForAgentId(subscription.agentId);
-                if (!context || context.userId !== subscription.userId) {
+                const context = await this.contextForAgentId(subscription.ctx.agentId);
+                if (!context || context.userId !== subscription.ctx.userId) {
                     return;
                 }
                 try {
                     await this.post(
-                        { agentId: subscription.agentId },
+                        { agentId: subscription.ctx.agentId },
                         {
                             type: "signal",
                             signal,
@@ -351,7 +351,7 @@ export class AgentSystem {
                         {
                             signalId: signal.id,
                             signalType: signal.type,
-                            agentId: subscription.agentId,
+                            agentId: subscription.ctx.agentId,
                             pattern: subscription.pattern,
                             error
                         },

@@ -103,25 +103,25 @@ export function topologyTool(
                 }));
 
             const signalSubscriptionsSummary = signalSubscriptions
-                .filter((subscription) => subscription.userId === callerUserId)
+                .filter((subscription) => subscription.ctx.userId === callerUserId)
                 .slice()
                 .sort((left, right) => {
-                    const byUser = left.userId.localeCompare(right.userId);
+                    const byUser = left.ctx.userId.localeCompare(right.ctx.userId);
                     if (byUser !== 0) {
                         return byUser;
                     }
-                    const byAgent = left.agentId.localeCompare(right.agentId);
+                    const byAgent = left.ctx.agentId.localeCompare(right.ctx.agentId);
                     if (byAgent !== 0) {
                         return byAgent;
                     }
                     return left.pattern.localeCompare(right.pattern);
                 })
                 .map((subscription) => ({
-                    userId: subscription.userId,
-                    agentId: subscription.agentId,
+                    userId: subscription.ctx.userId,
+                    agentId: subscription.ctx.agentId,
                     pattern: subscription.pattern,
                     silent: subscription.silent,
-                    isYou: subscription.agentId === callerAgentId
+                    isYou: subscription.ctx.agentId === callerAgentId
                 }));
 
             const channelsSummary = channelEntries

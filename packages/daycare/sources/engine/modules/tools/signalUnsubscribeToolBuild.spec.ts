@@ -17,8 +17,7 @@ describe("buildSignalUnsubscribeTool", () => {
         try {
             const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
             await signals.subscribe({
-                userId: "user-target",
-                agentId: "agent-target",
+                ctx: { userId: "user-target", agentId: "agent-target" },
                 pattern: "build:*:done",
                 silent: true
             });

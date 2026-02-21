@@ -394,8 +394,7 @@ function signalSubscriptionBuild(input: {
     silent: boolean;
 }): SignalSubscription {
     return {
-        userId: input.userId,
-        agentId: input.agentId,
+        ctx: { userId: input.userId, agentId: input.agentId },
         pattern: input.pattern,
         silent: input.silent,
         createdAt: 1,

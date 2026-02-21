@@ -1,3 +1,5 @@
+import type { Context } from "../agents/context.js";
+
 export type SignalSource =
     | { type: "system"; userId: string }
     | { type: "agent"; id: string; userId: string }
@@ -19,8 +21,7 @@ export type Signal = {
 };
 
 export type SignalSubscription = {
-    userId: string;
-    agentId: string;
+    ctx: Context;
     pattern: string;
     silent: boolean;
     createdAt: number;
@@ -28,15 +29,13 @@ export type SignalSubscription = {
 };
 
 export type SignalSubscribeInput = {
-    userId: string;
-    agentId: string;
+    ctx: Context;
     pattern: string;
     silent?: boolean;
 };
 
 export type SignalUnsubscribeInput = {
-    userId: string;
-    agentId: string;
+    ctx: Context;
     pattern: string;
 };
 

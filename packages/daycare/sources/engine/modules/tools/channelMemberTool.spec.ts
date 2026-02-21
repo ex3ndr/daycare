@@ -27,7 +27,7 @@ describe("channelMemberToolBuild", () => {
             addToolCall
         );
 
-        expect(addMember).toHaveBeenCalledWith("dev", "agent-a", "alice");
+        expect(addMember).toHaveBeenCalledWith("dev", { agentId: "agent-a", userId: "user-a" }, "alice");
         expect(result.toolMessage.isError).toBe(false);
     });
 
@@ -43,7 +43,7 @@ describe("channelMemberToolBuild", () => {
             removeToolCall
         );
 
-        expect(removeMember).toHaveBeenCalledWith("dev", "agent-a");
+        expect(removeMember).toHaveBeenCalledWith("dev", { agentId: "agent-a", userId: "user-a" });
         expect(result.toolMessage.isError).toBe(false);
     });
 });
@@ -66,7 +66,9 @@ function contextBuild(): ToolExecutionContext {
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
+        agentSystem: {
+            contextForAgentId: async (agentId: string) => ({ agentId, userId: "user-a" })
+        } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };
 }

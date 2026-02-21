@@ -95,8 +95,7 @@ export class Channels {
                     continue;
                 }
                 await this.signals.subscribe({
-                    userId: memberContext.userId,
-                    agentId: member.agentId,
+                    ctx: memberContext,
                     pattern: channelPatternBuild(channel.name),
                     silent: false
                 });
@@ -172,8 +171,7 @@ export class Channels {
                 continue;
             }
             await this.signals.unsubscribe({
-                userId: memberContext.userId,
-                agentId: member.agentId,
+                ctx: memberContext,
                 pattern: channelPatternBuild(channelName)
             });
         }
@@ -183,23 +181,22 @@ export class Channels {
         return true;
     }
 
-    async addMember(channelName: string, agentId: string, username: string): Promise<Channel> {
+    async addMember(channelName: string, ctx: Context, username: string): Promise<Channel> {
         const channel = this.channelRequire(channelName);
         const normalizedUsername = usernameNormalize(username);
-        const normalizedAgentId = agentId.trim();
+        const normalizedAgentId = (ctx.agentId ?? "").trim();
         if (!normalizedAgentId) {
             throw new Error("Channel member agent id is required.");
+        }
+        const normalizedUserId = (ctx.userId ?? "").trim();
+        if (!normalizedUserId) {
+            throw new Error("Channel member user id is required.");
         }
         const exists = await this.agentSystem.agentExists(normalizedAgentId);
         if (!exists) {
             throw new Error(`Agent not found: ${normalizedAgentId}`);
         }
-
-        const memberContext = await this.agentSystem.contextForAgentId(normalizedAgentId);
-        if (!memberContext) {
-            throw new Error(`Agent not found: ${normalizedAgentId}`);
-        }
-        if (memberContext.userId !== channel.userId) {
+        if (normalizedUserId !== channel.userId) {
             throw new Error(`Agent user scope mismatch for #${channel.name}: ${normalizedAgentId}`);
         }
 
@@ -229,7 +226,7 @@ export class Channels {
 
         channel.updatedAt = now;
         await this.channels.addMember(channel.id, {
-            userId: memberContext.userId,
+            userId: normalizedUserId,
             agentId: normalizedAgentId,
             username: normalizedUsername,
             joinedAt: channel.members.find((entry) => entry.agentId === normalizedAgentId)?.joinedAt ?? now
@@ -238,17 +235,19 @@ export class Channels {
         this.items.set(channel.name, cloneRuntimeChannel(channel));
 
         await this.signals.subscribe({
-            userId: memberContext.userId,
-            agentId: normalizedAgentId,
+            ctx: { userId: normalizedUserId, agentId: normalizedAgentId },
             pattern: channelPatternBuild(channel.name),
             silent: false
         });
         return cloneChannel(channel);
     }
 
-    async removeMember(channelName: string, agentId: string): Promise<boolean> {
+    async removeMember(channelName: string, ctx: Context): Promise<boolean> {
         const channel = this.channelRequire(channelName);
-        const normalizedAgentId = agentId.trim();
+        const normalizedAgentId = (ctx.agentId ?? "").trim();
+        if (!normalizedAgentId) {
+            throw new Error("Channel member agent id is required.");
+        }
         const nextMembers = channel.members.filter((member) => member.agentId !== normalizedAgentId);
         if (nextMembers.length === channel.members.length) {
             return false;
@@ -260,13 +259,12 @@ export class Channels {
         await this.channels.update(channel.id, { updatedAt: channel.updatedAt });
         this.items.set(channel.name, cloneRuntimeChannel(channel));
 
-        const memberContext = await this.agentSystem.contextForAgentId(normalizedAgentId);
-        if (!memberContext) {
+        const normalizedUserId = (ctx.userId ?? "").trim();
+        if (!normalizedUserId) {
             return true;
         }
         await this.signals.unsubscribe({
-            userId: memberContext.userId,
-            agentId: normalizedAgentId,
+            ctx: { userId: normalizedUserId, agentId: normalizedAgentId },
             pattern: channelPatternBuild(channel.name)
         });
         return true;

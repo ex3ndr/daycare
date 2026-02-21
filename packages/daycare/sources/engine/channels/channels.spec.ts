@@ -30,21 +30,19 @@ describe("Channels", () => {
             expect(created.name).toBe("dev");
             expect(created.leader).toBe("leader-agent");
 
-            await channels.addMember("dev", "agent-alice", "Alice");
-            await channels.addMember("dev", "agent-bob", "bob");
+            await channels.addMember("dev", { agentId: "agent-alice", userId: "user-1" }, "Alice");
+            await channels.addMember("dev", { agentId: "agent-bob", userId: "user-1" }, "bob");
             expect(subscribe).toHaveBeenCalledTimes(2);
             expect(subscribe).toHaveBeenCalledWith({
-                userId: "user-1",
-                agentId: "agent-alice",
+                ctx: { userId: "user-1", agentId: "agent-alice" },
                 pattern: "channel.dev:*",
                 silent: false
             });
 
-            const removed = await channels.removeMember("dev", "agent-bob");
+            const removed = await channels.removeMember("dev", { agentId: "agent-bob", userId: "user-1" });
             expect(removed).toBe(true);
             expect(unsubscribe).toHaveBeenCalledWith({
-                userId: "user-1",
-                agentId: "agent-bob",
+                ctx: { userId: "user-1", agentId: "agent-bob" },
                 pattern: "channel.dev:*"
             });
         } finally {
@@ -74,8 +72,8 @@ describe("Channels", () => {
 
             await channels.ensureDir();
             await channels.create("dev", "agent-leader");
-            await channels.addMember("dev", "agent-alice", "alice");
-            await channels.addMember("dev", "agent-bob", "bob");
+            await channels.addMember("dev", { agentId: "agent-alice", userId: "user-1" }, "alice");
+            await channels.addMember("dev", { agentId: "agent-bob", userId: "user-1" }, "bob");
 
             const mentioned = await channels.send("dev", "alice", "check this", ["bob"]);
             expect(mentioned.deliveredAgentIds.sort()).toEqual(["agent-bob", "agent-leader"]);
@@ -104,7 +102,7 @@ describe("Channels", () => {
 
             const history = await channels.getHistory("dev");
             expect(history).toHaveLength(2);
-            expect(history[1]?.text).toBe("what next?");
+            expect(history.map((entry) => entry.text).sort()).toEqual(["check this", "what next?"]);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -130,7 +128,7 @@ describe("Channels", () => {
             });
             await first.ensureDir();
             await first.create("ops", "agent-leader");
-            await first.addMember("ops", "agent-a", "alice");
+            await first.addMember("ops", { agentId: "agent-a", userId: "user-1" }, "alice");
 
             const subscribe = vi.fn();
             const second = new Channels({
@@ -152,8 +150,7 @@ describe("Channels", () => {
 
             expect(second.list()).toHaveLength(1);
             expect(subscribe).toHaveBeenCalledWith({
-                userId: "user-1",
-                agentId: "agent-a",
+                ctx: { userId: "user-1", agentId: "agent-a" },
                 pattern: "channel.ops:*",
                 silent: false
             });

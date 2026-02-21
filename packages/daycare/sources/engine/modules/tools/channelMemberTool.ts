@@ -50,9 +50,13 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
             parameters: addMemberSchema
         },
         returns: channelMemberReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelAddMemberArgs;
-            const channel = await channels.addMember(payload.channelName, payload.agentId, payload.username);
+            const ctx = await toolContext.agentSystem.contextForAgentId(payload.agentId);
+            if (!ctx) {
+                throw new Error(`Agent not found: ${payload.agentId}`);
+            }
+            const channel = await channels.addMember(payload.channelName, ctx, payload.username);
             const summary = `Added @${payload.username} (${payload.agentId}) to #${channel.name}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
@@ -89,9 +93,13 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
             parameters: removeMemberSchema
         },
         returns: channelMemberReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelRemoveMemberArgs;
-            const removed = await channels.removeMember(payload.channelName, payload.agentId);
+            const ctx = await toolContext.agentSystem.contextForAgentId(payload.agentId);
+            if (!ctx) {
+                throw new Error(`Agent not found: ${payload.agentId}`);
+            }
+            const removed = await channels.removeMember(payload.channelName, ctx);
             const summary = removed
                 ? `Removed ${payload.agentId} from #${payload.channelName}.`
                 : `${payload.agentId} is not a member of #${payload.channelName}.`;

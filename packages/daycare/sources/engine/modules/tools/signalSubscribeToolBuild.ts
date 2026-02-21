@@ -50,13 +50,12 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
             }
 
             const subscription = await signals.subscribe({
-                userId: ctx.userId,
-                agentId: targetAgentId,
+                ctx,
                 pattern: payload.pattern,
                 silent: payload.silent
             });
 
-            const summary = `Signal subscription saved for ${subscription.agentId}: ${subscription.pattern} (silent=${subscription.silent}).`;
+            const summary = `Signal subscription saved for ${subscription.ctx.agentId}: ${subscription.pattern} (silent=${subscription.silent}).`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -76,7 +75,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
                 toolMessage,
                 typedResult: {
                     summary,
-                    agentId: subscription.agentId,
+                    agentId: subscription.ctx.agentId,
                     pattern: subscription.pattern,
                     silent: subscription.silent
                 }

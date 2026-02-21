@@ -235,7 +235,11 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             return;
         }
         try {
-            const channel = await options.runtime.channels.addMember(channelName, payload.agentId, payload.username);
+            const ctx = await options.runtime.agentSystem.contextForAgentId(payload.agentId);
+            if (!ctx) {
+                return reply.status(404).send({ ok: false, error: `Agent not found: ${payload.agentId}` });
+            }
+            const channel = await options.runtime.channels.addMember(channelName, ctx, payload.username);
             return reply.send({ ok: true, channel });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Channel add member failed";
@@ -251,7 +255,11 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             return;
         }
         try {
-            const removed = await options.runtime.channels.removeMember(channelName, payload.agentId);
+            const ctx = await options.runtime.agentSystem.contextForAgentId(payload.agentId);
+            if (!ctx) {
+                return reply.status(404).send({ ok: false, error: `Agent not found: ${payload.agentId}` });
+            }
+            const removed = await options.runtime.channels.removeMember(channelName, ctx);
             return reply.send({ ok: true, removed });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Channel remove member failed";

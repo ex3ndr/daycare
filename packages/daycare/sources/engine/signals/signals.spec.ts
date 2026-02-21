@@ -112,8 +112,8 @@ describe("Signals", () => {
                     delivered.push({
                         signalType: signal.type,
                         subscriptions: subscriptions.map((subscription) => ({
-                            userId: subscription.userId,
-                            agentId: subscription.agentId,
+                            userId: subscription.ctx.userId,
+                            agentId: subscription.ctx.agentId,
                             pattern: subscription.pattern,
                             silent: subscription.silent
                         }))
@@ -121,14 +121,17 @@ describe("Signals", () => {
                 }
             });
 
-            await signals.subscribe({ userId: "user-1", agentId: "agent-a", pattern: "build:*:done", silent: true });
             await signals.subscribe({
-                userId: "user-1",
-                agentId: "agent-b",
+                ctx: { userId: "user-1", agentId: "agent-a" },
+                pattern: "build:*:done",
+                silent: true
+            });
+            await signals.subscribe({
+                ctx: { userId: "user-1", agentId: "agent-b" },
                 pattern: "build:*:done",
                 silent: false
             });
-            await signals.subscribe({ userId: "user-2", agentId: "agent-c", pattern: "other:*" });
+            await signals.subscribe({ ctx: { userId: "user-2", agentId: "agent-c" }, pattern: "other:*" });
 
             await signals.generate({
                 type: "build:alpha:done",
@@ -154,19 +157,17 @@ describe("Signals", () => {
                 eventBus: new EngineEventBus(),
                 configDir: dir,
                 onDeliver: (_signal, subscriptions) => {
-                    delivered.push(...subscriptions.map((subscription) => subscription.agentId));
+                    delivered.push(...subscriptions.map((subscription) => subscription.ctx.agentId));
                 }
             });
 
             await signals.subscribe({
-                userId: "user-1",
-                agentId: "agent-a",
+                ctx: { userId: "user-1", agentId: "agent-a" },
                 pattern: "build:*:done",
                 silent: true
             });
             const removed = await signals.unsubscribe({
-                userId: "user-1",
-                agentId: "agent-a",
+                ctx: { userId: "user-1", agentId: "agent-a" },
                 pattern: "build:*:done"
             });
             expect(removed).toBe(true);
@@ -178,7 +179,7 @@ describe("Signals", () => {
 
             expect(delivered).toEqual([]);
             await expect(
-                signals.unsubscribe({ userId: "user-1", agentId: "agent-a", pattern: "build:*:done" })
+                signals.unsubscribe({ ctx: { userId: "user-1", agentId: "agent-a" }, pattern: "build:*:done" })
             ).resolves.toBe(false);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -195,15 +196,23 @@ describe("Signals", () => {
                 onDeliver: (_signal, subscriptions) => {
                     delivered.push(
                         ...subscriptions.map((subscription) => ({
-                            userId: subscription.userId,
-                            agentId: subscription.agentId
+                            userId: subscription.ctx.userId,
+                            agentId: subscription.ctx.agentId
                         }))
                     );
                 }
             });
 
-            await signals.subscribe({ userId: "user-a", agentId: "agent-a", pattern: "build:*", silent: true });
-            await signals.subscribe({ userId: "user-b", agentId: "agent-b", pattern: "build:*", silent: true });
+            await signals.subscribe({
+                ctx: { userId: "user-a", agentId: "agent-a" },
+                pattern: "build:*",
+                silent: true
+            });
+            await signals.subscribe({
+                ctx: { userId: "user-b", agentId: "agent-b" },
+                pattern: "build:*",
+                silent: true
+            });
             await signals.generate({
                 type: "build:alpha",
                 source: { type: "agent", id: "agent-origin", userId: "user-a" }

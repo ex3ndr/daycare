@@ -135,15 +135,20 @@ export class DelayedSignalsRepository {
     }
 
     async findMany(ctx: Context): Promise<DelayedSignalDbRecord[]> {
-        return this.findAll(ctx.userId);
+        return this.findAll(ctx);
     }
 
-    async findAll(userId?: string): Promise<DelayedSignalDbRecord[]> {
-        if (this.allSignalsLoaded && !userId) {
+    async findAll(ctx?: Context): Promise<DelayedSignalDbRecord[]> {
+        const userId = ctx?.userId?.trim() ?? "";
+        const hasScope = ctx !== undefined;
+        if (hasScope && !userId) {
+            return [];
+        }
+        if (this.allSignalsLoaded && !hasScope) {
             return delayedSignalsSort(Array.from(this.signalsById.values())).map((entry) => delayedSignalClone(entry));
         }
 
-        const rows = userId
+        const rows = hasScope
             ? (this.db
                   .prepare("SELECT * FROM signals_delayed WHERE user_id = ? ORDER BY deliver_at ASC, id ASC")
                   .all(userId) as DatabaseDelayedSignalRow[])
@@ -156,7 +161,7 @@ export class DelayedSignalsRepository {
             for (const record of parsed) {
                 this.signalCacheSet(record);
             }
-            if (!userId) {
+            if (!hasScope) {
                 this.allSignalsLoaded = true;
             }
         });
@@ -177,17 +182,21 @@ export class DelayedSignalsRepository {
         });
     }
 
-    async deleteByRepeatKey(userId: string, type: string, repeatKey: string): Promise<number> {
+    async deleteByRepeatKey(ctx: Context, type: string, repeatKey: string): Promise<number> {
+        const normalizedUserId = (ctx.userId ?? "").trim();
+        if (!normalizedUserId) {
+            return 0;
+        }
         const removed = this.db
             .prepare("DELETE FROM signals_delayed WHERE user_id = ? AND type = ? AND repeat_key = ?")
-            .run(userId, type, repeatKey);
+            .run(normalizedUserId, type, repeatKey);
         const rawChanges = (removed as { changes?: number | bigint }).changes;
         const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
         if (changes > 0) {
             await this.cacheLock.inLock(() => {
                 for (const [signalId, signal] of this.signalsById.entries()) {
-                    if (signal.userId === userId && signal.type === type && signal.repeatKey === repeatKey) {
+                    if (signal.userId === normalizedUserId && signal.type === type && signal.repeatKey === repeatKey) {
                         this.signalsById.delete(signalId);
                     }
                 }

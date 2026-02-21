@@ -49,8 +49,7 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
             }
 
             const removed = await signals.unsubscribe({
-                userId: ctx.userId,
-                agentId: targetAgentId,
+                ctx,
                 pattern: payload.pattern
             });
 

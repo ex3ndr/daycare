@@ -31,12 +31,12 @@ describe("SignalSubscriptionsRepository", () => {
                 updatedAt: 20
             });
 
-            const found = await repository.findByUserAndAgent(ctxBuild("user-a"), "agent-1", "build:*");
+            const found = await repository.findByUserAndAgent(ctxBuild("user-a", "agent-1"), "build:*");
             expect(found?.id).toBe("sub-2");
             expect(found?.silent).toBe(false);
 
-            const removed = await repository.delete("user-a", "agent-1", "build:*");
-            const missing = await repository.findByUserAndAgent(ctxBuild("user-a"), "agent-1", "build:*");
+            const removed = await repository.delete(ctxBuild("user-a", "agent-1"), "build:*");
+            const missing = await repository.findByUserAndAgent(ctxBuild("user-a", "agent-1"), "build:*");
 
             expect(removed).toBe(true);
             expect(missing).toBeNull();
@@ -91,6 +91,32 @@ describe("SignalSubscriptionsRepository", () => {
             db.close();
         }
     });
+
+    it("normalizes ctx userId for keyed and matching lookups", async () => {
+        const db = databaseOpen(":memory:");
+        try {
+            schemaCreate(db);
+            const repository = new SignalSubscriptionsRepository(db);
+
+            await repository.create({
+                id: "sub-trim",
+                userId: "user-trim",
+                agentId: "agent-1",
+                pattern: "build:*",
+                silent: false,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const byKey = await repository.findByUserAndAgent(ctxBuild("  user-trim  ", "agent-1"), "build:*");
+            const matching = await repository.findMatching(ctxBuild("  user-trim  "), "build:foo");
+
+            expect(byKey?.id).toBe("sub-trim");
+            expect(matching.map((entry) => entry.id)).toEqual(["sub-trim"]);
+        } finally {
+            db.close();
+        }
+    });
 });
 
 function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
@@ -108,6 +134,6 @@ function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
     `);
 }
 
-function ctxBuild(userId: string): Context {
-    return { agentId: "test-agent", userId };
+function ctxBuild(userId: string, agentId = "test-agent"): Context {
+    return { agentId, userId };
 }

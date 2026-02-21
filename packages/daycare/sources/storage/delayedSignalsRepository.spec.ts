@@ -52,7 +52,11 @@ describe("DelayedSignalsRepository", () => {
             expect(due.map((entry) => entry.id)).toEqual(["delay-1"]);
 
             const removed = await repository.delete("delay-1");
-            const cancelled = await repository.deleteByRepeatKey("user-a", "notify:repeat", "r1");
+            const cancelled = await repository.deleteByRepeatKey(
+                { agentId: "test-agent", userId: "user-a" },
+                "notify:repeat",
+                "r1"
+            );
             const empty = await repository.findMany(ctxBuild("user-a"));
 
             expect(removed).toBe(true);

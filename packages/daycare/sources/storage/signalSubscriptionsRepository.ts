@@ -56,13 +56,17 @@ export class SignalSubscriptionsRepository {
         });
     }
 
-    async delete(userId: string, agentId: string, pattern: string): Promise<boolean> {
-        const key = subscriptionKeyBuild(userId, agentId, pattern);
+    async delete(ctx: Context, pattern: string): Promise<boolean> {
+        const keys = contextKeysNormalize(ctx);
+        if (!keys) {
+            return false;
+        }
+        const key = subscriptionKeyBuild(keys, pattern);
         const lock = await this.subscriptionLockForKey(key);
         return lock.inLock(async () => {
             const removed = this.db
                 .prepare("DELETE FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ?")
-                .run(userId, agentId, pattern);
+                .run(keys.userId, keys.agentId, pattern);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
@@ -73,12 +77,12 @@ export class SignalSubscriptionsRepository {
         });
     }
 
-    async findByUserAndAgent(
-        ctx: Context,
-        agentId: string,
-        pattern: string
-    ): Promise<SignalSubscriptionDbRecord | null> {
-        const key = subscriptionKeyBuild(ctx.userId, agentId, pattern);
+    async findByUserAndAgent(ctx: Context, pattern: string): Promise<SignalSubscriptionDbRecord | null> {
+        const keys = contextKeysNormalize(ctx);
+        if (!keys) {
+            return null;
+        }
+        const key = subscriptionKeyBuild(keys, pattern);
         const lock = await this.subscriptionLockForKey(key);
         return lock.inLock(async () => {
             const existing = await this.cacheLock.inLock(() => {
@@ -95,7 +99,7 @@ export class SignalSubscriptionsRepository {
                 return existing;
             }
 
-            const loaded = this.subscriptionLoadByKey(ctx.userId, agentId, pattern);
+            const loaded = this.subscriptionLoadByKey(ctx, pattern);
             if (!loaded) {
                 return null;
             }
@@ -138,10 +142,14 @@ export class SignalSubscriptionsRepository {
     }
 
     async findMatching(ctx: Context, signalType: string): Promise<SignalSubscriptionDbRecord[]> {
+        const userId = (ctx.userId ?? "").trim();
+        if (!userId) {
+            return [];
+        }
         const all = await this.findMany();
         return all
             .filter((entry) => {
-                if (entry.userId !== ctx.userId) {
+                if (entry.userId !== userId) {
                     return false;
                 }
                 return signalTypeMatchesPattern(signalType, entry.pattern);
@@ -150,15 +158,22 @@ export class SignalSubscriptionsRepository {
     }
 
     private subscriptionCacheSet(record: SignalSubscriptionDbRecord): void {
-        this.subscriptionsByKey.set(subscriptionKeyBuild(record.userId, record.agentId, record.pattern), {
-            ...record
-        });
+        this.subscriptionsByKey.set(
+            subscriptionKeyBuild({ userId: record.userId, agentId: record.agentId }, record.pattern),
+            {
+                ...record
+            }
+        );
     }
 
-    private subscriptionLoadByKey(userId: string, agentId: string, pattern: string): SignalSubscriptionDbRecord | null {
+    private subscriptionLoadByKey(ctx: Context, pattern: string): SignalSubscriptionDbRecord | null {
+        const keys = contextKeysNormalize(ctx);
+        if (!keys) {
+            return null;
+        }
         const row = this.db
             .prepare("SELECT * FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ? LIMIT 1")
-            .get(userId, agentId, pattern) as DatabaseSignalSubscriptionRow | undefined;
+            .get(keys.userId, keys.agentId, pattern) as DatabaseSignalSubscriptionRow | undefined;
         if (!row) {
             return null;
         }
@@ -194,8 +209,17 @@ export class SignalSubscriptionsRepository {
     }
 }
 
-function subscriptionKeyBuild(userId: string, agentId: string, pattern: string): string {
-    return `${userId}::${agentId}::${pattern}`;
+function subscriptionKeyBuild(ctx: Context, pattern: string): string {
+    return `${ctx.userId}::${ctx.agentId}::${pattern}`;
+}
+
+function contextKeysNormalize(ctx: Context): { userId: string; agentId: string } | null {
+    const userId = (ctx.userId ?? "").trim();
+    const agentId = (ctx.agentId ?? "").trim();
+    if (!userId || !agentId) {
+        return null;
+    }
+    return { userId, agentId };
 }
 
 function signalSubscriptionClone(record: SignalSubscriptionDbRecord): SignalSubscriptionDbRecord {

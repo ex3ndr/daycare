@@ -114,7 +114,11 @@ export class DelayedSignals {
             await this.loadUnlocked();
 
             if (normalized.repeatKey) {
-                await this.delayedSignals.deleteByRepeatKey(userId, normalized.type, normalized.repeatKey);
+                await this.delayedSignals.deleteByRepeatKey(
+                    { agentId: "signal-delayed", userId },
+                    normalized.type,
+                    normalized.repeatKey
+                );
                 for (const [delayedId, delayed] of this.events.entries()) {
                     if (
                         delayed.type === normalized.type &&

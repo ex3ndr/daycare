@@ -27,8 +27,7 @@ describe("buildSignalSubscribeTool", () => {
             const details = result.toolMessage.details as
                 | {
                       subscription?: {
-                          userId: string;
-                          agentId: string;
+                          ctx: { userId: string; agentId: string };
                           pattern: string;
                           silent: boolean;
                           createdAt: number;
@@ -36,8 +35,8 @@ describe("buildSignalSubscribeTool", () => {
                       };
                   }
                 | undefined;
-            expect(details?.subscription?.agentId).toBe("agent-target");
-            expect(details?.subscription?.userId).toBe("user-target");
+            expect(details?.subscription?.ctx.agentId).toBe("agent-target");
+            expect(details?.subscription?.ctx.userId).toBe("user-target");
             expect(details?.subscription?.pattern).toBe("build:*:done");
             expect(details?.subscription?.silent).toBe(false);
             expect(details?.subscription?.createdAt).toBeTypeOf("number");
