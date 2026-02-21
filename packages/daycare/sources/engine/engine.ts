@@ -440,15 +440,11 @@ export class Engine {
         };
     }
 
-    private listContextTools(
-        source?: string,
-        options?: { agentKind?: "background" | "foreground"; allowCronTools?: boolean }
-    ) {
+    private listContextTools(source?: string, options?: { agentKind?: "background" | "foreground" }) {
         return toolListContextBuild({
             tools: this.modules.tools.listTools(),
             source,
             agentKind: options?.agentKind,
-            allowCronTools: options?.allowCronTools,
             noTools: rlmNoToolsModeIs(this.config.current.features),
             rlm: this.config.current.features.rlm,
             connectorRegistry: this.modules.connectors,

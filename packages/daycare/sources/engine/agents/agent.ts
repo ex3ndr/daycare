@@ -364,7 +364,6 @@ export class Agent {
             userRoot: this.userHome.skills
         });
         const agentKind = this.resolveAgentKind();
-        const allowCronTools = agentDescriptorIsCron(this.descriptor);
 
         const toolResolver = item.toolResolverOverride ?? this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
@@ -398,7 +397,6 @@ export class Agent {
         const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
         const contextTools = await this.listContextTools(toolResolver, source, {
             agentKind,
-            allowCronTools,
             rlmToolDescription
         });
         const compactionStatus = contextCompactionStatus(
@@ -1072,7 +1070,6 @@ export class Agent {
         source?: string,
         options?: {
             agentKind?: "background" | "foreground";
-            allowCronTools?: boolean;
             rlmToolDescription?: string;
         }
     ): Promise<InferenceContext["tools"]> {
@@ -1087,7 +1084,6 @@ export class Agent {
             tools,
             source,
             agentKind: options?.agentKind,
-            allowCronTools: options?.allowCronTools,
             noTools: noToolsModeEnabled,
             rlm: this.agentSystem.config.current.features.rlm,
             rlmToolDescription,

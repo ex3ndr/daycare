@@ -32,7 +32,6 @@ import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
 import { Context } from "../context.js";
-import { agentDescriptorIsCron } from "./agentDescriptorIsCron.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import { agentHistoryPendingToolResults } from "./agentHistoryPendingToolResults.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
@@ -128,7 +127,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     let childAgentNudged = false;
     let childAgentResponded = false;
     const agentKind = agent.descriptor.type === "user" ? "foreground" : "background";
-    const allowCronTools = agentDescriptorIsCron(agent.descriptor);
     const target = agentDescriptorTargetResolve(agent.descriptor);
     const targetId = target?.targetId ?? null;
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
@@ -149,7 +147,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     tools: availableTools,
                     source,
                     agentKind,
-                    allowCronTools,
                     noTools: noToolsModeEnabled,
                     rlm: agentSystem.config.current.features.rlm,
                     rlmToolDescription,

@@ -8,7 +8,6 @@ type ToolListOptions = {
     tools: Tool[];
     source?: string;
     agentKind?: "background" | "foreground";
-    allowCronTools?: boolean;
     rlm?: boolean;
     rlmToolDescription?: string;
     noTools?: boolean;
