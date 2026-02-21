@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
-import type { AgentDescriptor, Connector, Signal } from "@/types";
+import type { AgentDescriptor, AgentState, Connector, Signal } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { ConfigModule } from "../config/configModule.js";
@@ -16,6 +16,7 @@ import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
 import { Signals } from "../signals/signals.js";
+import { UserHome } from "../users/userHome.js";
 import { Agent } from "./agent.js";
 import { AgentSystem } from "./agentSystem.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
@@ -880,6 +881,125 @@ describe("Agent", () => {
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("rebuilds permissions from userHome on restore, discarding stale persisted paths", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+
+            const agentId = createId();
+            const userId = createId();
+            const userHome = new UserHome(config.usersDir, userId);
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "slack",
+                channelId: "ch-1",
+                userId: "u-1"
+            };
+            const staleState: AgentState = {
+                context: { messages: [] },
+                activeSessionId: null,
+                permissions: {
+                    workingDir: "/stale/legacy/workspace",
+                    writeDirs: ["/stale/old/dir"]
+                },
+                tokens: null,
+                stats: {},
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                state: "active"
+            };
+
+            const agent = Agent.restore(
+                agentId,
+                userId,
+                descriptor,
+                staleState,
+                new AgentInbox(agentId),
+                agentSystem,
+                userHome
+            );
+
+            expect(agent.state.permissions.workingDir).toBe(userHome.desktop);
+            expect(agent.state.permissions.writeDirs).toEqual([userHome.home]);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("uses permanent agent workspaceDir as workingDir on restore", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: {} as unknown as PluginManager,
+                inferenceRouter: {} as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+
+            const agentId = createId();
+            const userId = createId();
+            const userHome = new UserHome(config.usersDir, userId);
+            const workspaceDir = path.join(userHome.home, "custom-workspace");
+            const descriptor: AgentDescriptor = {
+                type: "permanent",
+                id: agentId,
+                name: "test-perm",
+                description: "test",
+                systemPrompt: "test",
+                workspaceDir
+            };
+            const staleState: AgentState = {
+                context: { messages: [] },
+                activeSessionId: null,
+                permissions: {
+                    workingDir: "/stale/legacy/workspace",
+                    writeDirs: ["/stale/old/dir"]
+                },
+                tokens: null,
+                stats: {},
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                state: "active"
+            };
+
+            const agent = Agent.restore(
+                agentId,
+                userId,
+                descriptor,
+                staleState,
+                new AgentInbox(agentId),
+                agentSystem,
+                userHome
+            );
+
+            expect(agent.state.permissions.workingDir).toBe(workspaceDir);
+            expect(agent.state.permissions.writeDirs).toEqual([userHome.home]);
+        } finally {
             await rm(dir, { recursive: true, force: true });
         }
     });

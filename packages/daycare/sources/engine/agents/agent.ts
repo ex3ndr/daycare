@@ -156,6 +156,7 @@ export class Agent {
 
     /**
      * Rehydrates an agent from persisted descriptor + state.
+     * Rebuilds permissions from userHome to avoid stale legacy paths.
      * Expects: state and descriptor already validated.
      */
     static restore(
@@ -167,7 +168,13 @@ export class Agent {
         agentSystem: AgentSystem,
         userHome: UserHome
     ): Agent {
-        return new Agent(agentId, userId, descriptor, state, inbox, agentSystem, userHome);
+        const basePermissions = permissionBuildUser(userHome);
+        const permissions =
+            descriptor.type === "permanent" && descriptor.workspaceDir
+                ? { ...basePermissions, workingDir: descriptor.workspaceDir }
+                : basePermissions;
+        const refreshedState: AgentState = { ...state, permissions };
+        return new Agent(agentId, userId, descriptor, refreshedState, inbox, agentSystem, userHome);
     }
 
     start(): void {
