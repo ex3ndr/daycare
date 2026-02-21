@@ -4,7 +4,7 @@ import type { AssistantMessage, Context, Tool, ToolCall } from "@mariozechner/pi
 import { describe, expect, it, vi } from "vitest";
 import type { AgentSkill, Connector, ToolExecutionResult } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
-import type { FileStore } from "../../../files/store.js";
+import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
@@ -1151,7 +1151,7 @@ function optionsBuild(params: {
     abortSignal?: AbortSignal;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     inferenceSessionId?: string;
-    fileStore?: FileStore;
+    fileStore?: FileFolder;
 }) {
     const logger = {
         debug: vi.fn(),
@@ -1197,7 +1197,7 @@ function optionsBuild(params: {
         connectorRegistry,
         inferenceRouter: params.inferenceRouter,
         toolResolver: params.toolResolver,
-        fileStore: params.fileStore ?? ({} as FileStore),
+        fileStore: params.fileStore ?? ({} as FileFolder),
         authStore: {} as AuthStore,
         eventBus: { emit: vi.fn() } as unknown as EngineEventBus,
         assistant: null,
@@ -1359,7 +1359,7 @@ function toolResultTextBuild(toolCallId: string, toolName: string, text: string)
     };
 }
 
-function fileStoreBuild(): FileStore {
+function fileStoreBuild(): FileFolder {
     return {
         saveFromPath: async (options: { name: string; mimeType: string; path: string }) => {
             return {
@@ -1370,5 +1370,5 @@ function fileStoreBuild(): FileStore {
                 size: 10
             };
         }
-    } as unknown as FileStore;
+    } as unknown as FileFolder;
 }

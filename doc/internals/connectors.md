@@ -38,13 +38,13 @@ Connectors emit a user descriptor alongside `MessageContext` for agent targeting
 
 ## File transport policy
 
-- Connectors persist received files via `FileStore` (resolved to `<workspace>/files`).
-- Image generation tools write output files to `<workspace>/files`.
+- Connectors persist received files via `FileFolder` (typically user `home/downloads`).
+- Image generation tools write output files to the active `ToolExecutionContext.fileStore`.
 - LLM context includes file metadata + path only; no inline base64/image payloads.
 
 ```mermaid
 flowchart LR
-  External[Connector/Image provider] --> Store[workspace/files]
+  External[Connector/Image provider] --> Store[user-home/downloads]
   Store --> Ref[FileReference.path]
   Ref --> LLM[LLM context as text]
 ```
@@ -53,7 +53,7 @@ flowchart LR
 - Implemented as the `telegram` plugin.
 - Uses long polling by default.
 - Persists `lastUpdateId` to `.daycare/telegram-offset.json`.
-- Downloads incoming files into the shared file store.
+- Downloads incoming files into the user-scoped downloads folder.
 - Sends images/documents when tool results include files.
 - Supports chat actions (typing) and reactions.
 - Outgoing text uses MarkdownV2 parse mode.
@@ -63,7 +63,7 @@ flowchart TD
   Start[TelegramConnector] --> Poll[Polling]
   Poll --> Msg[message event]
   Msg --> Files[download files]
-  Files --> Store[FileStore]
+  Files --> Store[FileFolder]
   Msg --> Track[track update_id]
   Track --> Persist[persist offset]
   Poll -->|error| Retry[backoff + retry]

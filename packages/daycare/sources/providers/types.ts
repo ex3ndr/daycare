@@ -1,9 +1,9 @@
 import type { Logger } from "pino";
 
 import type { AuthStore } from "../auth/store.js";
+import type { FileFolder } from "../engine/files/fileFolder.js";
 import type { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import type { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
-import type { FileStore } from "../files/store.js";
 import type { ProviderSettings } from "../settings.js";
 
 export type ProviderAuth = "apiKey" | "oauth" | "mixed" | "none";
@@ -59,7 +59,7 @@ export type ProviderOnboardingResult = {
 export type ProviderContext = {
     settings: ProviderSettings;
     auth: AuthStore;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     inferenceRegistry: InferenceRegistry;
     imageRegistry: ImageGenerationRegistry;
     logger: Logger;

@@ -18,7 +18,7 @@ import type {
     PermissionRequest,
     SlashCommandEntry
 } from "@/types";
-import type { FileStore } from "../../files/store.js";
+import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
 import { telegramMessageSplit } from "./telegramMessageSplit.js";
@@ -29,7 +29,7 @@ export type TelegramConnectorOptions = {
     polling?: boolean;
     clearWebhook?: boolean;
     statePath?: string | null;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     dataDir: string;
     enableGracefulShutdown?: boolean;
     onFatal?: (reason: string, error?: unknown) => void;
@@ -68,7 +68,7 @@ export class TelegramConnector implements Connector {
     private pollingEnabled: boolean;
     private statePath: string | null;
     private lastUpdateId: number | null = null;
-    private fileStore: FileStore;
+    private fileStore: FileFolder;
     private dataDir: string;
     private persistTimer: NodeJS.Timeout | null = null;
     private typingTimers = new Map<string, NodeJS.Timeout>();

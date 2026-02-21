@@ -671,13 +671,12 @@ export type SettingsConfig = {
 
 Paths:
 
-- metadata: `config.filesDir/<fileId>.json`
-- binary payload: `config.filesDir/<fileId>__<sanitizedName>`
+- binary payload: `config.usersDir/<userId>/home/downloads/<fileId>__<sanitizedName>`
 
 Source:
 
 - `packages/daycare/sources/files/types.ts`
-- `packages/daycare/sources/files/store.ts`
+- `packages/daycare/sources/engine/files/fileFolder.ts`
 
 Type:
 
@@ -688,8 +687,6 @@ export type StoredFile = {
   path: string;
   mimeType: string;
   size: number;
-  source: string;
-  createdAt: string; // ISO string
 };
 ```
 
@@ -1379,7 +1376,7 @@ Example `db.md` sections:
 | migration record | SQLite | table row | `dbPath: _migrations` | `storage/migrations/migrationRun.ts` |
 | `AuthConfig` / `AuthEntry` | JSON | object | `authPath` | `auth/store.ts` |
 | `SettingsConfig` | JSON | object | `settingsPath` | `settings.ts` |
-| `StoredFile` | JSON | object | `filesDir/<id>.json` | `files/types.ts`, `files/store.ts` |
+| `StoredFile` | filesystem file | binary payload + filename metadata | `users/<userId>/home/downloads/<id>__<name>` | `files/types.ts`, `engine/files/fileFolder.ts` |
 | `Channel` / `ChannelMember` | JSON | object | `configDir/channels/<name>/channel.json` | `engine/channels/channelTypes.ts` |
 | `DelayedSignalStore` / `DelayedSignal` | JSON | object | `configDir/signals/delayed.json` | `engine/signals/delayedSignals.ts`, `engine/signals/signalTypes.ts` |
 | `ExposeEndpoint` | JSON | object | `configDir/expose/endpoints/<id>.json` | `engine/expose/exposeTypes.ts`, `engine/expose/exposes.ts` |

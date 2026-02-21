@@ -60,6 +60,7 @@ export const plugin = {
             logger: getLogger("test.loader"),
             auth: {} as never,
             dataDir: dir,
+            tmpDir: path.join(dir, "tmp"),
             registrar: {} as never,
             exposes: {
                 registerProvider: async () => undefined,

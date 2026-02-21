@@ -5,14 +5,14 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
-import { FileStore } from "../../../files/store.js";
+import { FileFolder } from "../../files/fileFolder.js";
 import { sayFileResolve } from "./sayFileResolve.js";
 
 describe("sayFileResolve", () => {
     it("copies tagged files into the file store when resolving", async () => {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-say-file-resolve-"));
         try {
-            const fileStore = new FileStore(path.join(tempDir, "files-store"));
+            const fileStore = new FileFolder(path.join(tempDir, "files-store"));
             const saved = await fileStore.saveBuffer({
                 name: "report.txt",
                 mimeType: "text/plain",
@@ -45,7 +45,7 @@ describe("sayFileResolve", () => {
             await fs.mkdir(workingDir, { recursive: true });
             await fs.writeFile(path.join(workingDir, "notes.txt"), "notes");
 
-            const fileStore = new FileStore(filesDir);
+            const fileStore = new FileFolder(filesDir);
             const result = await sayFileResolve({
                 files: [{ path: path.join(workingDir, "notes.txt"), mode: "auto" }],
                 fileStore,
@@ -67,7 +67,7 @@ describe("sayFileResolve", () => {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-say-file-resolve-"));
         try {
             const logger = loggerBuild();
-            const fileStore = new FileStore(path.join(tempDir, "files-store"));
+            const fileStore = new FileFolder(path.join(tempDir, "files-store"));
 
             const result = await sayFileResolve({
                 files: [{ path: "/definitely/missing/file.txt", mode: "auto" }],

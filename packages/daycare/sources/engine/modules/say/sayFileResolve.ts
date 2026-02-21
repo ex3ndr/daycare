@@ -4,12 +4,12 @@ import path from "node:path";
 import type { Logger } from "pino";
 
 import type { ConnectorFile, ConnectorFileDisposition, FileReference, SessionPermissions } from "@/types";
-import type { FileStore } from "../../../files/store.js";
+import type { FileFolder } from "../../files/fileFolder.js";
 import { openSecure, pathResolveSecure } from "../../permissions/pathResolveSecure.js";
 
 export type SayFileResolveInput = {
     files: Array<{ path: string; mode: ConnectorFileDisposition }>;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     permissions: SessionPermissions;
     logger: Logger;
 };
@@ -38,7 +38,7 @@ export async function sayFileResolve(input: SayFileResolveInput): Promise<Connec
 
 async function sayFileReferenceResolve(
     filePath: string,
-    fileStore: FileStore,
+    fileStore: FileFolder,
     permissions: SessionPermissions
 ): Promise<FileReference | null> {
     const normalizedInputPath = pathNormalize(filePath, permissions.workingDir);

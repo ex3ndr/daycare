@@ -16,6 +16,7 @@ export class UserHome {
     readonly documents: string;
     readonly developer: string;
     readonly knowledge: string;
+    readonly tmp: string;
 
     constructor(usersDir: string, userId: string) {
         this.root = path.resolve(usersDir, userId);
@@ -27,6 +28,7 @@ export class UserHome {
         this.documents = path.join(this.home, "documents");
         this.developer = path.join(this.home, "developer");
         this.knowledge = path.join(this.home, "knowledge");
+        this.tmp = path.join(this.home, "tmp");
     }
 
     knowledgePaths(): AgentPromptFilesPaths {

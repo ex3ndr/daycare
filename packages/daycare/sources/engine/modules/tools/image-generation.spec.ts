@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
-import { FileStore } from "../../../files/store.js";
+import { FileFolder } from "../../files/fileFolder.js";
 import { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
 import { buildImageGenerationTool } from "./image-generation.js";
 
@@ -62,7 +62,7 @@ describe("buildImageGenerationTool", () => {
 });
 
 function contextBuild(workingDir: string): ToolExecutionContext {
-    const fileStore = new FileStore(path.join(workingDir, "downloads"));
+    const fileStore = new FileFolder(path.join(workingDir, "downloads"));
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         fileStore,

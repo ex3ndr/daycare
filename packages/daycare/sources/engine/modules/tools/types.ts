@@ -3,11 +3,11 @@ import type { TSchema } from "@sinclair/typebox";
 import type { Logger } from "pino";
 import type { Context, MessageContext, SessionPermissions } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
-import type { FileStore } from "../../../files/store.js";
 import type { AssistantSettings } from "../../../settings.js";
 import type { Agent } from "../../agents/agent.js";
 import type { AgentSystem } from "../../agents/agentSystem.js";
 import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
+import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
@@ -16,7 +16,7 @@ import type { PermissionRequestRegistry } from "./permissionRequestRegistry.js";
 
 export type ToolExecutionContext<State = Record<string, unknown>> = {
     connectorRegistry: ConnectorRegistry;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     auth: AuthStore;
     logger: Logger;
     assistant: AssistantSettings | null;

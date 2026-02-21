@@ -12,9 +12,11 @@ This module provides per-user filesystem isolation under `config.usersDir`:
       data/
       state.json
   home/
+    downloads/
     desktop/
     documents/
     developer/
+    tmp/
     knowledge/
       SOUL.md
       USER.md
@@ -39,7 +41,7 @@ flowchart TD
     C --> E[knowledge files ensured]
     B --> F[permissionBuildUser]
     F --> G[Agent session permissions]
-    B --> H[Agent file store base: home/desktop]
+    B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
     B --> I[prompt paths: home/knowledge/*.md]
 ```
 

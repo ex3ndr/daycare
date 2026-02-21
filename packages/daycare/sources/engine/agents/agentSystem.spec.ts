@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { AgentDescriptor } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import { FileStore } from "../../files/store.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
 import { ConfigModule } from "../config/configModule.js";
@@ -387,6 +386,7 @@ describe("AgentSystem", () => {
                     path.join(expectedHome, "downloads"),
                     path.join(expectedHome, "documents"),
                     path.join(expectedHome, "developer"),
+                    path.join(expectedHome, "tmp"),
                     path.join(expectedKnowledge, "SOUL.md"),
                     path.join(expectedKnowledge, "USER.md"),
                     path.join(expectedKnowledge, "AGENTS.md"),
@@ -525,7 +525,6 @@ async function harnessCreate(
         toolResolver: new ToolResolver(),
         pluginManager,
         inferenceRouter,
-        fileStore: new FileStore(path.join(config.dataDir, "files")),
         authStore: new AuthStore(config),
         delayedSignals
     });

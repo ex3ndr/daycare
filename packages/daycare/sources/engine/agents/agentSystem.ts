@@ -12,7 +12,6 @@ import type {
     SignalSubscription
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
-import type { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
@@ -84,7 +83,6 @@ export type AgentSystemOptions = {
     toolResolver: ToolResolver;
     pluginManager: PluginManager;
     inferenceRouter: InferenceRouter;
-    fileStore: FileStore;
     authStore: AuthStore;
     delayedSignals?: DelayedSignalsFacade;
     permissionRequestRegistry?: PermissionRequestRegistry;
@@ -99,7 +97,6 @@ export class AgentSystem {
     readonly toolResolver: ToolResolver;
     readonly pluginManager: PluginManager;
     readonly inferenceRouter: InferenceRouter;
-    readonly fileStore: FileStore;
     readonly authStore: AuthStore;
     readonly permissionRequestRegistry: PermissionRequestRegistry;
     private readonly delayedSignals: DelayedSignalsFacade | null;
@@ -119,7 +116,6 @@ export class AgentSystem {
         this.toolResolver = options.toolResolver;
         this.pluginManager = options.pluginManager;
         this.inferenceRouter = options.inferenceRouter;
-        this.fileStore = options.fileStore;
         this.authStore = options.authStore;
         this.delayedSignals = options.delayedSignals ?? null;
         this.permissionRequestRegistry = options.permissionRequestRegistry ?? new PermissionRequestRegistry();

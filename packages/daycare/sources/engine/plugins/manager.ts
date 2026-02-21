@@ -4,12 +4,12 @@ import { createId } from "@paralleldrive/cuid2";
 import { ZodError } from "zod";
 import type { ExposeProviderRegistrationApi, PluginApi, PluginInstance, PluginModule } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
-import type { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
 import { listEnabledPlugins } from "../../settings.js";
 import { valueDeepEqual } from "../../util/valueDeepEqual.js";
 import type { ConfigModule } from "../config/configModule.js";
+import type { FileFolder } from "../files/fileFolder.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import type { Processes } from "../processes/processes.js";
@@ -24,7 +24,7 @@ export type PluginManagerOptions = {
     config: ConfigModule;
     registry: PluginRegistry;
     auth: AuthStore;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     pluginCatalog: Map<string, PluginDefinition>;
     inferenceRouter: InferenceRouter;
     processes: Processes;
@@ -47,7 +47,7 @@ export class PluginManager {
     private readonly config: ConfigModule;
     private registry: PluginRegistry;
     private auth: AuthStore;
-    private fileStore: FileStore;
+    private fileStore: FileFolder;
     private pluginCatalog: Map<string, PluginDefinition>;
     private mode: "runtime" | "validate";
     private engineEvents?: EngineEventBus;
@@ -257,6 +257,8 @@ export class PluginManager {
         this.logger.debug("event: Ensuring plugin data directory");
         const dataDir = await this.ensurePluginDir(instanceId);
         this.logger.debug(`ready: Plugin data directory ready dataDir=${dataDir}`);
+        const tmpDir = await this.ensureTmpDir();
+        this.logger.debug(`ready: Plugin tmp directory ready tmpDir=${tmpDir}`);
 
         this.logger.debug("event: Building plugin API");
         const api: PluginApi = {
@@ -266,6 +268,7 @@ export class PluginManager {
             logger: getLogger(`plugin.${instanceId}`),
             auth: this.auth,
             dataDir,
+            tmpDir,
             registrar,
             exposes: this.exposes,
             fileStore: this.fileStore,
@@ -389,6 +392,12 @@ export class PluginManager {
 
     private async ensurePluginDir(instanceId: string): Promise<string> {
         const dir = path.join(this.config.current.dataDir, "plugins", instanceId);
+        await fs.mkdir(dir, { recursive: true });
+        return dir;
+    }
+
+    private async ensureTmpDir(): Promise<string> {
+        const dir = path.join(this.config.current.dataDir, "tmp");
         await fs.mkdir(dir, { recursive: true });
         return dir;
     }

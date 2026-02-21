@@ -1,8 +1,8 @@
 import type { AuthStore } from "../auth/store.js";
 import type { ConfigModule } from "../engine/config/configModule.js";
+import type { FileFolder } from "../engine/files/fileFolder.js";
 import type { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import type { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
-import type { FileStore } from "../files/store.js";
 import { getLogger } from "../log.js";
 import { listProviders, type ProviderSettings } from "../settings.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
@@ -12,7 +12,7 @@ import type { ProviderDefinition, ProviderInstance } from "./types.js";
 export type ProviderManagerOptions = {
     config: ConfigModule;
     auth: AuthStore;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     inferenceRegistry: InferenceRegistry;
     imageRegistry: ImageGenerationRegistry;
     providerDefinitionResolve?: (id: string) => ProviderDefinition | null;
@@ -28,7 +28,7 @@ const logger = getLogger("providers.manager");
 export class ProviderManager {
     private readonly config: ConfigModule;
     private auth: AuthStore;
-    private fileStore: FileStore;
+    private fileStore: FileFolder;
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
     private providerDefinitionResolve: (id: string) => ProviderDefinition | null;

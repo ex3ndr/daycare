@@ -9,7 +9,7 @@ flowchart TD
     A[Agent Target] --> B[Resolve userId]
     B --> C[UserHome users/<userId>/home]
     C --> D[permissionBuildUser]
-    C --> E[FileStore users/<userId>/home/downloads]
+    C --> E[FileFolder users/<userId>/home/downloads]
     E --> F[Connector received files]
     E --> G[Generated images]
 
@@ -28,6 +28,6 @@ flowchart TD
 
 - `Config.workspaceDir`, `Config.filesDir`, and `Config.defaultPermissions` are removed.
 - All agents require `userId` and `UserHome`; no global permission fallback remains.
-- `FileStore` is path-only and metadata sidecars were removed.
+- `FileFolder` is path-only and metadata sidecars were removed.
 - Received files and generated images are saved under `UserHome.downloads`.
 - Global memory plugin and global apps/skills discovery fallbacks were removed.

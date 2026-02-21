@@ -1,7 +1,6 @@
 import { z } from "zod";
-
+import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { definePlugin } from "../../engine/plugins/types.js";
-import type { FileStore } from "../../files/store.js";
 
 const settingsSchema = z
     .object({
@@ -161,7 +160,7 @@ export const plugin = definePlugin({
     }
 });
 
-async function extractImages(data: NanoBananaProResponse, fileStore: FileStore) {
+async function extractImages(data: NanoBananaProResponse, fileStore: FileFolder) {
     const files = [];
     const entries = data.data ?? [];
     for (let index = 0; index < entries.length; index += 1) {
@@ -254,7 +253,7 @@ function buildGeminiPayload(prompt: string, size?: string) {
     return payload;
 }
 
-async function extractGeminiImages(data: GeminiResponse, fileStore: FileStore) {
+async function extractGeminiImages(data: GeminiResponse, fileStore: FileFolder) {
     const files = [];
     const candidates = data.candidates ?? [];
     for (const candidate of candidates) {

@@ -2,12 +2,12 @@ import path from "node:path";
 import type { Config } from "@/types";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
+import { FileFolder } from "../engine/files/fileFolder.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
 import { buildPluginCatalog, type PluginDefinition } from "../engine/plugins/catalog.js";
 import { resolveExclusivePlugins } from "../engine/plugins/exclusive.js";
 import { PluginModuleLoader } from "../engine/plugins/loader.js";
-import { FileStore } from "../files/store.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition, listProviderDefinitions } from "../providers/catalog.js";
 import type { ProviderDefinition } from "../providers/types.js";
@@ -246,7 +246,7 @@ async function validateProviderLoad(
 ) {
     const inferenceRegistry = new InferenceRegistry();
     const imageRegistry = new ImageGenerationRegistry();
-    const fileStore = new FileStore(path.join(config.dataDir, "validate"));
+    const fileStore = new FileFolder(path.join(config.dataDir, "validate"));
     const logger = getLogger(`provider.validate.${definition.id}`);
     const instance = await Promise.resolve(
         definition.create({

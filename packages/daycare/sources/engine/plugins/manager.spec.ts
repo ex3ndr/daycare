@@ -4,10 +4,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings } from "../../settings.js";
 import { ConfigModule } from "../config/configModule.js";
+import { FileFolder } from "../files/fileFolder.js";
 import { InferenceRouter } from "../modules/inference/router.js";
 import { ModuleRegistry } from "../modules/moduleRegistry.js";
 import { Processes } from "../processes/processes.js";
@@ -41,7 +41,7 @@ function createManager(
     const config = configResolve({ engine: { dataDir: rootDir } }, path.join(rootDir, "settings.json"));
     const configModule = new ConfigModule(config);
     const auth = new AuthStore(config);
-    const fileStore = new FileStore(path.join(config.dataDir, "files"));
+    const fileStore = new FileFolder(path.join(config.dataDir, "files"));
     const inferenceRouter = new InferenceRouter({
         registry: modules.inference,
         auth,
@@ -508,6 +508,47 @@ export const plugin = {
         expect(removeByOwnerSpy).toHaveBeenCalledWith({
             type: "plugin",
             id: "cleanup-one"
+        });
+    });
+
+    it("exposes a shared .daycare/tmp directory to plugin api", async () => {
+        const dir = await createTempDir();
+        const pluginSource = `import { promises as fs } from "node:fs";
+import { z } from "zod";
+
+export const plugin = {
+  settingsSchema: z.object({}).passthrough(),
+  create: (api) => ({
+    load: async () => {
+      const stats = await fs.stat(api.tmpDir);
+      api.events.emit({
+        type: "tmp-dir",
+        payload: {
+          tmpDir: api.tmpDir,
+          isDirectory: stats.isDirectory()
+        }
+      });
+    }
+  })
+};
+`;
+        const entryPath = await writePluginFile(dir, pluginSource);
+        const events: PluginEvent[] = [];
+        const { manager } = createManager(entryPath, "tmp-dir", dir, (event) => {
+            events.push(event);
+        });
+
+        await manager.load({
+            instanceId: "tmp-dir-one",
+            pluginId: "tmp-dir",
+            enabled: true,
+            settings: {}
+        });
+
+        expect(events).toHaveLength(1);
+        expect(events[0]?.payload).toEqual({
+            tmpDir: path.join(dir, "tmp"),
+            isDirectory: true
         });
     });
 });

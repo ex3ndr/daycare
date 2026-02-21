@@ -28,7 +28,7 @@ import type {
     PermissionRequest
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
-import type { FileStore } from "../../files/store.js";
+import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { useAuthStoreState } from "./authState.js";
 import { markdownToWhatsAppText } from "./markdownToWhatsAppText.js";
@@ -37,7 +37,7 @@ export type WhatsAppConnectorOptions = {
     allowedPhones: string[];
     authStore: AuthStore;
     instanceId: string;
-    fileStore: FileStore;
+    fileStore: FileFolder;
     dataDir: string;
     printQRInTerminal?: boolean;
     onQRCode?: (qr: string) => void;
@@ -74,7 +74,7 @@ export class WhatsAppConnector implements Connector {
     private allowedPhones: Set<string>;
     private authStore: AuthStore;
     private instanceId: string;
-    private fileStore: FileStore;
+    private fileStore: FileFolder;
     private dataDir: string;
     private printQRInTerminal: boolean;
     private onQRCode?: (qr: string) => void;

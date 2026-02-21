@@ -3,7 +3,6 @@ import path from "node:path";
 import type { AgentDescriptor, AgentTokenEntry, Config, MessageContext } from "@/types";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
-import { FileStore } from "../files/store.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
@@ -21,6 +20,7 @@ import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
 import { Exposes } from "./expose/exposes.js";
+import { FileFolder } from "./files/fileFolder.js";
 import { Heartbeats } from "./heartbeat/heartbeats.js";
 import type { EngineEventBus } from "./ipc/events.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
@@ -79,7 +79,6 @@ export type EngineOptions = {
 export class Engine {
     readonly config: ConfigModule;
     readonly authStore: AuthStore;
-    readonly fileStore: FileStore;
     readonly modules: ModuleRegistry;
     readonly pluginRegistry: PluginRegistry;
     readonly pluginManager: PluginManager;
@@ -128,7 +127,6 @@ export class Engine {
         });
         this.permissionRequestRegistry = new PermissionRequestRegistry();
         this.authStore = new AuthStore(this.config.current);
-        this.fileStore = new FileStore(path.join(this.config.current.dataDir, "files"));
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
             socketPath: this.config.current.socketPath,
             repository: this.storage.processes
@@ -150,7 +148,7 @@ export class Engine {
                 });
             }
         });
-        logger.debug(`init: AuthStore and FileStore initialized`);
+        logger.debug(`init: AuthStore initialized`);
         this.exposes = new Exposes({
             config: this.config,
             eventBus: this.eventBus,
@@ -281,6 +279,7 @@ export class Engine {
             // a strict quiescent point with no active model calls.
             config: this.config
         });
+        const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));
 
         this.pluginRegistry = new PluginRegistry(this.modules);
 
@@ -288,7 +287,7 @@ export class Engine {
             config: this.config,
             registry: this.pluginRegistry,
             auth: this.authStore,
-            fileStore: this.fileStore,
+            fileStore: stagingFileStore,
             pluginCatalog: buildPluginCatalog(),
             inferenceRouter: this.inferenceRouter,
             processes: this.processes,
@@ -302,7 +301,7 @@ export class Engine {
         this.providerManager = new ProviderManager({
             config: this.config,
             auth: this.authStore,
-            fileStore: this.fileStore,
+            fileStore: stagingFileStore,
             inferenceRegistry: this.modules.inference,
             imageRegistry: this.modules.images
         });
@@ -316,7 +315,6 @@ export class Engine {
             toolResolver: this.modules.tools,
             pluginManager: this.pluginManager,
             inferenceRouter: this.inferenceRouter,
-            fileStore: this.fileStore,
             authStore: this.authStore,
             delayedSignals: this.delayedSignals,
             permissionRequestRegistry: this.permissionRequestRegistry

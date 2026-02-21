@@ -112,7 +112,7 @@ type PluginApi<TSettings> = {
   dataDir: string;                        // Plugin's data directory
   registrar: PluginRegistrar;             // Component registration
   exposes: ExposeProviderRegistrationApi; // Expose tunnel provider registry
-  fileStore: FileStore;                   // Shared file storage
+  fileStore: FileFolder;                  // Shared file storage
   inference: PluginInference;             // LLM inference API
   mode: "runtime" | "validate";           // Execution context
   engineEvents?: EngineEventBus;          // Engine event bus
@@ -333,7 +333,7 @@ type ToolExecutionResult = {
 ```typescript
 type ToolExecutionContext = {
   connectorRegistry: ConnectorRegistry;
-  fileStore: FileStore;
+  fileStore: FileFolder;
   auth: AuthStore;
   logger: Logger;
   assistant: AssistantSettings | null;
@@ -403,7 +403,7 @@ type ImageGenerationResult = {
 };
 
 type ImageGenerationContext = {
-  fileStore: FileStore;
+  fileStore: FileFolder;
   auth: AuthStore;
   logger: Logger;
 };

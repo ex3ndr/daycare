@@ -7,9 +7,9 @@ import { describe, expect, it } from "vitest";
 import type { ImageGenerationProvider, PluginApi } from "@/types";
 import { AuthStore } from "../../../auth/store.js";
 import { configResolve } from "../../../config/configResolve.js";
+import { FileFolder } from "../../../engine/files/fileFolder.js";
 import type { PluginRegistrar } from "../../../engine/plugins/registry.js";
 import { Processes } from "../../../engine/processes/processes.js";
-import { FileStore } from "../../../files/store.js";
 import { getLogger } from "../../../log.js";
 import { plugin as nanoBananaPro } from "../plugin.js";
 
@@ -45,7 +45,7 @@ describeIf("nano-banana-pro image generation", () => {
             const auth = new AuthStore(config);
             await auth.setApiKey("nano-banana-pro", apiKey);
 
-            const fileStore = new FileStore(path.join(config.dataDir, "files"));
+            const fileStore = new FileFolder(path.join(config.dataDir, "files"));
             let registeredProvider: ImageGenerationProvider | null = null;
 
             const registrar = {
@@ -74,6 +74,7 @@ describeIf("nano-banana-pro image generation", () => {
                 logger: getLogger("test.nano-banana-pro"),
                 auth,
                 dataDir: dir,
+                tmpDir: path.join(dir, "tmp"),
                 registrar,
                 exposes: {
                     registerProvider: async () => undefined,

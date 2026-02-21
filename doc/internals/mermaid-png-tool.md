@@ -11,7 +11,7 @@ Daycare provides a built-in tool named `generate_mermaid_png` for agents to rend
 
 ## Result
 
-The tool stores the generated PNG in the file store and returns it as a generated file artifact so connectors can send it to users.
+The tool stores the generated PNG in the active file folder and returns it as a generated file artifact so connectors can send it to users.
 PNG rendering is done by opening a headless Chromium page through Playwright and taking a screenshot of the rendered SVG.
 
 ## Flow
@@ -23,6 +23,6 @@ flowchart LR
   C --> D[Open Chromium via Playwright]
   D --> E[Render SVG in browser page]
   E --> F[Screenshot SVG node as PNG]
-  F --> G[Store via FileStore.saveBuffer]
+  F --> G[Store via FileFolder.saveBuffer]
   G --> H[Return file artifact to agent loop]
 ```

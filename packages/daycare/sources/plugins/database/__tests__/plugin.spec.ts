@@ -10,11 +10,11 @@ import { configResolve } from "../../../config/configResolve.js";
 import { Agent } from "../../../engine/agents/agent.js";
 import { Context } from "../../../engine/agents/context.js";
 import { AgentInbox } from "../../../engine/agents/ops/agentInbox.js";
+import { FileFolder } from "../../../engine/files/fileFolder.js";
 import { ModuleRegistry } from "../../../engine/modules/moduleRegistry.js";
 import { PluginRegistry } from "../../../engine/plugins/registry.js";
 import { Processes } from "../../../engine/processes/processes.js";
 import { UserHome } from "../../../engine/users/userHome.js";
-import { FileStore } from "../../../files/store.js";
 import { getLogger } from "../../../log.js";
 import { plugin } from "../plugin.js";
 
@@ -28,7 +28,7 @@ describe("database plugin", () => {
     it("creates db files, runs SQL, and updates db.md", async () => {
         const config = configResolve({ engine: { dataDir: baseDir } }, path.join(baseDir, "settings.json"));
         const auth = new AuthStore(config);
-        const fileStore = new FileStore(path.join(config.dataDir, "files"));
+        const fileStore = new FileFolder(path.join(config.dataDir, "files"));
         const modules = new ModuleRegistry({ onMessage: async () => undefined });
         const pluginRegistry = new PluginRegistry(modules);
 
@@ -75,6 +75,7 @@ describe("database plugin", () => {
             logger: getLogger("test.database"),
             auth,
             dataDir: baseDir,
+            tmpDir: path.join(baseDir, "tmp"),
             registrar,
             exposes: {
                 registerProvider: async () => undefined,

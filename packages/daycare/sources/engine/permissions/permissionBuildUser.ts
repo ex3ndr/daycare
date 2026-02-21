@@ -12,6 +12,7 @@ export function permissionBuildUser(userHome: UserHome): SessionPermissions {
         userHome.downloads,
         userHome.documents,
         userHome.developer,
+        userHome.tmp,
         knowledgePaths.soulPath,
         knowledgePaths.userPath,
         knowledgePaths.agentsPath,

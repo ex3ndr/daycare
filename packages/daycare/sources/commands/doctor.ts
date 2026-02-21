@@ -6,10 +6,10 @@ import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
 import { configResolve } from "../config/configResolve.js";
 import { ConfigModule } from "../engine/config/configModule.js";
+import { FileFolder } from "../engine/files/fileFolder.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import { InferenceRouter } from "../engine/modules/inference/router.js";
 import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
-import { FileStore } from "../files/store.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { DEFAULT_SETTINGS_PATH, listProviders, type ProviderSettings } from "../settings.js";
@@ -31,7 +31,7 @@ export async function doctorCommand(options: DoctorOptions): Promise<void> {
     }
 
     const auth = new AuthStore(config);
-    const fileStore = new FileStore(path.join(config.dataDir, "validate"));
+    const fileStore = new FileFolder(path.join(config.dataDir, "validate"));
 
     let failed = 0;
     let skipped = 0;
@@ -75,7 +75,7 @@ async function checkProvider(
     definition: NonNullable<ReturnType<typeof getProviderDefinition>>,
     providerSettings: ProviderSettings,
     auth: AuthStore,
-    fileStore: FileStore
+    fileStore: FileFolder
 ): Promise<{ ok: true; modelId: string } | { ok: false; message: string }> {
     const inferenceRegistry = new InferenceRegistry();
     const imageRegistry = new ImageGenerationRegistry();

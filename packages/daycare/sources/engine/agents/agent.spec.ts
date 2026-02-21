@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { AgentDescriptor, Connector, Signal } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import { FileStore } from "../../files/store.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -40,7 +39,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -97,7 +95,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -145,7 +142,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -191,7 +187,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: pluginManagerStubBuild(),
                 inferenceRouter: inferenceRouterStubBuild(),
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
@@ -247,7 +242,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: pluginManagerStubBuild(),
                 inferenceRouter: inferenceRouterStubBuild(),
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
@@ -304,7 +298,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: pluginManagerStubBuild(),
                 inferenceRouter: inferenceRouterStubBuild(),
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
@@ -402,7 +395,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -509,7 +501,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -556,7 +547,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -610,7 +600,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -669,7 +658,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -750,7 +738,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
@@ -806,7 +793,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config),
                 delayedSignals
             });
@@ -866,7 +852,6 @@ describe("Agent", () => {
                 toolResolver: new ToolResolver(),
                 pluginManager: {} as unknown as PluginManager,
                 inferenceRouter: {} as unknown as InferenceRouter,
-                fileStore: new FileStore(path.join(config.dataDir, "files")),
                 authStore: new AuthStore(config),
                 delayedSignals
             });

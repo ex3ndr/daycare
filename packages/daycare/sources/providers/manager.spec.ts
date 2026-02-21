@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { AuthStore } from "../auth/store.js";
 import { configResolve } from "../config/configResolve.js";
 import { ConfigModule } from "../engine/config/configModule.js";
+import { FileFolder } from "../engine/files/fileFolder.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
-import { FileStore } from "../files/store.js";
 import { ProviderManager } from "./manager.js";
 import type { ProviderDefinition } from "./types.js";
 
@@ -89,7 +89,7 @@ describe("ProviderManager", () => {
         const manager = new ProviderManager({
             config: configModule,
             auth: new AuthStore(baseConfig),
-            fileStore: new FileStore(path.join(baseConfig.dataDir, "files")),
+            fileStore: new FileFolder(path.join(baseConfig.dataDir, "files")),
             inferenceRegistry,
             imageRegistry,
             providerDefinitionResolve: (id) => (id === "fake-provider" ? definition : null)
@@ -162,7 +162,7 @@ describe("ProviderManager", () => {
         const manager = new ProviderManager({
             config: new ConfigModule(config),
             auth: new AuthStore(config),
-            fileStore: new FileStore(path.join(config.dataDir, "files")),
+            fileStore: new FileFolder(path.join(config.dataDir, "files")),
             inferenceRegistry,
             imageRegistry,
             providerDefinitionResolve: (id) => (id === "fake-provider" ? definition : null)

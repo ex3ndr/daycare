@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentDescriptor, MessageContext, PermissionRequest } from "@/types";
-import type { FileStore } from "../../files/store.js";
+import type { FileFolder } from "../../engine/files/fileFolder.js";
 
 type Handler = (payload: unknown) => void | Promise<void>;
 type MockFn = ReturnType<typeof vi.fn>;
@@ -58,7 +58,7 @@ describe("TelegramConnector permissions", () => {
     });
 
     it("edits the permission prompt when approved", async () => {
-        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
@@ -142,7 +142,7 @@ describe("TelegramConnector permissions", () => {
     });
 
     it("renders scope with human-readable labels", async () => {
-        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
@@ -192,7 +192,7 @@ describe("TelegramConnector commands", () => {
     });
 
     it("routes /reset to command handlers", async () => {
-        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
@@ -243,7 +243,7 @@ describe("TelegramConnector startup", () => {
     });
 
     it("does not register slash commands before command sync starts", async () => {
-        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
@@ -271,7 +271,7 @@ describe("TelegramConnector command updates", () => {
     it("debounces setMyCommands updates by 1 second", async () => {
         vi.useFakeTimers();
         try {
-            const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+            const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
             const connector = new TelegramConnector({
                 token: "token",
                 allowedUids: ["123"],
@@ -332,7 +332,7 @@ describe("TelegramConnector polling", () => {
     });
 
     it("clears the webhook on polling conflict without local retry", async () => {
-        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
@@ -368,7 +368,7 @@ describe("TelegramConnector file uploads", () => {
     });
 
     it("sends explicit contentType and filename for document uploads", async () => {
-        const fileStore = { saveFromPath: vi.fn() } as unknown as FileStore;
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],

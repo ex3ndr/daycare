@@ -112,7 +112,7 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                 }
             );
 
-            const downloadsDir = toolContext.fileStore.resolvePath();
+            const downloadsDir = toolContext.fileStore.path;
             const createdAt = new Date();
             const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
 

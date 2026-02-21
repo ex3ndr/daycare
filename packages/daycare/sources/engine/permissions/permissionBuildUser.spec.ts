@@ -19,6 +19,7 @@ describe("permissionBuildUser", () => {
                 userHome.downloads,
                 userHome.documents,
                 userHome.developer,
+                userHome.tmp,
                 knowledgePaths.soulPath,
                 knowledgePaths.userPath,
                 knowledgePaths.agentsPath,

@@ -9,10 +9,10 @@ import { describe, expect, it } from "vitest";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
+import { FileFolder } from "../../engine/files/fileFolder.js";
 import { ImageGenerationRegistry } from "../../engine/modules/imageGenerationRegistry.js";
 import { InferenceRouter } from "../../engine/modules/inference/router.js";
 import { InferenceRegistry } from "../../engine/modules/inferenceRegistry.js";
-import { FileStore } from "../../files/store.js";
 import { ProviderManager } from "../manager.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -213,7 +213,7 @@ async function setupProvider(providerId: string, config: ProviderConfig) {
     const providerManager = new ProviderManager({
         config: configModule,
         auth,
-        fileStore: new FileStore(path.join(resolvedConfig.dataDir, "files")),
+        fileStore: new FileFolder(path.join(resolvedConfig.dataDir, "files")),
         inferenceRegistry,
         imageRegistry
     });

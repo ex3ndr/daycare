@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { AuthStore } from "../../../auth/store.js";
-import type { FileStore } from "../../../files/store.js";
 import type { FileReference } from "../../../files/types.js";
+import type { FileFolder } from "../../files/fileFolder.js";
 
 export type ImageGenerationRequest = {
     prompt: string;
@@ -16,7 +16,7 @@ export type ImageGenerationResult = {
 };
 
 export type ImageGenerationContext = {
-    fileStore: FileStore;
+    fileStore: FileFolder;
     auth: AuthStore;
     logger: Logger;
 };

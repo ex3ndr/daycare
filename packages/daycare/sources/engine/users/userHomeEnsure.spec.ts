@@ -31,7 +31,8 @@ describe("userHomeEnsure", () => {
             userHome.downloads,
             userHome.documents,
             userHome.developer,
-            userHome.knowledge
+            userHome.knowledge,
+            userHome.tmp
         ];
         for (const dir of expectedDirs) {
             const dirStat = await stat(dir);

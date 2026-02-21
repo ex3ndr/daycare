@@ -3,12 +3,13 @@ import path from "node:path";
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import type { MessageContext, ToolExecutionContext } from "@/types";
-import { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { tagExtractAll } from "../../util/tagExtract.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
+import type { FileFolder } from "../files/fileFolder.js";
+import { Files } from "../files/files.js";
 import { messageBuildSystemSilentText } from "../messages/messageBuildSystemSilentText.js";
 import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
@@ -82,7 +83,7 @@ export class Agent {
     private started = false;
     private inferenceAbortController: AbortController | null = null;
     private readonly userHome: UserHome;
-    private readonly fileStore: FileStore;
+    private readonly files: Files;
 
     private constructor(
         id: string,
@@ -103,7 +104,7 @@ export class Agent {
         this.inbox = inbox;
         this.agentSystem = agentSystem;
         this.userHome = userHome;
-        this.fileStore = new FileStore(this.userHome.downloads);
+        this.files = new Files(this.userHome.home);
     }
 
     /**
@@ -510,7 +511,7 @@ export class Agent {
                     connectorRegistry: this.agentSystem.connectorRegistry,
                     inferenceRouter: this.agentSystem.inferenceRouter,
                     toolResolver,
-                    fileStore: this.fileStore,
+                    fileStore: this.files.downloads,
                     authStore: this.agentSystem.authStore,
                     eventBus: this.agentSystem.eventBus,
                     assistant: this.agentSystem.config.current.settings.assistant ?? null,
@@ -987,7 +988,7 @@ export class Agent {
     private rlmRestoreContextBuild(source: string): ToolExecutionContext {
         return {
             connectorRegistry: this.agentSystem.connectorRegistry,
-            fileStore: this.fileStore,
+            fileStore: this.files.downloads,
             auth: this.agentSystem.authStore,
             logger,
             assistant: this.agentSystem.config.current.settings.assistant ?? null,
@@ -1062,7 +1063,7 @@ export class Agent {
         const relocated: Array<{ id: string; name: string; path: string; mimeType: string; size: number }> = [];
         for (const file of copied) {
             try {
-                relocated.push(await fileStoreCopyIfNeeded(this.fileStore, this.userHome.downloads, file));
+                relocated.push(await fileStoreCopyIfNeeded(this.files.downloads, this.userHome.downloads, file));
             } catch (error) {
                 logger.warn(
                     { agentId: this.id, filePath: file.path, error },
@@ -1183,7 +1184,7 @@ function isChannelSignalType(type: string): boolean {
 }
 
 async function fileStoreCopyIfNeeded(
-    fileStore: FileStore,
+    fileStore: FileFolder,
     targetDir: string,
     file: { id: string; name: string; path: string; mimeType: string; size: number }
 ): Promise<{ id: string; name: string; path: string; mimeType: string; size: number }> {

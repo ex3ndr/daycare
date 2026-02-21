@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginApi } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import { FileStore } from "../../files/store.js";
 import { getLogger } from "../../log.js";
 import { plugin as braveSearch } from "../../plugins/brave-search/plugin.js";
 import { plugin as telegram } from "../../plugins/telegram/plugin.js";
+import { FileFolder } from "../files/fileFolder.js";
 import { Processes } from "../processes/processes.js";
 import type { PluginRegistrar } from "./registry.js";
 
@@ -42,7 +42,7 @@ async function createApi<TSettings>(
 ): Promise<PluginApi<TSettings>> {
     const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
     const auth = new AuthStore(config);
-    const fileStore = new FileStore(path.join(config.dataDir, "files"));
+    const fileStore = new FileFolder(path.join(config.dataDir, "files"));
     const inference = {
         complete: async () => {
             throw new Error("Inference not available in tests");
@@ -55,6 +55,7 @@ async function createApi<TSettings>(
         logger: getLogger(`test.${instanceId}`),
         auth,
         dataDir: dir,
+        tmpDir: path.join(dir, "tmp"),
         registrar,
         exposes: {
             registerProvider: async () => undefined,
