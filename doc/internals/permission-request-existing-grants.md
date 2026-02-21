@@ -1,22 +1,17 @@
-# Permission Request Existing Grants
+# Permission Request Existing Grants (Removed)
 
-## Summary
+`request_permission` is removed from the runtime.
 
-`request_permission` now checks the target agent's current permissions before emitting a connector prompt.
-If all requested permissions are already available, the tool returns immediately and does not create a pending approval token.
-If only some are missing, only the missing subset is sent to the user.
+## Current behavior
 
-## Flow
+- No permission request tool exists.
+- No decision token registry exists.
+- No connector permission approval prompt exists.
 
 ```mermaid
-flowchart TD
-  A[request_permission called] --> B[Normalize and parse tags]
-  B --> C[Load target agent permissions]
-  C --> D{Already allowed?}
-  D -->|all| E[Return already granted tool result]
-  D -->|partial| F[Build request from missing permissions only]
-  D -->|none| F
-  F --> G[Send connector permission prompt]
-  G --> H[Wait for decision token]
-  H --> I[Apply approved missing permissions]
+flowchart LR
+  Request[request_permission] --> Removed[Removed]
+  Removed --> Static[Static SessionPermissions]
 ```
+
+Permissions are now fixed by agent type and enforced directly by sandbox path/domain policies.

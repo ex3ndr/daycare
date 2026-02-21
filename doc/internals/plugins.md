@@ -235,7 +235,7 @@ All registrations are automatically cleaned up when the plugin unloads.
 
 Plugin skills are listed alongside core/config/user skills and invoked through the `skill` tool. `SKILL.md` supports:
 - `sandbox: true` to run the skill in a forked subagent.
-- `permissions: [...]` to grant explicit permission tags to that subagent (validated against the caller's permissions).
+- `permissions` tags are not used at runtime anymore. Sandboxed skills run with fixed subagent permissions.
 
 ---
 
@@ -249,9 +249,7 @@ Connectors bridge external messaging platforms and the engine. They normalize in
 interface Connector {
   capabilities: ConnectorCapabilities;
   onMessage(handler: MessageHandler): MessageUnsubscribe;
-  onPermission?: (handler: PermissionHandler) => MessageUnsubscribe;
   sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
-  requestPermission?: (targetId: string, request: PermissionRequest, context: MessageContext) => Promise<void>;
   startTyping?: (targetId: string) => () => void;
   setReaction?: (targetId: string, messageId: string, reaction: string) => Promise<void>;
   shutdown?: (reason?: string) => void | Promise<void>;
@@ -564,10 +562,7 @@ export const plugin = definePlugin({
             parameters: searchSchema
           },
           execute: async (args, toolContext, toolCall) => {
-            // Check permissions
-            if (!toolContext.permissions.web) {
-              throw new Error("Web access not granted.");
-            }
+            // Use toolContext.permissions.workingDir/writeDirs for local path safety.
 
             const payload = args as SearchArgs;
             const apiKey = await api.auth.getApiKey(instanceId);

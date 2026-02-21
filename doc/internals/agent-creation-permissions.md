@@ -1,31 +1,24 @@
-# Agent Creation Permission Pre-Grants
+# Agent Creation Permissions
 
-`start_background_agent` and `create_permanent_agent` now accept an optional
-`permissions` list (`@network`, `@read:<abs-path>`, `@write:<abs-path>`).
-Creation validates that the creator already has every requested permission
-before any grants are applied.
+Creation-time permission pre-grants are removed.
 
-## Flow
+## Current tool behavior
+
+- `start_background_agent` no longer accepts a `permissions` argument.
+- `create_permanent_agent` no longer accepts a `permissions` argument.
+- New agents start with fixed base permissions for their type.
 
 ```mermaid
-sequenceDiagram
-  participant Creator as Creator Agent
-  participant Tool as Creation Tool
-  participant Check as permissionTagsValidate
-  participant AgentSystem
-  participant Target as New Agent
-
-  Creator->>Tool: create(..., permissions)
-  Tool->>Check: validate creator owns tags
-  Check-->>Tool: allowed
-  Tool->>AgentSystem: resolve/create target agent
-  Tool->>AgentSystem: grant validated permissions
-  Tool->>AgentSystem: deliver initial message (subagent) or persist state (permanent)
-  AgentSystem-->>Target: starts with pre-granted permissions
+flowchart TD
+  Create[create/start tool] --> Base[Base permissions only]
+  Base --> Start[Agent starts]
+  OldPreGrant[permissions[] pre-grants] --> Removed[Removed]
 ```
 
-## Notes
+## Result
 
-- Validation runs against the creator's current permissions, matching `grant_permission` semantics.
-- Subagent creation grants permissions before posting the first prompt.
-- Permanent agent create/update applies validated tags directly into persisted `state.json`.
+Agent creation is simpler and deterministic:
+
+- no tag parsing
+- no permission ownership checks
+- no grant replay during creation

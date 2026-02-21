@@ -1,49 +1,24 @@
-# Workspace Permission
+# Workspace Permission (Removed)
 
-Adds a new permission tag: `@workspace`.
+`@workspace` is removed from the runtime permission model.
 
-`@workspace` grants write access to the shared workspace root (and corresponding read access).
+## Current behavior
 
-## Default behavior
+- There is no workspace permission tag.
+- There is no workspace permission resolver.
+- Apps cannot request workspace expansion at runtime.
 
-- Non-app agents (foreground/background/system/cron/heartbeat) effectively have `@workspace` by default because their permission set already includes shared workspace write access.
-- App agents do **not** have `@workspace` by default.
-- Apps can request `@workspace` explicitly via `request_permission`.
-
-## Resolution model
-
-`@workspace` resolves to the shared workspace root path using:
-
-1. `permissions.workspaceDir` when present.
-2. App working-dir shape fallback (`<workspace>/apps/<id>/data` -> `<workspace>`).
-3. Closest ancestor from existing read/write permission roots.
-4. Final fallback to `permissions.workingDir`.
-
-## Permission flow
+Access is determined only by each agent's fixed `SessionPermissions` and sandbox policy.
 
 ```mermaid
 flowchart TD
-  A[Permission tag @workspace] --> B[permissionAccessParse]
-  B --> C[PermissionAccess kind workspace]
-  C --> D[permissionWorkspacePathResolve]
-  D --> E[Shared workspace path]
-  E --> F[permissionAccessApply]
-  F --> G[Add workspace path to writeDirs + readDirs]
+  A[@workspace tag] --> B[Removed]
+  B --> C[No parser]
+  B --> D[No grant flow]
+  B --> E[No connector prompt]
 ```
 
-## App request flow
+## Replacement
 
-```mermaid
-sequenceDiagram
-  participant App as App Agent
-  participant Tool as request_permission
-  participant User as User
-  participant System as AgentSystem
-
-  App->>Tool: request_permission(permissions: ["@workspace"])
-  Tool->>User: approval prompt
-  User-->>Tool: approve
-  Tool->>System: grantPermission/grantAppPermission(kind=workspace)
-  System->>System: resolve workspace root
-  System->>System: add workspace root to writeDirs/readDirs
-```
+- User agents write within `UserHome.home`.
+- App agents write only in `apps/<id>/data`.

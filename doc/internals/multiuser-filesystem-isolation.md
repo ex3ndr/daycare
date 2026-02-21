@@ -19,14 +19,14 @@ flowchart TD
 
     L[Apps] --> M[users/<userId>/apps only]
     N[Skills] --> O[user root only]
-
-    P[Legacy migration] --> Q[legacy workspace from raw settings]
-    Q --> R[userHomeMigrate legacy files/apps]
+    P[Config] --> P2[usersDir = <configDir>/users]
+    P2 --> C
 ```
 
 ## Key Outcomes
 
 - `Config.workspaceDir`, `Config.filesDir`, and `Config.defaultPermissions` are removed.
+- `usersDir` is always anchored to `<configDir>/users`.
 - All agents require `userId` and `UserHome`; no global permission fallback remains.
 - `FileFolder` is path-only and metadata sidecars were removed.
 - Received files and generated images are saved under `UserHome.downloads`.
