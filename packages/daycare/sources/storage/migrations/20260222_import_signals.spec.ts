@@ -66,7 +66,9 @@ describe("migration20260222ImportSignals", () => {
                 migration20260222AddSignals.up(db);
                 migration20260222ImportSignals.up(db);
 
-                const events = db.prepare("SELECT id, user_id, type FROM signals_events ORDER BY id ASC").all() as Array<{
+                const events = db
+                    .prepare("SELECT id, user_id, type FROM signals_events ORDER BY id ASC")
+                    .all() as Array<{
                     id: string;
                     user_id: string;
                     type: string;
@@ -74,11 +76,11 @@ describe("migration20260222ImportSignals", () => {
                 const delayed = db
                     .prepare("SELECT id, user_id, type, repeat_key FROM signals_delayed ORDER BY id ASC")
                     .all() as Array<{
-                        id: string;
-                        user_id: string;
-                        type: string;
-                        repeat_key: string | null;
-                    }>;
+                    id: string;
+                    user_id: string;
+                    type: string;
+                    repeat_key: string | null;
+                }>;
 
                 expect(events).toEqual([
                     { id: "ev-1", user_id: "user-a", type: "build:ok" },

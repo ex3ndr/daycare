@@ -23,7 +23,7 @@ describe("migration20260222ImportProcesses", () => {
                         version: 2,
                         id: "p-1",
                         name: "process-one",
-                        command: "node -e \"1\"",
+                        command: 'node -e "1"',
                         cwd: "/tmp/workspace",
                         home: null,
                         env: { A: "1" },
@@ -78,14 +78,16 @@ describe("migration20260222ImportProcesses", () => {
                 migration20260222ImportProcesses.up(db);
 
                 const rows = db
-                    .prepare("SELECT id, user_id, keep_alive, allow_local_binding, owner FROM processes ORDER BY id ASC")
+                    .prepare(
+                        "SELECT id, user_id, keep_alive, allow_local_binding, owner FROM processes ORDER BY id ASC"
+                    )
                     .all() as Array<{
-                        id: string;
-                        user_id: string;
-                        keep_alive: number;
-                        allow_local_binding: number;
-                        owner: string | null;
-                    }>;
+                    id: string;
+                    user_id: string;
+                    keep_alive: number;
+                    allow_local_binding: number;
+                    owner: string | null;
+                }>;
 
                 expect(rows).toHaveLength(1);
                 expect(rows[0]?.id).toBe("p-1");

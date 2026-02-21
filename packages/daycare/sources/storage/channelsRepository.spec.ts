@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { databaseOpen } from "./databaseOpen.js";
 import { ChannelsRepository } from "./channelsRepository.js";
+import { databaseOpen } from "./databaseOpen.js";
 
 describe("ChannelsRepository", () => {
     it("supports channel CRUD with user filters", async () => {

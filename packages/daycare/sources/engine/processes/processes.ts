@@ -7,14 +7,14 @@ import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
 import type { SandboxPackageManager, SessionPermissions } from "@/types";
-import type { ProcessDbRecord, ProcessOwnerDbRecord } from "../../storage/databaseTypes.js";
-import type { ProcessesRepository } from "../../storage/processesRepository.js";
-import { Storage } from "../../storage/storage.js";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
+import type { ProcessDbRecord, ProcessOwnerDbRecord } from "../../storage/databaseTypes.js";
+import type { ProcessesRepository } from "../../storage/processesRepository.js";
+import { Storage } from "../../storage/storage.js";
 import { atomicWrite } from "../../util/atomicWrite.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import { AsyncLock } from "../../util/lock.js";
@@ -191,7 +191,11 @@ export class Processes {
         }
     }
 
-    async create(input: ProcessCreateInput, permissions: SessionPermissions, userIdOverride?: string): Promise<ProcessInfo> {
+    async create(
+        input: ProcessCreateInput,
+        permissions: SessionPermissions,
+        userIdOverride?: string
+    ): Promise<ProcessInfo> {
         return this.lock.inLock(async () => {
             const now = Date.now();
             const workingDir = permissions.workingDir;
@@ -226,7 +230,8 @@ export class Processes {
             const settingsPath = path.join(recordDir, "sandbox.json");
             const logPath = path.join(recordDir, "process.log");
             const bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
-            const userId = normalizeOptionalUserId(input.userId ?? userIdOverride) ?? (await this.fallbackUserIdResolve());
+            const userId =
+                normalizeOptionalUserId(input.userId ?? userIdOverride) ?? (await this.fallbackUserIdResolve());
             await fs.mkdir(recordDir, { recursive: true });
 
             const record: ProcessRecord = {

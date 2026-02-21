@@ -10,8 +10,12 @@ describe("ProcessesRepository", () => {
             schemaCreate(db);
             const repository = new ProcessesRepository(db);
 
-            await repository.create(recordBuild({ id: "p-1", userId: "user-a", owner: { type: "plugin", id: "plugin-a" } }));
-            await repository.create(recordBuild({ id: "p-2", userId: "user-b", owner: { type: "plugin", id: "plugin-b" } }));
+            await repository.create(
+                recordBuild({ id: "p-1", userId: "user-a", owner: { type: "plugin", id: "plugin-a" } })
+            );
+            await repository.create(
+                recordBuild({ id: "p-2", userId: "user-b", owner: { type: "plugin", id: "plugin-b" } })
+            );
             await repository.create(recordBuild({ id: "p-3", userId: "user-a", owner: null }));
 
             const all = await repository.findMany();
@@ -72,16 +76,12 @@ function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
     `);
 }
 
-function recordBuild(input: {
-    id: string;
-    userId: string;
-    owner: { type: "plugin"; id: string } | null;
-}) {
+function recordBuild(input: { id: string; userId: string; owner: { type: "plugin"; id: string } | null }) {
     return {
         id: input.id,
         userId: input.userId,
         name: input.id,
-        command: "node -e \"1\"",
+        command: 'node -e "1"',
         cwd: "/tmp",
         home: null,
         env: {},

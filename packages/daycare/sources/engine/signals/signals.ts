@@ -2,10 +2,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 
 import { getLogger } from "../../log.js";
-import type {
-    SignalEventDbRecord,
-    SignalSubscriptionDbRecord
-} from "../../storage/databaseTypes.js";
+import type { SignalEventDbRecord, SignalSubscriptionDbRecord } from "../../storage/databaseTypes.js";
 import type { SignalEventsRepository } from "../../storage/signalEventsRepository.js";
 import type { SignalSubscriptionsRepository } from "../../storage/signalSubscriptionsRepository.js";
 import { Storage } from "../../storage/storage.js";

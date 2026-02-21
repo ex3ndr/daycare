@@ -92,7 +92,9 @@ export class ChannelsRepository {
             return null;
         }
 
-        const row = this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name) as DatabaseChannelRow | undefined;
+        const row = this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name) as
+            | DatabaseChannelRow
+            | undefined;
         if (!row) {
             return null;
         }
@@ -244,7 +246,9 @@ export class ChannelsRepository {
     }
 
     private channelLoadById(id: string): ChannelDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id) as DatabaseChannelRow | undefined;
+        const row = this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id) as
+            | DatabaseChannelRow
+            | undefined;
         if (!row) {
             return null;
         }

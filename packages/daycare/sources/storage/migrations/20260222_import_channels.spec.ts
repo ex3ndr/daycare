@@ -69,21 +69,23 @@ describe("migration20260222ImportChannels", () => {
                     leader: string;
                 }>;
                 const members = db
-                    .prepare("SELECT channel_id, user_id, agent_id, username FROM channel_members ORDER BY agent_id ASC")
+                    .prepare(
+                        "SELECT channel_id, user_id, agent_id, username FROM channel_members ORDER BY agent_id ASC"
+                    )
                     .all() as Array<{
-                        channel_id: string;
-                        user_id: string;
-                        agent_id: string;
-                        username: string;
-                    }>;
+                    channel_id: string;
+                    user_id: string;
+                    agent_id: string;
+                    username: string;
+                }>;
                 const messages = db
                     .prepare("SELECT id, channel_id, user_id, sender_username FROM channel_messages ORDER BY id ASC")
                     .all() as Array<{
-                        id: string;
-                        channel_id: string;
-                        user_id: string;
-                        sender_username: string;
-                    }>;
+                    id: string;
+                    channel_id: string;
+                    user_id: string;
+                    sender_username: string;
+                }>;
 
                 expect(channels).toEqual([
                     {

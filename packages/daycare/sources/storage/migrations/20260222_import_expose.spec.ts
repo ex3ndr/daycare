@@ -49,12 +49,12 @@ describe("migration20260222ImportExpose", () => {
                 const rows = db
                     .prepare("SELECT id, user_id, provider, domain, mode FROM expose_endpoints ORDER BY id ASC")
                     .all() as Array<{
-                        id: string;
-                        user_id: string;
-                        provider: string;
-                        domain: string;
-                        mode: string;
-                    }>;
+                    id: string;
+                    user_id: string;
+                    provider: string;
+                    domain: string;
+                    mode: string;
+                }>;
 
                 expect(rows).toEqual([
                     {

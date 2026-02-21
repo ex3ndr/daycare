@@ -10,9 +10,9 @@ describe("migration20260222AddSignals", () => {
             migration20260222AddSignals.up(db);
 
             const eventColumns = db.prepare("PRAGMA table_info(signals_events)").all() as Array<{ name: string }>;
-            const subscriptionColumns = db
-                .prepare("PRAGMA table_info(signals_subscriptions)")
-                .all() as Array<{ name: string }>;
+            const subscriptionColumns = db.prepare("PRAGMA table_info(signals_subscriptions)").all() as Array<{
+                name: string;
+            }>;
             const delayedColumns = db.prepare("PRAGMA table_info(signals_delayed)").all() as Array<{ name: string }>;
 
             expect(eventColumns.map((column) => column.name)).toEqual([
