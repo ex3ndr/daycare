@@ -29,7 +29,7 @@ describe("executablePromptExpand", () => {
 
         const result = await executablePromptExpand(prompt, context, resolver);
 
-        expect(result).toBe(prompt);
+        expect(result).toEqual({ expanded: prompt, skipTurn: false });
         expect(rlmExecuteMock).not.toHaveBeenCalled();
         expect(montyRuntimePreambleBuildMock).not.toHaveBeenCalled();
     });
@@ -45,7 +45,7 @@ describe("executablePromptExpand", () => {
 
         const result = await executablePromptExpand("A<run_python>1+1</run_python>B", context, resolver);
 
-        expect(result).toBe("A42B");
+        expect(result).toEqual({ expanded: "A42B", skipTurn: false });
         expect(rlmExecuteMock).toHaveBeenCalledTimes(1);
         expect(rlmExecuteMock).toHaveBeenCalledWith(
             "1+1",
@@ -78,7 +78,7 @@ describe("executablePromptExpand", () => {
             resolver
         );
 
-        expect(result).toBe("x FIRST y SECOND z");
+        expect(result).toEqual({ expanded: "x FIRST y SECOND z", skipTurn: false });
         expect(rlmExecuteMock).toHaveBeenNthCalledWith(
             1,
             "first()",
@@ -106,7 +106,50 @@ describe("executablePromptExpand", () => {
 
         const result = await executablePromptExpand("a <run_python>broken()</run_python> b", context, resolver);
 
-        expect(result).toBe("a <exec_error>boom</exec_error> b");
+        expect(result).toEqual({ expanded: "a <exec_error>boom</exec_error> b", skipTurn: false });
+    });
+
+    it("returns skipTurn true and stops processing when skip() is called", async () => {
+        rlmExecuteMock.mockResolvedValue({
+            output: "Turn skipped",
+            printOutput: [],
+            toolCallCount: 0,
+            skipTurn: true
+        });
+        const resolver = resolverBuild();
+        const context = contextBuild();
+
+        const result = await executablePromptExpand("before <run_python>skip()</run_python> after", context, resolver);
+
+        expect(result.skipTurn).toBe(true);
+        expect(rlmExecuteMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops processing remaining blocks after skip()", async () => {
+        rlmExecuteMock
+            .mockResolvedValueOnce({
+                output: "FIRST",
+                printOutput: [],
+                toolCallCount: 0
+            })
+            .mockResolvedValueOnce({
+                output: "Turn skipped",
+                printOutput: [],
+                toolCallCount: 0,
+                skipTurn: true
+            });
+        const resolver = resolverBuild();
+        const context = contextBuild();
+
+        const result = await executablePromptExpand(
+            "<run_python>a()</run_python> <run_python>skip()</run_python> <run_python>c()</run_python>",
+            context,
+            resolver
+        );
+
+        expect(result.skipTurn).toBe(true);
+        // Third block should not execute
+        expect(rlmExecuteMock).toHaveBeenCalledTimes(2);
     });
 });
 

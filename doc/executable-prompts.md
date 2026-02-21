@@ -14,8 +14,14 @@ flowchart TD
   Gate -- no --> Raw[Forward raw prompt text]
   Gate -- yes --> Expand[executablePromptExpand]
   Expand --> Run["run each <run_python> via rlmExecute"]
-  Run --> Replace[Replace tag blocks with output]
+  Run --> Skip{"skip() called?"}
+  Skip -- yes --> Abort[Abort — no inference]
+  Skip -- no --> Replace[Replace tag blocks with output]
   Run --> Error["on failure: <exec_error>...</exec_error>"]
   Replace --> Forward[Forward expanded system message]
   Error --> Forward
 ```
+
+## Skip during expansion
+
+Calling `skip()` inside a `<run_python>` block during prompt expansion aborts the entire system message. No inference runs and `handleSystemMessage` returns `null`. Remaining `<run_python>` blocks are not executed.

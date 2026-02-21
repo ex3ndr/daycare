@@ -593,7 +593,7 @@ export class Agent {
             } else {
                 const startedAt = Date.now();
                 const runPythonTagCount = tagExtractAll(systemText, "run_python").length;
-                systemText = await executablePromptExpand(
+                const expandResult = await executablePromptExpand(
                     systemText,
                     {
                         ...this.rlmRestoreContextBuild(item.origin ?? "system"),
@@ -601,6 +601,18 @@ export class Agent {
                     },
                     this.agentSystem.toolResolver
                 );
+                if (expandResult.skipTurn) {
+                    logger.info(
+                        {
+                            agentId: this.id,
+                            origin: item.origin ?? "system",
+                            durationMs: Date.now() - startedAt
+                        },
+                        "event: Executable system message skipped via skip()"
+                    );
+                    return null;
+                }
+                systemText = expandResult.expanded;
                 const errorTagCount = tagExtractAll(systemText, "exec_error").length;
                 logger.info(
                     {
