@@ -119,5 +119,5 @@ describe("formatPrettyMessage", () => {
 });
 
 function stripAnsi(value: string): string {
-    return value.replace(new RegExp("\\u001B\\[[0-9;]*m", "g"), "");
+    return value.replace(/\u001B\[[0-9;]*m/g, "");
 }
