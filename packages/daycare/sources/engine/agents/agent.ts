@@ -34,7 +34,6 @@ import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
 import { Context } from "./context.js";
 import { agentDescriptorIsCron } from "./ops/agentDescriptorIsCron.js";
-import { agentDescriptorIsHeartbeat } from "./ops/agentDescriptorIsHeartbeat.js";
 import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
 import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
@@ -366,10 +365,6 @@ export class Agent {
         });
         const agentKind = this.resolveAgentKind();
         const allowCronTools = agentDescriptorIsCron(this.descriptor);
-
-        if (agentDescriptorIsHeartbeat(this.descriptor)) {
-            this.state.permissions = permissionBuildUser(this.userHome);
-        }
 
         const toolResolver = item.toolResolverOverride ?? this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
