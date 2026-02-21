@@ -22,6 +22,8 @@ import { Crons } from "./cron/crons.js";
 import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Heartbeats } from "./heartbeat/heartbeats.js";
+import { Jobs } from "./jobs/jobs.js";
+import { buildJobEnqueueTool, buildJobCancelTool, buildJobGetTool, buildJobListTool } from "./jobs/jobTools.js";
 import type { EngineEventBus } from "./ipc/events.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { InferenceRouter } from "./modules/inference/router.js";
@@ -91,6 +93,7 @@ export class Engine {
     readonly delayedSignals: DelayedSignals;
     readonly channels: Channels;
     readonly processes: Processes;
+    readonly jobs: Jobs;
     readonly inferenceRouter: InferenceRouter;
     readonly eventBus: EngineEventBus;
     readonly permissionRequestRegistry: PermissionRequestRegistry;
@@ -351,6 +354,11 @@ export class Engine {
         this.apps = new Apps({
             usersDir: this.config.current.usersDir
         });
+
+        this.jobs = new Jobs({
+            config: this.config,
+            eventBus: this.eventBus
+        });
     }
 
     async start(): Promise<void> {
@@ -391,6 +399,10 @@ export class Engine {
         this.modules.tools.register("core", buildHeartbeatRunTool());
         this.modules.tools.register("core", buildHeartbeatAddTool());
         this.modules.tools.register("core", buildHeartbeatRemoveTool());
+        this.modules.tools.register("core", buildJobEnqueueTool(this.jobs));
+        this.modules.tools.register("core", buildJobCancelTool(this.jobs));
+        this.modules.tools.register("core", buildJobGetTool(this.jobs));
+        this.modules.tools.register("core", buildJobListTool(this.jobs));
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
         this.modules.tools.register("core", agentResetToolBuild());
@@ -441,6 +453,8 @@ export class Engine {
         await this.crons.start();
         logger.debug("start: Starting heartbeat scheduler");
         await this.heartbeats.start();
+        logger.debug("start: Starting job scheduler");
+        await this.jobs.start();
         logger.debug("start: Starting delayed signal scheduler");
         await this.delayedSignals.start();
         await this.pluginManager.postStartAll();
@@ -453,6 +467,7 @@ export class Engine {
         await this.incomingMessages.flush();
         this.crons.stop();
         this.heartbeats.stop();
+        this.jobs.stop();
         this.delayedSignals.stop();
         this.processes.unload();
         await this.exposes.stop();
