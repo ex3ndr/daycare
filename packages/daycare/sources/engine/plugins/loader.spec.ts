@@ -75,7 +75,9 @@ export const plugin = {
             },
             processes: new Processes(dir, getLogger("test.processes.loader")),
             mode: "runtime",
-            events: { emit: () => {} }
+            events: {
+                emit: () => undefined
+            }
         });
 
         expect(instance).toBeTruthy();

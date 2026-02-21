@@ -19,52 +19,52 @@ function formatRelativeDuration(diffMs: number): string {
 
     const seconds = Math.floor(absDiff / 1000);
     if (seconds < 60) {
-        return `${prefix}${seconds}s${suffix ? " " + suffix : ""}`;
+        return `${prefix}${seconds}s${suffix ? ` ${suffix}` : ""}`;
     }
 
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) {
-        return `${prefix}${minutes}m${suffix ? " " + suffix : ""}`;
+        return `${prefix}${minutes}m${suffix ? ` ${suffix}` : ""}`;
     }
 
     const hours = Math.floor(minutes / 60);
     if (hours < 24) {
         const remainingMins = minutes % 60;
         if (remainingMins > 0) {
-            return `${prefix}${hours}h ${remainingMins}m${suffix ? " " + suffix : ""}`;
+            return `${prefix}${hours}h ${remainingMins}m${suffix ? ` ${suffix}` : ""}`;
         }
-        return `${prefix}${hours}h${suffix ? " " + suffix : ""}`;
+        return `${prefix}${hours}h${suffix ? ` ${suffix}` : ""}`;
     }
 
     const days = Math.floor(hours / 24);
     if (days < 7) {
         const remainingHours = hours % 24;
         if (remainingHours > 0) {
-            return `${prefix}${days}d ${remainingHours}h${suffix ? " " + suffix : ""}`;
+            return `${prefix}${days}d ${remainingHours}h${suffix ? ` ${suffix}` : ""}`;
         }
-        return `${prefix}${days}d${suffix ? " " + suffix : ""}`;
+        return `${prefix}${days}d${suffix ? ` ${suffix}` : ""}`;
     }
 
     const weeks = Math.floor(days / 7);
     if (weeks < 4) {
         const remainingDays = days % 7;
         if (remainingDays > 0) {
-            return `${prefix}${weeks}w ${remainingDays}d${suffix ? " " + suffix : ""}`;
+            return `${prefix}${weeks}w ${remainingDays}d${suffix ? ` ${suffix}` : ""}`;
         }
-        return `${prefix}${weeks}w${suffix ? " " + suffix : ""}`;
+        return `${prefix}${weeks}w${suffix ? ` ${suffix}` : ""}`;
     }
 
     const months = Math.floor(days / 30);
     if (months < 12) {
-        return `${prefix}${months}mo${suffix ? " " + suffix : ""}`;
+        return `${prefix}${months}mo${suffix ? ` ${suffix}` : ""}`;
     }
 
     const years = Math.floor(days / 365);
     const remainingMonths = Math.floor((days % 365) / 30);
     if (remainingMonths > 0) {
-        return `${prefix}${years}y ${remainingMonths}mo${suffix ? " " + suffix : ""}`;
+        return `${prefix}${years}y ${remainingMonths}mo${suffix ? ` ${suffix}` : ""}`;
     }
-    return `${prefix}${years}y${suffix ? " " + suffix : ""}`;
+    return `${prefix}${years}y${suffix ? ` ${suffix}` : ""}`;
 }
 
 /**
@@ -87,29 +87,29 @@ function formatRelativeDays(diffMs: number): string {
     }
 
     if (days < 7) {
-        return `${prefix}${days}d${suffix ? " " + suffix : ""}`;
+        return `${prefix}${days}d${suffix ? ` ${suffix}` : ""}`;
     }
 
     const weeks = Math.floor(days / 7);
     if (weeks < 4) {
         const remainingDays = days % 7;
         if (remainingDays > 0) {
-            return `${prefix}${weeks}w ${remainingDays}d${suffix ? " " + suffix : ""}`;
+            return `${prefix}${weeks}w ${remainingDays}d${suffix ? ` ${suffix}` : ""}`;
         }
-        return `${prefix}${weeks}w${suffix ? " " + suffix : ""}`;
+        return `${prefix}${weeks}w${suffix ? ` ${suffix}` : ""}`;
     }
 
     const months = Math.floor(days / 30);
     if (months < 12) {
-        return `${prefix}${months}mo${suffix ? " " + suffix : ""}`;
+        return `${prefix}${months}mo${suffix ? ` ${suffix}` : ""}`;
     }
 
     const years = Math.floor(days / 365);
     const remainingMonths = Math.floor((days % 365) / 30);
     if (remainingMonths > 0) {
-        return `${prefix}${years}y ${remainingMonths}mo${suffix ? " " + suffix : ""}`;
+        return `${prefix}${years}y ${remainingMonths}mo${suffix ? ` ${suffix}` : ""}`;
     }
-    return `${prefix}${years}y${suffix ? " " + suffix : ""}`;
+    return `${prefix}${years}y${suffix ? ` ${suffix}` : ""}`;
 }
 
 /**

@@ -119,6 +119,7 @@ describe("formatPrettyMessage", () => {
 });
 
 function stripAnsi(value: string): string {
+    // biome-ignore lint/complexity/useRegexLiterals: Literal form triggers noControlCharactersInRegex for ESC.
     const ansiPattern = new RegExp("\\u001B\\[[0-9;]*m", "g");
     return value.replace(ansiPattern, "");
 }

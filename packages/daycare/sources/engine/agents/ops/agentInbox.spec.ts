@@ -3,12 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { AgentInbox } from "./agentInbox.js";
 
 const buildReset = () => ({ type: "reset" as const });
-const buildMessage = (text: string, messageId: string, tags: string[] = []) => ({
+const buildMessage = (text: string, messageId: string) => ({
     type: "message" as const,
     message: { text },
     context: {
-        messageId,
-        ...(tags.length > 0 ? { permissionTags: tags } : {})
+        messageId
     }
 });
 
@@ -43,8 +42,8 @@ describe("AgentInbox", () => {
 
     it("combines queued message items into one inbox entry", async () => {
         const inbox = new AgentInbox("agent-4");
-        inbox.post(buildMessage("first", "1", ["@read:/tmp"]));
-        const second = inbox.post(buildMessage("second", "2", ["@write:/tmp", "@read:/tmp"]));
+        inbox.post(buildMessage("first", "1"));
+        const second = inbox.post(buildMessage("second", "2"));
 
         expect(inbox.size()).toBe(1);
         const entry = await inbox.next();
@@ -55,8 +54,7 @@ describe("AgentInbox", () => {
         }
         expect(entry.item.message.text).toBe("first\nsecond");
         expect(entry.item.context).toEqual({
-            messageId: "2",
-            permissionTags: ["@read:/tmp", "@write:/tmp"]
+            messageId: "2"
         });
     });
 

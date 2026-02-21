@@ -16,7 +16,7 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
     const configDir = path.dirname(resolvedSettingsPath);
     const dataDir = path.resolve(resolvedSettings.engine?.dataDir ?? DEFAULT_DAYCARE_DIR);
     const agentsDir = path.join(dataDir, "agents");
-    const usersDir = path.join(dataDir, "users");
+    const usersDir = path.join(configDir, "users");
     const dbPath = path.resolve(resolvedSettings.engine?.dbPath ?? path.join(dataDir, "daycare.db"));
     const authPath = path.join(dataDir, "auth.json");
     const socketPath = resolveEngineSocketPath(resolvedSettings.engine?.socketPath);

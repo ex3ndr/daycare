@@ -188,10 +188,7 @@ function createContext(overrides: Partial<ToolExecutionContext> = {}): ToolExecu
         assistant: null,
         permissions: {
             workingDir: "/tmp",
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: []
         },
         agent,
         ctx: new Context("agent-1", "user-1"),

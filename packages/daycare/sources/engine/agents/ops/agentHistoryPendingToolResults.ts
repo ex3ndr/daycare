@@ -1,6 +1,6 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import type { AgentHistoryRecord, ToolExecutionResult } from "@/types";
-import { toolExecutionResultOutcome, toolReturnOutcome } from "../../modules/tools/toolReturnOutcome.js";
+import { toolExecutionResultOutcome } from "../../modules/tools/toolReturnOutcome.js";
 
 export type AgentHistoryPendingReason = "session_crashed" | "user_aborted";
 

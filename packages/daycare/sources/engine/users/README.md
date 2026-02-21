@@ -3,7 +3,7 @@
 This module provides per-user filesystem isolation under `config.usersDir`:
 
 ```text
-<dataDir>/users/<userId>/
+<configDir>/users/<userId>/
   skills/
   apps/
     <app-id>/
@@ -29,7 +29,7 @@ This module provides per-user filesystem isolation under `config.usersDir`:
 
 - `userHome.ts`: `UserHome` facade for user-scoped path resolution.
 - `userHomeEnsure.ts`: creates user directory tree and seeds knowledge markdown files.
-- `userHomeMigrate.ts`: one-time migration from legacy shared storage into owner user home.
+- `userHomeMigrate.ts`: one-time migration of legacy knowledge files into owner user home.
 
 ## Resolution Flow
 
@@ -62,8 +62,6 @@ sequenceDiagram
         Migrate->>DB: resolve/create owner user
         Migrate->>FS: ensure owner UserHome
         Migrate->>FS: copy legacy knowledge files
-        Migrate->>FS: copy workspace/files -> owner home/desktop
-        Migrate->>FS: copy workspace/apps -> owner apps
         Migrate->>FS: write users/.migrated
         Migrate-->>Engine: complete
     end

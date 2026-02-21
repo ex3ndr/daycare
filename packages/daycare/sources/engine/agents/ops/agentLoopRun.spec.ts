@@ -1214,10 +1214,7 @@ function optionsBuild(params: {
                 inferenceSessionId: params.inferenceSessionId ?? "session-agent-1",
                 permissions: {
                     workingDir: "/tmp",
-                    writeDirs: ["/tmp"],
-                    readDirs: ["/tmp"],
-                    network: false,
-                    events: false
+                    writeDirs: ["/tmp"]
                 }
             }
         } as unknown as Agent,

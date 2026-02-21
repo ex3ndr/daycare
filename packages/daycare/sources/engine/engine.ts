@@ -10,7 +10,6 @@ import { Storage } from "../storage/storage.js";
 import { InvalidateSync } from "../util/sync.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
-import { agentDescriptorLabel } from "./agents/ops/agentDescriptorLabel.js";
 import { agentDescriptorTargetResolve } from "./agents/ops/agentDescriptorTargetResolve.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { appInstallToolBuild } from "./apps/appInstallToolBuild.js";
@@ -45,8 +44,6 @@ import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
-import { PermissionRequestRegistry } from "./modules/tools/permissionRequestRegistry.js";
-import { buildPermissionGrantTool, buildPermissionRequestTool } from "./modules/tools/permissions.js";
 import { buildReactionTool } from "./modules/tools/reaction.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
@@ -59,7 +56,6 @@ import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { skipToolBuild } from "./modules/tools/skipTool.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
-import { permissionDescribeDecision } from "./permissions/permissionDescribeDecision.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -94,7 +90,6 @@ export class Engine {
     readonly processes: Processes;
     readonly inferenceRouter: InferenceRouter;
     readonly eventBus: EngineEventBus;
-    readonly permissionRequestRegistry: PermissionRequestRegistry;
     readonly apps: Apps;
     readonly exposes: Exposes;
     private readonly reloadSync: InvalidateSync;
@@ -126,10 +121,8 @@ export class Engine {
         this.reloadSync = new InvalidateSync(async () => {
             await this.reloadApplyLatest();
         });
-        this.permissionRequestRegistry = new PermissionRequestRegistry();
         this.authStore = new AuthStore(this.config.current);
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
-            socketPath: this.config.current.socketPath,
             repository: this.storage.processes
         });
         this.incomingMessages = new IncomingMessages({
@@ -231,43 +224,6 @@ export class Engine {
                     }
                     logger.debug({ connector, command: parsed.name }, "event: Unknown command ignored");
                 }),
-            onPermission: async (decision, context, descriptor) =>
-                this.runConnectorCallback("permission", async () => {
-                    const resolved = this.permissionRequestRegistry.resolve(decision.token, decision);
-                    if (!resolved) {
-                        logger.warn(
-                            { token: decision.token, agentId: decision.agentId },
-                            "event: Permission decision dropped; no pending request"
-                        );
-                    }
-
-                    if (decision.agentId) {
-                        const requester = this.agentSystem.getAgentDescriptor(decision.agentId);
-                        if (!requester || requester.type !== "user") {
-                            const status = decision.approved ? "approved" : "denied";
-                            const permissionLabels = decision.permissions.map((permission) =>
-                                permissionDescribeDecision(permission.access)
-                            );
-                            const permissionLabel = permissionLabels.join(", ");
-                            const permissionNoun = permissionLabels.length === 1 ? "permission" : "permissions";
-                            const agentLabel = requester ? agentDescriptorLabel(requester) : "agent";
-                            const notice = [
-                                `User ${status} ${permissionNoun} (${permissionLabel}) for background agent "${agentLabel}".`,
-                                "Decision delivered to background agent."
-                            ].join("\n");
-                            await this.agentSystem.post(
-                                { descriptor },
-                                {
-                                    type: "system_message",
-                                    text: notice,
-                                    origin: decision.agentId,
-                                    context,
-                                    silent: true
-                                }
-                            );
-                        }
-                    }
-                }),
             onFatal: (source, reason, error) => {
                 logger.warn({ source, reason, error }, "event: Connector requested shutdown");
             }
@@ -317,17 +273,14 @@ export class Engine {
             pluginManager: this.pluginManager,
             inferenceRouter: this.inferenceRouter,
             authStore: this.authStore,
-            delayedSignals: this.delayedSignals,
-            permissionRequestRegistry: this.permissionRequestRegistry
+            delayedSignals: this.delayedSignals
         });
 
         this.crons = new Crons({
             config: this.config,
             storage: this.storage,
             eventBus: this.eventBus,
-            agentSystem: this.agentSystem,
-            connectorRegistry: this.modules.connectors,
-            permissionRequestRegistry: this.permissionRequestRegistry
+            agentSystem: this.agentSystem
         });
         this.agentSystem.setCrons(this.crons);
         this.agentSystem.setSignals(this.signals);
@@ -337,9 +290,7 @@ export class Engine {
             storage: this.storage,
             eventBus: this.eventBus,
             intervalMs: 30 * 60 * 1000,
-            agentSystem: this.agentSystem,
-            connectorRegistry: this.modules.connectors,
-            permissionRequestRegistry: this.permissionRequestRegistry
+            agentSystem: this.agentSystem
         });
         this.heartbeats = heartbeats;
         this.agentSystem.setHeartbeats(heartbeats);
@@ -359,14 +310,7 @@ export class Engine {
         const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
         const ownerUserHome = this.agentSystem.userHomeForUserId(ownerUserId);
         await userHomeEnsure(ownerUserHome);
-        const legacyWorkspaceDir = legacyWorkspaceDirResolve(
-            this.config.current.configDir,
-            this.config.current.settings.assistant
-        );
-        await userHomeMigrate(this.config.current, this.storage, {
-            filesDir: path.join(legacyWorkspaceDir, "files"),
-            appsDir: path.join(legacyWorkspaceDir, "apps")
-        });
+        await userHomeMigrate(this.config.current, this.storage);
 
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
@@ -416,8 +360,6 @@ export class Engine {
         this.modules.tools.register("core", signalEventsCsvToolBuild(this.signals));
         this.modules.tools.register("core", buildSignalSubscribeTool(this.signals));
         this.modules.tools.register("core", buildSignalUnsubscribeTool(this.signals));
-        this.modules.tools.register("core", buildPermissionRequestTool());
-        this.modules.tools.register("core", buildPermissionGrantTool());
         this.modules.tools.register("core", appInstallToolBuild(this.apps));
         this.modules.tools.register("core", appRuleToolBuild(this.apps));
         this.modules.tools.register("core", exposeCreateToolBuild(this.exposes));
@@ -430,7 +372,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: cron, heartbeat, topology, background, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, request_permission, grant_permission, install_app, app_rules"
+            "register: Core tools registered: cron, heartbeat, topology, background, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();
@@ -589,10 +531,7 @@ export class Engine {
         return this.config.inReadLock(operation);
     }
 
-    private async runConnectorCallback(
-        kind: "message" | "command" | "permission",
-        operation: () => Promise<void>
-    ): Promise<void> {
+    private async runConnectorCallback(kind: "message" | "command", operation: () => Promise<void>): Promise<void> {
         try {
             await this.inReadLock(operation);
         } catch (error) {
@@ -670,17 +609,4 @@ function configReloadPathsEqual(left: Config, right: Config): boolean {
         left.authPath === right.authPath &&
         left.socketPath === right.socketPath
     );
-}
-
-function legacyWorkspaceDirResolve(configDir: string, assistant: unknown): string {
-    const configured =
-        assistant &&
-        typeof assistant === "object" &&
-        typeof (assistant as { workspaceDir?: unknown }).workspaceDir === "string"
-            ? (assistant as { workspaceDir?: string }).workspaceDir?.trim()
-            : "";
-    if (configured) {
-        return path.isAbsolute(configured) ? path.resolve(configured) : path.resolve(configDir, configured);
-    }
-    return path.resolve(configDir, "workspace");
 }

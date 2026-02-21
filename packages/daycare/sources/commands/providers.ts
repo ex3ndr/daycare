@@ -153,7 +153,7 @@ async function fetchConnectedProviders(
             return inference.filter((provider) => loaded.size === 0 || loaded.has(provider.id));
         }
         return Array.from(loaded).map((id) => ({ id, label: id }));
-    } catch (error) {
+    } catch (_error) {
         return null;
     }
 }

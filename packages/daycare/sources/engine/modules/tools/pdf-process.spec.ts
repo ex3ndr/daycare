@@ -58,10 +58,7 @@ function contextCreate(workingDir: string): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir,
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: []
         },
         agent: null as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],

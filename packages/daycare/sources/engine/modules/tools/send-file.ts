@@ -10,8 +10,8 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
+import { openSecure, pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
-import { openSecure, pathResolveSecure } from "../../permissions/pathResolveSecure.js";
 
 const schema = Type.Object(
     {
@@ -154,7 +154,7 @@ async function resolveFile(payload: SendFileArgs, context: ToolExecutionContext)
     }
 
     // Securely resolve path, following symlinks and verifying containment
-    const allowedDirs = [context.permissions.workingDir, ...context.permissions.readDirs];
+    const allowedDirs = [context.permissions.workingDir, ...context.permissions.writeDirs];
     const { realPath: resolved } = await pathResolveSecure(allowedDirs, payload.path!);
 
     // Use lstat to check for symlinks, then open securely to prevent TOCTOU

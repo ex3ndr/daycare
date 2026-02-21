@@ -29,7 +29,7 @@ function renderTokens(tokens: Token[]): string {
 function renderToken(token: Token): string {
     switch (token.type) {
         case "paragraph":
-            return renderInline(token as Tokens.Paragraph) + "\n";
+            return `${renderInline(token as Tokens.Paragraph)}\n`;
 
         case "text":
             // Top-level text may contain nested tokens
@@ -160,7 +160,7 @@ function renderList(token: Tokens.List): string {
         const content = renderListItemContent(item);
         return prefix + content;
     });
-    return items.join("\n") + "\n";
+    return `${items.join("\n")}\n`;
 }
 
 /** Renders list item content */
@@ -195,16 +195,16 @@ function renderTable(token: Tokens.Table): string {
 
     // Header row
     const headerCells = token.header.map((cell) => renderInline(cell));
-    rows.push("| " + headerCells.join(" | ") + " |");
+    rows.push(`| ${headerCells.join(" | ")} |`);
 
     // Separator
-    rows.push("| " + token.header.map(() => "---").join(" | ") + " |");
+    rows.push(`| ${token.header.map(() => "---").join(" | ")} |`);
 
     // Body rows
     for (const row of token.rows) {
         const cells = row.map((cell) => renderInline(cell));
-        rows.push("| " + cells.join(" | ") + " |");
+        rows.push(`| ${cells.join(" | ")} |`);
     }
 
-    return rows.join("\n") + "\n";
+    return `${rows.join("\n")}\n`;
 }

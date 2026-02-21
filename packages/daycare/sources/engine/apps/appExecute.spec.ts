@@ -45,10 +45,7 @@ describe("appExecute", () => {
             activeSessionId: null,
             permissions: {
                 workingDir: rootDir,
-                writeDirs: [rootDir],
-                readDirs: [rootDir],
-                network: false,
-                events: false
+                writeDirs: [rootDir]
             },
             tokens: null,
             stats: {},
@@ -93,10 +90,7 @@ describe("appExecute", () => {
             assistant: null,
             permissions: {
                 workingDir: rootDir,
-                writeDirs: [rootDir],
-                readDirs: [rootDir],
-                network: false,
-                events: false
+                writeDirs: [rootDir]
             },
             agent: { id: "parent-agent" } as ToolExecutionContext["agent"],
             ctx: { agentId: "parent-agent", userId: "user-1" } as ToolExecutionContext["ctx"],
@@ -205,10 +199,7 @@ describe("appExecute", () => {
             activeSessionId: null,
             permissions: {
                 workingDir: rootDir,
-                writeDirs: [rootDir],
-                readDirs: [rootDir],
-                network: false,
-                events: false
+                writeDirs: [rootDir]
             },
             tokens: null,
             stats: {},
@@ -252,10 +243,7 @@ describe("appExecute", () => {
             assistant: null,
             permissions: {
                 workingDir: rootDir,
-                writeDirs: [rootDir],
-                readDirs: [rootDir],
-                network: false,
-                events: false
+                writeDirs: [rootDir]
             },
             agent: { id: "parent-agent" } as ToolExecutionContext["agent"],
             ctx: { agentId: "parent-agent", userId: "user-1" } as ToolExecutionContext["ctx"],

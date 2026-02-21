@@ -67,9 +67,6 @@ describe("sandboxCanWrite", () => {
 function buildPermissions(workingDir: string, writeDirs: string[]): SessionPermissions {
     return {
         workingDir: path.resolve(workingDir),
-        readDirs: [],
-        writeDirs: writeDirs.map((entry) => path.resolve(entry)),
-        network: false,
-        events: false
+        writeDirs: writeDirs.map((entry) => path.resolve(entry))
     };
 }

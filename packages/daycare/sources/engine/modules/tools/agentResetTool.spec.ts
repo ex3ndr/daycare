@@ -71,10 +71,7 @@ function contextBuild(agentSystem: {
         assistant: null,
         permissions: {
             workingDir: "/tmp",
-            writeDirs: ["/tmp"],
-            readDirs: ["/tmp"],
-            network: true,
-            events: false
+            writeDirs: ["/tmp"]
         },
         agent: { id: "agent-source" } as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],

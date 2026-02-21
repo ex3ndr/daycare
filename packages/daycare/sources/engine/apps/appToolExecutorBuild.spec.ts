@@ -96,7 +96,7 @@ describe("appToolExecutorBuild", () => {
         expect(executor.listTools().map((tool) => tool.name)).toContain("run_python");
     });
 
-    it("includes request_permission in app allowlist when resolver exposes it", () => {
+    it("excludes request_permission from app allowlist", () => {
         const execute = vi.fn(async () => toolResultBuild(false, "ok"));
         const resolver = resolverBuild(execute);
         const executor = appToolExecutorBuild({
@@ -111,7 +111,7 @@ describe("appToolExecutorBuild", () => {
             toolResolver: resolver
         });
 
-        expect(executor.listTools().map((tool) => tool.name)).toContain("request_permission");
+        expect(executor.listTools().map((tool) => tool.name)).not.toContain("request_permission");
     });
 
     it("bypasses review model when reviewer is disabled by config", async () => {
@@ -239,10 +239,7 @@ function contextBuild(): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir: "/workspace",
-            writeDirs: ["/workspace"],
-            readDirs: ["/workspace"],
-            network: false,
-            events: false
+            writeDirs: ["/workspace"]
         },
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],

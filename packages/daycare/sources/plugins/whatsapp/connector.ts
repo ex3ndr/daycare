@@ -2,7 +2,6 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Boom } from "@hapi/boom";
 import makeWASocket, {
-    type AuthenticationState,
     type BaileysEventMap,
     DisconnectReason,
     downloadMediaMessage,
@@ -22,10 +21,7 @@ import type {
     ConnectorMessage,
     FileReference,
     MessageContext,
-    MessageHandler,
-    PermissionDecision,
-    PermissionHandler,
-    PermissionRequest
+    MessageHandler
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
@@ -70,7 +66,6 @@ export class WhatsAppConnector implements Connector {
     private socket: WASocket | null = null;
     private handlers: MessageHandler[] = [];
     private commandHandlers: CommandHandler[] = [];
-    private permissionHandlers: PermissionHandler[] = [];
     private allowedPhones: Set<string>;
     private authStore: AuthStore;
     private instanceId: string;
@@ -81,10 +76,6 @@ export class WhatsAppConnector implements Connector {
     private onFatal?: (reason: string, error?: unknown) => void;
     private shuttingDown = false;
     private reconnecting = false;
-    private pendingPermissions = new Map<
-        string,
-        { request: PermissionRequest; context: MessageContext; descriptor: AgentDescriptor }
-    >();
 
     constructor(options: WhatsAppConnectorOptions) {
         logger.debug(`init: WhatsAppConnector constructor instanceId=${options.instanceId}`);
@@ -116,16 +107,6 @@ export class WhatsAppConnector implements Connector {
             const index = this.commandHandlers.indexOf(handler);
             if (index !== -1) {
                 this.commandHandlers.splice(index, 1);
-            }
-        };
-    }
-
-    onPermission(handler: PermissionHandler): () => void {
-        this.permissionHandlers.push(handler);
-        return () => {
-            const index = this.permissionHandlers.indexOf(handler);
-            if (index !== -1) {
-                this.permissionHandlers.splice(index, 1);
             }
         };
     }
@@ -166,28 +147,6 @@ export class WhatsAppConnector implements Connector {
         for (const file of files.slice(1)) {
             await this.sendFile(jid, file);
         }
-    }
-
-    async requestPermission(
-        targetId: string,
-        request: PermissionRequest,
-        context: MessageContext,
-        descriptor: AgentDescriptor
-    ): Promise<void> {
-        if (!this.socket) {
-            logger.warn("event: Cannot request permission: socket not connected");
-            return;
-        }
-
-        if (!this.isAllowedTarget(targetId, "requestPermission")) {
-            return;
-        }
-
-        const jid = phoneToJid(targetId);
-        this.pendingPermissions.set(request.token, { request, context, descriptor });
-
-        const text = formatPermissionMessage(request, "pending");
-        await this.socket.sendMessage(jid, { text });
     }
 
     startTyping(targetId: string): () => void {
@@ -345,14 +304,6 @@ export class WhatsAppConnector implements Connector {
 
         logger.debug(`receive: Received WhatsApp message phone=${phone} messageId=${messageId} hasText=${!!text}`);
 
-        // Check for permission response
-        if (text) {
-            const permissionHandled = await this.handlePermissionResponse(text, phone);
-            if (permissionHandled) {
-                return;
-            }
-        }
-
         const descriptor: AgentDescriptor = {
             type: "user",
             connector: "whatsapp",
@@ -385,46 +336,6 @@ export class WhatsAppConnector implements Connector {
         for (const handler of this.handlers) {
             await handler(payload, context, descriptor);
         }
-    }
-
-    private async handlePermissionResponse(text: string, phone: string): Promise<boolean> {
-        const normalized = text.toLowerCase().trim();
-
-        // Look for permission tokens in pending permissions
-        for (const [token, pending] of this.pendingPermissions) {
-            if (normalized.includes(token.slice(0, 8).toLowerCase())) {
-                const approved =
-                    normalized.includes("allow") || normalized.includes("yes") || normalized.includes("approve");
-                const denied =
-                    normalized.includes("deny") || normalized.includes("no") || normalized.includes("reject");
-
-                if (approved || denied) {
-                    this.pendingPermissions.delete(token);
-
-                    const decision: PermissionDecision = {
-                        token,
-                        agentId: pending.request.agentId,
-                        approved,
-                        permissions: pending.request.permissions,
-                        ...(pending.request.scope ? { scope: pending.request.scope } : {})
-                    };
-
-                    // Send confirmation
-                    if (this.socket) {
-                        const jid = phoneToJid(phone);
-                        const status = approved ? "approved" : "denied";
-                        const confirmText = formatPermissionMessage(pending.request, status);
-                        await this.socket.sendMessage(jid, { text: confirmText });
-                    }
-
-                    for (const handler of this.permissionHandlers) {
-                        await handler(decision, pending.context, pending.descriptor);
-                    }
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private async sendFile(jid: string, file: ConnectorFile, caption?: string): Promise<void> {
@@ -570,57 +481,4 @@ function extractMessageText(msg: proto.IWebMessageInfo): string | null {
         message.documentMessage?.caption ??
         null
     );
-}
-
-type PermissionStatus = "pending" | "approved" | "denied";
-
-function formatPermissionMessage(request: PermissionRequest, status: PermissionStatus): string {
-    const permissionLines = request.permissions.map((permission) => `- ${describePermissionKind(permission.access)}`);
-
-    const heading =
-        status === "approved"
-            ? "✅ *Permission granted*"
-            : status === "denied"
-              ? "❌ *Permission denied*"
-              : "🔐 *Permission request*";
-
-    const requesterLine =
-        request.requester.kind === "background" ? `*Requester*: ${request.requester.label} (background agent)` : null;
-    const scopeLine =
-        request.scope === "always"
-            ? "*Scope*: Always (all future runs for this app)"
-            : request.scope === "now"
-              ? "*Scope*: One time (this app run only)"
-              : null;
-    const lines = [
-        heading,
-        "",
-        "*Permissions*:",
-        ...permissionLines,
-        requesterLine,
-        scopeLine,
-        `*Reason*: ${request.reason}`,
-        "",
-        status === "pending"
-            ? `Reply with "allow ${request.token.slice(0, 8)}" or "deny ${request.token.slice(0, 8)}"`
-            : "Decision recorded."
-    ];
-
-    return lines.filter((line): line is string => line !== null).join("\n");
-}
-
-function describePermissionKind(access: PermissionRequest["permissions"][number]["access"]): string {
-    if (access.kind === "read") {
-        return `Read files: ${access.path}`;
-    }
-    if (access.kind === "write") {
-        return `Write/edit files: ${access.path}`;
-    }
-    if (access.kind === "workspace") {
-        return "Workspace write access";
-    }
-    if (access.kind === "events") {
-        return "Events access";
-    }
-    return "Network access";
 }

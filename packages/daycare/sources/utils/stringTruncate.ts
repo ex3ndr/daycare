@@ -2,5 +2,5 @@ export function stringTruncate(value: string, maxLength: number): string {
     if (value.length <= maxLength) {
         return value;
     }
-    return value.slice(0, maxLength) + "...";
+    return `${value.slice(0, maxLength)}...`;
 }

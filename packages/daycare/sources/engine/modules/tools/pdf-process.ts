@@ -3,8 +3,8 @@ import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { isWithinSecure, openSecure } from "../../../sandbox/pathResolveSecure.js";
 import { sandboxCanRead } from "../../../sandbox/sandboxCanRead.js";
-import { isWithinSecure, openSecure } from "../../permissions/pathResolveSecure.js";
 import { pdfExtract, pdfSignatureIs } from "../media/pdfExtract.js";
 
 const DEFAULT_PDF_MAX_CHARS = 20_000;

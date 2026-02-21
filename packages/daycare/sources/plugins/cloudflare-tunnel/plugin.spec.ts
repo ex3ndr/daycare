@@ -60,8 +60,7 @@ describe("cloudflare tunnel plugin", () => {
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
             },
-            mode: "runtime" as const,
-            events: { emit: () => undefined }
+            mode: "runtime" as const
         };
 
         execSuccess(JSON.stringify({ result: { hostname: "web.example.com" } }));
@@ -82,10 +81,7 @@ describe("cloudflare tunnel plugin", () => {
             },
             {
                 workingDir: "/tmp/daycare/plugins/cloudflare-1",
-                writeDirs: ["/tmp/daycare/plugins/cloudflare-1"],
-                readDirs: ["/tmp/daycare/plugins/cloudflare-1"],
-                network: true,
-                events: false
+                writeDirs: ["/tmp/daycare/plugins/cloudflare-1"]
             }
         );
 
@@ -182,8 +178,7 @@ describe("cloudflare tunnel plugin", () => {
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
             },
-            mode: "runtime" as const,
-            events: { emit: () => undefined }
+            mode: "runtime" as const
         };
 
         execSuccess(JSON.stringify({ result: { hostname: "web.example.com" } }));

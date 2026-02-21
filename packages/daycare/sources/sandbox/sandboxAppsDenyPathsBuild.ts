@@ -1,13 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { SessionPermissions } from "@/types";
-
 /**
  * Builds app-directory deny paths for sandbox runtime policies.
  * Expects: permissions.workingDir is absolute and normalized.
  */
-export function sandboxAppsDenyPathsBuild(permissions: SessionPermissions): string[] {
+export function sandboxAppsDenyPathsBuild(permissions: { workingDir: string }): string[] {
     const context = sandboxAppsContextResolve(permissions.workingDir);
     if (!context) {
         return [path.resolve(permissions.workingDir, "apps")];

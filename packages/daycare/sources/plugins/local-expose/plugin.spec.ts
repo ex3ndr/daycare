@@ -60,8 +60,7 @@ describe("local-expose plugin", () => {
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
             },
-            mode: "runtime" as const,
-            events: { emit: () => undefined }
+            mode: "runtime" as const
         };
 
         const instance = await plugin.create(api as never);
@@ -87,10 +86,7 @@ describe("local-expose plugin", () => {
             }),
             {
                 workingDir: "/tmp/daycare/plugins/local-expose-1",
-                writeDirs: ["/tmp/daycare/plugins/local-expose-1"],
-                readDirs: ["/tmp/daycare/plugins/local-expose-1"],
-                network: true,
-                events: false
+                writeDirs: ["/tmp/daycare/plugins/local-expose-1"]
             }
         );
 
@@ -156,8 +152,7 @@ describe("local-expose plugin", () => {
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
             },
-            mode: "runtime" as const,
-            events: { emit: () => undefined }
+            mode: "runtime" as const
         };
 
         const instance = await plugin.create(api as never);
@@ -205,8 +200,7 @@ describe("local-expose plugin", () => {
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
             },
-            mode: "runtime" as const,
-            events: { emit: () => undefined }
+            mode: "runtime" as const
         };
 
         const instance = await plugin.create(api as never);

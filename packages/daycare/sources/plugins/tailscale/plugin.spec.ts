@@ -57,8 +57,7 @@ describe("tailscale plugin", () => {
                 }
             },
             processes: {},
-            mode: "runtime" as const,
-            events: { emit: () => undefined }
+            mode: "runtime" as const
         };
 
         execSuccess(JSON.stringify({ Self: { DNSName: "machine.tail123.ts.net" } }));

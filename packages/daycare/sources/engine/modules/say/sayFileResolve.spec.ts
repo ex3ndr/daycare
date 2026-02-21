@@ -87,10 +87,7 @@ describe("sayFileResolve", () => {
 function permissionsBuild(workingDir: string): SessionPermissions {
     return {
         workingDir,
-        writeDirs: [workingDir],
-        readDirs: [workingDir],
-        network: false,
-        events: false
+        writeDirs: [workingDir]
     };
 }
 

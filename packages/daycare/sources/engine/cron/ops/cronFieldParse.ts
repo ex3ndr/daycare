@@ -16,7 +16,7 @@ export function cronFieldParse(field: string, min: number, max: number): CronFie
     // Handle step values like */5
     if (field.startsWith("*/")) {
         const step = parseInt(field.slice(2), 10);
-        if (isNaN(step) || step <= 0) {
+        if (Number.isNaN(step) || step <= 0) {
             return null;
         }
         for (let i = min; i <= max; i += step) {
@@ -33,7 +33,7 @@ export function cronFieldParse(field: string, min: number, max: number): CronFie
             const [startStr, endStr] = part.split("-");
             const start = parseInt(startStr!, 10);
             const end = parseInt(endStr!, 10);
-            if (isNaN(start) || isNaN(end) || start < min || end > max || start > end) {
+            if (Number.isNaN(start) || Number.isNaN(end) || start < min || end > max || start > end) {
                 return null;
             }
             for (let i = start; i <= end; i++) {
@@ -41,7 +41,7 @@ export function cronFieldParse(field: string, min: number, max: number): CronFie
             }
         } else {
             const value = parseInt(part, 10);
-            if (isNaN(value) || value < min || value > max) {
+            if (Number.isNaN(value) || value < min || value > max) {
                 return null;
             }
             values.add(value);

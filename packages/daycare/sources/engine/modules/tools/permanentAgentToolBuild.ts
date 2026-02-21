@@ -4,17 +4,14 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 import type { AgentState, SessionPermissions, ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import { pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import type { PermanentAgentSummary } from "../../agents/ops/agentPermanentTypes.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
-import { pathResolveSecure } from "../../permissions/pathResolveSecure.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
-import { permissionTagsApply } from "../../permissions/permissionTagsApply.js";
-import { permissionTagsNormalize } from "../../permissions/permissionTagsNormalize.js";
-import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 
 const schema = Type.Object(
     {
@@ -23,8 +20,7 @@ const schema = Type.Object(
         description: Type.String({ minLength: 1 }),
         systemPrompt: Type.String({ minLength: 1 }),
         workspaceDir: Type.Optional(Type.String({ minLength: 1 })),
-        agentId: Type.Optional(Type.String({ minLength: 1 })),
-        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
+        agentId: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -78,8 +74,6 @@ export function permanentAgentToolBuild(): ToolDefinition {
             if (!systemPrompt) {
                 throw new Error("Permanent agent system prompt is required.");
             }
-            const permissionTags = permissionTagsNormalize(payload.permissions);
-            await permissionTagsValidate(toolContext.permissions, permissionTags);
 
             const storage = toolContext.agentSystem.storage;
             const existingAgents = await agentPermanentList(storage);
@@ -115,7 +109,6 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     throw new Error("Permanent agent state not found.");
                 }
                 const permissions = updatePermissions(state.permissions, resolvedWorkspaceDir);
-                permissionTagsApply(permissions, permissionTags);
                 const nextState: AgentState = {
                     ...state,
                     permissions,
@@ -126,7 +119,6 @@ export function permanentAgentToolBuild(): ToolDefinition {
             } else {
                 const now = Date.now();
                 const permissions = updatePermissions(basePermissions, resolvedWorkspaceDir);
-                permissionTagsApply(permissions, permissionTags);
                 const state: AgentState = {
                     context: { messages: [] },
                     activeSessionId: null,

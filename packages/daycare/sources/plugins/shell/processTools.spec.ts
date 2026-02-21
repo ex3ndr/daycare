@@ -4,7 +4,7 @@ import type { ProcessCreateInput, Processes, ProcessInfo } from "../../engine/pr
 import { buildProcessStartTool } from "./processTools.js";
 
 describe("process_start permissions", () => {
-    it("uses no network/write grants and no readDirs when none are provided", async () => {
+    it("uses /tmp write scope for process sandboxing", async () => {
         let capturedPermissions: SessionPermissions | null = null;
         const create = vi.fn(async (_input: ProcessCreateInput, permissions: SessionPermissions) => {
             capturedPermissions = permissions;
@@ -18,20 +18,14 @@ describe("process_start permissions", () => {
             },
             createContext({
                 workingDir: "/workspace",
-                writeDirs: ["/workspace", "/tmp"],
-                readDirs: ["/workspace", "/tmp", "/tmp/read-only"],
-                network: true,
-                events: false
+                writeDirs: ["/workspace", "/tmp"]
             }),
             { id: "call-0", name: "process_start" }
         );
 
         expect(capturedPermissions).toEqual({
             workingDir: "/workspace",
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: ["/tmp"]
         });
     });
 
@@ -40,24 +34,17 @@ describe("process_start permissions", () => {
         const tool = buildProcessStartTool({ create } as unknown as Processes);
         const permissions: SessionPermissions = {
             workingDir: "/workspace",
-            writeDirs: ["/workspace", "/tmp"],
-            readDirs: ["/workspace", "/tmp"],
-            network: true,
-            events: false
+            writeDirs: ["/workspace", "/tmp"]
         };
         const original = {
             workingDir: permissions.workingDir,
-            writeDirs: [...permissions.writeDirs],
-            readDirs: [...permissions.readDirs],
-            network: permissions.network,
-            events: permissions.events
+            writeDirs: [...permissions.writeDirs]
         };
         const context = createContext(permissions);
 
         await tool.execute(
             {
-                command: "echo hello",
-                permissions: ["@write:/tmp", "@network"]
+                command: "echo hello"
             },
             context,
             { id: "call-0b", name: "process_start" }
@@ -66,31 +53,7 @@ describe("process_start permissions", () => {
         expect(context.permissions).toEqual(original);
     });
 
-    it("rejects requested permissions that are not held by the caller", async () => {
-        const create = vi.fn(async () => buildProcessInfo());
-        const tool = buildProcessStartTool({ create } as unknown as Processes);
-
-        await expect(
-            tool.execute(
-                {
-                    command: "echo hello",
-                    permissions: ["@network"]
-                },
-                createContext({
-                    workingDir: "/workspace",
-                    writeDirs: ["/workspace"],
-                    readDirs: ["/workspace"],
-                    network: false,
-                    events: false
-                }),
-                { id: "call-1", name: "process_start" }
-            )
-        ).rejects.toThrow("Cannot attach permission '@network'");
-
-        expect(create).not.toHaveBeenCalled();
-    });
-
-    it("adds requested write permission without populating readDirs", async () => {
+    it("does not forward caller write grants", async () => {
         let capturedPermissions: SessionPermissions | null = null;
         const create = vi.fn(async (_input: ProcessCreateInput, permissions: SessionPermissions) => {
             capturedPermissions = permissions;
@@ -100,57 +63,18 @@ describe("process_start permissions", () => {
 
         await tool.execute(
             {
-                command: "echo hello",
-                permissions: ["@write:/tmp"]
+                command: "echo hello"
             },
             createContext({
                 workingDir: "/workspace",
-                writeDirs: ["/workspace", "/tmp"],
-                readDirs: ["/workspace", "/tmp", "/tmp/read-only"],
-                network: true,
-                events: false
+                writeDirs: ["/workspace", "/tmp"]
             }),
             { id: "call-2", name: "process_start" }
         );
 
         expect(capturedPermissions).toEqual({
             workingDir: "/workspace",
-            writeDirs: ["/tmp"],
-            readDirs: [],
-            network: false,
-            events: false
-        });
-    });
-
-    it("ignores @read permission tags", async () => {
-        let capturedPermissions: SessionPermissions | null = null;
-        const create = vi.fn(async (_input: ProcessCreateInput, permissions: SessionPermissions) => {
-            capturedPermissions = permissions;
-            return buildProcessInfo();
-        });
-        const tool = buildProcessStartTool({ create } as unknown as Processes);
-
-        await tool.execute(
-            {
-                command: "echo hello",
-                permissions: ["@read:/etc"]
-            },
-            createContext({
-                workingDir: "/workspace",
-                writeDirs: ["/workspace"],
-                readDirs: ["/workspace"],
-                network: false,
-                events: false
-            }),
-            { id: "call-3", name: "process_start" }
-        );
-
-        expect(capturedPermissions).toEqual({
-            workingDir: "/workspace",
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: ["/tmp"]
         });
     });
 });

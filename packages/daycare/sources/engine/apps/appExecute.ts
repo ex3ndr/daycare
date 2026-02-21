@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { createId } from "@paralleldrive/cuid2";
 
 import type { ToolExecutionContext } from "@/types";

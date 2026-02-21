@@ -4,10 +4,7 @@ import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
-import type { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
-import { gatePermissionRequest } from "../scheduling/gatePermissionRequest.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition } from "./heartbeatTypes.js";
 import { heartbeatPromptBuildBatch } from "./ops/heartbeatPromptBuildBatch.js";
 import { HeartbeatScheduler } from "./ops/heartbeatScheduler.js";
@@ -19,8 +16,6 @@ export type HeartbeatsOptions = {
     storage: Storage;
     eventBus: EngineEventBus;
     agentSystem: AgentSystem;
-    connectorRegistry: ConnectorRegistry;
-    permissionRequestRegistry: PermissionRequestRegistry;
     intervalMs?: number;
 };
 
@@ -44,16 +39,8 @@ export class Heartbeats {
                 const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
                 return permissionBuildUser(this.agentSystem.userHomeForUserId(ownerUserId));
             },
-            resolvePermissions: async () =>
-                this.agentSystem.permissionsForTarget({
-                    descriptor: { type: "system", tag: "heartbeat" }
-                }),
             onRun: async (tasks) => {
                 const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
-                const targetAgentId = await this.agentSystem.agentIdForTarget(target);
-                const permissions = await this.agentSystem.permissionsForTarget(target);
-                this.agentSystem.updateAgentPermissions(targetAgentId, permissions, Date.now());
-
                 const batch = heartbeatPromptBuildBatch(tasks);
                 await this.agentSystem.postAndAwait(target, {
                     type: "system_message",
@@ -64,20 +51,6 @@ export class Heartbeats {
             },
             onError: async (error, taskIds) => {
                 logger.warn({ taskIds, error }, "error: Heartbeat task failed");
-            },
-            onGatePermissionRequest: async (task, missing) => {
-                const label = task.title ? `heartbeat task "${task.title}" (${task.id})` : `heartbeat task ${task.id}`;
-                const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
-                const agentId = await this.agentSystem.agentIdForTarget(target);
-                const result = await gatePermissionRequest({
-                    missing,
-                    taskLabel: label,
-                    agentSystem: this.agentSystem,
-                    connectorRegistry: options.connectorRegistry,
-                    permissionRequestRegistry: options.permissionRequestRegistry,
-                    agentId
-                });
-                return result.granted;
             },
             onTaskComplete: (task, runAt) => {
                 this.eventBus.emit("heartbeat.task.ran", { taskId: task.id, runAt: runAt.toISOString() });

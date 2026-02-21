@@ -2,10 +2,8 @@ import type { Context, SessionPermissions } from "@/types";
 import { getLogger } from "../../../log.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { permissionClone } from "../../permissions/permissionClone.js";
 import { execGateCheck } from "../../scheduling/execGateCheck.js";
 import { execGateOutputAppend } from "../../scheduling/execGateOutputAppend.js";
-import { gatePermissionsCheck } from "../../scheduling/gatePermissionsCheck.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition, HeartbeatSchedulerOptions } from "../heartbeatTypes.js";
 
 const logger = getLogger("heartbeat.scheduler");
@@ -21,10 +19,8 @@ export class HeartbeatScheduler {
     private intervalMs: number;
     private onRun: HeartbeatSchedulerOptions["onRun"];
     private onError?: HeartbeatSchedulerOptions["onError"];
-    private onGatePermissionRequest?: HeartbeatSchedulerOptions["onGatePermissionRequest"];
     private onTaskComplete?: HeartbeatSchedulerOptions["onTaskComplete"];
     private resolveDefaultPermissions: HeartbeatSchedulerOptions["resolveDefaultPermissions"];
-    private resolvePermissions?: HeartbeatSchedulerOptions["resolvePermissions"];
     private gateCheck: HeartbeatSchedulerOptions["gateCheck"];
     private timer: NodeJS.Timeout | null = null;
     private started = false;
@@ -38,10 +34,8 @@ export class HeartbeatScheduler {
         this.intervalMs = options.intervalMs ?? 30 * 60 * 1000;
         this.onRun = options.onRun;
         this.onError = options.onError;
-        this.onGatePermissionRequest = options.onGatePermissionRequest;
         this.onTaskComplete = options.onTaskComplete;
         this.resolveDefaultPermissions = options.resolveDefaultPermissions;
-        this.resolvePermissions = options.resolvePermissions;
         this.gateCheck = options.gateCheck ?? execGateCheck;
         logger.debug("init: HeartbeatScheduler initialized");
     }
@@ -210,7 +204,7 @@ export class HeartbeatScheduler {
             if (filtered.length === 0) {
                 return { ran: 0, taskIds: [] };
             }
-            const basePermissions = (await this.resolvePermissions?.()) ?? (await this.resolveDefaultPermissions());
+            const basePermissions = await this.resolveDefaultPermissions();
             const gated = await this.filterByGate(filtered, basePermissions);
             if (gated.length === 0) {
                 return { ran: 0, taskIds: [] };
@@ -265,46 +259,11 @@ export class HeartbeatScheduler {
                 eligible.push(task);
                 continue;
             }
-            let permissions = permissionClone(basePermissions);
-            let permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
-            if (!permissionCheck.allowed) {
-                logger.warn(
-                    { taskId: task.id, missing: permissionCheck.missing },
-                    "event: Heartbeat gate permissions missing; requesting user approval"
-                );
-                let granted = false;
-                try {
-                    granted = (await this.onGatePermissionRequest?.(task, permissionCheck.missing)) ?? false;
-                } catch (error) {
-                    logger.warn({ taskId: task.id, error }, "error: Heartbeat gate permission request failed");
-                    await this.onError?.(error, [task.id]);
-                    continue;
-                }
-                if (!granted) {
-                    logger.debug(
-                        { taskId: task.id, missing: permissionCheck.missing },
-                        "skip: Heartbeat skipped because gate permissions were denied or timed out"
-                    );
-                    continue;
-                }
-
-                const refreshedBasePermissions =
-                    (await this.resolvePermissions?.()) ?? (await this.resolveDefaultPermissions());
-                permissions = permissionClone(refreshedBasePermissions);
-                permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
-                if (!permissionCheck.allowed) {
-                    logger.warn(
-                        { taskId: task.id, missing: permissionCheck.missing },
-                        "skip: Heartbeat skipped because requested gate permissions are still missing"
-                    );
-                    continue;
-                }
-            }
+            const permissions = basePermissions;
             const result = await this.gateCheck?.({
                 gate: task.gate,
                 permissions,
-                workingDir: permissions.workingDir,
-                socketPath: this.config.current.socketPath
+                workingDir: permissions.workingDir
             });
             if (!result) {
                 eligible.push(task);

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { AgentState, ToolExecutionContext } from "@/types";
+import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/types";
 import { Agent } from "../../engine/agents/agent.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
@@ -33,43 +33,12 @@ describe("read tool allowed paths", () => {
         await fs.rm(outsideDir, { recursive: true, force: true });
     });
 
-    it("allows reading any absolute path when readDirs is empty", async () => {
+    it("allows reading any absolute path", async () => {
         const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
 
         const result = await tool.execute({ path: outsideFile }, context, readToolCall);
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
-
-        expect(result.toolMessage.isError).toBe(false);
-        expect(text).toContain("outside-content");
-    });
-
-    it("allows reading outside workspace even when readDirs are configured", async () => {
-        const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false, [workingDir]);
-
-        const result = await tool.execute({ path: outsideFile }, context, readToolCall);
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
-
-        expect(result.toolMessage.isError).toBe(false);
-        expect(text).toContain("outside-content");
-    });
-
-    it("allows reading write-granted files when readDirs are restricted", async () => {
-        const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false, [workingDir], [outsideFile]);
-
-        const result = await tool.execute({ path: outsideFile }, context, readToolCall);
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const text = toolMessageText(result.toolMessage.content);
 
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain("outside-content");
@@ -77,13 +46,10 @@ describe("read tool allowed paths", () => {
 
     it("supports relative read paths from workspace", async () => {
         const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
 
         const result = await tool.execute({ path: "inside.txt" }, context, readToolCall);
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const text = toolMessageText(result.toolMessage.content);
 
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain("line-1");
@@ -92,36 +58,27 @@ describe("read tool allowed paths", () => {
 
     it("supports line pagination with limit and offset", async () => {
         const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
 
         const firstResult = await tool.execute({ path: insideFile, limit: 2 }, context, readToolCall);
-        const firstText = firstResult.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const firstText = toolMessageText(firstResult.toolMessage.content);
         expect(firstText).toContain("line-1\nline-2");
         expect(firstText).toContain("Use offset=3 to continue.");
 
         const secondResult = await tool.execute({ path: insideFile, offset: 3, limit: 1 }, context, readToolCall);
-        const secondText = secondResult.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const secondText = toolMessageText(secondResult.toolMessage.content);
         expect(secondText).toContain("line-3");
         expect(secondText).not.toContain("line-1");
     });
 
     it("returns actionable message when first line exceeds byte limit", async () => {
         const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
         const largeLinePath = path.join(workingDir, "large-line.txt");
         await fs.writeFile(largeLinePath, `${"x".repeat(READ_LIMIT_TEST_BYTES)}\nline-2`, "utf8");
 
         const result = await tool.execute({ path: largeLinePath }, context, readToolCall);
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const text = toolMessageText(result.toolMessage.content);
 
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain("exceeds 50.0KB limit");
@@ -130,7 +87,7 @@ describe("read tool allowed paths", () => {
 
     it("returns image content for supported image files", async () => {
         const tool = buildWorkspaceReadTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
         const pngPath = path.join(workingDir, "image.png");
         const oneByOnePngBase64 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5L5f8AAAAASUVORK5CYII=";
@@ -139,10 +96,7 @@ describe("read tool allowed paths", () => {
         const result = await tool.execute({ path: pngPath }, context, readToolCall);
         expect(result.toolMessage.isError).toBe(false);
         expect(result.toolMessage.content.some((item) => item.type === "image")).toBe(true);
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const text = toolMessageText(result.toolMessage.content);
         expect(text).toContain("Read image file:");
         expect(text).toContain("[image/png]");
     });
@@ -159,89 +113,57 @@ describe("exec tool allowedDomains", () => {
         await fs.rm(workingDir, { recursive: true, force: true });
     });
 
-    it("throws when allowedDomains provided without network permission", async () => {
+    it("requires explicit allowedDomains", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
 
-        await expect(
-            tool.execute({ command: "echo ok", allowedDomains: ["example.com"] }, context, execToolCall)
-        ).rejects.toThrow("Network permission is required");
+        await expect(tool.execute({ command: "echo ok" }, context, execToolCall)).rejects.toThrow(
+            "allowedDomains must include at least one explicit domain"
+        );
     });
 
-    it("throws when packageManagers provided without network permission", async () => {
+    it("rejects wildcard allowedDomains", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir, false);
-
-        await expect(
-            tool.execute({ command: "echo ok", packageManagers: ["node"] }, context, execToolCall)
-        ).rejects.toThrow("Network permission is required");
-    });
-
-    it("throws when network permission is provided without allowedDomains", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, true);
-
-        await expect(
-            tool.execute({ command: "echo ok", permissions: ["@network"] }, context, execToolCall)
-        ).rejects.toThrow("Network cannot be enabled without allowedDomains.");
-    });
-
-    it("throws when allowedDomains includes '*'", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, true);
+        const context = createContext(workingDir);
 
         await expect(
             tool.execute({ command: "echo ok", allowedDomains: ["*"] }, context, execToolCall)
         ).rejects.toThrow("Wildcard");
     });
 
-    it("uses zero permissions by default when none are provided", async () => {
+    it("executes command with explicit domains", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir, true);
-
-        await expect(
-            tool.execute({ command: "echo ok", allowedDomains: ["example.com"] }, context, execToolCall)
-        ).rejects.toThrow("Network permission is required");
-    });
-
-    it("ignores @read tags in exec permissions", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, false, [workingDir], []);
+        const context = createContext(workingDir);
 
         const result = await tool.execute(
             {
                 command: "echo ok",
-                permissions: ["@read:/etc"]
+                allowedDomains: ["example.com"]
             },
             context,
             execToolCall
         );
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const text = toolMessageText(result.toolMessage.content);
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain("stdout:\nok");
     });
 
-    it("allows reading outside workspace by default", async () => {
+    it("allows reading outside workspace", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
         const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "exec-tool-outside-"));
         const outsideFile = path.join(outsideDir, "outside.txt");
         await fs.writeFile(outsideFile, "outside-content", "utf8");
         try {
             const result = await tool.execute(
                 {
-                    command: `cat "${outsideFile}"`
+                    command: `cat "${outsideFile}"`,
+                    allowedDomains: ["example.com"]
                 },
                 context,
                 execToolCall
             );
-            const text = result.toolMessage.content
-                .filter((item) => item.type === "text")
-                .map((item) => item.text)
-                .join("\n");
+            const text = toolMessageText(result.toolMessage.content);
             expect(result.toolMessage.isError).toBe(false);
             expect(text).toContain("outside-content");
         } finally {
@@ -249,63 +171,21 @@ describe("exec tool allowedDomains", () => {
         }
     });
 
-    it("only allows exact domain unless wildcard subdomain is listed", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, true);
-
-        const allowedResult = await tool.execute(
-            {
-                command: "curl -I -sS https://google.com",
-                allowedDomains: ["google.com"],
-                permissions: ["@network"],
-                timeoutMs: 30_000
-            },
-            context,
-            execToolCall
-        );
-        const allowedText = allowedResult.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
-        expect(allowedResult.toolMessage.isError).toBe(false);
-        expect(allowedText).toContain("HTTP/");
-
-        const blockedResult = await tool.execute(
-            {
-                command: "curl -I -sS https://www.google.com",
-                allowedDomains: ["google.com"],
-                permissions: ["@network"],
-                timeoutMs: 30_000
-            },
-            context,
-            execToolCall
-        );
-        const blockedText = blockedResult.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
-        expect(blockedResult.toolMessage.isError).toBe(true);
-        expect(blockedText).toContain("CONNECT tunnel failed");
-    });
-
     it("maps HOME to provided home path", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir, false, [], [workingDir]);
-        const home = path.join(workingDir, ".daycare-home");
+        const context = createContext(workingDir);
+        const home = path.join("/tmp", `daycare-home-${createId()}`);
 
         const result = await tool.execute(
             {
                 command: "printf '%s' \"$HOME\"",
                 home,
-                permissions: [`@write:${workingDir}`]
+                allowedDomains: ["example.com"]
             },
             context,
             execToolCall
         );
-        const text = result.toolMessage.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
+        const text = toolMessageText(result.toolMessage.content);
         const expectedHome = await fs.realpath(home);
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain(`stdout:\n${expectedHome}`);
@@ -313,14 +193,15 @@ describe("exec tool allowedDomains", () => {
 
     it("rejects HOME path when not write-granted", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir, false);
+        const context = createContext(workingDir);
         const home = path.join(workingDir, ".daycare-home");
 
         await expect(
             tool.execute(
                 {
                     command: "echo ok",
-                    home
+                    home,
+                    allowedDomains: ["example.com"]
                 },
                 context,
                 execToolCall
@@ -330,40 +211,26 @@ describe("exec tool allowedDomains", () => {
 
     it("does not mutate tool context permissions", async () => {
         const tool = buildExecTool();
-        const writeDir = await fs.mkdtemp(path.join(os.tmpdir(), "exec-tool-write-scope-"));
-        const context = createContext(workingDir, true, [workingDir], [workingDir, writeDir]);
+        const context = createContext(workingDir, [workingDir]);
         const original = {
             workingDir: context.permissions.workingDir,
-            writeDirs: [...context.permissions.writeDirs],
-            readDirs: [...context.permissions.readDirs],
-            network: context.permissions.network,
-            events: context.permissions.events
+            writeDirs: [...context.permissions.writeDirs]
         };
 
-        try {
-            const result = await tool.execute(
-                {
-                    command: "echo ok",
-                    permissions: ["@network", `@write:${writeDir}`],
-                    allowedDomains: ["example.com"]
-                },
-                context,
-                execToolCall
-            );
-            expect(result.toolMessage.isError).toBe(false);
-            expect(context.permissions).toEqual(original);
-        } finally {
-            await fs.rm(writeDir, { recursive: true, force: true });
-        }
+        const result = await tool.execute(
+            {
+                command: "echo ok",
+                allowedDomains: ["example.com"]
+            },
+            context,
+            execToolCall
+        );
+        expect(result.toolMessage.isError).toBe(false);
+        expect(context.permissions).toEqual(original);
     });
 });
 
-function createContext(
-    workingDir: string,
-    network: boolean,
-    readDirs: string[] = [],
-    writeDirs: string[] = []
-): ToolExecutionContext {
+function createContext(workingDir: string, writeDirs: string[] = []): ToolExecutionContext {
     const agentId = createId();
     const messageContext = {};
     const descriptor = {
@@ -375,13 +242,7 @@ function createContext(
     const now = Date.now();
     const state: AgentState = {
         context: { messages: [] },
-        permissions: {
-            workingDir,
-            writeDirs: writeDirs.map((entry) => path.resolve(entry)),
-            readDirs: readDirs.map((entry) => path.resolve(entry)),
-            network,
-            events: false
-        },
+        permissions: permissionsBuild(workingDir, writeDirs),
         tokens: null,
         stats: {},
         createdAt: now,
@@ -408,9 +269,21 @@ function createContext(
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext,
-        agentSystem: {
-            config: { current: { socketPath: path.join(workingDir, "engine.sock") } }
-        } as unknown as ToolExecutionContext["agentSystem"],
+        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };
+}
+
+function permissionsBuild(workingDir: string, writeDirs: string[]): SessionPermissions {
+    return {
+        workingDir,
+        writeDirs: writeDirs.map((entry) => path.resolve(entry))
+    };
+}
+
+function toolMessageText(content: Array<{ type: string; text?: string }>): string {
+    return content
+        .filter((item) => item.type === "text")
+        .map((item) => item.text ?? "")
+        .join("\n");
 }

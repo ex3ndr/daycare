@@ -411,8 +411,7 @@ function processRecordClone(record: ProcessDbRecord): ProcessDbRecord {
         allowedDomains: [...record.allowedDomains],
         permissions: {
             ...record.permissions,
-            writeDirs: [...record.permissions.writeDirs],
-            readDirs: [...record.permissions.readDirs]
+            writeDirs: [...record.permissions.writeDirs]
         },
         owner: record.owner ? { ...record.owner } : null
     };
@@ -452,29 +451,17 @@ function jsonStringArrayParse(raw: string): string[] {
 function permissionsParse(raw: string): ProcessDbRecord["permissions"] {
     try {
         const parsed = JSON.parse(raw) as Partial<ProcessDbRecord["permissions"]>;
-        if (
-            typeof parsed.workingDir !== "string" ||
-            !Array.isArray(parsed.writeDirs) ||
-            !Array.isArray(parsed.readDirs) ||
-            typeof parsed.network !== "boolean" ||
-            typeof parsed.events !== "boolean"
-        ) {
+        if (typeof parsed.workingDir !== "string" || !Array.isArray(parsed.writeDirs)) {
             throw new Error("Invalid permissions");
         }
         return {
             workingDir: parsed.workingDir,
-            writeDirs: parsed.writeDirs.filter((entry): entry is string => typeof entry === "string"),
-            readDirs: parsed.readDirs.filter((entry): entry is string => typeof entry === "string"),
-            network: parsed.network,
-            events: parsed.events
+            writeDirs: parsed.writeDirs.filter((entry): entry is string => typeof entry === "string")
         };
     } catch {
         return {
             workingDir: "/",
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: []
         };
     }
 }

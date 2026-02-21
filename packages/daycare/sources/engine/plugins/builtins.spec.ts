@@ -66,7 +66,9 @@ async function createApi<TSettings>(
         inference,
         processes: new Processes(dir, getLogger(`test.processes.${instanceId}`)),
         mode: "runtime",
-        events: { emit: vi.fn() }
+        events: {
+            emit: () => undefined
+        }
     };
 }
 

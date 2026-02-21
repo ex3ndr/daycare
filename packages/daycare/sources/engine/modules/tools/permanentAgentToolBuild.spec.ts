@@ -15,7 +15,7 @@ import { permanentAgentToolBuild } from "./permanentAgentToolBuild.js";
 const toolCall = { id: "tool-1", name: "create_permanent_agent" };
 
 describe("permanentAgentToolBuild", () => {
-    it("applies creator-granted permissions during permanent agent creation", async () => {
+    it("creates a permanent agent with user baseline permissions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-permanent-tool-"));
         try {
             const config = configResolve(
@@ -27,7 +27,7 @@ describe("permanentAgentToolBuild", () => {
             const storage = Storage.open(config.dbPath);
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
-            const context = contextBuild(buildPermissions({ network: true, readDirs: ["/tmp"] }), {
+            const context = contextBuild(buildPermissions({}), {
                 config: { current: config },
                 storage,
                 updateAgentDescriptor,
@@ -39,8 +39,7 @@ describe("permanentAgentToolBuild", () => {
                 {
                     name: "ops",
                     description: "Ops automation",
-                    systemPrompt: "Keep things running",
-                    permissions: ["@network", "@read:/tmp"]
+                    systemPrompt: "Keep things running"
                 },
                 context,
                 toolCall
@@ -50,46 +49,11 @@ describe("permanentAgentToolBuild", () => {
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created).not.toBeNull();
             const state = await agentStateRead(config, created!.agentId);
-            expect(state?.permissions.network).toBe(true);
-            expect(state?.permissions.readDirs).toContain(path.resolve("/tmp"));
+            expect(state?.permissions.writeDirs).toContain(
+                path.resolve(path.join(dir, "users", "creator-user", "home"))
+            );
             expect(updateAgentDescriptor).toHaveBeenCalledTimes(1);
             expect(updateAgentPermissions).toHaveBeenCalledTimes(1);
-            storage.close();
-        } finally {
-            await rm(dir, { recursive: true, force: true });
-        }
-    });
-
-    it("rejects permissions that the creator does not have", async () => {
-        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-permanent-tool-deny-"));
-        try {
-            const config = configResolve(
-                {
-                    engine: { dataDir: dir }
-                },
-                path.join(dir, "settings.json")
-            );
-            const storage = Storage.open(config.dbPath);
-            const context = contextBuild(buildPermissions({ network: false }), {
-                config: { current: config },
-                storage,
-                updateAgentDescriptor: vi.fn(),
-                updateAgentPermissions: vi.fn()
-            });
-            const tool = permanentAgentToolBuild();
-
-            await expect(
-                tool.execute(
-                    {
-                        name: "ops",
-                        description: "Ops automation",
-                        systemPrompt: "Keep things running",
-                        permissions: ["@network"]
-                    },
-                    context,
-                    toolCall
-                )
-            ).rejects.toThrow("Cannot attach permission");
             storage.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -107,7 +71,7 @@ describe("permanentAgentToolBuild", () => {
             );
             const storage = Storage.open(config.dbPath);
             const tool = permanentAgentToolBuild();
-            const context = contextBuild(buildPermissions({ network: false }), {
+            const context = contextBuild(buildPermissions({}), {
                 config: { current: config },
                 storage,
                 updateAgentDescriptor: vi.fn(),
@@ -146,7 +110,7 @@ describe("permanentAgentToolBuild", () => {
             const storage = Storage.open(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = {
-                ...contextBuild(buildPermissions({ network: false }), {
+                ...contextBuild(buildPermissions({}), {
                     config: { current: config },
                     storage,
                     updateAgentDescriptor: vi.fn(),
@@ -177,9 +141,6 @@ function buildPermissions(overrides: Partial<SessionPermissions>): SessionPermis
     return {
         workingDir: "/workspace",
         writeDirs: ["/workspace"],
-        readDirs: [],
-        network: false,
-        events: false,
         ...overrides
     };
 }

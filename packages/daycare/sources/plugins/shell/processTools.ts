@@ -5,9 +5,6 @@ import {
     toolExecutionResultOutcomeWithTyped,
     toolMessageTextExtract
 } from "../../engine/modules/tools/toolReturnOutcome.js";
-import { permissionTagsApply } from "../../engine/permissions/permissionTagsApply.js";
-import { permissionTagsNormalize } from "../../engine/permissions/permissionTagsNormalize.js";
-import { permissionTagsValidate } from "../../engine/permissions/permissionTagsValidate.js";
 import type { Processes } from "../../engine/processes/processes.js";
 
 const envSchema = Type.Record(
@@ -41,7 +38,6 @@ const processStartSchema = Type.Object(
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         home: Type.Optional(Type.String({ minLength: 1 })),
         env: Type.Optional(envSchema),
-        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
         keepAlive: Type.Optional(Type.Boolean()),
         packageManagers: Type.Optional(Type.Array(packageManagerSchema, { minItems: 1 })),
         allowedDomains: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
@@ -100,13 +96,13 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
         tool: {
             name: "process_start",
             description:
-                "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. By default it starts with no network, no events socket access, and no write grants. Reads are always allowed (except protected deny-list paths). Explicit permission tags can only re-enable caller-held permissions; @read tags are ignored.",
+                "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. Processes run with /tmp as writable path and global read access with a protected deny-list.",
             parameters: processStartSchema
         },
         returns: processToolReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ProcessStartArgs;
-            const permissions = await resolveProcessPermissions(toolContext.permissions, payload.permissions);
+            const permissions = resolveProcessPermissions(toolContext.permissions);
             const processInfo = await processes.create({ ...payload, userId: toolContext.ctx.userId }, permissions);
             const text = [
                 `Process started: ${processInfo.id}`,
@@ -296,24 +292,9 @@ function buildToolMessage(
     };
 }
 
-async function resolveProcessPermissions(
-    currentPermissions: SessionPermissions,
-    requestedTags: string[] | undefined
-): Promise<SessionPermissions> {
-    const processPermissions: SessionPermissions = {
+function resolveProcessPermissions(currentPermissions: SessionPermissions): SessionPermissions {
+    return {
         workingDir: currentPermissions.workingDir,
-        writeDirs: [],
-        readDirs: [],
-        network: false,
-        events: false
+        writeDirs: ["/tmp"]
     };
-    if (!requestedTags || requestedTags.length === 0) {
-        return processPermissions;
-    }
-    const permissionTags = permissionTagsNormalize(requestedTags);
-    const nonReadTags = permissionTags.filter((tag) => !tag.startsWith("@read:"));
-    await permissionTagsValidate(currentPermissions, nonReadTags);
-    permissionTagsApply(processPermissions, nonReadTags);
-    processPermissions.readDirs = [];
-    return processPermissions;
 }

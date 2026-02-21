@@ -56,10 +56,7 @@ export const plugin = definePlugin({
                         parameters: fetchSchema
                     },
                     returns: fetchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as FetchArgs;
                         const maxChars = payload.maxChars ?? 20000;
                         const timeoutMs = payload.timeoutMs ?? 15000;

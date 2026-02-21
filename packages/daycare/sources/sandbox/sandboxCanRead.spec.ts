@@ -31,16 +31,8 @@ describe("sandboxCanRead", () => {
         await fs.rm(outsideDir, { recursive: true, force: true });
     });
 
-    it("allows reading any absolute path when readDirs is empty", async () => {
-        const permissions = buildPermissions(workingDir, [], []);
-
-        const result = await sandboxCanRead(permissions, outsideFile);
-
-        expect(result).toBe(await fs.realpath(outsideFile));
-    });
-
-    it("allows reading any absolute path when readDirs are configured", async () => {
-        const permissions = buildPermissions(workingDir, [workingDir], []);
+    it("allows reading any absolute path", async () => {
+        const permissions = buildPermissions(workingDir, []);
 
         const result = await sandboxCanRead(permissions, outsideFile);
 
@@ -48,7 +40,7 @@ describe("sandboxCanRead", () => {
     });
 
     it("ignores write grants for read access checks", async () => {
-        const permissions = buildPermissions(workingDir, [workingDir], [outsideFile]);
+        const permissions = buildPermissions(workingDir, [outsideFile]);
 
         const result = await sandboxCanRead(permissions, outsideFile);
 
@@ -56,7 +48,7 @@ describe("sandboxCanRead", () => {
     });
 
     it("denies non-app agents from reading app directories", async () => {
-        const permissions = buildPermissions(workingDir, [workingDir], [workingDir]);
+        const permissions = buildPermissions(workingDir, [workingDir]);
 
         await expect(sandboxCanRead(permissions, appFile)).rejects.toThrow(
             "App directories are not accessible from non-app agents."
@@ -66,7 +58,7 @@ describe("sandboxCanRead", () => {
     it("allows app agents to read their own app directory", async () => {
         const appDataDir = path.join(workingDir, "apps", "my-app", "data");
         await fs.mkdir(appDataDir, { recursive: true });
-        const permissions = buildPermissions(appDataDir, [workingDir], [appDataDir]);
+        const permissions = buildPermissions(appDataDir, [appDataDir]);
 
         const result = await sandboxCanRead(permissions, appFile);
 
@@ -76,7 +68,7 @@ describe("sandboxCanRead", () => {
     it("denies app agents from reading other app directories", async () => {
         const appDataDir = path.join(workingDir, "apps", "my-app", "data");
         await fs.mkdir(appDataDir, { recursive: true });
-        const permissions = buildPermissions(appDataDir, [workingDir], [appDataDir]);
+        const permissions = buildPermissions(appDataDir, [appDataDir]);
 
         await expect(sandboxCanRead(permissions, otherAppFile)).rejects.toThrow(
             "App agents can only access their own app directory."
@@ -84,12 +76,9 @@ describe("sandboxCanRead", () => {
     });
 });
 
-function buildPermissions(workingDir: string, readDirs: string[], writeDirs: string[]): SessionPermissions {
+function buildPermissions(workingDir: string, writeDirs: string[]): SessionPermissions {
     return {
         workingDir: path.resolve(workingDir),
-        readDirs: readDirs.map((entry) => path.resolve(entry)),
-        writeDirs: writeDirs.map((entry) => path.resolve(entry)),
-        network: false,
-        events: false
+        writeDirs: writeDirs.map((entry) => path.resolve(entry))
     };
 }

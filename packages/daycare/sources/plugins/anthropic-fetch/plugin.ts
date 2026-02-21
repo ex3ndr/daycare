@@ -135,7 +135,7 @@ export const plugin = definePlugin({
                 await validateApiKey(instanceKey);
                 api.note("Using existing Anthropic instance credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Anthropic instance key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -153,7 +153,7 @@ export const plugin = definePlugin({
                     "Anthropic subscription credentials are missing or expired, prompting for a new key.",
                     "Setup"
                 );
-            } catch (error) {
+            } catch (_error) {
                 api.note(
                     "Existing Anthropic subscription credentials failed validation, prompting for a new key.",
                     "Setup"
@@ -164,7 +164,7 @@ export const plugin = definePlugin({
                 await validateApiKey(providerEntry.apiKey);
                 api.note("Using existing Anthropic provider credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Anthropic provider key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -195,10 +195,7 @@ export const plugin = definePlugin({
                         parameters: fetchSchema
                     },
                     returns: fetchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as FetchArgs;
 
                         // Try plugin-specific key first, fallback to Anthropic provider OAuth/apiKey

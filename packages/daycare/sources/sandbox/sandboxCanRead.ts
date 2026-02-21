@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import type { SessionPermissions } from "@/types";
-import { pathResolveSecure } from "../engine/permissions/pathResolveSecure.js";
+import { pathResolveSecure } from "./pathResolveSecure.js";
 import { sandboxAppsAccessCheck } from "./sandboxAppsAccessCheck.js";
 
 /**

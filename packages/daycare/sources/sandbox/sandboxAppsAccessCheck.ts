@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { SessionPermissions } from "@/types";
-import { isWithinSecure } from "../engine/permissions/pathResolveSecure.js";
+import { isWithinSecure } from "./pathResolveSecure.js";
 
 type SandboxAppsAccessCheckResult = {
     allowed: boolean;
@@ -32,8 +32,17 @@ export function sandboxAppsAccessCheck(permissions: SessionPermissions, target: 
 }
 
 function sandboxAppsRootResolve(permissions: SessionPermissions, target: string): string | null {
+    const appRootFromWorkingDir = sandboxAppsRootFromWorkingDir(permissions.workingDir);
+    if (
+        appRootFromWorkingDir &&
+        (isWithinSecure(appRootFromWorkingDir, target) ||
+            isWithinSecure(appRootFromWorkingDir, sandboxExistingPathResolve(permissions.workingDir)))
+    ) {
+        return appRootFromWorkingDir;
+    }
+
     const candidates = Array.from(
-        new Set([permissions.workingDir, ...permissions.readDirs].map((entry) => sandboxExistingPathResolve(entry)))
+        new Set([permissions.workingDir, ...permissions.writeDirs].map((entry) => sandboxExistingPathResolve(entry)))
     );
     for (const candidate of candidates) {
         const appsRoot = sandboxExistingPathResolve(path.resolve(candidate, "apps"));
@@ -45,6 +54,19 @@ function sandboxAppsRootResolve(permissions: SessionPermissions, target: string)
         }
     }
     return null;
+}
+
+function sandboxAppsRootFromWorkingDir(workingDir: string): string | null {
+    const resolved = sandboxExistingPathResolve(workingDir);
+    if (path.basename(resolved) !== "data") {
+        return null;
+    }
+    const appDir = path.dirname(resolved);
+    const appsRoot = path.dirname(appDir);
+    if (path.basename(appsRoot) !== "apps") {
+        return null;
+    }
+    return appsRoot;
 }
 
 function sandboxAppIdFromWorkingDir(workingDir: string, appsRoot: string): string | null {

@@ -4,8 +4,8 @@ import path from "node:path";
 import type { Logger } from "pino";
 
 import type { ConnectorFile, ConnectorFileDisposition, FileReference, SessionPermissions } from "@/types";
+import { openSecure, pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import type { FileFolder } from "../../files/fileFolder.js";
-import { openSecure, pathResolveSecure } from "../../permissions/pathResolveSecure.js";
 
 export type SayFileResolveInput = {
     files: Array<{ path: string; mode: ConnectorFileDisposition }>;
@@ -42,7 +42,7 @@ async function sayFileReferenceResolve(
     permissions: SessionPermissions
 ): Promise<FileReference | null> {
     const normalizedInputPath = pathNormalize(filePath, permissions.workingDir);
-    const allowedDirs = [permissions.workingDir, ...permissions.readDirs];
+    const allowedDirs = [permissions.workingDir, ...permissions.writeDirs];
     const { realPath } = await pathResolveSecure(allowedDirs, normalizedInputPath);
 
     const stats = await fs.lstat(realPath);

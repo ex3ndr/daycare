@@ -32,10 +32,7 @@ function contextBuild(): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir: "/tmp",
-            writeDirs: ["/tmp"],
-            readDirs: ["/tmp"],
-            network: false,
-            events: false
+            writeDirs: ["/tmp"]
         },
         agent: { id: "agent-caller" } as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],

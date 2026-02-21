@@ -114,10 +114,7 @@ function toolExecutionContextBuild(): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir: "/tmp",
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: []
         },
         agent: null as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],

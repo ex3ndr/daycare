@@ -3,23 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { SessionPermissions } from "@/types";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
 
-function basePermissions(): SessionPermissions {
-    return {
-        workingDir: path.resolve("/workspace"),
-        writeDirs: [path.resolve("/workspace/tmp"), path.resolve("/workspace/tmp")],
-        readDirs: [],
-        network: false,
-        events: false
-    };
+function baseWriteDirs(): string[] {
+    return [path.resolve("/workspace/tmp"), path.resolve("/workspace/tmp")];
 }
 
 describe("sandboxFilesystemPolicyBuild", () => {
     it("dedupes writable paths", () => {
         const result = sandboxFilesystemPolicyBuild({
-            permissions: basePermissions(),
+            writeDirs: baseWriteDirs(),
             platform: "linux",
             homeDir: "/home/alice"
         });
@@ -29,7 +22,7 @@ describe("sandboxFilesystemPolicyBuild", () => {
 
     it("adds linux sensitive deny paths to read and write", () => {
         const result = sandboxFilesystemPolicyBuild({
-            permissions: basePermissions(),
+            writeDirs: baseWriteDirs(),
             platform: "linux",
             homeDir: "/home/alice"
         });
@@ -49,7 +42,7 @@ describe("sandboxFilesystemPolicyBuild", () => {
 
     it("adds macOS sensitive deny paths to read and write", () => {
         const result = sandboxFilesystemPolicyBuild({
-            permissions: basePermissions(),
+            writeDirs: baseWriteDirs(),
             platform: "darwin",
             homeDir: "/Users/alice"
         });
@@ -68,10 +61,8 @@ describe("sandboxFilesystemPolicyBuild", () => {
     it("denies workspace apps directory for non-app agents", () => {
         const workingDir = path.resolve("/workspace");
         const result = sandboxFilesystemPolicyBuild({
-            permissions: {
-                ...basePermissions(),
-                workingDir
-            },
+            writeDirs: baseWriteDirs(),
+            workingDir,
             platform: "linux",
             homeDir: "/home/alice"
         });
@@ -86,12 +77,8 @@ describe("sandboxFilesystemPolicyBuild", () => {
             await fs.mkdir(path.join(workspace, "apps", "my-app", "data"), { recursive: true });
             await fs.mkdir(path.join(workspace, "apps", "other-app", "data"), { recursive: true });
             const result = sandboxFilesystemPolicyBuild({
-                permissions: {
-                    ...basePermissions(),
-                    workingDir: path.join(workspace, "apps", "my-app", "data"),
-                    writeDirs: [path.join(workspace, "apps", "my-app", "data")],
-                    readDirs: [workspace]
-                },
+                writeDirs: [path.join(workspace, "apps", "my-app", "data")],
+                workingDir: path.join(workspace, "apps", "my-app", "data"),
                 platform: "linux",
                 homeDir: "/home/alice"
             });

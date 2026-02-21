@@ -85,7 +85,9 @@ describeIf("nano-banana-pro image generation", () => {
                 inference,
                 processes: new Processes(dir, getLogger("test.processes.nano-banana-pro")),
                 mode: "runtime",
-                events: { emit: () => undefined }
+                events: {
+                    emit: () => undefined
+                }
             };
 
             const instance = await nanoBananaPro.create(api);

@@ -6,10 +6,8 @@ import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import type { ConfigModule } from "../../config/configModule.js";
-import { permissionClone } from "../../permissions/permissionClone.js";
 import { type ExecGateCheckInput, type ExecGateCheckResult, execGateCheck } from "../../scheduling/execGateCheck.js";
 import { execGateOutputAppend } from "../../scheduling/execGateOutputAppend.js";
-import { gatePermissionsCheck } from "../../scheduling/gatePermissionsCheck.js";
 import type { CronTaskContext, CronTaskDefinition, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
 
@@ -19,10 +17,8 @@ export type CronSchedulerOptions = {
     config: ConfigModule;
     repository: CronTasksRepository;
     resolveDefaultPermissions: (task: CronTaskDbRecord) => Promise<SessionPermissions> | SessionPermissions;
-    resolvePermissions?: (task: CronTaskDbRecord) => Promise<SessionPermissions> | SessionPermissions;
     onTask: (context: CronTaskContext, messageContext: MessageContext) => void | Promise<void>;
     onError?: (error: unknown, taskId: string) => void | Promise<void>;
-    onGatePermissionRequest?: (task: CronTaskDbRecord, missing: string[]) => Promise<boolean>;
     onTaskComplete?: (task: CronTaskDbRecord, runAt: Date) => void | Promise<void>;
     gateCheck?: (input: ExecGateCheckInput) => Promise<ExecGateCheckResult>;
 };
@@ -38,10 +34,8 @@ export class CronScheduler {
     private stopped = false;
     private onTask: CronSchedulerOptions["onTask"];
     private onError?: CronSchedulerOptions["onError"];
-    private onGatePermissionRequest?: CronSchedulerOptions["onGatePermissionRequest"];
     private onTaskComplete?: CronSchedulerOptions["onTaskComplete"];
     private resolveDefaultPermissions: CronSchedulerOptions["resolveDefaultPermissions"];
-    private resolvePermissions?: CronSchedulerOptions["resolvePermissions"];
     private gateCheck: CronSchedulerOptions["gateCheck"];
     private tickTimer: NodeJS.Timeout | null = null;
     private runningTasks = new Set<string>();
@@ -51,10 +45,8 @@ export class CronScheduler {
         this.repository = options.repository;
         this.onTask = options.onTask;
         this.onError = options.onError;
-        this.onGatePermissionRequest = options.onGatePermissionRequest;
         this.onTaskComplete = options.onTaskComplete;
         this.resolveDefaultPermissions = options.resolveDefaultPermissions;
-        this.resolvePermissions = options.resolvePermissions;
         this.gateCheck = options.gateCheck ?? execGateCheck;
         logger.debug("init: CronScheduler initialized");
     }
@@ -292,46 +284,11 @@ export class CronScheduler {
         if (!task.gate) {
             return { allowed: true };
         }
-        let basePermissions = (await this.resolvePermissions?.(task)) ?? (await this.resolveDefaultPermissions(task));
-        let permissions = permissionClone(basePermissions);
-        let permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
-        if (!permissionCheck.allowed) {
-            logger.warn(
-                { taskId: task.id, missing: permissionCheck.missing },
-                "event: Cron gate permissions missing; requesting user approval"
-            );
-            let granted = false;
-            try {
-                granted = (await this.onGatePermissionRequest?.(task, permissionCheck.missing)) ?? false;
-            } catch (error) {
-                logger.warn({ taskId: task.id, error }, "error: Cron gate permission request failed");
-                await this.reportError(error, task.id);
-                return { allowed: false };
-            }
-            if (!granted) {
-                logger.debug(
-                    { taskId: task.id, missing: permissionCheck.missing },
-                    "skip: Cron task skipped because gate permissions were denied or timed out"
-                );
-                return { allowed: false };
-            }
-
-            basePermissions = (await this.resolvePermissions?.(task)) ?? (await this.resolveDefaultPermissions(task));
-            permissions = permissionClone(basePermissions);
-            permissionCheck = await gatePermissionsCheck(permissions, task.gate.permissions);
-            if (!permissionCheck.allowed) {
-                logger.warn(
-                    { taskId: task.id, missing: permissionCheck.missing },
-                    "skip: Cron task skipped because requested gate permissions are still missing"
-                );
-                return { allowed: false };
-            }
-        }
+        const permissions = await this.resolveDefaultPermissions(task);
         const result = await this.gateCheck?.({
             gate: task.gate,
             permissions,
-            workingDir: permissions.workingDir,
-            socketPath: this.config.current.socketPath
+            workingDir: permissions.workingDir
         });
         if (!result) {
             return { allowed: true };

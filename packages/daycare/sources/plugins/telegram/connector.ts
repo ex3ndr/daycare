@@ -13,9 +13,6 @@ import type {
     FileReference,
     MessageContext,
     MessageHandler,
-    PermissionDecision,
-    PermissionHandler,
-    PermissionRequest,
     SlashCommandEntry
 } from "@/types";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
@@ -64,7 +61,6 @@ export class TelegramConnector implements Connector {
     private bot: TelegramBot;
     private handlers: MessageHandler[] = [];
     private commandHandlers: CommandHandler[] = [];
-    private permissionHandlers: PermissionHandler[] = [];
     private pollingEnabled: boolean;
     private statePath: string | null;
     private lastUpdateId: number | null = null;
@@ -77,10 +73,6 @@ export class TelegramConnector implements Connector {
     private pendingCommands: SlashCommandEntry[] = [];
     private commandSyncTimer: NodeJS.Timeout | null = null;
     private allowedUids: Set<string>;
-    private pendingPermissions = new Map<
-        string,
-        { request: PermissionRequest; context: MessageContext; descriptor: AgentDescriptor }
-    >();
     private shuttingDown = false;
     private clearWebhookOnStart: boolean;
     private clearedWebhook = false;
@@ -170,49 +162,6 @@ export class TelegramConnector implements Connector {
             logger.debug(`event: All handlers completed channelId=${descriptor.channelId}`);
         });
 
-        this.bot.on("callback_query", async (query) => {
-            if (!this.isAllowedUid(query.from?.id)) {
-                logger.info({ senderId: query.from?.id }, "skip: Skipping telegram callback from unapproved uid");
-                return;
-            }
-            const data = query.data;
-            if (!data || !data.startsWith("perm:")) {
-                return;
-            }
-            const parts = data.split(":");
-            if (parts.length < 3) {
-                return;
-            }
-            const action = parts[1];
-            const token = parts[2];
-            if (!token) {
-                return;
-            }
-            const pending = this.pendingPermissions.get(token);
-            if (!pending) {
-                await this.bot.answerCallbackQuery(query.id, {
-                    text: "Permission request expired."
-                });
-                return;
-            }
-            this.pendingPermissions.delete(token);
-            const approved = action === "allow";
-            await this.updatePermissionMessage(query, pending.request, approved ? "approved" : "denied");
-            const decision: PermissionDecision = {
-                token,
-                agentId: pending.request.agentId,
-                approved,
-                permissions: pending.request.permissions,
-                ...(pending.request.scope ? { scope: pending.request.scope } : {})
-            };
-            for (const handler of this.permissionHandlers) {
-                await handler(decision, pending.context, pending.descriptor);
-            }
-            await this.bot.answerCallbackQuery(query.id, {
-                text: approved ? "Permission granted." : "Permission denied."
-            });
-        });
-
         this.bot.on("polling_error", (error) => {
             if (this.shuttingDown) {
                 return;
@@ -260,16 +209,6 @@ export class TelegramConnector implements Connector {
         this.scheduleCommandSync();
     }
 
-    onPermission(handler: PermissionHandler): () => void {
-        this.permissionHandlers.push(handler);
-        return () => {
-            const index = this.permissionHandlers.indexOf(handler);
-            if (index !== -1) {
-                this.permissionHandlers.splice(index, 1);
-            }
-        };
-    }
-
     async sendMessage(targetId: string, message: ConnectorMessage): Promise<void> {
         logger.debug(
             `event: sendMessage() called targetId=${targetId} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`
@@ -313,30 +252,6 @@ export class TelegramConnector implements Connector {
             await this.sendTextWithFallback(targetId, caption);
         }
         logger.debug(`send: All files sent targetId=${targetId} totalFiles=${files.length}`);
-    }
-
-    async requestPermission(
-        targetId: string,
-        request: PermissionRequest,
-        context: MessageContext,
-        descriptor: AgentDescriptor
-    ): Promise<void> {
-        if (!this.isAllowedTarget(targetId, "requestPermission")) {
-            return;
-        }
-        const { text, parseMode } = formatPermissionMessage(request, "pending");
-        this.pendingPermissions.set(request.token, { request, context, descriptor });
-        await this.bot.sendMessage(targetId, text, {
-            parse_mode: parseMode,
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        { text: "Allow", callback_data: `perm:allow:${request.token}` },
-                        { text: "Deny", callback_data: `perm:deny:${request.token}` }
-                    ]
-                ]
-            }
-        });
     }
 
     startTyping(targetId: string): () => void {
@@ -795,39 +710,6 @@ export class TelegramConnector implements Connector {
         }
     }
 
-    private async updatePermissionMessage(
-        query: TelegramBot.CallbackQuery,
-        request: PermissionRequest,
-        status: PermissionStatus
-    ): Promise<void> {
-        const { text, parseMode } = formatPermissionMessage(request, status);
-        const message = query.message;
-        const inlineMessageId = query.inline_message_id;
-        if (!message && !inlineMessageId) {
-            return;
-        }
-        try {
-            if (message?.chat?.id && message.message_id) {
-                await this.bot.editMessageText(text, {
-                    chat_id: message.chat.id,
-                    message_id: message.message_id,
-                    parse_mode: parseMode,
-                    reply_markup: { inline_keyboard: [] }
-                });
-                return;
-            }
-            if (inlineMessageId) {
-                await this.bot.editMessageText(text, {
-                    inline_message_id: inlineMessageId,
-                    parse_mode: parseMode,
-                    reply_markup: { inline_keyboard: [] }
-                });
-            }
-        } catch (error) {
-            logger.warn({ error }, "error: Failed to update Telegram permission message");
-        }
-    }
-
     private scheduleCommandSync(): void {
         if (this.commandSyncTimer) {
             clearTimeout(this.commandSyncTimer);
@@ -861,75 +743,11 @@ export class TelegramConnector implements Connector {
 
 function recoverLastUpdateId(content: string): number | null {
     const match = /"lastUpdateId"\s*:\s*(\d+)/.exec(content);
-    if (match && match[1]) {
+    if (match?.[1]) {
         const value = Number(match[1]);
         return Number.isFinite(value) ? value : null;
     }
     return null;
-}
-
-type PermissionStatus = "pending" | "approved" | "denied";
-
-function formatPermissionMessage(
-    request: PermissionRequest,
-    status: PermissionStatus
-): { text: string; parseMode: TelegramBot.ParseMode } {
-    const escapedReason = escapeHtml(request.reason);
-    const permissionLines = request.permissions.map(
-        (permission) => `- ${escapeHtml(describePermissionKind(permission.access))}`
-    );
-    const heading =
-        status === "approved"
-            ? "✅ <b>Permission granted</b>"
-            : status === "denied"
-              ? "❌ <b>Permission denied</b>"
-              : "🔐 <b>Permission request</b>";
-    const footer = status === "pending" ? "Approve to continue or deny to refuse." : "Decision recorded.";
-    const requesterLine =
-        request.requester.kind === "background"
-            ? `<b>Requester</b>: ${escapeHtml(request.requester.label)} (background agent)`
-            : null;
-    const scopeLine =
-        request.scope === "always"
-            ? "<b>Scope</b>: Always (all future runs for this app)"
-            : request.scope === "now"
-              ? "<b>Scope</b>: One time (this app run only)"
-              : null;
-    const lines = [
-        heading,
-        "",
-        "<b>Permissions</b>:",
-        ...permissionLines,
-        requesterLine,
-        scopeLine,
-        `<b>Reason</b>: ${escapedReason}`,
-        "",
-        footer
-    ];
-    return {
-        text: lines.filter((line): line is string => Boolean(line)).join("\n"),
-        parseMode: "HTML"
-    };
-}
-
-function describePermissionKind(access: PermissionRequest["permissions"][number]["access"]): string {
-    if (access.kind === "read") {
-        return `Read files: ${access.path}`;
-    }
-    if (access.kind === "write") {
-        return `Write/edit files: ${access.path}`;
-    }
-    if (access.kind === "workspace") {
-        return "Workspace write access";
-    }
-    if (access.kind === "events") {
-        return "Events access";
-    }
-    return "Network access";
-}
-
-function escapeHtml(text: string): string {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function isTelegramParseError(error: unknown): boolean {

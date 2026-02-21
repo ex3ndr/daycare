@@ -127,10 +127,7 @@ export const plugin = definePlugin({
 
             const processPermissions: SessionPermissions = {
                 workingDir: api.dataDir,
-                writeDirs: [api.dataDir],
-                readDirs: [api.dataDir],
-                network: true,
-                events: false
+                writeDirs: [api.dataDir]
             };
             const userId = await api.processes.defaultUserId();
             await api.processes.create(

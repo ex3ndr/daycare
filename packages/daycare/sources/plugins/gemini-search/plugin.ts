@@ -99,7 +99,7 @@ export const plugin = definePlugin({
                 await validateApiKey(instanceKey);
                 api.note("Using existing Google instance credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Google instance key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -111,7 +111,7 @@ export const plugin = definePlugin({
                 await validateApiKey(providerKey);
                 api.note("Using existing Google provider credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Google provider key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -142,10 +142,7 @@ export const plugin = definePlugin({
                         parameters: searchSchema
                     },
                     returns: searchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as SearchArgs;
 
                         // Try plugin-specific key first, fallback to Google provider key
@@ -198,7 +195,7 @@ export const plugin = definePlugin({
 
                         let text = content;
                         if (sources) {
-                            text += "\n\nSources:\n" + sources;
+                            text += `\n\nSources:\n${sources}`;
                         }
 
                         const summary = text;

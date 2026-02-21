@@ -32,16 +32,15 @@ describe("skillToolBuild", () => {
         const skillPath = await skillFileCreate("deploy", true);
         try {
             const agentIdForTarget = vi.fn(async () => "agent-sub");
-            const grantPermission = vi.fn(async () => undefined);
             const postAndAwait = vi.fn(async () => ({
                 type: "message" as const,
                 responseText: "Deployment complete."
             }));
             const tool = skillToolBuild();
             const context = contextBuild({
-                permissions: permissionsBuild({ network: true }),
-                skills: [skillBuild(skillPath, { name: "deploy", sandbox: true, permissions: ["@network"] })],
-                agentSystem: { agentIdForTarget, grantPermission, postAndAwait }
+                permissions: permissionsBuild({}),
+                skills: [skillBuild(skillPath, { name: "deploy", sandbox: true })],
+                agentSystem: { agentIdForTarget, postAndAwait }
             });
 
             const result = await tool.execute({ name: "deploy", prompt: "Deploy version 1.2.3" }, context, toolCall);
@@ -51,11 +50,6 @@ describe("skillToolBuild", () => {
                 expect.objectContaining({
                     descriptor: expect.objectContaining({ name: "deploy Skill" })
                 })
-            );
-            expect(grantPermission).toHaveBeenCalledWith(
-                { agentId: "agent-sub" },
-                { kind: "network" },
-                { source: "deploy Skill" }
             );
             expect(postAndAwait).toHaveBeenCalledWith(
                 { agentId: "agent-sub" },
@@ -108,7 +102,7 @@ describe("skillToolBuild", () => {
         try {
             const tool = skillToolBuild();
             const context = contextBuild({
-                permissions: permissionsBuild({ network: true }),
+                permissions: permissionsBuild({}),
                 skills: [skillBuild(skillPath, { name: "deploy", sandbox: true })]
             });
 
@@ -135,23 +129,6 @@ describe("skillToolBuild", () => {
             expect(contentText(result.toolMessage.content)).toContain("# path-skill");
         } finally {
             await fs.rm(workingDir, { recursive: true, force: true });
-        }
-    });
-
-    it("rejects sandbox skill permissions that exceed parent permissions", async () => {
-        const skillPath = await skillFileCreate("deploy", true);
-        try {
-            const tool = skillToolBuild();
-            const context = contextBuild({
-                permissions: permissionsBuild({ network: false }),
-                skills: [skillBuild(skillPath, { name: "deploy", sandbox: true, permissions: ["@network"] })]
-            });
-
-            await expect(tool.execute({ name: "deploy", prompt: "Ship it" }, context, toolCall)).rejects.toThrow(
-                "Cannot attach permission"
-            );
-        } finally {
-            await fs.rm(path.dirname(path.dirname(skillPath)), { recursive: true, force: true });
         }
     });
 
@@ -206,12 +183,10 @@ function contextBuild(input?: {
     connectorRegistry?: { get: (id: string) => unknown };
     agentSystem?: {
         agentIdForTarget?: (target: unknown) => Promise<string>;
-        grantPermission?: (target: unknown, access: unknown, options?: unknown) => Promise<void>;
         postAndAwait?: (target: unknown, item: unknown) => Promise<{ responseText: string | null; type: "message" }>;
     };
 }): ToolExecutionContext {
     const agentIdForTarget = input?.agentSystem?.agentIdForTarget ?? (async () => "agent-sub");
-    const grantPermission = input?.agentSystem?.grantPermission ?? (async () => undefined);
     const postAndAwait =
         input?.agentSystem?.postAndAwait ?? (async () => ({ type: "message" as const, responseText: "ok" }));
 
@@ -229,7 +204,6 @@ function contextBuild(input?: {
         skills: input?.skills ?? [],
         agentSystem: {
             agentIdForTarget,
-            grantPermission,
             postAndAwait
         } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
@@ -240,9 +214,6 @@ function permissionsBuild(overrides: Partial<SessionPermissions>): SessionPermis
     return {
         workingDir: "/workspace",
         writeDirs: ["/workspace"],
-        readDirs: [],
-        network: false,
-        events: false,
         ...overrides
     };
 }

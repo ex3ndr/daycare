@@ -5,8 +5,6 @@ import type {
     AgentTokenEntry,
     DelayedSignalCancelRepeatKeyInput,
     DelayedSignalScheduleInput,
-    PermissionAccess,
-    PermissionDecision,
     SessionPermissions,
     Signal,
     SignalSubscription
@@ -18,7 +16,6 @@ import { storageResolve } from "../../storage/storageResolve.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { AsyncLock } from "../../util/lock.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
-import { appPermissionStateGrant } from "../apps/appPermissionStateGrant.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { Heartbeats } from "../heartbeat/heartbeats.js";
@@ -27,10 +24,6 @@ import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
-import { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
-import { permissionAccessApply } from "../permissions/permissionAccessApply.js";
-import { permissionClone } from "../permissions/permissionClone.js";
-import { permissionFormatTag } from "../permissions/permissionFormatTag.js";
 import type { PluginManager } from "../plugins/manager.js";
 import type { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
@@ -85,7 +78,6 @@ export type AgentSystemOptions = {
     inferenceRouter: InferenceRouter;
     authStore: AuthStore;
     delayedSignals?: DelayedSignalsFacade;
-    permissionRequestRegistry?: PermissionRequestRegistry;
 };
 
 export class AgentSystem {
@@ -98,7 +90,6 @@ export class AgentSystem {
     readonly pluginManager: PluginManager;
     readonly inferenceRouter: InferenceRouter;
     readonly authStore: AuthStore;
-    readonly permissionRequestRegistry: PermissionRequestRegistry;
     private readonly delayedSignals: DelayedSignalsFacade | null;
     private _crons: Crons | null = null;
     private _heartbeats: Heartbeats | null = null;
@@ -118,7 +109,6 @@ export class AgentSystem {
         this.inferenceRouter = options.inferenceRouter;
         this.authStore = options.authStore;
         this.delayedSignals = options.delayedSignals ?? null;
-        this.permissionRequestRegistry = options.permissionRequestRegistry ?? new PermissionRequestRegistry();
         this.eventBus.onEvent((event) => {
             if (event.type !== "signal.generated") {
                 return;
@@ -256,15 +246,6 @@ export class AgentSystem {
         return completion.promise;
     }
 
-    async permissionsForTarget(target: AgentPostTarget): Promise<SessionPermissions> {
-        const entry = await this.resolveEntry(target, {
-            type: "message",
-            message: { text: null },
-            context: {}
-        });
-        return permissionClone(entry.agent.state.permissions);
-    }
-
     /**
      * Resolves a target to its concrete agent id, creating/restoring when needed.
      * Expects: descriptor targets are valid for agent creation.
@@ -392,88 +373,6 @@ export class AgentSystem {
         const aborted = entry.agent.abortInference();
         logger.info({ agentId: entry.agentId, aborted }, "event: Abort inference requested");
         return aborted;
-    }
-
-    async grantPermission(
-        target: AgentPostTarget,
-        access: PermissionAccess,
-        options?: { source?: string; decision?: PermissionDecision }
-    ): Promise<void> {
-        const entry = await this.resolveEntry(target, {
-            type: "message",
-            message: { text: null },
-            context: {}
-        });
-        const applied = permissionAccessApply(entry.agent.state.permissions, access);
-        if (!applied) {
-            throw new Error("Permission could not be applied.");
-        }
-        await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
-        const decision: PermissionDecision = options?.decision ?? {
-            token: "direct",
-            agentId: entry.agentId,
-            approved: true,
-            permissions: [{ permission: permissionFormatTag(access), access }]
-        };
-        this.eventBus.emit("permission.granted", {
-            agentId: entry.agentId,
-            source: options?.source ?? "agent",
-            decision
-        });
-    }
-
-    /**
-     * Grants a shared permission to an app and syncs loaded app-agent sessions.
-     * Expects: appId belongs to an installed app.
-     */
-    async grantAppPermission(
-        appId: string,
-        access: PermissionAccess,
-        options?: { source?: string; decision?: PermissionDecision }
-    ): Promise<void> {
-        const userIds = new Set<string>();
-        for (const entry of this.entries.values()) {
-            if (entry.descriptor.type !== "app" || entry.descriptor.appId !== appId) {
-                continue;
-            }
-            userIds.add(entry.userId);
-        }
-        if (userIds.size === 0) {
-            userIds.add(await this.ownerUserIdEnsure());
-        }
-        for (const userId of userIds) {
-            const userHome = this.userHomeForUserId(userId);
-            await appPermissionStateGrant(userHome.apps, appId, access);
-        }
-        for (const entry of this.entries.values()) {
-            if (entry.descriptor.type !== "app" || entry.descriptor.appId !== appId) {
-                continue;
-            }
-            const applied = permissionAccessApply(entry.agent.state.permissions, access);
-            if (!applied) {
-                throw new Error("Permission could not be applied.");
-            }
-            entry.agent.state.updatedAt = Date.now();
-            await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
-            const decision: PermissionDecision = options?.decision
-                ? {
-                      ...options.decision,
-                      agentId: entry.agentId,
-                      scope: "always"
-                  }
-                : {
-                      token: "direct",
-                      agentId: entry.agentId,
-                      approved: true,
-                      permissions: [{ permission: permissionFormatTag(access), access }],
-                      scope: "always"
-                  };
-            this.eventBus.emit("permission.granted", {
-                agentId: entry.agentId,
-                source: options?.source ?? "agent",
-                decision
-            });
-        }
     }
 
     markStopped(agentId: string, error?: unknown): void {

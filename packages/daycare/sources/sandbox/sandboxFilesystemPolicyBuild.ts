@@ -1,7 +1,6 @@
 import os from "node:os";
 import path from "node:path";
 
-import type { SessionPermissions } from "@/types";
 import { sandboxAppsDenyPathsBuild } from "./sandboxAppsDenyPathsBuild.js";
 
 const COMMON_HOME_RELATIVE_DENY_PATHS = [
@@ -47,7 +46,8 @@ const DARWIN_SYSTEM_DENY_PATHS = [
 const LINUX_SYSTEM_DENY_PATHS = ["/root/.ssh"];
 
 type SandboxFilesystemPolicyBuildInput = {
-    permissions: SessionPermissions;
+    writeDirs: string[];
+    workingDir?: string;
     homeDir?: string;
     platform?: NodeJS.Platform;
 };
@@ -66,7 +66,7 @@ export function sandboxFilesystemPolicyBuild(input: SandboxFilesystemPolicyBuild
     const platform = input.platform ?? process.platform;
     const homeDir = path.resolve(input.homeDir ?? os.homedir());
 
-    const allowWrite = dedupeResolvedPaths([...input.permissions.writeDirs]);
+    const allowWrite = dedupeResolvedPaths([...input.writeDirs]);
 
     const homeDeny = COMMON_HOME_RELATIVE_DENY_PATHS.map((entry) => path.resolve(homeDir, entry));
     const platformHomeDeny =
@@ -79,7 +79,9 @@ export function sandboxFilesystemPolicyBuild(input: SandboxFilesystemPolicyBuild
         ...platformHomeDeny,
         ...COMMON_SYSTEM_DENY_PATHS,
         ...platformSystemDeny,
-        ...sandboxAppsDenyPathsBuild(input.permissions)
+        ...sandboxAppsDenyPathsBuild({
+            workingDir: input.workingDir ?? ""
+        })
     ]);
 
     return {

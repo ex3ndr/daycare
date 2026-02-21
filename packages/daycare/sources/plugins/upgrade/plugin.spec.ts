@@ -132,8 +132,7 @@ describe("upgrade plugin commands", () => {
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
-            mode: "runtime",
-            events: { emit: () => undefined }
+            mode: "runtime"
         };
 
         const instance = await plugin.create(api as never);
@@ -190,8 +189,7 @@ describe("upgrade plugin commands", () => {
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
-            mode: "runtime",
-            events: { emit: () => undefined }
+            mode: "runtime"
         };
         const instance = await plugin.create(api as never);
         await instance.load?.();
@@ -275,8 +273,7 @@ describe("upgrade plugin commands", () => {
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
-            mode: "runtime",
-            events: { emit: () => undefined }
+            mode: "runtime"
         };
         const instance = await plugin.create(api as never);
         await instance.load?.();
@@ -335,8 +332,7 @@ describe("upgrade plugin commands", () => {
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
-            mode: "runtime",
-            events: { emit: () => undefined }
+            mode: "runtime"
         };
         const instance = await plugin.create(api as never);
 
@@ -391,8 +387,7 @@ describe("upgrade plugin commands", () => {
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
-            mode: "runtime",
-            events: { emit: () => undefined }
+            mode: "runtime"
         };
         const instance = await plugin.create(api as never);
 

@@ -1,27 +1,16 @@
 import path from "node:path";
 
 export type SessionPermissions = {
-    workspaceDir?: string;
     workingDir: string;
     writeDirs: string[];
-    readDirs: string[];
-    network: boolean;
-    events: boolean;
 };
 
 export function normalizePermissions(value: unknown, defaultWorkingDir: string): SessionPermissions {
     let writeDirs: string[] = [];
-    let readDirs: string[] = [];
-    let network = false;
-    let events = false;
     if (value && typeof value === "object") {
         const candidate = value as {
-            workspaceDir?: unknown;
             workingDir?: unknown;
             writeDirs?: unknown;
-            readDirs?: unknown;
-            network?: unknown;
-            events?: unknown;
         };
         if (typeof candidate.workingDir === "string" && candidate.workingDir.trim().length > 0) {
             if (path.isAbsolute(candidate.workingDir)) {
@@ -32,43 +21,16 @@ export function normalizePermissions(value: unknown, defaultWorkingDir: string):
                         .filter((entry) => path.isAbsolute(entry))
                         .map((entry) => path.resolve(entry));
                 }
-                if (Array.isArray(candidate.readDirs)) {
-                    readDirs = candidate.readDirs
-                        .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
-                        .map((entry) => entry.trim())
-                        .filter((entry) => path.isAbsolute(entry))
-                        .map((entry) => path.resolve(entry));
-                }
-                if (typeof candidate.network === "boolean") {
-                    network = candidate.network;
-                }
-                if (typeof candidate.events === "boolean") {
-                    events = candidate.events;
-                }
-                const workspaceDir =
-                    typeof candidate.workspaceDir === "string" &&
-                    candidate.workspaceDir.trim().length > 0 &&
-                    path.isAbsolute(candidate.workspaceDir)
-                        ? path.resolve(candidate.workspaceDir)
-                        : path.resolve(candidate.workingDir);
                 return {
-                    workspaceDir,
                     workingDir: path.resolve(candidate.workingDir),
-                    writeDirs: dedupe(writeDirs),
-                    readDirs: dedupe(readDirs),
-                    network,
-                    events
+                    writeDirs: dedupe(writeDirs)
                 };
             }
         }
     }
     return {
-        workspaceDir: path.resolve(defaultWorkingDir),
         workingDir: path.resolve(defaultWorkingDir),
-        writeDirs: [],
-        readDirs: [],
-        network: false,
-        events: false
+        writeDirs: []
     };
 }
 

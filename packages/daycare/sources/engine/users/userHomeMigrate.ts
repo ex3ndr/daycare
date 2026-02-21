@@ -12,14 +12,10 @@ const MARKER_FILENAME = ".migrated";
 const logger = getLogger("engine.users.migrate");
 
 /**
- * Migrates legacy shared files/apps into the owner user's UserHome tree once.
+ * Migrates legacy knowledge files into the owner user's UserHome tree once.
  * Expects: storage migrations have already run and config paths are absolute.
  */
-export async function userHomeMigrate(
-    config: Config,
-    storageOrConfig?: Storage | Config,
-    legacyPaths?: { filesDir: string; appsDir: string }
-): Promise<void> {
+export async function userHomeMigrate(config: Config, storageOrConfig?: Storage | Config): Promise<void> {
     const storage = storageResolve(storageOrConfig ?? config);
     const markerPath = path.join(config.usersDir, MARKER_FILENAME);
     if (await pathExists(markerPath)) {
@@ -30,10 +26,6 @@ export async function userHomeMigrate(
     const ownerHome = new UserHome(config.usersDir, ownerUserId);
     await userHomeEnsure(ownerHome);
     await knowledgeFilesCopy(config, ownerHome);
-    if (legacyPaths) {
-        await directoryCopy(legacyPaths.filesDir, ownerHome.desktop);
-        await directoryCopy(legacyPaths.appsDir, ownerHome.apps);
-    }
     await fs.mkdir(config.usersDir, { recursive: true });
     await fs.writeFile(markerPath, `${JSON.stringify({ migratedAt: Date.now(), ownerUserId }, null, 2)}\n`, "utf8");
 }
@@ -85,14 +77,6 @@ async function knowledgeFilesCopy(config: Config, ownerHome: UserHome): Promise<
         await fs.mkdir(path.dirname(pair.to), { recursive: true });
         await fs.copyFile(pair.from, pair.to);
     }
-}
-
-async function directoryCopy(sourceDir: string, targetDir: string): Promise<void> {
-    if (!(await pathExists(sourceDir))) {
-        return;
-    }
-    await fs.mkdir(targetDir, { recursive: true });
-    await fs.cp(sourceDir, targetDir, { recursive: true, force: false, dereference: false });
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {

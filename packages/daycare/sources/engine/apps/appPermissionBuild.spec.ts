@@ -4,7 +4,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { appPermissionBuild } from "./appPermissionBuild.js";
-import { appPermissionStateWrite } from "./appPermissionStateWrite.js";
 
 describe("appPermissionBuild", () => {
     let appsDir: string;
@@ -22,31 +21,19 @@ describe("appPermissionBuild", () => {
         const expectedDataDir = path.join(appsDir, "github-reviewer", "data");
 
         expect(permissions).toEqual({
-            workspaceDir: path.resolve(appsDir),
             workingDir: expectedDataDir,
-            writeDirs: [expectedDataDir],
-            readDirs: [path.resolve(appsDir)],
-            network: false,
-            events: false
+            writeDirs: [expectedDataDir]
         });
 
         const stat = await fs.stat(expectedDataDir);
         expect(stat.isDirectory()).toBe(true);
     });
 
-    it("merges shared app permissions persisted in app state", async () => {
-        await appPermissionStateWrite(appsDir, "github-reviewer", [
-            "@workspace",
-            "@network",
-            "@read:/tmp/daycare-app-read",
-            "@write:/tmp/daycare-app-write"
-        ]);
-
+    it("returns a fixed app-local permission set", async () => {
         const permissions = await appPermissionBuild(appsDir, "github-reviewer");
-        expect(permissions.network).toBe(true);
-        expect(permissions.readDirs).toContain("/tmp/daycare-app-read");
-        expect(permissions.readDirs).toContain("/tmp/daycare-app-write");
-        expect(permissions.writeDirs).toContain(path.resolve(appsDir));
-        expect(permissions.writeDirs).toContain("/tmp/daycare-app-write");
+        expect(permissions).toEqual({
+            workingDir: path.join(appsDir, "github-reviewer", "data"),
+            writeDirs: [path.join(appsDir, "github-reviewer", "data")]
+        });
     });
 });

@@ -48,8 +48,7 @@ describe("custom-tunnel plugin", () => {
                     }
                 },
                 processes: {},
-                mode: "runtime" as const,
-                events: { emit: () => undefined }
+                mode: "runtime" as const
             };
 
             const instance = await plugin.create(api as never);

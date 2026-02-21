@@ -24,7 +24,7 @@ function renderTokens(tokens: Token[]): string {
 function renderToken(token: Token): string {
     switch (token.type) {
         case "paragraph":
-            return renderInline(token as Tokens.Paragraph) + "\n";
+            return `${renderInline(token as Tokens.Paragraph)}\n`;
 
         case "text":
             if ("tokens" in token && token.tokens) {
@@ -96,7 +96,7 @@ function renderInlineToken(token: Token): string {
 
         case "codespan":
             // WhatsApp uses ``` for monospace
-            return "```" + (token as Tokens.Codespan).text + "```";
+            return `\`\`\`${(token as Tokens.Codespan).text}\`\`\``;
 
         case "link": {
             const link = token as Tokens.Link;
@@ -132,7 +132,7 @@ function renderInlineToken(token: Token): string {
 
 /** Renders a code block */
 function renderCodeBlock(token: Tokens.Code): string {
-    return "```" + token.text + "```\n";
+    return `\`\`\`${token.text}\`\`\`\n`;
 }
 
 /** Renders a blockquote */
@@ -140,7 +140,7 @@ function renderBlockquote(token: Tokens.Blockquote): string {
     const inner = renderTokens(token.tokens).trim();
     // WhatsApp doesn't have native blockquote, prefix with >
     const lines = inner.split("\n").map((line) => `> ${line}`);
-    return lines.join("\n") + "\n";
+    return `${lines.join("\n")}\n`;
 }
 
 /** Renders a list (ordered or unordered) */
@@ -151,7 +151,7 @@ function renderList(token: Tokens.List): string {
         const content = renderListItemContent(item);
         return prefix + content;
     });
-    return items.join("\n") + "\n";
+    return `${items.join("\n")}\n`;
 }
 
 /** Renders list item content */
@@ -184,13 +184,13 @@ function renderTable(token: Tokens.Table): string {
     const rows: string[] = [];
 
     const headerCells = token.header.map((cell) => renderInline(cell));
-    rows.push("| " + headerCells.join(" | ") + " |");
-    rows.push("| " + token.header.map(() => "---").join(" | ") + " |");
+    rows.push(`| ${headerCells.join(" | ")} |`);
+    rows.push(`| ${token.header.map(() => "---").join(" | ")} |`);
 
     for (const row of token.rows) {
         const cells = row.map((cell) => renderInline(cell));
-        rows.push("| " + cells.join(" | ") + " |");
+        rows.push(`| ${cells.join(" | ")} |`);
     }
 
-    return rows.join("\n") + "\n";
+    return `${rows.join("\n")}\n`;
 }

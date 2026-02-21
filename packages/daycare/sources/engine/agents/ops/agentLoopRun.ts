@@ -459,7 +459,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         heartbeats,
                         toolResolver,
                         skills: activeSkills,
-                        permissionRequestRegistry: agentSystem.permissionRequestRegistry,
                         appendHistoryRecord,
                         rlmToolOnly: false
                     };
@@ -596,7 +595,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     heartbeats,
                     toolResolver,
                     skills: activeSkills,
-                    permissionRequestRegistry: agentSystem.permissionRequestRegistry,
                     appendHistoryRecord,
                     rlmToolOnly: agentSystem.config.current.features.rlm
                 });

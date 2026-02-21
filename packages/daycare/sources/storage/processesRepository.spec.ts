@@ -98,10 +98,7 @@ function recordBuild(input: { id: string; userId: string; owner: { type: "plugin
         allowLocalBinding: false,
         permissions: {
             workingDir: "/tmp",
-            writeDirs: ["/tmp"],
-            readDirs: ["/tmp"],
-            network: false,
-            events: false
+            writeDirs: ["/tmp"]
         },
         owner: input.owner,
         keepAlive: false,

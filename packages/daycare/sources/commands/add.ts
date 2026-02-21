@@ -33,7 +33,7 @@ export async function addCommand(options: AddOptions): Promise<void> {
 
     const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
     const config = await configLoad(settingsPath);
-    const settings = config.settings;
+    const _settings = config.settings;
     const authStore = new AuthStore(config);
 
     const addTarget = await promptSelect({

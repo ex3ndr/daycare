@@ -375,26 +375,9 @@ describe("AgentSystem", () => {
 
             const expectedHome = path.join(harness.config.usersDir, context.userId, "home");
             const expectedDesktop = path.join(expectedHome, "desktop");
-            const expectedSkills = path.join(harness.config.usersDir, context.userId, "skills");
-            const expectedKnowledge = path.join(expectedHome, "knowledge");
 
-            expect(state.permissions.workspaceDir).toBe(expectedHome);
             expect(state.permissions.workingDir).toBe(expectedDesktop);
-            expect(state.permissions.writeDirs).toEqual(
-                expect.arrayContaining([
-                    expectedDesktop,
-                    path.join(expectedHome, "downloads"),
-                    path.join(expectedHome, "documents"),
-                    path.join(expectedHome, "developer"),
-                    path.join(expectedHome, "tmp"),
-                    path.join(expectedKnowledge, "SOUL.md"),
-                    path.join(expectedKnowledge, "USER.md"),
-                    path.join(expectedKnowledge, "AGENTS.md"),
-                    path.join(expectedKnowledge, "TOOLS.md")
-                ])
-            );
-            expect(state.permissions.readDirs).toContain(expectedSkills);
-            expect(state.permissions.writeDirs).not.toContain(expectedSkills);
+            expect(state.permissions.writeDirs).toEqual([expectedHome]);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

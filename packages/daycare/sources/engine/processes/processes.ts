@@ -12,13 +12,12 @@ import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomai
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
-import type { ProcessDbRecord, ProcessOwnerDbRecord } from "../../storage/databaseTypes.js";
+import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
 import type { ProcessesRepository } from "../../storage/processesRepository.js";
 import { Storage } from "../../storage/storage.js";
 import { atomicWrite } from "../../util/atomicWrite.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import { AsyncLock } from "../../util/lock.js";
-import { resolveEngineSocketPath } from "../ipc/socket.js";
 import { resolveWorkspacePath } from "../permissions.js";
 import { processBootTimeRead } from "./processBootTimeRead.js";
 
@@ -112,7 +111,6 @@ export class Processes {
     private readonly lock = new AsyncLock();
     private readonly logger: Logger;
     private readonly bootTimeProvider: () => Promise<number | null>;
-    private readonly socketPath: string;
     private readonly repository: Pick<
         ProcessesRepository,
         "create" | "findAll" | "findById" | "update" | "delete" | "deleteByOwner"
@@ -131,7 +129,6 @@ export class Processes {
         logger: Logger,
         options: {
             bootTimeProvider?: () => Promise<number | null>;
-            socketPath?: string;
             repository?: Pick<
                 ProcessesRepository,
                 "create" | "findAll" | "findById" | "update" | "delete" | "deleteByOwner"
@@ -142,7 +139,6 @@ export class Processes {
         this.recordsDir = path.join(this.baseDir, "processes");
         this.logger = logger;
         this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
-        this.socketPath = resolveEngineSocketPath(options.socketPath);
 
         if (options.repository) {
             this.repository = options.repository;
@@ -216,7 +212,7 @@ export class Processes {
             const home = input.home ? await sandboxCanWrite(permissions, input.home) : null;
 
             const allowedDomains = sandboxAllowedDomainsResolve(input.allowedDomains, input.packageManagers);
-            const domainIssues = sandboxAllowedDomainsValidate(allowedDomains, permissions.network);
+            const domainIssues = sandboxAllowedDomainsValidate(allowedDomains);
             if (domainIssues.length > 0) {
                 throw new Error(domainIssues.join(" "));
             }
@@ -466,12 +462,7 @@ export class Processes {
     }
 
     private async startRecordLocked(record: ProcessRecord, options: { incrementRestart: boolean }): Promise<void> {
-        const sandboxConfig = buildSandboxConfig(
-            record.allowedDomains,
-            record.permissions,
-            this.socketPath,
-            record.allowLocalBinding
-        );
+        const sandboxConfig = buildSandboxConfig(record.allowedDomains, record.permissions, record.allowLocalBinding);
         await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
         const baseEnv = { ...process.env, ...record.env };
         const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
@@ -619,17 +610,18 @@ export class Processes {
 function buildSandboxConfig(
     allowedDomains: string[],
     permissions: SessionPermissions,
-    socketPath: string,
     allowLocalBinding: boolean
 ): SandboxRuntimeConfig {
     return {
-        filesystem: sandboxFilesystemPolicyBuild({ permissions }),
+        filesystem: sandboxFilesystemPolicyBuild({
+            writeDirs: permissions.writeDirs,
+            workingDir: permissions.workingDir
+        }),
         network: {
             allowedDomains,
             deniedDomains: [],
             ...(allowLocalBinding ? { allowLocalBinding: true } : {})
         },
-        ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
         enableWeakerNestedSandbox: true
     };
 }
@@ -657,10 +649,7 @@ function toProcessInfo(record: ProcessRecord): ProcessInfo {
 function clonePermissions(permissions: SessionPermissions): SessionPermissions {
     return {
         workingDir: permissions.workingDir,
-        writeDirs: [...permissions.writeDirs],
-        readDirs: [...permissions.readDirs],
-        network: permissions.network,
-        events: permissions.events
+        writeDirs: [...permissions.writeDirs]
     };
 }
 

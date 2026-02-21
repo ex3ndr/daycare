@@ -79,7 +79,7 @@ export const plugin = definePlugin({
                 await validateApiKey(existingKey);
                 api.note("Using existing Perplexity credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Perplexity key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -109,10 +109,7 @@ export const plugin = definePlugin({
                         parameters: searchSchema
                     },
                     returns: searchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as SearchArgs;
                         const apiKey = await api.auth.getApiKey(instanceId);
                         if (!apiKey) {
@@ -147,7 +144,7 @@ export const plugin = definePlugin({
 
                         let text = content;
                         if (citations.length > 0) {
-                            text += "\n\nSources:\n" + citations.map((url, i) => `${i + 1}. ${url}`).join("\n");
+                            text += `\n\nSources:\n${citations.map((url, i) => `${i + 1}. ${url}`).join("\n")}`;
                         }
 
                         const summary = text;

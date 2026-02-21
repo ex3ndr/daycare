@@ -4,20 +4,16 @@ import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.j
 
 describe("sandboxAllowedDomainsValidate", () => {
     it("rejects wildcard domains", () => {
-        expect(sandboxAllowedDomainsValidate(["*"], true)).toEqual(['Wildcard "*" is not allowed in allowedDomains.']);
+        expect(sandboxAllowedDomainsValidate(["*"])).toEqual(['Wildcard "*" is not allowed in allowedDomains.']);
     });
 
-    it("requires network permission when any domains are present", () => {
-        expect(sandboxAllowedDomainsValidate(["example.com"], false)).toEqual([
-            "Network permission is required to set allowedDomains."
+    it("returns no issues for explicit domains", () => {
+        expect(sandboxAllowedDomainsValidate(["example.com"])).toEqual([]);
+    });
+
+    it("requires at least one explicit domain", () => {
+        expect(sandboxAllowedDomainsValidate([])).toEqual([
+            "allowedDomains must include at least one explicit domain."
         ]);
-    });
-
-    it("returns no issues for explicit domains with network permission", () => {
-        expect(sandboxAllowedDomainsValidate(["example.com"], true)).toEqual([]);
-    });
-
-    it("requires allowedDomains when network permission is enabled", () => {
-        expect(sandboxAllowedDomainsValidate([], true)).toEqual(["Network cannot be enabled without allowedDomains."]);
     });
 });

@@ -90,7 +90,7 @@ export const plugin = definePlugin({
                 await validateApiKey(existingKey);
                 api.note("Using existing Firecrawl credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Firecrawl key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -118,10 +118,7 @@ export const plugin = definePlugin({
                         parameters: fetchSchema
                     },
                     returns: fetchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as FetchArgs;
                         const apiKey = await api.auth.getApiKey(instanceId);
                         if (!apiKey) {

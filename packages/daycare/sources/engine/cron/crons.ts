@@ -4,10 +4,7 @@ import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
-import type { PermissionRequestRegistry } from "../modules/tools/permissionRequestRegistry.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
-import { gatePermissionRequest } from "../scheduling/gatePermissionRequest.js";
 import type { CronTaskDefinition } from "./cronTypes.js";
 import { CronScheduler } from "./ops/cronScheduler.js";
 
@@ -18,8 +15,6 @@ export type CronsOptions = {
     storage: Storage;
     eventBus: EngineEventBus;
     agentSystem: AgentSystem;
-    connectorRegistry: ConnectorRegistry;
-    permissionRequestRegistry: PermissionRequestRegistry;
 };
 
 /**
@@ -44,20 +39,6 @@ export class Crons {
                 const userId = task.userId?.trim() ? task.userId : ownerUserId;
                 return permissionBuildUser(this.agentSystem.userHomeForUserId(userId));
             },
-            resolvePermissions: async (task) => {
-                if (task.agentId) {
-                    return this.agentSystem.permissionsForTarget({ agentId: task.agentId });
-                }
-                try {
-                    return await this.agentSystem.permissionsForTarget({
-                        descriptor: { type: "cron", id: task.taskUid, name: task.name }
-                    });
-                } catch {
-                    const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
-                    const userId = task.userId?.trim() ? task.userId : ownerUserId;
-                    return permissionBuildUser(this.agentSystem.userHomeForUserId(userId));
-                }
-            },
             onTask: async (task, messageContext) => {
                 const target = task.agentId
                     ? { agentId: task.agentId }
@@ -65,14 +46,6 @@ export class Crons {
                 logger.debug(
                     `event: CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "system:cron"}`
                 );
-
-                const permissions = task.agentId
-                    ? await this.agentSystem.permissionsForTarget({ agentId: task.agentId })
-                    : await this.agentSystem.permissionsForTarget({
-                          descriptor: { type: "cron", id: task.taskUid, name: task.taskName }
-                      });
-                const targetAgentId = await this.agentSystem.agentIdForTarget(target);
-                this.agentSystem.updateAgentPermissions(targetAgentId, permissions, Date.now());
 
                 await this.agentSystem.postAndAwait(target, {
                     type: "system_message",
@@ -84,22 +57,6 @@ export class Crons {
             },
             onError: async (error, taskId) => {
                 logger.warn({ taskId, error }, "error: Cron task failed");
-            },
-            onGatePermissionRequest: async (task, missing) => {
-                const target = task.agentId
-                    ? { agentId: task.agentId }
-                    : { descriptor: { type: "cron" as const, id: task.taskUid, name: task.name } };
-                const agentId = await this.agentSystem.agentIdForTarget(target);
-                const label = task.name ? `cron task "${task.name}" (${task.id})` : `cron task ${task.id}`;
-                const result = await gatePermissionRequest({
-                    missing,
-                    taskLabel: label,
-                    agentSystem: this.agentSystem,
-                    connectorRegistry: options.connectorRegistry,
-                    permissionRequestRegistry: options.permissionRequestRegistry,
-                    agentId
-                });
-                return result.granted;
             },
             onTaskComplete: (task, runAt) => {
                 this.eventBus.emit("cron.task.ran", { taskId: task.id, runAt: runAt.toISOString() });

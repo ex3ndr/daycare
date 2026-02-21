@@ -153,7 +153,7 @@ function hasAssistantOutput(message: Context["messages"][number]): boolean {
         return true;
     }
     const text = extractAssistantText(message);
-    if (text && text.trim()) {
+    if (text?.trim()) {
         return true;
     }
     if ((message.usage?.totalTokens ?? 0) > 0) {
@@ -161,7 +161,7 @@ function hasAssistantOutput(message: Context["messages"][number]): boolean {
     }
     return message.content.some((part) => {
         if (part.type === "thinking") {
-            return Boolean(part.thinking && part.thinking.trim());
+            return Boolean(part.thinking?.trim());
         }
         if (part.type === "toolCall") {
             return true;

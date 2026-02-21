@@ -27,7 +27,6 @@ import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
-import { permissionTagsApply } from "../permissions/permissionTagsApply.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { Skills } from "../skills/skills.js";
 import type { UserHome } from "../users/userHome.js";
@@ -363,14 +362,6 @@ export class Agent {
 
         if (agentDescriptorIsHeartbeat(this.descriptor)) {
             this.state.permissions = permissionBuildUser(this.userHome);
-        }
-        const permissionTags = [...(entry.context.permissionTags ?? [])];
-        if (permissionTags.length > 0) {
-            try {
-                permissionTagsApply(this.state.permissions, permissionTags);
-            } catch (error) {
-                logger.warn({ agentId: this.id, error }, "error: Failed to apply task permissions");
-            }
         }
 
         const toolResolver = item.toolResolverOverride ?? this.agentSystem.toolResolver;
@@ -1000,8 +991,7 @@ export class Agent {
             agentSystem: this.agentSystem,
             heartbeats: this.agentSystem.heartbeats,
             toolResolver: this.agentSystem.toolResolver,
-            skills: [],
-            permissionRequestRegistry: this.agentSystem.permissionRequestRegistry
+            skills: []
         };
     }
 

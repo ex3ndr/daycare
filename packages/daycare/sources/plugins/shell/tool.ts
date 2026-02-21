@@ -5,16 +5,12 @@ import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { SessionPermissions, ToolDefinition, ToolExecutionResult, ToolResultContract } from "@/types";
-import { resolveEngineSocketPath } from "../../engine/ipc/socket.js";
 import {
     toolExecutionResultOutcomeWithTyped,
     toolMessageTextExtract
 } from "../../engine/modules/tools/toolReturnOutcome.js";
-import { isWithinSecure, openSecure } from "../../engine/permissions/pathResolveSecure.js";
-import { permissionTagsApply } from "../../engine/permissions/permissionTagsApply.js";
-import { permissionTagsNormalize } from "../../engine/permissions/permissionTagsNormalize.js";
-import { permissionTagsValidate } from "../../engine/permissions/permissionTagsValidate.js";
 import { resolveWorkspacePath } from "../../engine/permissions.js";
+import { isWithinSecure, openSecure } from "../../sandbox/pathResolveSecure.js";
 import { runInSandbox } from "../../sandbox/runtime.js";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
@@ -82,7 +78,6 @@ const execSchema = Type.Object(
         timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
         env: Type.Optional(envSchema),
         home: Type.Optional(Type.String({ minLength: 1 })),
-        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
         packageManagers: Type.Optional(
             Type.Array(
                 Type.Union([
@@ -200,7 +195,7 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. By default exec runs with no network, no events socket access, and /tmp as the only writable path. Reads are always allowed (except protected deny-list paths). Use explicit permission tags to re-enable caller-held network, events, or additional writable path access; @read tags are ignored. Writes are sandboxed to the allowed write directories. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Exec uses /tmp as the writable path and global read access with a protected deny-list. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: shellReturns,
@@ -210,7 +205,7 @@ export function buildExecTool(): ToolDefinition {
             if (!workingDir) {
                 throw new Error("Workspace is not configured.");
             }
-            const permissions = await resolveExecPermissions(toolContext.permissions, payload.permissions);
+            const permissions = resolveExecPermissions(toolContext.permissions);
             if (payload.cwd) {
                 ensureAbsolutePath(payload.cwd);
             }
@@ -220,15 +215,14 @@ export function buildExecTool(): ToolDefinition {
             const cwd = payload.cwd ? resolveWorkspacePath(workingDir, payload.cwd) : workingDir;
             const home = payload.home ? await resolveWritePathSecure(permissions, payload.home) : undefined;
             const allowedDomains = sandboxAllowedDomainsResolve(payload.allowedDomains, payload.packageManagers);
-            const domainIssues = sandboxAllowedDomainsValidate(allowedDomains, permissions.network);
+            const domainIssues = sandboxAllowedDomainsValidate(allowedDomains);
             if (domainIssues.length > 0) {
                 throw new Error(domainIssues.join(" "));
             }
             const envOverrides = envNormalize(payload.env);
             const env = envOverrides ? { ...process.env, ...envOverrides } : process.env;
             const timeout = payload.timeoutMs ?? DEFAULT_EXEC_TIMEOUT;
-            const socketPath = resolveEngineSocketPath(toolContext.agentSystem.config.current.socketPath);
-            const sandboxConfig = buildSandboxConfig(permissions, allowedDomains, socketPath);
+            const sandboxConfig = buildSandboxConfig(permissions, allowedDomains);
 
             try {
                 const result = await runInSandbox(payload.command, sandboxConfig, {
@@ -796,37 +790,24 @@ function formatDisplayPath(workingDir: string, target: string): string {
     return target;
 }
 
-function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[], socketPath: string) {
-    const filesystem = sandboxFilesystemPolicyBuild({ permissions });
+function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[]) {
+    const filesystem = sandboxFilesystemPolicyBuild({
+        writeDirs: permissions.writeDirs,
+        workingDir: permissions.workingDir
+    });
     return {
         filesystem,
         network: {
             allowedDomains,
             deniedDomains: []
         },
-        ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
         enableWeakerNestedSandbox: true
     };
 }
 
-async function resolveExecPermissions(
-    currentPermissions: SessionPermissions,
-    requestedTags: string[] | undefined
-): Promise<SessionPermissions> {
-    const execPermissions: SessionPermissions = {
+function resolveExecPermissions(currentPermissions: SessionPermissions): SessionPermissions {
+    return {
         workingDir: currentPermissions.workingDir,
-        writeDirs: ["/tmp"], // /tmp is always writable for ephemeral data
-        readDirs: [],
-        network: false,
-        events: false
+        writeDirs: ["/tmp"]
     };
-    if (!requestedTags || requestedTags.length === 0) {
-        return execPermissions;
-    }
-    const permissionTags = permissionTagsNormalize(requestedTags);
-    const nonReadTags = permissionTags.filter((tag) => !tag.startsWith("@read:"));
-    await permissionTagsValidate(currentPermissions, nonReadTags);
-    permissionTagsApply(execPermissions, nonReadTags);
-    execPermissions.readDirs = [];
-    return execPermissions;
 }

@@ -9,8 +9,6 @@ import type {
     MessageContext,
     MessageHandler,
     MessageUnsubscribe,
-    PermissionDecision,
-    PermissionHandler,
     SlashCommandEntry
 } from "./connectors/types.js";
 
@@ -26,11 +24,6 @@ export type ConnectorRegistryOptions = {
         descriptor: AgentDescriptor
     ) => void | Promise<void>;
     onCommand?: (command: string, context: MessageContext, descriptor: AgentDescriptor) => void | Promise<void>;
-    onPermission?: (
-        decision: PermissionDecision,
-        context: MessageContext,
-        descriptor: AgentDescriptor
-    ) => void | Promise<void>;
     onFatal?: (source: string, reason: string, error?: unknown) => void;
 };
 
@@ -45,7 +38,6 @@ type ManagedConnector = {
     connector: Connector;
     unsubscribe?: MessageUnsubscribe;
     commandUnsubscribe?: CommandUnsubscribe;
-    permissionUnsubscribe?: MessageUnsubscribe;
     loadedAt: Date;
 };
 
@@ -54,7 +46,6 @@ export class ConnectorRegistry {
     private commandRegistry: CommandRegistry;
     private onMessage: ConnectorRegistryOptions["onMessage"];
     private onCommand?: ConnectorRegistryOptions["onCommand"];
-    private onPermission?: ConnectorRegistryOptions["onPermission"];
     private onFatal?: ConnectorRegistryOptions["onFatal"];
     private logger = getLogger("connectors.registry");
 
@@ -62,7 +53,6 @@ export class ConnectorRegistry {
         this.commandRegistry = options.commandRegistry ?? new CommandRegistry();
         this.onMessage = options.onMessage;
         this.onCommand = options.onCommand;
-        this.onPermission = options.onPermission;
         this.onFatal = options.onFatal;
         this.commandRegistry.onChange(() => {
             void this.updateCommandsForAllConnectors();
@@ -97,14 +87,12 @@ export class ConnectorRegistry {
         }
 
         this.logger.debug(`event: Attaching message handler connectorId=${id}`);
-        const unsubscribe = this.attach(id, connector);
-        const commandUnsubscribe = this.attachCommand(id, connector);
-        const permissionUnsubscribe = this.attachPermission(id, connector);
+        const unsubscribe = this.attach(connector);
+        const commandUnsubscribe = this.attachCommand(connector);
         this.connectors.set(id, {
             connector,
             unsubscribe,
             commandUnsubscribe,
-            permissionUnsubscribe,
             loadedAt: new Date()
         });
         void this.updateCommandsForConnector(id, connector);
@@ -126,7 +114,6 @@ export class ConnectorRegistry {
         this.logger.debug(`event: Unsubscribing message handler connectorId=${id}`);
         entry.unsubscribe?.();
         entry.commandUnsubscribe?.();
-        entry.permissionUnsubscribe?.();
         try {
             this.logger.debug(`event: Calling connector.shutdown() connectorId=${id} reason=${reason}`);
             await entry.connector.shutdown?.(reason);
@@ -155,14 +142,14 @@ export class ConnectorRegistry {
         this.onFatal?.(id, reason, error);
     }
 
-    private attach(id: string, connector: Connector): MessageUnsubscribe {
+    private attach(connector: Connector): MessageUnsubscribe {
         const handler: MessageHandler = (message, context, descriptor) => {
             return this.onMessage(message, context, descriptor);
         };
         return connector.onMessage(handler);
     }
 
-    private attachCommand(id: string, connector: Connector): CommandUnsubscribe | undefined {
+    private attachCommand(connector: Connector): CommandUnsubscribe | undefined {
         if (!this.onCommand || !connector.onCommand) {
             return undefined;
         }
@@ -170,16 +157,6 @@ export class ConnectorRegistry {
             return this.onCommand?.(command, context, descriptor);
         };
         return connector.onCommand(handler);
-    }
-
-    private attachPermission(id: string, connector: Connector): MessageUnsubscribe | undefined {
-        if (!this.onPermission || !connector.onPermission) {
-            return undefined;
-        }
-        const handler: PermissionHandler = (decision, context, descriptor) => {
-            return this.onPermission?.(decision, context, descriptor);
-        };
-        return connector.onPermission(handler);
     }
 
     private commandListBuild(): SlashCommandEntry[] {

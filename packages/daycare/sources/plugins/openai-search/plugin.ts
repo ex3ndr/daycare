@@ -137,7 +137,7 @@ export const plugin = definePlugin({
                 await validateApiKey(instanceKey);
                 api.note("Using existing OpenAI instance credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing OpenAI instance key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -148,7 +148,7 @@ export const plugin = definePlugin({
                 await validateApiKey(providerKey);
                 api.note("Using existing OpenAI provider credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing OpenAI provider key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -166,7 +166,7 @@ export const plugin = definePlugin({
                     "OpenAI Codex subscription credentials are missing or expired, prompting for a new key.",
                     "Setup"
                 );
-            } catch (error) {
+            } catch (_error) {
                 api.note(
                     "Existing OpenAI Codex subscription credentials failed validation, prompting for a new key.",
                     "Setup"
@@ -200,10 +200,7 @@ export const plugin = definePlugin({
                         parameters: searchSchema
                     },
                     returns: searchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as SearchArgs;
 
                         // Try plugin-specific key first, fallback to OpenAI provider or Codex OAuth
@@ -252,7 +249,7 @@ export const plugin = definePlugin({
 
                         let finalText = text;
                         if (sources) {
-                            finalText += "\n\nSources:\n" + sources;
+                            finalText += `\n\nSources:\n${sources}`;
                         }
 
                         const summary = finalText;

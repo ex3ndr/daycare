@@ -142,23 +142,10 @@ function messageContextMerge(
     left: AgentInboxMessage["context"],
     right: AgentInboxMessage["context"]
 ): AgentInboxMessage["context"] {
-    const permissionTags = permissionTagsMerge(left.permissionTags, right.permissionTags);
     const messageId = right.messageId ?? left.messageId;
     return {
-        ...(messageId ? { messageId } : {}),
-        ...(permissionTags.length > 0 ? { permissionTags } : {})
+        ...(messageId ? { messageId } : {})
     };
-}
-
-function permissionTagsMerge(left: string[] | undefined, right: string[] | undefined): string[] {
-    const deduped = new Set<string>();
-    for (const tag of left ?? []) {
-        deduped.add(tag);
-    }
-    for (const tag of right ?? []) {
-        deduped.add(tag);
-    }
-    return Array.from(deduped);
 }
 
 function completionMerge(

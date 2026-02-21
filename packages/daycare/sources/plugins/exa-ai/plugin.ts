@@ -87,7 +87,7 @@ export const plugin = definePlugin({
                 await validateApiKey(existingKey);
                 api.note("Using existing Exa AI credentials.", "Setup");
                 return { settings: {} };
-            } catch (error) {
+            } catch (_error) {
                 api.note("Existing Exa AI key failed validation, prompting for a new key.", "Setup");
             }
         }
@@ -115,10 +115,7 @@ export const plugin = definePlugin({
                         parameters: searchSchema
                     },
                     returns: searchReturns,
-                    execute: async (args, toolContext, toolCall) => {
-                        if (!toolContext.permissions.network) {
-                            throw new Error("Network access not granted. Request @network permission.");
-                        }
+                    execute: async (args, _toolContext, toolCall) => {
                         const payload = args as SearchArgs;
                         const apiKey = await api.auth.getApiKey(instanceId);
                         if (!apiKey) {

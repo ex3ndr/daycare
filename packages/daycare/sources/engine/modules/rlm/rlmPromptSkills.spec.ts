@@ -101,8 +101,6 @@ async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<s
         model: "test-model",
         provider: "test-provider",
         workspace: "/tmp/workspace",
-        network: false,
-        events: false,
         connector: "test",
         canSendFiles: false,
         fileSendModes: "",

@@ -65,13 +65,6 @@ export type {
     MessageContext,
     MessageHandler,
     MessageUnsubscribe,
-    PermissionAccess,
-    PermissionDecision,
-    PermissionEntry,
-    PermissionHandler,
-    PermissionKind,
-    PermissionRequest,
-    PermissionRequestScope,
     PluginCommandDefinition,
     SlashCommandEntry
 } from "./engine/modules/connectors/types.js";

@@ -101,10 +101,7 @@ function contextBuild(workspaceDir: string): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir: workspaceDir,
-            writeDirs: [workspaceDir],
-            readDirs: [workspaceDir],
-            network: false,
-            events: false
+            writeDirs: [workspaceDir]
         },
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: { agentId: "agent-1", userId: "user-1" } as ToolExecutionContext["ctx"],

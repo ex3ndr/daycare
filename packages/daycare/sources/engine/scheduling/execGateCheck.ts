@@ -2,13 +2,11 @@ import type { ExecException } from "node:child_process";
 import path from "node:path";
 
 import type { ExecGateDefinition, SessionPermissions } from "@/types";
+import { pathResolveSecure } from "../../sandbox/pathResolveSecure.js";
 import { runInSandbox } from "../../sandbox/runtime.js";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
-import { resolveEngineSocketPath } from "../ipc/socket.js";
-import { pathResolveSecure } from "../permissions/pathResolveSecure.js";
-import { permissionClone } from "../permissions/permissionClone.js";
 
 const MAX_EXEC_BUFFER = 1_000_000;
 const DEFAULT_EXEC_TIMEOUT = 30_000;
@@ -19,7 +17,6 @@ export type ExecGateCheckInput = {
     gate: ExecGateDefinition;
     permissions: SessionPermissions;
     workingDir: string;
-    socketPath?: string;
 };
 
 export type ExecGateCheckResult = {
@@ -46,11 +43,13 @@ export async function execGateCheck(input: ExecGateCheckInput): Promise<ExecGate
         };
     }
 
-    const permissions = permissionClone(input.permissions);
-    permissions.workingDir = path.resolve(input.workingDir);
+    const permissions: SessionPermissions = {
+        ...input.permissions,
+        workingDir: path.resolve(input.workingDir)
+    };
 
     const allowedDomains = sandboxAllowedDomainsResolve(input.gate.allowedDomains, input.gate.packageManagers);
-    const domainIssues = sandboxAllowedDomainsValidate(allowedDomains, permissions.network);
+    const domainIssues = sandboxAllowedDomainsValidate(allowedDomains);
     if (domainIssues.length > 0) {
         return gateError(domainIssues.join(" "));
     }
@@ -73,7 +72,7 @@ export async function execGateCheck(input: ExecGateCheckInput): Promise<ExecGate
 
     const env = input.gate.env ? { ...process.env, ...input.gate.env } : process.env;
     const timeoutMs = clampTimeout(input.gate.timeoutMs ?? DEFAULT_EXEC_TIMEOUT);
-    const sandboxConfig = buildSandboxConfig(permissions, allowedDomains, resolveEngineSocketPath(input.socketPath));
+    const sandboxConfig = buildSandboxConfig(permissions, allowedDomains);
 
     try {
         const result = await runInSandbox(command, sandboxConfig, {
@@ -126,23 +125,23 @@ function gateError(message: string): ExecGateCheckResult {
     };
 }
 
-function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[], socketPath: string) {
-    const filesystem = sandboxFilesystemPolicyBuild({ permissions });
+function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: string[]) {
+    const filesystem = sandboxFilesystemPolicyBuild({
+        writeDirs: permissions.writeDirs,
+        workingDir: permissions.workingDir
+    });
     return {
         filesystem,
         network: {
             allowedDomains,
             deniedDomains: []
         },
-        ...(permissions.events ? { allowUnixSockets: [socketPath] } : {}),
         enableWeakerNestedSandbox: true
     };
 }
 
 async function resolveGateCwd(permissions: SessionPermissions, cwd: string): Promise<string> {
-    const allowedDirs = Array.from(
-        new Set([permissions.workingDir, ...permissions.readDirs, ...permissions.writeDirs])
-    );
+    const allowedDirs = Array.from(new Set([permissions.workingDir, ...permissions.writeDirs]));
     const resolved = await pathResolveSecure(allowedDirs, cwd);
     return resolved.realPath;
 }

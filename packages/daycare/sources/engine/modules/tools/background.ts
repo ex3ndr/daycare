@@ -3,15 +3,11 @@ import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { permissionAccessParse } from "../../permissions/permissionAccessParse.js";
-import { permissionTagsNormalize } from "../../permissions/permissionTagsNormalize.js";
-import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 
 const startSchema = Type.Object(
     {
         prompt: Type.String({ minLength: 1 }),
-        name: Type.Optional(Type.String({ minLength: 1 })),
-        permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
+        name: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -59,8 +55,6 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
             if (!prompt) {
                 throw new Error("Background agent prompt is required");
             }
-            const permissionTags = permissionTagsNormalize(payload.permissions);
-            await permissionTagsValidate(toolContext.permissions, permissionTags);
 
             const descriptor = {
                 type: "subagent" as const,
@@ -69,9 +63,6 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
                 name: payload.name ?? "subagent"
             };
             const agentId = await toolContext.agentSystem.agentIdForTarget({ descriptor });
-            for (const tag of permissionTags) {
-                await toolContext.agentSystem.grantPermission({ agentId }, permissionAccessParse(tag));
-            }
             await toolContext.agentSystem.post(
                 { agentId },
                 { type: "message", message: { text: prompt }, context: {} }

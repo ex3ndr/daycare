@@ -4,9 +4,6 @@ import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
-import { permissionAccessParse } from "../../permissions/permissionAccessParse.js";
-import { permissionTagsNormalize } from "../../permissions/permissionTagsNormalize.js";
-import { permissionTagsValidate } from "../../permissions/permissionTagsValidate.js";
 import { skillContentLoad } from "../../skills/skillContentLoad.js";
 import { skillResolve } from "../../skills/skillResolve.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
@@ -79,9 +76,6 @@ export function skillToolBuild(): ToolDefinition {
                     throw new Error(`Skill "${skill.name}" requires prompt in sandbox mode.`);
                 }
 
-                const permissionTags = permissionTagsNormalize(skill.permissions);
-                await permissionTagsValidate(toolContext.permissions, permissionTags);
-
                 const descriptor = {
                     type: "subagent" as const,
                     id: createId(),
@@ -89,11 +83,6 @@ export function skillToolBuild(): ToolDefinition {
                     name: skillSource
                 };
                 const agentId = await toolContext.agentSystem.agentIdForTarget({ descriptor });
-                for (const tag of permissionTags) {
-                    await toolContext.agentSystem.grantPermission({ agentId }, permissionAccessParse(tag), {
-                        source: skillSource
-                    });
-                }
 
                 const sandboxPrompt = skillSandboxPromptBuild(skillBody, prompt);
                 const result = await toolContext.agentSystem.postAndAwait(

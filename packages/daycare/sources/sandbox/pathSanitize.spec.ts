@@ -25,12 +25,12 @@ describe("pathSanitize", () => {
     });
 
     it("rejects excessively long paths", () => {
-        const longPath = "/" + "a".repeat(5000);
+        const longPath = `/${"a".repeat(5000)}`;
         expect(() => pathSanitize(longPath)).toThrow("Path exceeds maximum length of 4096 characters.");
     });
 
     it("accepts paths at the limit", () => {
-        const maxPath = "/" + "a".repeat(4095);
+        const maxPath = `/${"a".repeat(4095)}`;
         expect(() => pathSanitize(maxPath)).not.toThrow();
     });
 });

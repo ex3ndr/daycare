@@ -159,86 +159,6 @@ describe("HeartbeatScheduler", () => {
         expect(task?.prompt).toBe("Base prompt\n\n[Gate output]\nok");
     });
 
-    it("requests missing gate permissions and runs gate after approval", async () => {
-        const { dir, storage } = await createTempScheduler();
-        temps.push(dir);
-        storages.push(storage);
-
-        const onRun = vi.fn();
-        const gateCheck = vi.fn().mockResolvedValue({
-            shouldRun: true,
-            exitCode: 0,
-            stdout: "",
-            stderr: ""
-        });
-        let networkGranted = false;
-        const resolvePermissions = vi.fn(async () => defaultPermissions(dir, { network: networkGranted }));
-        const onGatePermissionRequest = vi.fn(async () => {
-            networkGranted = true;
-            return true;
-        });
-        const scheduler = new HeartbeatScheduler({
-            config: configModule(dir),
-            repository: storage.heartbeatTasks,
-            onRun,
-            gateCheck,
-            resolvePermissions,
-            onGatePermissionRequest,
-            resolveDefaultPermissions: () => defaultPermissions(dir)
-        });
-
-        await scheduler.createTask(contextBuild("user-1"), {
-            title: "Needs network",
-            prompt: "Check network.",
-            gate: { command: "echo gate", permissions: ["@network"] }
-        });
-
-        const result = await scheduler.runNow();
-
-        expect(result.ran).toBe(1);
-        expect(onGatePermissionRequest).toHaveBeenCalledWith(expect.objectContaining({ title: "Needs network" }), [
-            "@network"
-        ]);
-        expect(resolvePermissions).toHaveBeenCalledTimes(2);
-        expect(gateCheck).toHaveBeenCalledTimes(1);
-        expect(onRun).toHaveBeenCalledTimes(1);
-    });
-
-    it("skips task when missing gate permissions are denied", async () => {
-        const { dir, storage } = await createTempScheduler();
-        temps.push(dir);
-        storages.push(storage);
-
-        const onRun = vi.fn();
-        const gateCheck = vi.fn().mockResolvedValue({
-            shouldRun: true,
-            exitCode: 0,
-            stdout: "",
-            stderr: ""
-        });
-        const scheduler = new HeartbeatScheduler({
-            config: configModule(dir),
-            repository: storage.heartbeatTasks,
-            onRun,
-            gateCheck,
-            onGatePermissionRequest: vi.fn(async () => false),
-            resolveDefaultPermissions: () => defaultPermissions(dir)
-        });
-
-        await scheduler.createTask(contextBuild("user-1"), {
-            title: "Needs network",
-            prompt: "Check network.",
-            gate: { command: "echo gate", permissions: ["@network"] }
-        });
-
-        const result = await scheduler.runNow();
-
-        expect(result.ran).toBe(0);
-        expect(result.taskIds).toEqual([]);
-        expect(gateCheck).not.toHaveBeenCalled();
-        expect(onRun).not.toHaveBeenCalled();
-    });
-
     it("deletes tasks only for the same ctx user", async () => {
         const { dir, storage } = await createTempScheduler();
         temps.push(dir);
@@ -285,9 +205,6 @@ function defaultPermissions(workingDir: string, overrides: Partial<SessionPermis
     return {
         workingDir,
         writeDirs: [],
-        readDirs: [],
-        network: false,
-        events: false,
         ...overrides
     };
 }

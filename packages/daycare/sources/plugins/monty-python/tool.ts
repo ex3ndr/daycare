@@ -45,12 +45,6 @@ type MontyRuntime = {
     MontyTypingError: new (...args: unknown[]) => object;
 };
 
-type MontyCreateOptions = {
-    scriptName?: string;
-    inputs?: string[];
-    typeCheck?: boolean;
-};
-
 type MontyRunOptions = {
     inputs?: Record<string, unknown>;
     limits?: MontyLimits;

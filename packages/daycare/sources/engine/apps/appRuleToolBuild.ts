@@ -1,8 +1,6 @@
-import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { toolMessageTextExtract } from "../modules/tools/toolReturnOutcome.js";
 import { appDiscover } from "./appDiscover.js";
 import type { Apps } from "./appManager.js";
 import { type AppRuleAction, appRuleApply } from "./appRuleApply.js";
@@ -49,7 +47,7 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
     return {
         tool: {
             name: "app_rules",
-            description: "Manage app allow/deny rules. All mutations require permission approval.",
+            description: "Manage app allow/deny rules.",
             parameters: schema
         },
         returns: appRuleReturns,
@@ -64,33 +62,6 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
             const descriptor = (await appDiscover(appsDir)).find((entry) => entry.id === appId) ?? null;
             if (!descriptor) {
                 throw new Error(`Unknown app: ${appId}`);
-            }
-
-            const permissionsPath = path.join(path.resolve(descriptor.path), "PERMISSIONS.md");
-            const permissionResult = await context.agentSystem.toolResolver.execute(
-                {
-                    id: `${toolCall.id}:permission`,
-                    name: "request_permission",
-                    type: "toolCall",
-                    arguments: {
-                        permissions: [`@write:${permissionsPath}`],
-                        reason: appRulePermissionReasonBuild(payload.action, payload.rule)
-                    }
-                },
-                context
-            );
-            const approved = permissionApprovedRead(permissionResult.toolMessage.details);
-            if (permissionResult.toolMessage.isError || !approved) {
-                return {
-                    toolMessage: permissionResult.toolMessage,
-                    typedResult: {
-                        summary: toolMessageTextExtract(permissionResult.toolMessage),
-                        appId,
-                        action: payload.action,
-                        changed: false,
-                        approved: false
-                    }
-                };
             }
 
             const result = await appRuleApply({
@@ -130,25 +101,4 @@ export function appRuleToolBuild(apps: Apps): ToolDefinition {
             };
         }
     };
-}
-
-function appRulePermissionReasonBuild(action: AppRuleAction, rule: string): string {
-    const normalizedRule = rule.trim();
-    const actionLabel =
-        action === "add_allow"
-            ? "add allow rule"
-            : action === "add_deny"
-              ? "add deny rule"
-              : action === "remove_allow"
-                ? "remove allow rule"
-                : "remove deny rule";
-    return `Confirm app policy change (${actionLabel}): ${normalizedRule}`;
-}
-
-function permissionApprovedRead(details: unknown): boolean {
-    if (typeof details !== "object" || details === null) {
-        return false;
-    }
-    const approved = (details as { approved?: unknown }).approved;
-    return approved === true;
 }

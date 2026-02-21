@@ -27,7 +27,6 @@ export type ConnectorMessage = {
 
 export type MessageContext = {
     messageId?: string;
-    permissionTags?: string[];
 };
 
 export type MessageHandler = (
@@ -54,63 +53,12 @@ export type PluginCommandDefinition = SlashCommandEntry & {
 export type MessageUnsubscribe = () => void;
 export type CommandUnsubscribe = () => void;
 
-export type PermissionKind = "read" | "write" | "network" | "events" | "workspace";
-export type PermissionRequestScope = "now" | "always";
-
-export type PermissionAccess =
-    | { kind: "network" }
-    | { kind: "events" }
-    | { kind: "workspace" }
-    | { kind: "read"; path: string }
-    | { kind: "write"; path: string };
-
-export type PermissionEntry = {
-    permission: string;
-    access: PermissionAccess;
-};
-
-export type PermissionRequest = {
-    token: string;
-    agentId: string;
-    reason: string;
-    message: string;
-    permissions: PermissionEntry[];
-    scope?: PermissionRequestScope;
-    requester: {
-        id: string;
-        type: AgentDescriptor["type"];
-        label: string;
-        kind: "foreground" | "background";
-    };
-};
-
-export type PermissionDecision = {
-    token: string;
-    agentId: string;
-    approved: boolean;
-    permissions: PermissionEntry[];
-    scope?: PermissionRequestScope;
-};
-
-export type PermissionHandler = (
-    decision: PermissionDecision,
-    context: MessageContext,
-    descriptor: AgentDescriptor
-) => void | Promise<void>;
-
 export interface Connector {
     capabilities: ConnectorCapabilities;
     onMessage(handler: MessageHandler): MessageUnsubscribe;
     onCommand?: (handler: CommandHandler) => CommandUnsubscribe;
     updateCommands?: (commands: SlashCommandEntry[]) => void | Promise<void>;
-    onPermission?: (handler: PermissionHandler) => MessageUnsubscribe;
     sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
-    requestPermission?: (
-        targetId: string,
-        request: PermissionRequest,
-        context: MessageContext,
-        descriptor: AgentDescriptor
-    ) => Promise<void>;
     startTyping?: (targetId: string) => () => void;
     setReaction?: (targetId: string, messageId: string, reaction: string) => Promise<void>;
     shutdown?: (reason?: string) => void | Promise<void>;

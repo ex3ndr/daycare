@@ -26,13 +26,13 @@ describe("IncomingMessages", () => {
             incoming.post({
                 descriptor: userDescriptor("channel-1"),
                 message: { text: "hello" },
-                context: { messageId: "1", permissionTags: ["@read:/tmp"] }
+                context: { messageId: "1" }
             });
             await vi.advanceTimersByTimeAsync(50);
             incoming.post({
                 descriptor: userDescriptor("channel-1"),
                 message: { text: "world" },
-                context: { messageId: "2", permissionTags: ["@write:/tmp", "@read:/tmp"] }
+                context: { messageId: "2" }
             });
 
             await vi.advanceTimersByTimeAsync(99);
@@ -45,8 +45,7 @@ describe("IncomingMessages", () => {
             expect(batch[0]?.count).toBe(2);
             expect(batch[0]?.message.text).toBe("hello\nworld");
             expect(batch[0]?.context).toEqual({
-                messageId: "2",
-                permissionTags: ["@read:/tmp", "@write:/tmp"]
+                messageId: "2"
             });
         } finally {
             await incoming.flush();

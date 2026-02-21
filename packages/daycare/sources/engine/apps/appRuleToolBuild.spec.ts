@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { ToolResolver } from "../modules/toolResolver.js";
 import { Apps } from "./appManager.js";
@@ -57,16 +57,13 @@ describe("appRuleToolBuild", () => {
         await fs.rm(workspaceDir, { recursive: true, force: true });
     });
 
-    it("returns the permission result when approval is denied", async () => {
+    it("applies allow rules directly", async () => {
         const apps = new Apps({ usersDir });
         await apps.discover();
         const tool = appRuleToolBuild(apps);
         const context = contextBuild(workspaceDir);
-        const executeSpy = vi
-            .spyOn(context.agentSystem.toolResolver, "execute")
-            .mockResolvedValue(permissionResultBuild({ approved: false, text: "Permission denied for write access." }));
 
-        const denied = await tool.execute(
+        const result = await tool.execute(
             {
                 app_id: "github-reviewer",
                 action: "add_allow",
@@ -75,28 +72,18 @@ describe("appRuleToolBuild", () => {
             context,
             { id: "tool-1", name: "app_rules" }
         );
-        expect(denied.toolMessage.isError).toBe(false);
-        expect(contentText(denied.toolMessage.content)).toContain("Permission denied");
-        expect(executeSpy).toHaveBeenCalledTimes(1);
-        expect(executeSpy.mock.calls[0]?.[0]).toMatchObject({
-            name: "request_permission",
-            arguments: expect.objectContaining({
-                permissions: [expect.stringContaining("/apps/github-reviewer/PERMISSIONS.md")]
-            })
-        });
+        expect(result.toolMessage.isError).toBe(false);
+        expect(contentText(result.toolMessage.content)).toContain("Rule added");
 
         const permissions = await permissionsRead(path.join(appsDir, "github-reviewer", "PERMISSIONS.md"));
-        expect(permissions.rules.allow.map((rule) => rule.text)).not.toContain("Access network");
+        expect(permissions.rules.allow.map((rule) => rule.text)).toContain("Access network");
     });
 
-    it("applies rule changes after permission approval", async () => {
+    it("applies deny rule changes", async () => {
         const apps = new Apps({ usersDir });
         await apps.discover();
         const tool = appRuleToolBuild(apps);
         const context = contextBuild(workspaceDir);
-        const executeSpy = vi
-            .spyOn(context.agentSystem.toolResolver, "execute")
-            .mockResolvedValue(permissionResultBuild({ approved: true }));
 
         const applyResult = await tool.execute(
             {
@@ -109,7 +96,6 @@ describe("appRuleToolBuild", () => {
         );
         expect(applyResult.toolMessage.isError).toBe(false);
         expect(contentText(applyResult.toolMessage.content)).toContain("Rule added");
-        expect(executeSpy).toHaveBeenCalledTimes(1);
 
         const permissions = await permissionsRead(path.join(appsDir, "github-reviewer", "PERMISSIONS.md"));
         expect(permissions.rules.deny.map((rule) => rule.text)).toContain("Delete files recursively");
@@ -126,10 +112,7 @@ function contextBuild(workspaceDir: string): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir: workspaceDir,
-            writeDirs: [workspaceDir],
-            readDirs: [workspaceDir],
-            network: false,
-            events: false
+            writeDirs: [workspaceDir]
         },
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: { agentId: "agent-1", userId: "user-1" } as ToolExecutionContext["ctx"],
@@ -157,19 +140,4 @@ function contentText(content: unknown): string {
         .filter((entry) => typeof entry === "object" && entry !== null && (entry as { type?: unknown }).type === "text")
         .map((entry) => (entry as { text?: string }).text ?? "")
         .join("\n");
-}
-
-function permissionResultBuild(input: { approved: boolean; text?: string }) {
-    return {
-        toolMessage: {
-            role: "toolResult" as const,
-            toolCallId: "permission-call",
-            toolName: "request_permission",
-            content: [{ type: "text" as const, text: input.text ?? "Permission granted for write access." }],
-            details: { approved: input.approved },
-            isError: false,
-            timestamp: Date.now()
-        },
-        typedResult: { text: input.text ?? "Permission granted for write access." }
-    };
 }

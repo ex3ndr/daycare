@@ -38,10 +38,7 @@ describe("database plugin", () => {
         const agentId = createId();
         const permissions: SessionPermissions = {
             workingDir: baseDir,
-            writeDirs: [],
-            readDirs: [],
-            network: false,
-            events: false
+            writeDirs: []
         };
         const messageContext = {};
         const descriptor = {
@@ -90,7 +87,9 @@ describe("database plugin", () => {
             },
             processes: new Processes(baseDir, getLogger("test.processes.database")),
             mode: "runtime" as const,
-            events: { emit: () => undefined }
+            events: {
+                emit: () => undefined
+            }
         };
 
         const instance = await plugin.create(api);

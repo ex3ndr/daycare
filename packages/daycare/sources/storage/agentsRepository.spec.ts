@@ -6,12 +6,8 @@ import type { AgentDbRecord } from "./databaseTypes.js";
 import { Storage } from "./storage.js";
 
 const permissions: SessionPermissions = {
-    workspaceDir: "/workspace",
     workingDir: "/workspace",
-    writeDirs: ["/workspace"],
-    readDirs: ["/workspace"],
-    network: false,
-    events: false
+    writeDirs: ["/workspace"]
 };
 
 describe("AgentsRepository", () => {

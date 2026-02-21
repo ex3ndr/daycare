@@ -89,10 +89,7 @@ function contextBuild(agentId: string, exists: boolean): ToolExecutionContext {
         assistant: null,
         permissions: {
             workingDir: "/tmp",
-            writeDirs: ["/tmp"],
-            readDirs: ["/tmp"],
-            network: true,
-            events: false
+            writeDirs: ["/tmp"]
         },
         agent: { id: agentId } as unknown as ToolExecutionContext["agent"],
         ctx: {

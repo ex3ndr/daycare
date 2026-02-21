@@ -132,23 +132,10 @@ function connectorMessageMerge(left: ConnectorMessage, right: ConnectorMessage):
 }
 
 function messageContextMerge(left: MessageContext, right: MessageContext): MessageContext {
-    const permissionTags = permissionTagsMerge(left.permissionTags, right.permissionTags);
     const messageId = right.messageId ?? left.messageId;
     return {
-        ...(messageId ? { messageId } : {}),
-        ...(permissionTags.length > 0 ? { permissionTags } : {})
+        ...(messageId ? { messageId } : {})
     };
-}
-
-function permissionTagsMerge(left: string[] | undefined, right: string[] | undefined): string[] {
-    const deduped = new Set<string>();
-    for (const tag of left ?? []) {
-        deduped.add(tag);
-    }
-    for (const tag of right ?? []) {
-        deduped.add(tag);
-    }
-    return Array.from(deduped);
 }
 
 function textMerge(left: string | null | undefined, right: string | null | undefined): string | null {

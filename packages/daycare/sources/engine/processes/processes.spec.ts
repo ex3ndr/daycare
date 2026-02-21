@@ -22,10 +22,7 @@ describe("Processes", () => {
         await fs.mkdir(workspaceDir, { recursive: true });
         permissions = {
             workingDir: workspaceDir,
-            writeDirs: [workspaceDir],
-            readDirs: [workspaceDir],
-            network: false,
-            events: false
+            writeDirs: [workspaceDir]
         };
         managers = [];
     });
@@ -43,48 +40,26 @@ describe("Processes", () => {
     });
 
     it(
-        "adds allowUnixSockets when events permission is granted",
+        "writes explicit network allowlist to sandbox config",
         async () => {
-            const socketPath = path.join(baseDir, "engine.sock");
-            const manager = await createManager(baseDir, { socketPath });
+            const manager = await createManager(baseDir);
             const created = await manager.create(
                 {
-                    command: `node -e "console.log('events-enabled')"`,
+                    command: `node -e "console.log('domains-enabled')"`,
                     keepAlive: false,
                     cwd: workspaceDir,
-                    userId: "user-1"
-                },
-                { ...permissions, events: true }
-            );
-
-            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
-            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
-                allowUnixSockets?: string[];
-            };
-            expect(config.allowUnixSockets).toEqual([socketPath]);
-        },
-        TEST_TIMEOUT_MS
-    );
-
-    it(
-        "omits allowUnixSockets when events permission is not granted",
-        async () => {
-            const socketPath = path.join(baseDir, "engine.sock");
-            const manager = await createManager(baseDir, { socketPath });
-            const created = await manager.create(
-                {
-                    command: `node -e "console.log('events-disabled')"`,
-                    keepAlive: false,
-                    cwd: workspaceDir,
-                    userId: "user-1"
+                    userId: "user-1",
+                    allowedDomains: ["example.com"]
                 },
                 permissions
             );
 
             const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
             const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
+                network?: { allowedDomains?: string[] };
                 allowUnixSockets?: string[];
             };
+            expect(config.network?.allowedDomains).toEqual(["example.com"]);
             expect(config.allowUnixSockets).toBeUndefined();
         },
         TEST_TIMEOUT_MS
@@ -103,7 +78,7 @@ describe("Processes", () => {
                     allowLocalBinding: true,
                     allowedDomains: ["example.com"]
                 },
-                { ...permissions, network: true }
+                permissions
             );
 
             const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
@@ -116,7 +91,7 @@ describe("Processes", () => {
     );
 
     it(
-        "rejects network permission when allowedDomains are omitted",
+        "rejects process creation when allowedDomains are omitted",
         async () => {
             const manager = await createManager(baseDir);
 
@@ -128,9 +103,9 @@ describe("Processes", () => {
                         cwd: workspaceDir,
                         userId: "user-1"
                     },
-                    { ...permissions, network: true }
+                    permissions
                 )
-            ).rejects.toThrow("Network cannot be enabled without allowedDomains.");
+            ).rejects.toThrow("allowedDomains must include at least one explicit domain.");
         },
         TEST_TIMEOUT_MS
     );
@@ -144,7 +119,8 @@ describe("Processes", () => {
                     command: `node -e "setInterval(() => {}, 1000)"`,
                     keepAlive: false,
                     cwd: workspaceDir,
-                    userId: "user-1"
+                    userId: "user-1",
+                    allowedDomains: ["example.com"]
                 },
                 permissions
             );
@@ -184,7 +160,8 @@ describe("Processes", () => {
                     command,
                     keepAlive: true,
                     cwd: workspaceDir,
-                    userId: "user-1"
+                    userId: "user-1",
+                    allowedDomains: ["example.com"]
                 },
                 permissions
             );
@@ -210,7 +187,8 @@ describe("Processes", () => {
                     command: `node -e "console.log('hello-durable-log')"`,
                     keepAlive: false,
                     cwd: workspaceDir,
-                    userId: "user-1"
+                    userId: "user-1",
+                    allowedDomains: ["example.com"]
                 },
                 permissions
             );
@@ -246,7 +224,8 @@ describe("Processes", () => {
                     command,
                     keepAlive: true,
                     cwd: workspaceDir,
-                    userId: "user-1"
+                    userId: "user-1",
+                    allowedDomains: ["example.com"]
                 },
                 permissions
             );
@@ -333,6 +312,7 @@ describe("Processes", () => {
                     keepAlive: true,
                     cwd: workspaceDir,
                     userId: "user-1",
+                    allowedDomains: ["example.com"],
                     owner: { type: "plugin", id: "plugin-a" }
                 },
                 permissions
@@ -343,6 +323,7 @@ describe("Processes", () => {
                     keepAlive: true,
                     cwd: workspaceDir,
                     userId: "user-1",
+                    allowedDomains: ["example.com"],
                     owner: { type: "plugin", id: "plugin-a" }
                 },
                 permissions
@@ -353,6 +334,7 @@ describe("Processes", () => {
                     keepAlive: true,
                     cwd: workspaceDir,
                     userId: "user-1",
+                    allowedDomains: ["example.com"],
                     owner: { type: "plugin", id: "plugin-b" }
                 },
                 permissions
@@ -373,13 +355,9 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    async function createManager(
-        dir: string,
-        options: { bootTimeMs?: number | null; socketPath?: string } = {}
-    ): Promise<Processes> {
+    async function createManager(dir: string, options: { bootTimeMs?: number | null } = {}): Promise<Processes> {
         const manager = new Processes(dir, getLogger("test.processes"), {
-            bootTimeProvider: options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null,
-            socketPath: options.socketPath
+            bootTimeProvider: options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null
         });
         managers.push(manager);
         await manager.load();

@@ -1,9 +1,5 @@
 import type { Boom } from "@hapi/boom";
-import makeWASocket, {
-    type AuthenticationState,
-    DisconnectReason,
-    fetchLatestBaileysVersion
-} from "@whiskeysockets/baileys";
+import makeWASocket, { DisconnectReason, fetchLatestBaileysVersion } from "@whiskeysockets/baileys";
 import pino from "pino";
 import qrcodeTerminal from "qrcode-terminal";
 import type { AuthStore } from "../../auth/store.js";

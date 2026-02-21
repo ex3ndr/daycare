@@ -2,7 +2,6 @@ import path from "node:path";
 
 import Handlebars from "handlebars";
 
-import { permissionWorkspaceGranted } from "../../permissions/permissionWorkspaceGranted.js";
 import { agentAppFolderPathResolve } from "./agentAppFolderPathResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentPromptPathsResolve } from "./agentPromptPathsResolve.js";
@@ -41,7 +40,7 @@ export async function agentSystemPromptSectionPermissions(context: AgentSystemPr
     const section = Handlebars.compile(template)({
         workspace,
         appFolderPath,
-        workspacePermissionGranted: permissions ? permissionWorkspaceGranted(permissions) : false,
+        workspacePermissionGranted: false,
         soulPath: promptPaths.soulPath,
         userPath: promptPaths.userPath,
         agentsPath: promptPaths.agentsPath,
@@ -49,8 +48,8 @@ export async function agentSystemPromptSectionPermissions(context: AgentSystemPr
         isForeground: descriptor?.type === "user",
         skillsPath: context.userHome.skills,
         additionalWriteDirs,
-        network: permissions?.network ?? false,
-        events: permissions?.events ?? false
+        network: true,
+        events: false
     });
     return section.trim();
 }

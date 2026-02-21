@@ -11,7 +11,7 @@ import { messageFormatIncoming } from "../../messages/messageFormatIncoming.js";
  */
 export async function agentHistoryContext(
     records: AgentHistoryRecord[],
-    agentId: string
+    _agentId: string
 ): Promise<Context["messages"]> {
     const messages: Context["messages"] = [];
     let lastAssistantMessageIndex: number | null = null;

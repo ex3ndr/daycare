@@ -73,12 +73,8 @@ describe("agentSystemPrompt", () => {
                 provider: "openai",
                 model: "gpt-4.1",
                 permissions: {
-                    workspaceDir: "/tmp/workspace",
                     workingDir: "/tmp/workspace",
-                    writeDirs: ["/tmp/workspace"],
-                    readDirs: ["/tmp/workspace"],
-                    network: false,
-                    events: false
+                    writeDirs: ["/tmp/workspace"]
                 },
                 descriptor: {
                     type: "user",
@@ -160,12 +156,8 @@ describe("agentSystemPrompt", () => {
                 provider: "openai",
                 model: "gpt-4.1",
                 permissions: {
-                    workspaceDir: "/tmp/workspace",
                     workingDir: "/tmp/workspace",
-                    writeDirs: ["/tmp/workspace"],
-                    readDirs: ["/tmp/workspace"],
-                    network: false,
-                    events: false
+                    writeDirs: ["/tmp/workspace"]
                 },
                 descriptor: {
                     type: "permanent",

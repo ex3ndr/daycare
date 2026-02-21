@@ -12,9 +12,8 @@ import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ToolResolverApi } from "../toolResolver.js";
-import type { PermissionRequestRegistry } from "./permissionRequestRegistry.js";
 
-export type ToolExecutionContext<State = Record<string, unknown>> = {
+export type ToolExecutionContext<_State = Record<string, unknown>> = {
     connectorRegistry: ConnectorRegistry;
     fileStore: FileFolder;
     auth: AuthStore;
@@ -29,7 +28,6 @@ export type ToolExecutionContext<State = Record<string, unknown>> = {
     heartbeats: Heartbeats;
     toolResolver?: ToolResolverApi;
     skills?: AgentSkill[];
-    permissionRequestRegistry?: PermissionRequestRegistry;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     rlmToolOnly?: boolean;
 };

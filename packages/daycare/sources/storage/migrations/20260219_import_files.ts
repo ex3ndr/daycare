@@ -131,10 +131,7 @@ function legacyStateRead(basePath: string): LegacyState | null {
             inferenceSessionId: typeof parsed.inferenceSessionId === "string" ? parsed.inferenceSessionId : undefined,
             permissions: parsed.permissions ?? {
                 workingDir: "/",
-                writeDirs: [],
-                readDirs: [],
-                network: false,
-                events: false
+                writeDirs: []
             },
             tokens: parsed.tokens ?? null,
             stats: parsed.stats ?? {},
