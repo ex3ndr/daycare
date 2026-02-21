@@ -44,6 +44,8 @@ import type {
     AgentInboxSteering,
     AgentPostTarget
 } from "./ops/agentTypes.js";
+import { inboxItemDeserialize } from "./ops/inboxItemDeserialize.js";
+import { inboxItemSerialize } from "./ops/inboxItemSerialize.js";
 
 const logger = getLogger("engine.agent-system");
 const AGENT_IDLE_DELAY_MS = 60_000;
@@ -205,6 +207,7 @@ export class AgentSystem {
                 inbox
             });
             registered.inbox.post({ type: "restore" });
+            await this.replayPersistedInboxItems(registered);
             logger.info({ agentId }, "restore: Agent restored");
             this.startEntryIfRunning(registered);
         }
@@ -470,6 +473,10 @@ export class AgentSystem {
         return this.config.inReadLock(operation);
     }
 
+    async deleteInboxItem(id: string): Promise<void> {
+        await this.storage.inbox.delete(id);
+    }
+
     private findLoadedEntry(target: AgentPostTarget): AgentEntry | null {
         if ("agentId" in target) {
             return this.entries.get(target.agentId) ?? null;
@@ -595,11 +602,44 @@ export class AgentSystem {
         let woke = false;
         await entry.lock.inLock(async () => {
             woke = await this.wakeEntryIfSleeping(entry);
-            entry.inbox.post(item, completion);
+            const postedAt = Date.now();
+            const generatedId = createId();
+            await this.storage.inbox.insert(generatedId, entry.agentId, postedAt, item.type, inboxItemSerialize(item));
+            const queued = entry.inbox.post(item, completion, { id: generatedId, postedAt });
+
+            if (queued.id !== generatedId) {
+                // Message merge consumed the new row into an existing queue entry.
+                await this.storage.inbox.delete(generatedId);
+                await this.storage.inbox.insert(
+                    queued.id,
+                    entry.agentId,
+                    queued.postedAt,
+                    queued.item.type,
+                    inboxItemSerialize(queued.item)
+                );
+            }
         });
         if (woke) {
             await this.signalLifecycle(entry.agentId, "wake");
         }
+    }
+
+    private async replayPersistedInboxItems(entry: AgentEntry): Promise<void> {
+        await entry.lock.inLock(async () => {
+            const rows = await this.storage.inbox.findByAgentId(entry.agentId);
+            for (const row of rows) {
+                try {
+                    const item = inboxItemDeserialize(row.data);
+                    entry.inbox.post(item, null, { id: row.id, postedAt: row.postedAt, merge: false });
+                } catch (error) {
+                    logger.warn(
+                        { agentId: entry.agentId, inboxItemId: row.id, error },
+                        "restore: Dropping invalid persisted inbox row"
+                    );
+                    await this.storage.inbox.delete(row.id);
+                }
+            }
+        });
     }
 
     private async wakeEntryIfSleeping(entry: AgentEntry): Promise<boolean> {
@@ -770,6 +810,7 @@ export class AgentSystem {
         state.state = "dead";
         state.updatedAt = Date.now();
         await agentStateWrite(this.storage, agentId, state);
+        await this.storage.inbox.deleteByAgentId(agentId);
         this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
     }
 
@@ -788,6 +829,7 @@ export class AgentSystem {
             entry.agent.state.updatedAt = Date.now();
             await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
             pending = entry.inbox.drainPending();
+            await this.storage.inbox.deleteByAgentId(entry.agentId);
             changed = true;
         });
         if (!changed) {
@@ -837,6 +879,7 @@ export class AgentSystem {
             inbox
         });
         entry.inbox.post({ type: "restore" });
+        await this.replayPersistedInboxItems(entry);
         this.startEntryIfRunning(entry);
         return entry;
     }

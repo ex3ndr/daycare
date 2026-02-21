@@ -82,6 +82,24 @@ describe("AgentInbox", () => {
         expect(rejectSecond).not.toHaveBeenCalled();
     });
 
+    it("can disable merge for replayed message entries", async () => {
+        const inbox = new AgentInbox("agent-10");
+        const first = inbox.post(buildMessage("first", "1"), null, {
+            id: "persisted-1",
+            postedAt: 10,
+            merge: false
+        });
+        const second = inbox.post(buildMessage("second", "2"), null, {
+            id: "persisted-2",
+            postedAt: 20,
+            merge: false
+        });
+
+        expect(inbox.size()).toBe(2);
+        expect(first.id).toBe("persisted-1");
+        expect(second.id).toBe("persisted-2");
+    });
+
     describe("steering", () => {
         it("steer() stores a steering message", () => {
             const inbox = new AgentInbox("agent-6");

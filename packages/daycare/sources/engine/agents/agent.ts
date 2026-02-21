@@ -233,6 +233,14 @@ export class Agent {
                         await this.sendUnexpectedError(entry.item);
                     }
                 } finally {
+                    try {
+                        await this.agentSystem.deleteInboxItem(entry.id);
+                    } catch (error) {
+                        logger.warn(
+                            { agentId: this.id, inboxItemId: entry.id, error },
+                            "error: Failed to delete inbox item"
+                        );
+                    }
                     this.processing = false;
                 }
             }
@@ -364,7 +372,7 @@ export class Agent {
         });
         const agentKind = this.resolveAgentKind();
 
-        const toolResolver = item.toolResolverOverride ?? this.agentSystem.toolResolver;
+        const toolResolver = this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
         const availableTools = toolResolver.listTools();
         const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);

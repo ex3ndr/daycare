@@ -41,6 +41,14 @@ export type DatabaseSessionHistoryRow = {
     data: string;
 };
 
+export type DatabaseInboxRow = {
+    id: string;
+    agent_id: string;
+    posted_at: number;
+    type: string;
+    data: string;
+};
+
 export type AgentDbRecord = {
     id: string;
     userId: string;
@@ -53,6 +61,14 @@ export type AgentDbRecord = {
     lifecycle: AgentLifecycleState;
     createdAt: number;
     updatedAt: number;
+};
+
+export type InboxDbRecord = {
+    id: string;
+    agentId: string;
+    postedAt: number;
+    type: string;
+    data: string;
 };
 
 export type DatabaseCronTaskRow = {

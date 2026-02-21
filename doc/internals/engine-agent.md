@@ -113,3 +113,30 @@ sequenceDiagram
   System->>Inbox: enqueue item
   System->>Agent: start/restore
 ```
+
+## Durable Inbox
+
+Queued inbox work now persists in SQLite (`inbox` table) so items survive process restarts.
+`post()` writes first, the agent loop deletes rows after handling each item, and boot replay
+restores queued rows after a synthetic `restore` item.
+
+```mermaid
+sequenceDiagram
+  participant Caller
+  participant AgentSystem
+  participant SQLite
+  participant AgentInbox
+  participant Agent
+
+  Caller->>AgentSystem: post(target, item)
+  AgentSystem->>SQLite: INSERT inbox(id, agent_id, posted_at, type, data)
+  AgentSystem->>AgentInbox: post(item)
+  Agent->>AgentInbox: next()
+  Agent->>Agent: handleInboxItem(item)
+  Agent->>SQLite: DELETE inbox WHERE id = ?
+
+  Note over AgentSystem,AgentInbox: Boot replay
+  AgentSystem->>AgentInbox: post({ type: "restore" })
+  AgentSystem->>SQLite: SELECT * FROM inbox WHERE agent_id = ? ORDER BY posted_at
+  AgentSystem->>AgentInbox: post(persisted item, merge=false)
+```

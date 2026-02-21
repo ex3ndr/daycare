@@ -22,7 +22,7 @@ describe("appExecute", () => {
         await fs.rm(rootDir, { recursive: true, force: true });
     });
 
-    it("configures app-agent permissions and passes a reviewed tool executor override", async () => {
+    it("configures app-agent permissions and sends the app task prompt", async () => {
         const config = configResolve(
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
@@ -166,9 +166,7 @@ describe("appExecute", () => {
                 ].join("\n")
             }
         });
-        const override = (item as { toolResolverOverride: { listTools: () => Array<{ name: string }> } })
-            .toolResolverOverride;
-        expect(override.listTools().map((tool) => tool.name)).toEqual(["read", "write", "exec"]);
+        expect(Object.keys(item as Record<string, unknown>).sort()).toEqual(["context", "message", "type"]);
 
         const updated = await agentStateRead(config, agentId);
         expect(updated?.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));

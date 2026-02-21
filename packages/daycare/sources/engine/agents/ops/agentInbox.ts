@@ -34,16 +34,20 @@ export class AgentInbox {
         this.attached = false;
     }
 
-    post(item: AgentInboxItem, completion: AgentInboxCompletion | null = null): AgentInboxEntry {
-        if (item.type === "message") {
+    post(
+        item: AgentInboxItem,
+        completion: AgentInboxCompletion | null = null,
+        options?: AgentInboxPostOptions
+    ): AgentInboxEntry {
+        if (item.type === "message" && options?.merge !== false) {
             const merged = this.mergePendingMessage(item, completion);
             if (merged) {
                 return merged;
             }
         }
         const entry: AgentInboxEntry = {
-            id: createId(),
-            postedAt: Date.now(),
+            id: options?.id ?? createId(),
+            postedAt: options?.postedAt ?? Date.now(),
             item,
             completion
         };
@@ -120,6 +124,12 @@ export class AgentInbox {
         return this.steeringMessage !== null;
     }
 }
+
+type AgentInboxPostOptions = {
+    id?: string;
+    postedAt?: number;
+    merge?: boolean;
+};
 
 function messageItemMerge(left: AgentInboxMessage, right: AgentInboxMessage): AgentInboxMessage {
     const files = [...(left.message.files ?? []), ...(right.message.files ?? [])];

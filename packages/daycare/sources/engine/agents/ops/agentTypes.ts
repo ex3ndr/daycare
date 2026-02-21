@@ -8,7 +8,6 @@ import type {
     Signal,
     ToolExecutionResult
 } from "@/types";
-import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 
 export type AgentMessage = {
@@ -130,7 +129,6 @@ export type AgentInboxItem =
           type: "message";
           message: ConnectorMessage;
           context: MessageContext;
-          toolResolverOverride?: ToolResolverApi;
       }
     | {
           type: "system_message";

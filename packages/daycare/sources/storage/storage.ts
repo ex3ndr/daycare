@@ -10,6 +10,7 @@ import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
+import { InboxRepository } from "./inboxRepository.js";
 import { migrationRun } from "./migrations/migrationRun.js";
 import { ProcessesRepository } from "./processesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
@@ -26,6 +27,7 @@ export class Storage {
     readonly agents: AgentsRepository;
     readonly sessions: SessionsRepository;
     readonly history: HistoryRepository;
+    readonly inbox: InboxRepository;
     readonly cronTasks: CronTasksRepository;
     readonly heartbeatTasks: HeartbeatTasksRepository;
     readonly signalEvents: SignalEventsRepository;
@@ -45,6 +47,7 @@ export class Storage {
         this.agents = new AgentsRepository(connection);
         this.sessions = new SessionsRepository(connection);
         this.history = new HistoryRepository(connection);
+        this.inbox = new InboxRepository(connection);
         this.cronTasks = new CronTasksRepository(connection);
         this.heartbeatTasks = new HeartbeatTasksRepository(connection);
         this.signalEvents = new SignalEventsRepository(connection);

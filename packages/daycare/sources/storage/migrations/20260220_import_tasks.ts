@@ -277,7 +277,7 @@ function heartbeatContentResolve(
         const lines = trimmedBody.split(/\r?\n/);
         const firstLine = lines[0]?.trim() ?? "";
         const headingMatch = /^#{1,6}\s+(.*)$/.exec(firstLine);
-        if (headingMatch && headingMatch[1]) {
+        if (headingMatch?.[1]) {
             const title = headingMatch[1].trim() || fallbackTitle;
             const prompt = lines.slice(1).join("\n").trim();
             return { title, prompt };

@@ -88,6 +88,7 @@ Source files:
 - `packages/daycare/sources/storage/migrations/20260219_initial.ts`
 - `packages/daycare/sources/storage/migrations/20260220_add_users.ts`
 - `packages/daycare/sources/storage/migrations/20260220_users_bootstrap.ts`
+- `packages/daycare/sources/storage/migrations/20260221_add_inbox.ts`
 - `packages/daycare/sources/storage/migrations/migrationRun.ts`
 - `packages/daycare/sources/storage/databaseTypes.ts`
 
@@ -115,6 +116,7 @@ flowchart TD
     A --> K[ChannelMessagesRepository no cache]
     A --> L[ExposeEndpointsRepository cache]
     A --> M[ProcessesRepository cache]
+    A --> N[InboxRepository no cache]
 ```
 
 Repository files:
@@ -130,6 +132,7 @@ Repository files:
 - `packages/daycare/sources/storage/channelMessagesRepository.ts`
 - `packages/daycare/sources/storage/exposeEndpointsRepository.ts`
 - `packages/daycare/sources/storage/processesRepository.ts`
+- `packages/daycare/sources/storage/inboxRepository.ts`
 
 Facade-level operations:
 
@@ -148,7 +151,25 @@ Cache behavior:
 - `ChannelsRepository` keeps write-through caches for channels and members
 - `ExposeEndpointsRepository` keeps a write-through endpoint cache
 - `ProcessesRepository` keeps a write-through process cache
-- `SessionsRepository` and `HistoryRepository` are DB-only (no cache)
+- `SessionsRepository`, `HistoryRepository`, and `InboxRepository` are DB-only (no cache)
+
+### Durable Inbox Table Added in 20260221
+
+The durable inbox migration adds one queue table used by `AgentSystem` and `Agent`:
+
+- `inbox`
+
+Rows are inserted before enqueue, replayed on boot, and deleted after item handling.
+
+```mermaid
+flowchart LR
+    Post[AgentSystem.enqueueEntry] --> Insert[(INSERT inbox row)]
+    Insert --> Queue[AgentInbox.post]
+    Queue --> Handle[Agent.runLoop handleInboxItem]
+    Handle --> Delete[(DELETE inbox row)]
+    Boot[AgentSystem.load / restoreAgent] --> Replay[(SELECT inbox rows by agent)]
+    Replay --> Queue
+```
 
 ### Subsystem Tables Added in 20260222
 
@@ -231,6 +252,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_single_owner
   ON users(is_owner)
   WHERE is_owner = 1;
 
+CREATE TABLE IF NOT EXISTS inbox (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL,
+  posted_at INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_inbox_agent_order
+  ON inbox(agent_id, posted_at);
+
 -- Added in bootstrap migration when missing:
 ALTER TABLE agents ADD COLUMN user_id TEXT NOT NULL DEFAULT '<owner-user-id>';
 CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
@@ -272,6 +304,14 @@ export type DatabaseSessionHistoryRow = {
   type: string; // AgentHistoryRecord["type"]
   at: number;
   data: string; // JSON string of record payload without { type, at }
+};
+
+export type DatabaseInboxRow = {
+  id: string;
+  agent_id: string;
+  posted_at: number;
+  type: string;
+  data: string; // JSON serialized AgentInboxItem
 };
 
 export type DatabaseUserRow = {

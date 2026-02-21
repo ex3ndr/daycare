@@ -5,8 +5,6 @@ import { agentStateRead } from "../agents/ops/agentStateRead.js";
 import { agentStateWrite } from "../agents/ops/agentStateWrite.js";
 import { appDiscover } from "./appDiscover.js";
 import { appPermissionBuild } from "./appPermissionBuild.js";
-import { appReviewProvidersResolve } from "./appReviewProvidersResolve.js";
-import { appToolExecutorBuild } from "./appToolExecutorBuild.js";
 import type { AppDescriptor } from "./appTypes.js";
 
 type AppExecuteInput = {
@@ -22,12 +20,11 @@ export type AppExecuteResult = {
 };
 
 /**
- * Executes an app in a dedicated app agent with reviewed tool access.
+ * Executes an app in a dedicated app agent.
  * Expects: app descriptor is discovered/validated; prompt is non-empty.
  */
 export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResult> {
     const agentSystem = input.context.agentSystem;
-    const config = agentSystem.config.current;
     const storage = agentSystem.storage;
     const waitForResponse = input.waitForResponse ?? false;
     const appsDir = agentSystem.userHomeForUserId(input.context.ctx.userId).apps;
@@ -60,25 +57,10 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
     await agentStateWrite(storage, agentId, nextState);
     agentSystem.updateAgentPermissions(agentId, appPermissions, updatedAt);
 
-    const reviewProviders = appReviewProvidersResolve(config, appDescriptor.manifest.model);
-    const reviewedExecutor = appToolExecutorBuild({
-        appId: appDescriptor.id,
-        appName: appDescriptor.manifest.title,
-        appSystemPrompt: appDescriptor.manifest.systemPrompt,
-        reviewerEnabled: config.settings.security.appReviewerEnabled,
-        rlmEnabled: config.features.rlm,
-        sourceIntent: appDescriptor.permissions.sourceIntent,
-        rules: appDescriptor.permissions.rules,
-        inferenceRouter: agentSystem.inferenceRouter,
-        toolResolver: agentSystem.toolResolver,
-        providersOverride: reviewProviders
-    });
-
     const message = {
         type: "message" as const,
         message: { text: appTaskPromptBuild(appDescriptor, input.prompt) },
-        context: {},
-        toolResolverOverride: reviewedExecutor
+        context: {}
     };
     if (!waitForResponse) {
         await agentSystem.post({ agentId }, message);
