@@ -2,7 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
-import { RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
+import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "../rlm/rlmConstants.js";
 
 type ToolListOptions = {
     tools: Tool[];
@@ -66,12 +66,19 @@ function toolListRlmBuild(tools: Tool[], rlmToolDescription?: string): Tool[] {
         return [];
     }
 
-    return [
+    const result: Tool[] = [
         {
             ...runPython,
             description: rlmToolDescription ?? runPython.description
         }
     ];
+
+    const skip = tools.find((tool) => tool.name === SKIP_TOOL_NAME);
+    if (skip) {
+        result.push(skip);
+    }
+
+    return result;
 }
 
 function toolListFilterConnectorCapabilities<T extends { name: string }>(

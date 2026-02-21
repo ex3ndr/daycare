@@ -156,9 +156,13 @@ describe("toolListContextBuild", () => {
         expect(result).toEqual([]);
     });
 
-    it("returns only run_python in rlm mode", () => {
+    it("returns run_python and skip in rlm mode", () => {
+        const toolsWithSkip = [
+            ...baseTools,
+            { name: "skip", description: "Skip turn.", parameters: {} }
+        ] as unknown as Tool[];
         const result = toolListContextBuild({
-            tools: baseTools,
+            tools: toolsWithSkip,
             source: "slack",
             rlm: true,
             rlmToolDescription: [
@@ -177,9 +181,23 @@ describe("toolListContextBuild", () => {
             imageRegistry: { list: () => [] }
         });
 
-        expect(result.map((tool) => tool.name)).toEqual(["run_python"]);
+        expect(result.map((tool) => tool.name)).toEqual(["run_python", "skip"]);
         expect(result[0]?.description).toContain("The following functions are available:");
         expect(result[0]?.description).toContain("def other() -> str:");
-        expect(result[0]?.description).not.toContain("Available skills");
+    });
+
+    it("returns only run_python in rlm mode when skip is not registered", () => {
+        const result = toolListContextBuild({
+            tools: baseTools,
+            source: "slack",
+            rlm: true,
+            connectorRegistry: {
+                get: () => null,
+                list: () => []
+            },
+            imageRegistry: { list: () => [] }
+        });
+
+        expect(result.map((tool) => tool.name)).toEqual(["run_python"]);
     });
 });

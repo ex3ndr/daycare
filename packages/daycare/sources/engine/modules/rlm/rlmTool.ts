@@ -56,7 +56,11 @@ export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
                     appendHistoryRecord,
                     checkSteering
                 );
-                return rlmToolResultBuild(toolCall, rlmResultTextBuild(result), false);
+                const toolResult = rlmToolResultBuild(toolCall, rlmResultTextBuild(result), false);
+                if (result.skipTurn) {
+                    toolResult.skipTurn = true;
+                }
+                return toolResult;
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCall.id, message));

@@ -14,6 +14,7 @@ import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { montyRuntimePreambleBuild } from "../../modules/monty/montyRuntimePreambleBuild.js";
+import { SKIP_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 import { rlmExecute } from "../../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
@@ -113,6 +114,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     } = options;
 
     let response: Awaited<ReturnType<InferenceRouter["complete"]>> | null = null;
+    let skipTurnDetected = false;
     let toolLoopExceeded = false;
     let lastResponseHadToolCalls = false;
     let lastResponseTextSent = false;
@@ -485,8 +487,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             );
                             context.messages.push(rlmNoToolsResultMessageBuild({ result }));
 
-                            // If steering interrupted, break out of the loop
+                            // If steering interrupted, break out of the code loop
                             if (result.steeringInterrupt) {
+                                break;
+                            }
+
+                            // If skip() was called, break out of the code loop
+                            if (result.skipTurn) {
+                                skipTurnDetected = true;
                                 break;
                             }
                         } catch (error) {
@@ -514,6 +522,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             }
                             break;
                         }
+                    }
+
+                    if (skipTurnDetected) {
+                        break;
                     }
 
                     if (iteration === MAX_TOOL_ITERATIONS - 1) {
@@ -610,6 +622,38 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     appendHistoryRecord
                 );
 
+                // Check for skip: direct skip tool call or run_python that internally called skip()
+                if (toolCall.name === SKIP_TOOL_NAME || toolResult.skipTurn) {
+                    logger.debug("event: Skip tool detected, aborting inference loop");
+                    skipTurnDetected = true;
+
+                    // Cancel remaining tool calls
+                    for (let cancelIndex = toolIndex + 1; cancelIndex < toolCalls.length; cancelIndex++) {
+                        const cancelledCall = toolCalls[cancelIndex]!;
+                        const cancelledMessage: ToolResultMessage = {
+                            role: "toolResult",
+                            toolCallId: cancelledCall.id,
+                            toolName: cancelledCall.name,
+                            content: [{ type: "text", text: "Turn skipped" }],
+                            isError: true,
+                            timestamp: Date.now()
+                        };
+                        const cancelledResult = toolExecutionResultOutcome(cancelledMessage);
+                        context.messages.push(cancelledMessage);
+                        await historyRecordAppend(
+                            historyRecords,
+                            {
+                                type: "tool_result",
+                                at: Date.now(),
+                                toolCallId: cancelledCall.id,
+                                output: cancelledResult
+                            },
+                            appendHistoryRecord
+                        );
+                    }
+                    break;
+                }
+
                 // Check for steering after each tool call
                 if (agent.inbox.hasSteering()) {
                     const steering = agent.inbox.consumeSteering();
@@ -666,6 +710,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         break;
                     }
                 }
+            }
+
+            if (skipTurnDetected) {
+                context.messages.push({
+                    role: "user",
+                    content: [{ type: "text", text: "Turn skipped" }],
+                    timestamp: Date.now()
+                });
+                logger.debug("event: Skip detected, appended 'Turn skipped' and breaking inference loop");
+                break;
             }
 
             if (iteration === MAX_TOOL_ITERATIONS - 1) {

@@ -17,6 +17,11 @@ const baseTools = [
         name: "fail_tool",
         description: "Always fails.",
         parameters: Type.Object({}, { additionalProperties: false })
+    },
+    {
+        name: "skip",
+        description: "Skip this turn.",
+        parameters: Type.Object({}, { additionalProperties: false })
     }
 ];
 
@@ -139,6 +144,32 @@ describe("rlmExecute", () => {
         );
 
         expect(records).toEqual(["rlm_start", "rlm_tool_call", "rlm_tool_result", "rlm_complete"]);
+    });
+
+    it("aborts execution when skip() is called and sets skipTurn flag", async () => {
+        const resolver = createResolver(async (name) => {
+            throw new Error(`Unexpected tool ${name}`);
+        });
+        const records: string[] = [];
+
+        const result = await rlmExecute(
+            "skip()\necho('should not run')",
+            montyRuntimePreambleBuild(baseTools),
+            createContext(),
+            resolver,
+            "tool-call-skip",
+            async (record) => {
+                records.push(record.type);
+            }
+        );
+
+        expect(result.skipTurn).toBe(true);
+        expect(result.output).toBe("Turn skipped");
+        expect(result.toolCallCount).toBe(0);
+        // Should not have executed the echo tool
+        expect(resolver.execute).not.toHaveBeenCalled();
+        // Should emit rlm_start and rlm_complete only (no tool_call/tool_result)
+        expect(records).toEqual(["rlm_start", "rlm_complete"]);
     });
 
     it("fails fast when Monty type checking finds invalid tool argument types", async () => {

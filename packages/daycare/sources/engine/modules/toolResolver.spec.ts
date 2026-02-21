@@ -34,7 +34,33 @@ describe("ToolResolver", () => {
         );
 
         expect(result.toolMessage.isError).toBe(true);
-        expect(messageText(result)).toContain('RLM mode only allows calling "run_python".');
+        expect(messageText(result)).toContain('RLM mode only allows calling "run_python" or "skip".');
+    });
+
+    it("allows skip tool calls when rlmToolOnly is enabled", async () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "skip",
+                description: "Skip turn.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: async () => okResult("skip", "skipped")
+        });
+
+        const result = await resolver.execute(
+            {
+                type: "toolCall",
+                id: "call-1",
+                name: "skip",
+                arguments: {}
+            },
+            toolExecutionContextCreate({ rlmToolOnly: true })
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(messageText(result)).toContain("skipped");
     });
 
     it("allows run_python tool calls when rlmToolOnly is enabled", async () => {

@@ -3,7 +3,7 @@ import { Monty, type MontyComplete, MontySnapshot } from "@pydantic/monty";
 
 import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
-import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "./rlmConstants.js";
+import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 
 const RLM_LIMITS = {
@@ -21,6 +21,7 @@ export type RlmExecuteResult = {
         text: string;
         origin?: string;
     };
+    skipTurn?: boolean;
 };
 
 export type RlmHistoryCallback = (record: AgentHistoryRecord) => Promise<void>;
@@ -73,6 +74,26 @@ export async function rlmExecute(
             printOutput.push(printLineBuild(progress.args));
             progress = progress.resume({ returnValue: null });
             continue;
+        }
+
+        // Skip tool: abort execution immediately
+        if (progress.functionName === SKIP_TOOL_NAME) {
+            const skipResult: RlmExecuteResult = {
+                output: "Turn skipped",
+                printOutput,
+                toolCallCount,
+                skipTurn: true
+            };
+            await historyCallback?.({
+                type: "rlm_complete",
+                at: Date.now(),
+                toolCallId,
+                output: skipResult.output,
+                printOutput: [...skipResult.printOutput],
+                toolCallCount: skipResult.toolCallCount,
+                isError: false
+            });
+            return skipResult;
         }
 
         const tool = toolByName.get(progress.functionName);

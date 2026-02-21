@@ -56,6 +56,7 @@ export type ToolResultContract<TResult extends ToolResultShallowObject = ToolRes
 export type ToolExecutionResult<TResult extends ToolResultShallowObject = ToolResultShallowObject> = {
     toolMessage: ToolResultMessage;
     typedResult: TResult;
+    skipTurn?: boolean;
 };
 
 export type ToolDefinition<

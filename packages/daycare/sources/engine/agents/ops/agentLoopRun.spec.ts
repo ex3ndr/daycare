@@ -572,6 +572,82 @@ describe("agentLoopRun", () => {
         expect(rewrites[1]?.text).not.toContain("<run_python>tail()</run_python>");
     });
 
+    it("breaks inference loop when skip tool is called directly", async () => {
+        const connector = connectorBuild(vi.fn(async () => undefined));
+        const entry = entryBuild();
+        const context = contextBuild();
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([toolCallBuild("call-1", "skip", {})]),
+            assistantMessageBuild([{ type: "text", text: "should not reach" }])
+        ]);
+        const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+            return toolResultTextBuild(toolCall.id, toolCall.name, "Turn skipped");
+        });
+        const toolResolver = {
+            listTools: () => [],
+            execute
+        } as unknown as ToolResolverApi;
+
+        const result = await agentLoopRun(
+            optionsBuild({
+                entry,
+                context,
+                connector,
+                inferenceRouter,
+                toolResolver
+            })
+        );
+
+        // Inference should be called only once (no second inference after skip)
+        expect(inferenceRouter.complete).toHaveBeenCalledTimes(1);
+        // Tool should be executed once
+        expect(execute).toHaveBeenCalledTimes(1);
+        // Context should have a "Turn skipped" user message at the end
+        const lastMessage = context.messages[context.messages.length - 1];
+        expect(lastMessage?.role).toBe("user");
+        const textContent = Array.isArray(lastMessage?.content)
+            ? lastMessage.content.find(
+                  (part: { type: string; text?: string }) => part.type === "text" && part.text === "Turn skipped"
+              )
+            : undefined;
+        expect(textContent).toBeDefined();
+        expect(result.historyRecords).toBeDefined();
+    });
+
+    it("cancels remaining tool calls when skip is among multiple tool calls", async () => {
+        const connector = connectorBuild(vi.fn(async () => undefined));
+        const entry = entryBuild();
+        const context = contextBuild();
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([
+                toolCallBuild("call-1", "skip", {}),
+                toolCallBuild("call-2", "read_file", { path: "notes.txt" })
+            ]),
+            assistantMessageBuild([{ type: "text", text: "should not reach" }])
+        ]);
+        const execute = vi.fn(async (toolCall: { id: string; name: string }) => {
+            return toolResultTextBuild(toolCall.id, toolCall.name, "Turn skipped");
+        });
+        const toolResolver = {
+            listTools: () => [],
+            execute
+        } as unknown as ToolResolverApi;
+
+        await agentLoopRun(
+            optionsBuild({
+                entry,
+                context,
+                connector,
+                inferenceRouter,
+                toolResolver
+            })
+        );
+
+        // Only skip should be executed, read_file should be cancelled
+        expect(execute).toHaveBeenCalledTimes(1);
+        expect(inferenceRouter.complete).toHaveBeenCalledTimes(1);
+    });
+
     it("does not execute run_python tags unless noTools, rlm, and say are all enabled", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);

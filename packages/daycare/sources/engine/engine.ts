@@ -55,6 +55,7 @@ import { signalEventsCsvToolBuild } from "./modules/tools/signalEventsCsvToolBui
 import { buildSignalSubscribeTool } from "./modules/tools/signalSubscribeToolBuild.js";
 import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
+import { skipToolBuild } from "./modules/tools/skipTool.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { permissionDescribeDecision } from "./permissions/permissionDescribeDecision.js";
@@ -392,6 +393,7 @@ export class Engine {
         this.modules.tools.register("core", agentResetToolBuild());
         this.modules.tools.register("core", agentCompactToolBuild());
         this.modules.tools.register("core", sendUserMessageToolBuild());
+        this.modules.tools.register("core", skipToolBuild());
         this.modules.tools.register("core", skillToolBuild());
         this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.exposes));
         this.modules.tools.register("core", sessionHistoryToolBuild());

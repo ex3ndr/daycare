@@ -5,7 +5,7 @@ import { Value } from "@sinclair/typebox/value";
 import type { ToolDefinition, ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { getLogger } from "../../log.js";
 import { MONTY_RESPONSE_SCHEMA_KEY } from "./monty/montyResponseSchemaKey.js";
-import { RLM_TOOL_NAME } from "./rlm/rlmConstants.js";
+import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlm/rlmConstants.js";
 import { toolResultTruncate } from "./tools/toolResultTruncate.js";
 import { toolExecutionResultOutcome } from "./tools/toolReturnOutcome.js";
 
@@ -65,8 +65,8 @@ export class ToolResolver {
         }
 
         try {
-            if (context.rlmToolOnly && toolCall.name !== RLM_TOOL_NAME) {
-                throw new Error(`RLM mode only allows calling "${RLM_TOOL_NAME}".`);
+            if (context.rlmToolOnly && toolCall.name !== RLM_TOOL_NAME && toolCall.name !== SKIP_TOOL_NAME) {
+                throw new Error(`RLM mode only allows calling "${RLM_TOOL_NAME}" or "${SKIP_TOOL_NAME}".`);
             }
             logger.debug(`event: Validating tool call arguments toolName=${toolCall.name}`);
             const args = validateToolCall([entry.tool], toolCall);

@@ -152,7 +152,7 @@ describe("Engine RLM mode", () => {
             await engine.start();
 
             const status = engine.getStatus();
-            expect(status.tools).toEqual(["run_python"]);
+            expect(status.tools).toEqual(["run_python", "skip"]);
 
             await engine.shutdown();
         } finally {
