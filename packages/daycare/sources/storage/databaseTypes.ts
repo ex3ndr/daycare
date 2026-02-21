@@ -161,6 +161,22 @@ export type DatabaseDelayedSignalRow = {
     updated_at: number;
 };
 
+export type DatabasePermissionRequestRow = {
+    id: string;
+    token: string;
+    agent_id: string;
+    user_id: string;
+    status: string;
+    permissions: string;
+    reason: string;
+    requester: string;
+    scope: string | null;
+    timeout_at: number;
+    decision: string | null;
+    created_at: number;
+    updated_at: number;
+};
+
 export type DelayedSignalDbRecord = {
     id: string;
     userId: string;
