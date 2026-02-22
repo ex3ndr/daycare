@@ -126,18 +126,25 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const transcript = formatHistoryMessages(records);
+                const isForeground = agent.descriptor.type === "user";
+                const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }
+
+                // Prepend source context for background agents so the memory model
+                // knows this is automated task execution, not a human conversation.
+                const text = isForeground
+                    ? transcript
+                    : `> Source: This transcript is from an automated agent performing background work. There is no human participant. Extract facts about what was done, what succeeded/failed, and what was learned about systems and processes.\n\n${transcript}`;
 
                 const descriptor: AgentDescriptor = { type: "memory-agent", id: session.agentId };
                 await this.postToAgent(
                     { descriptor },
                     {
                         type: "system_message",
-                        text: transcript,
+                        text,
                         origin: `memory-worker:${session.id}`
                     }
                 );

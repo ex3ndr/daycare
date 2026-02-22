@@ -95,4 +95,26 @@ describe("formatHistoryMessages", () => {
         const result = formatHistoryMessages(records);
         expect(result).toBe("## User\n\nQ\n\n## Assistant\n\nA");
     });
+
+    it("uses background labels when isForeground is false", () => {
+        const records: AgentHistoryRecord[] = [
+            { type: "user_message", at: 1000, text: "run task", files: [] },
+            {
+                type: "assistant_message",
+                at: 1001,
+                text: "Done.",
+                files: [],
+                toolCalls: [],
+                tokens: null
+            }
+        ];
+        const result = formatHistoryMessages(records, false);
+        expect(result).toBe("## System Message\n\nrun task\n\n## Agent\n\nDone.");
+    });
+
+    it("uses foreground labels by default", () => {
+        const records: AgentHistoryRecord[] = [{ type: "user_message", at: 1000, text: "hi", files: [] }];
+        expect(formatHistoryMessages(records)).toBe("## User\n\nhi");
+        expect(formatHistoryMessages(records, true)).toBe("## User\n\nhi");
+    });
 });

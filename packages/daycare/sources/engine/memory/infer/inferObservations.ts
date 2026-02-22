@@ -1,5 +1,6 @@
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
+import Handlebars from "handlebars";
 
 import type { AgentHistoryRecord } from "@/types";
 import { getLogger } from "../../../log.js";
@@ -24,25 +25,29 @@ export type InferObservationsOptions = {
     inferenceRouter: InferenceRouter;
     providers: ProviderSettings[];
     signal?: AbortSignal;
+    isForeground?: boolean;
 };
 
 /**
  * Runs inference on conversation history to extract observations worth persisting.
+ * When isForeground is false, the OBSERVE.md prompt is adjusted for background agent context.
+ *
  * Expects: records from a single session, at least one provider available.
  */
 export async function inferObservations(options: InferObservationsOptions): Promise<InferObservation[]> {
-    const { records, inferenceRouter, providers, signal } = options;
+    const { records, inferenceRouter, providers, signal, isForeground = true } = options;
 
     if (records.length === 0) {
         return [];
     }
 
-    const transcript = formatHistoryMessages(records);
+    const transcript = formatHistoryMessages(records, isForeground);
     if (transcript.trim().length === 0) {
         return [];
     }
 
-    const systemPrompt = (await agentPromptBundledRead("memory/OBSERVE.md")).trim();
+    const template = (await agentPromptBundledRead("memory/OBSERVE.md")).trim();
+    const systemPrompt = Handlebars.compile(template)({ isForeground });
 
     const context: InferenceContext = {
         messages: [

@@ -74,11 +74,56 @@ describe("MemoryWorker", () => {
             expect(target.descriptor).toEqual({ type: "memory-agent", id: "agent-1" });
             expect(item.type).toBe("system_message");
             expect(item.text).toContain("hello");
+            // Background agent (cron) gets preamble and background labels
+            expect(item.text).toContain("## System Message");
+            expect(item.text).toContain("> Source:");
             expect(item.origin).toContain(sessionId);
 
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).toBeNull();
             expect(session?.processedUntil).toBe(maxId);
+
+            worker.stop();
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("uses foreground labels and no preamble for user agents", async () => {
+        vi.useFakeTimers();
+        const { storage, ownerId } = await createTestStorage();
+        try {
+            await storage.agents.create({
+                id: "user-agent-1",
+                userId: ownerId,
+                type: "user",
+                descriptor: { type: "user", connector: "web", userId: "u1", channelId: "ch1" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            const sessionId = await storage.sessions.create({ agentId: "user-agent-1", createdAt: 1000 });
+            await storage.agents.update("user-agent-1", { activeSessionId: sessionId });
+            await storage.history.append(sessionId, { type: "user_message", at: 1001, text: "hi", files: [] });
+            const maxId = await storage.history.maxId(sessionId);
+            await storage.sessions.invalidate(sessionId, maxId!);
+
+            const postFn = vi.fn().mockResolvedValue(undefined);
+            const worker = createWorker(storage, postFn);
+            worker.start();
+
+            await vi.advanceTimersByTimeAsync(150);
+
+            expect(postFn).toHaveBeenCalledOnce();
+            const [, item] = postFn.mock.calls[0];
+            // Foreground agent (user) gets standard labels and no preamble
+            expect(item.text).toContain("## User");
+            expect(item.text).not.toContain("## System Message");
+            expect(item.text).not.toContain("> Source:");
 
             worker.stop();
         } finally {

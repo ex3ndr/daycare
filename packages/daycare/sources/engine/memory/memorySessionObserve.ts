@@ -15,6 +15,7 @@ export type MemorySessionObserveOptions = {
     storage: Storage;
     inferenceRouter: InferenceRouter;
     providers: ProviderSettings[];
+    isForeground?: boolean;
 };
 
 /**
@@ -24,7 +25,7 @@ export type MemorySessionObserveOptions = {
  * Expects: ctx identifies the agent, records are the unprocessed history entries.
  */
 export async function memorySessionObserve(options: MemorySessionObserveOptions): Promise<InferObservation[]> {
-    const { sessionNumber, ctx, records, inferenceRouter, providers } = options;
+    const { sessionNumber, ctx, records, inferenceRouter, providers, isForeground } = options;
     logger.debug(
         `event: Observing session sessionNumber=${sessionNumber} agentId=${ctx.agentId} records=${records.length}`
     );
@@ -32,7 +33,8 @@ export async function memorySessionObserve(options: MemorySessionObserveOptions)
     const observations = await inferObservations({
         records,
         inferenceRouter,
-        providers
+        providers,
+        isForeground
     });
 
     logger.debug(

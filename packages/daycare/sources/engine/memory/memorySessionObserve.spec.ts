@@ -95,6 +95,63 @@ describe("memorySessionObserve", () => {
         }
     });
 
+    it("passes isForeground to inferObservations and uses background labels", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const owner = (await storage.users.findMany())[0];
+            if (!owner) {
+                throw new Error("Owner user missing");
+            }
+            await storage.agents.create({
+                id: "agent-bg",
+                userId: owner.id,
+                type: "cron",
+                descriptor: { type: "cron", id: "agent-bg", name: "job" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            const sessionId = await storage.sessions.create({ agentId: "agent-bg", createdAt: 1000 });
+            await storage.history.append(sessionId, {
+                type: "user_message",
+                at: 1001,
+                text: "run cleanup",
+                files: []
+            });
+
+            const ctx = new Context("agent-bg", owner.id);
+            const records = await storage.history.findBySessionId(sessionId);
+            const xml = "<observations></observations>";
+            const router = mockInferenceRouter(xml);
+
+            await memorySessionObserve({
+                sessionNumber: 1,
+                ctx,
+                records,
+                storage,
+                inferenceRouter: router,
+                providers: [],
+                isForeground: false
+            });
+
+            // Verify the transcript sent to inference uses background labels
+            const calls = (router.complete as ReturnType<typeof vi.fn>).mock.calls;
+            expect(calls.length).toBeGreaterThan(0);
+            const context = calls[0]![0] as { messages: { content: string }[]; systemPrompt: string };
+            expect(context.messages[0]!.content).toContain("## System Message");
+            expect(context.messages[0]!.content).not.toContain("## User");
+            // Verify the system prompt uses the background variant
+            expect(context.systemPrompt).toContain("automated agent");
+            expect(context.systemPrompt).not.toContain("between a person and an AI assistant");
+        } finally {
+            storage.close();
+        }
+    });
+
     it("returns empty array when no records", async () => {
         const storage = Storage.open(":memory:");
         try {

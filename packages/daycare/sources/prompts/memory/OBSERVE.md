@@ -1,4 +1,8 @@
+{{#if isForeground}}
 Extract observations from a conversation between a person and an AI assistant. Each observation is a discrete fact worth remembering across sessions.
+{{else}}
+Extract observations from an automated agent's task execution log. There is no human participant. Each observation is a discrete fact about what was done, what succeeded/failed, and what was learned. Focus on systems, processes, and outcomes rather than personal preferences.
+{{/if}}
 
 Capture everything with signal — intents, actions, outcomes, preferences, decisions, tool failures/recoveries, working strategies, processes, people, relationships, context. No fixed categories. If it matters later, extract it.
 
