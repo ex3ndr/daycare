@@ -42,6 +42,7 @@ import { agentMessageRunPythonTerminalTrim } from "./agentMessageRunPythonTermin
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
+import { inferenceErrorAnthropicPromptOverflowTokensExtract } from "./inferenceErrorAnthropicPromptOverflowTokensExtract.js";
 import { tokensResolve } from "./tokensResolve.js";
 
 const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
@@ -75,6 +76,7 @@ type AgentLoopResult = {
     responseText?: string | null;
     historyRecords: AgentHistoryRecord[];
     contextOverflow?: boolean;
+    contextOverflowTokens?: number;
     tokenStatsUpdates: Array<{
         provider: string;
         model: string;
@@ -805,10 +807,19 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 errorMessage: response.message.errorMessage
             })
         ) {
+            const contextOverflowTokens = inferenceErrorAnthropicPromptOverflowTokensExtract(
+                response.message.errorMessage
+            );
             logger.warn(
                 `error: Inference returned Anthropic prompt overflow response provider=${response.providerId} model=${response.modelId} stopReason=${response.message.stopReason} error=${errorDetail}`
             );
-            return { responseText: finalResponseText, historyRecords, contextOverflow: true, tokenStatsUpdates };
+            return {
+                responseText: finalResponseText,
+                historyRecords,
+                contextOverflow: true,
+                contextOverflowTokens,
+                tokenStatsUpdates
+            };
         }
         const message = "Inference failed.";
         logger.warn(

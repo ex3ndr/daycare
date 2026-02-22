@@ -18,10 +18,12 @@ import { sandboxCanRead } from "../../sandbox/sandboxCanRead.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { envNormalize } from "../../util/envNormalize.js";
+import { stringTruncateTail } from "../../utils/stringTruncateTail.js";
 
 const READ_MAX_LINES = 2000;
 const READ_MAX_BYTES = 50 * 1024;
 const MAX_EXEC_BUFFER = 1_000_000;
+const MAX_EXEC_STREAM_OUTPUT_CHARS = 8_000;
 const DEFAULT_EXEC_TIMEOUT = 30_000;
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 const NARROW_NO_BREAK_SPACE = "\u202F";
@@ -535,18 +537,28 @@ function toText(value: string | Buffer | undefined): string {
     return typeof value === "string" ? value : value.toString("utf8");
 }
 
-function formatExecOutput(stdout: string, stderr: string, failed: boolean): string {
+export function formatExecOutput(stdout: string, stderr: string, failed: boolean): string {
     const parts: string[] = [];
-    if (stdout.trim().length > 0) {
-        parts.push(`stdout:\n${stdout.trimEnd()}`);
+    const stdoutPart = formatExecStream("stdout", stdout);
+    if (stdoutPart) {
+        parts.push(stdoutPart);
     }
-    if (stderr.trim().length > 0) {
-        parts.push(`stderr:\n${stderr.trimEnd()}`);
+    const stderrPart = formatExecStream("stderr", stderr);
+    if (stderrPart) {
+        parts.push(stderrPart);
     }
     if (parts.length === 0) {
         return failed ? "Command failed with no output." : "Command completed with no output.";
     }
     return parts.join("\n\n");
+}
+
+function formatExecStream(stream: "stdout" | "stderr", value: string): string | null {
+    if (value.trim().length === 0) {
+        return null;
+    }
+    const text = stringTruncateTail(value.trimEnd(), MAX_EXEC_STREAM_OUTPUT_CHARS, stream);
+    return `${stream}:\n${text}`;
 }
 
 type TruncationResult = {

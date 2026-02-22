@@ -22,7 +22,7 @@ export function messageContextReset(options: MessageContextResetOptions): string
             return "🔄 Session reset.";
         case "overflow": {
             const tokens = options.estimatedTokens ?? 0;
-            const tokensPart = tokens > 0 ? ` (~${Math.round(tokens / 1000)}k tokens)` : "";
+            const tokensPart = tokens > 0 ? ` (${tokens.toLocaleString("en-US")} tokens)` : "";
             return `⚠️ Session reset — context overflow${tokensPart}. Please resend your last message.`;
         }
     }

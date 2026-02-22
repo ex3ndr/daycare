@@ -11,7 +11,7 @@ import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/typ
 import { Agent } from "../../engine/agents/agent.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
-import { buildExecTool, buildWorkspaceReadTool } from "./tool.js";
+import { buildExecTool, buildWorkspaceReadTool, formatExecOutput } from "./tool.js";
 
 const execToolCall = { id: "tool-call-1", name: "exec" };
 const readToolCall = { id: "tool-call-2", name: "read" };
@@ -231,6 +231,37 @@ describe("exec tool allowedDomains", () => {
         );
         expect(result.toolMessage.isError).toBe(false);
         expect(context.permissions).toEqual(original);
+    });
+});
+
+describe("formatExecOutput", () => {
+    it("tail-truncates stdout with stream label notice", () => {
+        const stdout = `${"a".repeat(100)}${"z".repeat(9_000)}`;
+        const text = formatExecOutput(stdout, "", false);
+
+        expect(text).toContain("stdout:");
+        expect(text).toContain("chars truncated from stdout");
+        expect(text.endsWith("z".repeat(8_000))).toBe(true);
+    });
+
+    it("tail-truncates stderr with stream label notice", () => {
+        const stderr = `${"x".repeat(100)}${"y".repeat(9_000)}`;
+        const text = formatExecOutput("", stderr, true);
+
+        expect(text).toContain("stderr:");
+        expect(text).toContain("chars truncated from stderr");
+        expect(text.endsWith("y".repeat(8_000))).toBe(true);
+    });
+
+    it("includes both streams and truncates each independently", () => {
+        const stdout = `${"s".repeat(50)}${"o".repeat(9_000)}`;
+        const stderr = `${"e".repeat(50)}${"r".repeat(9_000)}`;
+        const text = formatExecOutput(stdout, stderr, true);
+
+        expect(text).toContain("stdout:");
+        expect(text).toContain("stderr:");
+        expect(text).toContain("chars truncated from stdout");
+        expect(text).toContain("chars truncated from stderr");
     });
 });
 

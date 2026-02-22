@@ -19,7 +19,7 @@ describe("messageContextReset", () => {
 
     it("returns overflow message with token count", () => {
         const result = messageContextReset({ kind: "overflow", estimatedTokens: 153_200 });
-        expect(result).toBe("⚠️ Session reset — context overflow (~153k tokens). Please resend your last message.");
+        expect(result).toBe("⚠️ Session reset — context overflow (153,200 tokens). Please resend your last message.");
     });
 
     it("omits token count when zero", () => {

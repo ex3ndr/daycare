@@ -567,7 +567,7 @@ export class Agent {
 
         if (result.contextOverflow) {
             logger.warn({ agentId: this.id }, "event: Inference context overflow; resetting session");
-            await this.handleEmergencyReset(entry, source);
+            await this.handleEmergencyReset(entry, source, result.contextOverflowTokens);
             return null;
         }
 
@@ -801,10 +801,15 @@ export class Agent {
      * Resets the session when the emergency context limit is exceeded.
      * Expects: reset record written and state persisted before notifying users.
      */
-    private async handleEmergencyReset(entry: AgentMessage, source: string): Promise<void> {
-        // Estimate token usage before resetting context
-        const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
-        const estimatedTokens = contextEstimateTokens(history);
+    private async handleEmergencyReset(
+        entry: AgentMessage,
+        source: string,
+        contextOverflowTokens?: number
+    ): Promise<void> {
+        const estimatedTokens =
+            typeof contextOverflowTokens === "number" && contextOverflowTokens > 0
+                ? contextOverflowTokens
+                : contextEstimateTokens(await agentHistoryLoad(this.agentSystem.storage, this.id));
 
         const reset: AgentInboxReset = {
             type: "reset",

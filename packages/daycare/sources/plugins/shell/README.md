@@ -9,6 +9,13 @@ The shell plugin provides workspace file tools (`read`, `write`, `edit`), one-sh
 - Text output is truncated to `2000` lines or `50KB` (whichever is hit first), with continuation hints.
 - Supported image files (`jpg`, `png`, `gif`, `webp`) are returned as image content blocks.
 
+## Exec Output Size Notes
+
+- `stdout` and `stderr` are tail-truncated independently to `8000` chars before they are combined.
+- Truncation notices include stream and dropped char count, for example:
+  - `... (12,345 chars truncated from stdout)`
+- Tool-level truncation applies an additional `8000`-char tail-biased safety limit per text block before inference context storage.
+
 ## Durable Process Tools
 
 - `process_start`: starts a sandboxed detached process and persists metadata under engine data dir.

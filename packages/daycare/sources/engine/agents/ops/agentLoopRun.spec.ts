@@ -72,6 +72,7 @@ describe("agentLoopRun", () => {
         const result = await agentLoopRun(options);
 
         expect(result.contextOverflow).toBe(true);
+        expect(result.contextOverflowTokens).toBe(216_326);
         expect(connectorSend).not.toHaveBeenCalled();
         expect(notifySubagentFailure).not.toHaveBeenCalled();
     });

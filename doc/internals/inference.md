@@ -67,6 +67,22 @@ sequenceDiagram
   Engine-->>Inference: toolResult (truncated)
 ```
 
+Current truncation limits:
+- `toolResultTruncate` (all tool text blocks): tail-biased, `8000` chars per text block.
+- `exec` stream formatting: tail-biased, `8000` chars each for `stdout` and `stderr` before combining.
+- `run_python` result text (`rlmResultTextBuild`): head+tail, `16000` chars total.
+- `run_python` sub-sections (`printOutput`, `output`): head+tail, `8000` chars each before composing final text.
+
+```mermaid
+flowchart TD
+  Exec[exec stdout/stderr] --> ExecTrim[Per-stream tail truncate 8k]
+  ExecTrim --> ToolResult[toolResultTruncate tail 8k per text block]
+  ToolResult --> LLM[Inference context]
+  RLM[run_python print/output] --> RLMTrim[Head+tail 8k per section]
+  RLMTrim --> RLMSummary[Head+tail 16k result text]
+  RLMSummary --> LLM
+```
+
 ```mermaid
 sequenceDiagram
   participant Engine
