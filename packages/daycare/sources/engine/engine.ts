@@ -101,7 +101,7 @@ export class Engine {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
         this.config = new ConfigModule(options.config);
         this.storage = Storage.open(this.config.current.dbPath);
-        this.memoryWorker = new MemoryWorker({ storage: this.storage });
+        // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;
         const fallbackUserIdResolve = async (): Promise<string> => {
             const owner = await this.storage.users.findOwner();
@@ -237,6 +237,11 @@ export class Engine {
             auth: this.authStore,
             // Hold read lock for the full inference lifecycle so write-locked reload reaches
             // a strict quiescent point with no active model calls.
+            config: this.config
+        });
+        this.memoryWorker = new MemoryWorker({
+            storage: this.storage,
+            inferenceRouter: this.inferenceRouter,
             config: this.config
         });
         const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));

@@ -2,12 +2,40 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { Storage } from "../../storage/storage.js";
+import type { ConfigModule } from "../config/configModule.js";
+import type { InferenceRouter } from "../modules/inference/router.js";
 import { MemoryWorker } from "./memoryWorker.js";
+
+vi.mock("./memorySessionObserve.js", () => ({
+    memorySessionObserve: vi.fn().mockResolvedValue([])
+}));
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
     writeDirs: ["/workspace"]
 };
+
+function mockInferenceRouter(): InferenceRouter {
+    return {
+        complete: vi.fn().mockResolvedValue({
+            message: {
+                role: "assistant",
+                content: [{ type: "text", text: "[]" }],
+                stopReason: "stop",
+                timestamp: Date.now()
+            },
+            providerId: "test",
+            modelId: "test"
+        }),
+        reload: vi.fn()
+    } as unknown as InferenceRouter;
+}
+
+function mockConfig(): ConfigModule {
+    return {
+        current: { settings: { providers: [] } }
+    } as unknown as ConfigModule;
+}
 
 async function createTestStorage() {
     const storage = Storage.open(":memory:");
@@ -31,6 +59,15 @@ async function createTestStorage() {
     return storage;
 }
 
+function createWorker(storage: Storage, intervalMs = 100) {
+    return new MemoryWorker({
+        storage,
+        inferenceRouter: mockInferenceRouter(),
+        config: mockConfig(),
+        intervalMs
+    });
+}
+
 afterEach(() => {
     vi.useRealTimers();
 });
@@ -46,7 +83,7 @@ describe("MemoryWorker", () => {
             const maxId = await storage.history.maxId(sessionId);
             await storage.sessions.invalidate(sessionId, maxId!);
 
-            const worker = new MemoryWorker({ storage, intervalMs: 100 });
+            const worker = createWorker(storage);
             worker.start();
 
             // Advance timer to trigger tick
@@ -85,7 +122,7 @@ describe("MemoryWorker", () => {
                 return result;
             };
 
-            const worker = new MemoryWorker({ storage, intervalMs: 100 });
+            const worker = createWorker(storage);
             worker.start();
 
             await vi.advanceTimersByTimeAsync(150);
@@ -111,7 +148,7 @@ describe("MemoryWorker", () => {
             const maxId = await storage.history.maxId(sessionId);
             await storage.sessions.invalidate(sessionId, maxId!);
 
-            const worker = new MemoryWorker({ storage, intervalMs: 100 });
+            const worker = createWorker(storage);
             worker.start();
             worker.stop();
 
@@ -139,7 +176,7 @@ describe("MemoryWorker", () => {
             await storage.sessions.invalidate(s1, id1);
             await storage.sessions.invalidate(s2, id2);
 
-            const worker = new MemoryWorker({ storage, intervalMs: 100 });
+            const worker = createWorker(storage);
             worker.start();
 
             await vi.advanceTimersByTimeAsync(150);

@@ -1,6 +1,9 @@
 import { getLogger } from "../../log.js";
+import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import type { Storage } from "../../storage/storage.js";
 import { Context } from "../agents/context.js";
+import type { ConfigModule } from "../config/configModule.js";
+import type { InferenceRouter } from "../modules/inference/router.js";
 import { memorySessionObserve } from "./memorySessionObserve.js";
 
 const logger = getLogger("engine.memory");
@@ -10,15 +13,19 @@ const DEFAULT_BATCH_SIZE = 10;
 
 export type MemoryWorkerOptions = {
     storage: Storage;
+    inferenceRouter: InferenceRouter;
+    config: ConfigModule;
     intervalMs?: number;
 };
 
 /**
  * Timer-based worker that polls for invalidated sessions and processes them.
- * Processing is a stub for now - the actual memory extraction will be added later.
+ * Runs inference to extract memory observations from conversation history.
  */
 export class MemoryWorker {
     private readonly storage: Storage;
+    private readonly inferenceRouter: InferenceRouter;
+    private readonly config: ConfigModule;
     private readonly intervalMs: number;
     private tickTimer: NodeJS.Timeout | null = null;
     private started = false;
@@ -26,6 +33,8 @@ export class MemoryWorker {
 
     constructor(options: MemoryWorkerOptions) {
         this.storage = options.storage;
+        this.inferenceRouter = options.inferenceRouter;
+        this.config = options.config;
         this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
     }
 
@@ -73,6 +82,8 @@ export class MemoryWorker {
                 logger.debug(`event: Memory worker tick found ${sessions.length} invalidated session(s)`);
             }
 
+            const providers = listActiveInferenceProviders(this.config.current.settings);
+
             for (const session of sessions) {
                 if (this.stopped) {
                     break;
@@ -96,7 +107,14 @@ export class MemoryWorker {
                 const processedUntil = session.processedUntil ?? 0;
                 const records = await this.storage.history.findSinceId(session.id, processedUntil);
 
-                await memorySessionObserve(sessionNumber, ctx, records, this.storage);
+                await memorySessionObserve({
+                    sessionNumber,
+                    ctx,
+                    records,
+                    storage: this.storage,
+                    inferenceRouter: this.inferenceRouter,
+                    providers
+                });
 
                 const maxHistoryId = await this.storage.history.maxId(session.id);
                 const newProcessedUntil = maxHistoryId ?? invalidatedAt;
