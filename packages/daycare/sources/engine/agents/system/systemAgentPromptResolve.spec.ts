@@ -10,13 +10,6 @@ describe("systemAgentPromptResolve", () => {
         expect(heartbeat?.replaceSystemPrompt).toBe(false);
     });
 
-    it("resolves architect prompt with full prompt replacement enabled", async () => {
-        const architect = await systemAgentPromptResolve("architect");
-        expect(architect?.tag).toBe("architect");
-        expect(architect?.systemPrompt.length).toBeGreaterThan(0);
-        expect(architect?.replaceSystemPrompt).toBe(true);
-    });
-
     it("returns null for unknown tags", async () => {
         await expect(systemAgentPromptResolve("unknown")).resolves.toBeNull();
     });

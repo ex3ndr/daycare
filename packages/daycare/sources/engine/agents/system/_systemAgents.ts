@@ -9,10 +9,5 @@ export const SYSTEM_AGENTS: readonly SystemAgentDefinition[] = [
         tag: "heartbeat",
         promptFile: "HEARTBEAT.md",
         replaceSystemPrompt: false
-    },
-    {
-        tag: "architect",
-        promptFile: "ARCHITECT.md",
-        replaceSystemPrompt: true
     }
 ];

@@ -6,24 +6,11 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 
 import { UserHome } from "../../users/userHome.js";
-import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentSystemPrompt } from "./agentSystemPrompt.js";
 
 type AgentSystemPromptParameter = NonNullable<Parameters<typeof agentSystemPrompt>[0]>;
 
 describe("agentSystemPrompt", () => {
-    it("returns replacement prompt for architect system agent", async () => {
-        const expected = (await agentPromptBundledRead("ARCHITECT.md")).trim();
-        const rendered = await agentSystemPrompt({
-            descriptor: {
-                type: "system",
-                tag: "architect"
-            }
-        });
-
-        expect(rendered).toBe(expected);
-    });
-
     it("renders base prompt for system agent without a registered definition", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-unknown-"));
         try {

@@ -59,7 +59,6 @@ describe("agentDescriptorLabel", () => {
             })
         ).toBe("daily summary");
         expect(agentDescriptorLabel({ type: "system", tag: "heartbeat" })).toBe("heartbeat");
-        expect(agentDescriptorLabel({ type: "system", tag: "architect" })).toBe("architect");
     });
 
     it("labels user agents", () => {

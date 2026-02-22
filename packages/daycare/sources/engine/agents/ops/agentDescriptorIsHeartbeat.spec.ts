@@ -8,7 +8,7 @@ describe("agentDescriptorIsHeartbeat", () => {
     });
 
     it("rejects non-heartbeat descriptors", () => {
-        expect(agentDescriptorIsHeartbeat({ type: "system", tag: "architect" })).toBe(false);
+        expect(agentDescriptorIsHeartbeat({ type: "system", tag: "other" })).toBe(false);
         expect(
             agentDescriptorIsHeartbeat({
                 type: "user",
