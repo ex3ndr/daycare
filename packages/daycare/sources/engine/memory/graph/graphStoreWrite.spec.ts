@@ -18,7 +18,7 @@ describe("graphStoreWrite", () => {
         await fs.rm(memoryDir, { recursive: true, force: true });
     });
 
-    it("writes root node to __root__.md", async () => {
+    it("rejects writing the root node", async () => {
         const node: GraphNode = {
             id: "__root__",
             frontmatter: {
@@ -31,12 +31,7 @@ describe("graphStoreWrite", () => {
             refs: []
         };
 
-        await graphStoreWrite(memoryDir, node);
-
-        const rootPath = path.join(memoryDir, "__root__.md");
-        const content = await fs.readFile(rootPath, "utf8");
-        expect(content).toContain("title: Memory Summary");
-        expect(content).toContain("# Memory Summary");
+        await expect(graphStoreWrite(memoryDir, node)).rejects.toThrow("virtual");
     });
 
     it("writes non-root node to <id>.md", async () => {

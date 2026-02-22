@@ -18,17 +18,26 @@ describe("Memory", () => {
         await fs.rm(usersDir, { recursive: true, force: true });
     });
 
-    it("readGraph ensures root node exists and returns a graph tree", async () => {
+    it("readGraph returns virtual root and creates graph directory", async () => {
         const memory = new Memory({ usersDir });
 
         const tree = await memory.readGraph("usr_001");
 
         expect(tree.root.id).toBe("__root__");
-        const rootChildren = tree.children.get("__root__");
-        expect(rootChildren).toBeDefined();
-        const rootPath = path.join(usersDir, "usr_001", "memory", "graph", "__root__.md");
-        const stat = await fs.stat(rootPath);
-        expect(stat.isFile()).toBe(true);
+        expect(tree.root.content).toContain("Memory Graph");
+        const graphDir = path.join(usersDir, "usr_001", "memory", "graph");
+        const stat = await fs.stat(graphDir);
+        expect(stat.isDirectory()).toBe(true);
+    });
+
+    it("readNode returns virtual root for __root__", async () => {
+        const memory = new Memory({ usersDir });
+
+        const root = await memory.readNode("usr_001", "__root__");
+
+        expect(root).not.toBeNull();
+        expect(root!.id).toBe("__root__");
+        expect(root!.content).toContain("Memory Graph");
     });
 
     it("append updates body and updatedAt while preserving frontmatter", async () => {

@@ -18,4 +18,3 @@ export type GraphTree = {
 };
 
 export const GRAPH_ROOT_NODE_ID = "__root__";
-export const GRAPH_ROOT_FILENAME = "__root__.md";

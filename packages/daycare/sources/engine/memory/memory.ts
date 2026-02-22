@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { graphNodeParse } from "./graph/graphNodeParse.js";
-import { graphStoreEnsureRoot } from "./graph/graphStoreEnsureRoot.js";
+import { graphRootNodeRead } from "./graph/graphRootNodeRead.js";
 import { graphStoreRead } from "./graph/graphStoreRead.js";
 import { graphStoreWrite } from "./graph/graphStoreWrite.js";
 import { graphTreeBuild } from "./graph/graphTreeBuild.js";
@@ -29,19 +29,18 @@ export class Memory {
 
     async readGraph(userId: string): Promise<GraphTree> {
         const memoryDir = this.resolveMemoryDir(userId);
-        const root = await graphStoreEnsureRoot(memoryDir);
+        await fs.mkdir(memoryDir, { recursive: true });
+        const root = await graphRootNodeRead();
         const nodes = await graphStoreRead(memoryDir);
-        if (!nodes.some((node) => node.id === GRAPH_ROOT_NODE_ID)) {
-            nodes.push(root);
-        }
+        nodes.push(root);
         return graphTreeBuild(nodes);
     }
 
     async readNode(userId: string, nodeId: string): Promise<GraphNode | null> {
-        const memoryDir = this.resolveMemoryDir(userId);
         if (nodeId === GRAPH_ROOT_NODE_ID) {
-            return graphStoreEnsureRoot(memoryDir);
+            return graphRootNodeRead();
         }
+        const memoryDir = this.resolveMemoryDir(userId);
         const filename = `${nodeId}.md`;
         const filePath = path.join(memoryDir, filename);
 
