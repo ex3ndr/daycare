@@ -70,7 +70,6 @@ describe("Heartbeats", () => {
                 userId: "user-1",
                 title: "beat",
                 prompt: "check",
-                gate: null,
                 lastRunAt: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()

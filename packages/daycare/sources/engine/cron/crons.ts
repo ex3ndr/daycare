@@ -4,7 +4,6 @@ import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
 import type { CronTaskDefinition } from "./cronTypes.js";
 import { CronScheduler } from "./ops/cronScheduler.js";
 
@@ -34,11 +33,6 @@ export class Crons {
         this.scheduler = new CronScheduler({
             config: options.config,
             repository: this.storage.cronTasks,
-            resolveDefaultPermissions: async (task) => {
-                const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
-                const userId = task.userId?.trim() ? task.userId : ownerUserId;
-                return permissionBuildUser(this.agentSystem.userHomeForUserId(userId));
-            },
             onTask: async (task, messageContext) => {
                 const target = task.agentId
                     ? { agentId: task.agentId }

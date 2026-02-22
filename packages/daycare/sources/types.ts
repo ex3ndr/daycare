@@ -98,8 +98,6 @@ export type {
     PluginOnboardingApi,
     PluginOnboardingResult
 } from "./engine/plugins/types.js";
-// Scheduling
-export type { ExecGateDefinition } from "./engine/scheduling/execGateTypes.js";
 // Signals
 export type {
     DelayedSignal,

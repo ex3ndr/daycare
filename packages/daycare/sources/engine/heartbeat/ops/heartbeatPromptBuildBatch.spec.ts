@@ -7,7 +7,6 @@ const buildTask = (id: string, title: string, prompt: string) => ({
     userId: "user-1",
     title,
     prompt,
-    gate: null,
     lastRunAt: null,
     createdAt: 1,
     updatedAt: 1

@@ -21,7 +21,6 @@ describe("migration20260220AddTasks", () => {
                 "schedule",
                 "prompt",
                 "agent_id",
-                "gate",
                 "enabled",
                 "delete_after_run",
                 "last_run_at",
@@ -32,7 +31,6 @@ describe("migration20260220AddTasks", () => {
                 "id",
                 "title",
                 "prompt",
-                "gate",
                 "last_run_at",
                 "created_at",
                 "updated_at"

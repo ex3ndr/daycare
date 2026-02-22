@@ -3,7 +3,6 @@ import type {
     AgentLifecycleState,
     AgentTokenEntry,
     AgentTokenStats,
-    ExecGateDefinition,
     ExposeEndpointAuth,
     ExposeMode,
     ExposeTarget,
@@ -82,7 +81,6 @@ export type DatabaseCronTaskRow = {
     schedule: string;
     prompt: string;
     agent_id: string | null;
-    gate: string | null;
     enabled: number;
     delete_after_run: number;
     last_run_at: number | null;
@@ -99,7 +97,6 @@ export type CronTaskDbRecord = {
     schedule: string;
     prompt: string;
     agentId: string | null;
-    gate: ExecGateDefinition | null;
     enabled: boolean;
     deleteAfterRun: boolean;
     lastRunAt: number | null;
@@ -112,7 +109,6 @@ export type DatabaseHeartbeatTaskRow = {
     user_id: string;
     title: string;
     prompt: string;
-    gate: string | null;
     last_run_at: number | null;
     created_at: number;
     updated_at: number;
@@ -123,7 +119,6 @@ export type HeartbeatTaskDbRecord = {
     userId: string;
     title: string;
     prompt: string;
-    gate: ExecGateDefinition | null;
     lastRunAt: number | null;
     createdAt: number;
     updatedAt: number;

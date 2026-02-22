@@ -4,12 +4,6 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { Crons } from "../../cron/crons.js";
 import { cronExpressionParse as parseCronExpression } from "../../cron/ops/cronExpressionParse.js";
-import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
-
-const envSchema = Type.Record(
-    Type.String({ minLength: 1 }),
-    Type.Union([Type.String(), Type.Number(), Type.Boolean()])
-);
 
 const addCronSchema = Type.Object(
     {
@@ -19,36 +13,6 @@ const addCronSchema = Type.Object(
         schedule: Type.String({ minLength: 1 }),
         prompt: Type.String({ minLength: 1 }),
         agentId: Type.Optional(Type.String({ minLength: 1 })),
-        gate: Type.Optional(
-            Type.Object(
-                {
-                    command: Type.String({ minLength: 1 }),
-                    cwd: Type.Optional(Type.String({ minLength: 1 })),
-                    timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
-                    env: Type.Optional(envSchema),
-                    home: Type.Optional(Type.String({ minLength: 1 })),
-                    permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
-                    packageManagers: Type.Optional(
-                        Type.Array(
-                            Type.Union([
-                                Type.Literal("dart"),
-                                Type.Literal("dotnet"),
-                                Type.Literal("go"),
-                                Type.Literal("java"),
-                                Type.Literal("node"),
-                                Type.Literal("php"),
-                                Type.Literal("python"),
-                                Type.Literal("ruby"),
-                                Type.Literal("rust")
-                            ]),
-                            { minItems: 1 }
-                        )
-                    ),
-                    allowedDomains: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
-                },
-                { additionalProperties: false }
-            )
-        ),
         enabled: Type.Optional(Type.Boolean()),
         deleteAfterRun: Type.Optional(Type.Boolean())
     },
@@ -97,7 +61,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
     return {
         tool: {
             name: "cron_add",
-            description: "Create a scheduled cron task from a prompt stored in SQLite (optional agentId + gate).",
+            description: "Create a scheduled cron task from a prompt stored in SQLite (optional agentId).",
             parameters: addCronSchema
         },
         returns: cronReturns,
@@ -112,7 +76,6 @@ export function buildCronTool(crons: Crons): ToolDefinition {
                 throw new Error("Cron task id contains invalid characters.");
             }
 
-            const gate = execGateNormalize(payload.gate);
             const task = await crons.addTask(toolContext.ctx, {
                 id: payload.id,
                 name: payload.name,
@@ -120,7 +83,6 @@ export function buildCronTool(crons: Crons): ToolDefinition {
                 schedule: payload.schedule,
                 prompt: payload.prompt,
                 agentId: payload.agentId,
-                gate,
                 enabled: payload.enabled,
                 deleteAfterRun: payload.deleteAfterRun
             });
@@ -140,8 +102,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
                     taskId: task.id,
                     name: task.name,
                     schedule: task.schedule,
-                    agentId: task.agentId ?? null,
-                    gate: task.gate ?? null
+                    agentId: task.agentId ?? null
                 },
                 isError: false,
                 timestamp: Date.now()
@@ -200,7 +161,6 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
                     description: task.description ?? null,
                     schedule: task.schedule,
                     agentId: task.agentId ?? null,
-                    gate: task.gate ?? null,
                     enabled: task.enabled,
                     deleteAfterRun: task.deleteAfterRun,
                     prompt: task.prompt

@@ -13,7 +13,7 @@ To allow network or filesystem writes, the call must include explicit `permissio
 tags (for example `@network`, `@write:/absolute/path`), and each tag is validated
 as a subset of the caller's existing permissions.
 
-`exec` and exec gates also support typed language ecosystem presets:
+`exec` also supports typed language ecosystem presets:
 - `dart` -> `pub.dev`, `storage.googleapis.com`
 - `dotnet` -> `nuget.org`, `api.nuget.org`, `globalcdn.nuget.org`
 - `go` -> `proxy.golang.org`, `sum.golang.org`, `index.golang.org`, `golang.org`

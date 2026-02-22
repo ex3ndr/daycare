@@ -62,7 +62,7 @@ describe("migration20260220ImportTasks", () => {
             await mkdir(heartbeatDir, { recursive: true });
             await writeFile(
                 path.join(heartbeatDir, "morning-check.md"),
-                `---\ntitle: Morning Check\ngate:\n  command: echo hb\n  permissions:\n    - "@read:/tmp"\n---\n\nCheck status.\n`,
+                `---\ntitle: Morning Check\ngate:\n  command: echo hb\n---\n\nCheck status.\n`,
                 "utf8"
             );
             await writeFile(path.join(heartbeatDir, "with-heading.md"), "# Heading title\n\nBody prompt\n", "utf8");
@@ -92,7 +92,6 @@ describe("migration20260220ImportTasks", () => {
                     description: string | null;
                     schedule: string;
                     prompt: string;
-                    gate: string | null;
                     enabled: number;
                     delete_after_run: number;
                     agent_id: string | null;
@@ -103,7 +102,6 @@ describe("migration20260220ImportTasks", () => {
                     id: string;
                     title: string;
                     prompt: string;
-                    gate: string | null;
                     last_run_at: number | null;
                 }>;
 
@@ -119,9 +117,6 @@ describe("migration20260220ImportTasks", () => {
                 expect(cronRows[0]?.enabled).toBe(1);
                 expect(cronRows[0]?.delete_after_run).toBe(1);
                 expect(cronRows[0]?.last_run_at).toBe(Date.parse("2026-02-19T10:00:00.000Z"));
-                expect(JSON.parse(cronRows[0]?.gate ?? "{}") as { permissions?: string[] }).toEqual(
-                    expect.objectContaining({ permissions: ["@network"] })
-                );
                 expect(cronRows[1]?.id).toBe("owner-fallback");
                 expect(cronRows[1]?.task_uid).toBe(ownerFallbackCronTaskUid);
                 expect(cronRows[1]?.name).toBe("Owner fallback");
@@ -132,15 +127,11 @@ describe("migration20260220ImportTasks", () => {
                 expect(cronRows[1]?.enabled).toBe(1);
                 expect(cronRows[1]?.delete_after_run).toBe(0);
                 expect(cronRows[1]?.last_run_at).toBeNull();
-                expect(cronRows[1]?.gate).toBeNull();
 
                 expect(heartbeatRows).toHaveLength(2);
                 expect(heartbeatRows.map((row) => row.id)).toEqual(["morning-check", "with-heading"]);
                 expect(heartbeatRows[0]?.title).toBe("Morning Check");
                 expect(heartbeatRows[0]?.prompt).toBe("Check status.");
-                expect(JSON.parse(heartbeatRows[0]?.gate ?? "{}") as { permissions?: string[] }).toEqual(
-                    expect.objectContaining({ permissions: ["@read:/tmp"] })
-                );
                 expect(heartbeatRows[1]?.title).toBe("Heading title");
                 expect(heartbeatRows[1]?.prompt).toBe("Body prompt");
                 expect(heartbeatRows.every((row) => row.last_run_at === Date.parse("2026-02-18T12:34:56.000Z"))).toBe(

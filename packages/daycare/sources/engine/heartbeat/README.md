@@ -18,7 +18,6 @@ heartbeat/
 
 Heartbeat rows live in `tasks_heartbeat`:
 - `id`, `title`, `prompt`
-- `gate` (JSON)
 - `last_run_at` (unix ms)
 - `created_at`, `updated_at`
 
@@ -33,8 +32,7 @@ flowchart TD
   Heartbeats --> Scheduler[heartbeatScheduler.start]
   Scheduler --> Tick[Interval tick]
   Tick --> Load[repo.findMany]
-  Load --> Gate[Per-task execGateCheck]
-  Gate --> Batch[Build heartbeat batch prompt]
+  Load --> Batch[Build heartbeat batch prompt]
   Batch --> AgentSystem[post system_message execute=true]
   AgentSystem --> Record[repo.recordRun unix ms]
 ```

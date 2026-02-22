@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionPermissions } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import { Storage } from "../../../storage/storage.js";
 import { ConfigModule } from "../../config/configModule.js";
@@ -39,8 +38,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
-            onTask,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onTask
         });
 
         await scheduler.start();
@@ -67,8 +65,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
-            onTask,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onTask
         });
 
         await scheduler.start();
@@ -103,8 +100,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config,
             repository: storage.cronTasks,
-            onTask: vi.fn(),
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onTask: vi.fn()
         });
 
         await scheduler.start();
@@ -127,8 +123,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
-            onTask,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onTask
         });
 
         await scheduler.start();
@@ -144,8 +139,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
-            onTask,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onTask
         });
 
         await scheduler.start();
@@ -177,8 +171,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
-            onTask,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onTask
         });
 
         await scheduler.start();
@@ -211,8 +204,7 @@ describe("CronScheduler", () => {
             onTask: () => {
                 throw new Error("Task failed");
             },
-            onError,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
+            onError
         });
 
         await scheduler.start();
@@ -222,90 +214,7 @@ describe("CronScheduler", () => {
 
         scheduler.stop();
     });
-
-    it("skips gated tasks when gate check denies", async () => {
-        vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
-
-        await cronTaskInsert(storage, {
-            id: "gate-task",
-            name: "Gate Task",
-            schedule: "* * * * *",
-            prompt: "Should be gated",
-            gate: { command: "echo gate" }
-        });
-
-        const onTask = vi.fn();
-        const gateCheck = vi.fn().mockResolvedValue({
-            shouldRun: false,
-            exitCode: 1,
-            stdout: "",
-            stderr: ""
-        });
-        const scheduler = new CronScheduler({
-            config: configModule(tempDir),
-            repository: storage.cronTasks,
-            onTask,
-            gateCheck,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
-        });
-
-        await scheduler.start();
-        await vi.advanceTimersByTimeAsync(60 * 1000);
-
-        expect(gateCheck).toHaveBeenCalledTimes(1);
-        expect(onTask).not.toHaveBeenCalled();
-
-        scheduler.stop();
-    });
-
-    it("appends gate output to the prompt", async () => {
-        vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
-
-        await cronTaskInsert(storage, {
-            id: "gate-output",
-            name: "Gate Output",
-            schedule: "* * * * *",
-            prompt: "Base prompt",
-            gate: { command: "echo gate" }
-        });
-
-        const onTask = vi.fn();
-        const gateCheck = vi.fn().mockResolvedValue({
-            shouldRun: true,
-            exitCode: 0,
-            stdout: " ok ",
-            stderr: " warn "
-        });
-        const scheduler = new CronScheduler({
-            config: configModule(tempDir),
-            repository: storage.cronTasks,
-            onTask,
-            gateCheck,
-            resolveDefaultPermissions: () => defaultPermissions(tempDir)
-        });
-
-        await scheduler.start();
-        await vi.advanceTimersByTimeAsync(60 * 1000);
-
-        expect(onTask).toHaveBeenCalledTimes(1);
-        expect(onTask).toHaveBeenCalledWith(
-            expect.objectContaining({
-                prompt: "Base prompt\n\n[Gate output]\nok\nwarn"
-            }),
-            expect.any(Object)
-        );
-
-        scheduler.stop();
-    });
 });
-
-function defaultPermissions(workingDir: string, overrides: Partial<SessionPermissions> = {}): SessionPermissions {
-    return {
-        workingDir,
-        writeDirs: [],
-        ...overrides
-    };
-}
 
 async function cronTaskInsert(
     storage: Storage,
@@ -315,7 +224,6 @@ async function cronTaskInsert(
         schedule: string;
         prompt: string;
         userId?: string;
-        gate?: { command: string; permissions?: string[] };
         enabled?: boolean;
     }
 ) {
@@ -329,7 +237,6 @@ async function cronTaskInsert(
         schedule: input.schedule,
         prompt: input.prompt,
         agentId: null,
-        gate: input.gate ?? null,
         enabled: input.enabled !== false,
         deleteAfterRun: false,
         lastRunAt: null,

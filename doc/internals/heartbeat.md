@@ -6,7 +6,6 @@ Heartbeat tasks are stored in SQLite and executed in a single batch on a fixed i
 
 Rows live in `tasks_heartbeat`:
 - `id`, `title`, `prompt`
-- `gate` (JSON)
 - `last_run_at` (unix ms)
 - `created_at`, `updated_at`
 
@@ -14,8 +13,7 @@ Rows live in `tasks_heartbeat`:
 
 - `Heartbeats` wires `HeartbeatScheduler` with `HeartbeatTasksRepository`.
 - On each interval (or `heartbeat_run`), scheduler loads tasks.
-- Each task gate is evaluated independently.
-- Eligible tasks are merged into one batch prompt.
+- All tasks are merged into one batch prompt.
 - After run, `recordRun()` updates `last_run_at` for all heartbeat rows.
 
 ```mermaid
@@ -25,8 +23,7 @@ flowchart TD
   Engine --> Heartbeats[heartbeat/heartbeats.ts]
   Heartbeats --> Scheduler[heartbeat/ops/heartbeatScheduler.ts]
   Scheduler --> Load[repo.findMany]
-  Load --> Gate[execGateCheck per task]
-  Gate --> Batch[heartbeatPromptBuildBatch]
+  Load --> Batch[heartbeatPromptBuildBatch]
   Batch --> AgentSystem[agents/agentSystem.ts]
   AgentSystem --> Persist[repo.recordRun]
 ```

@@ -106,13 +106,12 @@ export class CronTasksRepository {
                     schedule,
                     prompt,
                     agent_id,
-                    gate,
                     enabled,
                     delete_after_run,
                     last_run_at,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                     task_uid = excluded.task_uid,
                     user_id = excluded.user_id,
@@ -121,7 +120,6 @@ export class CronTasksRepository {
                     schedule = excluded.schedule,
                     prompt = excluded.prompt,
                     agent_id = excluded.agent_id,
-                    gate = excluded.gate,
                     enabled = excluded.enabled,
                     delete_after_run = excluded.delete_after_run,
                     last_run_at = excluded.last_run_at,
@@ -138,7 +136,6 @@ export class CronTasksRepository {
                     record.schedule,
                     record.prompt,
                     record.agentId,
-                    record.gate ? JSON.stringify(record.gate) : null,
                     record.enabled ? 1 : 0,
                     record.deleteAfterRun ? 1 : 0,
                     record.lastRunAt,
@@ -168,7 +165,6 @@ export class CronTasksRepository {
                 userId: data.userId === undefined ? current.userId : data.userId,
                 description: data.description === undefined ? current.description : data.description,
                 agentId: data.agentId === undefined ? current.agentId : data.agentId,
-                gate: data.gate === undefined ? current.gate : data.gate,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
 
@@ -184,7 +180,6 @@ export class CronTasksRepository {
                     schedule = ?,
                     prompt = ?,
                     agent_id = ?,
-                    gate = ?,
                     enabled = ?,
                     delete_after_run = ?,
                     last_run_at = ?,
@@ -201,7 +196,6 @@ export class CronTasksRepository {
                     next.schedule,
                     next.prompt,
                     next.agentId,
-                    next.gate ? JSON.stringify(next.gate) : null,
                     next.enabled ? 1 : 0,
                     next.deleteAfterRun ? 1 : 0,
                     next.lastRunAt,
@@ -255,7 +249,6 @@ export class CronTasksRepository {
             schedule: row.schedule,
             prompt: row.prompt,
             agentId: row.agent_id,
-            gate: gateParse(row.gate),
             enabled: row.enabled === 1,
             deleteAfterRun: row.delete_after_run === 1,
             lastRunAt: row.last_run_at,
@@ -275,22 +268,8 @@ export class CronTasksRepository {
     }
 }
 
-function gateParse(raw: string | null): CronTaskDbRecord["gate"] {
-    if (!raw) {
-        return null;
-    }
-    try {
-        return JSON.parse(raw) as CronTaskDbRecord["gate"];
-    } catch {
-        return null;
-    }
-}
-
 function cronTaskClone(record: CronTaskDbRecord): CronTaskDbRecord {
-    return {
-        ...record,
-        gate: record.gate ? (JSON.parse(JSON.stringify(record.gate)) as CronTaskDbRecord["gate"]) : null
-    };
+    return { ...record };
 }
 
 function cronTasksSort(records: CronTaskDbRecord[]): CronTaskDbRecord[] {

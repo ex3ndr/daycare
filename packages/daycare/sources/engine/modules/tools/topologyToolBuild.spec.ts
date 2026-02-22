@@ -192,7 +192,6 @@ describe("topologyTool", () => {
                             userId: "user-1",
                             title: "Health Check",
                             prompt: "Check status",
-                            gate: null,
                             lastRunAt: Date.parse("2025-01-15T10:00:00Z"),
                             createdAt: 1,
                             updatedAt: 1
@@ -304,7 +303,6 @@ describe("topologyTool", () => {
                             userId: "user-1",
                             title: "Health Check",
                             prompt: "Check status",
-                            gate: null,
                             lastRunAt: null,
                             createdAt: 1,
                             updatedAt: 1
@@ -396,7 +394,6 @@ function cronTaskBuild(input: {
         description: null,
         schedule: input.schedule,
         prompt: "prompt",
-        gate: null,
         enabled: input.enabled,
         deleteAfterRun: false,
         lastRunAt: null,

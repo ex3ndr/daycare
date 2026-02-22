@@ -1,13 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import type { Context, MessageContext, SessionPermissions } from "@/types";
+import type { Context, MessageContext } from "@/types";
 import { getLogger } from "../../../log.js";
 import type { CronTasksRepository } from "../../../storage/cronTasksRepository.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import type { ConfigModule } from "../../config/configModule.js";
-import { type ExecGateCheckInput, type ExecGateCheckResult, execGateCheck } from "../../scheduling/execGateCheck.js";
-import { execGateOutputAppend } from "../../scheduling/execGateOutputAppend.js";
 import type { CronTaskContext, CronTaskDefinition, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
 
@@ -16,11 +14,9 @@ const logger = getLogger("cron.scheduler");
 export type CronSchedulerOptions = {
     config: ConfigModule;
     repository: CronTasksRepository;
-    resolveDefaultPermissions: (task: CronTaskDbRecord) => Promise<SessionPermissions> | SessionPermissions;
     onTask: (context: CronTaskContext, messageContext: MessageContext) => void | Promise<void>;
     onError?: (error: unknown, taskId: string) => void | Promise<void>;
     onTaskComplete?: (task: CronTaskDbRecord, runAt: Date) => void | Promise<void>;
-    gateCheck?: (input: ExecGateCheckInput) => Promise<ExecGateCheckResult>;
 };
 
 /**
@@ -35,8 +31,6 @@ export class CronScheduler {
     private onTask: CronSchedulerOptions["onTask"];
     private onError?: CronSchedulerOptions["onError"];
     private onTaskComplete?: CronSchedulerOptions["onTaskComplete"];
-    private resolveDefaultPermissions: CronSchedulerOptions["resolveDefaultPermissions"];
-    private gateCheck: CronSchedulerOptions["gateCheck"];
     private tickTimer: NodeJS.Timeout | null = null;
     private runningTasks = new Set<string>();
 
@@ -46,8 +40,6 @@ export class CronScheduler {
         this.onTask = options.onTask;
         this.onError = options.onError;
         this.onTaskComplete = options.onTaskComplete;
-        this.resolveDefaultPermissions = options.resolveDefaultPermissions;
-        this.gateCheck = options.gateCheck ?? execGateCheck;
         logger.debug("init: CronScheduler initialized");
     }
 
@@ -135,7 +127,6 @@ export class CronScheduler {
             schedule: definition.schedule,
             prompt: definition.prompt,
             agentId: definition.agentId ?? null,
-            gate: definition.gate ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
             lastRunAt: null,
@@ -235,12 +226,6 @@ export class CronScheduler {
             return;
         }
 
-        const gate = await this.checkGate(task);
-        if (!gate.allowed) {
-            return;
-        }
-        const prompt = gate.result ? execGateOutputAppend(task.prompt, gate.result) : task.prompt;
-
         const runAt = new Date();
         const runAtMs = runAt.getTime();
 
@@ -248,7 +233,7 @@ export class CronScheduler {
             taskId: task.id,
             taskUid: task.taskUid,
             taskName: task.name,
-            prompt,
+            prompt: task.prompt,
             agentId: task.agentId,
             userId: task.userId
         };
@@ -278,31 +263,6 @@ export class CronScheduler {
             return;
         }
         await this.onError(error, taskId);
-    }
-
-    private async checkGate(task: CronTaskDbRecord): Promise<{ allowed: boolean; result?: ExecGateCheckResult }> {
-        if (!task.gate) {
-            return { allowed: true };
-        }
-        const permissions = await this.resolveDefaultPermissions(task);
-        const result = await this.gateCheck?.({
-            gate: task.gate,
-            permissions,
-            workingDir: permissions.workingDir
-        });
-        if (!result) {
-            return { allowed: true };
-        }
-        if (result.error) {
-            logger.warn({ taskId: task.id, error: result.error }, "error: Cron gate failed");
-            await this.reportError(result.error, task.id);
-            return { allowed: false };
-        }
-        if (!result.shouldRun) {
-            logger.debug({ taskId: task.id, exitCode: result.exitCode }, "skip: Cron gate skipped execution");
-            return { allowed: false, result };
-        }
-        return { allowed: true, result };
     }
 
     private runTick(): void {
@@ -386,8 +346,5 @@ export class CronScheduler {
 }
 
 function cronTaskClone(task: CronTaskDbRecord): CronTaskDbRecord {
-    return {
-        ...task,
-        gate: task.gate ? (JSON.parse(JSON.stringify(task.gate)) as CronTaskDbRecord["gate"]) : null
-    };
+    return { ...task };
 }

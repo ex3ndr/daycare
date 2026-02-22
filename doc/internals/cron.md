@@ -9,7 +9,6 @@ Rows live in `tasks_cron`:
 - `task_uid` (cuid2 descriptor id)
 - `name`, `description`, `schedule`, `prompt`
 - `agent_id`, `user_id`
-- `gate` (JSON)
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
 
@@ -17,8 +16,7 @@ Rows live in `tasks_cron`:
 
 - `Crons` wires `CronScheduler` with `CronTasksRepository`.
 - `CronScheduler` loads enabled rows and schedules next runs.
-- For each due task, gate evaluation runs first.
-- If allowed, the prompt is posted as `internal.cron.task`.
+- For each due task, the prompt is posted as `internal.cron.task`.
 - After execution, `last_run_at` is persisted back to SQLite.
 
 ```mermaid
@@ -28,9 +26,7 @@ flowchart TD
   Engine --> Crons[cron/crons.ts]
   Crons --> Scheduler[cron/ops/cronScheduler.ts]
   Scheduler --> RepoLoad[repo.findMany enabled]
-  Scheduler --> Gate[execGateCheck]
-  Gate -->|allow| AgentSystem[agents/agentSystem.ts]
-  Gate -->|deny| Skip[Skip run]
+  Scheduler --> AgentSystem[agents/agentSystem.ts]
   AgentSystem --> Persist[repo.update last_run_at]
 ```
 

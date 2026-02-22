@@ -13,7 +13,6 @@ describe("HeartbeatTasksRepository", () => {
                 userId: "user-1",
                 title: "Alpha",
                 prompt: "Check alpha",
-                gate: { command: "echo alpha", permissions: ["@network"] },
                 lastRunAt: null,
                 createdAt: 10,
                 updatedAt: 10
@@ -23,7 +22,6 @@ describe("HeartbeatTasksRepository", () => {
                 userId: "user-1",
                 title: "Beta",
                 prompt: "Check beta",
-                gate: null,
                 lastRunAt: null,
                 createdAt: 11,
                 updatedAt: 11
@@ -41,12 +39,10 @@ describe("HeartbeatTasksRepository", () => {
 
             await repo.update("alpha", {
                 prompt: "Check alpha deeply",
-                gate: { command: "echo updated", permissions: ["@read:/tmp"] },
                 updatedAt: 20
             });
             const updated = await repo.findById("alpha");
             expect(updated?.prompt).toBe("Check alpha deeply");
-            expect(updated?.gate?.permissions).toEqual(["@read:/tmp"]);
 
             await repo.recordRun(30);
             const refreshed = await repo.findAll();
@@ -69,7 +65,6 @@ describe("HeartbeatTasksRepository", () => {
                 userId: "user-1",
                 title: "Cache",
                 prompt: "Prompt",
-                gate: null,
                 lastRunAt: null,
                 createdAt: 1,
                 updatedAt: 1

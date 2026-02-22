@@ -23,7 +23,6 @@ Tasks are stored in `tasks_cron` with key fields:
 - `id`: human task id (`daily-report`)
 - `task_uid`: cron descriptor id (cuid2)
 - `name`, `schedule`, `prompt`
-- `gate` (JSON)
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
 
@@ -38,9 +37,7 @@ flowchart TD
   Crons --> Scheduler[cronScheduler.start]
   Scheduler --> Repo[cronTasksRepository.findMany]
   Scheduler --> Tick[Compute next runs]
-  Tick --> Gate[execGateCheck]
-  Gate -->|allow| AgentSystem[post system_message execute=true]
-  Gate -->|deny| Skip[Skip run]
+  Tick --> AgentSystem[post system_message execute=true]
   AgentSystem --> Record[repo.update last_run_at]
 ```
 

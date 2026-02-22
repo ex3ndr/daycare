@@ -4,7 +4,6 @@ import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition } from "./heartbeatTypes.js";
 import { heartbeatPromptBuildBatch } from "./ops/heartbeatPromptBuildBatch.js";
 import { HeartbeatScheduler } from "./ops/heartbeatScheduler.js";
@@ -35,10 +34,6 @@ export class Heartbeats {
             config: options.config,
             repository: options.storage.heartbeatTasks,
             intervalMs: options.intervalMs,
-            resolveDefaultPermissions: async () => {
-                const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
-                return permissionBuildUser(this.agentSystem.userHomeForUserId(ownerUserId));
-            },
             onRun: async (tasks) => {
                 const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
                 const batch = heartbeatPromptBuildBatch(tasks);

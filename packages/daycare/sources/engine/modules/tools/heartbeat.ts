@@ -1,12 +1,6 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { execGateNormalize } from "../../scheduling/execGateNormalize.js";
-
-const envSchema = Type.Record(
-    Type.String({ minLength: 1 }),
-    Type.Union([Type.String(), Type.Number(), Type.Boolean()])
-);
 
 const runSchema = Type.Object(
     {
@@ -20,36 +14,6 @@ const addSchema = Type.Object(
         id: Type.Optional(Type.String({ minLength: 1 })),
         title: Type.String({ minLength: 1 }),
         prompt: Type.String({ minLength: 1 }),
-        gate: Type.Optional(
-            Type.Object(
-                {
-                    command: Type.String({ minLength: 1 }),
-                    cwd: Type.Optional(Type.String({ minLength: 1 })),
-                    timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
-                    env: Type.Optional(envSchema),
-                    home: Type.Optional(Type.String({ minLength: 1 })),
-                    permissions: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
-                    packageManagers: Type.Optional(
-                        Type.Array(
-                            Type.Union([
-                                Type.Literal("dart"),
-                                Type.Literal("dotnet"),
-                                Type.Literal("go"),
-                                Type.Literal("java"),
-                                Type.Literal("node"),
-                                Type.Literal("php"),
-                                Type.Literal("python"),
-                                Type.Literal("ruby"),
-                                Type.Literal("rust")
-                            ]),
-                            { minItems: 1 }
-                        )
-                    ),
-                    allowedDomains: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
-                },
-                { additionalProperties: false }
-            )
-        ),
         overwrite: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
@@ -158,19 +122,17 @@ export function buildHeartbeatAddTool(): ToolDefinition {
     return {
         tool: {
             name: "heartbeat_add",
-            description: "Create or update a heartbeat prompt stored in SQLite (optional gate).",
+            description: "Create or update a heartbeat prompt stored in SQLite.",
             parameters: addSchema
         },
         returns: heartbeatAddReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as AddHeartbeatArgs;
 
-            const gate = execGateNormalize(payload.gate);
             const result = await toolContext.heartbeats.addTask(toolContext.ctx, {
                 id: payload.id,
                 title: payload.title,
                 prompt: payload.prompt,
-                gate,
                 overwrite: payload.overwrite
             });
 
@@ -187,8 +149,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
                 ],
                 details: {
                     id: result.id,
-                    title: result.title,
-                    gate: result.gate ?? null
+                    title: result.title
                 },
                 isError: false,
                 timestamp: Date.now()

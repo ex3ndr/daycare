@@ -1,4 +1,3 @@
-import type { ExecGateDefinition } from "@/types";
 import type { CronTaskDbRecord } from "../../storage/databaseTypes.js";
 
 /**
@@ -13,7 +12,6 @@ export type CronTaskDefinition = {
     prompt: string;
     agentId?: string;
     userId: string;
-    gate?: ExecGateDefinition;
     enabled?: boolean;
     deleteAfterRun?: boolean;
 };

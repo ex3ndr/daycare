@@ -84,16 +84,14 @@ export class HeartbeatTasksRepository {
                     user_id,
                     title,
                     prompt,
-                    gate,
                     last_run_at,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                     user_id = excluded.user_id,
                     title = excluded.title,
                     prompt = excluded.prompt,
-                    gate = excluded.gate,
                     last_run_at = excluded.last_run_at,
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at
@@ -104,7 +102,6 @@ export class HeartbeatTasksRepository {
                     record.userId,
                     record.title,
                     record.prompt,
-                    record.gate ? JSON.stringify(record.gate) : null,
                     record.lastRunAt,
                     record.createdAt,
                     record.updatedAt
@@ -129,7 +126,6 @@ export class HeartbeatTasksRepository {
                 ...data,
                 id: current.id,
                 userId: data.userId ?? current.userId,
-                gate: data.gate === undefined ? current.gate : data.gate,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
 
@@ -141,23 +137,13 @@ export class HeartbeatTasksRepository {
                     user_id = ?,
                     title = ?,
                     prompt = ?,
-                    gate = ?,
                     last_run_at = ?,
                     created_at = ?,
                     updated_at = ?
                   WHERE id = ?
                 `
                 )
-                .run(
-                    next.userId,
-                    next.title,
-                    next.prompt,
-                    next.gate ? JSON.stringify(next.gate) : null,
-                    next.lastRunAt,
-                    next.createdAt,
-                    next.updatedAt,
-                    id
-                );
+                .run(next.userId, next.title, next.prompt, next.lastRunAt, next.createdAt, next.updatedAt, id);
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);
@@ -215,7 +201,6 @@ export class HeartbeatTasksRepository {
             userId: row.user_id,
             title: row.title,
             prompt: row.prompt,
-            gate: gateParse(row.gate),
             lastRunAt: row.last_run_at,
             createdAt: row.created_at,
             updatedAt: row.updated_at
@@ -233,22 +218,8 @@ export class HeartbeatTasksRepository {
     }
 }
 
-function gateParse(raw: string | null): HeartbeatTaskDbRecord["gate"] {
-    if (!raw) {
-        return null;
-    }
-    try {
-        return JSON.parse(raw) as HeartbeatTaskDbRecord["gate"];
-    } catch {
-        return null;
-    }
-}
-
 function heartbeatTaskClone(record: HeartbeatTaskDbRecord): HeartbeatTaskDbRecord {
-    return {
-        ...record,
-        gate: record.gate ? (JSON.parse(JSON.stringify(record.gate)) as HeartbeatTaskDbRecord["gate"]) : null
-    };
+    return { ...record };
 }
 
 function heartbeatTasksSort(records: HeartbeatTaskDbRecord[]): HeartbeatTaskDbRecord[] {

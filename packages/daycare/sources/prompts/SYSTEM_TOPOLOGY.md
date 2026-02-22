@@ -21,7 +21,7 @@ Cron: precise time-triggered tasks, run in a dedicated cron agent by default. Us
 
 Heartbeats: lightweight recurring prompts, run every ~30 min as a single batch. Good for periodic checks, monitoring, maintenance loops. Manage via `heartbeat_add`/`heartbeat_remove`/`heartbeat_run`.
 
-Create them proactively when you see a recurring need. Both support optional `gate` command (exit 0 = run, non-zero = skip). `gate.allowedDomains` and `gate.packageManagers` (dart/dotnet/go/java/node/php/python/ruby/rust) require `@network`. `gate.home` is an absolute writable path that remaps HOME-related env vars for the gate process.
+Create them proactively when you see a recurring need.
 
 ## Signals
 

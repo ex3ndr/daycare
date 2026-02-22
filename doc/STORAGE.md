@@ -1116,27 +1116,15 @@ export type CronTaskDefinition = {
   prompt: string;
   agentId?: string;
   userId?: string;
-  gate?: ExecGateDefinition;
   enabled?: boolean;
   deleteAfterRun?: boolean;
-};
-
-export type ExecGateDefinition = {
-  command: string;
-  cwd?: string;
-  timeoutMs?: number;
-  env?: Record<string, string>;
-  home?: string;
-  permissions?: string[];
-  packageManagers?: SandboxPackageManager[];
-  allowedDomains?: string[];
 };
 ```
 
 Frontmatter keys used:
 
 - required: `name`, `schedule`, `taskId`
-- optional: `description`, `enabled`, `agentId`/`agent_id`, `userId`/`user_id`, `gate`, `deleteAfterRun`
+- optional: `description`, `enabled`, `agentId`/`agent_id`, `userId`/`user_id`, `deleteAfterRun`
 - accepted legacy aliases: `cron`, `delete_after_run`, `oneOff`, `one_off`, `once`
 
 Example `TASK.md`:
@@ -1148,9 +1136,6 @@ schedule: "0 2 * * *"
 enabled: true
 taskId: abc123
 agentId: agent_1
-gate:
-  command: "test -f ./ready.flag"
-  timeoutMs: 5000
 deleteAfterRun: false
 ---
 Check temporary files and summarize deletions.
@@ -1177,7 +1162,6 @@ export type HeartbeatDefinition = {
   title: string;
   prompt: string;
   filePath: string;
-  gate?: ExecGateDefinition;
   lastRunAt?: string;
 };
 ```
@@ -1185,7 +1169,6 @@ export type HeartbeatDefinition = {
 Frontmatter keys used:
 
 - `title` (preferred) or `name`
-- optional `gate`
 - markdown body is the prompt
 
 Example:
@@ -1193,8 +1176,6 @@ Example:
 ```md
 ---
 title: Morning status
-gate:
-  command: "echo ok"
 ---
 Summarize open incidents and blocked tasks.
 ```

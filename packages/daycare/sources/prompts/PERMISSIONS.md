@@ -46,7 +46,7 @@ Provide explicit permission tags in the tool call when needed. Tags must be a su
 
 ## Exec Home
 
-`exec.home` and `gate.home` are absolute paths used to remap HOME-related env vars (`HOME`, `USERPROFILE`, `XDG_*`, temp/cache vars) for that process. Use this for isolated package-manager state. Keep it inside writable dirs (typically under `{{workspace}}`).
+`exec.home` is an absolute path used to remap HOME-related env vars (`HOME`, `USERPROFILE`, `XDG_*`, temp/cache vars) for that process. Use this for isolated package-manager state. Keep it inside writable dirs (typically under `{{workspace}}`).
 
 ## Multi-Agent Workspace
 

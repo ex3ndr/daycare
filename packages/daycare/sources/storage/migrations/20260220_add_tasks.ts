@@ -17,7 +17,6 @@ export const migration20260220AddTasks: Migration = {
         schedule TEXT NOT NULL,
         prompt TEXT NOT NULL,
         agent_id TEXT,
-        gate TEXT,
         enabled INTEGER NOT NULL DEFAULT 1,
         delete_after_run INTEGER NOT NULL DEFAULT 0,
         last_run_at INTEGER,
@@ -32,7 +31,6 @@ export const migration20260220AddTasks: Migration = {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         prompt TEXT NOT NULL,
-        gate TEXT,
         last_run_at INTEGER,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL

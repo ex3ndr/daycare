@@ -6,6 +6,7 @@ import { migration20260220ImportTasks } from "./20260220_import_tasks.js";
 import { migration20260220UsersBootstrap } from "./20260220_users_bootstrap.js";
 import { migration20260221AddInbox } from "./20260221_add_inbox.js";
 import { migration20260221BackfillCronUsers } from "./20260221_backfill_cron_users.js";
+import { migration20260221DropGateColumns } from "./20260221_drop_gate_columns.js";
 import { migration20260222AddChannels } from "./20260222_add_channels.js";
 import { migration20260222AddExpose } from "./20260222_add_expose.js";
 import { migration20260222AddProcesses } from "./20260222_add_processes.js";
@@ -25,6 +26,7 @@ export const migrations: Migration[] = [
     migration20260220UsersBootstrap,
     migration20260220AddTasks,
     migration20260220ImportTasks,
+    migration20260221DropGateColumns,
     migration20260221BackfillCronUsers,
     migration20260221AddInbox,
     migration20260222AddSignals,

@@ -1,9 +1,7 @@
-import type { Context, SessionPermissions } from "@/types";
+import type { Context } from "@/types";
 import { getLogger } from "../../../log.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { execGateCheck } from "../../scheduling/execGateCheck.js";
-import { execGateOutputAppend } from "../../scheduling/execGateOutputAppend.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition, HeartbeatSchedulerOptions } from "../heartbeatTypes.js";
 
 const logger = getLogger("heartbeat.scheduler");
@@ -20,8 +18,6 @@ export class HeartbeatScheduler {
     private onRun: HeartbeatSchedulerOptions["onRun"];
     private onError?: HeartbeatSchedulerOptions["onError"];
     private onTaskComplete?: HeartbeatSchedulerOptions["onTaskComplete"];
-    private resolveDefaultPermissions: HeartbeatSchedulerOptions["resolveDefaultPermissions"];
-    private gateCheck: HeartbeatSchedulerOptions["gateCheck"];
     private timer: NodeJS.Timeout | null = null;
     private started = false;
     private stopped = false;
@@ -35,8 +31,6 @@ export class HeartbeatScheduler {
         this.onRun = options.onRun;
         this.onError = options.onError;
         this.onTaskComplete = options.onTaskComplete;
-        this.resolveDefaultPermissions = options.resolveDefaultPermissions;
-        this.gateCheck = options.gateCheck ?? execGateCheck;
         logger.debug("init: HeartbeatScheduler initialized");
     }
 
@@ -105,7 +99,6 @@ export class HeartbeatScheduler {
                 userId,
                 title,
                 prompt,
-                gate: definition.gate ?? null,
                 updatedAt: now
             };
             await this.repository.update(taskId, updated);
@@ -117,7 +110,6 @@ export class HeartbeatScheduler {
             userId,
             title,
             prompt,
-            gate: definition.gate ?? null,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now
@@ -204,29 +196,24 @@ export class HeartbeatScheduler {
             if (filtered.length === 0) {
                 return { ran: 0, taskIds: [] };
             }
-            const basePermissions = await this.resolveDefaultPermissions();
-            const gated = await this.filterByGate(filtered, basePermissions);
-            if (gated.length === 0) {
-                return { ran: 0, taskIds: [] };
-            }
             const runAt = new Date();
             const runAtMs = runAt.getTime();
-            const ids = gated.map((task) => task.id);
+            const ids = filtered.map((task) => task.id);
             logger.info(
                 {
-                    taskCount: gated.length,
+                    taskCount: filtered.length,
                     taskIds: ids
                 },
                 "start: Heartbeat run started"
             );
             try {
-                await this.onRun(gated, runAt);
+                await this.onRun(filtered, runAt);
             } catch (error) {
                 logger.warn({ taskIds: ids, error }, "error: Heartbeat run failed");
                 await this.onError?.(error, ids);
             } finally {
                 await this.repository.recordRun(runAtMs);
-                for (const task of gated) {
+                for (const task of filtered) {
                     task.lastRunAt = runAtMs;
                     task.updatedAt = runAtMs;
                     await this.onTaskComplete?.(heartbeatTaskClone(task), runAt);
@@ -239,7 +226,7 @@ export class HeartbeatScheduler {
                 },
                 "event: Heartbeat run completed"
             );
-            return { ran: gated.length, taskIds: ids };
+            return { ran: filtered.length, taskIds: ids };
         } catch (error) {
             logger.warn({ error }, "error: Heartbeat run failed");
             await this.onError?.(error, undefined);
@@ -248,46 +235,8 @@ export class HeartbeatScheduler {
             this.running = false;
         }
     }
-
-    private async filterByGate(
-        tasks: HeartbeatDefinition[],
-        basePermissions: SessionPermissions
-    ): Promise<HeartbeatDefinition[]> {
-        const eligible: HeartbeatDefinition[] = [];
-        for (const task of tasks) {
-            if (!task.gate) {
-                eligible.push(task);
-                continue;
-            }
-            const permissions = basePermissions;
-            const result = await this.gateCheck?.({
-                gate: task.gate,
-                permissions,
-                workingDir: permissions.workingDir
-            });
-            if (!result) {
-                eligible.push(task);
-                continue;
-            }
-            if (result.error) {
-                logger.warn({ taskId: task.id, error: result.error }, "error: Heartbeat gate failed");
-                await this.onError?.(result.error, [task.id]);
-                continue;
-            }
-            if (!result.shouldRun) {
-                logger.debug({ taskId: task.id, exitCode: result.exitCode }, "skip: Heartbeat gate skipped execution");
-                continue;
-            }
-            const prompt = execGateOutputAppend(task.prompt, result);
-            eligible.push(prompt === task.prompt ? task : { ...task, prompt });
-        }
-        return eligible;
-    }
 }
 
 function heartbeatTaskClone(task: HeartbeatDefinition): HeartbeatDefinition {
-    return {
-        ...task,
-        gate: task.gate ? (JSON.parse(JSON.stringify(task.gate)) as HeartbeatDefinition["gate"]) : null
-    };
+    return { ...task };
 }

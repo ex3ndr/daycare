@@ -12,7 +12,6 @@ import {
   HeartPulse,
   RefreshCw,
   Repeat,
-  Shield,
   Zap
 } from "lucide-react";
 
@@ -51,10 +50,6 @@ export default function AutomationsPage() {
 
   const recurring = useMemo(() => cronTasks.filter((task) => !task.deleteAfterRun).length, [cronTasks]);
   const oneOff = useMemo(() => cronTasks.filter((task) => task.deleteAfterRun).length, [cronTasks]);
-  const gated = useMemo(
-    () => cronTasks.filter((t) => t.gate).length + heartbeatTasks.filter((t) => t.gate).length,
-    [cronTasks, heartbeatTasks]
-  );
   const totalTasks = cronTasks.length + heartbeatTasks.length;
 
   return (
@@ -82,7 +77,7 @@ export default function AutomationsPage() {
     >
       <div className="flex flex-1 flex-col gap-6 px-4 py-6 lg:px-6">
         {/* Stats strip */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             label="Total tasks"
             value={totalTasks}
@@ -103,13 +98,6 @@ export default function AutomationsPage() {
             detail="Batch interval tasks"
             icon={<HeartPulse className="h-5 w-5" />}
             tone="rose"
-          />
-          <StatCard
-            label="Gated"
-            value={gated}
-            detail="Tasks with gate conditions"
-            icon={<Shield className="h-5 w-5" />}
-            tone="emerald"
           />
         </div>
 
@@ -162,14 +150,13 @@ type StatCardProps = {
   value: number;
   detail: string;
   icon: React.ReactNode;
-  tone: "primary" | "amber" | "rose" | "emerald";
+  tone: "primary" | "amber" | "rose";
 };
 
 const toneMap: Record<StatCardProps["tone"], { bg: string; text: string; gradient: string }> = {
   primary: { bg: "bg-primary/10", text: "text-primary", gradient: "from-primary/10 via-card to-card" },
   amber: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", gradient: "from-amber-500/10 via-card to-card" },
-  rose: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400", gradient: "from-rose-500/10 via-card to-card" },
-  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", gradient: "from-emerald-500/10 via-card to-card" }
+  rose: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400", gradient: "from-rose-500/10 via-card to-card" }
 };
 
 function StatCard({ label, value, detail, icon, tone }: StatCardProps) {
@@ -231,11 +218,6 @@ function CronTaskCard({ task }: { task: CronTask }) {
                     Last run {formatRelativeTime(task.lastRunAt)}
                   </span>
                 )}
-                {task.gate && (
-                  <Badge variant="outline" className="gap-1 text-[10px]">
-                    <Shield className="h-2.5 w-2.5" /> Gated
-                  </Badge>
-                )}
               </div>
             </div>
           </div>
@@ -269,9 +251,6 @@ function CronTaskCard({ task }: { task: CronTask }) {
             {task.lastRunAt && <MetaField label="Last run" value={formatShortDate(task.lastRunAt)} />}
             {task.enabled === false && <MetaField label="Enabled" value="No" />}
           </div>
-
-          {/* Gate details */}
-          {task.gate && <GateDetails gate={task.gate} />}
 
           {/* File paths */}
           {(task.taskPath || task.memoryPath || task.filesPath) && (
@@ -321,13 +300,7 @@ function HeartbeatTaskCard({ task }: { task: HeartbeatTask }) {
                 ) : (
                   <span className="italic">Never run</span>
                 )}
-                {task.gate ? (
-                  <Badge variant="outline" className="gap-1 text-[10px]">
-                    <Shield className="h-2.5 w-2.5" /> Gated
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-[10px]">Always</Badge>
-                )}
+                <Badge variant="outline" className="text-[10px]">Scheduled</Badge>
               </div>
             </div>
           </div>
@@ -358,9 +331,6 @@ function HeartbeatTaskCard({ task }: { task: HeartbeatTask }) {
             {task.lastRunAt && <MetaField label="Last run" value={formatShortDate(task.lastRunAt)} />}
             {task.filePath && <MetaField label="File" value={task.filePath} mono />}
           </div>
-
-          {/* Gate details */}
-          {task.gate && <GateDetails gate={task.gate} />}
         </CardContent>
       )}
     </Card>
@@ -368,45 +338,6 @@ function HeartbeatTaskCard({ task }: { task: HeartbeatTask }) {
 }
 
 /* ── Shared components ────────────────────────────────────────────────── */
-
-function GateDetails({ gate }: { gate: NonNullable<CronTask["gate"]> }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        <Shield className="h-3.5 w-3.5" />
-        Gate condition
-      </div>
-      <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-muted-foreground">Command:</span>
-          <code className="rounded bg-muted px-2 py-0.5 font-mono text-foreground">{gate.command}</code>
-        </div>
-        {gate.cwd && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground">Working directory:</span>
-            <code className="rounded bg-muted px-2 py-0.5 font-mono text-foreground">{gate.cwd}</code>
-          </div>
-        )}
-        {gate.timeoutMs && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground">Timeout:</span>
-            <span>{gate.timeoutMs}ms</span>
-          </div>
-        )}
-        {gate.permissions && gate.permissions.length > 0 && (
-          <div className="flex items-start gap-2 text-xs">
-            <span className="text-muted-foreground shrink-0">Permissions:</span>
-            <div className="flex flex-wrap gap-1">
-              {gate.permissions.map((perm) => (
-                <Badge key={perm} variant="outline" className="text-[10px] font-mono">{perm}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function MetaField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (

@@ -2,7 +2,6 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import matter from "gray-matter";
-import { execGateNormalize } from "../../engine/scheduling/execGateNormalize.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { stringSlugify } from "../../utils/stringSlugify.js";
 import { databasePathResolve } from "../databasePathResolve.js";
@@ -64,7 +63,6 @@ function cronTasksImport(db: Pick<DatabaseSync, "prepare">, cronDir: string, own
             "one_off",
             "once"
         ]);
-        const gate = execGateNormalize(frontmatter.gate);
         const prompt = parsed.content.trim();
         if (!prompt) {
             continue;
@@ -90,13 +88,12 @@ function cronTasksImport(db: Pick<DatabaseSync, "prepare">, cronDir: string, own
             schedule,
             prompt,
             agent_id,
-            gate,
             enabled,
             delete_after_run,
             last_run_at,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
         ).run(
             taskId,
@@ -107,7 +104,6 @@ function cronTasksImport(db: Pick<DatabaseSync, "prepare">, cronDir: string, own
             schedule,
             prompt,
             agentId,
-            gate ? JSON.stringify(gate) : null,
             enabled ? 1 : 0,
             deleteAfterRun ? 1 : 0,
             lastRunAt,
@@ -154,7 +150,6 @@ function heartbeatTasksImport(db: Pick<DatabaseSync, "prepare">, heartbeatDir: s
             continue;
         }
 
-        const gate = execGateNormalize((parsed.data as Record<string, unknown>).gate);
         const timestamps = timestampsResolve(filePath);
 
         db.prepare(
@@ -163,21 +158,12 @@ function heartbeatTasksImport(db: Pick<DatabaseSync, "prepare">, heartbeatDir: s
             id,
             title,
             prompt,
-            gate,
             last_run_at,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?)
         `
-        ).run(
-            id,
-            parsedTask.title,
-            parsedTask.prompt,
-            gate ? JSON.stringify(gate) : null,
-            sharedLastRunAt,
-            timestamps.createdAt,
-            timestamps.updatedAt
-        );
+        ).run(id, parsedTask.title, parsedTask.prompt, sharedLastRunAt, timestamps.createdAt, timestamps.updatedAt);
     }
 }
 

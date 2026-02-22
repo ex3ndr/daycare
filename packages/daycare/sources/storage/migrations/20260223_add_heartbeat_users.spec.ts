@@ -28,13 +28,12 @@ describe("migration20260223AddHeartbeatUsers", () => {
                     id,
                     title,
                     prompt,
-                    gate,
                     last_run_at,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 `
-            ).run("heartbeat-a", "Heartbeat A", "Do thing", null, null, 1, 1);
+            ).run("heartbeat-a", "Heartbeat A", "Do thing", null, 1, 1);
 
             migration20260223AddHeartbeatUsers.up(db);
 
@@ -64,13 +63,12 @@ describe("migration20260223AddHeartbeatUsers", () => {
                     id,
                     title,
                     prompt,
-                    gate,
                     last_run_at,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 `
-            ).run("heartbeat-a", "Heartbeat A", "Do thing", null, null, 1, 1);
+            ).run("heartbeat-a", "Heartbeat A", "Do thing", null, 1, 1);
 
             expect(() => migration20260223AddHeartbeatUsers.up(db)).toThrow(
                 "No owner user found for heartbeat user backfill."

@@ -5,7 +5,7 @@ import type { CronTaskDbRecord } from "./databaseTypes.js";
 import { Storage } from "./storage.js";
 
 describe("CronTasksRepository", () => {
-    it("supports create, find, update, delete, and gate JSON round-trip", async () => {
+    it("supports create, find, update, and delete", async () => {
         const storage = Storage.open(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
@@ -18,11 +18,6 @@ describe("CronTasksRepository", () => {
                 schedule: "0 9 * * *",
                 prompt: "Summarize yesterday.",
                 agentId: null,
-                gate: {
-                    command: "echo gate",
-                    permissions: ["@network"],
-                    allowedDomains: ["example.com"]
-                },
                 enabled: true,
                 deleteAfterRun: false,
                 lastRunAt: null,
@@ -42,7 +37,6 @@ describe("CronTasksRepository", () => {
             await repo.update("daily-report", {
                 enabled: false,
                 prompt: "Summarize today.",
-                gate: { command: "echo next", permissions: ["@read:/tmp"] },
                 lastRunAt: 20,
                 updatedAt: 20
             });
@@ -51,7 +45,6 @@ describe("CronTasksRepository", () => {
             expect(updated?.enabled).toBe(false);
             expect(updated?.prompt).toBe("Summarize today.");
             expect(updated?.lastRunAt).toBe(20);
-            expect(updated?.gate?.permissions).toEqual(["@read:/tmp"]);
 
             const stillEnabled = await repo.findAll();
             expect(stillEnabled).toHaveLength(0);
@@ -81,7 +74,6 @@ describe("CronTasksRepository", () => {
                 schedule: "* * * * *",
                 prompt: "Prompt",
                 agentId: null,
-                gate: null,
                 enabled: true,
                 deleteAfterRun: false,
                 lastRunAt: null,

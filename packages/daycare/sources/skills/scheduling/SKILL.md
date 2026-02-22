@@ -33,38 +33,15 @@ Use heartbeats when:
 
 **Heartbeat tools:** `heartbeat_add`, `heartbeat_run`, `heartbeat_remove` (use `topology` to inspect tasks)
 
-## Optional Exec Gate
-
-Both cron and heartbeat tasks can define an optional `gate` command to decide
-whether to run the LLM. The command runs first; exit code `0` means "run" and
-non-zero means "skip." This keeps checks cheap (ex: HTTP health check before notifying).
-Trimmed gate output is appended to the prompt under `[Gate output]`.
-Gates run within the target agent permissions. If `gate.permissions` are not already
-allowed, a system message is posted and the task still runs (the gate is treated as
-successful).
-
-`gate` supports:
-- `command` (required)
-- `cwd`, `timeoutMs`, `env`
-- `permissions` (required tags; must already be allowed by the target agent)
-- `packageManagers` (`dart` | `dotnet` | `go` | `java` | `node` | `php` | `python` | `ruby` | `rust`; auto-adds language ecosystem hosts; requires `@network`)
-- `allowedDomains` (network allowlist; requires `@network`)
-
 ## Examples
 
-**Cron with routing + gate (`TASK.md` frontmatter):**
+**Cron with routing (`TASK.md` frontmatter):**
 
 ```yaml
 ---
 name: API health
 schedule: "*/10 * * * *"
 agentId: cu3ql2p5q0000x5p3g7q1l8a9
-gate:
-  command: "curl -fsS https://api.example.com/healthz >/dev/null"
-  packageManagers:
-    - node
-  allowedDomains:
-    - api.example.com
 ---
 If the API is down, notify me with a short summary.
 ```
@@ -110,12 +87,12 @@ If the API is down, notify me with a short summary.
 
 **For cron tasks:**
 1. Determine the schedule (cron expression: `minute hour day month weekday`)
-2. Use `cron_add` with name, schedule, and prompt (optional `agentId` + `gate`)
+2. Use `cron_add` with name, schedule, and prompt (optional `agentId`)
 3. Each task gets isolated agent, memory file, and workspace
 
 **For heartbeats:**
 1. Run `topology` to see existing heartbeat tasks and ownership
-2. Use `heartbeat_add` with title and prompt (optional `gate`)
+2. Use `heartbeat_add` with title and prompt
 3. Use `heartbeat_run` to trigger immediately
 4. Use `heartbeat_remove` for cleanup
 
@@ -183,36 +160,6 @@ else:
 Review the git status above and remind me to commit if there are uncommitted changes.
 ```
 
-### Combining Gate and Executable Prompts
-
-Gates run **before** the prompt; executable prompts expand **within** the prompt.
-Use gates for cheap pass/fail checks, and executable prompts for dynamic data injection:
-
-```yaml
----
-name: Deploy check
-schedule: "*/30 * * * *"
-gate:
-  command: "curl -fsS https://api.example.com/deploy-status | grep -q pending"
-  allowedDomains:
-    - api.example.com
----
-A deploy is pending. Here is the current status:
-<run_python>
-import urllib.request, json
-data = json.loads(urllib.request.urlopen("https://api.example.com/deploy-status").read())
-print(f"Version: {data['version']}")
-print(f"Started: {data['started_at']}")
-print(f"Progress: {data['progress']}%")
-</run_python>
-
-Summarize the deploy status and notify me if it's been stuck for more than 10 minutes.
-```
-
-The gate runs first — if there's no pending deploy (`curl` exits non-zero), the LLM
-is never invoked. If the gate passes, the `<run_python>` block fetches detailed status
-before the LLM sees the prompt.
-
 ### Error Handling
 
 If a `<run_python>` block fails (syntax error, runtime exception, timeout), it is
@@ -238,7 +185,6 @@ When `skip` is called:
 - The cron or heartbeat prompt describes a condition that isn't met (e.g., "notify if
   there are errors" but executable prompt output shows no errors).
 - A monitoring task finds nothing to report.
-- The gate passed but the dynamic data shows the situation is already resolved.
 
 **Example prompt encouraging skip:**
 

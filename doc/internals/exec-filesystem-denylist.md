@@ -1,6 +1,6 @@
 # Exec Filesystem Denylist
 
-`exec` and exec gates now apply a default filesystem deny policy in the sandbox for both reads and writes.
+`exec` now applies a default filesystem deny policy in the sandbox for both reads and writes.
 This is a defense-in-depth layer for sensitive host paths (for example `~/.ssh`) on Linux and macOS.
 
 Policy shape:
@@ -22,5 +22,5 @@ flowchart TD
   C --> F[SandboxRuntime filesystem config]
   D --> F
   E --> F
-  F --> G[exec tool / exec gate command]
+  F --> G[exec tool command]
 ```
