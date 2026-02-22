@@ -28,6 +28,7 @@ export type AgentDescriptor =
           description: string;
           systemPrompt: string;
           workspaceDir?: string;
-      };
+      }
+    | { type: "memory-agent"; id: string };
 
 export type AgentFetchStrategy = "most-recent-foreground" | "heartbeat";

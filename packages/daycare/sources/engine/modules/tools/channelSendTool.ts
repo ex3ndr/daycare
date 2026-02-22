@@ -95,6 +95,9 @@ function senderUsernameResolve(descriptor: AgentDescriptor): string {
     if (descriptor.type === "system") {
         return usernameNormalize(descriptor.tag);
     }
+    if (descriptor.type === "memory-agent") {
+        return usernameNormalize("memory-agent");
+    }
     return usernameNormalize(descriptor.userId);
 }
 

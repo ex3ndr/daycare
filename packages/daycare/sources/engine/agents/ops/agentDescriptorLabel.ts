@@ -23,6 +23,9 @@ export function agentDescriptorLabel(descriptor: AgentDescriptor): string {
     if (descriptor.type === "system") {
         return descriptor.tag;
     }
+    if (descriptor.type === "memory-agent") {
+        return "memory-agent";
+    }
     return "user";
 }
 

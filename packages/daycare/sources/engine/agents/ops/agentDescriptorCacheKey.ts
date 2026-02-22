@@ -18,6 +18,8 @@ export function agentDescriptorCacheKey(descriptor: AgentDescriptor): string {
             return `/app/${descriptor.id}`;
         case "permanent":
             return `/permanent/${descriptor.id}`;
+        case "memory-agent":
+            return `/memory-agent/${descriptor.id}`;
     }
     return descriptorTypeUnreachable(descriptor);
 }

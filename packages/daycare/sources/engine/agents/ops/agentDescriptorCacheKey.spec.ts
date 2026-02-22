@@ -16,6 +16,10 @@ describe("agentDescriptorCacheKey", () => {
         expect(agentDescriptorCacheKey({ type: "system", tag: "scheduler" })).toBe("/system/scheduler");
     });
 
+    it("returns stable key for memory-agent descriptor", () => {
+        expect(agentDescriptorCacheKey({ type: "memory-agent", id: "agent-123" })).toBe("/memory-agent/agent-123");
+    });
+
     it("returns stable keys for subagent, app, and permanent descriptors", () => {
         expect(
             agentDescriptorCacheKey({
