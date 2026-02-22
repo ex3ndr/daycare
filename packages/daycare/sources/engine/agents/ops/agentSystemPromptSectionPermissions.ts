@@ -47,9 +47,7 @@ export async function agentSystemPromptSectionPermissions(context: AgentSystemPr
         toolsPath: promptPaths.toolsPath,
         isForeground: descriptor?.type === "user",
         skillsPath: context.userHome.skills,
-        additionalWriteDirs,
-        network: true,
-        events: false
+        additionalWriteDirs
     });
     return section.trim();
 }

@@ -28,9 +28,8 @@ Permissions are fixed by the system and cannot be changed at runtime. Work withi
     - `{{this}}`
 {{/each}}
 {{/if}}
-- **Network**: {{#if network}}enabled{{else}}not enabled{{/if}}.
-- **Events**: {{#if events}}enabled{{else}}not enabled{{/if}} (`@events` allows Unix socket access to Daycare CLI control endpoint).
+- **Network**: always enabled.
 
 ### Exec Networking
 
-For `exec` to use outbound network access, include `allowedDomains` in the tool call. `@network` permission alone is not enough.
+For `exec` to use outbound network access, include `allowedDomains` in the tool call.
