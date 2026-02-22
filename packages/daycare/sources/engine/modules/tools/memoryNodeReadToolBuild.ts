@@ -2,10 +2,11 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { GRAPH_ROOT_NODE_ID } from "../../memory/graph/graphTypes.js";
 
 const schema = Type.Object(
     {
-        nodeId: Type.String({ minLength: 1 })
+        nodeId: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -29,6 +30,7 @@ const returns: ToolResultContract<MemoryNodeReadResult> = {
 
 /**
  * Builds the memory_node_read tool that returns a single graph node by id.
+ * When nodeId is omitted reads the root node with a full graph tree overview.
  * Expects: toolContext.memory is available and ctx.userId identifies the user.
  */
 export function memoryNodeReadToolBuild(): ToolDefinition {
@@ -36,7 +38,7 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
         tool: {
             name: "memory_node_read",
             description:
-                "Read a single memory document by node id. Returns the full content, frontmatter (title, description), and refs.",
+                "Read a memory document by node id. Omit nodeId to read the root node with a full graph tree overview. Returns content, frontmatter, and refs.",
             parameters: schema
         },
         returns,
@@ -47,10 +49,7 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
             }
 
             const payload = args as MemoryNodeReadArgs;
-            const nodeId = payload.nodeId.trim();
-            if (!nodeId) {
-                throw new Error("nodeId is required.");
-            }
+            const nodeId = payload.nodeId?.trim() || GRAPH_ROOT_NODE_ID;
 
             const node = await memory.readNode(toolContext.ctx.userId, nodeId);
             if (!node) {
@@ -78,6 +77,35 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
                 "",
                 node.content
             ];
+
+            // When reading root, append the full graph tree overview.
+            if (nodeId === GRAPH_ROOT_NODE_ID) {
+                const tree = await memory.readGraph(toolContext.ctx.userId);
+                lines.push("", "## Children", "");
+
+                const renderNode = (parentId: string, depth: number): void => {
+                    const children = tree.children.get(parentId) ?? [];
+                    for (const child of children) {
+                        const indent = "  ".repeat(depth);
+                        const contentPreview =
+                            child.content.length > 200 ? `${child.content.slice(0, 200)}...` : child.content;
+                        lines.push(`${indent}- **${child.frontmatter.title}** (id: \`${child.id}\`)`);
+                        if (child.frontmatter.description) {
+                            lines.push(`${indent}  ${child.frontmatter.description}`);
+                        }
+                        if (child.content.trim()) {
+                            lines.push(`${indent}  > ${contentPreview.replace(/\n/g, " ")}`);
+                        }
+                        renderNode(child.id, depth + 1);
+                    }
+                };
+
+                renderNode(tree.root.id, 0);
+
+                if (!tree.children.has(tree.root.id) || tree.children.get(tree.root.id)!.length === 0) {
+                    lines.push("(empty graph — no documents yet)");
+                }
+            }
 
             const summary = lines.join("\n");
             const toolMessage: ToolResultMessage = {

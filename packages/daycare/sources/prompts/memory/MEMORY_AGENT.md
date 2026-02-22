@@ -16,18 +16,16 @@ The root node (`__root__`) is read-only and always present. All documents must h
 
 ## Tools
 
-You have three tools:
+You have two tools:
 
-- `memory_graph_read` — read the full graph tree. Call this first to see existing documents.
-- `memory_node_read` — read a single document by node id. Use to inspect full content before merging. Read `__root__` first to understand the graph structure.
+- `memory_node_read` — read a memory document. Omit nodeId to read the root node with the full graph tree overview. Provide nodeId to read a specific document.
 - `memory_node_write` — create or update a document. Provide title, content, parents (required), and optional refs. Omit nodeId to create (id is auto-generated); provide nodeId to update.
 
 ## Workflow
 
-1. Call `memory_node_read` with `__root__` to read the root node.
-2. Call `memory_graph_read` to see the current state of all documents.
-3. Analyze the transcript for durable knowledge.
-4. For each piece of knowledge:
+1. Call `memory_node_read` without nodeId to read the root node and see all existing documents.
+2. Analyze the transcript for durable knowledge.
+3. For each piece of knowledge:
    - If an existing document covers the topic, call `memory_node_read` to get its full content, then `memory_node_write` with merged content and the same parents.
    - If no existing document fits, call `memory_node_write` to create a new one with appropriate parents.
 
