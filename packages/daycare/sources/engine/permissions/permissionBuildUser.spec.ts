@@ -6,11 +6,12 @@ import { UserHome } from "../users/userHome.js";
 import { permissionBuildUser } from "./permissionBuildUser.js";
 
 describe("permissionBuildUser", () => {
-    it("builds user-scoped permissions with user home as the only writable root", () => {
+    it("builds user-scoped permissions with read-only skills roots", () => {
         const userHome = new UserHome(path.resolve("/tmp/daycare-users"), "usr_001");
         const permissions = permissionBuildUser(userHome);
 
         expect(permissions.workingDir).toBe(userHome.desktop);
         expect(permissions.writeDirs).toEqual([userHome.home]);
+        expect(permissions.readDirs).toEqual([userHome.skills, path.resolve("/tmp/daycare-users/skills")]);
     });
 });

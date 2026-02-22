@@ -649,7 +649,8 @@ function toProcessInfo(record: ProcessRecord): ProcessInfo {
 function clonePermissions(permissions: SessionPermissions): SessionPermissions {
     return {
         workingDir: permissions.workingDir,
-        writeDirs: [...permissions.writeDirs]
+        writeDirs: [...permissions.writeDirs],
+        readDirs: [...(permissions.readDirs ?? [])]
     };
 }
 

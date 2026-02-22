@@ -45,6 +45,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `engine-tool-agent-extractions.md` - extracted tool + agent persistence helpers
 - `release-command.md` - `yarn release` flow for daycare-cli publish
 - `config.md` - config files and resolution order
+- `config-skills-readonly.md` - read-only access model for `<config>/skills`
 - `config-reload-locking.md` - online config reload lock model and plugin/provider apply flow
 - `context-compaction.md` - compaction thresholds and auto-compaction flow
 - `context-overflow-reset-removal.md` - removal of heuristic overflow-triggered emergency resets

@@ -411,7 +411,8 @@ function processRecordClone(record: ProcessDbRecord): ProcessDbRecord {
         allowedDomains: [...record.allowedDomains],
         permissions: {
             ...record.permissions,
-            writeDirs: [...record.permissions.writeDirs]
+            writeDirs: [...record.permissions.writeDirs],
+            readDirs: [...(record.permissions.readDirs ?? [])]
         },
         owner: record.owner ? { ...record.owner } : null
     };
@@ -454,14 +455,19 @@ function permissionsParse(raw: string): ProcessDbRecord["permissions"] {
         if (typeof parsed.workingDir !== "string" || !Array.isArray(parsed.writeDirs)) {
             throw new Error("Invalid permissions");
         }
+        const readDirs = Array.isArray(parsed.readDirs)
+            ? parsed.readDirs.filter((entry): entry is string => typeof entry === "string")
+            : [];
         return {
             workingDir: parsed.workingDir,
-            writeDirs: parsed.writeDirs.filter((entry): entry is string => typeof entry === "string")
+            writeDirs: parsed.writeDirs.filter((entry): entry is string => typeof entry === "string"),
+            readDirs
         };
     } catch {
         return {
             workingDir: "/",
-            writeDirs: []
+            writeDirs: [],
+            readDirs: []
         };
     }
 }

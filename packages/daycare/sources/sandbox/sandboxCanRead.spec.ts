@@ -15,6 +15,7 @@ describe("sandboxCanRead", () => {
     let homeRandomFile: string;
     let homeWorkspaceFile: string;
     let homeWriteDirFile: string;
+    let homeReadDirFile: string;
     let appFile: string;
     let otherAppFile: string;
 
@@ -31,13 +32,16 @@ describe("sandboxCanRead", () => {
         homeRandomFile = path.join(homeDir, "random.txt");
         homeWorkspaceFile = path.join(homeDir, "workspace", "notes.txt");
         homeWriteDirFile = path.join(homeDir, "allowed", "data.txt");
+        homeReadDirFile = path.join(homeDir, ".daycare", "skills", "my-skill", "SKILL.md");
         await fs.mkdir(path.dirname(homeSensitiveFile), { recursive: true });
         await fs.mkdir(path.dirname(homeWorkspaceFile), { recursive: true });
         await fs.mkdir(path.dirname(homeWriteDirFile), { recursive: true });
+        await fs.mkdir(path.dirname(homeReadDirFile), { recursive: true });
         await fs.writeFile(homeSensitiveFile, "sensitive", "utf8");
         await fs.writeFile(homeRandomFile, "home-file", "utf8");
         await fs.writeFile(homeWorkspaceFile, "workspace-file", "utf8");
         await fs.writeFile(homeWriteDirFile, "allowed-file", "utf8");
+        await fs.writeFile(homeReadDirFile, "skill-body", "utf8");
 
         appFile = path.join(workingDir, "apps", "my-app", "APP.md");
         otherAppFile = path.join(workingDir, "apps", "other-app", "APP.md");
@@ -86,6 +90,14 @@ describe("sandboxCanRead", () => {
         expect(result).toBe(await fs.realpath(homeWriteDirFile));
     });
 
+    it("allows reading files in explicitly granted readDirs inside home", async () => {
+        const permissions = buildPermissions(workingDir, [], [path.join(homeDir, ".daycare", "skills")]);
+
+        const result = await sandboxCanRead(permissions, homeReadDirFile);
+
+        expect(result).toBe(await fs.realpath(homeReadDirFile));
+    });
+
     it("allows reading system paths outside home", async () => {
         const permissions = buildPermissions(workingDir, []);
 
@@ -123,9 +135,10 @@ describe("sandboxCanRead", () => {
     });
 });
 
-function buildPermissions(workingDir: string, writeDirs: string[]): SessionPermissions {
+function buildPermissions(workingDir: string, writeDirs: string[], readDirs: string[] = []): SessionPermissions {
     return {
         workingDir: path.resolve(workingDir),
-        writeDirs: writeDirs.map((entry) => path.resolve(entry))
+        writeDirs: writeDirs.map((entry) => path.resolve(entry)),
+        readDirs: readDirs.map((entry) => path.resolve(entry))
     };
 }

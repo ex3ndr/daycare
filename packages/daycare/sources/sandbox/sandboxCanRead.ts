@@ -25,7 +25,7 @@ export async function sandboxCanRead(permissions: SessionPermissions, target: st
         throw new Error("Read access denied for sensitive paths.");
     }
 
-    const explicitlyAllowedDirs = [permissions.workingDir, ...permissions.writeDirs];
+    const explicitlyAllowedDirs = [permissions.workingDir, ...permissions.writeDirs, ...(permissions.readDirs ?? [])];
     for (const allowedDir of explicitlyAllowedDirs) {
         if (isWithinSecure(await existingPathResolve(allowedDir), result.realPath)) {
             return result.realPath;
