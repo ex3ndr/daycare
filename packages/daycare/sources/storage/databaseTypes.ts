@@ -32,6 +32,7 @@ export type DatabaseSessionRow = {
     reset_message: string | null;
     invalidated_at: number | null;
     processed_until: number | null;
+    ended_at: number | null;
 };
 
 export type DatabaseSessionHistoryRow = {
@@ -367,6 +368,7 @@ export type SessionDbRecord = {
     resetMessage: string | null;
     invalidatedAt: number | null;
     processedUntil: number | null;
+    endedAt: number | null;
 };
 
 export type CreateUserInput = {

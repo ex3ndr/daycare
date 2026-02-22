@@ -51,7 +51,8 @@ describe("SessionsRepository", () => {
                 createdAt: 5,
                 resetMessage: "manual",
                 invalidatedAt: null,
-                processedUntil: null
+                processedUntil: null,
+                endedAt: null
             });
 
             await sessions.create({ agentId: "agent-1", createdAt: 8 });
@@ -62,6 +63,39 @@ describe("SessionsRepository", () => {
         } finally {
             storage.close();
         }
+    });
+
+    describe("endSession", () => {
+        it("sets ended_at on an active session", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessions = new SessionsRepository(storage.db);
+                const sessionId = await sessions.create({ agentId: "agent-1", createdAt: 1000 });
+
+                await sessions.endSession(sessionId, 2000);
+
+                const session = await sessions.findById(sessionId);
+                expect(session?.endedAt).toBe(2000);
+            } finally {
+                storage.close();
+            }
+        });
+
+        it("does not overwrite ended_at if already set", async () => {
+            const storage = await createTestStorage();
+            try {
+                const sessions = new SessionsRepository(storage.db);
+                const sessionId = await sessions.create({ agentId: "agent-1", createdAt: 1000 });
+
+                await sessions.endSession(sessionId, 2000);
+                await sessions.endSession(sessionId, 3000);
+
+                const session = await sessions.findById(sessionId);
+                expect(session?.endedAt).toBe(2000);
+            } finally {
+                storage.close();
+            }
+        });
     });
 
     describe("invalidate", () => {

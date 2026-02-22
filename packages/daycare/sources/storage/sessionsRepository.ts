@@ -52,6 +52,16 @@ export class SessionsRepository {
     }
 
     /**
+     * Marks a session as ended by setting ended_at.
+     * Expects: sessionId is valid.
+     */
+    async endSession(sessionId: string, endedAt: number): Promise<void> {
+        this.db
+            .prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL")
+            .run(endedAt, sessionId);
+    }
+
+    /**
      * Marks a session as needing memory processing.
      * Sets invalidated_at only if null or if historyId is larger.
      * Expects: sessionId and historyId are valid.
@@ -105,7 +115,8 @@ export class SessionsRepository {
             createdAt: row.created_at,
             resetMessage: row.reset_message,
             invalidatedAt: row.invalidated_at ?? null,
-            processedUntil: row.processed_until ?? null
+            processedUntil: row.processed_until ?? null,
+            endedAt: row.ended_at ?? null
         };
     }
 }

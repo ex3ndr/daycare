@@ -725,11 +725,12 @@ export class Agent {
     private async handleReset(item: AgentInboxReset): Promise<boolean> {
         const now = Date.now();
         this.endTurnCount = 0;
-        // Invalidate old session for memory processing before creating new one
-        // Memory-agents must never trigger the memory worker
-        if (this.descriptor.type !== "memory-agent") {
-            const oldSessionId = this.state.activeSessionId;
-            if (oldSessionId) {
+        // End and invalidate old session before creating new one
+        const oldSessionId = this.state.activeSessionId;
+        if (oldSessionId) {
+            await this.agentSystem.storage.sessions.endSession(oldSessionId, now);
+            // Memory-agents must never trigger the memory worker
+            if (this.descriptor.type !== "memory-agent") {
                 const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
                 if (maxHistoryId !== null) {
                     await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
@@ -1206,11 +1207,12 @@ export class Agent {
         const compactionAt = Date.now();
         const resetMessage = "Session context compacted.";
         this.endTurnCount = 0;
-        // Invalidate old session for memory processing before creating new one
-        // Memory-agents must never trigger the memory worker
-        if (this.descriptor.type !== "memory-agent") {
-            const oldSessionId = this.state.activeSessionId;
-            if (oldSessionId) {
+        // End and invalidate old session before creating new one
+        const oldSessionId = this.state.activeSessionId;
+        if (oldSessionId) {
+            await this.agentSystem.storage.sessions.endSession(oldSessionId, compactionAt);
+            // Memory-agents must never trigger the memory worker
+            if (this.descriptor.type !== "memory-agent") {
                 const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
                 if (maxHistoryId !== null) {
                     await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
