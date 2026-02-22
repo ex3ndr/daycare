@@ -1,3 +1,4 @@
+import { isCuid } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import type { GraphNode } from "../../memory/graph/graphTypes.js";
@@ -22,11 +23,10 @@ function makeContext(existingNode: GraphNode | null) {
 describe("memoryNodeWriteToolBuild", () => {
     const tool = memoryNodeWriteToolBuild();
 
-    it("creates a new node when none exists", async () => {
+    it("generates cuid2 id when nodeId is omitted", async () => {
         const { context, written } = makeContext(null);
         const result = await tool.execute(
             {
-                nodeId: "user-prefs",
                 title: "User Preferences",
                 content: "Prefers dark mode."
             },
@@ -34,7 +34,7 @@ describe("memoryNodeWriteToolBuild", () => {
             { id: "tc1", name: "memory_node_write" }
         );
         expect(result.typedResult.summary).toContain("Created");
-        expect(result.typedResult.nodeId).toBe("user-prefs");
+        expect(isCuid(result.typedResult.nodeId as string)).toBe(true);
         expect(written).toHaveLength(1);
         expect(written[0]!.frontmatter.title).toBe("User Preferences");
         expect(written[0]!.content).toBe("Prefers dark mode.");
@@ -79,7 +79,7 @@ describe("memoryNodeWriteToolBuild", () => {
     it("throws when memory is not available", async () => {
         const ctx = { ctx: { agentId: "a", userId: "u" } } as never;
         await expect(
-            tool.execute({ nodeId: "x", title: "T", content: "c" }, ctx, {
+            tool.execute({ title: "T", content: "c" }, ctx, {
                 id: "tc1",
                 name: "memory_node_write"
             })

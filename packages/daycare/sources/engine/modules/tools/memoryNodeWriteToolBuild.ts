@@ -1,11 +1,12 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 
 const schema = Type.Object(
     {
-        nodeId: Type.String({ minLength: 1 }),
+        nodeId: Type.Optional(Type.String({ minLength: 1 })),
         title: Type.String({ minLength: 1 }),
         description: Type.Optional(Type.String()),
         content: Type.String(),
@@ -33,6 +34,7 @@ const returns: ToolResultContract<MemoryNodeWriteResult> = {
 
 /**
  * Builds the memory_node_write tool that creates or updates a graph node.
+ * When nodeId is omitted a cuid2 is generated. When provided the existing node is updated.
  * Expects: toolContext.memory is available and ctx.userId identifies the user.
  */
 export function memoryNodeWriteToolBuild(): ToolDefinition {
@@ -40,7 +42,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
         tool: {
             name: "memory_node_write",
             description:
-                "Create or update a memory document. Provide nodeId, title, content (markdown body), and optional refs (ids of related nodes as children). Overwrites existing node if nodeId matches.",
+                "Create or update a memory document. Provide title, content (markdown body), and optional refs (ids of related nodes as children). Omit nodeId to create a new node (id is auto-generated); provide nodeId to update an existing node.",
             parameters: schema
         },
         returns,
@@ -51,10 +53,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
             }
 
             const payload = args as MemoryNodeWriteArgs;
-            const nodeId = payload.nodeId.trim();
-            if (!nodeId) {
-                throw new Error("nodeId is required.");
-            }
+            const nodeId = payload.nodeId?.trim() || createId();
             if (nodeId.startsWith("__")) {
                 throw new Error("Node ids starting with __ are reserved.");
             }
