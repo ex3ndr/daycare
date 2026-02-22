@@ -216,6 +216,76 @@ describe("TelegramConnector incoming documents", () => {
     });
 });
 
+describe("TelegramConnector access mode", () => {
+    beforeEach(() => {
+        telegramInstances.length = 0;
+    });
+
+    it("sends a rejection message for unapproved users in private mode", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "private",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandler = vi.fn(async (_message, _context, _descriptor) => undefined);
+        connector.onMessage(messageHandler);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        await botMessageHandler?.({
+            message_id: 77,
+            chat: { id: 999, type: "private" },
+            from: { id: 999 },
+            text: "hello"
+        });
+
+        expect(messageHandler).not.toHaveBeenCalled();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        expect(bot!.sendMessage).toHaveBeenCalledWith(
+            "999",
+            "🚫 You are not authorized to use this bot. Please contact the system administrator to request access."
+        );
+    });
+
+    it("allows all users in public mode", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "public",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandler = vi.fn(async (_message, _context, _descriptor) => undefined);
+        connector.onMessage(messageHandler);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        await botMessageHandler?.({
+            message_id: 88,
+            chat: { id: 999, type: "private" },
+            from: { id: 999 },
+            text: "hello"
+        });
+
+        expect(messageHandler).toHaveBeenCalledTimes(1);
+        expect(bot!.sendMessage).not.toHaveBeenCalled();
+    });
+});
+
 describe("TelegramConnector startup", () => {
     beforeEach(() => {
         telegramInstances.length = 0;

@@ -9,15 +9,30 @@ const allowedUidSchema = z.union([z.string().trim().min(1), z.number().int()]);
 
 const settingsSchema = z
     .object({
+        mode: z.enum(["public", "private"]).default("private"),
         allowedUids: z
             .array(allowedUidSchema)
-            .min(1)
+            .optional()
+            .default([])
             .transform((values) => Array.from(new Set(values.map((value) => String(value))))),
         polling: z.boolean().optional(),
         clearWebhook: z.boolean().optional(),
         statePath: z.string().nullable().optional()
     })
-    .passthrough();
+    .passthrough()
+    .superRefine((data, ctx) => {
+        if (data.mode !== "private" || data.allowedUids.length > 0) {
+            return;
+        }
+        ctx.addIssue({
+            code: z.ZodIssueCode.too_small,
+            minimum: 1,
+            type: "array",
+            inclusive: true,
+            message: "allowedUids must have at least 1 entry in private mode",
+            path: ["allowedUids"]
+        });
+    });
 
 type TelegramPluginConfig = Omit<TelegramConnectorOptions, "token" | "fileStore" | "dataDir">;
 
@@ -30,12 +45,20 @@ export const plugin = definePlugin({
         if (!token) {
             return null;
         }
+        const mode = await promptMode(api);
+        if (!mode) {
+            return null;
+        }
+        if (mode === "public") {
+            await api.auth.setToken(api.instanceId, token);
+            return { settings: { mode } };
+        }
         const allowedUids = await promptAllowedUids(api);
         if (!allowedUids) {
             return null;
         }
         await api.auth.setToken(api.instanceId, token);
-        return { settings: { allowedUids } };
+        return { settings: { mode, allowedUids } };
     },
     create: (api) => {
         const connectorId = api.instance.instanceId;
@@ -82,6 +105,24 @@ export const plugin = definePlugin({
 
 function resolvePluginPath(baseDir: string, target: string): string {
     return path.isAbsolute(target) ? target : path.join(baseDir, target);
+}
+
+async function promptMode(api: PluginOnboardingApi): Promise<"public" | "private" | null> {
+    return api.prompt.select({
+        message: "Telegram access mode",
+        choices: [
+            {
+                value: "private",
+                name: "Private",
+                description: "Only allow configured Telegram user IDs."
+            },
+            {
+                value: "public",
+                name: "Public",
+                description: "Allow all Telegram users to interact with the bot."
+            }
+        ]
+    });
 }
 
 async function promptAllowedUids(api: PluginOnboardingApi): Promise<string[] | null> {

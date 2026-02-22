@@ -7,7 +7,7 @@ Connect Daycare to Telegram via the Bot API with long polling. Only processes pr
 1. Create a bot via [@BotFather](https://t.me/BotFather)
 2. Run `daycare add` and select the Telegram plugin
 3. Enter the bot token when prompted
-4. Add allowed Telegram user IDs to the settings
+4. Choose access mode (`private` or `public`); add allowed Telegram user IDs when using `private`
 
 ## Configuration
 
@@ -17,6 +17,7 @@ Connect Daycare to Telegram via the Bot API with long polling. Only processes pr
   "pluginId": "telegram",
   "enabled": true,
   "settings": {
+    "mode": "private",
     "allowedUids": [123456789],
     "polling": true,
     "clearWebhook": true
@@ -28,10 +29,26 @@ Connect Daycare to Telegram via the Bot API with long polling. Only processes pr
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `allowedUids` | number[] | required | Telegram user IDs allowed to interact |
+| `mode` | `"private" \| "public"` | `"private"` | Access policy for Telegram users |
+| `allowedUids` | number[] | required in `private`, optional in `public` | Telegram user IDs allowed to interact |
 | `polling` | boolean | `true` | Enable/disable long polling |
 | `clearWebhook` | boolean | `true` | Clear Telegram webhook before polling starts |
 | `statePath` | string | auto | Override path for `lastUpdateId` storage |
+
+### Access modes
+
+- `private` mode: only users in `allowedUids` are allowed. Unapproved users receive:
+  `🚫 You are not authorized to use this bot. Please contact the system administrator to request access.`
+- `public` mode: all Telegram users are allowed and `allowedUids` can be omitted.
+
+```mermaid
+flowchart TD
+    A[Incoming Telegram message] --> B{mode}
+    B -->|public| C[Allow message]
+    B -->|private| D{sender in allowedUids?}
+    D -->|yes| C
+    D -->|no| E[Send unauthorized message and stop]
+```
 
 ## Authentication
 

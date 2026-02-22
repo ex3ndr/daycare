@@ -23,6 +23,7 @@ import { telegramMessageSplit } from "./telegramMessageSplit.js";
 export type TelegramConnectorOptions = {
     token: string;
     allowedUids: string[];
+    mode?: "public" | "private";
     polling?: boolean;
     clearWebhook?: boolean;
     statePath?: string | null;
@@ -47,6 +48,8 @@ const TELEGRAM_MESSAGE_FORMAT_PROMPT = [
 const TELEGRAM_MESSAGE_MAX_LENGTH = 4096;
 const TELEGRAM_CAPTION_MAX_LENGTH = 1024;
 const TELEGRAM_COMMAND_UPDATE_DEBOUNCE_MS = 1000;
+const TELEGRAM_UNAUTHORIZED_MESSAGE =
+    "🚫 You are not authorized to use this bot. Please contact the system administrator to request access.";
 
 export class TelegramConnector implements Connector {
     capabilities: ConnectorCapabilities = {
@@ -73,6 +76,7 @@ export class TelegramConnector implements Connector {
     private pendingCommands: SlashCommandEntry[] = [];
     private commandSyncTimer: NodeJS.Timeout | null = null;
     private allowedUids: Set<string>;
+    private mode: "public" | "private";
     private shuttingDown = false;
     private clearWebhookOnStart: boolean;
     private clearedWebhook = false;
@@ -85,6 +89,7 @@ export class TelegramConnector implements Connector {
         this.clearWebhookOnStart = options.clearWebhook ?? true;
         this.fileStore = options.fileStore;
         this.dataDir = options.dataDir;
+        this.mode = options.mode ?? "private";
         this.allowedUids = new Set(options.allowedUids.map((uid) => String(uid)));
         this.statePath =
             options.statePath === undefined ? path.join(this.dataDir, "telegram-offset.json") : options.statePath;
@@ -115,6 +120,9 @@ export class TelegramConnector implements Connector {
                     { senderId, chatId: message.chat?.id },
                     "skip: Skipping telegram message from unapproved uid"
                 );
+                if (this.mode === "private") {
+                    await this.bot.sendMessage(String(message.chat.id), TELEGRAM_UNAUTHORIZED_MESSAGE);
+                }
                 return;
             }
             logger.debug(
@@ -548,6 +556,9 @@ export class TelegramConnector implements Connector {
     }
 
     private isAllowedUid(uid: string | number | null | undefined): boolean {
+        if (this.mode === "public") {
+            return true;
+        }
         if (uid === null || uid === undefined) {
             return false;
         }

@@ -9,7 +9,8 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - `connector.ts` - TelegramBot adapter, polling logic, and message normalization.
 
 ## Settings
-- `allowedUids` (required): list of Telegram user IDs that are allowed to interact with the bot.
+- `mode` (optional): `"private"` (default) or `"public"`.
+- `allowedUids` (conditionally required): list of Telegram user IDs that are allowed to interact with the bot when mode is `"private"`.
 - `polling` (optional): enable/disable polling (default true).
 - `clearWebhook` (optional): clear Telegram webhook before polling (default true).
 - `statePath` (optional): override `lastUpdateId` storage path (default `${dataDir}/telegram-offset.json`).
@@ -19,7 +20,8 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 
 ## Incoming message handling
 - Only accepts `message.chat.type === "private"`.
-- Ignores messages from users not listed in `allowedUids`.
+- In `"private"` mode, rejects users not listed in `allowedUids` with an explicit unauthorized message.
+- In `"public"` mode, skips allowlist checks and allows all Telegram users.
 - Extracts text or caption and downloads attached photos/documents into the file store.
 - Builds `MessageContext` with `messageId` only and emits a user descriptor for targeting.
 - Emits normalized payloads to agent handling.
