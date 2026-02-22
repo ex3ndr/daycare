@@ -8,6 +8,16 @@ describe("agentDescriptorRoleResolve", () => {
         expect(agentDescriptorRoleResolve(d)).toBe("user");
     });
 
+    it("maps subuser descriptor to 'user'", () => {
+        const d: AgentDescriptor = {
+            type: "subuser",
+            id: "su1",
+            name: "my-app",
+            systemPrompt: "sp"
+        };
+        expect(agentDescriptorRoleResolve(d)).toBe("user");
+    });
+
     it("maps permanent descriptor to 'user'", () => {
         const d: AgentDescriptor = {
             type: "permanent",

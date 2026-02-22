@@ -16,7 +16,7 @@ export async function agentSystemPromptSectionPreamble(_context: AgentSystemProm
             ? (descriptor.parentAgentId ?? "")
             : "";
     const section = Handlebars.compile(template)({
-        isForeground: descriptor?.type === "user",
+        isForeground: descriptor?.type === "user" || descriptor?.type === "subuser",
         parentAgentId,
         date: new Date().toISOString().slice(0, 10)
     });

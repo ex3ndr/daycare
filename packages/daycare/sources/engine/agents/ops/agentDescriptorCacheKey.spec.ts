@@ -31,6 +31,17 @@ describe("agentDescriptorCacheKey", () => {
         ).toBe("/memory-search/ms-1");
     });
 
+    it("returns stable key for subuser descriptor", () => {
+        expect(
+            agentDescriptorCacheKey({
+                type: "subuser",
+                id: "sub-user-1",
+                name: "my-app",
+                systemPrompt: "prompt"
+            })
+        ).toBe("/subuser/sub-user-1");
+    });
+
     it("returns stable keys for subagent, app, and permanent descriptors", () => {
         expect(
             agentDescriptorCacheKey({

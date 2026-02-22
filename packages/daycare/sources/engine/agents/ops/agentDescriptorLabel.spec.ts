@@ -61,6 +61,17 @@ describe("agentDescriptorLabel", () => {
         expect(agentDescriptorLabel({ type: "system", tag: "heartbeat" })).toBe("heartbeat");
     });
 
+    it("labels subuser agents", () => {
+        expect(
+            agentDescriptorLabel({
+                type: "subuser",
+                id: "sub-1",
+                name: "my-isolated-app",
+                systemPrompt: "prompt"
+            })
+        ).toBe("my-isolated-app");
+    });
+
     it("labels user agents", () => {
         expect(
             agentDescriptorLabel({

@@ -18,6 +18,20 @@ describe("agentPromptResolve", () => {
         });
     });
 
+    it("resolves subuser agent prompt without replacement", async () => {
+        const resolved = await agentPromptResolve({
+            type: "subuser",
+            id: "su-1",
+            name: "my-isolated-app",
+            systemPrompt: "  You are a helpful assistant.  "
+        });
+
+        expect(resolved).toEqual({
+            agentPrompt: "You are a helpful assistant.",
+            replaceSystemPrompt: false
+        });
+    });
+
     it("resolves app agent prompt without replacement", async () => {
         const resolved = await agentPromptResolve({
             type: "app",

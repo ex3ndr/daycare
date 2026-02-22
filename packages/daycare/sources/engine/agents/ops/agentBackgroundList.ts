@@ -31,7 +31,9 @@ export async function agentBackgroundList(storageOrConfig: Storage | Config): Pr
                         ? "memory-agent"
                         : descriptor.type === "memory-search"
                           ? (descriptor.name ?? "memory-search")
-                          : descriptor.tag;
+                          : descriptor.type === "subuser"
+                            ? descriptor.name
+                            : descriptor.tag;
         const parentAgentId =
             descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
                 ? (descriptor.parentAgentId ?? null)

@@ -29,6 +29,9 @@ export function agentDescriptorLabel(descriptor: AgentDescriptor): string {
     if (descriptor.type === "memory-search") {
         return descriptor.name;
     }
+    if (descriptor.type === "subuser") {
+        return descriptor.name;
+    }
     return "user";
 }
 

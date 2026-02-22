@@ -1161,7 +1161,7 @@ export class Agent {
     }
 
     private resolveAgentKind(): "background" | "foreground" {
-        if (this.descriptor.type === "user") {
+        if (this.descriptor.type === "user" || this.descriptor.type === "subuser") {
             return "foreground";
         }
         return "background";

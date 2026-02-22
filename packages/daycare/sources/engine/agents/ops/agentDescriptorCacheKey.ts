@@ -22,6 +22,8 @@ export function agentDescriptorCacheKey(descriptor: AgentDescriptor): string {
             return `/memory-agent/${descriptor.id}`;
         case "memory-search":
             return `/memory-search/${descriptor.id}`;
+        case "subuser":
+            return `/subuser/${descriptor.id}`;
     }
     return descriptorTypeUnreachable(descriptor);
 }

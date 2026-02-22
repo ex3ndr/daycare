@@ -126,7 +126,7 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const isForeground = agent.descriptor.type === "user";
+                const isForeground = agent.descriptor.type === "user" || agent.descriptor.type === "subuser";
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);

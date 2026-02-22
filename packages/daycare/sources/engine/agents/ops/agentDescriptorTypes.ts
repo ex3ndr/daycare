@@ -35,6 +35,12 @@ export type AgentDescriptor =
           id: string;
           parentAgentId: string;
           name: string;
+      }
+    | {
+          type: "subuser";
+          id: string;
+          name: string;
+          systemPrompt: string;
       };
 
 export type AgentFetchStrategy = "most-recent-foreground" | "heartbeat";

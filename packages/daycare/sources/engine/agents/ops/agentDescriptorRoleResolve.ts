@@ -9,6 +9,7 @@ export function agentDescriptorRoleResolve(descriptor: AgentDescriptor): ModelRo
     switch (descriptor.type) {
         case "user":
         case "permanent":
+        case "subuser":
             return "user";
         case "memory-agent":
             return "memory";

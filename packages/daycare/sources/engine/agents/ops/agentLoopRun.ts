@@ -136,7 +136,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         agent.descriptor.type === "memory-search";
     let childAgentNudged = false;
     let childAgentResponded = false;
-    const agentKind = agent.descriptor.type === "user" ? "foreground" : "background";
+    const agentKind = agent.descriptor.type === "user" || agent.descriptor.type === "subuser" ? "foreground" : "background";
     const target = agentDescriptorTargetResolve(agent.descriptor);
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {

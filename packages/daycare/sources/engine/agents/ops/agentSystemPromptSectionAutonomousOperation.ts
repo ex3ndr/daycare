@@ -20,7 +20,7 @@ export async function agentSystemPromptSectionAutonomousOperation(
     const agentPrompt = descriptor ? (await agentPromptResolve(descriptor)).agentPrompt : "";
     const template = await agentPromptBundledRead("SYSTEM_AGENCY.md");
     const section = Handlebars.compile(template)({
-        isForeground: descriptor?.type === "user",
+        isForeground: descriptor?.type === "user" || descriptor?.type === "subuser",
         parentAgentId,
         agentPrompt
     });

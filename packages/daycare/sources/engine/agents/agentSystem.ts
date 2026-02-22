@@ -927,6 +927,10 @@ export class AgentSystem {
             }
             return this.ownerUserIdEnsure();
         }
+        // Subuser gateway agents belong to the subuser — descriptor.id IS the subuser's userId
+        if (descriptor.type === "subuser") {
+            return descriptor.id;
+        }
         return this.ownerUserIdEnsure();
     }
 
