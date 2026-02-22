@@ -22,6 +22,7 @@ System prompt rendering is centralized in `agentSystemPrompt()` and called from 
 - Formatting
 - Memory
 - System Environment
+- Model Awareness
 
 Top-level composition is plain concatenation with section separators (no Handlebars composition step).
 
@@ -36,6 +37,8 @@ Template naming:
 - Topology rendering no longer injects `permanentAgentsPrompt`; current agent graph should be read via the `topology` tool.
 - `SYSTEM_SKILLS.md` owns mandatory skill-invocation guidance.
 - `skillPromptFormat()` now renders only the dynamic `<available_skills>...</available_skills>` list, which is appended after rendering `SYSTEM_SKILLS.md`.
+- `SYSTEM_MODELS.md` renders current model/provider plus active non-deprecated model catalogs from configured inference providers.
+- `agentSystemPromptSectionModels()` reads active providers from `config.current.settings` and formats provider-grouped model rows.
 
 ```mermaid
 flowchart LR
@@ -44,15 +47,25 @@ flowchart LR
 ```
 
 ```mermaid
+flowchart LR
+  A[agentSystemPromptSectionModels] --> B[listActiveInferenceProviders settings]
+  B --> C[listProviderModels per provider]
+  C --> D[Filter deprecated models]
+  D --> E[SYSTEM_MODELS.md]
+  E --> F[Rendered model-awareness section]
+```
+
+```mermaid
 flowchart TD
   A[Agent handleMessage] --> A1[Resolve prompt paths from config.dataDir]
   A1 --> A2[agentPromptFilesEnsure]
   A2 --> B[agentSystemPrompt]
   B --> C[Check replace-system prompt]
-  B --> D[Call 9 section functions with same context]
+  B --> D[Call 10 section functions with same context]
   D --> D1[Preamble section loads its own data]
   D --> D2[Autonomous section loads its own data]
   D --> D3[...]
   D --> D4[Memory section loads memory files]
+  D --> D5[Model section loads active provider catalogs]
   D --> E[Concatenate sections with separators]
 ```

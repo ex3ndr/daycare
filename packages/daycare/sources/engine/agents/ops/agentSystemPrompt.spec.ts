@@ -100,6 +100,9 @@ describe("agentSystemPrompt", () => {
                             noTools: false,
                             rlm: false,
                             say: false
+                        },
+                        settings: {
+                            providers: [{ id: "openai", enabled: true }]
                         }
                     }
                 },
@@ -130,6 +133,9 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("Connector: telegram, channel: channel-1, user: user-1.");
             expect(rendered).toContain("Soul prompt text");
             expect(rendered).toContain("Tools prompt text");
+            expect(rendered).toContain("## Model Awareness");
+            expect(rendered).toContain("**OpenAI**:");
+            expect(rendered).toContain("set_agent_model");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -169,6 +175,9 @@ describe("agentSystemPrompt", () => {
                             noTools: true,
                             rlm: true,
                             say: true
+                        },
+                        settings: {
+                            providers: [{ id: "openai", enabled: true }]
                         }
                     }
                 },
