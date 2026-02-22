@@ -144,11 +144,7 @@ export class MemoryWorker {
 
                 const maxHistoryId = await this.storage.history.maxId(session.id);
                 const newProcessedUntil = maxHistoryId ?? invalidatedAt;
-                const cleared = await this.storage.sessions.markProcessed(
-                    session.id,
-                    newProcessedUntil,
-                    invalidatedAt
-                );
+                const cleared = await this.storage.sessions.markProcessed(session.id, newProcessedUntil, invalidatedAt);
                 if (cleared) {
                     logger.debug(
                         `event: Session routed to memory-agent sessionId=${session.id} processedUntil=${newProcessedUntil}`

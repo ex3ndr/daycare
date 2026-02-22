@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SessionPermissions } from "@/types";
 import { Storage } from "../../storage/storage.js";
 import type { ConfigModule } from "../config/configModule.js";
-import { type MemoryWorkerPostFn, MemoryWorker } from "./memoryWorker.js";
+import { MemoryWorker, type MemoryWorkerPostFn } from "./memoryWorker.js";
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
