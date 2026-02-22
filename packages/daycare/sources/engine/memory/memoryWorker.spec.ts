@@ -10,6 +10,10 @@ vi.mock("./memorySessionObserve.js", () => ({
     memorySessionObserve: vi.fn().mockResolvedValue([])
 }));
 
+vi.mock("./observationLogAppend.js", () => ({
+    observationLogAppend: vi.fn().mockResolvedValue(undefined)
+}));
+
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
     writeDirs: ["/workspace"]
@@ -64,6 +68,7 @@ function createWorker(storage: Storage, intervalMs = 100) {
         storage,
         inferenceRouter: mockInferenceRouter(),
         config: mockConfig(),
+        usersDir: "/tmp/test-users",
         intervalMs
     });
 }

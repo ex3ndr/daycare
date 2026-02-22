@@ -244,7 +244,8 @@ export class Engine {
         this.memoryWorker = new MemoryWorker({
             storage: this.storage,
             inferenceRouter: this.inferenceRouter,
-            config: this.config
+            config: this.config,
+            usersDir: this.config.current.usersDir
         });
         const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));
 

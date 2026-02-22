@@ -4,7 +4,9 @@ import type { Storage } from "../../storage/storage.js";
 import { Context } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
+import { UserHome } from "../users/userHome.js";
 import { memorySessionObserve } from "./memorySessionObserve.js";
+import { observationLogAppend } from "./observationLogAppend.js";
 
 const logger = getLogger("engine.memory");
 
@@ -15,6 +17,7 @@ export type MemoryWorkerOptions = {
     storage: Storage;
     inferenceRouter: InferenceRouter;
     config: ConfigModule;
+    usersDir: string;
     intervalMs?: number;
 };
 
@@ -26,6 +29,7 @@ export class MemoryWorker {
     private readonly storage: Storage;
     private readonly inferenceRouter: InferenceRouter;
     private readonly config: ConfigModule;
+    private readonly usersDir: string;
     private readonly intervalMs: number;
     private tickTimer: NodeJS.Timeout | null = null;
     private started = false;
@@ -35,6 +39,7 @@ export class MemoryWorker {
         this.storage = options.storage;
         this.inferenceRouter = options.inferenceRouter;
         this.config = options.config;
+        this.usersDir = options.usersDir;
         this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
     }
 
@@ -107,7 +112,7 @@ export class MemoryWorker {
                 const processedUntil = session.processedUntil ?? 0;
                 const records = await this.storage.history.findSinceId(session.id, processedUntil);
 
-                await memorySessionObserve({
+                const observations = await memorySessionObserve({
                     sessionNumber,
                     ctx,
                     records,
@@ -115,6 +120,9 @@ export class MemoryWorker {
                     inferenceRouter: this.inferenceRouter,
                     providers
                 });
+
+                const memoryDir = new UserHome(this.usersDir, agent.userId).memory;
+                await observationLogAppend(memoryDir, observations);
 
                 const maxHistoryId = await this.storage.history.maxId(session.id);
                 const newProcessedUntil = maxHistoryId ?? invalidatedAt;
