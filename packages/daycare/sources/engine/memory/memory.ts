@@ -25,7 +25,7 @@ export class Memory {
     }
 
     resolveMemoryDir(userId: string): string {
-        return new UserHome(this.usersDir, userId).memory;
+        return path.join(new UserHome(this.usersDir, userId).memory, "graph");
     }
 
     async readGraph(userId: string): Promise<GraphTree> {
