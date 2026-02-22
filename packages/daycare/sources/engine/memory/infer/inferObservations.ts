@@ -15,7 +15,8 @@ import { parseObservations } from "./utils/parseObservations.js";
 const logger = getLogger("memory.infer");
 
 export type InferObservation = {
-    content: string;
+    text: string;
+    context: string;
 };
 
 export type InferObservationsOptions = {
@@ -85,5 +86,16 @@ export async function inferObservations(options: InferObservationsOptions): Prom
     if (observations.length === 0 && text.includes("observation")) {
         logger.warn(`event: inferObservations found no valid <observation> tags in response: ${text}`);
     }
+
+    for (const observation of observations) {
+        logger.info(
+            {
+                observationText: observation.text,
+                observationContext: observation.context
+            },
+            "event: inferObservations inferred"
+        );
+    }
+
     return observations;
 }

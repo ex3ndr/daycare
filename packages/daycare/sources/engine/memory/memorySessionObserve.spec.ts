@@ -69,7 +69,8 @@ describe("memorySessionObserve", () => {
 
             const ctx = new Context("agent-1", owner.id);
             const records = await storage.history.findBySessionId(sessionId);
-            const xml = "<observations>\n<observation>User requested production deploy</observation>\n</observations>";
+            const xml =
+                "<observations>\n<observation><text>The person wanted to push their latest changes to production as part of the release cycle</text><context>During a release planning session, the person asked to deploy to production. They seemed confident the changes were ready and wanted to move forward quickly.</context></observation>\n</observations>";
             const router = mockInferenceRouter(xml);
 
             const observations = await memorySessionObserve({
@@ -81,7 +82,13 @@ describe("memorySessionObserve", () => {
                 providers: []
             });
 
-            expect(observations).toEqual([{ content: "User requested production deploy" }]);
+            expect(observations).toEqual([
+                {
+                    text: "The person wanted to push their latest changes to production as part of the release cycle",
+                    context:
+                        "During a release planning session, the person asked to deploy to production. They seemed confident the changes were ready and wanted to move forward quickly."
+                }
+            ]);
             expect(router.complete).toHaveBeenCalledOnce();
         } finally {
             storage.close();

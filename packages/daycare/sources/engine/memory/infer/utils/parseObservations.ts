@@ -1,4 +1,4 @@
-import { tagExtractAll } from "../../../../util/tagExtract.js";
+import { tagExtract, tagExtractAll } from "../../../../util/tagExtract.js";
 import type { InferObservation } from "../inferObservations.js";
 
 /**
@@ -7,6 +7,20 @@ import type { InferObservation } from "../inferObservations.js";
  */
 export function parseObservations(text: string): InferObservation[] {
     return tagExtractAll(text, "observation")
-        .filter((content) => content.length > 0)
-        .map((content) => ({ content }));
+        .map((observationBlock): InferObservation | null => {
+            const observationText = tagExtract(observationBlock, "text");
+            const observationContext = tagExtract(observationBlock, "context");
+            if (observationText === null || observationContext === null) {
+                return null;
+            }
+            if (observationText.length === 0 || observationContext.length === 0) {
+                return null;
+            }
+
+            return {
+                text: observationText,
+                context: observationContext
+            };
+        })
+        .filter((observation): observation is InferObservation => observation !== null);
 }
