@@ -17,7 +17,7 @@ describe("observationLogAppend", () => {
         await fs.rm(tmpDir, { recursive: true, force: true });
     });
 
-    const fixedTime = new Date("2026-02-21T14:30:00").getTime();
+    const fixedTime = new Date("2026-02-21T14:30:00Z").getTime();
 
     it("appends formatted observations to observations.md", async () => {
         await observationLogAppend(

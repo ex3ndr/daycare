@@ -1,8 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { format } from "date-fns";
-
 import type { InferObservation } from "./infer/inferObservations.js";
 
 const OBSERVATIONS_FILE = "observations.md";
@@ -22,7 +20,8 @@ export async function observationLogAppend(
         return;
     }
 
-    const timestamp = format(new Date(now ?? Date.now()), "yyyy-MM-dd HH:mm");
+    // Use UTC ISO string truncated to minutes for consistent cross-timezone output
+    const timestamp = new Date(now ?? Date.now()).toISOString().slice(0, 16).replace("T", " ");
     const lines: string[] = [];
 
     for (const observation of observations) {
