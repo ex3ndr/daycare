@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   fetchAgentHistory,
+  fetchAgentSessions,
   fetchAgents,
   fetchSignalSubscriptions,
   type AgentDescriptor,
   type AgentHistoryRecord,
   type AgentSummary,
   type EngineEvent,
+  type SessionSummary,
   type SignalSubscription
 } from "@/lib/engine-client";
 import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
@@ -25,6 +27,8 @@ export default function AgentDetailPage() {
   const searchParams = useSearchParams();
   const agentId = searchParams.get("agentId")?.trim() ?? "";
   const [summary, setSummary] = useState<AgentSummary | null>(null);
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [records, setRecords] = useState<AgentHistoryRecord[]>([]);
   const [subscriptions, setSubscriptions] = useState<SignalSubscription[]>([]);
   const [connected, setConnected] = useState(false);
@@ -42,6 +46,7 @@ export default function AgentDetailPage() {
     async (options: { silent?: boolean } = {}) => {
       if (!agentId) {
         setSummary(null);
+        setSessions([]);
         setRecords([]);
         setSubscriptions([]);
         return;
@@ -52,11 +57,31 @@ export default function AgentDetailPage() {
       }
       setError(null);
       try {
-        const [agents, agentRecords, allSubscriptions] = await Promise.all([fetchAgents(), fetchAgentHistory(agentId), fetchSignalSubscriptions()]);
+        const [agents, agentSessions, allSubscriptions] = await Promise.all([
+          fetchAgents(),
+          fetchAgentSessions(agentId),
+          fetchSignalSubscriptions()
+        ]);
         const nextSummary = agents.find((agent) => agent.agentId === agentId) ?? null;
         setSummary(nextSummary);
-        setRecords(agentRecords);
+        setSessions(agentSessions);
         setSubscriptions(allSubscriptions.filter((s) => s.agentId === agentId));
+
+        // Pick session: use current selection if still valid, else latest
+        const activeSession = agentSessions.length > 0
+          ? agentSessions[agentSessions.length - 1]
+          : null;
+        const sessionToUse = selectedSessionId && agentSessions.some((s) => s.id === selectedSessionId)
+          ? selectedSessionId
+          : activeSession?.id ?? null;
+        if (sessionToUse !== selectedSessionId) {
+          setSelectedSessionId(sessionToUse);
+        }
+
+        const agentRecords = sessionToUse
+          ? await fetchAgentHistory(agentId, { sessionId: sessionToUse })
+          : await fetchAgentHistory(agentId, { limit: 100 });
+        setRecords(agentRecords);
         setLastUpdated(new Date());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load agent");
@@ -66,7 +91,7 @@ export default function AgentDetailPage() {
         }
       }
     },
-    [agentId]
+    [agentId, selectedSessionId]
   );
 
   useEffect(() => {
@@ -274,6 +299,52 @@ export default function AgentDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {sessions.length > 1 && (
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div>
+                  <CardTitle>Sessions</CardTitle>
+                  <CardDescription>Switch between conversation sessions for this agent.</CardDescription>
+                </div>
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {sessions.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-wrap gap-2">
+                {sessions.map((session, index) => {
+                  const sessionNumber = index + 1;
+                  const isActive = session.endedAt === null;
+                  const isSelected = session.id === selectedSessionId;
+                  return (
+                    <Button
+                      key={session.id}
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => {
+                        setSelectedSessionId(session.id);
+                      }}
+                    >
+                      #{sessionNumber}
+                      {isActive && (
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                          active
+                        </Badge>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatDateTime(session.createdAt)}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {subscriptions.length > 0 && (
           <Card className="overflow-hidden">
@@ -870,6 +941,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `${descriptor.name} / ${descriptor.id}`;
     case "memory-agent":
       return `memory-agent:${descriptor.id}`;
+    case "memory-search":
+      return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
     default:
       return "system";
   }

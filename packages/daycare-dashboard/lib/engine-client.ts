@@ -99,7 +99,8 @@ export type AgentDescriptor =
       systemPrompt: string;
       workspaceDir?: string;
     }
-  | { type: "memory-agent"; id: string };
+  | { type: "memory-agent"; id: string }
+  | { type: "memory-search"; id: string; parentAgentId: string; name: string };
 
 export type AgentSummary = {
   agentId: string;
@@ -265,6 +266,18 @@ type AgentsResponse = {
   agents?: AgentSummary[];
 };
 
+export type SessionSummary = {
+  id: string;
+  agentId: string;
+  createdAt: number;
+  endedAt: number | null;
+  resetMessage: string | null;
+};
+
+type AgentSessionsResponse = {
+  sessions?: SessionSummary[];
+};
+
 type AgentHistoryResponse = {
   records?: AgentHistoryRecord[];
 };
@@ -350,9 +363,21 @@ export async function fetchAgents() {
   return data.agents ?? [];
 }
 
-export async function fetchAgentHistory(agentId: string, limit = 100) {
+export async function fetchAgentSessions(agentId: string) {
   const encoded = encodeURIComponent(agentId);
-  const query = new URLSearchParams({ limit: String(limit) });
+  const data = await fetchJSON<AgentSessionsResponse>(`/api/v1/engine/agents/${encoded}/sessions`);
+  return data.sessions ?? [];
+}
+
+export async function fetchAgentHistory(agentId: string, options?: { limit?: number; sessionId?: string }) {
+  const encoded = encodeURIComponent(agentId);
+  const query = new URLSearchParams();
+  if (options?.limit) {
+    query.set("limit", String(options.limit));
+  }
+  if (options?.sessionId) {
+    query.set("sessionId", options.sessionId);
+  }
   const data = await fetchJSON<AgentHistoryResponse>(`/api/v1/engine/agents/${encoded}/history?${query}`);
   return data.records ?? [];
 }

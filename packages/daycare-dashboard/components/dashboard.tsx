@@ -1133,6 +1133,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `${descriptor.name} / ${descriptor.id}`;
     case "memory-agent":
       return `memory-agent:${descriptor.id}`;
+    case "memory-search":
+      return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
     default:
       return "system";
   }

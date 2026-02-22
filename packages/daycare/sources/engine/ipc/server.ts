@@ -56,7 +56,8 @@ const signalEventsQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(1000).optional()
 });
 const agentHistoryQuerySchema = z.object({
-    limit: z.coerce.number().int().min(1).max(10000).optional()
+    limit: z.coerce.number().int().min(1).max(10000).optional(),
+    sessionId: z.string().min(1).optional()
 });
 const signalGenerateSchema = z.object({
     type: z.string().min(1),
@@ -299,12 +300,23 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         return reply.send({ ok: true, agents });
     });
 
+    app.get("/v1/engine/agents/:agentId/sessions", async (request, reply) => {
+        const agentId = (request.params as { agentId: string }).agentId;
+        logger.debug(`event: GET /v1/engine/agents/:agentId/sessions agentId=${agentId}`);
+        const sessions = await options.runtime.storage.sessions.findByAgentId(agentId);
+        logger.debug(`event: Agent sessions retrieved agentId=${agentId} sessionCount=${sessions.length}`);
+        return reply.send({ ok: true, sessions });
+    });
+
     app.get("/v1/engine/agents/:agentId/history", async (request, reply) => {
         const agentId = (request.params as { agentId: string }).agentId;
         const parsed = agentHistoryQuerySchema.safeParse(request.query);
         const limit = parsed.success ? parsed.data.limit : undefined;
-        logger.debug(`event: GET /v1/engine/agents/:agentId/history agentId=${agentId} limit=${limit ?? "none"}`);
-        const records = await agentHistoryLoadAll(options.runtime.storage, agentId, limit);
+        const sessionId = parsed.success ? parsed.data.sessionId : undefined;
+        logger.debug(`event: GET /v1/engine/agents/:agentId/history agentId=${agentId} limit=${limit ?? "none"} sessionId=${sessionId ?? "all"}`);
+        const records = sessionId
+            ? await options.runtime.storage.history.findBySessionId(sessionId)
+            : await agentHistoryLoadAll(options.runtime.storage, agentId, limit);
         logger.debug(`event: Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
         return reply.send({ ok: true, records });
     });
