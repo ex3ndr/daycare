@@ -65,15 +65,19 @@ export default function MemoryPage() {
   }, []);
 
   useEffect(() => {
-    void fetchUsers().then((loadedUsers) => {
-      setUsers(loadedUsers);
-      if (loadedUsers.length > 0) {
-        const owner = loadedUsers.find((u) => u.isOwner);
-        const first = owner ?? loadedUsers[0]!;
-        setActiveUserId(first.id);
-        void loadGraph(first.id);
-      }
-    });
+    void fetchUsers()
+      .then((loadedUsers) => {
+        setUsers(loadedUsers);
+        if (loadedUsers.length > 0) {
+          const owner = loadedUsers.find((u) => u.isOwner);
+          const first = owner ?? loadedUsers[0]!;
+          setActiveUserId(first.id);
+          void loadGraph(first.id);
+        }
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load users");
+      });
   }, [loadGraph]);
 
   const handleSelectNode = useCallback(
