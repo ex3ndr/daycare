@@ -197,7 +197,7 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Exec uses /tmp as the writable path and global read access with a protected deny-list. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must be an absolute path that resolves inside the workspace. Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional home (absolute path within allowed write directories) remaps HOME and related env vars for sandboxed execution. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: shellReturns,
@@ -818,8 +818,10 @@ function buildSandboxConfig(permissions: SessionPermissions, allowedDomains: str
 }
 
 function resolveExecPermissions(currentPermissions: SessionPermissions): SessionPermissions {
+    const readDirs = currentPermissions.readDirs ? [...currentPermissions.readDirs] : undefined;
     return {
         workingDir: currentPermissions.workingDir,
-        writeDirs: ["/tmp"]
+        writeDirs: [...currentPermissions.writeDirs],
+        ...(readDirs ? { readDirs } : {})
     };
 }

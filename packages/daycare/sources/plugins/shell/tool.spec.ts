@@ -177,8 +177,9 @@ describe("exec tool allowedDomains", () => {
 
     itIfSandbox("maps HOME to provided home path", async () => {
         const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const home = path.join("/tmp", `daycare-home-${createId()}`);
+        const context = createContext(workingDir, [workingDir]);
+        const home = path.join(workingDir, ".daycare-home");
+        await fs.mkdir(home, { recursive: true });
 
         const result = await tool.execute(
             {
@@ -193,6 +194,26 @@ describe("exec tool allowedDomains", () => {
         const expectedHome = await fs.realpath(home);
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain(`stdout:\n${expectedHome}`);
+    });
+
+    itIfSandbox("denies writing to global /tmp when not write-granted", async () => {
+        const tool = buildExecTool();
+        const context = createContext(workingDir, [workingDir]);
+        const blockedPath = path.join("/tmp", `daycare-exec-denied-${createId()}`);
+        try {
+            const result = await tool.execute(
+                {
+                    command: `printf '%s' blocked > "${blockedPath}"`,
+                    allowedDomains: ["example.com"]
+                },
+                context,
+                execToolCall
+            );
+            expect(result.toolMessage.isError).toBe(true);
+            await expect(fs.access(blockedPath)).rejects.toThrow();
+        } finally {
+            await fs.rm(blockedPath, { force: true });
+        }
     });
 
     itIfSandbox("rejects HOME path when not write-granted", async () => {
