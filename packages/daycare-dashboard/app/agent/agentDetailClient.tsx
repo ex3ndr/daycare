@@ -537,9 +537,6 @@ function renderRecordDetails(record: AgentHistoryRecord) {
           <RecordSection title="Code">
             <p className="whitespace-pre-wrap break-words font-mono text-xs text-foreground">{record.code}</p>
           </RecordSection>
-          <RecordSection title="Preamble">
-            <p className="whitespace-pre-wrap break-words font-mono text-xs text-foreground">{record.preamble}</p>
-          </RecordSection>
         </>
       );
     case "rlm_tool_call":
@@ -871,6 +868,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `${descriptor.name} / ${descriptor.appId}`;
     case "permanent":
       return `${descriptor.name} / ${descriptor.id}`;
+    case "memory-agent":
+      return `memory-agent:${descriptor.id}`;
     default:
       return "system";
   }

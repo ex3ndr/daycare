@@ -98,7 +98,8 @@ export type AgentDescriptor =
       description: string;
       systemPrompt: string;
       workspaceDir?: string;
-    };
+    }
+  | { type: "memory-agent"; id: string };
 
 export type AgentSummary = {
   agentId: string;

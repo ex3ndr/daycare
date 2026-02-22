@@ -7,6 +7,7 @@ export type AgentType =
   | { type: "subagent"; id: string; parentAgentId: string; name: string }
   | { type: "app"; id: string; parentAgentId: string; name: string; appId: string }
   | { type: "permanent"; id: string; name: string }
+  | { type: "memory-agent"; id: string }
   | { type: "system"; tag: string };
 
 export function buildAgentType(agent: AgentSummary): AgentType {
@@ -47,6 +48,8 @@ export function buildAgentType(agent: AgentSummary): AgentType {
         id: descriptor.id,
         name: descriptor.name
       };
+    case "memory-agent":
+      return { type: "memory-agent", id: descriptor.id };
     default:
       return { type: "system", tag: "unknown" };
   }
@@ -66,6 +69,8 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "App";
     case "permanent":
       return "Permanent";
+    case "memory-agent":
+      return "Memory";
     case "system":
       return "System";
     default:

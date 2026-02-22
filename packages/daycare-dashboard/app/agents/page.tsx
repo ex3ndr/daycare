@@ -329,6 +329,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `${descriptor.name} / ${descriptor.appId}`;
     case "permanent":
       return `${descriptor.name} / ${descriptor.id}`;
+    case "memory-agent":
+      return `memory-agent:${descriptor.id}`;
     default:
       return "system";
   }
@@ -352,6 +354,8 @@ function formatAgentTypeKey(type: string) {
       return "App";
     case "permanent":
       return "Permanent";
+    case "memory-agent":
+      return "Memory";
     case "system":
       return "System";
     default:
