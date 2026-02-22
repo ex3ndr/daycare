@@ -25,10 +25,11 @@ describe("graphStoreRead", () => {
             frontmatter: {
                 title: "Memory Summary",
                 description: "Root",
+                parents: [],
                 createdAt: 1,
                 updatedAt: 1
             },
-            content: "# Memory Summary\n[[node-1]]",
+            content: "# Memory Summary",
             refs: ["node-1"]
         };
         const childNode: GraphNode = {
@@ -36,6 +37,7 @@ describe("graphStoreRead", () => {
             frontmatter: {
                 title: "Node 1",
                 description: "Child",
+                parents: ["__root__"],
                 createdAt: 2,
                 updatedAt: 3
             },
@@ -53,6 +55,7 @@ describe("graphStoreRead", () => {
         expect(nodes[0]?.id).toBe("__root__");
         expect(nodes[1]?.id).toBe("node-1");
         expect(nodes[0]?.refs).toEqual(["node-1"]);
+        expect(nodes[1]?.frontmatter.parents).toEqual(["__root__"]);
         expect(nodes[1]?.frontmatter.title).toBe("Node 1");
     });
 

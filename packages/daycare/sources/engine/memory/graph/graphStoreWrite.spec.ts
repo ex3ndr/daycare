@@ -24,6 +24,7 @@ describe("graphStoreWrite", () => {
             frontmatter: {
                 title: "Memory Summary",
                 description: "Root",
+                parents: [],
                 createdAt: 1,
                 updatedAt: 1
             },
@@ -40,6 +41,7 @@ describe("graphStoreWrite", () => {
             frontmatter: {
                 title: "Node",
                 description: "Desc",
+                parents: ["__root__"],
                 createdAt: 1,
                 updatedAt: 2
             },
@@ -52,6 +54,7 @@ describe("graphStoreWrite", () => {
         const filePath = path.join(memoryDir, "abc123.md");
         const content = await fs.readFile(filePath, "utf8");
         expect(content).toContain("title: Node");
+        expect(content).toContain("parents:");
         expect(content).toContain("Body");
     });
 });

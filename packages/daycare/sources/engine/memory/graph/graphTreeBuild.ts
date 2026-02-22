@@ -2,8 +2,8 @@ import { GRAPH_ROOT_NODE_ID, type GraphNode, type GraphTree } from "./graphTypes
 
 /**
  * Projects graph nodes into a root + parent/children map for UI traversal.
- * Hierarchy is determined by refs: a parent node's refs list its children.
- * Nodes not referenced by any parent are attached to root.
+ * Hierarchy is determined by frontmatter.parents on each child node.
+ * Nodes with no valid parent are attached to root.
  * Expects: node ids are unique; root node id is `__root__` when present.
  */
 export function graphTreeBuild(nodes: GraphNode[]): GraphTree {
@@ -19,6 +19,7 @@ export function graphTreeBuild(nodes: GraphNode[]): GraphTree {
             frontmatter: {
                 title: "Memory Summary",
                 description: "Structured summary of all memories",
+                parents: [],
                 createdAt: 0,
                 updatedAt: 0
             },
@@ -28,7 +29,6 @@ export function graphTreeBuild(nodes: GraphNode[]): GraphTree {
     nodeById.set(root.id, root);
 
     const children = new Map<string, GraphNode[]>();
-    const inboundCount = new Map<string, number>();
     const edges = new Set<string>();
 
     const link = (parentId: string, childNode: GraphNode): void => {
@@ -41,30 +41,34 @@ export function graphTreeBuild(nodes: GraphNode[]): GraphTree {
         const siblings = children.get(parentId) ?? [];
         siblings.push(childNode);
         children.set(parentId, siblings);
-        inboundCount.set(childNode.id, (inboundCount.get(childNode.id) ?? 0) + 1);
     };
 
-    // Build hierarchy from refs: each node's refs are its children.
-    for (const node of nodeById.values()) {
-        for (const ref of node.refs) {
-            if (ref === node.id) {
-                continue;
-            }
-            const target = nodeById.get(ref);
-            if (!target) {
-                continue;
-            }
-            link(node.id, target);
-        }
-    }
-
-    // Orphan nodes (not referenced by anyone) attach to root.
+    // Build hierarchy from child.parents.
     for (const node of nodeById.values()) {
         if (node.id === root.id) {
             continue;
         }
-        const inbound = inboundCount.get(node.id) ?? 0;
-        if (inbound === 0) {
+
+        let linked = false;
+        for (const parentId of node.frontmatter.parents) {
+            if (parentId === node.id) {
+                continue;
+            }
+            if (parentId === root.id) {
+                link(root.id, node);
+                linked = true;
+                continue;
+            }
+
+            const parentNode = nodeById.get(parentId);
+            if (!parentNode) {
+                continue;
+            }
+
+            link(parentNode.id, node);
+            linked = true;
+        }
+        if (!linked) {
             link(root.id, node);
         }
     }

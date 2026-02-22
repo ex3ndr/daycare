@@ -3,11 +3,16 @@ import { describe, expect, it } from "vitest";
 import { graphNodeParse } from "./graphNodeParse.js";
 
 describe("graphNodeParse", () => {
-    it("parses frontmatter, content, and wiki-link refs", () => {
+    it("parses frontmatter, content, parents, and refs", () => {
         const raw = [
             "---",
             "title: User prefers dark mode",
             "description: UI preference observed during onboarding",
+            "parents:",
+            "  - profile",
+            "  - __root__",
+            "refs:",
+            "  - abc123",
             "createdAt: 1708531200000",
             "updatedAt: 1708531300000",
             "---",
@@ -22,6 +27,7 @@ describe("graphNodeParse", () => {
         expect(parsed.frontmatter).toEqual({
             title: "User prefers dark mode",
             description: "UI preference observed during onboarding",
+            parents: ["profile", "__root__"],
             createdAt: 1708531200000,
             updatedAt: 1708531300000
         });
@@ -35,6 +41,7 @@ describe("graphNodeParse", () => {
         expect(parsed.frontmatter).toEqual({
             title: "node-1",
             description: "",
+            parents: ["__root__"],
             createdAt: 0,
             updatedAt: 0
         });
@@ -47,6 +54,8 @@ describe("graphNodeParse", () => {
             "---",
             "title: ''",
             "description: 7",
+            "parents: [__root__]",
+            "refs: [__root__]",
             "createdAt: invalid",
             "updatedAt: 1708531200001",
             "---"
@@ -57,6 +66,7 @@ describe("graphNodeParse", () => {
         expect(parsed.frontmatter).toEqual({
             title: "Memory Summary",
             description: "Structured summary of all memories",
+            parents: [],
             createdAt: 0,
             updatedAt: 1708531200001
         });

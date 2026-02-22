@@ -21,6 +21,7 @@ describe("serverMemoryRoutesRegister", () => {
                 frontmatter: {
                     title: "Memory Summary",
                     description: "Structured summary",
+                    parents: [],
                     createdAt: 1,
                     updatedAt: 1
                 },
@@ -35,7 +36,8 @@ describe("serverMemoryRoutesRegister", () => {
                             id: "node-1",
                             frontmatter: {
                                 title: "Node 1",
-                                description: "",
+                                description: "Node one description",
+                                parents: ["__root__"],
                                 createdAt: 2,
                                 updatedAt: 3
                             },
@@ -77,7 +79,8 @@ describe("serverMemoryRoutesRegister", () => {
                     id: "known",
                     frontmatter: {
                         title: "Known",
-                        description: "",
+                        description: "Known node",
+                        parents: ["__root__"],
                         createdAt: 1,
                         updatedAt: 1
                     },
@@ -95,7 +98,8 @@ describe("serverMemoryRoutesRegister", () => {
                         id: "__root__",
                         frontmatter: {
                             title: "Memory Summary",
-                            description: "",
+                            description: "Structured summary",
+                            parents: [],
                             createdAt: 1,
                             updatedAt: 1
                         },
@@ -135,7 +139,8 @@ describe("graphTreeJsonBuild", () => {
                 id: "__root__",
                 frontmatter: {
                     title: "Memory Summary",
-                    description: "",
+                    description: "Structured summary",
+                    parents: [],
                     createdAt: 0,
                     updatedAt: 0
                 },
@@ -150,7 +155,8 @@ describe("graphTreeJsonBuild", () => {
                             id: "child",
                             frontmatter: {
                                 title: "Child",
-                                description: "",
+                                description: "Child description",
+                                parents: ["__root__"],
                                 createdAt: 0,
                                 updatedAt: 0
                             },

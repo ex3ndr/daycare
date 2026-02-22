@@ -76,6 +76,11 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
             }
             lines.push(
                 `- **description**: ${node.frontmatter.description}`,
+                `- **parents**: ${
+                    node.frontmatter.parents.length > 0
+                        ? node.frontmatter.parents.map((p) => `\`${p}\``).join(", ")
+                        : "(none)"
+                }`,
                 `- **refs**: ${node.refs.length > 0 ? node.refs.map((r) => `\`${r}\``).join(", ") : "(none)"}`,
                 "",
                 node.content

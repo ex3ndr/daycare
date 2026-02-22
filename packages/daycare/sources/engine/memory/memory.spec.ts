@@ -34,7 +34,13 @@ describe("Memory", () => {
         const memory = new Memory({ usersDir });
         const child: GraphNode = {
             id: "child-1",
-            frontmatter: { title: "Child", description: "", createdAt: 1, updatedAt: 1 },
+            frontmatter: {
+                title: "Child",
+                description: "Child node",
+                parents: ["__root__"],
+                createdAt: 1,
+                updatedAt: 1
+            },
             content: "body",
             refs: []
         };
@@ -55,6 +61,7 @@ describe("Memory", () => {
             frontmatter: {
                 title: "Preference",
                 description: "User preference",
+                parents: ["__root__"],
                 createdAt: 100,
                 updatedAt: 100
             },

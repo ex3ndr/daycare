@@ -9,6 +9,7 @@ describe("graphRootNodeRead", () => {
         expect(root.id).toBe("__root__");
         expect(root.frontmatter.title).toBe("Memory Summary");
         expect(root.frontmatter.description).toBe("Structured summary of all memories");
+        expect(root.frontmatter.parents).toEqual([]);
         expect(root.content).toContain("Memory Graph");
         expect(root.refs).toEqual([]);
     });

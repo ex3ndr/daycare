@@ -13,6 +13,7 @@ export async function graphRootNodeRead(): Promise<GraphNode> {
         frontmatter: {
             title: "Memory Summary",
             description: "Structured summary of all memories",
+            parents: [],
             createdAt: 0,
             updatedAt: 0
         },

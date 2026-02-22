@@ -8,6 +8,7 @@ const sampleNode: GraphNode = {
     frontmatter: {
         title: "User Preferences",
         description: "General user preferences",
+        parents: ["__root__"],
         createdAt: 1000,
         updatedAt: 2000
     },
@@ -20,6 +21,7 @@ const rootNode: GraphNode = {
     frontmatter: {
         title: "Memory Summary",
         description: "Structured summary of all memories",
+        parents: [],
         createdAt: 0,
         updatedAt: 0
     },
@@ -77,6 +79,7 @@ describe("memoryNodeReadToolBuild", () => {
         expect(result.typedResult.summary).toContain("User Preferences");
         expect(result.typedResult.summary).toContain("Prefers dark mode");
         expect(result.typedResult.summary).toContain("person-alice");
+        expect(result.typedResult.summary).toContain("**parents**");
         expect(result.typedResult.summary).toContain("**id**: `user-prefs`");
     });
 
@@ -104,6 +107,7 @@ describe("memoryNodeReadToolBuild", () => {
         expect(result.typedResult.summary).toContain("Children");
         expect(result.typedResult.summary).toContain("User Preferences");
         expect(result.typedResult.summary).toContain("user-prefs");
+        expect(result.typedResult.summary).toContain("**parents**");
         expect(result.typedResult.summary).toContain("**refs**");
     });
 

@@ -5,6 +5,8 @@ import { GRAPH_ROOT_NODE_ID, type GraphNode, type GraphNodeFrontmatter } from ".
 type GraphNodeFrontmatterInput = {
     title?: unknown;
     description?: unknown;
+    parents?: unknown;
+    refs?: unknown;
     createdAt?: unknown;
     updatedAt?: unknown;
 };
@@ -27,7 +29,7 @@ export function graphNodeParse(id: string, raw: string): GraphNode {
     }
 
     const frontmatter = graphNodeFrontmatterNormalize(id, frontmatterInput);
-    const refs = graphNodeRefsExtract(content);
+    const refs = graphNodeRefsNormalize(id, frontmatterInput.refs, content);
 
     return {
         id,
@@ -40,18 +42,33 @@ export function graphNodeParse(id: string, raw: string): GraphNode {
 function graphNodeFrontmatterNormalize(id: string, input: GraphNodeFrontmatterInput): GraphNodeFrontmatter {
     const defaultTitle = id === GRAPH_ROOT_NODE_ID ? "Memory Summary" : id;
     const defaultDescription = id === GRAPH_ROOT_NODE_ID ? "Structured summary of all memories" : "";
+    const defaultParents = id === GRAPH_ROOT_NODE_ID ? [] : [GRAPH_ROOT_NODE_ID];
 
     const title = stringValue(input.title) ?? defaultTitle;
     const description = stringValue(input.description) ?? defaultDescription;
+    const parents = graphNodeParentsNormalize(id, input.parents, defaultParents);
     const createdAt = numberValue(input.createdAt) ?? 0;
     const updatedAt = numberValue(input.updatedAt) ?? createdAt;
 
     return {
         title,
         description,
+        parents,
         createdAt,
         updatedAt
     };
+}
+
+function graphNodeParentsNormalize(id: string, value: unknown, fallback: string[]): string[] {
+    if (id === GRAPH_ROOT_NODE_ID) {
+        return [];
+    }
+
+    const parents = stringArrayValues(value).filter((parentId) => parentId !== id);
+    if (parents.length > 0) {
+        return parents;
+    }
+    return fallback;
 }
 
 function graphNodeRefsExtract(content: string): string[] {
@@ -68,6 +85,43 @@ function graphNodeRefsExtract(content: string): string[] {
     }
     REF_PATTERN.lastIndex = 0;
     return refs;
+}
+
+function graphNodeRefsNormalize(id: string, value: unknown, content: string): string[] {
+    const refs = new Set<string>();
+    for (const ref of stringArrayValues(value)) {
+        if (ref !== id) {
+            refs.add(ref);
+        }
+    }
+    for (const ref of graphNodeRefsExtract(content)) {
+        if (ref !== id) {
+            refs.add(ref);
+        }
+    }
+    return [...refs];
+}
+
+function stringArrayValues(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    const seen = new Set<string>();
+    const values: string[] = [];
+    for (const entry of value) {
+        if (typeof entry !== "string") {
+            continue;
+        }
+        const normalized = entry.trim();
+        if (normalized.length === 0 || seen.has(normalized)) {
+            continue;
+        }
+        seen.add(normalized);
+        values.push(normalized);
+    }
+
+    return values;
 }
 
 function stringValue(value: unknown): string | null {
