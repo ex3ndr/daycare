@@ -1,5 +1,6 @@
 import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
+import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 
 export type AgentPromptResolved = {
     agentPrompt: string;
@@ -15,6 +16,13 @@ export async function agentPromptResolve(descriptor: AgentDescriptor): Promise<A
         return {
             agentPrompt: descriptor.systemPrompt.trim(),
             replaceSystemPrompt: false
+        };
+    }
+    if (descriptor.type === "memory-agent") {
+        const prompt = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
+        return {
+            agentPrompt: prompt,
+            replaceSystemPrompt: true
         };
     }
     if (descriptor.type !== "system") {
