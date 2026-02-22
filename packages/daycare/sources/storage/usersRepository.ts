@@ -115,6 +115,8 @@ export class UsersRepository {
             const record: UserWithConnectorKeysDbRecord = {
                 id: row.id,
                 isOwner: row.is_owner === 1,
+                parentUserId: row.parent_user_id ?? null,
+                name: row.name ?? null,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
                 connectorKeys: (keysByUserId.get(row.id) ?? []).map((keyRow) => ({
@@ -162,11 +164,15 @@ export class UsersRepository {
             const createdAt = input.createdAt ?? now;
             const updatedAt = input.updatedAt ?? createdAt;
             const isOwner = input.isOwner ?? false;
+            const parentUserId = input.parentUserId ?? null;
+            const name = input.name ?? null;
             const connectorKey = input.connectorKey?.trim() ?? "";
 
             this.db
-                .prepare("INSERT INTO users (id, is_owner, created_at, updated_at) VALUES (?, ?, ?, ?)")
-                .run(id, isOwner ? 1 : 0, createdAt, updatedAt);
+                .prepare(
+                    "INSERT INTO users (id, is_owner, parent_user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                .run(id, isOwner ? 1 : 0, parentUserId, name, createdAt, updatedAt);
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
             if (connectorKey) {
@@ -181,6 +187,8 @@ export class UsersRepository {
             const record: UserWithConnectorKeysDbRecord = {
                 id,
                 isOwner,
+                parentUserId,
+                name,
                 createdAt,
                 updatedAt,
                 connectorKeys
@@ -239,6 +247,19 @@ export class UsersRepository {
         });
     }
 
+    async findByParentUserId(parentUserId: string): Promise<UserWithConnectorKeysDbRecord[]> {
+        if (this.allUsersLoaded) {
+            return usersSort(Array.from(this.usersById.values()).filter((u) => u.parentUserId === parentUserId)).map(
+                (u) => userClone(u)
+            );
+        }
+        // Load all users to populate the cache, then filter
+        await this.findMany();
+        return usersSort(Array.from(this.usersById.values()).filter((u) => u.parentUserId === parentUserId)).map((u) =>
+            userClone(u)
+        );
+    }
+
     async addConnectorKey(userId: string, connectorKey: string): Promise<void> {
         const lock = this.userLockForId(userId);
         await lock.inLock(async () => {
@@ -294,6 +315,8 @@ export class UsersRepository {
         return {
             id: userRow.id,
             isOwner: userRow.is_owner === 1,
+            parentUserId: userRow.parent_user_id ?? null,
+            name: userRow.name ?? null,
             createdAt: userRow.created_at,
             updatedAt: userRow.updated_at,
             connectorKeys: keyRows.map((row) => ({

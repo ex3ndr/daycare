@@ -17,6 +17,7 @@ import { migration20260222ImportProcesses } from "./20260222_import_processes.js
 import { migration20260222ImportSignals } from "./20260222_import_signals.js";
 import { migration20260222SessionEndedAt } from "./20260222_session_ended_at.js";
 import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_users.js";
+import { migration20260222AddUserParent } from "./20260222_add_user_parent.js";
 import { migration20260224AddMemoryColumns } from "./20260224_add_memory_columns.js";
 import type { Migration } from "./migrationTypes.js";
 
@@ -40,5 +41,6 @@ export const migrations: Migration[] = [
     migration20260222ImportProcesses,
     migration20260223AddHeartbeatUsers,
     migration20260224AddMemoryColumns,
-    migration20260222SessionEndedAt
+    migration20260222SessionEndedAt,
+    migration20260222AddUserParent
 ];

@@ -333,6 +333,8 @@ export type ProcessDbRecord = {
 export type DatabaseUserRow = {
     id: string;
     is_owner: number;
+    parent_user_id: string | null;
+    name: string | null;
     created_at: number;
     updated_at: number;
 };
@@ -346,6 +348,8 @@ export type DatabaseUserConnectorKeyRow = {
 export type UserDbRecord = {
     id: string;
     isOwner: boolean;
+    parentUserId: string | null;
+    name: string | null;
     createdAt: number;
     updatedAt: number;
 };
@@ -374,6 +378,8 @@ export type SessionDbRecord = {
 export type CreateUserInput = {
     id?: string;
     isOwner?: boolean;
+    parentUserId?: string;
+    name?: string;
     createdAt?: number;
     updatedAt?: number;
     connectorKey?: string;
