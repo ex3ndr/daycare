@@ -277,6 +277,10 @@ export class Agent {
         if (this.endTurnCount <= 5) {
             return;
         }
+        // Memory-agents must never trigger the memory worker
+        if (this.descriptor.type === "memory-agent") {
+            return;
+        }
         const sessionId = this.state.activeSessionId;
         if (!sessionId) {
             return;
@@ -707,11 +711,14 @@ export class Agent {
         const now = Date.now();
         this.endTurnCount = 0;
         // Invalidate old session for memory processing before creating new one
-        const oldSessionId = this.state.activeSessionId;
-        if (oldSessionId) {
-            const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
-            if (maxHistoryId !== null) {
-                await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
+        // Memory-agents must never trigger the memory worker
+        if (this.descriptor.type !== "memory-agent") {
+            const oldSessionId = this.state.activeSessionId;
+            if (oldSessionId) {
+                const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
+                if (maxHistoryId !== null) {
+                    await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
+                }
             }
         }
         const resetMessage = item.message?.trim() ?? "";
@@ -1167,11 +1174,14 @@ export class Agent {
         const resetMessage = "Session context compacted.";
         this.endTurnCount = 0;
         // Invalidate old session for memory processing before creating new one
-        const oldSessionId = this.state.activeSessionId;
-        if (oldSessionId) {
-            const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
-            if (maxHistoryId !== null) {
-                await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
+        // Memory-agents must never trigger the memory worker
+        if (this.descriptor.type !== "memory-agent") {
+            const oldSessionId = this.state.activeSessionId;
+            if (oldSessionId) {
+                const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
+                if (maxHistoryId !== null) {
+                    await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
+                }
             }
         }
         this.state.context = {

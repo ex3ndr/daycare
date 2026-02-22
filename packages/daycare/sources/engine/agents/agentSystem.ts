@@ -413,11 +413,14 @@ export class AgentSystem {
             this.eventBus.emit("agent.sleep", { agentId, reason });
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
             // Mark session for memory processing on idle
-            const sessionId = entry.agent.state.activeSessionId;
-            if (sessionId) {
-                const maxHistoryId = await this.storage.history.maxId(sessionId);
-                if (maxHistoryId !== null) {
-                    await this.storage.sessions.invalidate(sessionId, maxHistoryId);
+            // Memory-agents must never trigger the memory worker
+            if (entry.descriptor.type !== "memory-agent") {
+                const sessionId = entry.agent.state.activeSessionId;
+                if (sessionId) {
+                    const maxHistoryId = await this.storage.history.maxId(sessionId);
+                    if (maxHistoryId !== null) {
+                        await this.storage.sessions.invalidate(sessionId, maxHistoryId);
+                    }
                 }
             }
             // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
