@@ -241,10 +241,9 @@ describe("topologyTool", () => {
 
     it("subuser agent sees only their own agents and crons in topology", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-subuser-"));
+        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const storage = storageResolve(config);
         try {
-            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageResolve(config);
-
             // Find the owner user (created by bootstrap migration)
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
@@ -318,19 +317,17 @@ describe("topologyTool", () => {
             expect(text).not.toContain("owner-cron");
             // No subusers section for subuser agents
             expect(text).not.toContain("## Subusers");
-
-            storage.close();
         } finally {
+            storage.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("owner user sees subusers section in topology", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-owner-subusers-"));
+        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const storage = storageResolve(config);
         try {
-            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageResolve(config);
-
             // Find the owner user
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
@@ -397,9 +394,8 @@ describe("topologyTool", () => {
             expect(text).toContain("## Subusers (2)");
             expect(text).toContain('sub-a name="app-a" gatewayAgent=gateway-a');
             expect(text).toContain('sub-b name="app-b" gatewayAgent=gateway-b');
-
-            storage.close();
         } finally {
+            storage.close();
             await rm(dir, { recursive: true, force: true });
         }
     });

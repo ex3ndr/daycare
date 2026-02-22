@@ -89,28 +89,18 @@ export function subuserCreateToolBuild(): ToolDefinition {
             };
             const permissions = permissionBuildUser(subuserHome);
             await agentDescriptorWrite(storage, gatewayAgentId, descriptor, subuserId, permissions);
-            await agentStateWrite(storage, gatewayAgentId, {
-                context: { messages: [] },
-                activeSessionId: null,
-                inferenceSessionId: createId(),
-                permissions,
-                tokens: null,
-                stats: {},
-                createdAt: now,
-                updatedAt: now,
-                state: "active"
-            });
 
-            // Create a session for the gateway agent
+            // Create a session and write agent state in one step
+            const inferenceSessionId = createId();
             const sessionId = await storage.sessions.create({
                 agentId: gatewayAgentId,
-                inferenceSessionId: createId(),
+                inferenceSessionId,
                 createdAt: now
             });
             await agentStateWrite(storage, gatewayAgentId, {
                 context: { messages: [] },
                 activeSessionId: sessionId,
-                inferenceSessionId: createId(),
+                inferenceSessionId,
                 permissions,
                 tokens: null,
                 stats: {},
