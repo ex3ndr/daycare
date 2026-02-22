@@ -243,9 +243,7 @@ export class Engine {
         });
         this.memoryWorker = new MemoryWorker({
             storage: this.storage,
-            inferenceRouter: this.inferenceRouter,
-            config: this.config,
-            usersDir: this.config.current.usersDir
+            config: this.config
         });
         const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));
 
@@ -290,6 +288,8 @@ export class Engine {
             memory: this.memory,
             delayedSignals: this.delayedSignals
         });
+
+        this.memoryWorker.setPostFn((target, item) => this.agentSystem.post(target, item));
 
         this.crons = new Crons({
             config: this.config,

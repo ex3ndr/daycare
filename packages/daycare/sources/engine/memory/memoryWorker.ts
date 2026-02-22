@@ -1,46 +1,50 @@
 import { getLogger } from "../../log.js";
-import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import type { Storage } from "../../storage/storage.js";
-import { Context } from "../agents/context.js";
+import type { AgentDescriptor } from "../agents/ops/agentDescriptorTypes.js";
 import type { ConfigModule } from "../config/configModule.js";
-import type { InferenceRouter } from "../modules/inference/router.js";
-import { UserHome } from "../users/userHome.js";
-import { memorySessionObserve } from "./memorySessionObserve.js";
-import { observationLogAppend } from "./observationLogAppend.js";
+import { formatHistoryMessages } from "./infer/utils/formatHistoryMessages.js";
 
 const logger = getLogger("engine.memory");
 
 const DEFAULT_INTERVAL_MS = 30_000;
 const DEFAULT_BATCH_SIZE = 10;
 
+export type MemoryWorkerPostFn = (
+    target: { descriptor: AgentDescriptor },
+    item: { type: "system_message"; text: string; origin: string }
+) => Promise<void>;
+
 export type MemoryWorkerOptions = {
     storage: Storage;
-    inferenceRouter: InferenceRouter;
     config: ConfigModule;
-    usersDir: string;
     intervalMs?: number;
 };
 
 /**
- * Timer-based worker that polls for invalidated sessions and processes them.
- * Runs inference to extract memory observations from conversation history.
+ * Timer-based worker that polls for invalidated sessions and routes them
+ * to per-agent memory-agents for observation extraction.
  */
 export class MemoryWorker {
     private readonly storage: Storage;
-    private readonly inferenceRouter: InferenceRouter;
     private readonly config: ConfigModule;
-    private readonly usersDir: string;
     private readonly intervalMs: number;
+    private postToAgent: MemoryWorkerPostFn | null = null;
     private tickTimer: NodeJS.Timeout | null = null;
     private started = false;
     private stopped = false;
 
     constructor(options: MemoryWorkerOptions) {
         this.storage = options.storage;
-        this.inferenceRouter = options.inferenceRouter;
         this.config = options.config;
-        this.usersDir = options.usersDir;
         this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+    }
+
+    /**
+     * Sets the posting function used to route transcripts to memory-agents.
+     * Must be called before start().
+     */
+    setPostFn(fn: MemoryWorkerPostFn): void {
+        this.postToAgent = fn;
     }
 
     start(): void {
@@ -80,14 +84,17 @@ export class MemoryWorker {
         if (this.stopped) {
             return;
         }
+        if (!this.postToAgent) {
+            logger.warn("skip: Memory worker tick skipped — no postFn set");
+            this.scheduleNextTick();
+            return;
+        }
 
         try {
             const sessions = await this.storage.sessions.findInvalidated(DEFAULT_BATCH_SIZE);
             if (sessions.length > 0) {
                 logger.debug(`event: Memory worker tick found ${sessions.length} invalidated session(s)`);
             }
-
-            const providers = listActiveInferenceProviders(this.config.current.settings);
 
             for (const session of sessions) {
                 if (this.stopped) {
@@ -106,31 +113,48 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const allSessions = await this.storage.sessions.findByAgentId(session.agentId);
-                const sessionNumber = allSessions.findIndex((s) => s.id === session.id) + 1;
-                const ctx = new Context(session.agentId, agent.userId);
+                // Skip sessions belonging to memory-agents to prevent recursion
+                if (agent.descriptor.type === "memory-agent") {
+                    await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
+                    continue;
+                }
+
                 const processedUntil = session.processedUntil ?? 0;
                 const records = await this.storage.history.findSinceId(session.id, processedUntil);
+                if (records.length === 0) {
+                    await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
+                    continue;
+                }
 
-                const observations = await memorySessionObserve({
-                    sessionNumber,
-                    ctx,
-                    records,
-                    storage: this.storage,
-                    inferenceRouter: this.inferenceRouter,
-                    providers
-                });
+                const transcript = formatHistoryMessages(records);
+                if (transcript.trim().length === 0) {
+                    await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
+                    continue;
+                }
 
-                const memoryDir = new UserHome(this.usersDir, agent.userId).memory;
-                await observationLogAppend(memoryDir, observations);
+                const descriptor: AgentDescriptor = { type: "memory-agent", id: session.agentId };
+                await this.postToAgent(
+                    { descriptor },
+                    {
+                        type: "system_message",
+                        text: transcript,
+                        origin: `memory-worker:${session.id}`
+                    }
+                );
 
                 const maxHistoryId = await this.storage.history.maxId(session.id);
                 const newProcessedUntil = maxHistoryId ?? invalidatedAt;
-                const cleared = await this.storage.sessions.markProcessed(session.id, newProcessedUntil, invalidatedAt);
+                const cleared = await this.storage.sessions.markProcessed(
+                    session.id,
+                    newProcessedUntil,
+                    invalidatedAt
+                );
                 if (cleared) {
-                    logger.debug(`event: Session observed sessionId=${session.id} processedUntil=${newProcessedUntil}`);
+                    logger.debug(
+                        `event: Session routed to memory-agent sessionId=${session.id} processedUntil=${newProcessedUntil}`
+                    );
                 } else {
-                    logger.debug(`event: Session re-invalidated during observation sessionId=${session.id}`);
+                    logger.debug(`event: Session re-invalidated during routing sessionId=${session.id}`);
                 }
             }
         } finally {

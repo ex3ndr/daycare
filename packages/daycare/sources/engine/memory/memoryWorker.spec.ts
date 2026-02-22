@@ -3,37 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SessionPermissions } from "@/types";
 import { Storage } from "../../storage/storage.js";
 import type { ConfigModule } from "../config/configModule.js";
-import type { InferenceRouter } from "../modules/inference/router.js";
-import { MemoryWorker } from "./memoryWorker.js";
-
-vi.mock("./memorySessionObserve.js", () => ({
-    memorySessionObserve: vi.fn().mockResolvedValue([])
-}));
-
-vi.mock("./observationLogAppend.js", () => ({
-    observationLogAppend: vi.fn().mockResolvedValue(undefined)
-}));
+import { type MemoryWorkerPostFn, MemoryWorker } from "./memoryWorker.js";
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
     writeDirs: ["/workspace"]
 };
-
-function mockInferenceRouter(): InferenceRouter {
-    return {
-        complete: vi.fn().mockResolvedValue({
-            message: {
-                role: "assistant",
-                content: [{ type: "text", text: "[]" }],
-                stopReason: "stop",
-                timestamp: Date.now()
-            },
-            providerId: "test",
-            modelId: "test"
-        }),
-        reload: vi.fn()
-    } as unknown as InferenceRouter;
-}
 
 function mockConfig(): ConfigModule {
     return {
@@ -60,17 +35,17 @@ async function createTestStorage() {
         createdAt: 1,
         updatedAt: 1
     });
-    return storage;
+    return { storage, ownerId: owner.id };
 }
 
-function createWorker(storage: Storage, intervalMs = 100) {
-    return new MemoryWorker({
+function createWorker(storage: Storage, postFn?: MemoryWorkerPostFn, intervalMs = 100) {
+    const worker = new MemoryWorker({
         storage,
-        inferenceRouter: mockInferenceRouter(),
         config: mockConfig(),
-        usersDir: "/tmp/test-users",
         intervalMs
     });
+    worker.setPostFn(postFn ?? vi.fn().mockResolvedValue(undefined));
+    return worker;
 }
 
 afterEach(() => {
@@ -78,21 +53,28 @@ afterEach(() => {
 });
 
 describe("MemoryWorker", () => {
-    it("processes invalidated sessions on tick", async () => {
+    it("routes invalidated sessions to memory-agent via postFn", async () => {
         vi.useFakeTimers();
-        const storage = await createTestStorage();
+        const { storage } = await createTestStorage();
         try {
             const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 1000 });
             await storage.agents.update("agent-1", { activeSessionId: sessionId });
-            await storage.history.append(sessionId, { type: "note", at: 1001, text: "msg" });
+            await storage.history.append(sessionId, { type: "user_message", at: 1001, text: "hello", files: [] });
             const maxId = await storage.history.maxId(sessionId);
             await storage.sessions.invalidate(sessionId, maxId!);
 
-            const worker = createWorker(storage);
+            const postFn = vi.fn().mockResolvedValue(undefined);
+            const worker = createWorker(storage, postFn);
             worker.start();
 
-            // Advance timer to trigger tick
             await vi.advanceTimersByTimeAsync(150);
+
+            expect(postFn).toHaveBeenCalledOnce();
+            const [target, item] = postFn.mock.calls[0];
+            expect(target.descriptor).toEqual({ type: "memory-agent", id: "agent-1" });
+            expect(item.type).toBe("system_message");
+            expect(item.text).toContain("hello");
+            expect(item.origin).toContain(sessionId);
 
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).toBeNull();
@@ -104,13 +86,58 @@ describe("MemoryWorker", () => {
         }
     });
 
+    it("skips sessions belonging to memory-agent descriptors", async () => {
+        vi.useFakeTimers();
+        const { storage, ownerId } = await createTestStorage();
+        try {
+            await storage.agents.create({
+                id: "mem-agent-1",
+                userId: ownerId,
+                type: "memory-agent",
+                descriptor: { type: "memory-agent", id: "agent-1" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            const sessionId = await storage.sessions.create({ agentId: "mem-agent-1", createdAt: 1000 });
+            await storage.history.append(sessionId, { type: "note", at: 1001, text: "obs" });
+            const maxId = await storage.history.maxId(sessionId);
+            await storage.sessions.invalidate(sessionId, maxId!);
+
+            const postFn = vi.fn().mockResolvedValue(undefined);
+            const worker = createWorker(storage, postFn);
+            worker.start();
+
+            await vi.advanceTimersByTimeAsync(150);
+
+            // postFn should not be called for memory-agent sessions
+            expect(postFn).not.toHaveBeenCalled();
+            // Session should be marked as processed
+            const session = await storage.sessions.findById(sessionId);
+            expect(session?.invalidatedAt).toBeNull();
+
+            worker.stop();
+        } finally {
+            storage.close();
+        }
+    });
+
     it("does not clear invalidated_at when it changed during processing", async () => {
         vi.useFakeTimers();
-        const storage = await createTestStorage();
+        const { storage } = await createTestStorage();
         try {
             const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 1000 });
             await storage.agents.update("agent-1", { activeSessionId: sessionId });
-            const id1 = await storage.history.append(sessionId, { type: "note", at: 1001, text: "msg1" });
+            const id1 = await storage.history.append(sessionId, {
+                type: "user_message",
+                at: 1001,
+                text: "msg1",
+                files: []
+            });
             await storage.sessions.invalidate(sessionId, id1);
 
             // Monkey-patch findInvalidated to simulate new messages arriving during processing
@@ -120,8 +147,12 @@ describe("MemoryWorker", () => {
                 const result = await originalFindInvalidated(limit);
                 if (!intercepted && result.length > 0) {
                     intercepted = true;
-                    // Simulate a new history record arriving and re-invalidating
-                    const id2 = await storage.history.append(sessionId, { type: "note", at: 1002, text: "msg2" });
+                    const id2 = await storage.history.append(sessionId, {
+                        type: "user_message",
+                        at: 1002,
+                        text: "msg2",
+                        files: []
+                    });
                     await storage.sessions.invalidate(sessionId, id2);
                 }
                 return result;
@@ -132,7 +163,6 @@ describe("MemoryWorker", () => {
 
             await vi.advanceTimersByTimeAsync(150);
 
-            // Session should still be invalidated because invalidated_at changed
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).not.toBeNull();
             expect(session?.processedUntil).toBeNull();
@@ -145,11 +175,11 @@ describe("MemoryWorker", () => {
 
     it("does not tick after stop", async () => {
         vi.useFakeTimers();
-        const storage = await createTestStorage();
+        const { storage } = await createTestStorage();
         try {
             const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 1000 });
             await storage.agents.update("agent-1", { activeSessionId: sessionId });
-            await storage.history.append(sessionId, { type: "note", at: 1001, text: "msg" });
+            await storage.history.append(sessionId, { type: "user_message", at: 1001, text: "msg", files: [] });
             const maxId = await storage.history.maxId(sessionId);
             await storage.sessions.invalidate(sessionId, maxId!);
 
@@ -157,10 +187,8 @@ describe("MemoryWorker", () => {
             worker.start();
             worker.stop();
 
-            // Advance past multiple tick intervals
             await vi.advanceTimersByTimeAsync(500);
 
-            // Session should still be invalidated since worker was stopped
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).toBe(maxId);
         } finally {
@@ -170,21 +198,34 @@ describe("MemoryWorker", () => {
 
     it("processes multiple sessions in one tick", async () => {
         vi.useFakeTimers();
-        const storage = await createTestStorage();
+        const { storage } = await createTestStorage();
         try {
             const s1 = await storage.sessions.create({ agentId: "agent-1", createdAt: 1000 });
             const s2 = await storage.sessions.create({ agentId: "agent-1", createdAt: 2000 });
 
-            const id1 = await storage.history.append(s1, { type: "note", at: 1001, text: "a" });
-            const id2 = await storage.history.append(s2, { type: "note", at: 2001, text: "b" });
+            const id1 = await storage.history.append(s1, {
+                type: "user_message",
+                at: 1001,
+                text: "a",
+                files: []
+            });
+            const id2 = await storage.history.append(s2, {
+                type: "user_message",
+                at: 2001,
+                text: "b",
+                files: []
+            });
 
             await storage.sessions.invalidate(s1, id1);
             await storage.sessions.invalidate(s2, id2);
 
-            const worker = createWorker(storage);
+            const postFn = vi.fn().mockResolvedValue(undefined);
+            const worker = createWorker(storage, postFn);
             worker.start();
 
             await vi.advanceTimersByTimeAsync(150);
+
+            expect(postFn).toHaveBeenCalledTimes(2);
 
             const session1 = await storage.sessions.findById(s1);
             const session2 = await storage.sessions.findById(s2);
