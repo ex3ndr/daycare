@@ -38,20 +38,21 @@ describe("subuserCreateToolBuild", () => {
                 toolCall
             );
 
-            expect(result.typedResult.name).toBe("my-app");
-            expect(result.typedResult.subuserId).toBeTruthy();
-            expect(result.typedResult.gatewayAgentId).toBeTruthy();
+            const typed = result.typedResult as { name: string; subuserId: string; gatewayAgentId: string };
+            expect(typed.name).toBe("my-app");
+            expect(typed.subuserId).toBeTruthy();
+            expect(typed.gatewayAgentId).toBeTruthy();
 
             // Verify subuser was created with correct parent
-            const subuser = await storage.users.findById(result.typedResult.subuserId);
+            const subuser = await storage.users.findById(typed.subuserId);
             expect(subuser).not.toBeNull();
             expect(subuser!.parentUserId).toBe(ownerUserId);
             expect(subuser!.name).toBe("my-app");
 
             // Verify gateway agent was created
-            const agent = await storage.agents.findById(result.typedResult.gatewayAgentId);
+            const agent = await storage.agents.findById(typed.gatewayAgentId);
             expect(agent).not.toBeNull();
-            expect(agent!.userId).toBe(result.typedResult.subuserId);
+            expect(agent!.userId).toBe(typed.subuserId);
             expect(agent!.type).toBe("subuser");
             expect(agent!.descriptor.type).toBe("subuser");
 

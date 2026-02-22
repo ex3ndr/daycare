@@ -39,8 +39,9 @@ describe("subuserConfigureToolBuild", () => {
                 context,
                 createToolCall
             );
-            const subuserId = createResult.typedResult.subuserId;
-            const gatewayAgentId = createResult.typedResult.gatewayAgentId;
+            const createTyped = createResult.typedResult as { subuserId: string; gatewayAgentId: string };
+            const subuserId = createTyped.subuserId;
+            const gatewayAgentId = createTyped.gatewayAgentId;
 
             // Now configure it
             const configureTool = subuserConfigureToolBuild();
@@ -50,8 +51,9 @@ describe("subuserConfigureToolBuild", () => {
                 configureToolCall
             );
 
-            expect(configureResult.typedResult.subuserId).toBe(subuserId);
-            expect(configureResult.typedResult.gatewayAgentId).toBe(gatewayAgentId);
+            const configTyped = configureResult.typedResult as { subuserId: string; gatewayAgentId: string };
+            expect(configTyped.subuserId).toBe(subuserId);
+            expect(configTyped.gatewayAgentId).toBe(gatewayAgentId);
 
             // Verify descriptor was updated in storage
             const agent = await storage.agents.findById(gatewayAgentId);
