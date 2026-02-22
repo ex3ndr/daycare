@@ -10,6 +10,7 @@ describe("sandboxCanRead", () => {
   let workingDir: string;
   let outsideDir: string;
   let outsideFile: string;
+  let workspaceFile: string;
   let appFile: string;
   let otherAppFile: string;
 
@@ -18,6 +19,8 @@ describe("sandboxCanRead", () => {
     outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-read-outside-"));
     outsideFile = path.join(outsideDir, "outside.txt");
     await fs.writeFile(outsideFile, "outside-content", "utf8");
+    workspaceFile = path.join(workingDir, "workspace.txt");
+    await fs.writeFile(workspaceFile, "workspace-content", "utf8");
     appFile = path.join(workingDir, "apps", "my-app", "APP.md");
     otherAppFile = path.join(workingDir, "apps", "other-app", "APP.md");
     await fs.mkdir(path.dirname(appFile), { recursive: true });
@@ -31,7 +34,7 @@ describe("sandboxCanRead", () => {
     await fs.rm(outsideDir, { recursive: true, force: true });
   });
 
-  it("allows reading any absolute path when readDirs is empty", async () => {
+  it("allows reading any absolute path when readDirs is empty (legacy behavior)", async () => {
     const permissions = buildPermissions(workingDir, [], []);
 
     const result = await sandboxCanRead(permissions, outsideFile);
@@ -39,20 +42,54 @@ describe("sandboxCanRead", () => {
     expect(result).toBe(await fs.realpath(outsideFile));
   });
 
-  it("allows reading any absolute path when readDirs are configured", async () => {
+  it("allows reading within workspace when workspace is configured", async () => {
     const permissions = buildPermissions(workingDir, [workingDir], []);
+
+    const result = await sandboxCanRead(permissions, workspaceFile);
+
+    expect(result).toBe(await fs.realpath(workspaceFile));
+  });
+
+  it("allows reading within readDirs", async () => {
+    const permissions = buildPermissions(workingDir, [outsideDir], []);
 
     const result = await sandboxCanRead(permissions, outsideFile);
 
     expect(result).toBe(await fs.realpath(outsideFile));
   });
 
-  it("ignores write grants for read access checks", async () => {
-    const permissions = buildPermissions(workingDir, [workingDir], [outsideFile]);
+  it("allows reading within writeDirs", async () => {
+    const permissions = buildPermissions(workingDir, [], [outsideDir]);
 
     const result = await sandboxCanRead(permissions, outsideFile);
 
     expect(result).toBe(await fs.realpath(outsideFile));
+  });
+
+  it("denies reading outside allowed directories", async () => {
+    const permissions = buildPermissions(workingDir, [workingDir], []);
+
+    await expect(sandboxCanRead(permissions, outsideFile)).rejects.toThrow(
+      "Path is outside the allowed directories."
+    );
+  });
+
+  it("denies reading home directory root", async () => {
+    const permissions = buildPermissions(workingDir, [workingDir], []);
+    const homeDir = os.homedir();
+
+    await expect(sandboxCanRead(permissions, homeDir)).rejects.toThrow(
+      "Path is outside the allowed directories."
+    );
+  });
+
+  it("denies reading .daycare directory root", async () => {
+    const permissions = buildPermissions(workingDir, [workingDir], []);
+    const daycareDir = path.join(os.homedir(), ".daycare");
+
+    await expect(sandboxCanRead(permissions, daycareDir)).rejects.toThrow(
+      "Path is outside the allowed directories."
+    );
   });
 
   it("denies non-app agents from reading app directories", async () => {
@@ -97,3 +134,4 @@ function buildPermissions(
     events: false
   };
 }
+
