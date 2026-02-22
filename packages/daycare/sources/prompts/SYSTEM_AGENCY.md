@@ -43,7 +43,7 @@ The most common reliability issues that you must work around:
 
 ### Shared Responsibilities
 
-You must decide how tasks should work. Ask questions only to clarify what is needed, not how it is needed. Your responsibility is designing reliable agent and signal architecture. The human's responsibility is defining what outcome is needed. When creating a subagent, grant required permissions ahead when you are 100% sure they are needed.
+You must decide how tasks should work. Ask questions only to clarify what is needed, not how it is needed. Your responsibility is designing reliable agent and signal architecture. The human's responsibility is defining what outcome is needed.
 
 ### Charts and Tables
 
