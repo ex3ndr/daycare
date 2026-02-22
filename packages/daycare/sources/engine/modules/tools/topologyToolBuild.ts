@@ -2,8 +2,8 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { Context } from "../../agents/context.js";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
-import { agentList } from "../../agents/ops/agentList.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
 import type { Exposes } from "../../expose/exposes.js";
@@ -60,9 +60,14 @@ export function topologyTool(
         execute: async (_args, toolContext, toolCall) => {
             const callerAgentId = toolContext.agent.id;
             const callerUserId = toolContext.ctx.userId;
+            const storage = toolContext.agentSystem.storage;
 
-            const [agentEntries, cronTasks, heartbeatTasks, exposeEndpoints] = await Promise.all([
-                agentList(toolContext.agentSystem.storage),
+            // Determine if caller is a subuser (has parent)
+            const callerUser = await storage.users.findById(callerUserId);
+            const isSubuser = callerUser?.parentUserId != null;
+
+            const [allAgentRecords, cronTasks, heartbeatTasks, exposeEndpoints] = await Promise.all([
+                storage.agents.findMany(),
                 crons.listTasks(),
                 toolContext.heartbeats.listTasks(),
                 exposes.list()
@@ -70,18 +75,26 @@ export function topologyTool(
             const signalSubscriptions = await signals.listSubscriptions();
             const channelEntries = channels.list();
 
-            const agents = agentEntries
+            // Filter agents by userId for subusers
+            const visibleAgentRecords = isSubuser
+                ? allAgentRecords.filter((record) => record.userId === callerUserId)
+                : allAgentRecords;
+
+            const agents = visibleAgentRecords
                 .slice()
                 .sort((left, right) => right.updatedAt - left.updatedAt)
-                .map((entry) => ({
-                    id: entry.agentId,
-                    type: entry.descriptor.type,
-                    label: agentDescriptorLabel(entry.descriptor),
-                    lifecycle: entry.lifecycle,
-                    isYou: entry.agentId === callerAgentId
+                .map((record) => ({
+                    id: record.id,
+                    type: record.descriptor.type,
+                    label: agentDescriptorLabel(record.descriptor),
+                    lifecycle: record.lifecycle,
+                    isYou: record.id === callerAgentId
                 }));
 
-            const cronsSummary = cronTasks
+            // Build visible agent ID set for subuser filtering of channels
+            const visibleAgentIdSet = isSubuser ? new Set(visibleAgentRecords.map((record) => record.id)) : null;
+
+            const cronsSummary = (isSubuser ? cronTasks.filter((t) => t.userId === callerUserId) : cronTasks)
                 .slice()
                 .sort((left, right) => left.id.localeCompare(right.id))
                 .map((task) => ({
@@ -93,7 +106,7 @@ export function topologyTool(
                     isYou: task.agentId === callerAgentId
                 }));
 
-            const heartbeats = heartbeatTasks
+            const heartbeats = (isSubuser ? heartbeatTasks.filter((t) => t.userId === callerUserId) : heartbeatTasks)
                 .slice()
                 .sort((left, right) => left.id.localeCompare(right.id))
                 .map((task) => ({
@@ -124,7 +137,13 @@ export function topologyTool(
                     isYou: subscription.ctx.agentId === callerAgentId
                 }));
 
-            const channelsSummary = channelEntries
+            // Filter channels by agent membership for subusers
+            const visibleChannelEntries =
+                isSubuser && visibleAgentIdSet
+                    ? channelEntries.filter((ch) => ch.members.some((m) => visibleAgentIdSet.has(m.agentId)))
+                    : channelEntries;
+
+            const channelsSummary = visibleChannelEntries
                 .slice()
                 .sort((left, right) => left.name.localeCompare(right.name))
                 .map((channel) => ({
@@ -140,7 +159,12 @@ export function topologyTool(
                         }))
                 }));
 
-            const exposeSummary = exposeEndpoints
+            // For subusers, filter exposes by userId via storage (public type lacks userId)
+            const visibleExposeEndpoints = isSubuser
+                ? await storage.exposeEndpoints.findMany(new Context(callerAgentId, callerUserId))
+                : exposeEndpoints;
+
+            const exposeSummary = visibleExposeEndpoints
                 .slice()
                 .sort((left, right) => left.createdAt - right.createdAt)
                 .map((endpoint) => ({
@@ -155,7 +179,7 @@ export function topologyTool(
                     authenticated: Boolean(endpoint.auth)
                 }));
 
-            const summary = [
+            const sections = [
                 `## Agents (${agents.length})`,
                 ...listAgentsLinesBuild(agents),
                 "",
@@ -173,7 +197,27 @@ export function topologyTool(
                 "",
                 `## Expose Endpoints (${exposeSummary.length})`,
                 ...listExposeLinesBuild(exposeSummary)
-            ].join("\n");
+            ];
+
+            // Add subusers section for owner users
+            if (!isSubuser) {
+                const subusers = await storage.users.findByParentUserId(callerUserId);
+                if (subusers.length > 0) {
+                    const subuserLines = subusers.map((subuser) => {
+                        const gateway = allAgentRecords.find(
+                            (a) => a.descriptor.type === "subuser" && a.descriptor.id === subuser.id
+                        );
+                        return (
+                            `${subuser.id} name="${subuser.name ?? "unnamed"}" ` +
+                            `gatewayAgent=${gateway?.id ?? "none"} ` +
+                            `lifecycle=${gateway?.lifecycle ?? "unknown"}`
+                        );
+                    });
+                    sections.push("", `## Subusers (${subusers.length})`, ...subuserLines);
+                }
+            }
+
+            const summary = sections.join("\n");
 
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",

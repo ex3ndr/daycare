@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
@@ -16,10 +16,7 @@ describe("subuserCreateToolBuild", () => {
     it("creates a subuser with gateway agent", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-"));
         try {
-            const config = configResolve(
-                { engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const storage = Storage.open(config.dbPath);
 
             // Bootstrap migration creates an owner; find it
@@ -65,10 +62,7 @@ describe("subuserCreateToolBuild", () => {
     it("rejects non-owner callers", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-reject-"));
         try {
-            const config = configResolve(
-                { engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const storage = Storage.open(config.dbPath);
 
             // Bootstrap creates owner; create a regular user
@@ -80,13 +74,9 @@ describe("subuserCreateToolBuild", () => {
                 storage
             });
 
-            await expect(
-                tool.execute(
-                    { name: "my-app", systemPrompt: "prompt" },
-                    context,
-                    toolCall
-                )
-            ).rejects.toThrow("Only the owner user can create subusers.");
+            await expect(tool.execute({ name: "my-app", systemPrompt: "prompt" }, context, toolCall)).rejects.toThrow(
+                "Only the owner user can create subusers."
+            );
 
             storage.close();
         } finally {

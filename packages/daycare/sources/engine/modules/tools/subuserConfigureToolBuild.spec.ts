@@ -18,10 +18,7 @@ describe("subuserConfigureToolBuild", () => {
     it("updates the gateway agent system prompt", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-"));
         try {
-            const config = configResolve(
-                { engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const storage = Storage.open(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
@@ -74,10 +71,7 @@ describe("subuserConfigureToolBuild", () => {
     it("rejects non-owner callers", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-reject-"));
         try {
-            const config = configResolve(
-                { engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const storage = Storage.open(config.dbPath);
             await storage.users.create({ id: "regular-user" });
 
@@ -89,11 +83,7 @@ describe("subuserConfigureToolBuild", () => {
             });
 
             await expect(
-                tool.execute(
-                    { subuserId: "some-id", systemPrompt: "prompt" },
-                    context,
-                    configureToolCall
-                )
+                tool.execute({ subuserId: "some-id", systemPrompt: "prompt" }, context, configureToolCall)
             ).rejects.toThrow("Only the owner user can configure subusers.");
 
             storage.close();

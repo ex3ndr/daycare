@@ -18,10 +18,7 @@ describe("subuserListToolBuild", () => {
     it("lists created subusers", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-"));
         try {
-            const config = configResolve(
-                { engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const storage = Storage.open(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
@@ -32,16 +29,8 @@ describe("subuserListToolBuild", () => {
 
             // Create two subusers
             const createTool = subuserCreateToolBuild();
-            await createTool.execute(
-                { name: "app-one", systemPrompt: "Prompt 1." },
-                context,
-                createToolCall
-            );
-            await createTool.execute(
-                { name: "app-two", systemPrompt: "Prompt 2." },
-                context,
-                createToolCall
-            );
+            await createTool.execute({ name: "app-one", systemPrompt: "Prompt 1." }, context, createToolCall);
+            await createTool.execute({ name: "app-two", systemPrompt: "Prompt 2." }, context, createToolCall);
 
             // List them
             const listTool = subuserListToolBuild();
@@ -60,10 +49,7 @@ describe("subuserListToolBuild", () => {
     it("returns empty list when no subusers", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-empty-"));
         try {
-            const config = configResolve(
-                { engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const storage = Storage.open(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
