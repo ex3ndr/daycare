@@ -6,6 +6,7 @@ import { agentSystemPromptSectionAutonomousOperation } from "./agentSystemPrompt
 import { agentSystemPromptSectionEnvironment } from "./agentSystemPromptSectionEnvironment.js";
 import { agentSystemPromptSectionFormatting } from "./agentSystemPromptSectionFormatting.js";
 import { agentSystemPromptSectionMemory } from "./agentSystemPromptSectionMemory.js";
+import { agentSystemPromptSectionModels } from "./agentSystemPromptSectionModels.js";
 import { agentSystemPromptSectionPermissions } from "./agentSystemPromptSectionPermissions.js";
 import { agentSystemPromptSectionPreamble } from "./agentSystemPromptSectionPreamble.js";
 import { agentSystemPromptSectionSkills } from "./agentSystemPromptSectionSkills.js";
@@ -49,7 +50,8 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext = {}):
         agentSystemPromptSectionSkills(context),
         agentSystemPromptSectionFormatting(context),
         agentSystemPromptSectionMemory(context),
-        agentSystemPromptSectionEnvironment(context)
+        agentSystemPromptSectionEnvironment(context),
+        agentSystemPromptSectionModels(context)
     ]);
 
     return renderedSections
