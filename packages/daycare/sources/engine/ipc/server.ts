@@ -269,6 +269,19 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         }
     });
 
+    app.get("/v1/engine/users", async (_request, reply) => {
+        logger.debug("event: GET /v1/engine/users");
+        const users = await options.runtime.storage.users.findMany();
+        const mapped = users.map((user) => ({
+            id: user.id,
+            isOwner: user.isOwner,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        }));
+        logger.debug(`event: Users retrieved userCount=${mapped.length}`);
+        return reply.send({ ok: true, users: mapped });
+    });
+
     app.get("/v1/engine/agents/background", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/agents/background");
         const agents = await agentBackgroundList(options.runtime.storage);

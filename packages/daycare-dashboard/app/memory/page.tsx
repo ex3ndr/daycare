@@ -7,19 +7,21 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   fetchMemoryGraph,
   fetchMemoryNode,
+  fetchUsers,
   type MemoryGraph,
-  type MemoryNode
+  type MemoryNode,
+  type UserSummary
 } from "@/lib/engine-client";
 
 const FOLDER_NODE_PREFIX = "__folder__:";
 
 export default function MemoryPage() {
-  const [userIdInput, setUserIdInput] = useState("owner");
-  const [activeUserId, setActiveUserId] = useState("owner");
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [graph, setGraph] = useState<MemoryGraph | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<MemoryNode | null>(null);
@@ -63,7 +65,15 @@ export default function MemoryPage() {
   }, []);
 
   useEffect(() => {
-    void loadGraph("owner");
+    void fetchUsers().then((loadedUsers) => {
+      setUsers(loadedUsers);
+      if (loadedUsers.length > 0) {
+        const owner = loadedUsers.find((u) => u.isOwner);
+        const first = owner ?? loadedUsers[0]!;
+        setActiveUserId(first.id);
+        void loadGraph(first.id);
+      }
+    });
   }, [loadGraph]);
 
   const handleSelectNode = useCallback(
@@ -73,6 +83,10 @@ export default function MemoryPage() {
       const cached = nodeCache.get(nodeId);
       if (cached) {
         setSelectedNode(cached);
+      }
+
+      if (!activeUserId) {
+        return;
       }
 
       try {
@@ -111,25 +125,37 @@ export default function MemoryPage() {
       subtitle="Graph memory tree projected from markdown nodes."
       toolbar={
         <>
-          <Input
-            value={userIdInput}
-            onChange={(event) => setUserIdInput(event.target.value)}
-            placeholder="User ID"
-            className="h-9 w-44"
-          />
+          <Select
+            value={activeUserId ?? ""}
+            onValueChange={(userId) => {
+              setActiveUserId(userId);
+              void loadGraph(userId);
+            }}
+          >
+            <SelectTrigger className="h-9 w-52">
+              <SelectValue placeholder="Select user" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.id}{user.isOwner ? " (owner)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             className="gap-2"
-            disabled={loading || userIdInput.trim().length === 0}
-            onClick={() => void loadGraph(userIdInput)}
+            disabled={loading || !activeUserId}
+            onClick={() => activeUserId && void loadGraph(activeUserId)}
           >
             <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-            Load
+            Reload
           </Button>
         </>
       }
       status={
         <>
-          <span>User: {activeUserId}</span>
+          {activeUserId ? <span>User: {activeUserId}</span> : null}
           <span>{lastUpdated ? `Last synced ${lastUpdated.toLocaleTimeString()}` : "Awaiting first sync"}</span>
           <span>Nodes: {totalNodeCount}</span>
           {error ? (

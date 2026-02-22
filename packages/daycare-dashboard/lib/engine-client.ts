@@ -246,6 +246,17 @@ type SignalGenerateResponse = {
   error?: string;
 };
 
+export type UserSummary = {
+  id: string;
+  isOwner: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type UsersResponse = {
+  users?: UserSummary[];
+};
+
 type BackgroundAgentsResponse = {
   agents?: BackgroundAgentState[];
 };
@@ -277,6 +288,11 @@ async function fetchJSON<T>(url: string): Promise<T> {
 export async function fetchEngineStatus() {
   const data = await fetchJSON<EngineStatusResponse>("/api/v1/engine/status");
   return data.status ?? {};
+}
+
+export async function fetchUsers() {
+  const data = await fetchJSON<UsersResponse>("/api/v1/engine/users");
+  return data.users ?? [];
 }
 
 export async function fetchCronTasks() {
