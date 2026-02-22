@@ -10,6 +10,7 @@ import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { formatHistoryMessages } from "./utils/formatHistoryMessages.js";
+import { parseObservations } from "./utils/parseObservations.js";
 
 const logger = getLogger("memory.infer");
 
@@ -80,21 +81,7 @@ export async function inferObservations(options: InferObservationsOptions): Prom
         return [];
     }
 
-    return parseObservations(text);
-}
-
-/** Parses XML observation response into structured observations. */
-function parseObservations(text: string): InferObservation[] {
-    const observations: InferObservation[] = [];
-    const regex = /<observation>([\s\S]*?)<\/observation>/g;
-    let match = regex.exec(text);
-    while (match !== null) {
-        const content = (match[1] ?? "").trim();
-        if (content.length > 0) {
-            observations.push({ content });
-        }
-        match = regex.exec(text);
-    }
+    const observations = parseObservations(text);
     if (observations.length === 0 && text.includes("observation")) {
         logger.warn("event: inferObservations found no valid <observation> tags in response");
     }
