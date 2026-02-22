@@ -1,8 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
-
-import { agentSystemPromptSectionToolCalling } from "./agentSystemPromptSectionToolCalling.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
+import { agentSystemPromptSectionToolCalling } from "./agentSystemPromptSectionToolCalling.js";
 
 type MockAgentSystem = NonNullable<AgentSystemPromptContext["agentSystem"]>;
 

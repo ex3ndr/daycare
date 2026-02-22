@@ -56,9 +56,7 @@ export class SessionsRepository {
      * Expects: sessionId is valid.
      */
     async endSession(sessionId: string, endedAt: number): Promise<void> {
-        this.db
-            .prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL")
-            .run(endedAt, sessionId);
+        this.db.prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL").run(endedAt, sessionId);
     }
 
     /**

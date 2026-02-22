@@ -313,7 +313,9 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         const parsed = agentHistoryQuerySchema.safeParse(request.query);
         const limit = parsed.success ? parsed.data.limit : undefined;
         const sessionId = parsed.success ? parsed.data.sessionId : undefined;
-        logger.debug(`event: GET /v1/engine/agents/:agentId/history agentId=${agentId} limit=${limit ?? "none"} sessionId=${sessionId ?? "all"}`);
+        logger.debug(
+            `event: GET /v1/engine/agents/:agentId/history agentId=${agentId} limit=${limit ?? "none"} sessionId=${sessionId ?? "all"}`
+        );
         const records = sessionId
             ? await options.runtime.storage.history.findBySessionId(sessionId)
             : await agentHistoryLoadAll(options.runtime.storage, agentId, limit);

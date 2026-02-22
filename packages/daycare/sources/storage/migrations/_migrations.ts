@@ -15,8 +15,8 @@ import { migration20260222ImportChannels } from "./20260222_import_channels.js";
 import { migration20260222ImportExpose } from "./20260222_import_expose.js";
 import { migration20260222ImportProcesses } from "./20260222_import_processes.js";
 import { migration20260222ImportSignals } from "./20260222_import_signals.js";
-import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_users.js";
 import { migration20260222SessionEndedAt } from "./20260222_session_ended_at.js";
+import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_users.js";
 import { migration20260224AddMemoryColumns } from "./20260224_add_memory_columns.js";
 import type { Migration } from "./migrationTypes.js";
 
