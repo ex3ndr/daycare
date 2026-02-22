@@ -8,9 +8,6 @@ describe("graphNodeParse", () => {
             "---",
             "title: User prefers dark mode",
             "description: UI preference observed during onboarding",
-            "path:",
-            "  - preferences",
-            "  - ui",
             "createdAt: 1708531200000",
             "updatedAt: 1708531300000",
             "---",
@@ -25,7 +22,6 @@ describe("graphNodeParse", () => {
         expect(parsed.frontmatter).toEqual({
             title: "User prefers dark mode",
             description: "UI preference observed during onboarding",
-            path: ["preferences", "ui"],
             createdAt: 1708531200000,
             updatedAt: 1708531300000
         });
@@ -39,7 +35,6 @@ describe("graphNodeParse", () => {
         expect(parsed.frontmatter).toEqual({
             title: "node-1",
             description: "",
-            path: [],
             createdAt: 0,
             updatedAt: 0
         });
@@ -52,7 +47,6 @@ describe("graphNodeParse", () => {
             "---",
             "title: ''",
             "description: 7",
-            "path: bad-path",
             "createdAt: invalid",
             "updatedAt: 1708531200001",
             "---"
@@ -63,7 +57,6 @@ describe("graphNodeParse", () => {
         expect(parsed.frontmatter).toEqual({
             title: "Memory Summary",
             description: "Structured summary of all memories",
-            path: [],
             createdAt: 0,
             updatedAt: 1708531200001
         });

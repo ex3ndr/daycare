@@ -28,7 +28,6 @@ describe("memoryNodeWriteToolBuild", () => {
             {
                 nodeId: "user-prefs",
                 title: "User Preferences",
-                path: ["user"],
                 content: "Prefers dark mode."
             },
             context,
@@ -47,7 +46,6 @@ describe("memoryNodeWriteToolBuild", () => {
             frontmatter: {
                 title: "Old Title",
                 description: "",
-                path: ["user"],
                 createdAt: 1000,
                 updatedAt: 1500
             },
@@ -59,7 +57,6 @@ describe("memoryNodeWriteToolBuild", () => {
             {
                 nodeId: "user-prefs",
                 title: "User Preferences",
-                path: ["user"],
                 content: "Updated content."
             },
             context,
@@ -72,7 +69,7 @@ describe("memoryNodeWriteToolBuild", () => {
     it("rejects reserved node ids", async () => {
         const { context } = makeContext(null);
         await expect(
-            tool.execute({ nodeId: "__root__", title: "Root", path: [], content: "x" }, context, {
+            tool.execute({ nodeId: "__root__", title: "Root", content: "x" }, context, {
                 id: "tc1",
                 name: "memory_node_write"
             })
@@ -82,7 +79,7 @@ describe("memoryNodeWriteToolBuild", () => {
     it("throws when memory is not available", async () => {
         const ctx = { ctx: { agentId: "a", userId: "u" } } as never;
         await expect(
-            tool.execute({ nodeId: "x", title: "T", path: [], content: "c" }, ctx, {
+            tool.execute({ nodeId: "x", title: "T", content: "c" }, ctx, {
                 id: "tc1",
                 name: "memory_node_write"
             })

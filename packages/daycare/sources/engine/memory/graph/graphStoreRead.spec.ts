@@ -25,7 +25,6 @@ describe("graphStoreRead", () => {
             frontmatter: {
                 title: "Memory Summary",
                 description: "Root",
-                path: [],
                 createdAt: 1,
                 updatedAt: 1
             },
@@ -37,7 +36,6 @@ describe("graphStoreRead", () => {
             frontmatter: {
                 title: "Node 1",
                 description: "Child",
-                path: ["preferences"],
                 createdAt: 2,
                 updatedAt: 3
             },
@@ -55,7 +53,7 @@ describe("graphStoreRead", () => {
         expect(nodes[0]?.id).toBe("__root__");
         expect(nodes[1]?.id).toBe("node-1");
         expect(nodes[0]?.refs).toEqual(["node-1"]);
-        expect(nodes[1]?.frontmatter.path).toEqual(["preferences"]);
+        expect(nodes[1]?.frontmatter.title).toBe("Node 1");
     });
 
     it("returns empty array when memory dir does not exist", async () => {

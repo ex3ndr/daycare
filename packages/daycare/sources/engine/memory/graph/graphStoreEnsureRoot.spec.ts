@@ -23,7 +23,6 @@ describe("graphStoreEnsureRoot", () => {
         const root = await graphStoreEnsureRoot(memoryDir);
 
         expect(root.id).toBe("__root__");
-        expect(root.frontmatter.path).toEqual([]);
         const exists = await fs.stat(path.join(memoryDir, "__root__.md"));
         expect(exists.isFile()).toBe(true);
     });
@@ -34,7 +33,6 @@ describe("graphStoreEnsureRoot", () => {
             frontmatter: {
                 title: "Custom Root",
                 description: "Kept",
-                path: [],
                 createdAt: 10,
                 updatedAt: 20
             },

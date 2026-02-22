@@ -24,7 +24,6 @@ describe("graphStoreWrite", () => {
             frontmatter: {
                 title: "Memory Summary",
                 description: "Root",
-                path: [],
                 createdAt: 1,
                 updatedAt: 1
             },
@@ -46,7 +45,6 @@ describe("graphStoreWrite", () => {
             frontmatter: {
                 title: "Node",
                 description: "Desc",
-                path: ["a"],
                 createdAt: 1,
                 updatedAt: 2
             },

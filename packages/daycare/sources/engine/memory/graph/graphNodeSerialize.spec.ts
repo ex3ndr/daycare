@@ -11,7 +11,6 @@ describe("graphNodeSerialize", () => {
             frontmatter: {
                 title: "Preference",
                 description: "Observed user preference",
-                path: ["preferences"],
                 createdAt: 1700000000000,
                 updatedAt: 1700000000500
             },
@@ -34,7 +33,6 @@ describe("graphNodeSerialize", () => {
             frontmatter: {
                 title: "Cross link",
                 description: "Contains wiki links",
-                path: ["topics", "links"],
                 createdAt: 1,
                 updatedAt: 2
             },

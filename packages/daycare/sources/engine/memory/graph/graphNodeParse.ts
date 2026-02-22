@@ -5,7 +5,6 @@ import { GRAPH_ROOT_NODE_ID, type GraphNode, type GraphNodeFrontmatter } from ".
 type GraphNodeFrontmatterInput = {
     title?: unknown;
     description?: unknown;
-    path?: unknown;
     createdAt?: unknown;
     updatedAt?: unknown;
 };
@@ -44,14 +43,12 @@ function graphNodeFrontmatterNormalize(id: string, input: GraphNodeFrontmatterIn
 
     const title = stringValue(input.title) ?? defaultTitle;
     const description = stringValue(input.description) ?? defaultDescription;
-    const path = pathValue(input.path);
     const createdAt = numberValue(input.createdAt) ?? 0;
     const updatedAt = numberValue(input.updatedAt) ?? createdAt;
 
     return {
         title,
         description,
-        path,
         createdAt,
         updatedAt
     };
@@ -92,11 +89,4 @@ function numberValue(value: unknown): number | null {
         }
     }
     return null;
-}
-
-function pathValue(value: unknown): string[] {
-    if (!Array.isArray(value)) {
-        return [];
-    }
-    return value.map((item) => (typeof item === "string" ? item.trim() : "")).filter((item) => item.length > 0);
 }

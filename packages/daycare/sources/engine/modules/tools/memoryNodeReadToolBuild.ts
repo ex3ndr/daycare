@@ -36,7 +36,7 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
         tool: {
             name: "memory_node_read",
             description:
-                "Read a single memory document by node id. Returns the full content, frontmatter (title, description, path), and refs.",
+                "Read a single memory document by node id. Returns the full content, frontmatter (title, description), and refs.",
             parameters: schema
         },
         returns,
@@ -74,7 +74,6 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
                 "",
                 `- **id**: \`${node.id}\``,
                 `- **description**: ${node.frontmatter.description}`,
-                `- **path**: ${node.frontmatter.path.length > 0 ? node.frontmatter.path.join(" / ") : "(root)"}`,
                 `- **refs**: ${node.refs.length > 0 ? node.refs.map((r) => `\`${r}\``).join(", ") : "(none)"}`,
                 "",
                 node.content

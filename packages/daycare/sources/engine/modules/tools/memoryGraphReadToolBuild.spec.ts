@@ -6,7 +6,7 @@ import { memoryGraphReadToolBuild } from "./memoryGraphReadToolBuild.js";
 function makeTree(children: GraphNode[]): GraphTree {
     const root: GraphNode = {
         id: "__root__",
-        frontmatter: { title: "Root", description: "", path: [], createdAt: 0, updatedAt: 0 },
+        frontmatter: { title: "Root", description: "", createdAt: 0, updatedAt: 0 },
         content: "",
         refs: []
     };
@@ -40,7 +40,6 @@ describe("memoryGraphReadToolBuild", () => {
             frontmatter: {
                 title: "User Preferences",
                 description: "General prefs",
-                path: [],
                 createdAt: 0,
                 updatedAt: 0
             },

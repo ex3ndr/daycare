@@ -172,7 +172,6 @@ export type AgentHistoryRecord =
 export type MemoryNodeFrontmatter = {
   title: string;
   description: string;
-  path: string[];
   createdAt: number;
   updatedAt: number;
 };

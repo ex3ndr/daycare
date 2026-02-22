@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { UserHome } from "../users/userHome.js";
 import { graphNodeParse } from "./graph/graphNodeParse.js";
 import { graphStoreEnsureRoot } from "./graph/graphStoreEnsureRoot.js";
 import { graphStoreRead } from "./graph/graphStoreRead.js";
@@ -25,7 +24,7 @@ export class Memory {
     }
 
     resolveMemoryDir(userId: string): string {
-        return path.join(new UserHome(this.usersDir, userId).memory, "graph");
+        return path.join(this.usersDir, userId, "memory", "graph");
     }
 
     async readGraph(userId: string): Promise<GraphTree> {

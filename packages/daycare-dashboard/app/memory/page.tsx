@@ -17,8 +17,6 @@ import {
   type UserSummary
 } from "@/lib/engine-client";
 
-const FOLDER_NODE_PREFIX = "__folder__:";
-
 export default function MemoryPage() {
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
@@ -228,13 +226,9 @@ export default function MemoryPage() {
                       {selectedNode.id}
                     </Badge>
                     <Badge variant="secondary">refs: {selectedNode.refs.length}</Badge>
-                    {selectedNode.id.startsWith(FOLDER_NODE_PREFIX) ? <Badge>folder</Badge> : null}
                   </div>
                   <h2 className="text-lg font-semibold leading-tight">{selectedNode.frontmatter.title}</h2>
                   <p className="text-sm text-muted-foreground">{selectedNode.frontmatter.description || "No description"}</p>
-                  <div className="text-xs text-muted-foreground">
-                    Path: {selectedNode.frontmatter.path.length ? selectedNode.frontmatter.path.join(" / ") : "(root)"}
-                  </div>
                 </div>
 
                 <div className="rounded-lg border bg-muted/30 p-3 text-sm leading-relaxed">
@@ -303,7 +297,6 @@ function renderNodeTree(params: RenderNodeTreeParams): JSX.Element {
     visited
   } = params;
 
-  const isFolder = node.id.startsWith(FOLDER_NODE_PREFIX);
   const children = childrenByParent[node.id] ?? [];
   const hasChildren = children.length > 0;
   const isExpanded = expandedNodeIds.has(node.id);
@@ -333,15 +326,11 @@ function renderNodeTree(params: RenderNodeTreeParams): JSX.Element {
             <div className="flex items-center gap-1 text-sm font-medium">
               {hasChildren ? (isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : null}
               <span className="truncate">{node.frontmatter.title}</span>
-              {isFolder ? <Badge className="ml-1 h-5 px-1.5 text-[10px]">folder</Badge> : null}
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
               {node.frontmatter.description || "No description"}
             </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">
-              path: {node.frontmatter.path.length ? node.frontmatter.path.join(" / ") : "(root)"}
-            </div>
-            {!isFolder && !hasChildren && preview.length > 0 ? (
+            {!hasChildren && preview.length > 0 ? (
               <div className="mt-2 text-xs text-muted-foreground">{preview}</div>
             ) : null}
           </div>

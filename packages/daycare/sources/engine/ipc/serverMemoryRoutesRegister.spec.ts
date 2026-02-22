@@ -21,7 +21,6 @@ describe("serverMemoryRoutesRegister", () => {
                 frontmatter: {
                     title: "Memory Summary",
                     description: "Structured summary",
-                    path: [],
                     createdAt: 1,
                     updatedAt: 1
                 },
@@ -37,7 +36,6 @@ describe("serverMemoryRoutesRegister", () => {
                             frontmatter: {
                                 title: "Node 1",
                                 description: "",
-                                path: [],
                                 createdAt: 2,
                                 updatedAt: 3
                             },
@@ -80,7 +78,6 @@ describe("serverMemoryRoutesRegister", () => {
                     frontmatter: {
                         title: "Known",
                         description: "",
-                        path: [],
                         createdAt: 1,
                         updatedAt: 1
                     },
@@ -99,7 +96,6 @@ describe("serverMemoryRoutesRegister", () => {
                         frontmatter: {
                             title: "Memory Summary",
                             description: "",
-                            path: [],
                             createdAt: 1,
                             updatedAt: 1
                         },
@@ -140,7 +136,6 @@ describe("graphTreeJsonBuild", () => {
                 frontmatter: {
                     title: "Memory Summary",
                     description: "",
-                    path: [],
                     createdAt: 0,
                     updatedAt: 0
                 },
@@ -156,7 +151,6 @@ describe("graphTreeJsonBuild", () => {
                             frontmatter: {
                                 title: "Child",
                                 description: "",
-                                path: [],
                                 createdAt: 0,
                                 updatedAt: 0
                             },

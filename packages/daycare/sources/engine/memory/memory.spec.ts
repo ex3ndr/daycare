@@ -26,7 +26,7 @@ describe("Memory", () => {
         expect(tree.root.id).toBe("__root__");
         const rootChildren = tree.children.get("__root__");
         expect(rootChildren).toBeDefined();
-        const rootPath = path.join(usersDir, "usr_001", "home", "memory", "graph", "__root__.md");
+        const rootPath = path.join(usersDir, "usr_001", "memory", "graph", "__root__.md");
         const stat = await fs.stat(rootPath);
         expect(stat.isFile()).toBe(true);
     });
@@ -38,7 +38,6 @@ describe("Memory", () => {
             frontmatter: {
                 title: "Preference",
                 description: "User preference",
-                path: ["preferences"],
                 createdAt: 100,
                 updatedAt: 100
             },

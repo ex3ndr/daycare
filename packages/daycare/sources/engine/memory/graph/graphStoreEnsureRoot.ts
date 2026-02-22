@@ -28,7 +28,6 @@ export async function graphStoreEnsureRoot(memoryDir: string): Promise<GraphNode
         frontmatter: {
             title: "Memory Summary",
             description: "Structured summary of all memories",
-            path: [],
             createdAt: now,
             updatedAt: now
         },

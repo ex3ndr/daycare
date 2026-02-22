@@ -8,7 +8,6 @@ const sampleNode: GraphNode = {
     frontmatter: {
         title: "User Preferences",
         description: "General user preferences",
-        path: ["user"],
         createdAt: 1000,
         updatedAt: 2000
     },

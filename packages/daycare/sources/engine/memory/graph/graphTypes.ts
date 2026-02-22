@@ -1,7 +1,6 @@
 export type GraphNodeFrontmatter = {
     title: string;
     description: string;
-    path: string[];
     createdAt: number;
     updatedAt: number;
 };

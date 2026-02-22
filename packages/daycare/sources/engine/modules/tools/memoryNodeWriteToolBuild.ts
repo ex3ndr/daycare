@@ -8,7 +8,6 @@ const schema = Type.Object(
         nodeId: Type.String({ minLength: 1 }),
         title: Type.String({ minLength: 1 }),
         description: Type.Optional(Type.String()),
-        path: Type.Array(Type.String()),
         content: Type.String(),
         refs: Type.Optional(Type.Array(Type.String()))
     },
@@ -41,7 +40,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
         tool: {
             name: "memory_node_write",
             description:
-                "Create or update a memory document. Provide nodeId, title, path (hierarchical location), content (markdown body), and optional refs (ids of related nodes). Overwrites existing node if nodeId matches.",
+                "Create or update a memory document. Provide nodeId, title, content (markdown body), and optional refs (ids of related nodes as children). Overwrites existing node if nodeId matches.",
             parameters: schema
         },
         returns,
@@ -68,7 +67,6 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
                 frontmatter: {
                     title: payload.title.trim(),
                     description: payload.description?.trim() ?? "",
-                    path: payload.path.map((s) => s.trim()).filter((s) => s.length > 0),
                     createdAt: existing?.frontmatter.createdAt ?? now,
                     updatedAt: now
                 },
