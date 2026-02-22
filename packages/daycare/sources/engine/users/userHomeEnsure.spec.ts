@@ -32,6 +32,7 @@ describe("userHomeEnsure", () => {
             userHome.documents,
             userHome.developer,
             userHome.knowledge,
+            userHome.memory,
             userHome.tmp
         ];
         for (const dir of expectedDirs) {

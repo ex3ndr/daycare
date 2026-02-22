@@ -9,6 +9,7 @@ import type { AgentSystem } from "../../agents/agentSystem.js";
 import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
 import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
+import type { Memory } from "../../memory/memory.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ToolResolverApi } from "../toolResolver.js";
@@ -26,6 +27,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     messageContext: MessageContext;
     agentSystem: AgentSystem;
     heartbeats: Heartbeats;
+    memory?: Memory;
     toolResolver?: ToolResolverApi;
     skills?: AgentSkill[];
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;

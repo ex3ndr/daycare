@@ -16,6 +16,7 @@ export class UserHome {
     readonly documents: string;
     readonly developer: string;
     readonly knowledge: string;
+    readonly memory: string;
     readonly tmp: string;
 
     constructor(usersDir: string, userId: string) {
@@ -28,6 +29,7 @@ export class UserHome {
         this.documents = path.join(this.home, "documents");
         this.developer = path.join(this.home, "developer");
         this.knowledge = path.join(this.home, "knowledge");
+        this.memory = path.join(this.home, "memory");
         this.tmp = path.join(this.home, "tmp");
     }
 

@@ -536,6 +536,7 @@ export class Agent {
                     assistant: this.agentSystem.config.current.settings.assistant ?? null,
                     agentSystem: this.agentSystem,
                     heartbeats: this.agentSystem.heartbeats,
+                    memory: this.agentSystem.memory,
                     skills,
                     providersForAgent,
                     verbose: this.agentSystem.config.current.verbose,
@@ -1029,6 +1030,7 @@ export class Agent {
             messageContext: {},
             agentSystem: this.agentSystem,
             heartbeats: this.agentSystem.heartbeats,
+            memory: this.agentSystem.memory,
             toolResolver: this.agentSystem.toolResolver,
             skills: []
         };

@@ -22,6 +22,7 @@ import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Heartbeats } from "./heartbeat/heartbeats.js";
 import type { EngineEventBus } from "./ipc/events.js";
+import { Memory } from "./memory/memory.js";
 import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { InferenceRouter } from "./modules/inference/router.js";
@@ -92,6 +93,7 @@ export class Engine {
     readonly inferenceRouter: InferenceRouter;
     readonly eventBus: EngineEventBus;
     readonly apps: Apps;
+    readonly memory: Memory;
     readonly exposes: Exposes;
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
@@ -270,6 +272,9 @@ export class Engine {
             inferenceRegistry: this.modules.inference,
             imageRegistry: this.modules.images
         });
+        this.memory = new Memory({
+            usersDir: this.config.current.usersDir
+        });
 
         this.agentSystem = new AgentSystem({
             config: this.config,
@@ -281,6 +286,7 @@ export class Engine {
             pluginManager: this.pluginManager,
             inferenceRouter: this.inferenceRouter,
             authStore: this.authStore,
+            memory: this.memory,
             delayedSignals: this.delayedSignals
         });
 

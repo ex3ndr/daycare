@@ -7,6 +7,7 @@ import type { AuthStore } from "../../../auth/store.js";
 import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
+import type { Memory } from "../../memory/memory.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
@@ -1241,6 +1242,7 @@ function optionsBuild(params: {
             imageRegistry: { list: () => [] }
         } as unknown as AgentSystem,
         heartbeats: {} as Heartbeats,
+        memory: {} as Memory,
         skills,
         providersForAgent: [],
         verbose: false,

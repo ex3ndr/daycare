@@ -168,6 +168,26 @@ export type AgentHistoryRecord =
     }
   | { type: "note"; at: number; text: string };
 
+export type MemoryNodeFrontmatter = {
+  title: string;
+  description: string;
+  path: string[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type MemoryNode = {
+  id: string;
+  frontmatter: MemoryNodeFrontmatter;
+  content: string;
+  refs: string[];
+};
+
+export type MemoryGraph = {
+  root: MemoryNode;
+  children: Record<string, MemoryNode[]>;
+};
+
 export type EngineEvent = {
   type: string;
   payload?: {
@@ -236,6 +256,14 @@ type AgentsResponse = {
 
 type AgentHistoryResponse = {
   records?: AgentHistoryRecord[];
+};
+
+type MemoryGraphResponse = {
+  graph?: MemoryGraph;
+};
+
+type MemoryNodeResponse = {
+  node?: MemoryNode;
 };
 
 async function fetchJSON<T>(url: string): Promise<T> {
@@ -310,4 +338,27 @@ export async function fetchAgentHistory(agentId: string) {
   const encoded = encodeURIComponent(agentId);
   const data = await fetchJSON<AgentHistoryResponse>(`/api/v1/engine/agents/${encoded}/history`);
   return data.records ?? [];
+}
+
+export async function fetchMemoryGraph(userId: string): Promise<MemoryGraph> {
+  const encoded = encodeURIComponent(userId);
+  const data = await fetchJSON<MemoryGraphResponse>(`/api/v1/engine/memory/${encoded}/graph`);
+  if (!data.graph) {
+    throw new Error("Memory graph payload missing");
+  }
+  return data.graph;
+}
+
+export async function fetchMemoryNode(userId: string, nodeId: string): Promise<MemoryNode | null> {
+  const userEncoded = encodeURIComponent(userId);
+  const nodeEncoded = encodeURIComponent(nodeId);
+  const response = await fetch(`/api/v1/engine/memory/${userEncoded}/node/${nodeEncoded}`);
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  const data = (await response.json()) as MemoryNodeResponse;
+  return data.node ?? null;
 }

@@ -18,6 +18,7 @@ describe("UserHome", () => {
         expect(userHome.documents).toBe(path.join(usersDir, "usr_123", "home", "documents"));
         expect(userHome.developer).toBe(path.join(usersDir, "usr_123", "home", "developer"));
         expect(userHome.knowledge).toBe(path.join(usersDir, "usr_123", "home", "knowledge"));
+        expect(userHome.memory).toBe(path.join(usersDir, "usr_123", "home", "memory"));
         expect(userHome.tmp).toBe(path.join(usersDir, "usr_123", "home", "tmp"));
     });
 

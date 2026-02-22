@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  Brain,
   Bot,
   BookOpen,
   Clock,
@@ -71,6 +72,11 @@ const data = {
       title: "Signals",
       url: "/signals",
       icon: Radio
+    },
+    {
+      title: "Memory",
+      url: "/memory",
+      icon: Brain
     },
     {
       title: "Processes",

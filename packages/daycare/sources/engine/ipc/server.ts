@@ -22,6 +22,7 @@ import { buildPluginCatalog } from "../plugins/catalog.js";
 import { resolveExclusivePlugins } from "../plugins/exclusive.js";
 import { PluginModuleLoader } from "../plugins/loader.js";
 import type { EngineEventBus } from "./events.js";
+import { serverMemoryRoutesRegister } from "./serverMemoryRoutesRegister.js";
 import { resolveEngineSocketPath } from "./socket.js";
 
 export type EngineServerOptions = {
@@ -97,6 +98,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
     const app = fastify({ logger: false });
     logger.debug("create: Fastify app created");
     const pluginCatalog = buildPluginCatalog();
+    serverMemoryRoutesRegister(app, options.runtime);
 
     app.get("/v1/engine/status", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/status");

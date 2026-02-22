@@ -8,6 +8,7 @@ import { tagExtract, tagExtractAll } from "../../../util/tagExtract.js";
 import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
+import type { Memory } from "../../memory/memory.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
@@ -58,6 +59,7 @@ type AgentLoopRunOptions = {
     assistant: AssistantSettings | null;
     agentSystem: AgentSystem;
     heartbeats: Heartbeats;
+    memory: Memory;
     skills: Skills;
     providersForAgent: ProviderSettings[];
     verbose: boolean;
@@ -104,6 +106,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         assistant,
         agentSystem,
         heartbeats,
+        memory,
         skills,
         providersForAgent,
         verbose,
@@ -454,6 +457,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         messageContext: entry.context,
                         agentSystem,
                         heartbeats,
+                        memory,
                         toolResolver,
                         skills: activeSkills,
                         appendHistoryRecord,
@@ -590,6 +594,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     messageContext: entry.context,
                     agentSystem,
                     heartbeats,
+                    memory,
                     toolResolver,
                     skills: activeSkills,
                     appendHistoryRecord,

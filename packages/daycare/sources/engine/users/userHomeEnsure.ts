@@ -16,6 +16,7 @@ export async function userHomeEnsure(userHome: UserHome): Promise<void> {
         fs.mkdir(userHome.documents, { recursive: true }),
         fs.mkdir(userHome.developer, { recursive: true }),
         fs.mkdir(userHome.knowledge, { recursive: true }),
+        fs.mkdir(userHome.memory, { recursive: true }),
         fs.mkdir(userHome.tmp, { recursive: true })
     ]);
     await agentPromptFilesEnsure(userHome.knowledgePaths());
