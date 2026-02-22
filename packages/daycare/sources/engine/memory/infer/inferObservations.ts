@@ -83,7 +83,7 @@ export async function inferObservations(options: InferObservationsOptions): Prom
 
     const observations = parseObservations(text);
     if (observations.length === 0 && text.includes("observation")) {
-        logger.warn("event: inferObservations found no valid <observation> tags in response");
+        logger.warn(`event: inferObservations found no valid <observation> tags in response: ${text}`);
     }
     return observations;
 }
