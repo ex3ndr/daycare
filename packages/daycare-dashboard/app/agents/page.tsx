@@ -358,6 +358,8 @@ function formatAgentTypeKey(type: string) {
       return "Permanent";
     case "memory-agent":
       return "Memory";
+    case "memory-search":
+      return "Memory Search";
     case "system":
       return "System";
     default:

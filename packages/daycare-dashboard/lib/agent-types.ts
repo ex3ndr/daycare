@@ -8,6 +8,7 @@ export type AgentType =
   | { type: "app"; id: string; parentAgentId: string; name: string; appId: string }
   | { type: "permanent"; id: string; name: string }
   | { type: "memory-agent"; id: string }
+  | { type: "memory-search"; id: string; parentAgentId: string; name: string }
   | { type: "system"; tag: string };
 
 export function buildAgentType(agent: AgentSummary): AgentType {
@@ -50,6 +51,13 @@ export function buildAgentType(agent: AgentSummary): AgentType {
       };
     case "memory-agent":
       return { type: "memory-agent", id: descriptor.id };
+    case "memory-search":
+      return {
+        type: "memory-search",
+        id: descriptor.id,
+        parentAgentId: descriptor.parentAgentId,
+        name: descriptor.name
+      };
     default:
       return { type: "system", tag: "unknown" };
   }
@@ -71,6 +79,8 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "Permanent";
     case "memory-agent":
       return "Memory";
+    case "memory-search":
+      return "Memory Search";
     case "system":
       return "System";
     default:
