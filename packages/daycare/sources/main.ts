@@ -9,6 +9,7 @@ import { channelRemoveMemberCommand } from "./commands/channelRemoveMember.js";
 import { channelSendCommand } from "./commands/channelSend.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { eventCommand } from "./commands/event.js";
+import { modelsCommand } from "./commands/models.js";
 import { loadPluginCommand, unloadPluginCommand } from "./commands/plugins.js";
 import { setDefaultProviderCommand } from "./commands/providers.js";
 import { removeCommand } from "./commands/remove.js";
@@ -78,6 +79,13 @@ program
     .description("Select the default provider")
     .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
     .action(setDefaultProviderCommand);
+
+program
+    .command("models")
+    .description("View and configure per-role model assignments")
+    .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
+    .option("-l, --list", "List current model assignments without prompting")
+    .action(modelsCommand);
 
 program
     .command("doctor")

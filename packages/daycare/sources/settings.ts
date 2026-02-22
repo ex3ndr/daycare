@@ -35,6 +35,14 @@ export type ProviderSettings = {
     image?: ProviderImageSettings;
 };
 
+export type ModelRoleKey = "user" | "memory" | "memorySearch" | "subagent" | "heartbeat";
+
+/**
+ * Per-role model overrides. Each value uses "<providerId>/<modelName>" format.
+ * When a role has no entry, the provider's default model is used.
+ */
+export type ModelRoleConfig = Partial<Record<ModelRoleKey, string>>;
+
 export type AgentSettings = {
     emergencyContextLimit?: number;
 };
@@ -75,6 +83,7 @@ export type SettingsConfig = {
     cron?: {
         tasks?: CronTaskConfig[];
     };
+    models?: ModelRoleConfig;
     memory?: {
         enabled?: boolean;
         maxEntries?: number;

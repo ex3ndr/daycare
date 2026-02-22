@@ -5,6 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import type { MessageContext, ToolExecutionContext } from "@/types";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
+import { modelRoleApply } from "../../providers/modelRoleApply.js";
 import { tagExtractAll } from "../../util/tagExtract.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
@@ -33,6 +34,7 @@ import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
 import { Context } from "./context.js";
+import { agentDescriptorRoleResolve } from "./ops/agentDescriptorRoleResolve.js";
 import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
 import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
 import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
@@ -387,8 +389,12 @@ export class Agent {
         await this.completePendingToolCalls("session_crashed");
 
         const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        const providerId = this.resolveAgentProvider(rawProviders);
-        const providers = agentModelOverrideApply(rawProviders, this.state.modelOverride, providerId);
+        const roleKey = agentDescriptorRoleResolve(this.descriptor);
+        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
+        const roleApplied = modelRoleApply(rawProviders, roleConfig);
+        const roleProviders = roleApplied.providers;
+        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);
+        const providers = agentModelOverrideApply(roleProviders, this.state.modelOverride, providerId);
 
         const connector = this.agentSystem.connectorRegistry.get(source);
         const pluginManager = this.agentSystem.pluginManager;
@@ -864,8 +870,11 @@ export class Agent {
         if (rawCompactionProviders.length === 0) {
             return { ok: false, reason: "no_provider" };
         }
-        const providerId = this.resolveAgentProvider(rawCompactionProviders);
-        const providers = agentModelOverrideApply(rawCompactionProviders, this.state.modelOverride, providerId);
+        const roleKey = agentDescriptorRoleResolve(this.descriptor);
+        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
+        const roleApplied = modelRoleApply(rawCompactionProviders, roleConfig);
+        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleApplied.providers);
+        const providers = agentModelOverrideApply(roleApplied.providers, this.state.modelOverride, providerId);
         const stopCompactionTyping = this.startCompactionTypingIndicator();
         const compactionAbortController = new AbortController();
         this.inferenceAbortController = compactionAbortController;
