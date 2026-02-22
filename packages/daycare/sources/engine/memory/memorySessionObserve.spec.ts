@@ -69,7 +69,8 @@ describe("memorySessionObserve", () => {
 
             const ctx = new Context("agent-1", owner.id);
             const records = await storage.history.findBySessionId(sessionId);
-            const router = mockInferenceRouter(JSON.stringify([{ content: "User requested production deploy" }]));
+            const xml = "<observations>\n<observation>User requested production deploy</observation>\n</observations>";
+            const router = mockInferenceRouter(xml);
 
             const observations = await memorySessionObserve({
                 sessionNumber: 1,
@@ -95,7 +96,7 @@ describe("memorySessionObserve", () => {
                 throw new Error("Owner user missing");
             }
             const ctx = new Context("agent-1", owner.id);
-            const router = mockInferenceRouter("[]");
+            const router = mockInferenceRouter("<observations></observations>");
 
             const observations = await memorySessionObserve({
                 sessionNumber: 1,

@@ -15,14 +15,14 @@ Each observation should capture a single fact, preference, decision, or piece of
 
 ## Output Format
 
-Return a JSON array of observation objects. Each object has a single `content` field with a concise statement.
+Return observations as XML. Each observation is wrapped in an `<observation>` tag inside a root `<observations>` tag.
 
-```json
-[
-  { "content": "User prefers snake_case for database column names" },
-  { "content": "Authentication uses JWT tokens stored in httpOnly cookies" },
-  { "content": "The deploy pipeline requires manual approval for production" }
-]
+```xml
+<observations>
+<observation>User prefers snake_case for database column names</observation>
+<observation>Authentication uses JWT tokens stored in httpOnly cookies</observation>
+<observation>The deploy pipeline requires manual approval for production</observation>
+</observations>
 ```
 
-Return ONLY the JSON array. No preamble, no explanation, no markdown fences.
+Return ONLY the XML. No preamble, no explanation, no markdown fences.

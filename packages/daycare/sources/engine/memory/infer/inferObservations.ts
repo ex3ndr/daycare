@@ -83,20 +83,20 @@ export async function inferObservations(options: InferObservationsOptions): Prom
     return parseObservations(text);
 }
 
-/** Parses the LLM response into structured observations. */
+/** Parses XML observation response into structured observations. */
 function parseObservations(text: string): InferObservation[] {
-    try {
-        const parsed = JSON.parse(text);
-        if (!Array.isArray(parsed)) {
-            logger.warn("event: inferObservations response is not an array");
-            return [];
+    const observations: InferObservation[] = [];
+    const regex = /<observation>([\s\S]*?)<\/observation>/g;
+    let match = regex.exec(text);
+    while (match !== null) {
+        const content = (match[1] ?? "").trim();
+        if (content.length > 0) {
+            observations.push({ content });
         }
-        return parsed.filter(
-            (item): item is InferObservation =>
-                typeof item === "object" && item !== null && typeof item.content === "string" && item.content.length > 0
-        );
-    } catch {
-        logger.warn("event: inferObservations failed to parse response as JSON");
-        return [];
+        match = regex.exec(text);
     }
+    if (observations.length === 0 && text.includes("observation")) {
+        logger.warn("event: inferObservations found no valid <observation> tags in response");
+    }
+    return observations;
 }
