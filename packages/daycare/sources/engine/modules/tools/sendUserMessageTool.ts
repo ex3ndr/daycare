@@ -52,7 +52,9 @@ export function sendUserMessageToolBuild(): ToolDefinition {
 
             // Resolve target: parent agent for subagents/apps, most recent foreground otherwise
             const targetAgentId =
-                descriptor.type === "subagent" || descriptor.type === "app" ? descriptor.parentAgentId : undefined;
+                descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
+                    ? descriptor.parentAgentId
+                    : undefined;
             const resolvedTarget = targetAgentId ?? toolContext.agentSystem.agentFor("most-recent-foreground");
             if (!resolvedTarget) {
                 throw new Error("No foreground agent found to deliver the message.");

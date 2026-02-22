@@ -42,7 +42,8 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
             parameters: schema
         },
         returns,
-        visibleByDefault: (context) => context.descriptor.type === "memory-agent",
+        visibleByDefault: (context) =>
+            context.descriptor.type === "memory-agent" || context.descriptor.type === "memory-search",
         execute: async (args, toolContext, toolCall) => {
             const memory = toolContext.memory;
             if (!memory) {

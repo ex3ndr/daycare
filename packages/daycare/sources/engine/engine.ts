@@ -46,6 +46,7 @@ import { buildHeartbeatAddTool, buildHeartbeatRemoveTool, buildHeartbeatRunTool 
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
 import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
+import { memorySearchToolBuild } from "./modules/tools/memorySearchToolBuild.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
@@ -356,6 +357,7 @@ export class Engine {
         this.modules.tools.register("core", buildHeartbeatRemoveTool());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
+        this.modules.tools.register("core", memorySearchToolBuild());
         this.modules.tools.register("core", agentModelSetToolBuild(this.inferenceRouter));
         this.modules.tools.register("core", agentResetToolBuild());
         this.modules.tools.register("core", agentCompactToolBuild());

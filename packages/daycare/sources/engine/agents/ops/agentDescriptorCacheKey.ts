@@ -20,6 +20,8 @@ export function agentDescriptorCacheKey(descriptor: AgentDescriptor): string {
             return `/permanent/${descriptor.id}`;
         case "memory-agent":
             return `/memory-agent/${descriptor.id}`;
+        case "memory-search":
+            return `/memory-search/${descriptor.id}`;
     }
     return descriptorTypeUnreachable(descriptor);
 }

@@ -20,6 +20,17 @@ describe("agentDescriptorCacheKey", () => {
         expect(agentDescriptorCacheKey({ type: "memory-agent", id: "agent-123" })).toBe("/memory-agent/agent-123");
     });
 
+    it("returns stable key for memory-search descriptor", () => {
+        expect(
+            agentDescriptorCacheKey({
+                type: "memory-search",
+                id: "ms-1",
+                parentAgentId: "parent-1",
+                name: "find user preferences"
+            })
+        ).toBe("/memory-search/ms-1");
+    });
+
     it("returns stable keys for subagent, app, and permanent descriptors", () => {
         expect(
             agentDescriptorCacheKey({

@@ -25,6 +25,13 @@ export async function agentPromptResolve(descriptor: AgentDescriptor): Promise<A
             replaceSystemPrompt: true
         };
     }
+    if (descriptor.type === "memory-search") {
+        const prompt = (await agentPromptBundledRead("memory/MEMORY_SEARCH.md")).trim();
+        return {
+            agentPrompt: prompt,
+            replaceSystemPrompt: true
+        };
+    }
     if (descriptor.type !== "system") {
         return {
             agentPrompt: "",

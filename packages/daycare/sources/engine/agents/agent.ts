@@ -279,8 +279,8 @@ export class Agent {
         if (this.endTurnCount <= 5) {
             return;
         }
-        // Memory-agents must never trigger the memory worker
-        if (this.descriptor.type === "memory-agent") {
+        // Memory-agents and memory-search agents must never trigger the memory worker
+        if (this.descriptor.type === "memory-agent" || this.descriptor.type === "memory-search") {
             return;
         }
         const sessionId = this.state.activeSessionId;

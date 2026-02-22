@@ -415,7 +415,7 @@ export class AgentSystem {
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
             // Mark session for memory processing on idle
             // Memory-agents must never trigger the memory worker
-            if (entry.descriptor.type !== "memory-agent") {
+            if (entry.descriptor.type !== "memory-agent" && entry.descriptor.type !== "memory-search") {
                 const sessionId = entry.agent.state.activeSessionId;
                 if (sessionId) {
                     const maxHistoryId = await this.storage.history.maxId(sessionId);
@@ -731,7 +731,7 @@ export class AgentSystem {
             return;
         }
         const descriptor = options?.descriptor ?? this.entries.get(agentId)?.descriptor;
-        if (descriptor?.type !== "subagent") {
+        if (descriptor?.type !== "subagent" && descriptor?.type !== "memory-search") {
             return;
         }
         const context = await this.contextForAgentId(agentId);
@@ -758,7 +758,7 @@ export class AgentSystem {
             return;
         }
         const descriptor = options?.descriptor ?? this.entries.get(agentId)?.descriptor;
-        if (descriptor?.type !== "subagent") {
+        if (descriptor?.type !== "subagent" && descriptor?.type !== "memory-search") {
             return;
         }
         try {

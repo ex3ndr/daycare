@@ -29,9 +29,13 @@ export async function agentBackgroundList(storageOrConfig: Storage | Config): Pr
                       ? (descriptor.name ?? "cron task")
                       : descriptor.type === "memory-agent"
                         ? "memory-agent"
-                        : descriptor.tag;
+                        : descriptor.type === "memory-search"
+                          ? (descriptor.name ?? "memory-search")
+                          : descriptor.tag;
         const parentAgentId =
-            descriptor.type === "subagent" || descriptor.type === "app" ? (descriptor.parentAgentId ?? null) : null;
+            descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
+                ? (descriptor.parentAgentId ?? null)
+                : null;
 
         results.push({
             agentId: record.id,
