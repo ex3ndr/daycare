@@ -25,21 +25,23 @@ describe("agentSystemPromptSectionModels", () => {
         expect(section).toContain("### Available Models");
         expect(section).toContain("**Anthropic**:");
         expect(section).toContain("**OpenAI**:");
+        expect(section).toContain("- ");
 
         const activeAnthropicModel = listProviderModels("anthropic").find((model) => model.deprecated !== true);
         expect(activeAnthropicModel).toBeDefined();
-        expect(section).toContain(`${activeAnthropicModel!.name} (${activeAnthropicModel!.size})`);
+        expect(section).toContain(`\`${activeAnthropicModel!.id}\` (${activeAnthropicModel!.size})`);
 
         const deprecatedAnthropicModel = listProviderModels("anthropic").find((model) => model.deprecated === true);
         if (deprecatedAnthropicModel) {
-            expect(section).not.toContain(`${deprecatedAnthropicModel.name} (${deprecatedAnthropicModel.size})`);
+            expect(section).not.toContain(`\`${deprecatedAnthropicModel.id}\` (${deprecatedAnthropicModel.size})`);
         }
     });
 
     it("renders providers without model catalogs as explicit no-catalog entries", async () => {
         const section = await agentSystemPromptSectionModels(contextBuild(["openai-compatible"]));
 
-        expect(section).toContain("**OpenAI-compatible**: No non-deprecated models in the local catalog.");
+        expect(section).toContain("**OpenAI-compatible**:");
+        expect(section).toContain("- No non-deprecated models in the local catalog.");
     });
 
     it("ignores unknown provider ids and falls back to the no-provider message", async () => {

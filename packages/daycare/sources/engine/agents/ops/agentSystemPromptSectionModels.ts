@@ -31,19 +31,19 @@ function availableModelsPromptBuild(providers: ProviderSettings[]): string {
         return "No active inference providers are configured.";
     }
     const lines = providers.map((provider) => availableModelsLineBuild(provider));
-    return lines.join("\n");
+    return lines.join("\n\n");
 }
 
 function availableModelsLineBuild(provider: ProviderSettings): string {
     const models = listProviderModels(provider.id).filter((model) => model.deprecated !== true);
     const providerName = getProviderDefinition(provider.id)?.name ?? provider.id;
     if (models.length === 0) {
-        return `**${providerName}**: No non-deprecated models in the local catalog.`;
+        return `**${providerName}**:\n- No non-deprecated models in the local catalog.`;
     }
-    const modelList = models.map((model) => modelLabelBuild(model)).join(", ");
-    return `**${providerName}**: ${modelList}`;
+    const modelList = models.map((model) => `- ${modelLabelBuild(model)}`).join("\n");
+    return `**${providerName}**:\n${modelList}`;
 }
 
 function modelLabelBuild(model: ProviderModelInfo): string {
-    return `${model.name} (${model.size})`;
+    return `\`${model.id}\` (${model.size})`;
 }
