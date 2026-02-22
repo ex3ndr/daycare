@@ -112,6 +112,25 @@ describe("memoryNodeWriteToolBuild", () => {
         expect(written[0]!.refs).toEqual(["ref-a"]);
     });
 
+    it("normalizes parent root alias to __root__", async () => {
+        const { context, written } = makeContext(null);
+        await tool.execute(
+            {
+                nodeId: "node-1",
+                title: "Node",
+                description: "A fully normalized memory node",
+                content: "Body",
+                parents: ["root", "topic-a"],
+                refs: []
+            },
+            context,
+            { id: "tc1", name: "memory_node_write" }
+        );
+
+        expect(written).toHaveLength(1);
+        expect(written[0]!.frontmatter.parents).toEqual(["__root__", "topic-a"]);
+    });
+
     it("rejects reserved node ids", async () => {
         const { context } = makeContext(null);
         await expect(
@@ -146,6 +165,21 @@ describe("memoryNodeWriteToolBuild", () => {
                 { id: "tc1", name: "memory_node_write" }
             )
         ).rejects.toThrow("description is required");
+    });
+
+    it("rejects missing parents", async () => {
+        const { context } = makeContext(null);
+        await expect(
+            tool.execute(
+                {
+                    title: "Node",
+                    description: "Node description",
+                    content: "x"
+                } as never,
+                context,
+                { id: "tc1", name: "memory_node_write" }
+            )
+        ).rejects.toThrow("parents are required");
     });
 
     it("rejects parents that normalize to empty", async () => {

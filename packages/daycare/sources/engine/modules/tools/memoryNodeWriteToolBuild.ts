@@ -46,7 +46,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
         tool: {
             name: "memory_node_write",
             description:
-                "Create or update a memory document. Provide title, description, content (markdown body), parents (required list of parent node ids — use __root__ for top-level), and optional refs (cross-reference node ids). Omit nodeId to create; provide nodeId to update.",
+                "Create or update a memory document. Provide title, description, content (markdown body), parents (required list of parent node ids — use __root__ or root for top-level), and optional refs (cross-reference node ids). Omit nodeId to create; provide nodeId to update.",
             parameters: schema
         },
         returns,
@@ -72,7 +72,11 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
                 throw new Error("Memory node description is required.");
             }
 
-            const parents = memoryNodeIdsNormalize(payload.parents, [nodeId]);
+            const rawParents = Array.isArray(payload.parents) ? payload.parents : [];
+            if (rawParents.length === 0) {
+                throw new Error("Memory node parents are required and must include at least one parent id.");
+            }
+            const parents = memoryNodeIdsNormalize(rawParents, [nodeId], { normalizeRootAlias: true });
             if (parents.length === 0) {
                 throw new Error("Memory node parents must include at least one valid parent id.");
             }
@@ -81,7 +85,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
                     throw new Error("Only __root__ is allowed as a reserved parent id.");
                 }
             }
-            const refs = memoryNodeIdsNormalize(payload.refs ?? [], [nodeId]);
+            const refs = memoryNodeIdsNormalize(payload.refs ?? [], [nodeId], { normalizeRootAlias: false });
 
             const now = Date.now();
             const userId = toolContext.ctx.userId;
@@ -119,12 +123,17 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
     };
 }
 
-function memoryNodeIdsNormalize(values: string[], excludedIds: string[]): string[] {
+function memoryNodeIdsNormalize(
+    values: string[],
+    excludedIds: string[],
+    options: { normalizeRootAlias: boolean }
+): string[] {
     const excluded = new Set(excludedIds);
     const seen = new Set<string>();
     const normalized: string[] = [];
     for (const value of values) {
-        const nodeId = value.trim();
+        const trimmed = value.trim();
+        const nodeId = options.normalizeRootAlias && trimmed.toLowerCase() === "root" ? GRAPH_ROOT_NODE_ID : trimmed;
         if (nodeId.length === 0 || excluded.has(nodeId) || seen.has(nodeId)) {
             continue;
         }
