@@ -350,9 +350,10 @@ export async function fetchAgents() {
   return data.agents ?? [];
 }
 
-export async function fetchAgentHistory(agentId: string) {
+export async function fetchAgentHistory(agentId: string, limit = 100) {
   const encoded = encodeURIComponent(agentId);
-  const data = await fetchJSON<AgentHistoryResponse>(`/api/v1/engine/agents/${encoded}/history`);
+  const query = new URLSearchParams({ limit: String(limit) });
+  const data = await fetchJSON<AgentHistoryResponse>(`/api/v1/engine/agents/${encoded}/history?${query}`);
   return data.records ?? [];
 }
 

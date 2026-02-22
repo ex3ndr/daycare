@@ -21,18 +21,16 @@ export class HistoryRepository {
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
 
-    async findByAgentId(agentId: string): Promise<AgentHistoryRecord[]> {
-        const rows = this.db
-            .prepare(
-                `
+    async findByAgentId(agentId: string, limit?: number): Promise<AgentHistoryRecord[]> {
+        const sql = `
               SELECT h.*
               FROM session_history h
               INNER JOIN sessions s ON s.id = h.session_id
               WHERE s.agent_id = ?
               ORDER BY s.created_at ASC, h.id ASC
-            `
-            )
-            .all(agentId) as DatabaseSessionHistoryRow[];
+              ${limit !== undefined ? `LIMIT ${limit}` : ""}
+            `;
+        const rows = this.db.prepare(sql).all(agentId) as DatabaseSessionHistoryRow[];
 
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
