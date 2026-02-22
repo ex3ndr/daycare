@@ -130,7 +130,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const historyRecords: AgentHistoryRecord[] = [];
     const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
     let activeSkills: AgentSkill[] = [];
-    const isChildAgent = agent.descriptor.type === "subagent" || agent.descriptor.type === "app";
+    const isChildAgent =
+        agent.descriptor.type === "subagent" ||
+        agent.descriptor.type === "app" ||
+        agent.descriptor.type === "memory-search";
     let childAgentNudged = false;
     let childAgentResponded = false;
     const agentKind = agent.descriptor.type === "user" ? "foreground" : "background";
@@ -926,7 +929,11 @@ async function subagentDeliverResponse(
     text: string,
     logger: Logger
 ): Promise<void> {
-    if (agent.descriptor.type !== "subagent" && agent.descriptor.type !== "app") {
+    if (
+        agent.descriptor.type !== "subagent" &&
+        agent.descriptor.type !== "app" &&
+        agent.descriptor.type !== "memory-search"
+    ) {
         return;
     }
     const parentAgentId = agent.descriptor.parentAgentId ?? null;

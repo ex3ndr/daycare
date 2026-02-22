@@ -13,6 +13,15 @@ export function agentToolExecutionAllowlistResolve(
     descriptor: AgentDescriptor,
     options: AgentToolExecutionAllowlistResolveOptions
 ): ReadonlySet<string> | undefined {
+    if (descriptor.type === "memory-search") {
+        const allowedToolNames = new Set<string>(["memory_node_read"]);
+        if (options.rlmEnabled) {
+            allowedToolNames.add(RLM_TOOL_NAME);
+            allowedToolNames.add(SKIP_TOOL_NAME);
+        }
+        return allowedToolNames;
+    }
+
     if (descriptor.type !== "memory-agent") {
         return undefined;
     }

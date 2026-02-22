@@ -11,7 +11,8 @@ export async function agentSystemPromptSectionPreamble(_context: AgentSystemProm
     const descriptor = _context.descriptor;
     const template = await agentPromptBundledRead("SYSTEM.md");
     const parentAgentId =
-        descriptor && (descriptor.type === "subagent" || descriptor.type === "app")
+        descriptor &&
+        (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search")
             ? (descriptor.parentAgentId ?? "")
             : "";
     const section = Handlebars.compile(template)({

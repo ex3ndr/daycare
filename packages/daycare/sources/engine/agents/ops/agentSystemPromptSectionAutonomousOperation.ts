@@ -13,7 +13,8 @@ export async function agentSystemPromptSectionAutonomousOperation(
 ): Promise<string> {
     const descriptor = context.descriptor;
     const parentAgentId =
-        descriptor && (descriptor.type === "subagent" || descriptor.type === "app")
+        descriptor &&
+        (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search")
             ? (descriptor.parentAgentId ?? "")
             : "";
     const agentPrompt = descriptor ? (await agentPromptResolve(descriptor)).agentPrompt : "";

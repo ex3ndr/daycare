@@ -113,8 +113,8 @@ export class MemoryWorker {
                     continue;
                 }
 
-                // Skip sessions belonging to memory-agents to prevent recursion
-                if (agent.descriptor.type === "memory-agent") {
+                // Skip sessions belonging to memory-agents and memory-search agents
+                if (agent.descriptor.type === "memory-agent" || agent.descriptor.type === "memory-search") {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }

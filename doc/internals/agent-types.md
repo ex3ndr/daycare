@@ -32,7 +32,9 @@ type AgentDescriptor =
       description: string;
       systemPrompt: string;
       workspaceDir?: string;
-    };
+    }
+  | { type: "memory-agent"; id: string }
+  | { type: "memory-search"; id: string; parentAgentId: string; name: string };
 ```
 
 Notes:
@@ -42,6 +44,8 @@ Notes:
 - `subagent` is a generic background worker and always includes a parent + name.
 - `app` is a dedicated app runtime agent and always includes parent + username-style name + app id.
 - `permanent` is a background agent with a stable name, short description, system prompt, and optional workspace folder.
+- `memory-agent` extracts observations from session transcripts and writes them to the memory graph.
+- `memory-search` navigates the memory graph to answer queries. Spawned via `search_memory` tool. Read-only access to the graph, excluded from memory extraction.
 
 ## System agent registry
 
@@ -74,6 +78,33 @@ sequenceDiagram
   Tool-->>Foreground: permanent agent id
 ```
 
+## Memory-search agents
+
+Memory-search agents navigate the memory graph to answer queries. They are
+spawned via the `search_memory` tool and operate like subagents with a
+specialized system prompt.
+
+```mermaid
+sequenceDiagram
+  participant Parent
+  participant Tool
+  participant AgentSystem
+  participant MemSearch
+  participant Graph
+  Parent->>Tool: search_memory(query)
+  Tool->>AgentSystem: create memory-search agent
+  AgentSystem->>MemSearch: post query message
+  MemSearch->>Graph: memory_node_read (root)
+  MemSearch->>Graph: memory_node_read (relevant nodes)
+  MemSearch->>Parent: response tag with answer
+```
+
+Key differences from regular subagents:
+- System prompt is fully replaced with `MEMORY_SEARCH.md` (read-only graph navigation).
+- Tool allowlist: only `memory_node_read` (no write access).
+- Sessions are excluded from memory extraction (same as memory-agents).
+- Poison-pill scheduling applies (same as subagents).
+
 ## Persistence rules
 
 1. On agent creation, the engine writes `descriptor.json` and `state.json`.
@@ -99,11 +130,15 @@ Resolution behavior:
 flowchart LR
   User[User agent] -->|spawns| Subagent[Subagent]
   User -->|invokes app_<name>| AppAgent[App agent]
+  User -->|search_memory| MemSearch[Memory-search agent]
   Cron[Cron agent] -->|spawns| Subagent
   Heartbeat[Heartbeat scheduler] -->|batch prompt| HeartbeatAgent[System agent: heartbeat]
-  Architect[Planner flow] -->|specialized prompt| ArchitectAgent[System agent: architect]
+  MemWorker[Memory worker] -->|transcript| MemAgent[Memory-agent]
   Subagent -->|send_agent_message| User
   AppAgent -->|send_agent_message| User
+  MemSearch -->|response tag| User
+  MemAgent -->|memory_node_write| Graph[(Memory graph)]
+  MemSearch -->|memory_node_read| Graph
 ```
 
 Operational notes:
@@ -111,6 +146,8 @@ Operational notes:
 - Subagents and app agents always have a parent (usually a user agent, cron, or a system agent).
 - Heartbeat runs always map to a single `system:heartbeat` agent that runs a batch prompt.
 - Cron agents are scheduled inputs; they can spawn child agents but are not foreground targets.
+- Memory-search agents are spawned via `search_memory` tool and have read-only graph access.
+- Memory-agents are spawned by the memory worker and have read-write graph access.
 
 ## Message delivery
 
