@@ -24,21 +24,25 @@ const rootNode: GraphNode = {
         updatedAt: 0
     },
     content: "# Memory Graph\nRoot content.",
-    refs: []
+    refs: ["user-prefs"]
 };
 
 function makeContext(node: GraphNode | null, tree?: GraphTree) {
+    const defaultTree: GraphTree = {
+        root: rootNode,
+        children: new Map<string, GraphNode[]>([["__root__", []]])
+    };
     return {
         memory: {
             readNode: async (_userId: string, nodeId: string) => {
-                if (nodeId === "__root__") return rootNode;
+                if (nodeId === "__root__")
+                    return {
+                        ...rootNode,
+                        refs: (tree ?? defaultTree).children.get("__root__")?.map((c) => c.id) ?? []
+                    };
                 return node;
             },
-            readGraph: async () =>
-                tree ?? {
-                    root: rootNode,
-                    children: new Map<string, GraphNode[]>([["__root__", []]])
-                }
+            readGraph: async () => tree ?? defaultTree
         },
         ctx: { agentId: "agent-1", userId: "user-1" }
     } as never;
@@ -47,7 +51,7 @@ function makeContext(node: GraphNode | null, tree?: GraphTree) {
 describe("memoryNodeReadToolBuild", () => {
     const tool = memoryNodeReadToolBuild();
 
-    it("returns node content when found", async () => {
+    it("returns node content with id when found", async () => {
         const result = await tool.execute({ nodeId: "user-prefs" }, makeContext(sampleNode), {
             id: "tc1",
             name: "memory_node_read"
@@ -56,6 +60,7 @@ describe("memoryNodeReadToolBuild", () => {
         expect(result.typedResult.summary).toContain("User Preferences");
         expect(result.typedResult.summary).toContain("Prefers dark mode");
         expect(result.typedResult.summary).toContain("person-alice");
+        expect(result.typedResult.summary).toContain("**id**: `user-prefs`");
     });
 
     it("returns not found when node is missing", async () => {
@@ -67,7 +72,7 @@ describe("memoryNodeReadToolBuild", () => {
         expect(result.typedResult.summary).toContain("not found");
     });
 
-    it("reads root with tree overview when nodeId is omitted", async () => {
+    it("reads root without id but with children refs and tree overview", async () => {
         const tree: GraphTree = {
             root: rootNode,
             children: new Map([["__root__", [sampleNode]]])
@@ -78,9 +83,11 @@ describe("memoryNodeReadToolBuild", () => {
         });
         expect(result.typedResult.found).toBe(true);
         expect(result.typedResult.summary).toContain("Memory Summary");
+        expect(result.typedResult.summary).not.toContain("**id**: `__root__`");
         expect(result.typedResult.summary).toContain("Children");
         expect(result.typedResult.summary).toContain("User Preferences");
         expect(result.typedResult.summary).toContain("user-prefs");
+        expect(result.typedResult.summary).toContain("**refs**");
     });
 
     it("shows empty graph message when root has no children", async () => {

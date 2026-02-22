@@ -68,15 +68,17 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
                 };
             }
 
-            const lines = [
-                `# ${node.frontmatter.title}`,
-                "",
-                `- **id**: \`${node.id}\``,
+            const isRoot = nodeId === GRAPH_ROOT_NODE_ID;
+            const lines = [`# ${node.frontmatter.title}`, ""];
+            if (!isRoot) {
+                lines.push(`- **id**: \`${node.id}\``);
+            }
+            lines.push(
                 `- **description**: ${node.frontmatter.description}`,
                 `- **refs**: ${node.refs.length > 0 ? node.refs.map((r) => `\`${r}\``).join(", ") : "(none)"}`,
                 "",
                 node.content
-            ];
+            );
 
             // When reading root, append the full graph tree overview.
             if (nodeId === GRAPH_ROOT_NODE_ID) {

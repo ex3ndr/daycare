@@ -38,7 +38,10 @@ export class Memory {
 
     async readNode(userId: string, nodeId: string): Promise<GraphNode | null> {
         if (nodeId === GRAPH_ROOT_NODE_ID) {
-            return graphRootNodeRead();
+            // Build the full tree so root.refs reflects its actual children.
+            const tree = await this.readGraph(userId);
+            const childIds = (tree.children.get(GRAPH_ROOT_NODE_ID) ?? []).map((c) => c.id);
+            return { ...tree.root, refs: childIds };
         }
         const memoryDir = this.resolveMemoryDir(userId);
         const filename = `${nodeId}.md`;

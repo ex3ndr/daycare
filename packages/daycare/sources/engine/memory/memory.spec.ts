@@ -30,14 +30,22 @@ describe("Memory", () => {
         expect(stat.isDirectory()).toBe(true);
     });
 
-    it("readNode returns virtual root for __root__", async () => {
+    it("readNode returns virtual root with children refs populated", async () => {
         const memory = new Memory({ usersDir });
+        const child: GraphNode = {
+            id: "child-1",
+            frontmatter: { title: "Child", description: "", createdAt: 1, updatedAt: 1 },
+            content: "body",
+            refs: []
+        };
+        await memory.writeNode("usr_001", child);
 
         const root = await memory.readNode("usr_001", "__root__");
 
         expect(root).not.toBeNull();
         expect(root!.id).toBe("__root__");
         expect(root!.content).toContain("Memory Graph");
+        expect(root!.refs).toContain("child-1");
     });
 
     it("append updates body and updatedAt while preserving frontmatter", async () => {
