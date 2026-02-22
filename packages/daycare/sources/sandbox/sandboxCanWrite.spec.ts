@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
@@ -9,11 +9,22 @@ import { sandboxCanWrite } from "./sandboxCanWrite.js";
 describe("sandboxCanWrite", () => {
     let workingDir: string;
     let outsideDir: string;
+    let homeDir: string;
+    let sensitiveFile: string;
+    let dangerousFile: string;
+    let dangerousHookFile: string;
     let appFile: string;
 
     beforeEach(async () => {
         workingDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-write-workspace-"));
         outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-write-outside-"));
+        homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-write-home-"));
+        vi.spyOn(os, "homedir").mockReturnValue(homeDir);
+        sensitiveFile = path.join(homeDir, ".ssh", "authorized_keys");
+        dangerousFile = path.join(outsideDir, ".bashrc");
+        dangerousHookFile = path.join(outsideDir, ".git", "hooks", "pre-commit");
+        await fs.mkdir(path.dirname(sensitiveFile), { recursive: true });
+        await fs.mkdir(path.dirname(dangerousHookFile), { recursive: true });
         appFile = path.join(workingDir, "apps", "my-app", "APP.md");
         await fs.mkdir(path.dirname(appFile), { recursive: true });
     });
@@ -21,6 +32,8 @@ describe("sandboxCanWrite", () => {
     afterEach(async () => {
         await fs.rm(workingDir, { recursive: true, force: true });
         await fs.rm(outsideDir, { recursive: true, force: true });
+        await fs.rm(homeDir, { recursive: true, force: true });
+        vi.restoreAllMocks();
     });
 
     it("rejects writing within the workspace when not explicitly granted", async () => {
@@ -53,6 +66,39 @@ describe("sandboxCanWrite", () => {
         const target = path.join(outsideDir, "blocked.txt");
 
         await expect(sandboxCanWrite(permissions, target)).rejects.toThrow("Path is outside the allowed directories.");
+    });
+
+    it("denies writing to sensitive paths even when parent is in writeDirs", async () => {
+        const permissions = buildPermissions(workingDir, [homeDir]);
+
+        await expect(sandboxCanWrite(permissions, sensitiveFile)).rejects.toThrow(
+            "Write access denied for sensitive paths."
+        );
+    });
+
+    it("denies writing dangerous filenames in allowed writeDirs", async () => {
+        const permissions = buildPermissions(workingDir, [outsideDir]);
+
+        await expect(sandboxCanWrite(permissions, dangerousFile)).rejects.toThrow(
+            "Write access denied for dangerous files or directories."
+        );
+    });
+
+    it("denies writing under dangerous directories in allowed writeDirs", async () => {
+        const permissions = buildPermissions(workingDir, [outsideDir]);
+
+        await expect(sandboxCanWrite(permissions, dangerousHookFile)).rejects.toThrow(
+            "Write access denied for dangerous files or directories."
+        );
+    });
+
+    it("allows writing regular files in allowed writeDirs", async () => {
+        const permissions = buildPermissions(workingDir, [outsideDir]);
+        const target = path.join(outsideDir, "notes", "output.txt");
+
+        const result = await sandboxCanWrite(permissions, target);
+
+        expect(result).toBe(path.join(await fs.realpath(outsideDir), "notes", "output.txt"));
     });
 
     it("denies non-app agents from writing app directories", async () => {

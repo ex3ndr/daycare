@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { sandboxCanRead } from "./sandboxCanRead.js";
@@ -10,14 +10,35 @@ describe("sandboxCanRead", () => {
     let workingDir: string;
     let outsideDir: string;
     let outsideFile: string;
+    let homeDir: string;
+    let homeSensitiveFile: string;
+    let homeRandomFile: string;
+    let homeWorkspaceFile: string;
+    let homeWriteDirFile: string;
     let appFile: string;
     let otherAppFile: string;
 
     beforeEach(async () => {
         workingDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-read-workspace-"));
         outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-read-outside-"));
+        homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "sandbox-can-read-home-"));
+        vi.spyOn(os, "homedir").mockReturnValue(homeDir);
+
         outsideFile = path.join(outsideDir, "outside.txt");
         await fs.writeFile(outsideFile, "outside-content", "utf8");
+
+        homeSensitiveFile = path.join(homeDir, ".ssh", "id_rsa");
+        homeRandomFile = path.join(homeDir, "random.txt");
+        homeWorkspaceFile = path.join(homeDir, "workspace", "notes.txt");
+        homeWriteDirFile = path.join(homeDir, "allowed", "data.txt");
+        await fs.mkdir(path.dirname(homeSensitiveFile), { recursive: true });
+        await fs.mkdir(path.dirname(homeWorkspaceFile), { recursive: true });
+        await fs.mkdir(path.dirname(homeWriteDirFile), { recursive: true });
+        await fs.writeFile(homeSensitiveFile, "sensitive", "utf8");
+        await fs.writeFile(homeRandomFile, "home-file", "utf8");
+        await fs.writeFile(homeWorkspaceFile, "workspace-file", "utf8");
+        await fs.writeFile(homeWriteDirFile, "allowed-file", "utf8");
+
         appFile = path.join(workingDir, "apps", "my-app", "APP.md");
         otherAppFile = path.join(workingDir, "apps", "other-app", "APP.md");
         await fs.mkdir(path.dirname(appFile), { recursive: true });
@@ -29,18 +50,44 @@ describe("sandboxCanRead", () => {
     afterEach(async () => {
         await fs.rm(workingDir, { recursive: true, force: true });
         await fs.rm(outsideDir, { recursive: true, force: true });
+        await fs.rm(homeDir, { recursive: true, force: true });
+        vi.restoreAllMocks();
     });
 
-    it("allows reading any absolute path", async () => {
+    it("denies reading sensitive paths", async () => {
+        const permissions = buildPermissions(workingDir, [homeDir]);
+
+        await expect(sandboxCanRead(permissions, homeSensitiveFile)).rejects.toThrow(
+            "Read access denied for sensitive paths."
+        );
+    });
+
+    it("denies reading random home-directory files by default", async () => {
         const permissions = buildPermissions(workingDir, []);
 
-        const result = await sandboxCanRead(permissions, outsideFile);
-
-        expect(result).toBe(await fs.realpath(outsideFile));
+        await expect(sandboxCanRead(permissions, homeRandomFile)).rejects.toThrow(
+            "Read access denied for OS home paths without explicit permission."
+        );
     });
 
-    it("ignores write grants for read access checks", async () => {
-        const permissions = buildPermissions(workingDir, [outsideFile]);
+    it("allows reading files in workingDir even when workingDir is inside home", async () => {
+        const permissions = buildPermissions(path.join(homeDir, "workspace"), []);
+
+        const result = await sandboxCanRead(permissions, homeWorkspaceFile);
+
+        expect(result).toBe(await fs.realpath(homeWorkspaceFile));
+    });
+
+    it("allows reading files in explicitly granted writeDirs inside home", async () => {
+        const permissions = buildPermissions(workingDir, [path.join(homeDir, "allowed")]);
+
+        const result = await sandboxCanRead(permissions, homeWriteDirFile);
+
+        expect(result).toBe(await fs.realpath(homeWriteDirFile));
+    });
+
+    it("allows reading system paths outside home", async () => {
+        const permissions = buildPermissions(workingDir, []);
 
         const result = await sandboxCanRead(permissions, outsideFile);
 
