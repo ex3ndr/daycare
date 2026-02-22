@@ -43,6 +43,7 @@ import { agentHistoryPendingRlmResolve } from "./ops/agentHistoryPendingRlmResol
 import { agentHistoryPendingToolResults } from "./ops/agentHistoryPendingToolResults.js";
 import type { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopRun } from "./ops/agentLoopRun.js";
+import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
 import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
@@ -385,8 +386,9 @@ export class Agent {
 
         await this.completePendingToolCalls("session_crashed");
 
-        const providers = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        const providerId = this.resolveAgentProvider(providers);
+        const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
+        const providerId = this.resolveAgentProvider(rawProviders);
+        const providers = agentModelOverrideApply(rawProviders, this.state.modelOverride, providerId);
 
         const connector = this.agentSystem.connectorRegistry.get(source);
         const pluginManager = this.agentSystem.pluginManager;
@@ -853,11 +855,12 @@ export class Agent {
         if (messages.length === 0) {
             return { ok: false, reason: "empty" };
         }
-        const providers = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        if (providers.length === 0) {
+        const rawCompactionProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
+        if (rawCompactionProviders.length === 0) {
             return { ok: false, reason: "no_provider" };
         }
-        const providerId = this.resolveAgentProvider(providers);
+        const providerId = this.resolveAgentProvider(rawCompactionProviders);
+        const providers = agentModelOverrideApply(rawCompactionProviders, this.state.modelOverride, providerId);
         const stopCompactionTyping = this.startCompactionTypingIndicator();
         const compactionAbortController = new AbortController();
         this.inferenceAbortController = compactionAbortController;

@@ -35,6 +35,10 @@ export type AgentTokenEntry = {
 
 export type AgentTokenStats = Record<string, Record<string, AgentTokenSize>>;
 
+export type AgentModelOverride =
+    | { type: "selector"; value: "small" | "normal" | "big" }
+    | { type: "model"; value: string };
+
 export type AgentState = {
     context: Context;
     activeSessionId?: string | null;
@@ -45,6 +49,7 @@ export type AgentState = {
     createdAt: number;
     updatedAt: number;
     state: AgentLifecycleState;
+    modelOverride?: AgentModelOverride | null;
 };
 
 export type AgentLifecycleState = "active" | "sleeping" | "dead";

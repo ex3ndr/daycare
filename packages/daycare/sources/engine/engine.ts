@@ -30,6 +30,7 @@ import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import { rlmNoToolsModeIs } from "./modules/rlm/rlmNoToolsModeIs.js";
 import { rlmToolBuild } from "./modules/rlm/rlmTool.js";
 import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
+import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
 import { agentResetToolBuild } from "./modules/tools/agentResetTool.js";
 import { buildSendAgentMessageTool, buildStartBackgroundAgentTool } from "./modules/tools/background.js";
 import { channelCreateToolBuild } from "./modules/tools/channelCreateTool.js";
@@ -355,6 +356,7 @@ export class Engine {
         this.modules.tools.register("core", buildHeartbeatRemoveTool());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
+        this.modules.tools.register("core", agentModelSetToolBuild(this.inferenceRouter));
         this.modules.tools.register("core", agentResetToolBuild());
         this.modules.tools.register("core", agentCompactToolBuild());
         this.modules.tools.register("core", sendUserMessageToolBuild());

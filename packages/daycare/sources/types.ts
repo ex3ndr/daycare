@@ -17,6 +17,7 @@ export type {
     AgentInboxResult,
     AgentLifecycleState,
     AgentMessage,
+    AgentModelOverride,
     AgentPostTarget,
     AgentState,
     AgentTokenEntry,

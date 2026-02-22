@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 
 import { createId } from "@paralleldrive/cuid2";
 import type {
+    AgentModelOverride,
     AgentTokenEntry,
     DelayedSignalCancelRepeatKeyInput,
     DelayedSignalScheduleInput,
@@ -482,6 +483,21 @@ export class AgentSystem {
         }
         entry.agent.state.permissions = permissions;
         entry.agent.state.updatedAt = updatedAt;
+    }
+
+    /**
+     * Updates a loaded agent's model override in memory and persists it.
+     * Returns false when the agent is not loaded.
+     */
+    async updateAgentModelOverride(agentId: string, override: AgentModelOverride | null): Promise<boolean> {
+        const entry = this.entries.get(agentId);
+        if (!entry) {
+            return false;
+        }
+        entry.agent.state.modelOverride = override;
+        entry.agent.state.updatedAt = Date.now();
+        await agentStateWrite(this.storage, agentId, entry.agent.state);
+        return true;
     }
 
     async inReadLock<T>(operation: () => Promise<T>): Promise<T> {
