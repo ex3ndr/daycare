@@ -1,6 +1,6 @@
 # Memory
 
-The memory system extracts observations from agent conversations and persists them for cross-session recall.
+The memory system processes agent conversations and persists durable knowledge to the graph for cross-session recall.
 
 ## Architecture
 
@@ -10,12 +10,14 @@ sequenceDiagram
     participant S as Session Storage
     participant MW as MemoryWorker
     participant MA as Memory-Agent
+    participant G as Graph Storage
 
     A->>S: Session invalidated (sleep/reset/threshold)
     MW->>S: Poll findInvalidated()
     MW->>S: Load history records
     MW->>MA: Post formatted transcript
-    MA->>MA: Extract observations via inference
+    MA->>G: Read existing graph nodes
+    MA->>G: Write new/updated documents
     MW->>S: markProcessed()
 ```
 
@@ -24,8 +26,9 @@ sequenceDiagram
 | Component | File | Role |
 |-----------|------|------|
 | MemoryWorker | `engine/memory/memoryWorker.ts` | Timer-based poller (30s) that routes invalidated sessions |
-| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and extracts observations |
+| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and updates graph documents |
 | formatHistoryMessages | `engine/memory/infer/utils/formatHistoryMessages.ts` | Converts history records to markdown transcript |
+| Graph Store | `engine/memory/graph/` | Markdown files with YAML frontmatter for structured knowledge |
 
 ### Memory-Agent Descriptor
 
@@ -38,6 +41,7 @@ sequenceDiagram
 - **System prompt**: `prompts/memory/MEMORY_AGENT.md` (full replacement, no standard sections)
 - **Sessions never invalidated** — prevents recursive memory processing
 - **Cache key**: `/memory-agent/<sourceAgentId>`
+- **Purpose**: reads transcripts, reads existing graph, writes new/updated documents
 
 ### Session Invalidation Flow
 
@@ -62,27 +66,30 @@ Each 30-second tick:
    - Post as `system_message` to `{ type: "memory-agent", id: agentId }`
    - Mark session as processed
 
-## Storage layout
+## Storage Layout
 
-Memory files live under `<usersDir>/<userId>/memory/`.
+Memory graph files live under `<usersDir>/<userId>/memory/`.
 
-## Observation Format
+Each graph node is a markdown file with YAML frontmatter:
 
-The memory-agent extracts observations as XML:
+```markdown
+---
+title: "Node Title"
+description: "Short description"
+path: ["category", "subcategory"]
+createdAt: 1708000000000
+updatedAt: 1708000000000
+---
 
-```xml
-<observations>
-<observation>
-<text>Dense observation text.</text>
-<context>Relevant surrounding context.</context>
-</observation>
-</observations>
+Document content here.
 ```
 
-## Entity Tools
+## Memory Files
 
-| Tool | Parameters | Description |
-|------|------------|-------------|
-| `memory_create_entity` | `entity`, `name`, `description` | Create or update an entity file and add to INDEX.md |
-| `memory_upsert_record` | `entity`, `record`, `content` | Add or update a `## <record>` section |
-| `memory_list_entities` | `limit` (optional) | List entities with short name/description |
+| File | Purpose |
+|------|---------|
+| `USER.md` | User facts, preferences, timezone, communication style |
+| `SOUL.md` | Agent personality and behavioral refinements |
+| `AGENTS.md` | Workspace operating rules, session routines |
+| `TOOLS.md` | Learned tool knowledge, pitfalls, patterns |
+| `memory/*.md` | Graph nodes for topics, people, projects |
