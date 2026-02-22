@@ -81,6 +81,7 @@ export class Agent {
     private inferenceAbortController: AbortController | null = null;
     private readonly userHome: UserHome;
     private readonly files: Files;
+    private endTurnCount = 0;
 
     private constructor(
         id: string,
@@ -265,6 +266,26 @@ export class Agent {
             return;
         }
         await this.agentSystem.sleepIfIdle(this.id, item.type);
+    }
+
+    /**
+     * Increments end turn counter and invalidates the session when threshold exceeded.
+     * Runtime-only — no persistence needed for the counter.
+     */
+    private async invalidateSessionIfNeeded(): Promise<void> {
+        this.endTurnCount += 1;
+        if (this.endTurnCount <= 5) {
+            return;
+        }
+        const sessionId = this.state.activeSessionId;
+        if (!sessionId) {
+            return;
+        }
+        const maxHistoryId = await this.agentSystem.storage.history.maxId(sessionId);
+        if (maxHistoryId !== null) {
+            await this.agentSystem.storage.sessions.invalidate(sessionId, maxHistoryId);
+            logger.debug(`event: Session invalidated after ${this.endTurnCount} end turns sessionId=${sessionId}`);
+        }
     }
 
     private async handleInboxItem(
@@ -567,6 +588,8 @@ export class Agent {
         this.state.updatedAt = Date.now();
         await agentStateWrite(this.agentSystem.storage, this.id, this.state);
 
+        await this.invalidateSessionIfNeeded();
+
         return result.responseText ?? null;
     }
 
@@ -681,6 +704,7 @@ export class Agent {
 
     private async handleReset(item: AgentInboxReset): Promise<boolean> {
         const now = Date.now();
+        this.endTurnCount = 0;
         // Invalidate old session for memory processing before creating new one
         const oldSessionId = this.state.activeSessionId;
         if (oldSessionId) {
@@ -1139,6 +1163,7 @@ export class Agent {
         const summaryWithContinue = `${summaryText}\n\nPlease continue with the user's latest request.`;
         const compactionAt = Date.now();
         const resetMessage = "Session context compacted.";
+        this.endTurnCount = 0;
         // Invalidate old session for memory processing before creating new one
         const oldSessionId = this.state.activeSessionId;
         if (oldSessionId) {

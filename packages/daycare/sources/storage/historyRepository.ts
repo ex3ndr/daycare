@@ -55,14 +55,14 @@ export class HistoryRepository {
     }
 
     /**
-     * Counts history records after a given id for a session.
-     * Expects: afterId >= 0; returns 0 when no records exist after afterId.
+     * Returns history records after a given id for a session, ordered by id ASC.
+     * Expects: afterId >= 0; returns empty array when no records exist after afterId.
      */
-    async countSinceId(sessionId: string, afterId: number): Promise<number> {
-        const row = this.db
-            .prepare("SELECT COUNT(*) AS count FROM session_history WHERE session_id = ? AND id > ?")
-            .get(sessionId, afterId) as { count: number | bigint };
-        return Number(row.count);
+    async findSinceId(sessionId: string, afterId: number): Promise<AgentHistoryRecord[]> {
+        const rows = this.db
+            .prepare("SELECT * FROM session_history WHERE session_id = ? AND id > ? ORDER BY id ASC")
+            .all(sessionId, afterId) as DatabaseSessionHistoryRow[];
+        return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
 
     /**

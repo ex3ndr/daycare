@@ -159,15 +159,7 @@ export class Storage {
             });
         }
 
-        const newRecordId = await this.history.append(sessionId, record);
-
-        // Auto-invalidate session when >5 unprocessed history records
-        const session = await this.sessions.findById(sessionId);
-        const processedUntil = session?.processedUntil ?? 0;
-        const unprocessedCount = await this.history.countSinceId(sessionId, processedUntil);
-        if (unprocessedCount > 5) {
-            await this.sessions.invalidate(sessionId, newRecordId);
-        }
+        await this.history.append(sessionId, record);
     }
 
     private connectorKeyLockFor(connectorKey: string): AsyncLock {

@@ -71,8 +71,8 @@ describe("HistoryRepository", () => {
         }
     });
 
-    describe("countSinceId", () => {
-        it("counts records after a given id", async () => {
+    describe("findSinceId", () => {
+        it("returns records after a given id", async () => {
             const storage = await createTestStorage();
             try {
                 const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
@@ -82,14 +82,16 @@ describe("HistoryRepository", () => {
                 await history.append(sessionId, { type: "note", at: 12, text: "b" });
                 await history.append(sessionId, { type: "note", at: 13, text: "c" });
 
-                const count = await history.countSinceId(sessionId, id1);
-                expect(count).toBe(2);
+                const records = await history.findSinceId(sessionId, id1);
+                expect(records).toHaveLength(2);
+                expect(records[0]).toEqual({ type: "note", at: 12, text: "b" });
+                expect(records[1]).toEqual({ type: "note", at: 13, text: "c" });
             } finally {
                 storage.close();
             }
         });
 
-        it("returns 0 when no records exist after id", async () => {
+        it("returns empty array when no records exist after id", async () => {
             const storage = await createTestStorage();
             try {
                 const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
@@ -97,24 +99,8 @@ describe("HistoryRepository", () => {
 
                 const lastId = await history.append(sessionId, { type: "note", at: 11, text: "a" });
 
-                const count = await history.countSinceId(sessionId, lastId);
-                expect(count).toBe(0);
-            } finally {
-                storage.close();
-            }
-        });
-
-        it("counts all records when afterId is 0", async () => {
-            const storage = await createTestStorage();
-            try {
-                const sessionId = await storage.sessions.create({ agentId: "agent-1", createdAt: 10 });
-                const history = new HistoryRepository(storage.db);
-
-                await history.append(sessionId, { type: "note", at: 11, text: "a" });
-                await history.append(sessionId, { type: "note", at: 12, text: "b" });
-
-                const count = await history.countSinceId(sessionId, 0);
-                expect(count).toBe(2);
+                const records = await history.findSinceId(sessionId, lastId);
+                expect(records).toHaveLength(0);
             } finally {
                 storage.close();
             }

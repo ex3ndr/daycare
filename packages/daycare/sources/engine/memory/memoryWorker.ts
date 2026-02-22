@@ -1,5 +1,7 @@
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
+import { Context } from "../agents/context.js";
+import { memorySessionObserve } from "./memorySessionObserve.js";
 
 const logger = getLogger("engine.memory");
 
@@ -80,26 +82,33 @@ export class MemoryWorker {
                     continue;
                 }
 
-                await this.processSession(session.id);
+                const agent = await this.storage.agents.findById(session.agentId);
+                if (!agent) {
+                    logger.warn(
+                        `event: Agent not found for session sessionId=${session.id} agentId=${session.agentId}`
+                    );
+                    continue;
+                }
+
+                const allSessions = await this.storage.sessions.findByAgentId(session.agentId);
+                const sessionNumber = allSessions.findIndex((s) => s.id === session.id) + 1;
+                const ctx = new Context(session.agentId, agent.userId);
+                const processedUntil = session.processedUntil ?? 0;
+                const records = await this.storage.history.findSinceId(session.id, processedUntil);
+
+                await memorySessionObserve(sessionNumber, ctx, records, this.storage);
 
                 const maxHistoryId = await this.storage.history.maxId(session.id);
-                const processedUntil = maxHistoryId ?? invalidatedAt;
-                const cleared = await this.storage.sessions.markProcessed(session.id, processedUntil, invalidatedAt);
+                const newProcessedUntil = maxHistoryId ?? invalidatedAt;
+                const cleared = await this.storage.sessions.markProcessed(session.id, newProcessedUntil, invalidatedAt);
                 if (cleared) {
-                    logger.debug(`event: Session processed sessionId=${session.id} processedUntil=${processedUntil}`);
+                    logger.debug(`event: Session observed sessionId=${session.id} processedUntil=${newProcessedUntil}`);
                 } else {
-                    logger.debug(`event: Session re-invalidated during processing sessionId=${session.id}`);
+                    logger.debug(`event: Session re-invalidated during observation sessionId=${session.id}`);
                 }
             }
         } finally {
             this.scheduleNextTick();
         }
-    }
-
-    /**
-     * Stub for session processing. Will be replaced with actual memory extraction.
-     */
-    private async processSession(sessionId: string): Promise<void> {
-        logger.debug(`event: Processing session sessionId=${sessionId} (stub)`);
     }
 }
