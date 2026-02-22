@@ -30,15 +30,15 @@ const searchReturns: ToolResultContract<SearchResult> = {
 };
 
 /**
- * Builds the search_memory tool that spawns a memory-search subagent.
- * The agent navigates the memory graph to answer the query asynchronously.
+ * Builds the search_memory tool that queries the memory graph asynchronously.
+ * Returns a query ID that receives results once the search completes.
  */
 export function memorySearchToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "search_memory",
             description:
-                "Search the memory graph to answer a question. Spawns a background agent that navigates the memory graph and returns the answer asynchronously.",
+                "Search the memory graph to answer a question. Returns a query ID immediately. The query runs in the background, navigating the memory graph and synthesizing an answer. Results are delivered asynchronously via the query ID.",
             parameters: searchSchema
         },
         returns: searchReturns,
@@ -58,7 +58,7 @@ export function memorySearchToolBuild(): ToolDefinition {
             const agentId = await toolContext.agentSystem.agentIdForTarget({ descriptor });
             await toolContext.agentSystem.post({ agentId }, { type: "message", message: { text: query }, context: {} });
 
-            const summary = `Memory search started: ${agentId}.`;
+            const summary = `Memory query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
