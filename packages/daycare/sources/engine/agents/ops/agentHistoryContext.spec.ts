@@ -166,4 +166,117 @@ describe("agentHistoryContext", () => {
         expect(firstTextPart && "text" in firstTextPart ? firstTextPart.text : "").toBe("first rewritten");
         expect(secondTextPart && "text" in secondTextPart ? secondTextPart.text : "").toBe("second untouched");
     });
+
+    it("drops orphaned tool_result records that do not follow a matching assistant tool call", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 1,
+                text: "",
+                files: [],
+                toolCalls: [
+                    {
+                        type: "toolCall",
+                        id: "tool-1",
+                        name: "read_file",
+                        arguments: {}
+                    }
+                ],
+                tokens: null
+            },
+            {
+                type: "user_message",
+                at: 2,
+                text: "new request",
+                files: []
+            },
+            {
+                type: "tool_result",
+                at: 3,
+                toolCallId: "tool-1",
+                output: {
+                    toolMessage: {
+                        role: "toolResult",
+                        toolCallId: "tool-1",
+                        toolName: "read_file",
+                        content: [{ type: "text", text: "late result" }],
+                        isError: false,
+                        timestamp: 3
+                    },
+                    typedResult: { text: "late result" }
+                }
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+
+        expect(messages).toHaveLength(2);
+        expect(messages[0]?.role).toBe("assistant");
+        expect(messages[1]?.role).toBe("user");
+    });
+
+    it("keeps a contiguous batch of matching tool_result records for one assistant turn", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 1,
+                text: "",
+                files: [],
+                toolCalls: [
+                    {
+                        type: "toolCall",
+                        id: "tool-1",
+                        name: "read_file",
+                        arguments: {}
+                    },
+                    {
+                        type: "toolCall",
+                        id: "tool-2",
+                        name: "write_file",
+                        arguments: {}
+                    }
+                ],
+                tokens: null
+            },
+            {
+                type: "tool_result",
+                at: 2,
+                toolCallId: "tool-1",
+                output: {
+                    toolMessage: {
+                        role: "toolResult",
+                        toolCallId: "tool-1",
+                        toolName: "read_file",
+                        content: [{ type: "text", text: "ok-1" }],
+                        isError: false,
+                        timestamp: 2
+                    },
+                    typedResult: { text: "ok-1" }
+                }
+            },
+            {
+                type: "tool_result",
+                at: 3,
+                toolCallId: "tool-2",
+                output: {
+                    toolMessage: {
+                        role: "toolResult",
+                        toolCallId: "tool-2",
+                        toolName: "write_file",
+                        content: [{ type: "text", text: "ok-2" }],
+                        isError: false,
+                        timestamp: 3
+                    },
+                    typedResult: { text: "ok-2" }
+                }
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+
+        expect(messages).toHaveLength(3);
+        expect(messages[0]?.role).toBe("assistant");
+        expect(messages[1]?.role).toBe("toolResult");
+        expect(messages[2]?.role).toBe("toolResult");
+    });
 });
