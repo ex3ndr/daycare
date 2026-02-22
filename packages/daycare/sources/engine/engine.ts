@@ -43,6 +43,9 @@ import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js"
 import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js";
 import { buildHeartbeatAddTool, buildHeartbeatRemoveTool, buildHeartbeatRunTool } from "./modules/tools/heartbeat.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
+import { memoryGraphReadToolBuild } from "./modules/tools/memoryGraphReadToolBuild.js";
+import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
+import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
@@ -381,6 +384,9 @@ export class Engine {
         this.modules.tools.register("core", exposeRemoveToolBuild(this.exposes));
         this.modules.tools.register("core", exposeUpdateToolBuild(this.exposes));
         this.modules.tools.register("core", exposeListToolBuild(this.exposes));
+        this.modules.tools.register("core", memoryGraphReadToolBuild());
+        this.modules.tools.register("core", memoryNodeReadToolBuild());
+        this.modules.tools.register("core", memoryNodeWriteToolBuild());
         if (this.config.current.features.rlm) {
             this.modules.tools.register("core", rlmToolBuild(this.modules.tools));
         }
