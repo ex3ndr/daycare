@@ -1,44 +1,85 @@
 # Memory
 
-The memory plugin provides structured entity storage using Markdown files. It allows agents to create, update, and query persistent knowledge.
+The memory system extracts observations from agent conversations and persists them for cross-session recall.
+
+## Architecture
+
+```mermaid
+sequenceDiagram
+    participant A as Agent
+    participant S as Session Storage
+    participant MW as MemoryWorker
+    participant MA as Memory-Agent
+
+    A->>S: Session invalidated (sleep/reset/threshold)
+    MW->>S: Poll findInvalidated()
+    MW->>S: Load history records
+    MW->>MA: Post formatted transcript
+    MA->>MA: Extract observations via inference
+    MW->>S: markProcessed()
+```
+
+### Components
+
+| Component | File | Role |
+|-----------|------|------|
+| MemoryWorker | `engine/memory/memoryWorker.ts` | Timer-based poller (30s) that routes invalidated sessions |
+| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and extracts observations |
+| formatHistoryMessages | `engine/memory/infer/utils/formatHistoryMessages.ts` | Converts history records to markdown transcript |
+
+### Memory-Agent Descriptor
+
+```typescript
+{ type: "memory-agent"; id: string }
+// id = source agent this memory-agent processes for
+```
+
+- **One memory-agent per source agent** — lazily created on first encounter
+- **System prompt**: `prompts/memory/MEMORY_AGENT.md` (full replacement, no standard sections)
+- **Sessions never invalidated** — prevents recursive memory processing
+- **Cache key**: `/memory-agent/<sourceAgentId>`
+
+### Session Invalidation Flow
+
+Sessions are invalidated at four points:
+
+1. **End turn threshold** — after 5+ turns (`agent.ts:invalidateSessionIfNeeded`)
+2. **Session reset** — manual or emergency reset (`agent.ts:handleReset`)
+3. **Context compaction** — old session archived (`agent.ts:applyCompactionSummary`)
+4. **Agent sleep** — idle timeout (`agentSystem.ts:sleepIfIdle`)
+
+Memory-agent descriptors skip all four invalidation points.
+
+### Memory Worker Tick
+
+Each 30-second tick:
+
+1. Query up to 10 invalidated sessions
+2. For each session:
+   - Skip if agent is a `memory-agent` (mark processed, continue)
+   - Load unprocessed history records since `processedUntil`
+   - Format as markdown transcript
+   - Post as `system_message` to `{ type: "memory-agent", id: agentId }`
+   - Mark session as processed
 
 ## Storage layout
 
-Memory files live under `<workspace>/memory/`:
+Memory files live under `<usersDir>/<userId>/memory/`.
 
-| File | Purpose |
-|------|---------|
-| `INDEX.md` | Lists all entity types |
-| `<entity>.md` | Records for that entity type |
+## Observation Format
 
-## Entity format
+The memory-agent extracts observations as XML:
 
-Entity names must be lowercase English letters only (a-z, no underscores).
-
-```markdown
----
-name: "Ada Lovelace"
-description: "Pioneer of computing."
----
-
-# person
-
-## Ada Lovelace
-Pioneer of computing.
-
-## Alan Turing
-Father of computer science.
+```xml
+<observations>
+<observation>
+<text>Dense observation text.</text>
+<context>Relevant surrounding context.</context>
+</observation>
+</observations>
 ```
 
-### Constraints
-
-| Field | Limit |
-|-------|-------|
-| Entity name | Lowercase a-z only |
-| Name | Max 60 characters, single line |
-| Description | Max 160 characters, single line |
-
-## Tools
+## Entity Tools
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
