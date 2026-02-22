@@ -10,6 +10,8 @@ export type AgentSystemPromptAgentSystem = Pick<
 export type AgentSystemPromptContext = {
     model?: string;
     provider?: string;
+    userId?: string;
+    agentId?: string;
     permissions?: SessionPermissions;
     agentSystem?: AgentSystemPromptAgentSystem;
     descriptor?: AgentDescriptor;

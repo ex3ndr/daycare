@@ -10,7 +10,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  */
 export async function agentSystemPromptSectionToolCalling(context: AgentSystemPromptContext = {}): Promise<string> {
     const config = context.agentSystem?.config?.current;
-    const availableTools = context.agentSystem?.toolResolver?.listTools() ?? [];
+    const availableTools = toolListVisibleResolve(context);
     const isForeground = context.descriptor?.type === "user";
     const noToolsPrompt =
         config?.features.noTools && availableTools.length > 0
@@ -22,4 +22,19 @@ export async function agentSystemPromptSectionToolCalling(context: AgentSystemPr
         .filter((part) => part.length > 0)
         .join("\n\n")
         .trim();
+}
+
+function toolListVisibleResolve(context: AgentSystemPromptContext) {
+    const toolResolver = context.agentSystem?.toolResolver;
+    if (!toolResolver) {
+        return [];
+    }
+    if (context.userId && context.agentId && context.descriptor) {
+        return toolResolver.listToolsForAgent({
+            userId: context.userId,
+            agentId: context.agentId,
+            descriptor: context.descriptor
+        });
+    }
+    return toolResolver.listTools();
 }

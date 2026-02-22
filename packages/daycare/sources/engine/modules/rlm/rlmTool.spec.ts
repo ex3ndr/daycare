@@ -92,6 +92,13 @@ describe("rlmToolBuild", () => {
                     parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
                 }
             ],
+            listToolsForAgent: () => [
+                {
+                    name: "run_python",
+                    description: "meta",
+                    parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+                }
+            ],
             execute: fallbackExecute
         };
         const runtimeExecute = vi.fn(async (toolCall: { arguments: { text: string } }) =>
@@ -99,6 +106,18 @@ describe("rlmToolBuild", () => {
         );
         const runtimeResolver: ToolResolverApi = {
             listTools: () => [
+                {
+                    name: "echo",
+                    description: "Echo text.",
+                    parameters: Type.Object({ text: Type.String() }, { additionalProperties: false })
+                },
+                {
+                    name: "run_python",
+                    description: "meta",
+                    parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+                }
+            ],
+            listToolsForAgent: () => [
                 {
                     name: "echo",
                     description: "Echo text.",
@@ -124,6 +143,62 @@ describe("rlmToolBuild", () => {
         expect(messageText(result)).toContain("runtime");
         expect(runtimeExecute).toHaveBeenCalledTimes(1);
         expect(fallbackExecute).not.toHaveBeenCalled();
+    });
+
+    it("resolves runtime tools using contextual listing when available", async () => {
+        const listTools = vi.fn(() => [
+            {
+                name: "secret_tool",
+                description: "Secret.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            {
+                name: "run_python",
+                description: "meta",
+                parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+            }
+        ]);
+        const listToolsForAgent = vi.fn(() => [
+            {
+                name: "echo",
+                description: "Echo text.",
+                parameters: Type.Object({ text: Type.String() }, { additionalProperties: false })
+            },
+            {
+                name: "run_python",
+                description: "meta",
+                parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+            }
+        ]);
+        const runtimeExecute = vi.fn(async (toolCall: { arguments: { text: string } }) =>
+            okResult("echo", toolCall.arguments.text)
+        );
+        const runtimeResolver: ToolResolverApi = {
+            listTools,
+            listToolsForAgent,
+            execute: runtimeExecute as unknown as ToolResolverApi["execute"]
+        };
+        const tool = rlmToolBuild(runtimeResolver);
+
+        const result = await tool.execute(
+            { code: "echo('runtime')" },
+            createContext({ toolResolver: runtimeResolver }),
+            { id: "tool-call-contextual", name: "run_python" }
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(messageText(result)).toContain("runtime");
+        expect(listToolsForAgent).toHaveBeenCalledWith({
+            userId: "user-1",
+            agentId: "agent-1",
+            descriptor: {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            }
+        });
+        expect(listTools).not.toHaveBeenCalled();
     });
 
     it("writes checkpoint history through appendHistoryRecord when provided", async () => {
@@ -167,6 +242,7 @@ function createResolver(handler: (name: string, args: unknown) => Promise<ToolEx
 
     return {
         listTools: () => tools,
+        listToolsForAgent: () => tools,
         execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments))
     };
 }
@@ -175,6 +251,12 @@ function createContext(overrides: Partial<ToolExecutionContext> = {}): ToolExecu
     const agent = {
         id: "agent-1",
         userId: "user-1",
+        descriptor: {
+            type: "user",
+            connector: "telegram",
+            channelId: "channel-1",
+            userId: "user-1"
+        },
         inbox: {
             consumeSteering: () => null
         }

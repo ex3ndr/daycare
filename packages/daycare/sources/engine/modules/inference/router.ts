@@ -25,6 +25,7 @@ export type InferenceCompleteOptions = {
     onFailure?: (providerId: string, error: unknown) => void;
     providersOverride?: ProviderSettings[];
     signal?: AbortSignal;
+    providerOptions?: Record<string, unknown>;
 };
 
 export class InferenceRouter {
@@ -102,6 +103,7 @@ export class InferenceRouter {
                     );
                     // Provider API expects `sessionId`; caller owns how this is scoped/rotated.
                     const message = await client.complete(context, {
+                        ...(options?.providerOptions ?? {}),
                         sessionId,
                         signal: options?.signal
                     });

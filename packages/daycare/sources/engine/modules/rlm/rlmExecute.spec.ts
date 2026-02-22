@@ -186,6 +186,7 @@ describe("rlmExecute", () => {
 function createResolver(handler: (name: string, args: unknown) => Promise<ToolExecutionResult>): ToolResolverApi {
     return {
         listTools: () => baseTools,
+        listToolsForAgent: () => baseTools,
         execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments))
     };
 }

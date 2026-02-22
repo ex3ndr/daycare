@@ -5,6 +5,7 @@ import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
+import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 const RLM_LIMITS = {
     maxDurationSecs: 30,
@@ -46,7 +47,9 @@ export async function rlmExecute(
     historyCallback?: RlmHistoryCallback,
     checkSteering?: RlmCheckSteeringCallback
 ): Promise<RlmExecuteResult> {
-    const availableTools = toolResolver.listTools().filter((tool) => tool.name !== RLM_TOOL_NAME);
+    const availableTools = rlmToolsForContextResolve(toolResolver, context).filter(
+        (tool) => tool.name !== RLM_TOOL_NAME
+    );
     const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
     const externalFunctions = [...toolByName.keys(), RLM_PRINT_FUNCTION_NAME];
     const rewrittenCode = printCallsRewrite(code);

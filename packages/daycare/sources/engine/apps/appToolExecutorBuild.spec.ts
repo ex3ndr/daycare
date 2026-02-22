@@ -202,16 +202,18 @@ function inferenceRouterBuild(text: string): InferenceRouter {
 
 function resolverBuild(execute: () => Promise<ToolExecutionResult>) {
     const schema = Type.Object({}, { additionalProperties: true });
+    const tools: Tool[] = [
+        { name: "read", description: "read", parameters: schema },
+        { name: "write", description: "write", parameters: schema },
+        { name: "edit", description: "edit", parameters: schema },
+        { name: "exec", description: "exec", parameters: schema },
+        { name: "run_python", description: "run_python", parameters: schema },
+        { name: "request_permission", description: "request_permission", parameters: schema },
+        { name: "cron", description: "cron", parameters: schema }
+    ];
     return {
-        listTools: (): Tool[] => [
-            { name: "read", description: "read", parameters: schema },
-            { name: "write", description: "write", parameters: schema },
-            { name: "edit", description: "edit", parameters: schema },
-            { name: "exec", description: "exec", parameters: schema },
-            { name: "run_python", description: "run_python", parameters: schema },
-            { name: "request_permission", description: "request_permission", parameters: schema },
-            { name: "cron", description: "cron", parameters: schema }
-        ],
+        listTools: (): Tool[] => tools,
+        listToolsForAgent: (): Tool[] => tools,
         execute: vi.fn(async () => execute())
     };
 }

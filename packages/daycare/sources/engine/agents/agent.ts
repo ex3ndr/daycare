@@ -48,6 +48,7 @@ import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
+import { agentToolExecutionAllowlistResolve } from "./ops/agentToolExecutionAllowlistResolve.js";
 import type {
     AgentHistoryRecord,
     AgentInboxCompact,
@@ -399,11 +400,15 @@ export class Agent {
 
         const toolResolver = this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
-        const availableTools = toolResolver.listTools();
+        const visibleTools = toolResolver.listToolsForAgent({
+            userId: this.userId,
+            agentId: this.id,
+            descriptor: this.descriptor
+        });
         const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);
         const rlmToolDescription =
             this.agentSystem.config.current.features.rlm && !noToolsModeEnabled
-                ? await rlmToolDescriptionBuild(availableTools)
+                ? await rlmToolDescriptionBuild(visibleTools)
                 : undefined;
 
         await agentPromptFilesEnsure(agentPromptPathsResolve(this.userHome));
@@ -413,6 +418,8 @@ export class Agent {
             model: providerSettings?.model,
             permissions: this.state.permissions,
             descriptor: this.descriptor,
+            userId: this.userId,
+            agentId: this.id,
             agentSystem: this.agentSystem,
             userHome: this.userHome
         });
@@ -1024,6 +1031,10 @@ export class Agent {
     }
 
     private rlmRestoreContextBuild(source: string): ToolExecutionContext {
+        const allowedToolNames = agentToolExecutionAllowlistResolve(this.descriptor, {
+            rlmEnabled: this.agentSystem.config.current.features.rlm
+        });
+
         return {
             connectorRegistry: this.agentSystem.connectorRegistry,
             fileStore: this.files.downloads,
@@ -1039,7 +1050,8 @@ export class Agent {
             heartbeats: this.agentSystem.heartbeats,
             memory: this.agentSystem.memory,
             toolResolver: this.agentSystem.toolResolver,
-            skills: []
+            skills: [],
+            allowedToolNames
         };
     }
 
@@ -1107,7 +1119,11 @@ export class Agent {
             rlmToolDescription?: string;
         }
     ): Promise<InferenceContext["tools"]> {
-        const tools = toolResolver.listTools();
+        const tools = toolResolver.listToolsForAgent({
+            userId: this.userId,
+            agentId: this.id,
+            descriptor: this.descriptor
+        });
         const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);
         let rlmToolDescription = options?.rlmToolDescription;
         if (!rlmToolDescription && this.agentSystem.config.current.features.rlm && !noToolsModeEnabled) {

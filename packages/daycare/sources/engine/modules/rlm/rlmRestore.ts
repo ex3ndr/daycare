@@ -6,6 +6,7 @@ import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "./rlmConstants.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 import type { RlmCheckSteeringCallback, RlmExecuteResult, RlmHistoryCallback } from "./rlmExecute.js";
+import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 const RLM_RESTART_MESSAGE = "Process was restarted";
 
@@ -21,7 +22,9 @@ export async function rlmRestore(
     historyCallback?: RlmHistoryCallback,
     checkSteering?: RlmCheckSteeringCallback
 ): Promise<RlmExecuteResult> {
-    const availableTools = toolResolver.listTools().filter((tool) => tool.name !== RLM_TOOL_NAME);
+    const availableTools = rlmToolsForContextResolve(toolResolver, context).filter(
+        (tool) => tool.name !== RLM_TOOL_NAME
+    );
     const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
     const printOutput = [...lastToolCall.printOutput];
     let toolCallCount = lastToolCall.toolCallCount;

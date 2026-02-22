@@ -51,6 +51,23 @@ function makeContext(node: GraphNode | null, tree?: GraphTree) {
 describe("memoryNodeReadToolBuild", () => {
     const tool = memoryNodeReadToolBuild();
 
+    it("is visible by default only for memory-agent descriptors", () => {
+        expect(
+            tool.visibleByDefault?.({
+                userId: "user-1",
+                agentId: "agent-1",
+                descriptor: { type: "memory-agent", id: "source-agent-1" }
+            })
+        ).toBe(true);
+        expect(
+            tool.visibleByDefault?.({
+                userId: "user-1",
+                agentId: "agent-1",
+                descriptor: { type: "user", connector: "telegram", userId: "user-1", channelId: "channel-1" }
+            })
+        ).toBe(false);
+    });
+
     it("returns node content with id when found", async () => {
         const result = await tool.execute({ nodeId: "user-prefs" }, makeContext(sampleNode), {
             id: "tc1",

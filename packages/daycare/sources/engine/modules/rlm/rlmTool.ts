@@ -9,6 +9,7 @@ import { rlmExecute } from "./rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "./rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmResultTextBuild } from "./rlmResultTextBuild.js";
 import { rlmToolResultBuild, rlmToolReturns } from "./rlmToolResultBuild.js";
+import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 const schema = Type.Object(
     {
@@ -35,7 +36,7 @@ export function rlmToolBuild(toolResolver: ToolResolverApi): ToolDefinition {
         execute: async (args, context, toolCall) => {
             const payload = args as RlmArgs;
             const runtimeResolver = context.toolResolver ?? toolResolver;
-            const preamble = montyRuntimePreambleBuild(runtimeResolver.listTools());
+            const preamble = montyRuntimePreambleBuild(rlmToolsForContextResolve(runtimeResolver, context));
             const appendHistoryRecord = context.appendHistoryRecord;
 
             try {

@@ -34,6 +34,16 @@ describe("agentPromptResolve", () => {
         });
     });
 
+    it("resolves memory-agent prompt with full replacement", async () => {
+        const resolved = await agentPromptResolve({
+            type: "memory-agent",
+            id: "agent-1"
+        });
+
+        expect(resolved.agentPrompt.length).toBeGreaterThan(0);
+        expect(resolved.replaceSystemPrompt).toBe(true);
+    });
+
     it("returns empty prompt for non-system descriptors", async () => {
         const resolved = await agentPromptResolve({
             type: "user",

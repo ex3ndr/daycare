@@ -38,6 +38,8 @@ import { agentHistoryPendingToolResults } from "./agentHistoryPendingToolResults
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
 import { agentMessageRunPythonSayAfterTrim } from "./agentMessageRunPythonSayAfterTrim.js";
+import { agentMessageRunPythonTerminalTrim } from "./agentMessageRunPythonTerminalTrim.js";
+import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
 import { tokensResolve } from "./tokensResolve.js";
@@ -132,6 +134,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const agentKind = agent.descriptor.type === "user" ? "foreground" : "background";
     const target = agentDescriptorTargetResolve(agent.descriptor);
     const targetId = target?.targetId ?? null;
+    const toolVisibilityContext = {
+        userId: agent.userId,
+        agentId: agent.id,
+        descriptor: agent.descriptor
+    };
+    const allowedToolNames = agentToolExecutionAllowlistResolve(agent.descriptor, {
+        rlmEnabled: agentSystem.config.current.features.rlm
+    });
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
     const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
 
@@ -139,9 +149,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
         for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
             const noToolsModeEnabled = rlmNoToolsModeIs(agentSystem.config.current.features);
+            let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
             try {
                 activeSkills = await skills.list();
-                const availableTools = toolResolver.listTools();
+                availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
                 const rlmToolDescription =
                     agentSystem.config.current.features.rlm && !noToolsModeEnabled
                         ? await rlmToolDescriptionBuild(availableTools)
@@ -181,6 +192,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             }
             response = await inferenceRouter.complete(context, inferenceSessionId, {
                 providersOverride: providersForAgent,
+                providerOptions: noToolsModeEnabled
+                    ? {
+                          stop: ["</run_python>"]
+                      }
+                    : undefined,
                 signal: abortSignal,
                 onAttempt: (providerId, modelId) => {
                     logger.debug(
@@ -257,7 +273,15 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             );
             context.messages.push(response.message);
 
-            const responseText = messageExtractText(response.message);
+            let responseText = messageExtractText(response.message);
+            if (noToolsModeEnabled && responseText) {
+                const terminalTrimmed = agentMessageRunPythonTerminalTrim(responseText);
+                if (terminalTrimmed !== null) {
+                    responseText = terminalTrimmed;
+                    messageAssistantTextRewrite(response.message, terminalTrimmed);
+                    logger.debug("event: Trimmed inline RLM assistant text at first </run_python>");
+                }
+            }
             let historyResponseText = responseText ?? "";
             const pendingHistoryRewrites: Array<{
                 text: string;
@@ -443,7 +467,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
             if (noToolsModeEnabled) {
                 if (hasRunPythonTag) {
-                    const preamble = montyRuntimePreambleBuild(toolResolver.listTools());
+                    const preamble = montyRuntimePreambleBuild(availableTools);
                     const executionContext = {
                         connectorRegistry,
                         fileStore,
@@ -461,7 +485,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         toolResolver,
                         skills: activeSkills,
                         appendHistoryRecord,
-                        rlmToolOnly: false
+                        rlmToolOnly: false,
+                        allowedToolNames
                     };
 
                     for (let index = 0; index < runPythonCodes.length; index += 1) {
@@ -598,7 +623,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     toolResolver,
                     skills: activeSkills,
                     appendHistoryRecord,
-                    rlmToolOnly: agentSystem.config.current.features.rlm
+                    rlmToolOnly: agentSystem.config.current.features.rlm,
+                    allowedToolNames
                 });
                 logger.debug(
                     `event: Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError}`

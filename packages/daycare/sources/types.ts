@@ -89,7 +89,8 @@ export type {
     ToolResultOutcomeObject,
     ToolResultPrimitive,
     ToolResultRow,
-    ToolResultShallowObject
+    ToolResultShallowObject,
+    ToolVisibilityContext
 } from "./engine/modules/tools/types.js";
 // Permissions
 export type { SessionPermissions } from "./engine/permissions.js";

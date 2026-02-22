@@ -6,11 +6,43 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 
 import { UserHome } from "../../users/userHome.js";
+import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
+import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentSystemPrompt } from "./agentSystemPrompt.js";
 
 type AgentSystemPromptParameter = NonNullable<Parameters<typeof agentSystemPrompt>[0]>;
 
 describe("agentSystemPrompt", () => {
+    it("returns replacement prompt for memory-agent descriptor", async () => {
+        const expected = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
+
+        const rendered = await agentSystemPrompt({
+            descriptor: { type: "memory-agent", id: "agent-1" }
+        });
+
+        expect(rendered).toContain(expected);
+        expect(rendered).toContain("## Tool Calling");
+        expect(rendered).toContain("## Skills");
+    });
+
+    it("returns replacement prompt for architect system agent", async () => {
+        const resolved = await systemAgentPromptResolve("architect");
+        if (!resolved) {
+            // Some builds register only non-replacement system agents.
+            expect(resolved).toBeNull();
+            return;
+        }
+        const expected = resolved.systemPrompt.trim();
+
+        const rendered = await agentSystemPrompt({
+            descriptor: { type: "system", tag: "architect" }
+        });
+
+        expect(rendered).toContain(expected);
+        expect(rendered).toContain("## Tool Calling");
+        expect(rendered).toContain("## Skills");
+    });
+
     it("renders base prompt for system agent without a registered definition", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-unknown-"));
         try {
@@ -31,7 +63,7 @@ describe("agentSystemPrompt", () => {
                             features: { noTools: false, rlm: false, say: false }
                         }
                     },
-                    toolResolver: { listTools: () => [] }
+                    toolResolver: { listTools: () => [], listToolsForAgent: () => [] }
                 } as unknown as NonNullable<AgentSystemPromptParameter["agentSystem"]>
             });
 
@@ -72,7 +104,8 @@ describe("agentSystemPrompt", () => {
                     }
                 },
                 toolResolver: {
-                    listTools: () => []
+                    listTools: () => [],
+                    listToolsForAgent: () => []
                 }
             } as unknown as NonNullable<AgentSystemPromptParameter["agentSystem"]>;
 
@@ -148,6 +181,18 @@ describe("agentSystemPrompt", () => {
                 toolResolver: {
                     listTools: () => [
                         {
+                            name: "hidden_tool",
+                            description: "Hidden tool",
+                            parameters: {}
+                        } as unknown as Tool,
+                        {
+                            name: "run_python",
+                            description: "Python execution",
+                            parameters: {}
+                        } as unknown as Tool
+                    ],
+                    listToolsForAgent: () => [
+                        {
                             name: "run_python",
                             description: "Python execution",
                             parameters: {}
@@ -159,6 +204,8 @@ describe("agentSystemPrompt", () => {
             const rendered = await agentSystemPrompt({
                 provider: "openai",
                 model: "gpt-4.1",
+                userId: "user-1",
+                agentId: "agent-runtime-1",
                 permissions: {
                     workingDir: "/tmp/workspace",
                     writeDirs: ["/tmp/workspace"]
@@ -178,6 +225,7 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("## Agent Prompt");
             expect(rendered).toContain("Handle long-running research.");
             expect(rendered).toContain("## Python Execution");
+            expect(rendered).not.toContain("hidden_tool");
             expect(rendered).not.toContain("If you include `<say>` in the same response");
             expect(rendered).not.toContain("you MUST emit `<say>` with your response");
         } finally {

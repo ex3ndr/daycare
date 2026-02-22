@@ -2,7 +2,7 @@ import type { Tool, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
 import { validateToolCall } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import type { ToolDefinition, ToolExecutionContext, ToolExecutionResult } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolExecutionResult, ToolVisibilityContext } from "@/types";
 import { getLogger } from "../../log.js";
 import { MONTY_RESPONSE_SCHEMA_KEY } from "./monty/montyResponseSchemaKey.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlm/rlmConstants.js";
@@ -41,15 +41,13 @@ export class ToolResolver {
     }
 
     listTools(): Tool[] {
-        return Array.from(this.tools.values()).map((entry) => {
-            const tool = { ...entry.tool } as Tool;
-            Object.defineProperty(tool, MONTY_RESPONSE_SCHEMA_KEY, {
-                value: entry.returns.schema,
-                enumerable: false,
-                configurable: false
-            });
-            return tool;
-        });
+        return Array.from(this.tools.values()).map((entry) => toolExpose(entry));
+    }
+
+    listToolsForAgent(context: ToolVisibilityContext): Tool[] {
+        return Array.from(this.tools.values())
+            .filter((entry) => toolVisibleByDefault(entry, context))
+            .map((entry) => toolExpose(entry));
     }
 
     async execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> {
@@ -62,6 +60,10 @@ export class ToolResolver {
             const availableTools = Array.from(this.tools.keys()).join(",");
             logger.debug(`event: Tool not found toolName=${toolCall.name} availableTools=${availableTools}`);
             return buildToolError(toolCall, `Unknown tool: ${toolCall.name}`);
+        }
+        if (context.allowedToolNames && !context.allowedToolNames.has(toolCall.name)) {
+            logger.info({ tool: toolCall.name }, "deny: Tool execution blocked by execution allowlist");
+            return buildToolError(toolCall, `Tool "${toolCall.name}" is not allowed for this agent.`);
         }
 
         try {
@@ -105,7 +107,7 @@ export class ToolResolver {
     }
 }
 
-export type ToolResolverApi = Pick<ToolResolver, "listTools" | "execute">;
+export type ToolResolverApi = Pick<ToolResolver, "listTools" | "listToolsForAgent" | "execute">;
 
 function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
     const toolMessage: ToolResultMessage = {
@@ -117,6 +119,31 @@ function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
         timestamp: Date.now()
     };
     return toolExecutionResultOutcome(toolMessage);
+}
+
+function toolExpose(entry: RegisteredTool): Tool {
+    const tool = { ...entry.tool } as Tool;
+    Object.defineProperty(tool, MONTY_RESPONSE_SCHEMA_KEY, {
+        value: entry.returns.schema,
+        enumerable: false,
+        configurable: false
+    });
+    return tool;
+}
+
+function toolVisibleByDefault(entry: RegisteredTool, context: ToolVisibilityContext): boolean {
+    if (!entry.visibleByDefault) {
+        return true;
+    }
+    try {
+        return entry.visibleByDefault(context);
+    } catch (error) {
+        logger.warn(
+            { tool: entry.tool.name, descriptorType: context.descriptor.type, error },
+            "error: Tool visibleByDefault callback failed"
+        );
+        return false;
+    }
 }
 
 function toolResultSchemaValidate(toolName: string, schema: TSchema): void {

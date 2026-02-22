@@ -29,7 +29,14 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext = {}):
         if (!replaced) {
             throw new Error("System prompt replacement requires a non-empty agent prompt.");
         }
-        return replaced;
+        const [toolSection, skillsSection] = await Promise.all([
+            agentSystemPromptSectionToolCalling(context),
+            agentSystemPromptSectionSkills(context)
+        ]);
+        return [replaced, toolSection.trim(), skillsSection.trim()]
+            .filter((section) => section.length > 0)
+            .join(SECTION_SEPARATOR)
+            .trim();
     }
 
     logger.debug("event: buildSystemPrompt rendering sections");

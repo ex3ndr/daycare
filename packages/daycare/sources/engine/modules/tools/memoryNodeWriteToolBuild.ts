@@ -50,6 +50,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
             parameters: schema
         },
         returns,
+        visibleByDefault: (context) => context.descriptor.type === "memory-agent",
         execute: async (args, toolContext, toolCall) => {
             const memory = toolContext.memory;
             if (!memory) {

@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 
-import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
+import type { ToolExecutionContext, ToolExecutionResult, ToolVisibilityContext } from "@/types";
 import { ToolResolver } from "./toolResolver.js";
 
 const textResultSchema = Type.Object({ text: Type.String() }, { additionalProperties: false });
@@ -11,6 +11,118 @@ const textReturns = {
 };
 
 describe("ToolResolver", () => {
+    it("lists tools as visible by default when callback is not defined", () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: async () => okResult("read_file", "ok")
+        });
+
+        const tools = resolver.listToolsForAgent(toolVisibilityContextCreate());
+
+        expect(tools.map((tool) => tool.name)).toEqual(["read_file"]);
+    });
+
+    it("omits tools from contextual list when visibleByDefault returns false", () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            visibleByDefault: () => false,
+            execute: async () => okResult("read_file", "ok")
+        });
+
+        const tools = resolver.listToolsForAgent(toolVisibilityContextCreate());
+
+        expect(tools).toEqual([]);
+    });
+
+    it("supports descriptor-aware visibility callbacks", () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "memory_node_read",
+                description: "Read memory node.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            returns: textReturns,
+            visibleByDefault: (context) => context.descriptor.type === "memory-agent",
+            execute: async () => okResult("memory_node_read", "ok")
+        });
+
+        const memoryTools = resolver.listToolsForAgent(
+            toolVisibilityContextCreate({ descriptor: { type: "memory-agent", id: "agent-1" } })
+        );
+        const userTools = resolver.listToolsForAgent(toolVisibilityContextCreate());
+
+        expect(memoryTools.map((tool) => tool.name)).toEqual(["memory_node_read"]);
+        expect(userTools).toEqual([]);
+    });
+
+    it("keeps hidden tools executable when no execution allowlist is configured", async () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "hidden_tool",
+                description: "Hidden tool.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            returns: textReturns,
+            visibleByDefault: () => false,
+            execute: async () => okResult("hidden_tool", "ok")
+        });
+
+        expect(resolver.listToolsForAgent(toolVisibilityContextCreate())).toEqual([]);
+
+        const result = await resolver.execute(
+            {
+                type: "toolCall",
+                id: "call-1",
+                name: "hidden_tool",
+                arguments: {}
+            },
+            toolExecutionContextCreate()
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(messageText(result)).toContain("ok");
+    });
+
+    it("blocks execution when tool is not in execution allowlist", async () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: async () => okResult("read_file", "ok")
+        });
+
+        const result = await resolver.execute(
+            {
+                type: "toolCall",
+                id: "call-1",
+                name: "read_file",
+                arguments: { path: "/tmp/a.txt" }
+            },
+            toolExecutionContextCreate({ allowedToolNames: new Set(["memory_node_read"]) })
+        );
+
+        expect(result.toolMessage.isError).toBe(true);
+        expect(messageText(result)).toContain('Tool "read_file" is not allowed for this agent.');
+    });
+
     it("rejects non-run_python tool calls when rlmToolOnly is enabled", async () => {
         const resolver = new ToolResolver();
         resolver.register("test", {
@@ -247,6 +359,20 @@ function toolExecutionContextCreate(overrides: Partial<ToolExecutionContext> = {
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"],
+        ...overrides
+    };
+}
+
+function toolVisibilityContextCreate(overrides: Partial<ToolVisibilityContext> = {}): ToolVisibilityContext {
+    return {
+        userId: "user-1",
+        agentId: "agent-1",
+        descriptor: {
+            type: "user",
+            connector: "telegram",
+            userId: "user-1",
+            channelId: "channel-1"
+        },
         ...overrides
     };
 }

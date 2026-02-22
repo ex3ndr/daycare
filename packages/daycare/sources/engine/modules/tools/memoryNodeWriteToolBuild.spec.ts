@@ -26,6 +26,23 @@ function makeContext(existingNode: GraphNode | null, parentNodes?: Map<string, G
 describe("memoryNodeWriteToolBuild", () => {
     const tool = memoryNodeWriteToolBuild();
 
+    it("is visible by default only for memory-agent descriptors", () => {
+        expect(
+            tool.visibleByDefault?.({
+                userId: "user-1",
+                agentId: "agent-1",
+                descriptor: { type: "memory-agent", id: "source-agent-1" }
+            })
+        ).toBe(true);
+        expect(
+            tool.visibleByDefault?.({
+                userId: "user-1",
+                agentId: "agent-1",
+                descriptor: { type: "user", connector: "telegram", userId: "user-1", channelId: "channel-1" }
+            })
+        ).toBe(false);
+    });
+
     it("generates cuid2 id when nodeId is omitted", async () => {
         const { context, written } = makeContext(null);
         const result = await tool.execute(

@@ -156,6 +156,7 @@ describe("executablePromptExpand", () => {
 function resolverBuild(): ToolResolverApi {
     return {
         listTools: vi.fn(() => []),
+        listToolsForAgent: vi.fn(() => []),
         execute: vi.fn()
     } as unknown as ToolResolverApi;
 }

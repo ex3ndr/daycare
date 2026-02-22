@@ -1,7 +1,7 @@
 import type { Tool, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 import type { Logger } from "pino";
-import type { Context, MessageContext, SessionPermissions } from "@/types";
+import type { AgentDescriptor, Context, MessageContext, SessionPermissions } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings } from "../../../settings.js";
 import type { Agent } from "../../agents/agent.js";
@@ -13,6 +13,12 @@ import type { Memory } from "../../memory/memory.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ToolResolverApi } from "../toolResolver.js";
+
+export type ToolVisibilityContext = {
+    userId: string;
+    agentId: string;
+    descriptor: AgentDescriptor;
+};
 
 export type ToolExecutionContext<_State = Record<string, unknown>> = {
     connectorRegistry: ConnectorRegistry;
@@ -32,6 +38,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     skills?: AgentSkill[];
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     rlmToolOnly?: boolean;
+    allowedToolNames?: ReadonlySet<string>;
 };
 
 export type ToolResultPrimitive = string | number | boolean | null;
@@ -70,4 +77,5 @@ export type ToolDefinition<
         context: ToolExecutionContext,
         toolCall: { id: string; name: string }
     ) => Promise<ToolExecutionResult<TResult>>;
+    visibleByDefault?: (context: ToolVisibilityContext) => boolean;
 };

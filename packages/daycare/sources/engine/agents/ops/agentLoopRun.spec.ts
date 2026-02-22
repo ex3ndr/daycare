@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { AssistantMessage, Context, Tool, ToolCall } from "@mariozechner/pi-ai";
+import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentSkill, Connector, ToolExecutionResult } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
@@ -12,6 +13,7 @@ import { messageExtractText } from "../../messages/messageExtractText.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
+import { ToolResolver } from "../../modules/toolResolver.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
@@ -186,6 +188,7 @@ describe("agentLoopRun", () => {
         } as unknown as InferenceRouter;
         const toolResolver = {
             listTools: vi.fn(() => tools),
+            listToolsForAgent: vi.fn(() => tools),
             execute: vi.fn(async (_toolCall, executeContext) => {
                 toolResolverSkills.push(executeContext.skills);
                 return toolResultTextBuild("call-1", "run_python", "ok");
@@ -273,6 +276,7 @@ describe("agentLoopRun", () => {
         const execute = vi.fn(async () => toolResultTextBuild("call-1", "read_file", "ok"));
         const toolResolver = {
             listTools: () => [],
+            listToolsForAgent: () => [],
             execute
         } as unknown as ToolResolverApi;
 
@@ -359,6 +363,10 @@ describe("agentLoopRun", () => {
                 { name: "run_python", description: "", parameters: {} },
                 { name: "echo", description: "", parameters: {} }
             ]),
+            listToolsForAgent: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} }
+            ]),
             execute
         } as unknown as ToolResolverApi;
 
@@ -379,6 +387,16 @@ describe("agentLoopRun", () => {
         );
 
         expect(inferenceRouter.complete).toHaveBeenCalledTimes(2);
+        expect(inferenceRouter.complete).toHaveBeenNthCalledWith(
+            1,
+            expect.anything(),
+            expect.any(String),
+            expect.objectContaining({
+                providerOptions: {
+                    stop: ["</run_python>"]
+                }
+            })
+        );
         expect(contexts[0]?.tools).toEqual([]);
         expect(execute).toHaveBeenCalledTimes(1);
         const secondIterationMessages = contexts[1]?.messages ?? [];
@@ -401,7 +419,7 @@ describe("agentLoopRun", () => {
         expect(appendHistoryTypes).toContain("rlm_complete");
     });
 
-    it("executes multiple run_python tags sequentially and stops at the first failure", async () => {
+    it("trims inline run_python output at the first closing tag before execution", async () => {
         const contexts: Context[] = [];
         const connector = connectorBuild(vi.fn(async () => undefined));
         const entry = entryBuild();
@@ -448,6 +466,12 @@ describe("agentLoopRun", () => {
                 { name: "fail", description: "", parameters: {} },
                 { name: "tail", description: "", parameters: {} }
             ]),
+            listToolsForAgent: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} },
+                { name: "fail", description: "", parameters: {} },
+                { name: "tail", description: "", parameters: {} }
+            ]),
             execute
         } as unknown as ToolResolverApi;
 
@@ -465,13 +489,12 @@ describe("agentLoopRun", () => {
         );
 
         expect(inferenceRouter.complete).toHaveBeenCalledTimes(2);
-        expect(execute).toHaveBeenCalledTimes(2);
+        expect(execute).toHaveBeenCalledTimes(1);
         expect(execute).toHaveBeenNthCalledWith(1, expect.objectContaining({ name: "echo" }), expect.anything());
-        expect(execute).toHaveBeenNthCalledWith(2, expect.objectContaining({ name: "fail" }), expect.anything());
         const assistantMessage = contexts[1]?.messages.find((message) => message.role === "assistant");
         const assistantText = assistantMessage ? (messageExtractText(assistantMessage) ?? "") : "";
         expect(assistantText).toContain("<run_python>echo()</run_python>");
-        expect(assistantText).toContain("<run_python>fail()</run_python>");
+        expect(assistantText).not.toContain("<run_python>fail()</run_python>");
         expect(assistantText).not.toContain("<run_python>tail()</run_python>");
         const secondIterationMessages = contexts[1]?.messages ?? [];
         const pythonResultTexts = secondIterationMessages
@@ -482,9 +505,8 @@ describe("agentLoopRun", () => {
                     part.type === "text" && typeof part.text === "string" && part.text.includes("<python_result>")
             )
             .map((part) => part.text);
-        expect(pythonResultTexts).toHaveLength(2);
+        expect(pythonResultTexts).toHaveLength(1);
         expect(pythonResultTexts[0]).toContain("Python execution completed.");
-        expect(pythonResultTexts[1]).toContain("Python runtime error.");
     });
 
     it("suppresses raw run_python text delivery in noTools mode", async () => {
@@ -501,6 +523,10 @@ describe("agentLoopRun", () => {
         });
         const toolResolver = {
             listTools: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} }
+            ]),
+            listToolsForAgent: vi.fn(() => [
                 { name: "run_python", description: "", parameters: {} },
                 { name: "echo", description: "", parameters: {} }
             ]),
@@ -524,7 +550,7 @@ describe("agentLoopRun", () => {
         expect(connectorSend).not.toHaveBeenCalled();
     });
 
-    it("appends assistant_rewrite history events for say-after and failed run_python rewrites", async () => {
+    it("stores assistant history already trimmed at the first run_python closing tag", async () => {
         const appendedRecords: AgentHistoryRecord[] = [];
         const connector = connectorBuild(vi.fn(async () => undefined));
         const entry = entryBuild();
@@ -548,13 +574,16 @@ describe("agentLoopRun", () => {
             if (toolCall.name === "echo") {
                 return toolResultTextBuild(toolCall.id, toolCall.name, "ok");
             }
-            if (toolCall.name === "fail") {
-                throw new Error("boom");
-            }
             throw new Error(`Unexpected tool: ${toolCall.name}`);
         });
         const toolResolver = {
             listTools: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} },
+                { name: "fail", description: "", parameters: {} },
+                { name: "tail", description: "", parameters: {} }
+            ]),
+            listToolsForAgent: vi.fn(() => [
                 { name: "run_python", description: "", parameters: {} },
                 { name: "echo", description: "", parameters: {} },
                 { name: "fail", description: "", parameters: {} },
@@ -583,26 +612,14 @@ describe("agentLoopRun", () => {
         if (!assistant || assistant.type !== "assistant_message") {
             throw new Error("Expected assistant history record.");
         }
-        expect(assistant.text).toContain("<run_python>tail()</run_python>");
-        expect(assistant.text).toContain("<say>after</say>");
+        expect(assistant.text).toBe("<say>before</say><run_python>echo()</run_python>");
+        expect(execute).toHaveBeenCalledTimes(1);
 
         const rewrites = appendedRecords.filter(
             (record): record is Extract<AgentHistoryRecord, { type: "assistant_rewrite" }> =>
                 record.type === "assistant_rewrite"
         );
-        expect(rewrites).toHaveLength(2);
-        expect(rewrites[0]).toMatchObject({
-            type: "assistant_rewrite",
-            reason: "run_python_say_after_trim"
-        });
-        expect(rewrites[1]).toMatchObject({
-            type: "assistant_rewrite",
-            reason: "run_python_failure_trim"
-        });
-        expect(rewrites[0]?.assistantAt).toBe(assistant.at);
-        expect(rewrites[1]?.assistantAt).toBe(assistant.at);
-        expect(rewrites[0]?.text).not.toContain("<say>after</say>");
-        expect(rewrites[1]?.text).not.toContain("<run_python>tail()</run_python>");
+        expect(rewrites).toHaveLength(0);
     });
 
     it("breaks inference loop when skip tool is called directly", async () => {
@@ -618,6 +635,7 @@ describe("agentLoopRun", () => {
         });
         const toolResolver = {
             listTools: () => [],
+            listToolsForAgent: () => [],
             execute
         } as unknown as ToolResolverApi;
 
@@ -663,6 +681,7 @@ describe("agentLoopRun", () => {
         });
         const toolResolver = {
             listTools: () => [],
+            listToolsForAgent: () => [],
             execute
         } as unknown as ToolResolverApi;
 
@@ -697,6 +716,10 @@ describe("agentLoopRun", () => {
                 { name: "run_python", description: "", parameters: {} },
                 { name: "echo", description: "", parameters: {} }
             ]),
+            listToolsForAgent: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} }
+            ]),
             execute
         } as unknown as ToolResolverApi;
 
@@ -719,6 +742,49 @@ describe("agentLoopRun", () => {
             text: "<run_python>echo()</run_python>",
             replyToMessageId: undefined
         });
+    });
+
+    it("blocks non-whitelisted tool execution for memory-agent descriptors", async () => {
+        const entry = entryBuild();
+        const context = contextBuild();
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([toolCallBuild("call-1", "read_file", { path: "notes.txt" })]),
+            assistantMessageBuild([])
+        ]);
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: {
+                schema: Type.Object({ text: Type.String() }, { additionalProperties: false }),
+                toLLMText: (result: { text: string }) => result.text
+            },
+            execute: async () => toolResultTextBuild("call-1", "read_file", "ok")
+        });
+
+        const result = await agentLoopRun(
+            optionsBuild({
+                entry,
+                context,
+                connector: connectorBuild(vi.fn(async () => undefined)),
+                inferenceRouter,
+                toolResolver: resolver,
+                agentType: "memory-agent"
+            })
+        );
+
+        const blockedToolResult = result.historyRecords.find(
+            (record): record is Extract<AgentHistoryRecord, { type: "tool_result" }> =>
+                record.type === "tool_result" && record.toolCallId === "call-1"
+        );
+
+        expect(blockedToolResult?.output.toolMessage.isError).toBe(true);
+        expect(blockedToolResult?.output.toolMessage.content).toEqual([
+            { type: "text", text: 'Tool "read_file" is not allowed for this agent.' }
+        ]);
     });
 });
 
@@ -883,6 +949,10 @@ describe("agentLoopRun say tag", () => {
                 { name: "run_python", description: "", parameters: {} },
                 { name: "echo", description: "", parameters: {} }
             ]),
+            listToolsForAgent: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} }
+            ]),
             execute
         } as unknown as ToolResolverApi;
 
@@ -933,6 +1003,10 @@ describe("agentLoopRun say tag", () => {
         });
         const toolResolver = {
             listTools: vi.fn(() => [
+                { name: "run_python", description: "", parameters: {} },
+                { name: "echo", description: "", parameters: {} }
+            ]),
+            listToolsForAgent: vi.fn(() => [
                 { name: "run_python", description: "", parameters: {} },
                 { name: "echo", description: "", parameters: {} }
             ]),
@@ -999,6 +1073,7 @@ describe("agentLoopRun say tag", () => {
         } as unknown as InferenceRouter;
         const toolResolver = {
             listTools: vi.fn(() => [{ name: "run_python", description: "", parameters: {} }]),
+            listToolsForAgent: vi.fn(() => [{ name: "run_python", description: "", parameters: {} }]),
             execute: vi.fn(async () => {
                 throw new Error("unexpected");
             })
@@ -1178,7 +1253,7 @@ function optionsBuild(params: {
     rlm?: boolean;
     say?: boolean;
     noTools?: boolean;
-    agentType?: "user" | "subagent";
+    agentType?: "user" | "subagent" | "memory-agent";
     abortSignal?: AbortSignal;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     inferenceSessionId?: string;
@@ -1196,17 +1271,31 @@ function optionsBuild(params: {
         ({
             list: vi.fn(async (): Promise<AgentSkill[]> => [])
         } as unknown as Skills);
+    const descriptor =
+        params.agentType === "subagent"
+            ? {
+                  type: "subagent",
+                  id: "subagent-1",
+                  parentAgentId: "agent-parent",
+                  name: "child"
+              }
+            : params.agentType === "memory-agent"
+              ? {
+                    type: "memory-agent",
+                    id: "source-agent-1"
+                }
+              : {
+                    type: "user",
+                    connector: "telegram",
+                    channelId: "channel-1",
+                    userId: "user-1"
+                };
     return {
         entry: params.entry,
         agent: {
             id: "agent-1",
             userId: "user-1",
-            descriptor: {
-                type: params.agentType ?? "user",
-                connector: "telegram",
-                channelId: "channel-1",
-                userId: "user-1"
-            },
+            descriptor,
             inbox: {
                 hasSteering: () => false,
                 consumeSteering: () => null
@@ -1302,6 +1391,7 @@ function toolResolverBuild(
 ): ToolResolverApi {
     return {
         listTools: () => [],
+        listToolsForAgent: () => [],
         execute: vi.fn(async (toolCall: { id: string; name: string }) => execute(toolCall))
     } as unknown as ToolResolverApi;
 }
