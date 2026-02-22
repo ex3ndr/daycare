@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+// bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
+const itIfSandbox = process.env.CI ? it.skip : it;
+
 import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/types";
 import { Agent } from "../../engine/agents/agent.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
@@ -131,7 +135,7 @@ describe("exec tool allowedDomains", () => {
         ).rejects.toThrow("Wildcard");
     });
 
-    it("executes command with explicit domains", async () => {
+    itIfSandbox("executes command with explicit domains", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
 
@@ -148,7 +152,7 @@ describe("exec tool allowedDomains", () => {
         expect(text).toContain("stdout:\nok");
     });
 
-    it("allows reading outside workspace", async () => {
+    itIfSandbox("allows reading outside workspace", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
         const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "exec-tool-outside-"));
@@ -171,7 +175,7 @@ describe("exec tool allowedDomains", () => {
         }
     });
 
-    it("maps HOME to provided home path", async () => {
+    itIfSandbox("maps HOME to provided home path", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
         const home = path.join("/tmp", `daycare-home-${createId()}`);
@@ -191,7 +195,7 @@ describe("exec tool allowedDomains", () => {
         expect(text).toContain(`stdout:\n${expectedHome}`);
     });
 
-    it("rejects HOME path when not write-granted", async () => {
+    itIfSandbox("rejects HOME path when not write-granted", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
         const home = path.join(workingDir, ".daycare-home");
@@ -209,7 +213,7 @@ describe("exec tool allowedDomains", () => {
         ).rejects.toThrow("Path is outside the allowed directories.");
     });
 
-    it("does not mutate tool context permissions", async () => {
+    itIfSandbox("does not mutate tool context permissions", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir, [workingDir]);
         const original = {

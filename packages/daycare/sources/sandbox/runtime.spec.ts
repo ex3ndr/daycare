@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import { runInSandbox } from "./runtime.js";
 
+// bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
+const describeIf = process.env.CI ? describe.skip : describe;
+
 const baseFilesystem = {
     denyRead: [],
     allowWrite: ["."],
@@ -64,7 +67,7 @@ function toText(value?: string | Buffer): string {
     return value.toString("utf8");
 }
 
-describe("runInSandbox integration", () => {
+describeIf("runInSandbox integration", () => {
     it("runs google and microsoft in parallel with one whitelisted domain per call", async () => {
         const [googleResult, microsoftResult] = await Promise.all([
             runCurlWithDomains("https://google.com", ["google.com"]),

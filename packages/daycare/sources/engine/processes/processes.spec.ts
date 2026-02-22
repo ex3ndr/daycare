@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+// bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
+const itIfSandbox = process.env.CI ? it.skip : it;
+
 import type { SessionPermissions } from "@/types";
 import { getLogger } from "../../log.js";
 import { Storage } from "../../storage/storage.js";
@@ -139,7 +142,7 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    it(
+    itIfSandbox(
         "restarts keepAlive processes when they exit",
         async () => {
             const manager = await createManager(baseDir);
@@ -178,7 +181,7 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    it(
+    itIfSandbox(
         "returns log file path via process get",
         async () => {
             const manager = await createManager(baseDir);
@@ -204,7 +207,7 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    it(
+    itIfSandbox(
         "applies exponential backoff for repeatedly failing keepAlive processes",
         async () => {
             const manager = await createManager(baseDir);
