@@ -62,6 +62,7 @@ import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { skipToolBuild } from "./modules/tools/skipTool.js";
 import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./modules/tools/subuserCreateToolBuild.js";
+import { subuserListToolBuild } from "./modules/tools/subuserListToolBuild.js";
 import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
@@ -371,6 +372,7 @@ export class Engine {
         this.modules.tools.register("core", permanentAgentToolBuild());
         this.modules.tools.register("core", subuserCreateToolBuild());
         this.modules.tools.register("core", subuserConfigureToolBuild());
+        this.modules.tools.register("core", subuserListToolBuild());
         this.modules.tools.register("core", channelCreateToolBuild(this.channels));
         this.modules.tools.register("core", channelSendToolBuild(this.channels));
         this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
