@@ -7,14 +7,14 @@ import { cronExpressionParse as parseCronExpression } from "../../cron/ops/cronE
 
 const addCronSchema = Type.Object(
     {
-        id: Type.Optional(Type.String({ minLength: 1 })),
-        name: Type.String({ minLength: 1 }),
-        description: Type.Optional(Type.String({ minLength: 1 })),
-        schedule: Type.String({ minLength: 1 }),
-        prompt: Type.String({ minLength: 1 }),
-        agentId: Type.Optional(Type.String({ minLength: 1 })),
-        enabled: Type.Optional(Type.Boolean()),
-        deleteAfterRun: Type.Optional(Type.Boolean())
+        id: Type.Optional(Type.String({ minLength: 1, description: "Custom task id (slug). Auto-generated from name if omitted." })),
+        name: Type.String({ minLength: 1, description: "Human-readable task name." }),
+        description: Type.Optional(Type.String({ minLength: 1, description: "Optional description of what this task does." })),
+        schedule: Type.String({ minLength: 1, description: "5-field cron expression (minute hour day month weekday)." }),
+        prompt: Type.String({ minLength: 1, description: "The prompt text to execute when the task fires." }),
+        agentId: Type.Optional(Type.String({ minLength: 1, description: "Target agent id. Omit to use the system cron agent." })),
+        enabled: Type.Optional(Type.Boolean({ description: "Whether the task is enabled. Defaults to true." })),
+        deleteAfterRun: Type.Optional(Type.Boolean({ description: "Set to true for one-shot tasks that self-remove after running once." }))
     },
     { additionalProperties: false }
 );
@@ -61,7 +61,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
     return {
         tool: {
             name: "cron_add",
-            description: "Create a scheduled cron task from a prompt stored in SQLite (optional agentId).",
+            description: "Create a scheduled cron task. Set deleteAfterRun=true for one-shot tasks that self-remove after execution.",
             parameters: addCronSchema
         },
         returns: cronReturns,
