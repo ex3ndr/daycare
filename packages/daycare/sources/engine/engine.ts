@@ -47,6 +47,8 @@ import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js"
 import { friendAddToolBuild } from "./modules/tools/friendAddToolBuild.js";
 import { friendRemoveToolBuild } from "./modules/tools/friendRemoveToolBuild.js";
 import { friendSendToolBuild } from "./modules/tools/friendSendToolBuild.js";
+import { friendShareSubuserToolBuild } from "./modules/tools/friendShareSubuserToolBuild.js";
+import { friendUnshareSubuserToolBuild } from "./modules/tools/friendUnshareSubuserToolBuild.js";
 import { buildHeartbeatAddTool, buildHeartbeatRemoveTool, buildHeartbeatRunTool } from "./modules/tools/heartbeat.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
@@ -383,6 +385,8 @@ export class Engine {
         this.modules.tools.register("core", friendAddToolBuild());
         this.modules.tools.register("core", friendRemoveToolBuild());
         this.modules.tools.register("core", friendSendToolBuild());
+        this.modules.tools.register("core", friendShareSubuserToolBuild());
+        this.modules.tools.register("core", friendUnshareSubuserToolBuild());
         this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
         this.modules.tools.register("core", buildMermaidPngTool());
         this.modules.tools.register("core", buildReactionTool());

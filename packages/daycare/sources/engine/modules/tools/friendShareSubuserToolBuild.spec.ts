@@ -1,52 +1,71 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ToolExecutionContext } from "@/types";
+import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { Storage } from "../../../storage/storage.js";
-import { friendSendToolBuild } from "./friendSendToolBuild.js";
+import { friendShareSubuserToolBuild } from "./friendShareSubuserToolBuild.js";
 
-const toolCall = { id: "tool-1", name: "friend_send" };
+const toolCall = { id: "tool-1", name: "friend_share_subuser" };
 
-describe("friendSendToolBuild", () => {
-    it("sends a friend message to the target user's frontend agents", async () => {
+describe("friendShareSubuserToolBuild", () => {
+    it("shares a subuser with an existing friend", async () => {
         const storage = Storage.open(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            await storage.users.create({ id: "charlie", usertag: "brave-eagle-77" });
+            const subuser = await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendSendToolBuild();
+            const tool = friendShareSubuserToolBuild();
             const result = await tool.execute(
-                { usertag: "swift-fox-42", message: "Hello <friend> & crew" },
+                { friendUsertag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
                 toolCall
             );
 
-            expect(result.typedResult.summary).toContain("Sent message");
+            expect(result.typedResult.status).toBe("offered");
             expect(postToUserAgents).toHaveBeenCalledWith(
                 bob.id,
                 expect.objectContaining({
                     type: "system_message",
                     origin: "friend:happy-penguin-42",
-                    text: expect.stringContaining("Hello &lt;friend&gt; &amp; crew")
+                    text: expect.stringContaining('Use friend_add("cool-cat-11") to accept.')
                 })
             );
+
+            const share = await storage.connections.find(subuser.id, bob.id);
+            expect(share).toMatchObject({
+                requestedA: true,
+                requestedB: false
+            });
         } finally {
             storage.close();
         }
     });
 
-    it("fails when users are not friends", async () => {
+    it("fails when owner and friend are not connected", async () => {
         const storage = Storage.open(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
-            const tool = friendSendToolBuild();
+            const subuser = await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            const tool = friendShareSubuserToolBuild();
 
             await expect(
                 tool.execute(
-                    { usertag: "swift-fox-42", message: "Hello" },
+                    { friendUsertag: "swift-fox-42", subuserId: subuser.id },
                     contextBuild(
                         alice.id,
                         storage,
@@ -60,61 +79,39 @@ describe("friendSendToolBuild", () => {
         }
     });
 
-    it("sends to a shared subuser gateway agent", async () => {
+    it("fails when caller does not own the subuser", async () => {
         const storage = Storage.open(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            await storage.users.create({ id: "charlie", usertag: "brave-eagle-77" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
                 usertag: "cool-cat-11"
             });
+            await storage.connections.upsertRequest(alice.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, alice.id, 200);
+            const tool = friendShareSubuserToolBuild();
 
-            await storage.agents.create({
-                id: "subuser-gateway",
-                userId: subuser.id,
-                type: "subuser",
-                descriptor: { type: "subuser", id: subuser.id, name: "helper", systemPrompt: "prompt" },
-                activeSessionId: null,
-                permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
-                tokens: null,
-                stats: {},
-                lifecycle: "active",
-                createdAt: 1,
-                updatedAt: 1
-            });
-
-            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
-            await storage.connections.upsertRequest(bob.id, subuser.id, 200);
-
-            const postToUserAgents = vi.fn(async () => undefined);
-            const post = vi.fn(async () => undefined);
-            const tool = friendSendToolBuild();
-            const result = await tool.execute(
-                { usertag: "cool-cat-11", message: "Hello helper" },
-                contextBuild(bob.id, storage, postToUserAgents, post),
-                toolCall
-            );
-
-            expect(result.typedResult.summary).toContain("Sent message");
-            expect(post).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "alice-sub-1" }),
-                { agentId: "subuser-gateway" },
-                expect.objectContaining({
-                    type: "system_message",
-                    origin: "friend:swift-fox-42",
-                    text: expect.stringContaining("Message from swift-fox-42: Hello helper")
-                })
-            );
-            expect(postToUserAgents).not.toHaveBeenCalled();
+            await expect(
+                tool.execute(
+                    { friendUsertag: "brave-eagle-77", subuserId: subuser.id },
+                    contextBuild(
+                        bob.id,
+                        storage,
+                        vi.fn(async () => undefined)
+                    ),
+                    toolCall
+                )
+            ).rejects.toThrow("Subuser does not belong to the calling user.");
         } finally {
             storage.close();
         }
     });
 
-    it("fails when subuser share is not active", async () => {
+    it("fails when share is already active", async () => {
         const storage = Storage.open(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
@@ -125,21 +122,24 @@ describe("friendSendToolBuild", () => {
                 name: "helper",
                 usertag: "cool-cat-11"
             });
-            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
 
-            const tool = friendSendToolBuild();
+            await storage.connections.upsertRequest(alice.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, alice.id, 200);
+            await storage.connections.upsertRequest(subuser.id, bob.id, 300);
+            await storage.connections.upsertRequest(bob.id, subuser.id, 400);
+
+            const tool = friendShareSubuserToolBuild();
             await expect(
                 tool.execute(
-                    { usertag: "cool-cat-11", message: "Hello" },
+                    { friendUsertag: "swift-fox-42", subuserId: subuser.id },
                     contextBuild(
-                        bob.id,
+                        alice.id,
                         storage,
-                        vi.fn(async () => undefined),
                         vi.fn(async () => undefined)
                     ),
                     toolCall
                 )
-            ).rejects.toThrow("No active shared access");
+            ).rejects.toThrow("already shared");
         } finally {
             storage.close();
         }
@@ -149,23 +149,22 @@ describe("friendSendToolBuild", () => {
 function contextBuild(
     userId: string,
     storage: Storage,
-    postToUserAgents: (targetUserId: string, item: unknown) => Promise<void>,
-    post: (ctx: unknown, target: unknown, item: unknown) => Promise<void> = async () => undefined
+    postToUserAgents: (targetUserId: string, item: unknown) => Promise<void>
 ): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        sandbox: null as unknown as ToolExecutionContext["sandbox"],
+        fileStore: null as unknown as ToolExecutionContext["fileStore"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
+        permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] } as SessionPermissions,
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: { userId, agentId: "agent-1" } as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: {
             storage,
-            postToUserAgents,
-            post
+            postToUserAgents
         } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };

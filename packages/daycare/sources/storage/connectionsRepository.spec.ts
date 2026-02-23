@@ -68,4 +68,58 @@ describe("ConnectionsRepository", () => {
             storage.close();
         }
     });
+
+    it("finds all connections that involve subusers of an owner", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            await storage.users.create({ id: "alice", usertag: "alice-tag-42" });
+            await storage.users.create({ id: "bob", usertag: "bob-tag-42" });
+            await storage.users.create({ id: "charlie", usertag: "charlie-tag-42" });
+            await storage.users.create({ id: "alice-sub-1", parentUserId: "alice", usertag: "alice-sub-1-tag-42" });
+            await storage.users.create({ id: "alice-sub-2", parentUserId: "alice", usertag: "alice-sub-2-tag-42" });
+            await storage.users.create({ id: "bob-sub-1", parentUserId: "bob", usertag: "bob-sub-1-tag-42" });
+
+            await storage.connections.upsertRequest("alice-sub-1", "bob", 100);
+            await storage.connections.upsertRequest("alice-sub-2", "bob", 200);
+            await storage.connections.upsertRequest("charlie", "alice-sub-1", 300);
+            await storage.connections.upsertRequest("alice", "bob-sub-1", 400);
+
+            const aliceSubuserConnections = await storage.connections.findConnectionsForSubusersOf("alice");
+            expect(aliceSubuserConnections).toHaveLength(3);
+            expect(aliceSubuserConnections.map((row) => `${row.userAId}:${row.userBId}`)).toEqual([
+                "alice-sub-1:bob",
+                "alice-sub-1:charlie",
+                "alice-sub-2:bob"
+            ]);
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("finds connections between a friend and another owner's subusers", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            await storage.users.create({ id: "alice", usertag: "alice-tag-42" });
+            await storage.users.create({ id: "bob", usertag: "bob-tag-42" });
+            await storage.users.create({ id: "charlie", usertag: "charlie-tag-42" });
+            await storage.users.create({ id: "alice-sub-1", parentUserId: "alice", usertag: "alice-sub-1-tag-42" });
+            await storage.users.create({ id: "alice-sub-2", parentUserId: "alice", usertag: "alice-sub-2-tag-42" });
+            await storage.users.create({
+                id: "charlie-sub-1",
+                parentUserId: "charlie",
+                usertag: "charlie-sub-1-tag-42"
+            });
+
+            await storage.connections.upsertRequest("alice-sub-1", "bob", 100);
+            await storage.connections.upsertRequest("alice-sub-2", "bob", 200);
+            await storage.connections.upsertRequest("alice-sub-1", "charlie", 300);
+            await storage.connections.upsertRequest("bob", "charlie-sub-1", 400);
+
+            const rows = await storage.connections.findConnectionsWithSubusersOf("bob", "alice");
+            expect(rows).toHaveLength(2);
+            expect(rows.map((row) => `${row.userAId}:${row.userBId}`)).toEqual(["alice-sub-1:bob", "alice-sub-2:bob"]);
+        } finally {
+            storage.close();
+        }
+    });
 });

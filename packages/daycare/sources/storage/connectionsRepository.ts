@@ -119,6 +119,42 @@ export class ConnectionsRepository {
         return rows.map((row) => connectionParse(row));
     }
 
+    async findConnectionsForSubusersOf(ownerUserId: string): Promise<ConnectionDbRecord[]> {
+        const rows = this.db
+            .prepare(
+                `
+                SELECT DISTINCT c.*
+                FROM connections c
+                INNER JOIN users su
+                    ON (c.user_a_id = su.id OR c.user_b_id = su.id)
+                WHERE su.parent_user_id = ?
+                ORDER BY c.user_a_id ASC, c.user_b_id ASC
+            `
+            )
+            .all(ownerUserId) as DatabaseConnectionRow[];
+        return rows.map((row) => connectionParse(row));
+    }
+
+    async findConnectionsWithSubusersOf(friendUserId: string, ownerUserId: string): Promise<ConnectionDbRecord[]> {
+        const rows = this.db
+            .prepare(
+                `
+                SELECT c.*
+                FROM connections c
+                INNER JOIN users su
+                    ON (
+                        (c.user_a_id = su.id AND c.user_b_id = ?)
+                        OR
+                        (c.user_b_id = su.id AND c.user_a_id = ?)
+                    )
+                WHERE su.parent_user_id = ?
+                ORDER BY c.user_a_id ASC, c.user_b_id ASC
+            `
+            )
+            .all(friendUserId, friendUserId, ownerUserId) as DatabaseConnectionRow[];
+        return rows.map((row) => connectionParse(row));
+    }
+
     async delete(id1: string, id2: string): Promise<boolean> {
         const [userAId, userBId] = sortPair(id1, id2);
         const removed = this.db

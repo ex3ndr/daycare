@@ -56,6 +56,7 @@ describe("topologyTool", () => {
             expect(text).toContain("## Signal Subscriptions (0)");
             expect(text).toContain("## Channels (0)");
             expect(text).toContain("## Expose Endpoints (0)");
+            expect(text).toContain("## Friends (0)");
 
             const details = result.toolMessage.details as
                 | {
@@ -215,6 +216,7 @@ describe("topologyTool", () => {
             expect(text).toContain("## Channels (1)");
             expect(text).toContain("#dev leader=agent-other members=@monitor(agent-caller)");
             expect(text).toContain("## Expose Endpoints (1)");
+            expect(text).toContain("## Friends (0)");
             expect(text).toContain(
                 "expose-1 domain=app.example.com target=port:8080 provider=provider-a mode=public authenticated=false"
             );
@@ -318,6 +320,8 @@ describe("topologyTool", () => {
             expect(text).not.toContain("owner-cron");
             // No subusers section for subuser agents
             expect(text).not.toContain("## Subusers");
+            // No friends section for subuser agents
+            expect(text).not.toContain("## Friends");
         } finally {
             storage.close();
             await rm(dir, { recursive: true, force: true });
@@ -395,6 +399,120 @@ describe("topologyTool", () => {
             expect(text).toContain("## Subusers (2)");
             expect(text).toContain('sub-a name="app-a" gatewayAgent=gateway-a');
             expect(text).toContain('sub-b name="app-b" gatewayAgent=gateway-b');
+            expect(text).toContain("## Friends (0)");
+        } finally {
+            storage.close();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("renders friends with outgoing/incoming shared subusers and pending markers", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-friends-sharing-"));
+        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const storage = storageResolve(config);
+        try {
+            await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
+            await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            await storage.users.create({
+                id: "alice-sub-active",
+                parentUserId: "alice",
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            await storage.users.create({
+                id: "alice-sub-pending",
+                parentUserId: "alice",
+                name: "assistant",
+                usertag: "lazy-dog-55"
+            });
+            await storage.users.create({
+                id: "bob-sub-active",
+                parentUserId: "bob",
+                name: "bob-helper",
+                usertag: "smart-owl-22"
+            });
+
+            await storage.connections.upsertRequest("alice", "bob", 100);
+            await storage.connections.upsertRequest("bob", "alice", 200);
+            await storage.connections.upsertRequest("alice-sub-active", "bob", 300);
+            await storage.connections.upsertRequest("bob", "alice-sub-active", 400);
+            await storage.connections.upsertRequest("alice-sub-pending", "bob", 500);
+            await storage.connections.upsertRequest("bob-sub-active", "alice", 600);
+            await storage.connections.upsertRequest("alice", "bob-sub-active", 700);
+
+            const aliceActivePerms = permissionBuildUser(new UserHome(config.usersDir, "alice-sub-active"));
+            const alicePendingPerms = permissionBuildUser(new UserHome(config.usersDir, "alice-sub-pending"));
+            const bobActivePerms = permissionBuildUser(new UserHome(config.usersDir, "bob-sub-active"));
+            await storage.agents.create({
+                id: "gateway-alice-active",
+                userId: "alice-sub-active",
+                type: "subuser",
+                descriptor: { type: "subuser", id: "alice-sub-active", name: "helper", systemPrompt: "prompt" },
+                activeSessionId: null,
+                permissions: aliceActivePerms,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.agents.create({
+                id: "gateway-alice-pending",
+                userId: "alice-sub-pending",
+                type: "subuser",
+                descriptor: { type: "subuser", id: "alice-sub-pending", name: "assistant", systemPrompt: "prompt" },
+                activeSessionId: null,
+                permissions: alicePendingPerms,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 2,
+                updatedAt: 2
+            });
+            await storage.agents.create({
+                id: "gateway-bob-active",
+                userId: "bob-sub-active",
+                type: "subuser",
+                descriptor: { type: "subuser", id: "bob-sub-active", name: "bob-helper", systemPrompt: "prompt" },
+                activeSessionId: null,
+                permissions: bobActivePerms,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 3,
+                updatedAt: 3
+            });
+
+            const tool = topologyTool(
+                { listTasks: async () => [] } as unknown as Crons,
+                { listSubscriptions: async () => [] } as unknown as Signals,
+                { list: () => [] } as never,
+                { list: async () => [] } as never
+            );
+
+            const result = await tool.execute(
+                {},
+                contextBuild(config, {
+                    callerAgentId: "alice-main",
+                    callerUserId: "alice",
+                    heartbeatTasks: []
+                }),
+                toolCall
+            );
+
+            const text = contentText(result.toolMessage.content);
+            expect(text).toContain("## Friends (1)");
+            expect(text).toContain("swift-fox-42");
+            expect(text).toContain(
+                "→ shared out: helper (usertag=cool-cat-11) gateway=gateway-alice-active status=active"
+            );
+            expect(text).toContain(
+                "→ shared out: assistant (usertag=lazy-dog-55) gateway=gateway-alice-pending status=pending"
+            );
+            expect(text).toContain(
+                "← shared in: bob-helper (usertag=smart-owl-22) gateway=gateway-bob-active status=active"
+            );
+            expect(result.typedResult.friendCount).toBe(1);
         } finally {
             storage.close();
             await rm(dir, { recursive: true, force: true });

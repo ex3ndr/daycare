@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { xmlEscape } from "../../../util/xmlEscape.js";
+import { contextForAgent } from "../../agents/context.js";
 import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js";
 
 const schema = Type.Object(
@@ -70,16 +71,35 @@ export function friendSendToolBuild(): ToolDefinition {
             }
 
             const connection = await connections.find(me.id, target.id);
-            if (!connection || !connection.requestedA || !connection.requestedB) {
-                throw new Error(`You are not friends with ${targetUsertag}.`);
-            }
-
             const origin = `friend:${myUsertag}`;
-            await toolContext.agentSystem.postToUserAgents(target.id, {
+            const item = {
                 type: "system_message",
                 origin,
                 text: messageBuildSystemText(`Message from ${myUsertag}: ${xmlEscape(message)}`, origin)
-            });
+            } as const;
+
+            if (target.parentUserId) {
+                if (!connection || !connection.requestedA || !connection.requestedB) {
+                    throw new Error(`No active shared access to ${targetUsertag}.`);
+                }
+                const agents = await toolContext.agentSystem.storage.agents.findMany();
+                const gateway = agents.find(
+                    (agent) => agent.descriptor.type === "subuser" && agent.descriptor.id === target.id
+                );
+                if (!gateway) {
+                    throw new Error(`Gateway agent not found for shared subuser ${targetUsertag}.`);
+                }
+                await toolContext.agentSystem.post(
+                    contextForAgent({ userId: target.id, agentId: gateway.id }),
+                    { agentId: gateway.id },
+                    item
+                );
+            } else {
+                if (!connection || !connection.requestedA || !connection.requestedB) {
+                    throw new Error(`You are not friends with ${targetUsertag}.`);
+                }
+                await toolContext.agentSystem.postToUserAgents(target.id, item);
+            }
 
             const summary = `Sent message to ${targetUsertag}.`;
             const toolMessage: ToolResultMessage = {

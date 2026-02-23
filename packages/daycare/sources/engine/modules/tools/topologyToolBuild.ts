@@ -19,7 +19,8 @@ const topologyResultSchema = Type.Object(
         heartbeatCount: Type.Number(),
         signalSubscriptionCount: Type.Number(),
         channelCount: Type.Number(),
-        exposeCount: Type.Number()
+        exposeCount: Type.Number(),
+        friendCount: Type.Number()
     },
     { additionalProperties: false }
 );
@@ -32,6 +33,7 @@ type TopologyResult = {
     signalSubscriptionCount: number;
     channelCount: number;
     exposeCount: number;
+    friendCount: number;
 };
 
 const topologyReturns: ToolResultContract<TopologyResult> = {
@@ -61,6 +63,7 @@ export function topologyTool(
             const callerAgentId = toolContext.agent.id;
             const callerUserId = toolContext.ctx.userId;
             const storage = toolContext.agentSystem.storage;
+            let friendCount = 0;
 
             // Determine if caller is a subuser (has parent)
             const callerUser = await storage.users.findById(callerUserId);
@@ -217,6 +220,10 @@ export function topologyTool(
                     });
                     sections.push("", `## Subusers (${subusers.length})`, ...subuserLines);
                 }
+
+                const friendsSection = await listFriendLinesBuild(callerUserId, storage, allAgentRecords);
+                friendCount = friendsSection.count;
+                sections.push("", `## Friends (${friendCount})`, ...friendsSection.lines);
             }
 
             const summary = sections.join("\n");
@@ -248,7 +255,8 @@ export function topologyTool(
                     heartbeatCount: heartbeats.length,
                     signalSubscriptionCount: signalSubscriptionsSummary.length,
                     channelCount: channelsSummary.length,
-                    exposeCount: exposeSummary.length
+                    exposeCount: exposeSummary.length,
+                    friendCount
                 }
             };
         }
@@ -353,4 +361,168 @@ function listExposeLinesBuild(
         (endpoint) =>
             `${endpoint.id} domain=${endpoint.domain} target=${endpoint.target} provider=${endpoint.provider} mode=${endpoint.mode} authenticated=${endpoint.authenticated}`
     );
+}
+
+async function listFriendLinesBuild(
+    callerUserId: string,
+    storage: {
+        connections: {
+            findFriends: (userId: string) => Promise<Array<{ userAId: string; userBId: string }>>;
+            findConnectionsWithSubusersOf: (
+                friendUserId: string,
+                ownerUserId: string
+            ) => Promise<Array<{ userAId: string; userBId: string; requestedA: boolean; requestedB: boolean }>>;
+        };
+        users: {
+            findById: (id: string) => Promise<{
+                id: string;
+                parentUserId: string | null;
+                usertag: string | null;
+                name: string | null;
+            } | null>;
+        };
+    },
+    agents: Array<{ id: string; descriptor: { type: string; id?: string } }>
+): Promise<{ count: number; lines: string[] }> {
+    const friendConnections = await storage.connections.findFriends(callerUserId);
+    const userCache = new Map<
+        string,
+        { id: string; parentUserId: string | null; usertag: string | null; name: string | null }
+    >();
+    const friendUsers = (
+        await Promise.all(
+            friendConnections.map(async (connection) => {
+                const friendId = connection.userAId === callerUserId ? connection.userBId : connection.userAId;
+                if (friendId === callerUserId) {
+                    return null;
+                }
+                const cached = userCache.get(friendId);
+                if (cached) {
+                    return cached.parentUserId ? null : cached;
+                }
+                const user = await storage.users.findById(friendId);
+                if (!user) {
+                    return null;
+                }
+                userCache.set(friendId, user);
+                if (user.parentUserId) {
+                    return null;
+                }
+                return user;
+            })
+        )
+    )
+        .filter(
+            (
+                entry
+            ): entry is { id: string; parentUserId: string | null; usertag: string | null; name: string | null } =>
+                !!entry
+        )
+        .sort((left, right) => {
+            const leftTag = left.usertag ?? left.id;
+            const rightTag = right.usertag ?? right.id;
+            return leftTag.localeCompare(rightTag);
+        });
+
+    if (friendUsers.length === 0) {
+        return {
+            count: 0,
+            lines: ["None"]
+        };
+    }
+
+    const gatewayBySubuserId = new Map(
+        agents
+            .filter((agent) => agent.descriptor.type === "subuser" && typeof agent.descriptor.id === "string")
+            .map((agent) => [agent.descriptor.id as string, agent.id])
+    );
+
+    const lines: string[] = [];
+    for (let i = 0; i < friendUsers.length; i += 1) {
+        const friend = friendUsers[i]!;
+        const friendTag = friend.usertag ?? friend.id;
+        lines.push(friendTag);
+
+        const [outgoing, incoming] = await Promise.all([
+            storage.connections.findConnectionsWithSubusersOf(friend.id, callerUserId),
+            storage.connections.findConnectionsWithSubusersOf(callerUserId, friend.id)
+        ]);
+
+        const outgoingLines = await sharedSubuserLinesBuild({
+            connections: outgoing,
+            knownUserId: friend.id,
+            users: storage.users,
+            userCache,
+            gatewayBySubuserId,
+            direction: "out"
+        });
+        const incomingLines = await sharedSubuserLinesBuild({
+            connections: incoming,
+            knownUserId: callerUserId,
+            users: storage.users,
+            userCache,
+            gatewayBySubuserId,
+            direction: "in"
+        });
+
+        if (outgoingLines.length === 0 && incomingLines.length === 0) {
+            lines.push("  (no shared subusers)");
+        } else {
+            lines.push(...outgoingLines, ...incomingLines);
+        }
+        if (i < friendUsers.length - 1) {
+            lines.push("");
+        }
+    }
+
+    return {
+        count: friendUsers.length,
+        lines
+    };
+}
+
+async function sharedSubuserLinesBuild(options: {
+    connections: Array<{ userAId: string; userBId: string; requestedA: boolean; requestedB: boolean }>;
+    knownUserId: string;
+    users: {
+        findById: (
+            id: string
+        ) => Promise<{ id: string; parentUserId: string | null; usertag: string | null; name: string | null } | null>;
+    };
+    userCache: Map<string, { id: string; parentUserId: string | null; usertag: string | null; name: string | null }>;
+    gatewayBySubuserId: Map<string, string>;
+    direction: "out" | "in";
+}): Promise<string[]> {
+    const sorted = options.connections
+        .slice()
+        .sort((left, right) =>
+            connectionOtherUserId(left, options.knownUserId).localeCompare(
+                connectionOtherUserId(right, options.knownUserId)
+            )
+        );
+
+    const lines: string[] = [];
+    for (const connection of sorted) {
+        const subuserId = connectionOtherUserId(connection, options.knownUserId);
+        const cached = options.userCache.get(subuserId);
+        const subuser = cached ?? (await options.users.findById(subuserId));
+        if (!subuser) {
+            continue;
+        }
+        options.userCache.set(subuserId, subuser);
+        const subuserName = subuser.name ?? subuser.id;
+        const subuserTag = subuser.usertag ?? "none";
+        const gateway = options.gatewayBySubuserId.get(subuserId) ?? "none";
+        const status = connection.requestedA && connection.requestedB ? "active" : "pending";
+        const arrow = options.direction === "out" ? "→" : "←";
+        const relation = options.direction === "out" ? "shared out" : "shared in";
+        lines.push(
+            `  ${arrow} ${relation}: ${subuserName} (usertag=${subuserTag}) gateway=${gateway} status=${status}`
+        );
+    }
+    return lines;
+}
+
+function connectionOtherUserId(connection: { userAId: string; userBId: string }, knownUserId: string): string {
+    return connection.userAId === knownUserId ? connection.userBId : connection.userAId;
 }

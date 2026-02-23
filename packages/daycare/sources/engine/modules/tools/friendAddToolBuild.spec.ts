@@ -57,6 +57,107 @@ describe("friendAddToolBuild", () => {
         }
     });
 
+    it("accepts a pending subuser share and notifies the owner", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const subuser = await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            await storage.connections.upsertRequest(alice.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, alice.id, 200);
+            await storage.connections.upsertRequest(subuser.id, bob.id, 300);
+
+            const postToUserAgents = vi.fn(async () => undefined);
+            const tool = friendAddToolBuild();
+            const result = await tool.execute(
+                { usertag: "cool-cat-11" },
+                contextBuild(bob.id, storage, postToUserAgents),
+                toolCall
+            );
+
+            expect(result.typedResult.status).toBe("accepted_share");
+            expect(postToUserAgents).toHaveBeenCalledWith(
+                alice.id,
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "friend:swift-fox-42"
+                })
+            );
+
+            const share = await storage.connections.find(subuser.id, bob.id);
+            expect(share?.requestedA).toBe(true);
+            expect(share?.requestedB).toBe(true);
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("rejects subuser accept when no pending offer exists", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            await storage.connections.upsertRequest(alice.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, alice.id, 200);
+            const tool = friendAddToolBuild();
+
+            await expect(
+                tool.execute(
+                    { usertag: "cool-cat-11" },
+                    contextBuild(
+                        bob.id,
+                        storage,
+                        vi.fn(async () => undefined)
+                    ),
+                    toolCall
+                )
+            ).rejects.toThrow("No pending share request for this subuser.");
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("rejects subuser accept when caller is not friends with owner", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const subuser = await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
+            const tool = friendAddToolBuild();
+
+            await expect(
+                tool.execute(
+                    { usertag: "cool-cat-11" },
+                    contextBuild(
+                        bob.id,
+                        storage,
+                        vi.fn(async () => undefined)
+                    ),
+                    toolCall
+                )
+            ).rejects.toThrow("You are not friends with subuser owner");
+        } finally {
+            storage.close();
+        }
+    });
+
     it("enforces cooldown after a rejected request", async () => {
         const storage = Storage.open(":memory:");
         try {

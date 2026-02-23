@@ -57,6 +57,8 @@ export function friendAddToolBuild(): ToolDefinition {
             if (!myUsertag) {
                 throw new Error("Current user does not have a usertag.");
             }
+            const origin = `friend:${myUsertag}`;
+            const now = Date.now();
 
             const target = await users.findByUsertag(targetUsertag);
             if (!target) {
@@ -66,9 +68,42 @@ export function friendAddToolBuild(): ToolDefinition {
                 throw new Error("Cannot add yourself as a friend.");
             }
 
+            if (target.parentUserId) {
+                const owner = await users.findById(target.parentUserId);
+                if (!owner) {
+                    throw new Error("Subuser owner not found.");
+                }
+                const ownerTag = owner.usertag?.trim() ?? owner.id;
+                const ownerConnection = await connections.find(me.id, owner.id);
+                if (!ownerConnection || !ownerConnection.requestedA || !ownerConnection.requestedB) {
+                    throw new Error(`You are not friends with subuser owner ${ownerTag}.`);
+                }
+
+                const subuserShare = await connections.find(me.id, target.id);
+                if (!subuserShare) {
+                    throw new Error("No pending share request for this subuser.");
+                }
+                const shareState = sideStateForUser(subuserShare, me.id);
+                if (shareState.myRequested && shareState.otherRequested) {
+                    throw new Error(`Already connected to shared subuser ${targetUsertag}.`);
+                }
+                if (!shareState.otherRequested) {
+                    throw new Error("No pending share request for this subuser.");
+                }
+
+                await connections.upsertRequest(me.id, target.id, now);
+                await toolContext.agentSystem.postToUserAgents(owner.id, {
+                    type: "system_message",
+                    origin,
+                    text: messageBuildSystemText(
+                        `${myUsertag} accepted access to subuser "${target.name ?? target.id}" (${targetUsertag}).`,
+                        origin
+                    )
+                });
+                return success("accepted_share", targetUsertag, toolCall);
+            }
+
             const existing = await connections.find(me.id, target.id);
-            const origin = `friend:${myUsertag}`;
-            const now = Date.now();
             if (!existing) {
                 await connections.upsertRequest(me.id, target.id, now);
                 await toolContext.agentSystem.postToUserAgents(target.id, {
@@ -121,7 +156,11 @@ export function friendAddToolBuild(): ToolDefinition {
 
 function success(status: FriendAddResult["status"], usertag: string, toolCall: { id: string; name: string }) {
     const summary =
-        status === "requested" ? `Friend request sent to ${usertag}.` : `${usertag} accepted. You are now friends.`;
+        status === "requested"
+            ? `Friend request sent to ${usertag}.`
+            : status === "accepted_share"
+              ? `Accepted shared access to ${usertag}.`
+              : `${usertag} accepted. You are now friends.`;
     const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,

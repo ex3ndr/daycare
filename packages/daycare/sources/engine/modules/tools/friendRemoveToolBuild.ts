@@ -70,8 +70,42 @@ export function friendRemoveToolBuild(): ToolDefinition {
             }
 
             const state = sideStateForUser(connection, me.id);
+            if (target.parentUserId) {
+                if (state.myRequested && state.otherRequested) {
+                    const updated = await connections.clearSide(me.id, target.id);
+                    await connectionDeleteIfEmpty(connections, target.id, me.id, updated);
+
+                    const owner = await users.findById(target.parentUserId);
+                    if (owner) {
+                        const origin = `friend:${myUsertag}`;
+                        await toolContext.agentSystem.postToUserAgents(owner.id, {
+                            type: "system_message",
+                            origin,
+                            text: messageBuildSystemText(
+                                `${myUsertag} removed access to subuser "${target.name ?? target.id}" (${targetUsertag}).`,
+                                origin
+                            )
+                        });
+                    }
+                    return success("removed_share", targetUsertag, toolCall);
+                }
+                if (!state.myRequested && state.otherRequested) {
+                    const updated = await connections.clearSide(target.id, me.id);
+                    await connectionDeleteIfEmpty(connections, target.id, me.id, updated);
+                    return success("rejected_share", targetUsertag, toolCall);
+                }
+                if (state.myRequested && !state.otherRequested) {
+                    const updated = await connections.clearSide(me.id, target.id);
+                    await connectionDeleteIfEmpty(connections, target.id, me.id, updated);
+                    return success("canceled_share", targetUsertag, toolCall);
+                }
+
+                throw new Error(`No relationship with ${targetUsertag}.`);
+            }
+
             if (state.myRequested && state.otherRequested) {
                 await connections.clearSide(me.id, target.id);
+                await subuserShareCleanup(connections, me.id, target.id);
                 const origin = `friend:${myUsertag}`;
                 await toolContext.agentSystem.postToUserAgents(target.id, {
                     type: "system_message",
@@ -100,7 +134,13 @@ function success(status: FriendRemoveResult["status"], usertag: string, toolCall
             ? `Removed ${usertag} from friends.`
             : status === "rejected"
               ? `Rejected friend request from ${usertag}.`
-              : `Canceled pending friend request to ${usertag}.`;
+              : status === "removed_share"
+                ? `Removed shared access to ${usertag}.`
+                : status === "rejected_share"
+                  ? `Rejected shared subuser offer from ${usertag}.`
+                  : status === "canceled_share"
+                    ? `Canceled pending shared subuser access to ${usertag}.`
+                    : `Canceled pending friend request to ${usertag}.`;
     const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -148,4 +188,52 @@ function sideStateForUser(
         myRequested: connection.requestedB,
         otherRequested: connection.requestedA
     };
+}
+
+async function subuserShareCleanup(
+    connections: {
+        findConnectionsWithSubusersOf: (
+            friendUserId: string,
+            ownerUserId: string
+        ) => Promise<Array<{ userAId: string; userBId: string }>>;
+        delete: (id1: string, id2: string) => Promise<boolean>;
+    },
+    myUserId: string,
+    friendUserId: string
+): Promise<void> {
+    const [outgoing, incoming] = await Promise.all([
+        connections.findConnectionsWithSubusersOf(friendUserId, myUserId),
+        connections.findConnectionsWithSubusersOf(myUserId, friendUserId)
+    ]);
+
+    const pairKeys = new Set(
+        [...outgoing, ...incoming].map((connection) => `${connection.userAId}:${connection.userBId}`)
+    );
+    await Promise.all(
+        Array.from(pairKeys).map(async (pair) => {
+            const [left, right] = pair.split(":");
+            if (!left || !right) {
+                return;
+            }
+            await connections.delete(left, right);
+        })
+    );
+}
+
+async function connectionDeleteIfEmpty(
+    connections: { delete: (id1: string, id2: string) => Promise<boolean> },
+    id1: string,
+    id2: string,
+    connection: {
+        requestedA: boolean;
+        requestedB: boolean;
+    } | null
+): Promise<void> {
+    if (!connection) {
+        return;
+    }
+    if (connection.requestedA || connection.requestedB) {
+        return;
+    }
+    await connections.delete(id1, id2);
 }

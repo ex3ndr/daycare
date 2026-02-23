@@ -88,6 +88,117 @@ describe("friendRemoveToolBuild", () => {
             storage.close();
         }
     });
+
+    it("removes an active shared subuser and notifies the owner", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const owner = await storage.users.create({ id: "owner", usertag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const subuser = await storage.users.create({
+                id: "owner-sub-1",
+                parentUserId: owner.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, subuser.id, 200);
+
+            const postToUserAgents = vi.fn(async () => undefined);
+            const tool = friendRemoveToolBuild();
+            const result = await tool.execute(
+                { usertag: "cool-cat-11" },
+                contextBuild(bob.id, storage, postToUserAgents),
+                toolCall
+            );
+
+            expect(result.typedResult.status).toBe("removed_share");
+            expect(postToUserAgents).toHaveBeenCalledWith(
+                owner.id,
+                expect.objectContaining({ type: "system_message", origin: "friend:swift-fox-42" })
+            );
+
+            const state = await storage.connections.find(subuser.id, bob.id);
+            if (state?.userAId === bob.id) {
+                expect(state.requestedA).toBe(false);
+                expect(state.requestedB).toBe(true);
+            } else {
+                expect(state?.requestedA).toBe(true);
+                expect(state?.requestedB).toBe(false);
+            }
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("rejects an incoming shared subuser offer without notification", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const owner = await storage.users.create({ id: "owner", usertag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const subuser = await storage.users.create({
+                id: "owner-sub-1",
+                parentUserId: owner.id,
+                name: "helper",
+                usertag: "cool-cat-11"
+            });
+            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
+
+            const postToUserAgents = vi.fn(async () => undefined);
+            const tool = friendRemoveToolBuild();
+            const result = await tool.execute(
+                { usertag: "cool-cat-11" },
+                contextBuild(bob.id, storage, postToUserAgents),
+                toolCall
+            );
+
+            expect(result.typedResult.status).toBe("rejected_share");
+            expect(postToUserAgents).not.toHaveBeenCalled();
+            expect(await storage.connections.find(subuser.id, bob.id)).toBeNull();
+        } finally {
+            storage.close();
+        }
+    });
+
+    it("cascades subuser-share cleanup when unfriending a user", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const aliceSub = await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                name: "a-helper",
+                usertag: "cool-cat-11"
+            });
+            const bobSub = await storage.users.create({
+                id: "bob-sub-1",
+                parentUserId: bob.id,
+                name: "b-helper",
+                usertag: "smart-owl-22"
+            });
+
+            await storage.connections.upsertRequest(alice.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, alice.id, 200);
+            await storage.connections.upsertRequest(aliceSub.id, bob.id, 300);
+            await storage.connections.upsertRequest(bob.id, aliceSub.id, 400);
+            await storage.connections.upsertRequest(bobSub.id, alice.id, 500);
+            await storage.connections.upsertRequest(alice.id, bobSub.id, 600);
+
+            const postToUserAgents = vi.fn(async () => undefined);
+            const tool = friendRemoveToolBuild();
+            const result = await tool.execute(
+                { usertag: "swift-fox-42" },
+                contextBuild(alice.id, storage, postToUserAgents),
+                toolCall
+            );
+
+            expect(result.typedResult.status).toBe("unfriended");
+            expect(await storage.connections.find(aliceSub.id, bob.id)).toBeNull();
+            expect(await storage.connections.find(bobSub.id, alice.id)).toBeNull();
+        } finally {
+            storage.close();
+        }
+    });
 });
 
 function contextBuild(
