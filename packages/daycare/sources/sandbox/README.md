@@ -18,7 +18,15 @@ import { Sandbox } from "@/types";
 
 const sandbox = new Sandbox({
     homeDir: userHome.home,
-    permissions: state.permissions
+    permissions: state.permissions,
+    docker: {
+        enabled: true,
+        image: "daycare-sandbox",
+        tag: "latest",
+        socketPath: "/var/run/docker.sock",
+        runtime: "runsc",
+        userId: ctx.userId
+    }
 });
 ```
 
@@ -26,6 +34,7 @@ Inputs:
 - `homeDir`: sandbox HOME and default write root
 - `workingDir`: derived from `permissions.workingDir` and cannot be overridden at construction
 - `permissions`: session permissions used by read/write checks
+- `docker` (optional): enable Docker-wrapped `exec` with per-user container config
 
 ## API
 
@@ -67,7 +76,27 @@ Behavior:
 - resolves `cwd` inside workspace scope
 - builds filesystem policy from permissions
 - always runs with `HOME = homeDir`
-- executes through `runInSandbox`
+- executes through `runInSandbox` (host mode) or `dockerRunInSandbox` (docker mode)
+
+## Docker Settings
+
+Enable Docker runtime in `settings.json`:
+
+```json
+{
+    "docker": {
+        "enabled": true,
+        "image": "daycare-sandbox",
+        "tag": "latest",
+        "socketPath": "/var/run/docker.sock",
+        "runtime": "runsc"
+    }
+}
+```
+
+Path mapping when Docker is enabled:
+- host: `/data/users/<userId>/home/...`
+- container: `/home/<userId>/...`
 
 ## Tool Context
 

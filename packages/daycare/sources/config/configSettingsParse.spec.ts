@@ -22,4 +22,41 @@ describe("configSettingsParse", () => {
 
         expect(parsed.engine?.dbPath).toBe("/tmp/daycare/daycare.db");
     });
+
+    it("accepts full docker settings", () => {
+        const parsed = configSettingsParse({
+            docker: {
+                enabled: true,
+                image: "daycare-sandbox",
+                tag: "latest",
+                socketPath: "/var/run/docker.sock",
+                runtime: "runsc"
+            }
+        });
+
+        expect(parsed.docker).toEqual({
+            enabled: true,
+            image: "daycare-sandbox",
+            tag: "latest",
+            socketPath: "/var/run/docker.sock",
+            runtime: "runsc"
+        });
+    });
+
+    it("accepts missing docker settings", () => {
+        const parsed = configSettingsParse({});
+        expect(parsed.docker).toBeUndefined();
+    });
+
+    it("accepts partial docker settings", () => {
+        const parsed = configSettingsParse({
+            docker: {
+                enabled: true
+            }
+        });
+
+        expect(parsed.docker).toEqual({
+            enabled: true
+        });
+    });
 });

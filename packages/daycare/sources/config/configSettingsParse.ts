@@ -48,6 +48,16 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
 
     const settingsSchema = z
         .object({
+            docker: z
+                .object({
+                    enabled: z.boolean().optional(),
+                    image: z.string().min(1).optional(),
+                    tag: z.string().min(1).optional(),
+                    socketPath: z.string().min(1).optional(),
+                    runtime: z.string().min(1).optional()
+                })
+                .passthrough()
+                .optional(),
             features: z
                 .object({
                     say: z.boolean().optional(),

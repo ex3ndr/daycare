@@ -3325,7 +3325,7 @@
     "@types/node" "*"
     "@types/ssh2" "*"
 
-"@types/dockerode@^3.3.36":
+"@types/dockerode@^3.3.36", "@types/dockerode@^3.3.45":
   version "3.3.47"
   resolved "https://registry.yarnpkg.com/@types/dockerode/-/dockerode-3.3.47.tgz#cf8c6b4efcd0bb28b0e6009e613e7faab1b96e75"
   integrity sha512-ShM1mz7rCjdssXt7Xz0u1/R2BJC7piWa3SJpUBiVjCf2A3XNn4cP6pUVaD8bLanpPVVn4IKzJuw3dOvkJ8IbYw==
@@ -4339,7 +4339,7 @@ docker-modem@^5.0.6:
     split-ca "^1.0.1"
     ssh2 "^1.15.0"
 
-dockerode@^4.0.7:
+dockerode@^4.0.7, dockerode@^4.0.9:
   version "4.0.9"
   resolved "https://registry.yarnpkg.com/dockerode/-/dockerode-4.0.9.tgz#15b32000edad25520be6fafa9ad6bc4529b06be7"
   integrity sha512-iND4mcOWhPaCNh54WmK/KoSb35AFqPAUWFMffTQcp52uQt36b5uNwEJTSXntJZBbeGad72Crbi/hvDIv6us/6Q==

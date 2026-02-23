@@ -2,9 +2,12 @@ import path from "node:path";
 
 import { resolveEngineSocketPath } from "../engine/ipc/socket.js";
 import { DEFAULT_DAYCARE_DIR } from "../paths.js";
-import type { ResolvedSettingsConfig, SettingsConfig } from "../settings.js";
+import type { DockerSettings, ResolvedSettingsConfig, SettingsConfig } from "../settings.js";
 import { freezeDeep } from "../util/freezeDeep.js";
 import type { Config, ConfigOverrides } from "./configTypes.js";
+
+const DEFAULT_DOCKER_IMAGE = "daycare-sandbox";
+const DEFAULT_DOCKER_TAG = "latest";
 
 /**
  * Resolves derived paths and defaults into an immutable Config snapshot.
@@ -32,6 +35,7 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
         dbPath,
         authPath,
         socketPath,
+        docker: frozenSettings.docker,
         features: frozenSettings.features,
         settings: frozenSettings,
         verbose
@@ -41,6 +45,7 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
 function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConfig {
     const emergencyContextLimit = settings.agents?.emergencyContextLimit ?? 200_000;
     const appReviewerEnabled = settings.security?.appReviewerEnabled ?? false;
+    const docker = resolveDockerDefaults(settings.docker);
     return {
         ...settings,
         agents: {
@@ -55,6 +60,17 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
             say: settings.features?.say ?? false,
             rlm: settings.features?.rlm ?? false,
             noTools: settings.features?.noTools ?? false
-        }
+        },
+        docker
+    };
+}
+
+function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSettingsConfig["docker"] {
+    return {
+        enabled: docker?.enabled ?? false,
+        image: docker?.image ?? DEFAULT_DOCKER_IMAGE,
+        tag: docker?.tag ?? DEFAULT_DOCKER_TAG,
+        socketPath: docker?.socketPath,
+        runtime: docker?.runtime
     };
 }

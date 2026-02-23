@@ -51,6 +51,22 @@ export type SecuritySettings = {
     appReviewerEnabled?: boolean;
 };
 
+export type DockerSettings = {
+    enabled?: boolean;
+    image?: string;
+    tag?: string;
+    socketPath?: string;
+    runtime?: string;
+};
+
+export type ResolvedDockerSettings = {
+    enabled: boolean;
+    image: string;
+    tag: string;
+    socketPath?: string;
+    runtime?: string;
+};
+
 export type FeaturesConfig = {
     say?: boolean;
     rlm?: boolean;
@@ -59,14 +75,16 @@ export type FeaturesConfig = {
 
 export type ResolvedFeaturesConfig = Required<FeaturesConfig>;
 
-export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security" | "features"> & {
+export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security" | "features" | "docker"> & {
     agents: Required<AgentSettings>;
     security: Required<SecuritySettings>;
     features: ResolvedFeaturesConfig;
+    docker: ResolvedDockerSettings;
 };
 
 export type SettingsConfig = {
     features?: FeaturesConfig;
+    docker?: DockerSettings;
     engine?: {
         socketPath?: string;
         dataDir?: string;

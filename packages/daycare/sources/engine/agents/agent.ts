@@ -105,9 +105,20 @@ export class Agent {
         this.agentSystem = agentSystem;
         this.userHome = userHome;
         this.files = new Files(this.userHome.home);
+        const dockerSettings = this.agentSystem.config?.current?.settings?.docker;
         this.sandbox = new Sandbox({
             homeDir: this.userHome.home,
-            permissions: this.state.permissions
+            permissions: this.state.permissions,
+            docker: dockerSettings?.enabled
+                ? {
+                      enabled: true,
+                      image: dockerSettings.image,
+                      tag: dockerSettings.tag,
+                      socketPath: dockerSettings.socketPath,
+                      runtime: dockerSettings.runtime,
+                      userId: this.ctx.userId
+                  }
+                : undefined
         });
     }
 

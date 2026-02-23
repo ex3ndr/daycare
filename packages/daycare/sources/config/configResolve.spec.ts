@@ -77,4 +77,60 @@ describe("configResolve", () => {
         const config = configResolve({ security: { appReviewerEnabled: false } }, configPath);
         expect(config.settings.security.appReviewerEnabled).toBe(false);
     });
+
+    it("defaults docker settings when missing", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve({}, configPath);
+        expect(config.docker).toEqual({
+            enabled: false,
+            image: "daycare-sandbox",
+            tag: "latest",
+            socketPath: undefined,
+            runtime: undefined
+        });
+        expect(config.settings.docker).toEqual(config.docker);
+    });
+
+    it("resolves partial docker settings with defaults", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                docker: {
+                    enabled: true,
+                    image: "custom-sandbox"
+                }
+            },
+            configPath
+        );
+        expect(config.docker).toEqual({
+            enabled: true,
+            image: "custom-sandbox",
+            tag: "latest",
+            socketPath: undefined,
+            runtime: undefined
+        });
+    });
+
+    it("resolves full docker settings", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                docker: {
+                    enabled: true,
+                    image: "daycare-sandbox",
+                    tag: "v2",
+                    socketPath: "/var/run/docker.sock",
+                    runtime: "runsc"
+                }
+            },
+            configPath
+        );
+        expect(config.docker).toEqual({
+            enabled: true,
+            image: "daycare-sandbox",
+            tag: "v2",
+            socketPath: "/var/run/docker.sock",
+            runtime: "runsc"
+        });
+    });
 });

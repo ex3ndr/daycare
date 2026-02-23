@@ -1,4 +1,4 @@
-import type { ResolvedFeaturesConfig, ResolvedSettingsConfig } from "../settings.js";
+import type { ResolvedDockerSettings, ResolvedFeaturesConfig, ResolvedSettingsConfig } from "../settings.js";
 
 export type Config = {
     settingsPath: string;
@@ -9,6 +9,7 @@ export type Config = {
     dbPath: string;
     authPath: string;
     socketPath: string;
+    docker: ResolvedDockerSettings;
     features: ResolvedFeaturesConfig;
     settings: ResolvedSettingsConfig;
     verbose: boolean;

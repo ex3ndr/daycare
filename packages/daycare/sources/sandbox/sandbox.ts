@@ -5,6 +5,7 @@ import path from "node:path";
 import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../engine/permissions.js";
 import { envNormalize } from "../util/envNormalize.js";
+import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { runInSandbox } from "./runtime.js";
 import { sandboxAllowedDomainsResolve } from "./sandboxAllowedDomainsResolve.js";
@@ -12,8 +13,10 @@ import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.j
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
+import { sandboxPathContainerToHost } from "./sandboxPathContainerToHost.js";
 import type {
     SandboxConfig,
+    SandboxDockerConfig,
     SandboxExecArgs,
     SandboxExecResult,
     SandboxReadArgs,
@@ -42,11 +45,13 @@ export class Sandbox {
     readonly homeDir: string;
     readonly workingDir: string;
     readonly permissions: SessionPermissions;
+    readonly docker: SandboxDockerConfig | undefined;
 
     constructor(config: SandboxConfig) {
         this.homeDir = path.resolve(config.homeDir);
         this.workingDir = path.resolve(config.permissions.workingDir);
         this.permissions = config.permissions;
+        this.docker = config.docker;
     }
 
     /**
@@ -153,9 +158,10 @@ export class Sandbox {
      */
     async write(args: SandboxWriteArgs): Promise<SandboxWriteResult> {
         const permissions = this.permissionsEffectiveResolve();
-        sandboxPathAbsoluteEnsure(args.path);
-        await pathRejectIfSymlink(args.path, "Cannot write to symbolic link.");
-        const resolvedPath = await sandboxCanWrite(permissions, args.path);
+        const targetPath = this.pathContainerToHost(args.path);
+        sandboxPathAbsoluteEnsure(targetPath);
+        await pathRejectIfSymlink(targetPath, "Cannot write to symbolic link.");
+        const resolvedPath = await sandboxCanWrite(permissions, targetPath);
         await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
 
         try {
@@ -204,24 +210,34 @@ export class Sandbox {
         });
 
         try {
-            const result = await runInSandbox(
-                args.command,
-                {
-                    filesystem,
-                    network: {
-                        allowedDomains,
-                        deniedDomains: []
-                    },
-                    enableWeakerNestedSandbox: true
+            const runtimeConfig = {
+                filesystem,
+                network: {
+                    allowedDomains,
+                    deniedDomains: []
                 },
-                {
-                    cwd,
-                    env,
-                    home: this.homeDir,
-                    timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
-                    maxBufferBytes: MAX_EXEC_BUFFER
-                }
-            );
+                enableWeakerNestedSandbox: true
+            };
+            const runtimeOptions = {
+                cwd,
+                env,
+                home: this.homeDir,
+                timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
+                maxBufferBytes: MAX_EXEC_BUFFER
+            };
+            const result =
+                this.docker?.enabled === true
+                    ? await dockerRunInSandbox(args.command, runtimeConfig, {
+                          ...runtimeOptions,
+                          docker: {
+                              image: this.docker.image,
+                              tag: this.docker.tag,
+                              socketPath: this.docker.socketPath,
+                              runtime: this.docker.runtime,
+                              userId: this.docker.userId
+                          }
+                      })
+                    : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
             return {
                 stdout: sandboxText(result.stdout),
                 stderr: sandboxText(result.stderr),
@@ -263,7 +279,8 @@ export class Sandbox {
 
     private async readInputPathResolve(rawPath: string): Promise<string> {
         const normalized = sandboxReadPathNormalize(rawPath, this.homeDir);
-        const resolved = path.isAbsolute(normalized) ? normalized : path.resolve(this.workingDir, normalized);
+        const rewritten = this.pathContainerToHost(normalized);
+        const resolved = path.isAbsolute(rewritten) ? rewritten : path.resolve(this.workingDir, rewritten);
         if (await pathExists(resolved)) {
             return resolved;
         }
@@ -284,6 +301,13 @@ export class Sandbox {
             return nfdCurlyVariant;
         }
         return resolved;
+    }
+
+    private pathContainerToHost(targetPath: string): string {
+        if (!this.docker?.enabled) {
+            return targetPath;
+        }
+        return sandboxPathContainerToHost(this.homeDir, this.docker.userId, targetPath);
     }
 }
 

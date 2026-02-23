@@ -70,7 +70,17 @@ export type SandboxExecResult = {
     cwd: string;
 };
 
+export type SandboxDockerConfig = {
+    enabled: boolean;
+    image: string;
+    tag: string;
+    socketPath?: string;
+    runtime?: string;
+    userId: string;
+};
+
 export type SandboxConfig = {
     homeDir: string;
     permissions: SessionPermissions;
+    docker?: SandboxDockerConfig;
 };
