@@ -1,10 +1,10 @@
 ## Memory
 
 Memory files:
-- SOUL `{{soulPath}}`
-- USER `{{userPath}}`
-- AGENTS `{{agentsPath}}`
-- TOOLS `{{toolsPath}}`
+- SOUL `~/knowledge/SOUL.md`
+- USER `~/knowledge/USER.md`
+- AGENTS `~/knowledge/AGENTS.md`
+- TOOLS `~/knowledge/TOOLS.md`
 
 Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update AGENTS.md for workspace operating rules and recurring session routines. Update TOOLS.md when you learn non-obvious tool behavior. Keep concise, no speculation.
 

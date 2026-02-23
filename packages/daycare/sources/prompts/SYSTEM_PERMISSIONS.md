@@ -8,26 +8,10 @@ Permissions are fixed by the system and cannot be changed at runtime. Work withi
 
 - **Read**: all paths.
 - **Write**: allowlist only:
-  - `{{workspace}}` (workspace, recursive)
-{{#if appFolderPath}}
-  - `{{appFolderPath}}` (app folder path; default writes are typically scoped to `{{workspace}}`)
-  - `@workspace`: {{#if workspacePermissionGranted}}granted{{else}}not granted{{/if}} (shared workspace write access)
-{{/if}}
-  - `{{soulPath}}` (SOUL memory)
-  - `{{userPath}}` (USER memory)
-  - `{{agentsPath}}` (AGENTS - workspace operating rules and routines)
-  - `{{toolsPath}}` (TOOLS - learned tool knowledge)
-{{#if isForeground}}
-{{#if skillsPath}}
-  - `{{skillsPath}}` (skills, recursive)
-{{/if}}
-{{/if}}
-{{#if additionalWriteDirs}}
-  - Granted:
-{{#each additionalWriteDirs}}
-    - `{{this}}`
+  - `~/` (home, recursive)
+{{#each homeDirs}}
+  - `~/{{this.name}}`{{#if this.label}} ({{this.label}}){{/if}}
 {{/each}}
-{{/if}}
 - **Network**: always enabled.
 
 ### Exec Networking
