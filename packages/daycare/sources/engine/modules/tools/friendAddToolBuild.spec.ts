@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { SessionPermissions, ToolExecutionContext } from "@/types";
+import type { ToolExecutionContext } from "@/types";
 import { Storage } from "../../../storage/storage.js";
 import { contextForAgent } from "../../agents/context.js";
 import { friendAddToolBuild } from "./friendAddToolBuild.js";
@@ -107,11 +107,10 @@ function contextBuild(
 ): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] } as SessionPermissions,
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: { userId, agentId: "agent-1" } as ToolExecutionContext["ctx"],
         source: "test",
