@@ -148,28 +148,28 @@ describe("skillToolBuild", () => {
             });
 
             await expect(tool.execute({ name: skillPath }, context, toolCall)).rejects.toThrow(
-                "Read access denied for OS home paths without explicit permission."
+                "Read access denied for denied paths."
             );
         } finally {
             await fs.rm(homeBaseDir, { recursive: true, force: true });
         }
     });
 
-    it("allows direct-path skill load when read permission includes skill directory", async () => {
-        const homeBaseDir = await fs.mkdtemp(path.join(os.homedir(), ".daycare-skill-tool-allow-"));
-        const skillPath = path.join(homeBaseDir, "allowed", "SKILL.md");
+    it("allows direct-path skill load when read permission includes skill directory outside OS home", async () => {
+        const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-tool-allow-"));
+        const skillPath = path.join(baseDir, "allowed", "SKILL.md");
         await fs.mkdir(path.dirname(skillPath), { recursive: true });
         await fs.writeFile(skillPath, "# allowed\nWithin approved read scope.");
         try {
             const tool = skillToolBuild();
             const context = contextBuild({
-                permissions: permissionsBuild({ readDirs: [homeBaseDir] })
+                permissions: permissionsBuild({ readDirs: [baseDir] })
             });
 
             const result = await tool.execute({ name: skillPath }, context, toolCall);
             expect(contentText(result.toolMessage.content)).toContain("# allowed");
         } finally {
-            await fs.rm(homeBaseDir, { recursive: true, force: true });
+            await fs.rm(baseDir, { recursive: true, force: true });
         }
     });
 
@@ -186,7 +186,7 @@ describe("skillToolBuild", () => {
             });
 
             await expect(tool.execute({ name: "restricted" }, context, toolCall)).rejects.toThrow(
-                "Read access denied for OS home paths without explicit permission."
+                "Read access denied for denied paths."
             );
         } finally {
             await fs.rm(homeBaseDir, { recursive: true, force: true });

@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { sandboxAppsDenyPathsBuild } from "./sandboxAppsDenyPathsBuild.js";
+import { sandboxReadDenyPathsBuild } from "./sandboxReadDenyPathsBuild.js";
 import { sandboxSensitiveDenyPathsBuild } from "./sandboxSensitiveDenyPathsBuild.js";
 
 type SandboxFilesystemPolicyBuildInput = {
@@ -17,27 +18,35 @@ type SandboxFilesystemPolicy = {
 };
 
 /**
- * Builds sandbox filesystem policy with a default sensitive-path deny list.
+ * Builds sandbox filesystem policy with read/write deny-lists.
  * Expects: permissions paths are already absolute and normalized.
  */
 export function sandboxFilesystemPolicyBuild(input: SandboxFilesystemPolicyBuildInput): SandboxFilesystemPolicy {
     const allowWrite = dedupeResolvedPaths([...input.writeDirs]);
+    const appDenyPaths = sandboxAppsDenyPathsBuild({
+        workingDir: input.workingDir ?? ""
+    });
 
     const denyRead = dedupeResolvedPaths([
+        ...sandboxReadDenyPathsBuild({
+            homeDir: input.homeDir,
+            platform: input.platform
+        }),
+        ...appDenyPaths
+    ]);
+
+    const denyWrite = dedupeResolvedPaths([
         ...sandboxSensitiveDenyPathsBuild({
             homeDir: input.homeDir,
             platform: input.platform
         }),
-        ...sandboxAppsDenyPathsBuild({
-            workingDir: input.workingDir ?? ""
-        })
+        ...appDenyPaths
     ]);
 
     return {
         denyRead,
         allowWrite,
-        // Keep read/write denials aligned to prevent both data exfiltration and tampering.
-        denyWrite: [...denyRead]
+        denyWrite
     };
 }
 

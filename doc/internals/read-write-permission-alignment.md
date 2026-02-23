@@ -15,9 +15,11 @@ Read behavior:
 
 - Absolute path resolution stays broad
 - App isolation applies first
-- Sensitive deny paths are blocked
-- Explicitly granted `workingDir`/`writeDirs` paths are allowed
-- Remaining OS-home paths are denied
+- Deny-list paths are blocked first:
+  - sensitive home/system paths
+  - OS home root
+  - Daycare config root (`~/.daycare` or `DAYCARE_ROOT_DIR`)
+- Explicitly granted `workingDir`/`writeDirs`/`readDirs` paths are allowed only when outside deny-list roots
 - Non-home system paths remain readable
 
 Write behavior:
@@ -31,13 +33,11 @@ Write behavior:
 flowchart TD
   A["read target"] --> B["pathResolveSecure(root, target)"]
   B --> C["sandboxAppsAccessCheck"]
-  C --> D{"sensitive deny?"}
+  C --> D{"deny-list path?"}
   D -- yes --> E["deny"]
-  D -- no --> F{"within workingDir/writeDirs?"}
+  D -- no --> F{"within workingDir/writeDirs/readDirs?"}
   F -- yes --> G["allow"]
-  F -- no --> H{"within os.homedir?"}
-  H -- yes --> E
-  H -- no --> G
+  F -- no --> G
 
   I["write target"] --> J["pathResolveSecure(writeDirs, target)"]
   J --> K["sandboxAppsAccessCheck"]

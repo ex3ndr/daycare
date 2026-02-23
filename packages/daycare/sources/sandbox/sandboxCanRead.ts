@@ -1,19 +1,18 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import type { SessionPermissions } from "@/types";
 import { isWithinSecure, pathResolveSecure } from "./pathResolveSecure.js";
 import { sandboxAppsAccessCheck } from "./sandboxAppsAccessCheck.js";
 import { sandboxPathDenyCheck } from "./sandboxPathDenyCheck.js";
-import { sandboxSensitiveDenyPathsBuild } from "./sandboxSensitiveDenyPathsBuild.js";
+import { sandboxReadDenyPathsBuild } from "./sandboxReadDenyPathsBuild.js";
 
 /**
  * Resolves a read target against the current read allowlist.
  * Expects: target is an absolute path.
  */
 export async function sandboxCanRead(permissions: SessionPermissions, target: string): Promise<string> {
-    // Read uses a broad allowlist, then applies explicit deny-lists to match sandbox safety policy.
+    // Read uses a broad allowlist, then applies hard deny-lists (including OS home/config roots).
     const allowedDirs = [path.parse(target).root];
     const result = await pathResolveSecure(allowedDirs, target);
     const access = sandboxAppsAccessCheck(permissions, result.realPath);
@@ -21,8 +20,8 @@ export async function sandboxCanRead(permissions: SessionPermissions, target: st
         throw new Error(access.reason ?? "Read access denied.");
     }
 
-    if (sandboxPathDenyCheck(result.realPath, sandboxSensitiveDenyPathsBuild())) {
-        throw new Error("Read access denied for sensitive paths.");
+    if (sandboxPathDenyCheck(result.realPath, sandboxReadDenyPathsBuild())) {
+        throw new Error("Read access denied for denied paths.");
     }
 
     const explicitlyAllowedDirs = [permissions.workingDir, ...permissions.writeDirs, ...(permissions.readDirs ?? [])];
@@ -30,10 +29,6 @@ export async function sandboxCanRead(permissions: SessionPermissions, target: st
         if (isWithinSecure(await existingPathResolve(allowedDir), result.realPath)) {
             return result.realPath;
         }
-    }
-
-    if (isWithinSecure(await existingPathResolve(os.homedir()), result.realPath)) {
-        throw new Error("Read access denied for OS home paths without explicit permission.");
     }
 
     return result.realPath;

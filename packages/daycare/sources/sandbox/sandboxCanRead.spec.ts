@@ -62,7 +62,7 @@ describe("sandboxCanRead", () => {
         const permissions = buildPermissions(workingDir, [homeDir]);
 
         await expect(sandboxCanRead(permissions, homeSensitiveFile)).rejects.toThrow(
-            "Read access denied for sensitive paths."
+            "Read access denied for denied paths."
         );
     });
 
@@ -70,32 +70,32 @@ describe("sandboxCanRead", () => {
         const permissions = buildPermissions(workingDir, []);
 
         await expect(sandboxCanRead(permissions, homeRandomFile)).rejects.toThrow(
-            "Read access denied for OS home paths without explicit permission."
+            "Read access denied for denied paths."
         );
     });
 
-    it("allows reading files in workingDir even when workingDir is inside home", async () => {
+    it("denies reading files in workingDir when workingDir is inside OS home", async () => {
         const permissions = buildPermissions(path.join(homeDir, "workspace"), []);
 
-        const result = await sandboxCanRead(permissions, homeWorkspaceFile);
-
-        expect(result).toBe(await fs.realpath(homeWorkspaceFile));
+        await expect(sandboxCanRead(permissions, homeWorkspaceFile)).rejects.toThrow(
+            "Read access denied for denied paths."
+        );
     });
 
-    it("allows reading files in explicitly granted writeDirs inside home", async () => {
+    it("denies reading files in explicitly granted writeDirs inside OS home", async () => {
         const permissions = buildPermissions(workingDir, [path.join(homeDir, "allowed")]);
 
-        const result = await sandboxCanRead(permissions, homeWriteDirFile);
-
-        expect(result).toBe(await fs.realpath(homeWriteDirFile));
+        await expect(sandboxCanRead(permissions, homeWriteDirFile)).rejects.toThrow(
+            "Read access denied for denied paths."
+        );
     });
 
-    it("allows reading files in explicitly granted readDirs inside home", async () => {
+    it("denies reading files in explicitly granted readDirs inside OS home", async () => {
         const permissions = buildPermissions(workingDir, [], [path.join(homeDir, ".daycare", "skills")]);
 
-        const result = await sandboxCanRead(permissions, homeReadDirFile);
-
-        expect(result).toBe(await fs.realpath(homeReadDirFile));
+        await expect(sandboxCanRead(permissions, homeReadDirFile)).rejects.toThrow(
+            "Read access denied for denied paths."
+        );
     });
 
     it("allows reading system paths outside home", async () => {
@@ -104,6 +104,18 @@ describe("sandboxCanRead", () => {
         const result = await sandboxCanRead(permissions, outsideFile);
 
         expect(result).toBe(await fs.realpath(outsideFile));
+    });
+
+    it("allows reading files in explicitly granted readDirs outside OS home", async () => {
+        const explicitReadDir = path.join(outsideDir, "allowed-read");
+        const explicitReadFile = path.join(explicitReadDir, "file.txt");
+        await fs.mkdir(explicitReadDir, { recursive: true });
+        await fs.writeFile(explicitReadFile, "explicit-read", "utf8");
+        const permissions = buildPermissions(workingDir, [], [explicitReadDir]);
+
+        const result = await sandboxCanRead(permissions, explicitReadFile);
+
+        expect(result).toBe(await fs.realpath(explicitReadFile));
     });
 
     it("denies non-app agents from reading app directories", async () => {

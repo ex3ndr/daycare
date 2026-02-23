@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_DAYCARE_DIR } from "../paths.js";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
 
 function baseWriteDirs(): string[] {
@@ -37,7 +38,11 @@ describe("sandboxFilesystemPolicyBuild", () => {
                 path.resolve("/root/.ssh")
             ])
         );
-        expect(result.denyWrite).toEqual(result.denyRead);
+        expect(result.denyRead).toEqual(
+            expect.arrayContaining([path.resolve(os.homedir()), path.resolve(DEFAULT_DAYCARE_DIR)])
+        );
+        expect(result.denyWrite).not.toContain(path.resolve(os.homedir()));
+        expect(result.denyWrite).not.toContain(path.resolve(DEFAULT_DAYCARE_DIR));
     });
 
     it("adds macOS sensitive deny paths to read and write", () => {
@@ -55,7 +60,11 @@ describe("sandboxFilesystemPolicyBuild", () => {
                 path.resolve("/private/etc/ssh")
             ])
         );
-        expect(result.denyWrite).toEqual(result.denyRead);
+        expect(result.denyRead).toEqual(
+            expect.arrayContaining([path.resolve(os.homedir()), path.resolve(DEFAULT_DAYCARE_DIR)])
+        );
+        expect(result.denyWrite).not.toContain(path.resolve(os.homedir()));
+        expect(result.denyWrite).not.toContain(path.resolve(DEFAULT_DAYCARE_DIR));
     });
 
     it("denies workspace apps directory for non-app agents", () => {
