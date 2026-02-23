@@ -132,6 +132,63 @@ describe("skillToolBuild", () => {
         }
     });
 
+    it("denies direct-path skill load when file is outside approved read scope", async () => {
+        const homeBaseDir = await fs.mkdtemp(path.join(os.homedir(), ".daycare-skill-tool-deny-"));
+        const skillPath = path.join(homeBaseDir, "denied", "SKILL.md");
+        await fs.mkdir(path.dirname(skillPath), { recursive: true });
+        await fs.writeFile(skillPath, "# denied\nNo access.");
+        try {
+            const tool = skillToolBuild();
+            const context = contextBuild({
+                permissions: permissionsBuild({})
+            });
+
+            await expect(tool.execute({ name: skillPath }, context, toolCall)).rejects.toThrow(
+                "Read access denied for OS home paths without explicit permission."
+            );
+        } finally {
+            await fs.rm(homeBaseDir, { recursive: true, force: true });
+        }
+    });
+
+    it("allows direct-path skill load when read permission includes skill directory", async () => {
+        const homeBaseDir = await fs.mkdtemp(path.join(os.homedir(), ".daycare-skill-tool-allow-"));
+        const skillPath = path.join(homeBaseDir, "allowed", "SKILL.md");
+        await fs.mkdir(path.dirname(skillPath), { recursive: true });
+        await fs.writeFile(skillPath, "# allowed\nWithin approved read scope.");
+        try {
+            const tool = skillToolBuild();
+            const context = contextBuild({
+                permissions: permissionsBuild({ readDirs: [homeBaseDir] })
+            });
+
+            const result = await tool.execute({ name: skillPath }, context, toolCall);
+            expect(contentText(result.toolMessage.content)).toContain("# allowed");
+        } finally {
+            await fs.rm(homeBaseDir, { recursive: true, force: true });
+        }
+    });
+
+    it("denies named skill load when skill file is outside approved read scope", async () => {
+        const homeBaseDir = await fs.mkdtemp(path.join(os.homedir(), ".daycare-skill-tool-name-deny-"));
+        const skillPath = path.join(homeBaseDir, "restricted", "SKILL.md");
+        await fs.mkdir(path.dirname(skillPath), { recursive: true });
+        await fs.writeFile(skillPath, "# restricted\nNo access.");
+        try {
+            const tool = skillToolBuild();
+            const context = contextBuild({
+                permissions: permissionsBuild({}),
+                skills: [skillBuild(skillPath, { name: "restricted", sandbox: false })]
+            });
+
+            await expect(tool.execute({ name: "restricted" }, context, toolCall)).rejects.toThrow(
+                "Read access denied for OS home paths without explicit permission."
+            );
+        } finally {
+            await fs.rm(homeBaseDir, { recursive: true, force: true });
+        }
+    });
+
     it("sends connector notification for user-type agents", async () => {
         const skillPath = await skillFileCreate("scheduling", false);
         try {

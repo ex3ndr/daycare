@@ -2,7 +2,8 @@ import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { SessionPermissions, ToolDefinition, ToolResultContract } from "@/types";
+import { sandboxCanRead } from "../../../sandbox/sandboxCanRead.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 import { skillContentLoad } from "../../skills/skillContentLoad.js";
 import { skillResolve } from "../../skills/skillResolve.js";
@@ -51,24 +52,28 @@ export function skillToolBuild(): ToolDefinition {
             if (!requested) {
                 throw new Error("Skill name is required.");
             }
+            const workingDir = toolContext.permissions.workingDir;
+            if (!workingDir) {
+                throw new Error("Workspace is not configured.");
+            }
 
             const skill = await skillTargetResolve(
                 requested,
                 toolContext.skills ?? [],
-                toolContext.permissions.workingDir
+                toolContext.permissions,
+                workingDir
             );
             if (!skill) {
                 throw skillInputLooksLikePath(requested)
-                    ? new Error(
-                          `Skill not found at path: ${path.resolve(toolContext.permissions.workingDir, requested)}.`
-                      )
+                    ? new Error(`Skill not found at path: ${path.resolve(workingDir, requested)}.`)
                     : new Error(`Unknown skill: ${requested}.`);
             }
 
             // Notify connector about skill activation (fire-and-forget for user agents)
             void skillNotifyConnector(skill.name, toolContext);
 
-            const skillBody = await skillContentLoad(skill.path);
+            const resolvedSkillPath = await skillPathResolveReadable(toolContext.permissions, skill.path);
+            const skillBody = await skillContentLoad(resolvedSkillPath);
             if (skill.sandbox === true) {
                 const skillSource = skillSourceBuild(skill.name);
                 const prompt = payload.prompt?.trim() ?? "";
@@ -130,13 +135,21 @@ export function skillToolBuild(): ToolDefinition {
 async function skillTargetResolve(
     requested: string,
     skills: AgentSkill[],
+    permissions: SessionPermissions,
     workingDir: string
 ): Promise<AgentSkill | null> {
     if (skillInputLooksLikePath(requested)) {
-        return skillResolve(path.resolve(workingDir, requested), { source: "config" });
+        const requestedPath = path.resolve(workingDir, requested);
+        const readablePath = await skillPathResolveReadable(permissions, requestedPath);
+        return skillResolve(readablePath, { source: "config" });
     }
 
     return skillByNameResolve(requested, skills);
+}
+
+async function skillPathResolveReadable(permissions: SessionPermissions, target: string): Promise<string> {
+    const resolvedPath = path.resolve(target);
+    return sandboxCanRead(permissions, resolvedPath);
 }
 
 function skillInputLooksLikePath(value: string): boolean {
