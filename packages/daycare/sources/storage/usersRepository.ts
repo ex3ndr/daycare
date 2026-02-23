@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { createId } from "@paralleldrive/cuid2";
+import { usertagGenerate } from "../engine/friends/usertagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
 import type {
     CreateUserInput,
@@ -203,14 +204,32 @@ export class UsersRepository {
             const isOwner = input.isOwner ?? false;
             const parentUserId = input.parentUserId ?? null;
             const name = input.name ?? null;
-            const usertag = input.usertag?.trim() || null;
             const connectorKey = input.connectorKey?.trim() ?? "";
+            const explicitUsertag = input.usertag?.trim() ?? "";
+            const shouldGenerateUsertag = explicitUsertag.length === 0;
+            const maxGeneratedUsertagAttempts = 100;
 
-            this.db
-                .prepare(
-                    "INSERT INTO users (id, is_owner, parent_user_id, name, usertag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                )
-                .run(id, isOwner ? 1 : 0, parentUserId, name, usertag, createdAt, updatedAt);
+            let usertag: string | null = null;
+            for (let attempt = 0; attempt < maxGeneratedUsertagAttempts; attempt += 1) {
+                usertag = shouldGenerateUsertag ? usertagGenerate() : explicitUsertag;
+                try {
+                    this.db
+                        .prepare(
+                            "INSERT INTO users (id, is_owner, parent_user_id, name, usertag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                        )
+                        .run(id, isOwner ? 1 : 0, parentUserId, name, usertag, createdAt, updatedAt);
+                    break;
+                } catch (error) {
+                    if (!shouldGenerateUsertag || !sqliteUniqueConstraintOnUsertagIs(error)) {
+                        throw error;
+                    }
+                    usertag = null;
+                }
+            }
+
+            if (!usertag) {
+                throw new Error("Failed to generate unique usertag after 100 attempts.");
+            }
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
             if (connectorKey) {
@@ -379,6 +398,11 @@ export class UsersRepository {
             this.userIdByConnectorKey.set(connectorKey.connectorKey, record.id);
         }
     }
+}
+
+function sqliteUniqueConstraintOnUsertagIs(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return message.includes("UNIQUE constraint failed: users.usertag");
 }
 
 function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeysDbRecord {

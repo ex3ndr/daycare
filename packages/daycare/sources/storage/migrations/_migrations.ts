@@ -20,6 +20,7 @@ import { migration20260222ImportSignals } from "./20260222_import_signals.js";
 import { migration20260222SessionEndedAt } from "./20260222_session_ended_at.js";
 import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_users.js";
 import { migration20260224AddMemoryColumns } from "./20260224_add_memory_columns.js";
+import { migration20260225RequireUsertag } from "./20260225_require_usertag.js";
 import type { Migration } from "./migrationTypes.js";
 
 export const migrations: Migration[] = [
@@ -44,5 +45,6 @@ export const migrations: Migration[] = [
     migration20260224AddMemoryColumns,
     migration20260222SessionEndedAt,
     migration20260222AddUserParent,
-    migration20260222AddUsertagConnections
+    migration20260222AddUsertagConnections,
+    migration20260225RequireUsertag
 ];
