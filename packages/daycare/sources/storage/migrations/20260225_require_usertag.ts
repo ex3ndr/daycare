@@ -1,4 +1,4 @@
-import { usertagGenerate } from "../../engine/friends/usertagGenerate.js";
+import { nametagGenerate } from "../../engine/friends/nametagGenerate.js";
 import type { Migration } from "./migrationTypes.js";
 
 /**
@@ -33,7 +33,7 @@ export const migration20260225RequireUsertag: Migration = {
         for (const user of usersMissingTags) {
             let nextTag = "";
             for (let attempt = 0; attempt < 1_000; attempt += 1) {
-                const candidate = usertagGenerate();
+                const candidate = nametagGenerate();
                 if (existingTags.has(candidate)) {
                     continue;
                 }

@@ -143,7 +143,7 @@ describe("AgentsRepository", () => {
             if (!ownerUser) {
                 throw new Error("Owner user missing");
             }
-            const otherUser = await storage.users.create({ usertag: "other-user-42" });
+            const otherUser = await storage.users.create({ nametag: "other-user-42" });
             const repo = new AgentsRepository(storage.db);
 
             await repo.create({

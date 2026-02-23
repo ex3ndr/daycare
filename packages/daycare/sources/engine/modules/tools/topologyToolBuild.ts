@@ -377,7 +377,7 @@ async function listFriendLinesBuild(
             findById: (id: string) => Promise<{
                 id: string;
                 parentUserId: string | null;
-                usertag: string | null;
+                nametag: string | null;
                 name: string | null;
             } | null>;
         };
@@ -387,7 +387,7 @@ async function listFriendLinesBuild(
     const friendConnections = await storage.connections.findFriends(callerUserId);
     const userCache = new Map<
         string,
-        { id: string; parentUserId: string | null; usertag: string | null; name: string | null }
+        { id: string; parentUserId: string | null; nametag: string | null; name: string | null }
     >();
     const friendUsers = (
         await Promise.all(
@@ -415,12 +415,12 @@ async function listFriendLinesBuild(
         .filter(
             (
                 entry
-            ): entry is { id: string; parentUserId: string | null; usertag: string | null; name: string | null } =>
+            ): entry is { id: string; parentUserId: string | null; nametag: string | null; name: string | null } =>
                 !!entry
         )
         .sort((left, right) => {
-            const leftTag = left.usertag ?? left.id;
-            const rightTag = right.usertag ?? right.id;
+            const leftTag = left.nametag ?? left.id;
+            const rightTag = right.nametag ?? right.id;
             return leftTag.localeCompare(rightTag);
         });
 
@@ -440,7 +440,7 @@ async function listFriendLinesBuild(
     const lines: string[] = [];
     for (let i = 0; i < friendUsers.length; i += 1) {
         const friend = friendUsers[i]!;
-        const friendTag = friend.usertag ?? friend.id;
+        const friendTag = friend.nametag ?? friend.id;
         lines.push(friendTag);
 
         const [outgoing, incoming] = await Promise.all([
@@ -487,9 +487,9 @@ async function sharedSubuserLinesBuild(options: {
     users: {
         findById: (
             id: string
-        ) => Promise<{ id: string; parentUserId: string | null; usertag: string | null; name: string | null } | null>;
+        ) => Promise<{ id: string; parentUserId: string | null; nametag: string | null; name: string | null } | null>;
     };
-    userCache: Map<string, { id: string; parentUserId: string | null; usertag: string | null; name: string | null }>;
+    userCache: Map<string, { id: string; parentUserId: string | null; nametag: string | null; name: string | null }>;
     gatewayBySubuserId: Map<string, string>;
     direction: "out" | "in";
 }): Promise<string[]> {
@@ -511,13 +511,13 @@ async function sharedSubuserLinesBuild(options: {
         }
         options.userCache.set(subuserId, subuser);
         const subuserName = subuser.name ?? subuser.id;
-        const subuserTag = subuser.usertag ?? "none";
+        const subuserTag = subuser.nametag ?? "none";
         const gateway = options.gatewayBySubuserId.get(subuserId) ?? "none";
         const status = connection.requestedA && connection.requestedB ? "active" : "pending";
         const arrow = options.direction === "out" ? "→" : "←";
         const relation = options.direction === "out" ? "shared out" : "shared in";
         lines.push(
-            `  ${arrow} ${relation}: ${subuserName} (usertag=${subuserTag}) gateway=${gateway} status=${status}`
+            `  ${arrow} ${relation}: ${subuserName} (nametag=${subuserTag}) gateway=${gateway} status=${status}`
         );
     }
     return lines;

@@ -10,15 +10,15 @@ describe("friendSendToolBuild", () => {
     it("sends a friend message to the target user's frontend agents", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
 
             const postToUserAgents = vi.fn(async () => undefined);
             const tool = friendSendToolBuild();
             const result = await tool.execute(
-                { usertag: "swift-fox-42", message: "Hello <friend> & crew" },
+                { nametag: "swift-fox-42", message: "Hello <friend> & crew" },
                 contextBuild(alice.id, storage, postToUserAgents),
                 toolCall
             );
@@ -40,13 +40,13 @@ describe("friendSendToolBuild", () => {
     it("fails when users are not friends", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const tool = friendSendToolBuild();
 
             await expect(
                 tool.execute(
-                    { usertag: "swift-fox-42", message: "Hello" },
+                    { nametag: "swift-fox-42", message: "Hello" },
                     contextBuild(
                         alice.id,
                         storage,
@@ -63,13 +63,13 @@ describe("friendSendToolBuild", () => {
     it("sends to a shared subuser gateway agent", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
 
             await storage.agents.create({
@@ -93,7 +93,7 @@ describe("friendSendToolBuild", () => {
             const post = vi.fn(async () => undefined);
             const tool = friendSendToolBuild();
             const result = await tool.execute(
-                { usertag: "cool-cat-11", message: "Hello helper" },
+                { nametag: "cool-cat-11", message: "Hello helper" },
                 contextBuild(bob.id, storage, postToUserAgents, post),
                 toolCall
             );
@@ -117,20 +117,20 @@ describe("friendSendToolBuild", () => {
     it("fails when subuser share is not active", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
 
             const tool = friendSendToolBuild();
             await expect(
                 tool.execute(
-                    { usertag: "cool-cat-11", message: "Hello" },
+                    { nametag: "cool-cat-11", message: "Hello" },
                     contextBuild(
                         bob.id,
                         storage,

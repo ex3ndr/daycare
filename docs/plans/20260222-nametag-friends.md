@@ -1,24 +1,24 @@
-# Usertag & Friends System
+# Nametag & Friends System
 
 ## Overview
-- Add a global `usertag` (adjective-noun-number format, e.g. `swift-fox-42`) auto-generated for every user on creation
+- Add a global `nametag` (adjective-noun-number format, e.g. `swift-fox-42`) auto-generated for every user on creation
 - Implement a connections system with one row per pair (IDs sorted so `user_a_id < user_b_id`), with independent `requested_a`/`requested_b` flags and timestamps per side; friends = both sides requested; timestamps enforce 1-week cooldown after rejection
 - Add cross-user messaging capability through `AgentSystem.postToUserAgents()` that bypasses the existing userId guard
-- Three tools: `friend_add(usertag)`, `friend_remove(usertag)`, `friend_send(usertag, message)`
+- Three tools: `friend_add(nametag)`, `friend_remove(nametag)`, `friend_send(nametag, message)`
 - Friend requests are delivered as `system_message` items to the target user's frontend agents
 
 ## Context
 - **Database**: SQLite via `node:sqlite`, raw SQL, manual migrations in `sources/storage/migrations/`
-- **Users**: `UsersRepository` with `users` table; no usertag column yet
+- **Users**: `UsersRepository` with `users` table; no nametag column yet
 - **Cross-user guard**: `AgentSystem.resolveEntry()` enforces `ctx.userId === entry.ctx.userId` — no cross-user messaging exists
 - **Tools**: `*ToolBuild()` pattern with TypeBox schemas, registered in `engine.ts` via `this.modules.tools.register("core", ...)`
 - **Agent types**: Frontend agents have descriptor `type: "user"` with `connector`, `userId`, `channelId`
 
 ## Architecture
 
-### Usertag Generation
+### Nametag Generation
 ```
-usertagGenerate() → "adjective-noun-NN"
+nametagGenerate() → "adjective-noun-NN"
 ```
 - Word lists (~200 adjectives, ~200 nouns) embedded in the generator file
 - Random 2-digit number suffix (10–99)
@@ -52,7 +52,7 @@ sequenceDiagram
     participant B as User B's Agent
 
     A->>S: friend_add("swift-fox-42")
-    S->>S: Resolve usertag → User B
+    S->>S: Resolve nametag → User B
     S->>S: Insert/update connection: requested_a=1, requested_a_at=now
     S->>B: system_message: "User happy-penguin-42 wants to be your friend"
     B->>S: friend_add("happy-penguin-42")
@@ -72,8 +72,8 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
 
 ### Tool Behavior
 
-**`friend_add(usertag)`**
-1. Resolve usertag → target user; determine which side I am (a or b)
+**`friend_add(nametag)`**
+1. Resolve nametag → target user; determine which side I am (a or b)
 2. Sort (me, target) into (a, b) for canonical lookup
 3. Look up connection row:
    - Both sides = 1 → already friends, error
@@ -82,8 +82,8 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
    - My side = 0, other = 0 (row exists) → check cooldown: if my_at is within 1 week → error "try again later"; else set my side = 1, my_at = now, notify target
    - Row doesn't exist → **request**: insert row with my side = 1, my_at = now, other = 0; notify target
 
-**`friend_remove(usertag)`**
-1. Resolve usertag → target user; determine which side I am (a or b)
+**`friend_remove(nametag)`**
+1. Resolve nametag → target user; determine which side I am (a or b)
 2. Sort (me, target) into (a, b) for canonical lookup
 3. Look up connection row:
    - Both sides = 1 → **unfriend**: set my side = 0, notify target
@@ -91,10 +91,10 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
    - My side = 1, other = 0 → **cancel**: set my side = 0
    - Row doesn't exist OR both = 0 → error "no relationship"
 
-**`friend_send(usertag, message)`**
-1. Resolve usertag → target user
+**`friend_send(nametag, message)`**
+1. Resolve nametag → target user
 2. Sort (me, target) into (a, b), verify connection exists with requested_a=1 AND requested_b=1
-3. Post system_message to target's frontend agents with sender's usertag as origin
+3. Post system_message to target's frontend agents with sender's nametag as origin
 
 ## Development Approach
 - **Testing approach**: Regular (code first, then tests)
@@ -109,35 +109,35 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
 
 ## Implementation Steps
 
-### Task 1: Migration — add usertag column and connections table
-- [ ] Create `sources/storage/migrations/20260222_add_usertag_connections.ts`
-  - Add `usertag TEXT` column to `users` table (nullable, unique)
+### Task 1: Migration — add nametag column and connections table
+- [ ] Create `sources/storage/migrations/20260222_add_nametag_connections.ts`
+  - Add `nametag TEXT` column to `users` table (nullable, unique)
   - Create `connections` table: `(user_a_id TEXT, user_b_id TEXT, requested_a INTEGER DEFAULT 0, requested_b INTEGER DEFAULT 0, requested_a_at INTEGER, requested_b_at INTEGER, PRIMARY KEY (user_a_id, user_b_id), CHECK (user_a_id < user_b_id))`
   - Add index on `user_b_id` for reverse lookups
-  - Add unique index on `usertag` (filtered WHERE usertag IS NOT NULL)
+  - Add unique index on `nametag` (filtered WHERE nametag IS NOT NULL)
 - [ ] Register migration in `sources/storage/migrations/_migrations.ts`
-- [ ] Update `DatabaseUserRow` in `databaseTypes.ts` to include `usertag: string | null`
-- [ ] Update `UserDbRecord` in `databaseTypes.ts` to include `usertag: string | null`
+- [ ] Update `DatabaseUserRow` in `databaseTypes.ts` to include `nametag: string | null`
+- [ ] Update `UserDbRecord` in `databaseTypes.ts` to include `nametag: string | null`
 - [ ] Add `DatabaseConnectionRow` type to `databaseTypes.ts`
 - [ ] Run tests — must pass before next task
 
-### Task 2: Usertag generator
-- [ ] Create `sources/engine/friends/usertagGenerate.ts`
-  - Export `usertagGenerate(): string` — returns `"adjective-noun-NN"` format
+### Task 2: Nametag generator
+- [ ] Create `sources/engine/friends/nametagGenerate.ts`
+  - Export `nametagGenerate(): string` — returns `"adjective-noun-NN"` format
   - Embedded word lists (~200 adjectives, ~200 nouns)
   - Random 2-digit number suffix (10–99)
-- [ ] Write tests in `sources/engine/friends/usertagGenerate.spec.ts`
+- [ ] Write tests in `sources/engine/friends/nametagGenerate.spec.ts`
   - Verify format matches `word-word-number` pattern
   - Verify output randomness (multiple calls produce different results)
 - [ ] Run tests — must pass before next task
 
-### Task 3: Wire usertag into user creation
-- [ ] Update `UsersRepository.create()` to accept optional `usertag` in `CreateUserInput`
-- [ ] Update `UsersRepository.create()` SQL INSERT to include usertag column
-- [ ] Update all SELECT queries in `UsersRepository` to include usertag column (mapRow, findByConnectorKey, etc.)
-- [ ] Add `UsersRepository.findByUsertag(usertag: string): Promise<UserDbRecord | null>` method
-- [ ] Update `Storage.resolveUserByConnectorKey()` to generate usertag via `usertagGenerate()` on creation, retrying on collision
-- [ ] Write tests for `findByUsertag` lookup
+### Task 3: Wire nametag into user creation
+- [ ] Update `UsersRepository.create()` to accept optional `nametag` in `CreateUserInput`
+- [ ] Update `UsersRepository.create()` SQL INSERT to include nametag column
+- [ ] Update all SELECT queries in `UsersRepository` to include nametag column (mapRow, findByConnectorKey, etc.)
+- [ ] Add `UsersRepository.findByNametag(nametag: string): Promise<UserDbRecord | null>` method
+- [ ] Update `Storage.resolveUserByConnectorKey()` to generate nametag via `nametagGenerate()` on creation, retrying on collision
+- [ ] Write tests for `findByNametag` lookup
 - [ ] Run tests — must pass before next task
 
 ### Task 4: ConnectionsRepository
@@ -163,8 +163,8 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
 
 ### Task 6: friend_add tool
 - [ ] Create `sources/engine/modules/tools/friendAddToolBuild.ts`
-  - Parameter: `usertag: string`
-  - Logic: resolve usertag → check state → request or confirm (see Tool Behavior above)
+  - Parameter: `nametag: string`
+  - Logic: resolve nametag → check state → request or confirm (see Tool Behavior above)
   - On request: upsert connection row (my side=1, my_at=now), post system_message to target via `postToUserAgents`
   - On confirm: set my side=1 → both=1 → friends! Notify requester
   - Enforce 1-week cooldown: if my side was cleared and my_at < 1 week ago → error
@@ -175,8 +175,8 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
 
 ### Task 7: friend_remove tool
 - [ ] Create `sources/engine/modules/tools/friendRemoveToolBuild.ts`
-  - Parameter: `usertag: string`
-  - Logic: resolve usertag → unfriend / reject / cancel (see Tool Behavior above)
+  - Parameter: `nametag: string`
+  - Logic: resolve nametag → unfriend / reject / cancel (see Tool Behavior above)
   - Unfriend: set my side=0 (preserve timestamp), notify target
   - Reject: set other side=0 (preserve timestamp for cooldown), no notification
   - Cancel: set my side=0
@@ -187,16 +187,16 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
 
 ### Task 8: friend_send tool
 - [ ] Create `sources/engine/modules/tools/friendSendToolBuild.ts`
-  - Parameters: `usertag: string`, `message: string`
-  - Logic: resolve usertag → verify friendship → post system_message to target's agents
-  - Message origin includes sender's usertag for reply context
+  - Parameters: `nametag: string`, `message: string`
+  - Logic: resolve nametag → verify friendship → post system_message to target's agents
+  - Message origin includes sender's nametag for reply context
   - Visible only to frontend agents (descriptor type "user")
 - [ ] Register tool in `engine.ts`
 - [ ] Write tests for send success and not-friends error
 - [ ] Run tests — must pass before next task
 
 ### Task 9: Verify acceptance criteria
-- [ ] Verify usertag is auto-generated on user creation
+- [ ] Verify nametag is auto-generated on user creation
 - [ ] Verify friend_add sends request and confirms
 - [ ] Verify friend_remove rejects silently and unfriends with notification
 - [ ] Verify friend_send delivers to target's frontend agents
@@ -213,8 +213,8 @@ async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void
 ### Database Schema Changes
 ```sql
 -- users table: add column
-ALTER TABLE users ADD COLUMN usertag TEXT;
-CREATE UNIQUE INDEX idx_users_usertag ON users(usertag) WHERE usertag IS NOT NULL;
+ALTER TABLE users ADD COLUMN nametag TEXT;
+CREATE UNIQUE INDEX idx_users_nametag ON users(nametag) WHERE nametag IS NOT NULL;
 
 -- new table (one row per pair, IDs always sorted so user_a_id < user_b_id)
 CREATE TABLE connections (
@@ -259,12 +259,12 @@ swift-fox-42 removed you as a friend.
 ### File Map
 | File | Purpose |
 |------|---------|
-| `storage/migrations/20260222_add_usertag_connections.ts` | DB migration |
+| `storage/migrations/20260222_add_nametag_connections.ts` | DB migration |
 | `storage/databaseTypes.ts` | Updated row types |
-| `storage/usersRepository.ts` | Usertag in create + findByUsertag |
+| `storage/usersRepository.ts` | Nametag in create + findByNametag |
 | `storage/connectionsRepository.ts` | Connections CRUD |
 | `storage/storage.ts` | Register ConnectionsRepository |
-| `engine/friends/usertagGenerate.ts` | Adjective-noun-number generator |
+| `engine/friends/nametagGenerate.ts` | Adjective-noun-number generator |
 | `engine/modules/tools/friendAddToolBuild.ts` | friend_add tool |
 | `engine/modules/tools/friendRemoveToolBuild.ts` | friend_remove tool |
 | `engine/modules/tools/friendSendToolBuild.ts` | friend_send tool |

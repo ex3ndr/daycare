@@ -12,7 +12,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 export async function agentSystemPromptSectionEnvironment(context: AgentSystemPromptContext): Promise<string> {
     const descriptor = context.descriptor;
     const isForeground = descriptor?.type === "user";
-    const usertag = await usertagResolve(context);
+    const nametag = await nametagResolve(context);
     const template = await agentPromptBundledRead("SYSTEM_ENVIRONMENT.md");
     const section = Handlebars.compile(template)({
         isForeground,
@@ -23,17 +23,17 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
         connector: isForeground ? descriptor.connector : "unknown",
         channelId: isForeground ? descriptor.channelId : "unknown",
         userId: isForeground ? descriptor.userId : "unknown",
-        usertag
+        nametag
     });
     return section.trim();
 }
 
-/** Looks up the usertag for the current user from storage. */
-async function usertagResolve(context: AgentSystemPromptContext): Promise<string | null> {
+/** Looks up the nametag for the current user from storage. */
+async function nametagResolve(context: AgentSystemPromptContext): Promise<string | null> {
     const storage = context.agentSystem?.storage;
     if (!storage) {
         return null;
     }
     const user = await storage.users.findById(context.ctx.userId);
-    return user?.usertag ?? null;
+    return user?.nametag ?? null;
 }

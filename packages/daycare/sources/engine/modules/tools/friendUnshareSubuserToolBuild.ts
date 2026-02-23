@@ -5,7 +5,7 @@ import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js
 
 const schema = Type.Object(
     {
-        friendUsertag: Type.String({ minLength: 1 }),
+        friendNametag: Type.String({ minLength: 1 }),
         subuserId: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
@@ -17,7 +17,7 @@ const resultSchema = Type.Object(
     {
         summary: Type.String(),
         status: Type.String(),
-        friendUsertag: Type.String(),
+        friendNametag: Type.String(),
         subuserId: Type.String()
     },
     { additionalProperties: false }
@@ -38,14 +38,14 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "friend_unshare_subuser",
-            description: "Revoke a subuser share from a friend by usertag.",
+            description: "Revoke a subuser share from a friend by nametag.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.descriptor.type !== "subuser",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendUnshareSubuserArgs;
-            const targetUsertag = usertagNormalize(payload.friendUsertag);
+            const targetNametag = nametagNormalize(payload.friendNametag);
             const subuserId = payload.subuserId.trim();
             if (!subuserId) {
                 throw new Error("subuserId is required.");
@@ -57,14 +57,14 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myUsertag = me.usertag?.trim() ?? "";
-            if (!myUsertag) {
-                throw new Error("Current user does not have a usertag.");
+            const myNametag = me.nametag?.trim() ?? "";
+            if (!myNametag) {
+                throw new Error("Current user does not have a nametag.");
             }
 
-            const friend = await users.findByUsertag(targetUsertag);
+            const friend = await users.findByNametag(targetNametag);
             if (!friend) {
-                throw new Error(`User not found for usertag: ${targetUsertag}`);
+                throw new Error(`User not found for nametag: ${targetNametag}`);
             }
 
             const subuser = await users.findById(subuserId);
@@ -77,12 +77,12 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
 
             const existing = await connections.find(subuser.id, friend.id);
             if (!existing) {
-                throw new Error(`No share exists for subuser ${subuserId} and ${targetUsertag}.`);
+                throw new Error(`No share exists for subuser ${subuserId} and ${targetNametag}.`);
             }
 
             const state = sideStateForUser(existing, subuser.id);
             if (!state.myRequested) {
-                throw new Error(`No share exists for subuser ${subuserId} and ${targetUsertag}.`);
+                throw new Error(`No share exists for subuser ${subuserId} and ${targetNametag}.`);
             }
 
             const updated = await connections.clearSide(subuser.id, friend.id);
@@ -90,19 +90,19 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
                 await connections.delete(subuser.id, friend.id);
             }
 
-            const origin = `friend:${myUsertag}`;
+            const origin = `friend:${myNametag}`;
             const subuserName = subuser.name ?? subuser.id;
-            const subuserUsertag = subuser.usertag?.trim() ?? "unknown";
+            const subuserNametag = subuser.nametag?.trim() ?? "unknown";
             await toolContext.agentSystem.postToUserAgents(friend.id, {
                 type: "system_message",
                 origin,
                 text: messageBuildSystemText(
-                    `${myUsertag} revoked your access to subuser "${subuserName}" (${subuserUsertag}).`,
+                    `${myNametag} revoked your access to subuser "${subuserName}" (${subuserNametag}).`,
                     origin
                 )
             });
 
-            const summary = `Revoked subuser ${subuserId} share from ${targetUsertag}.`;
+            const summary = `Revoked subuser ${subuserId} share from ${targetNametag}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -117,7 +117,7 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
                 typedResult: {
                     summary,
                     status: "revoked",
-                    friendUsertag: targetUsertag,
+                    friendNametag: targetNametag,
                     subuserId
                 }
             };
@@ -125,10 +125,10 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
     };
 }
 
-function usertagNormalize(value: string): string {
+function nametagNormalize(value: string): string {
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
-        throw new Error("friendUsertag is required.");
+        throw new Error("friendNametag is required.");
     }
     return normalized;
 }

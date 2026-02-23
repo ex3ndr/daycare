@@ -11,20 +11,20 @@ describe("UsersRepository", () => {
                 isOwner: false,
                 createdAt: 1,
                 updatedAt: 2,
-                usertag: "swift-fox-42",
+                nametag: "swift-fox-42",
                 connectorKey: "telegram:1"
             });
             expect(created.isOwner).toBe(false);
             expect(created.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
-            expect(created.usertag).toBe("swift-fox-42");
+            expect(created.nametag).toBe("swift-fox-42");
 
             const byId = await users.findById(created.id);
             expect(byId?.id).toBe(created.id);
 
             const byKey = await users.findByConnectorKey("telegram:1");
             expect(byKey?.id).toBe(created.id);
-            const byUsertag = await users.findByUsertag("swift-fox-42");
-            expect(byUsertag?.id).toBe(created.id);
+            const byNametag = await users.findByNametag("swift-fox-42");
+            expect(byNametag?.id).toBe(created.id);
 
             await users.addConnectorKey(created.id, "slack:1");
             const updated = await users.findById(created.id);
@@ -42,7 +42,7 @@ describe("UsersRepository", () => {
             await users.delete(created.id);
             expect(await users.findById(created.id)).toBeNull();
             expect(await users.findByConnectorKey("telegram:1")).toBeNull();
-            expect(await users.findByUsertag("swift-fox-42")).toBeNull();
+            expect(await users.findByNametag("swift-fox-42")).toBeNull();
         } finally {
             storage.close();
         }
@@ -70,7 +70,7 @@ describe("UsersRepository", () => {
         try {
             const users = new UsersRepository(storage.db);
             storage.db
-                .prepare("INSERT INTO users (id, is_owner, usertag, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+                .prepare("INSERT INTO users (id, is_owner, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
                 .run("user-1", 0, "brave-wolf-99", 10, 11);
             storage.db
                 .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?)")
@@ -79,12 +79,12 @@ describe("UsersRepository", () => {
             const loaded = await users.findById("user-1");
             expect(loaded?.id).toBe("user-1");
             expect(loaded?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
-            expect((await users.findByUsertag("brave-wolf-99"))?.id).toBe("user-1");
+            expect((await users.findByNametag("brave-wolf-99"))?.id).toBe("user-1");
 
             await users.delete("user-1");
             expect(await users.findById("user-1")).toBeNull();
             expect(await users.findByConnectorKey("telegram:1")).toBeNull();
-            expect(await users.findByUsertag("brave-wolf-99")).toBeNull();
+            expect(await users.findByNametag("brave-wolf-99")).toBeNull();
         } finally {
             storage.close();
         }

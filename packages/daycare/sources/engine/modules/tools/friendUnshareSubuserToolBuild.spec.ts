@@ -10,13 +10,13 @@ describe("friendUnshareSubuserToolBuild", () => {
     it("revokes an active share and notifies the friend", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, subuser.id, 200);
@@ -24,7 +24,7 @@ describe("friendUnshareSubuserToolBuild", () => {
             const postToUserAgents = vi.fn(async () => undefined);
             const tool = friendUnshareSubuserToolBuild();
             const result = await tool.execute(
-                { friendUsertag: "swift-fox-42", subuserId: subuser.id },
+                { friendNametag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
                 toolCall
             );
@@ -51,20 +51,20 @@ describe("friendUnshareSubuserToolBuild", () => {
     it("revokes a pending share offer and removes the empty row", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
 
             const postToUserAgents = vi.fn(async () => undefined);
             const tool = friendUnshareSubuserToolBuild();
             const result = await tool.execute(
-                { friendUsertag: "swift-fox-42", subuserId: subuser.id },
+                { friendNametag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
                 toolCall
             );
@@ -86,19 +86,19 @@ describe("friendUnshareSubuserToolBuild", () => {
     it("fails when no share exists", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             const tool = friendUnshareSubuserToolBuild();
 
             await expect(
                 tool.execute(
-                    { friendUsertag: "swift-fox-42", subuserId: "alice-sub-1" },
+                    { friendNametag: "swift-fox-42", subuserId: "alice-sub-1" },
                     contextBuild(
                         alice.id,
                         storage,

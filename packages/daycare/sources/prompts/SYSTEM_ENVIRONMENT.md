@@ -13,8 +13,8 @@
 Connector: {{connector}}, channel: {{channelId}}, user: {{userId}}.
 {{/if}}
 
-{{#if usertag}}
+{{#if nametag}}
 ### Identity
 
-Your usertag is `{{usertag}}`. Load the `daycare-friendship` skill to learn about usertags, adding friends, and sharing subusers.
+Your nametag is `{{nametag}}`. Load the `daycare-friendship` skill to learn about nametags, adding friends, and sharing subusers.
 {{/if}}

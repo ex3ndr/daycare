@@ -2,16 +2,16 @@
 
 ## Overview
 - Allow owners to share access to their subusers with friends, using the existing `connections` table
-- Owner initiates sharing via `friend_share_subuser(friendUsertag, subuserId)` which creates a connection row between the subuser and the friend (subuser-side=1)
-- Friend accepts or rejects using existing `friend_add(subuserUsertag)` / `friend_remove(subuserUsertag)`, which are extended to detect subuser targets
+- Owner initiates sharing via `friend_share_subuser(friendNametag, subuserId)` which creates a connection row between the subuser and the friend (subuser-side=1)
+- Friend accepts or rejects using existing `friend_add(subuserNametag)` / `friend_remove(subuserNametag)`, which are extended to detect subuser targets
 - Once accepted (both sides=1), the friend can see the subuser in topology and send messages to it
 - Topology gets a new `## Friends` section showing friends and their shared subusers (active + pending) in a tree structure
-- Owner can revoke sharing via `friend_unshare_subuser(friendUsertag, subuserId)`
+- Owner can revoke sharing via `friend_unshare_subuser(friendNametag, subuserId)`
 
 ## Context
 - **Connections table**: canonical pair `(user_a_id < user_b_id)` with independent `requested_a`/`requested_b` flags; friends = both sides=1
-- **Subusers**: child users with `parentUserId` pointing to owner; each has a gateway agent (`type: "subuser"`); each gets an auto-generated usertag
-- **Existing tools**: `friend_add`, `friend_remove`, `friend_send` operate on usertags; visible only to `type: "user"` agents
+- **Subusers**: child users with `parentUserId` pointing to owner; each has a gateway agent (`type: "subuser"`); each gets an auto-generated nametag
+- **Existing tools**: `friend_add`, `friend_remove`, `friend_send` operate on nametags; visible only to `type: "user"` agents
 - **Topology**: already filters by `userId` for subusers; has `## Subusers` section for owners
 - **Cross-user posting**: `AgentSystem.postToUserAgents()` delivers `system_message` items to target user's frontend agents
 
@@ -76,8 +76,8 @@ sequenceDiagram
 ```
 ## Friends (2)
 swift-fox-42
-  shared: helper (usertag=cool-cat-11) status=active gateway=agent-abc
-  shared: assistant (usertag=lazy-dog-55) status=pending
+  shared: helper (nametag=cool-cat-11) status=active gateway=agent-abc
+  shared: assistant (nametag=lazy-dog-55) status=pending
 
 brave-eagle-77
   (no shared subusers)
@@ -90,8 +90,8 @@ Visibility rules:
 
 ### Tool Modifications
 
-**`friend_add(usertag)` — extend for subuser targets**
-1. Resolve usertag → user record
+**`friend_add(nametag)` — extend for subuser targets**
+1. Resolve nametag → user record
 2. If `target.parentUserId != null` → subuser share acceptance path:
    - Verify caller is friends with the subuser's parent (owner)
    - Verify existing connection with subuser-side=1 (owner offered)
@@ -99,28 +99,28 @@ Visibility rules:
    - Notify owner
 3. If `target.parentUserId == null` → existing human friendship path (unchanged)
 
-**`friend_remove(usertag)` — extend for subuser targets**
-1. Resolve usertag → user record
+**`friend_remove(nametag)` — extend for subuser targets**
+1. Resolve nametag → user record
 2. If `target.parentUserId != null` → subuser share removal path:
    - Clear friend-side on the subuser↔friend connection
    - Notify owner if share was active
 3. If `target.parentUserId == null` → existing human friendship path (unchanged)
    - Additionally: when unfriending, also clean up all subuser shares between the two users
 
-**New: `friend_share_subuser(friendUsertag, subuserId)`**
+**New: `friend_share_subuser(friendNametag, subuserId)`**
 - Visible only to non-subuser agents (same as `subuser_create`)
 - Validates: caller is owner of subuserId, caller is friends with friend
 - Creates connection: subuser ↔ friend (subuser-side=1)
 - Sends system_message to friend
 
-**New: `friend_unshare_subuser(friendUsertag, subuserId)`**
+**New: `friend_unshare_subuser(friendNametag, subuserId)`**
 - Visible only to non-subuser agents
 - Validates: caller is owner of subuserId
 - Clears subuser-side on connection (or deletes row)
 - Sends system_message to friend
 
 ### Messaging — Friend Can Message Shared Subuser
-Once a share is active (both sides=1), the friend can use `friend_send(subuserUsertag, message)` to message the subuser's gateway agent. The existing `friend_send` tool is extended to:
+Once a share is active (both sides=1), the friend can use `friend_send(subuserNametag, message)` to message the subuser's gateway agent. The existing `friend_send` tool is extended to:
 1. Detect subuser target
 2. Verify the share is active
 3. Post to the subuser's gateway agent instead of frontend agents
@@ -147,12 +147,12 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 
 ### Task 2: `friend_share_subuser` tool
 - [x] Create `sources/engine/modules/tools/friendShareSubuserToolBuild.ts`
-  - Parameters: `friendUsertag: string`, `subuserId: string`
+  - Parameters: `friendNametag: string`, `subuserId: string`
   - Validate caller owns the subuser (`subuser.parentUserId === ctx.userId`)
   - Validate caller is friends with the friend (connection with both=1)
   - Validate no existing active share (both=1 already)
   - Create connection: `upsertRequest(subuser.id, friend.id)` (subuser-side=1)
-  - Send system_message to friend: "X shared subuser 'name' (usertag) with you. Use friend_add('usertag') to accept."
+  - Send system_message to friend: "X shared subuser 'name' (nametag) with you. Use friend_add('nametag') to accept."
   - Visible only to non-subuser agents
 - [x] Register tool in `engine.ts`
 - [x] Write tests: success path, not-friends error, not-owner error, already-shared error
@@ -160,7 +160,7 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 
 ### Task 3: `friend_unshare_subuser` tool
 - [x] Create `sources/engine/modules/tools/friendUnshareSubuserToolBuild.ts`
-  - Parameters: `friendUsertag: string`, `subuserId: string`
+  - Parameters: `friendNametag: string`, `subuserId: string`
   - Validate caller owns the subuser
   - Clear subuser-side on the subuser↔friend connection (or delete row if both=0)
   - Send system_message to friend: "X revoked access to subuser 'name'"
@@ -170,7 +170,7 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 - [x] Run tests — must pass before next task
 
 ### Task 4: Extend `friend_add` to handle subuser targets
-- [x] Modify `friendAddToolBuild.ts` — after resolving usertag, check `target.parentUserId`
+- [x] Modify `friendAddToolBuild.ts` — after resolving nametag, check `target.parentUserId`
   - If subuser: verify caller is friends with parent (owner)
   - Verify existing connection with subuser-side=1 (owner offered the share)
   - Set friend-side=1 → shared
@@ -180,7 +180,7 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 - [x] Run tests — must pass before next task
 
 ### Task 5: Extend `friend_remove` to handle subuser targets
-- [x] Modify `friendRemoveToolBuild.ts` — after resolving usertag, check `target.parentUserId`
+- [x] Modify `friendRemoveToolBuild.ts` — after resolving nametag, check `target.parentUserId`
   - If subuser and both=1: reject/remove the share, notify owner
   - If subuser and only subuser-side=1: reject pending offer (no notification)
   - If subuser and only friend-side=1: cancel own pending (shouldn't happen in normal flow)
@@ -191,7 +191,7 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 - [x] Run tests — must pass before next task
 
 ### Task 6: Extend `friend_send` to handle subuser targets
-- [x] Modify `friendSendToolBuild.ts` — after resolving usertag, check `target.parentUserId`
+- [x] Modify `friendSendToolBuild.ts` — after resolving nametag, check `target.parentUserId`
   - If subuser: verify share is active (connection both=1)
   - Post to subuser's gateway agent (find agent where `descriptor.type === "subuser"` and `descriptor.id === target.id`)
   - Use `agentSystem.post()` with the subuser's context to deliver the message
@@ -201,7 +201,7 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 ### Task 7: Extend topology with `## Friends` section
 - [x] Modify `topologyToolBuild.ts` — add `## Friends` section for non-subuser callers
   - Query caller's friends via `connections.findFriends(callerUserId)`
-  - For each friend, resolve user record (get usertag)
+  - For each friend, resolve user record (get nametag)
   - For each friend, query shared subusers:
     - Outgoing: subusers of caller shared with the friend
     - Incoming: subusers of the friend shared with caller
@@ -214,8 +214,8 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 
 ### Task 8: Verify acceptance criteria
 - [x] Verify owner can share subuser with friend via `friend_share_subuser`
-- [x] Verify friend can accept via `friend_add(subuserUsertag)`
-- [x] Verify friend can reject via `friend_remove(subuserUsertag)`
+- [x] Verify friend can accept via `friend_add(subuserNametag)`
+- [x] Verify friend can reject via `friend_remove(subuserNametag)`
 - [x] Verify owner can revoke via `friend_unshare_subuser`
 - [x] Verify unfriending cascades to remove all subuser shares
 - [x] Verify friend can message shared subuser via `friend_send`
@@ -234,13 +234,13 @@ Once a share is active (both sides=1), the friend can use `friend_send(subuserUs
 ```typescript
 // friend_share_subuser
 Type.Object({
-    friendUsertag: Type.String({ minLength: 1 }),
+    friendNametag: Type.String({ minLength: 1 }),
     subuserId: Type.String({ minLength: 1 })
 })
 
 // friend_unshare_subuser
 Type.Object({
-    friendUsertag: Type.String({ minLength: 1 }),
+    friendNametag: Type.String({ minLength: 1 }),
     subuserId: Type.String({ minLength: 1 })
 })
 ```
@@ -277,9 +277,9 @@ Message from bob-tag: Hello helper!
 ```
 ## Friends (2)
 swift-fox-42
-  → shared out: helper (usertag=cool-cat-11) gateway=agent-abc status=active
-  → shared out: assistant (usertag=lazy-dog-55) gateway=agent-def status=pending
-  ← shared in: bob-helper (usertag=smart-owl-22) gateway=agent-ghi status=active
+  → shared out: helper (nametag=cool-cat-11) gateway=agent-abc status=active
+  → shared out: assistant (nametag=lazy-dog-55) gateway=agent-def status=pending
+  ← shared in: bob-helper (nametag=smart-owl-22) gateway=agent-ghi status=active
 
 brave-eagle-77
   (no shared subusers)

@@ -5,7 +5,7 @@ import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js
 
 const schema = Type.Object(
     {
-        friendUsertag: Type.String({ minLength: 1 }),
+        friendNametag: Type.String({ minLength: 1 }),
         subuserId: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
@@ -17,9 +17,9 @@ const resultSchema = Type.Object(
     {
         summary: Type.String(),
         status: Type.String(),
-        friendUsertag: Type.String(),
+        friendNametag: Type.String(),
         subuserId: Type.String(),
-        subuserUsertag: Type.String()
+        subuserNametag: Type.String()
     },
     { additionalProperties: false }
 );
@@ -33,20 +33,20 @@ const returns: ToolResultContract<FriendShareSubuserResult> = {
 
 /**
  * Shares one of the caller-owned subusers with an existing friend.
- * Expects: caller owns subuserId and caller is already friends with friendUsertag.
+ * Expects: caller owns subuserId and caller is already friends with friendNametag.
  */
 export function friendShareSubuserToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "friend_share_subuser",
-            description: "Share one of your subusers with a friend by usertag.",
+            description: "Share one of your subusers with a friend by nametag.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.descriptor.type !== "subuser",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendShareSubuserArgs;
-            const targetUsertag = usertagNormalize(payload.friendUsertag);
+            const targetNametag = nametagNormalize(payload.friendNametag);
             const subuserId = payload.subuserId.trim();
             if (!subuserId) {
                 throw new Error("subuserId is required.");
@@ -59,14 +59,14 @@ export function friendShareSubuserToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myUsertag = me.usertag?.trim() ?? "";
-            if (!myUsertag) {
-                throw new Error("Current user does not have a usertag.");
+            const myNametag = me.nametag?.trim() ?? "";
+            if (!myNametag) {
+                throw new Error("Current user does not have a nametag.");
             }
 
-            const friend = await users.findByUsertag(targetUsertag);
+            const friend = await users.findByNametag(targetNametag);
             if (!friend) {
-                throw new Error(`User not found for usertag: ${targetUsertag}`);
+                throw new Error(`User not found for nametag: ${targetNametag}`);
             }
             if (friend.id === me.id) {
                 throw new Error("Cannot share a subuser with yourself.");
@@ -83,39 +83,39 @@ export function friendShareSubuserToolBuild(): ToolDefinition {
                 throw new Error("Subuser does not belong to the calling user.");
             }
 
-            const subuserUsertag = subuser.usertag?.trim() ?? "";
-            if (!subuserUsertag) {
-                throw new Error("Subuser does not have a usertag.");
+            const subuserNametag = subuser.nametag?.trim() ?? "";
+            if (!subuserNametag) {
+                throw new Error("Subuser does not have a nametag.");
             }
 
             const friendship = await connections.find(me.id, friend.id);
             if (!friendship || !friendship.requestedA || !friendship.requestedB) {
-                throw new Error(`You are not friends with ${targetUsertag}.`);
+                throw new Error(`You are not friends with ${targetNametag}.`);
             }
 
             const existingShare = await connections.find(subuser.id, friend.id);
             if (existingShare?.requestedA && existingShare.requestedB) {
-                throw new Error(`Subuser ${subuserId} is already shared with ${targetUsertag}.`);
+                throw new Error(`Subuser ${subuserId} is already shared with ${targetNametag}.`);
             }
             const shareSideState = sideStateForUser(existingShare, subuser.id);
             if (shareSideState.myRequested && !shareSideState.otherRequested) {
-                throw new Error(`A share request for subuser ${subuserId} is already pending with ${targetUsertag}.`);
+                throw new Error(`A share request for subuser ${subuserId} is already pending with ${targetNametag}.`);
             }
 
             await connections.upsertRequest(subuser.id, friend.id, Date.now());
 
-            const origin = `friend:${myUsertag}`;
+            const origin = `friend:${myNametag}`;
             const subuserName = subuser.name ?? subuser.id;
             await toolContext.agentSystem.postToUserAgents(friend.id, {
                 type: "system_message",
                 origin,
                 text: messageBuildSystemText(
-                    `${myUsertag} shared subuser "${subuserName}" (${subuserUsertag}) with you. Use friend_add("${subuserUsertag}") to accept.`,
+                    `${myNametag} shared subuser "${subuserName}" (${subuserNametag}) with you. Use friend_add("${subuserNametag}") to accept.`,
                     origin
                 )
             });
 
-            const summary = `Shared subuser ${subuserId} with ${targetUsertag}.`;
+            const summary = `Shared subuser ${subuserId} with ${targetNametag}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -130,19 +130,19 @@ export function friendShareSubuserToolBuild(): ToolDefinition {
                 typedResult: {
                     summary,
                     status: "offered",
-                    friendUsertag: targetUsertag,
+                    friendNametag: targetNametag,
                     subuserId,
-                    subuserUsertag
+                    subuserNametag
                 }
             };
         }
     };
 }
 
-function usertagNormalize(value: string): string {
+function nametagNormalize(value: string): string {
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
-        throw new Error("friendUsertag is required.");
+        throw new Error("friendNametag is required.");
     }
     return normalized;
 }

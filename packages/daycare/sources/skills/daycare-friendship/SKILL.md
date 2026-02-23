@@ -1,15 +1,15 @@
 ---
 name: daycare-friendship
-description: Friendship mechanics for daycare agents. Use when the user wants to add friends, manage friend requests, send messages to friends, share or unshare subusers with friends, or understand what usertags are.
+description: Friendship mechanics for daycare agents. Use when the user wants to add friends, manage friend requests, send messages to friends, share or unshare subusers with friends, or understand what nametags are.
 ---
 
 # Friendship
 
-Daycare lets users connect as friends and share subusers across boundaries. This skill covers usertags, the friendship lifecycle, messaging, and subuser sharing.
+Daycare lets users connect as friends and share subusers across boundaries. This skill covers nametags, the friendship lifecycle, messaging, and subuser sharing.
 
-## What is a Usertag
+## What is a Nametag
 
-Every user (and subuser) in Daycare has a **usertag** — a unique, human-readable identifier. Usertags are how users refer to each other in all friend operations.
+Every user (and subuser) in Daycare has a **nametag** — a unique, human-readable identifier. Nametags are how users refer to each other in all friend operations.
 
 **Format:** A lowercase string generated from dictionary words plus random digits with no separator, e.g. `swiftfox42`, `happypenguin7`, `lazydog55`.
 
@@ -17,10 +17,10 @@ Every user (and subuser) in Daycare has a **usertag** — a unique, human-readab
 - Required for every user — assigned automatically at creation
 - Globally unique across the entire Daycare instance
 - Case-insensitive when looking up (always normalized to lowercase)
-- Immutable once assigned — usertags do not change
+- Immutable once assigned — nametags do not change
 - Used instead of raw user IDs in all user-facing interactions
 
-**How to find a usertag:** Run `topology` — your own usertag appears at the top. Friends and their usertags appear in the Friends section.
+**How to find a nametag:** Run `topology` — your own nametag appears at the top. Friends and their nametags appear in the Friends section.
 
 ## Why Friends
 
@@ -48,19 +48,19 @@ A relationship between two users progresses through these states:
 
 **Adding a friend:**
 
-1. You call `friend_add("their-usertag")` — state moves to **PendingOut**
+1. You call `friend_add("their-nametag")` — state moves to **PendingOut**
 2. They receive a system message notifying them of your request
-3. They call `friend_add("your-usertag")` — state moves to **Friends**
+3. They call `friend_add("your-nametag")` — state moves to **Friends**
 4. You receive a system message confirming the friendship
 
 **Rejecting or canceling:**
 
-- If you have a pending incoming request: `friend_remove("their-usertag")` rejects it (state returns to None)
-- If you sent a pending outgoing request: `friend_remove("their-usertag")` cancels it (state returns to None)
+- If you have a pending incoming request: `friend_remove("their-nametag")` rejects it (state returns to None)
+- If you sent a pending outgoing request: `friend_remove("their-nametag")` cancels it (state returns to None)
 
 **Unfriending:**
 
-- Either side calls `friend_remove("their-usertag")` — the friendship ends
+- Either side calls `friend_remove("their-nametag")` — the friendship ends
 - All subuser shares between the two users are automatically cleaned up
 - The other side receives a notification
 
@@ -72,10 +72,10 @@ After removing a friend or having a request rejected, there is a **7-day cooldow
 
 ### `friend_add`
 
-Send or accept a friend request by usertag.
+Send or accept a friend request by nametag.
 
 **Parameters:**
-- `usertag` (string) — the target user's usertag
+- `nametag` (string) — the target user's nametag
 
 **Behavior:**
 - If no relationship exists: creates a pending outgoing request
@@ -85,16 +85,16 @@ Send or accept a friend request by usertag.
 
 **Example:**
 ```
-friend_add({ usertag: "swiftfox42" })
-// → { summary: "Friend request sent to swiftfox42", status: "pending_out", usertag: "swiftfox42" }
+friend_add({ nametag: "swiftfox42" })
+// → { summary: "Friend request sent to swiftfox42", status: "pending_out", nametag: "swiftfox42" }
 ```
 
 ### `friend_remove`
 
-Unfriend, reject a request, or cancel a pending request by usertag.
+Unfriend, reject a request, or cancel a pending request by nametag.
 
 **Parameters:**
-- `usertag` (string) — the target user's usertag
+- `nametag` (string) — the target user's nametag
 
 **Behavior:**
 - If friends: unfriends and cleans up all subuser shares between you
@@ -104,16 +104,16 @@ Unfriend, reject a request, or cancel a pending request by usertag.
 
 **Example:**
 ```
-friend_remove({ usertag: "swiftfox42" })
-// → { summary: "Removed swiftfox42 as friend", status: "removed", usertag: "swiftfox42" }
+friend_remove({ nametag: "swiftfox42" })
+// → { summary: "Removed swiftfox42 as friend", status: "removed", nametag: "swiftfox42" }
 ```
 
 ### `friend_send`
 
-Send a direct message to a friend by usertag.
+Send a direct message to a friend by nametag.
 
 **Parameters:**
-- `usertag` (string) — the friend's usertag (or a shared subuser's usertag)
+- `nametag` (string) — the friend's nametag (or a shared subuser's nametag)
 - `message` (string) — the message text to send
 
 **Requirements:**
@@ -126,8 +126,8 @@ Send a direct message to a friend by usertag.
 
 **Example:**
 ```
-friend_send({ usertag: "swiftfox42", message: "Hey, can you check the latest deploy?" })
-// → { summary: "Message sent to swiftfox42", usertag: "swiftfox42" }
+friend_send({ nametag: "swiftfox42", message: "Hey, can you check the latest deploy?" })
+// → { summary: "Message sent to swiftfox42", nametag: "swiftfox42" }
 ```
 
 ### `friend_share_subuser`
@@ -135,7 +135,7 @@ friend_send({ usertag: "swiftfox42", message: "Hey, can you check the latest dep
 Share one of your subusers with a friend. Only the owner of the subuser can call this.
 
 **Parameters:**
-- `friendUsertag` (string) — the friend's usertag
+- `friendNametag` (string) — the friend's nametag
 - `subuserId` (string) — the ID of the subuser to share
 
 **Requirements:**
@@ -144,12 +144,12 @@ Share one of your subusers with a friend. Only the owner of the subuser can call
 
 **Behavior:**
 - Creates a pending share offer (subuser side requested, friend side pending)
-- The friend receives a notification with the subuser's usertag
-- The friend must call `friend_add("<subuser-usertag>")` to accept the share
+- The friend receives a notification with the subuser's nametag
+- The friend must call `friend_add("<subuser-nametag>")` to accept the share
 
 **Example:**
 ```
-friend_share_subuser({ friendUsertag: "swiftfox42", subuserId: "sub_abc123" })
+friend_share_subuser({ friendNametag: "swiftfox42", subuserId: "sub_abc123" })
 // → { summary: "Shared subuser with swiftfox42 (pending acceptance)", status: "pending", ... }
 ```
 
@@ -158,7 +158,7 @@ friend_share_subuser({ friendUsertag: "swiftfox42", subuserId: "sub_abc123" })
 Revoke a subuser share from a friend. Only the owner of the subuser can call this.
 
 **Parameters:**
-- `friendUsertag` (string) — the friend's usertag
+- `friendNametag` (string) — the friend's nametag
 - `subuserId` (string) — the ID of the subuser to unshare
 
 **Behavior:**
@@ -168,7 +168,7 @@ Revoke a subuser share from a friend. Only the owner of the subuser can call thi
 
 **Example:**
 ```
-friend_unshare_subuser({ friendUsertag: "swiftfox42", subuserId: "sub_abc123" })
+friend_unshare_subuser({ friendNametag: "swiftfox42", subuserId: "sub_abc123" })
 // → { summary: "Revoked subuser share from swiftfox42", status: "removed", ... }
 ```
 
@@ -183,12 +183,12 @@ A subuser is an isolated application created by the owner. It has its own memory
 ### Share Lifecycle
 
 1. **Owner initiates:** `friend_share_subuser("swiftfox42", subuserId)` — creates a pending share
-2. **Friend sees notification:** a system message with the subuser's usertag and description
-3. **Friend accepts:** `friend_add("<subuser-usertag>")` — share becomes active
-4. **Friend can now message:** `friend_send("<subuser-usertag>", "hello")` — delivers to gateway agent
+2. **Friend sees notification:** a system message with the subuser's nametag and description
+3. **Friend accepts:** `friend_add("<subuser-nametag>")` — share becomes active
+4. **Friend can now message:** `friend_send("<subuser-nametag>", "hello")` — delivers to gateway agent
 5. **Revocation (either side):**
    - Owner: `friend_unshare_subuser("swiftfox42", subuserId)` — revokes access
-   - Friend: `friend_remove("<subuser-usertag>")` — removes from their side
+   - Friend: `friend_remove("<subuser-nametag>")` — removes from their side
 
 ### Share States
 
@@ -210,9 +210,9 @@ Use `topology` (no parameters) to see your current friend connections and shared
 ```
 ## Friends (2)
 swiftfox42
-  -> shared out: helper (usertag=coolcat11) gateway=gw-abc status=active
-  -> shared out: assistant (usertag=lazydog55) gateway=gw-def status=pending
-  <- shared in: bob-helper (usertag=smartowl22) gateway=gw-ghi status=active
+  -> shared out: helper (nametag=coolcat11) gateway=gw-abc status=active
+  -> shared out: assistant (nametag=lazydog55) gateway=gw-def status=pending
+  <- shared in: bob-helper (nametag=smartowl22) gateway=gw-ghi status=active
 
 happypenguin7
   (no shared subusers)
@@ -235,11 +235,11 @@ User A wants to connect with User B:
 
 ```
 // User A:
-friend_add({ usertag: "userbtag123" })
+friend_add({ nametag: "userbtag123" })
 // Status: pending_out — User B gets notified
 
 // User B (after receiving notification):
-friend_add({ usertag: "useratag456" })
+friend_add({ nametag: "useratag456" })
 // Status: friends — both sides confirmed
 ```
 
@@ -249,15 +249,15 @@ Owner wants to give a friend access to their "research-assistant" subuser:
 
 ```
 // Step 1: Owner shares
-friend_share_subuser({ friendUsertag: "swiftfox42", subuserId: "sub_research" })
-// Friend gets notified with the subuser's usertag (e.g. "smartowl22")
+friend_share_subuser({ friendNametag: "swiftfox42", subuserId: "sub_research" })
+// Friend gets notified with the subuser's nametag (e.g. "smartowl22")
 
 // Step 2: Friend accepts
-friend_add({ usertag: "smartowl22" })
+friend_add({ nametag: "smartowl22" })
 // Share is now active
 
 // Step 3: Friend messages the subuser
-friend_send({ usertag: "smartowl22", message: "Summarize recent findings" })
+friend_send({ nametag: "smartowl22", message: "Summarize recent findings" })
 // Message delivered to the research-assistant gateway agent
 ```
 
@@ -272,14 +272,14 @@ topology()
 
 ```
 // Unfriend — also removes all shared subusers between you
-friend_remove({ usertag: "swiftfox42" })
+friend_remove({ nametag: "swiftfox42" })
 ```
 
 ### Revoking a Single Subuser Share
 
 ```
 // Owner revokes without unfriending
-friend_unshare_subuser({ friendUsertag: "swiftfox42", subuserId: "sub_helper" })
+friend_unshare_subuser({ friendNametag: "swiftfox42", subuserId: "sub_helper" })
 ```
 
 ## Important Rules
@@ -290,6 +290,6 @@ friend_unshare_subuser({ friendUsertag: "swiftfox42", subuserId: "sub_helper" })
 4. **Only owners can revoke shares.** Use `friend_unshare_subuser`. Friends can remove from their side with `friend_remove`.
 5. **Unfriending cleans up everything.** All subuser shares between the two users are deleted automatically.
 6. **Cooldown after removal.** You must wait 7 days before re-requesting someone you removed or who rejected you.
-7. **Usertags are case-insensitive.** `SwiftFox42` and `swiftfox42` resolve to the same user.
+7. **Nametags are case-insensitive.** `SwiftFox42` and `swiftfox42` resolve to the same user.
 8. **Subuser agents cannot manage friends.** Only owner (non-subuser) agents have access to friend tools and see the Friends section in topology.
-9. **Use topology to discover usertags.** Do not guess usertags — always check topology or ask the user.
+9. **Use topology to discover nametags.** Do not guess nametags — always check topology or ask the user.

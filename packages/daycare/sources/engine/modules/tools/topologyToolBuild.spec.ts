@@ -411,25 +411,25 @@ describe("topologyTool", () => {
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
         const storage = storageResolve(config);
         try {
-            await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             await storage.users.create({
                 id: "alice-sub-active",
                 parentUserId: "alice",
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             await storage.users.create({
                 id: "alice-sub-pending",
                 parentUserId: "alice",
                 name: "assistant",
-                usertag: "lazy-dog-55"
+                nametag: "lazy-dog-55"
             });
             await storage.users.create({
                 id: "bob-sub-active",
                 parentUserId: "bob",
                 name: "bob-helper",
-                usertag: "smart-owl-22"
+                nametag: "smart-owl-22"
             });
 
             await storage.connections.upsertRequest("alice", "bob", 100);
@@ -504,13 +504,13 @@ describe("topologyTool", () => {
             expect(text).toContain("## Friends (1)");
             expect(text).toContain("swift-fox-42");
             expect(text).toContain(
-                "→ shared out: helper (usertag=cool-cat-11) gateway=gateway-alice-active status=active"
+                "→ shared out: helper (nametag=cool-cat-11) gateway=gateway-alice-active status=active"
             );
             expect(text).toContain(
-                "→ shared out: assistant (usertag=lazy-dog-55) gateway=gateway-alice-pending status=pending"
+                "→ shared out: assistant (nametag=lazy-dog-55) gateway=gateway-alice-pending status=pending"
             );
             expect(text).toContain(
-                "← shared in: bob-helper (usertag=smart-owl-22) gateway=gateway-bob-active status=active"
+                "← shared in: bob-helper (nametag=smart-owl-22) gateway=gateway-bob-active status=active"
             );
             expect(result.typedResult.friendCount).toBe(1);
         } finally {

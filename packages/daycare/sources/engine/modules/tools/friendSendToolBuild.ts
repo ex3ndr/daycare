@@ -7,7 +7,7 @@ import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js
 
 const schema = Type.Object(
     {
-        usertag: Type.String({ minLength: 1 }),
+        nametag: Type.String({ minLength: 1 }),
         message: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
@@ -18,7 +18,7 @@ type FriendSendArgs = Static<typeof schema>;
 const resultSchema = Type.Object(
     {
         summary: Type.String(),
-        usertag: Type.String()
+        nametag: Type.String()
     },
     { additionalProperties: false }
 );
@@ -31,21 +31,21 @@ const returns: ToolResultContract<FriendSendResult> = {
 };
 
 /**
- * Sends a direct message to a friend by usertag.
+ * Sends a direct message to a friend by nametag.
  * Expects: caller and target are connected with both request flags set.
  */
 export function friendSendToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "friend_send",
-            description: "Send a direct message to a friend by usertag.",
+            description: "Send a direct message to a friend by nametag.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.descriptor.type === "user",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendSendArgs;
-            const targetUsertag = usertagNormalize(payload.usertag);
+            const targetNametag = nametagNormalize(payload.nametag);
             const message = payload.message.trim();
             if (!message) {
                 throw new Error("message is required.");
@@ -57,37 +57,37 @@ export function friendSendToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myUsertag = me.usertag?.trim() ?? "";
-            if (!myUsertag) {
-                throw new Error("Current user does not have a usertag.");
+            const myNametag = me.nametag?.trim() ?? "";
+            if (!myNametag) {
+                throw new Error("Current user does not have a nametag.");
             }
 
-            const target = await users.findByUsertag(targetUsertag);
+            const target = await users.findByNametag(targetNametag);
             if (!target) {
-                throw new Error(`User not found for usertag: ${targetUsertag}`);
+                throw new Error(`User not found for nametag: ${targetNametag}`);
             }
             if (target.id === me.id) {
                 throw new Error("Cannot send to yourself.");
             }
 
             const connection = await connections.find(me.id, target.id);
-            const origin = `friend:${myUsertag}`;
+            const origin = `friend:${myNametag}`;
             const item = {
                 type: "system_message",
                 origin,
-                text: messageBuildSystemText(`Message from ${myUsertag}: ${xmlEscape(message)}`, origin)
+                text: messageBuildSystemText(`Message from ${myNametag}: ${xmlEscape(message)}`, origin)
             } as const;
 
             if (target.parentUserId) {
                 if (!connection || !connection.requestedA || !connection.requestedB) {
-                    throw new Error(`No active shared access to ${targetUsertag}.`);
+                    throw new Error(`No active shared access to ${targetNametag}.`);
                 }
                 const agents = await toolContext.agentSystem.storage.agents.findMany();
                 const gateway = agents.find(
                     (agent) => agent.descriptor.type === "subuser" && agent.descriptor.id === target.id
                 );
                 if (!gateway) {
-                    throw new Error(`Gateway agent not found for shared subuser ${targetUsertag}.`);
+                    throw new Error(`Gateway agent not found for shared subuser ${targetNametag}.`);
                 }
                 await toolContext.agentSystem.post(
                     contextForAgent({ userId: target.id, agentId: gateway.id }),
@@ -96,12 +96,12 @@ export function friendSendToolBuild(): ToolDefinition {
                 );
             } else {
                 if (!connection || !connection.requestedA || !connection.requestedB) {
-                    throw new Error(`You are not friends with ${targetUsertag}.`);
+                    throw new Error(`You are not friends with ${targetNametag}.`);
                 }
                 await toolContext.agentSystem.postToUserAgents(target.id, item);
             }
 
-            const summary = `Sent message to ${targetUsertag}.`;
+            const summary = `Sent message to ${targetNametag}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -114,17 +114,17 @@ export function friendSendToolBuild(): ToolDefinition {
                 toolMessage,
                 typedResult: {
                     summary,
-                    usertag: targetUsertag
+                    nametag: targetNametag
                 }
             };
         }
     };
 }
 
-function usertagNormalize(value: string): string {
+function nametagNormalize(value: string): string {
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
-        throw new Error("usertag is required.");
+        throw new Error("nametag is required.");
     }
     return normalized;
 }

@@ -1,14 +1,14 @@
 # Friends System
 
 The Friends system adds three user tools:
-- `friend_add(usertag)`
-- `friend_remove(usertag)`
-- `friend_send(usertag, message)`
-- `friend_share_subuser(friendUsertag, subuserId)`
-- `friend_unshare_subuser(friendUsertag, subuserId)`
+- `friend_add(nametag)`
+- `friend_remove(nametag)`
+- `friend_send(nametag, message)`
+- `friend_share_subuser(friendNametag, subuserId)`
+- `friend_unshare_subuser(friendNametag, subuserId)`
 
 It is built on:
-- `users.usertag` (required, unique)
+- `users.nametag` (required, unique)
 - `connections` table with one canonical row per user pair (`user_a_id < user_b_id`)
 - `AgentSystem.postToUserAgents()` for cross-user frontend delivery
 
@@ -24,7 +24,7 @@ erDiagram
         integer is_owner
         text parent_user_id
         text name
-        text usertag "required, unique"
+        text nametag "required, unique"
         integer created_at
         integer updated_at
     }
@@ -71,7 +71,7 @@ stateDiagram-v2
 
 ## Messaging behavior
 
-- Friend notifications are delivered as `<system_message origin="friend:<usertag>">...`.
+- Friend notifications are delivered as `<system_message origin="friend:<nametag>">...`.
 - `friend_send` requires both request flags set (`requested_a = 1` and `requested_b = 1`).
 - Payload text in friend messages is XML-escaped before embedding in the system message body.
 
@@ -82,8 +82,8 @@ A share is represented by a connection row between `subuser_id` and `friend_id`.
 
 - Pending share: subuser side requested (`requested_subuser = 1`, friend side `0`)
 - Active share: both sides requested (`1/1`)
-- Acceptance: friend runs `friend_add("<subuser-usertag>")`
-- Removal/reject: friend runs `friend_remove("<subuser-usertag>")`
+- Acceptance: friend runs `friend_add("<subuser-nametag>")`
+- Removal/reject: friend runs `friend_remove("<subuser-nametag>")`
 - Owner revoke: `friend_unshare_subuser(...)`
 
 ```mermaid
@@ -97,7 +97,7 @@ sequenceDiagram
     S->>S: Verify owner and friend are friends
     S->>S: Upsert subuser->friend request
     S->>F: system_message share offer
-    F->>S: friend_add("subuser-usertag")
+    F->>S: friend_add("subuser-nametag")
     S->>S: Verify friend and owner are friends
     S->>S: Verify pending subuser offer exists
     S->>S: Upsert friend side (share active)
@@ -114,14 +114,14 @@ sequenceDiagram
     S->>S: Clear subuser side request
     S->>F: system_message revoked access
 
-    F->>S: friend_remove("subuser-usertag")
+    F->>S: friend_remove("subuser-nametag")
     S->>S: Clear friend side (active) or clear subuser side (pending reject)
     S->>O: system_message removed access (active case)
 ```
 
 ## Shared subuser messaging and topology
 
-- `friend_send("<subuser-usertag>", message)` delivers to the shared subuser gateway agent when share is active.
+- `friend_send("<subuser-nametag>", message)` delivers to the shared subuser gateway agent when share is active.
 - Topology for non-subuser callers now includes:
   - `## Friends (N)`
   - per-friend tree items:

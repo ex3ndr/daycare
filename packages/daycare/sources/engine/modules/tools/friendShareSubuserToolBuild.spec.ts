@@ -10,14 +10,14 @@ describe("friendShareSubuserToolBuild", () => {
     it("shares a subuser with an existing friend", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
-            await storage.users.create({ id: "charlie", usertag: "brave-eagle-77" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
+            await storage.users.create({ id: "charlie", nametag: "brave-eagle-77" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
@@ -25,7 +25,7 @@ describe("friendShareSubuserToolBuild", () => {
             const postToUserAgents = vi.fn(async () => undefined);
             const tool = friendShareSubuserToolBuild();
             const result = await tool.execute(
-                { friendUsertag: "swift-fox-42", subuserId: subuser.id },
+                { friendNametag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
                 toolCall
             );
@@ -53,19 +53,19 @@ describe("friendShareSubuserToolBuild", () => {
     it("fails when owner and friend are not connected", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             const tool = friendShareSubuserToolBuild();
 
             await expect(
                 tool.execute(
-                    { friendUsertag: "swift-fox-42", subuserId: subuser.id },
+                    { friendNametag: "swift-fox-42", subuserId: subuser.id },
                     contextBuild(
                         alice.id,
                         storage,
@@ -82,14 +82,14 @@ describe("friendShareSubuserToolBuild", () => {
     it("fails when caller does not own the subuser", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
-            await storage.users.create({ id: "charlie", usertag: "brave-eagle-77" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
+            await storage.users.create({ id: "charlie", nametag: "brave-eagle-77" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
@@ -97,7 +97,7 @@ describe("friendShareSubuserToolBuild", () => {
 
             await expect(
                 tool.execute(
-                    { friendUsertag: "brave-eagle-77", subuserId: subuser.id },
+                    { friendNametag: "brave-eagle-77", subuserId: subuser.id },
                     contextBuild(
                         bob.id,
                         storage,
@@ -114,13 +114,13 @@ describe("friendShareSubuserToolBuild", () => {
     it("fails when share is already active", async () => {
         const storage = Storage.open(":memory:");
         try {
-            const alice = await storage.users.create({ id: "alice", usertag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", usertag: "swift-fox-42" });
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
                 name: "helper",
-                usertag: "cool-cat-11"
+                nametag: "cool-cat-11"
             });
 
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
@@ -131,7 +131,7 @@ describe("friendShareSubuserToolBuild", () => {
             const tool = friendShareSubuserToolBuild();
             await expect(
                 tool.execute(
-                    { friendUsertag: "swift-fox-42", subuserId: subuser.id },
+                    { friendNametag: "swift-fox-42", subuserId: subuser.id },
                     contextBuild(
                         alice.id,
                         storage,

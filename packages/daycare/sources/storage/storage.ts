@@ -1,5 +1,5 @@
 import type { AgentHistoryRecord } from "@/types";
-import { usertagGenerate } from "../engine/friends/usertagGenerate.js";
+import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
 import { AgentsRepository } from "./agentsRepository.js";
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
@@ -78,11 +78,11 @@ export class Storage {
     }
 
     async createUser(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {
-        const normalizedUsertag = input.usertag?.trim() ?? "";
-        if (normalizedUsertag) {
-            return this.users.create({ ...input, usertag: normalizedUsertag });
+        const normalizedNametag = input.nametag?.trim() ?? "";
+        if (normalizedNametag) {
+            return this.users.create({ ...input, nametag: normalizedNametag });
         }
-        return this.userCreateWithGeneratedUsertag(input);
+        return this.userCreateWithGeneratedNametag(input);
     }
 
     async resolveUserByConnectorKey(connectorKey: string): Promise<UserWithConnectorKeysDbRecord> {
@@ -99,7 +99,7 @@ export class Storage {
             }
             const users = await this.users.findMany();
             try {
-                return await this.userCreateWithGeneratedUsertag({
+                return await this.userCreateWithGeneratedNametag({
                     isOwner: users.length === 0,
                     connectorKey: normalized
                 });
@@ -180,20 +180,20 @@ export class Storage {
         return lock;
     }
 
-    private async userCreateWithGeneratedUsertag(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {
-        const MAX_USER_TAG_ATTEMPTS = 100;
-        for (let attempt = 0; attempt < MAX_USER_TAG_ATTEMPTS; attempt += 1) {
-            const usertag = usertagGenerate();
+    private async userCreateWithGeneratedNametag(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {
+        const MAX_NAMETAG_ATTEMPTS = 100;
+        for (let attempt = 0; attempt < MAX_NAMETAG_ATTEMPTS; attempt += 1) {
+            const nametag = nametagGenerate();
             try {
-                return await this.users.create({ ...input, usertag });
+                return await this.users.create({ ...input, nametag });
             } catch (error) {
-                if (sqliteUniqueConstraintOnUsertagIs(error)) {
+                if (sqliteUniqueConstraintOnNametagIs(error)) {
                     continue;
                 }
                 throw error;
             }
         }
-        throw new Error("Failed to generate unique usertag after 100 attempts.");
+        throw new Error("Failed to generate unique nametag after 100 attempts.");
     }
 }
 
@@ -202,9 +202,9 @@ function sqliteUniqueConstraintErrorIs(error: unknown): boolean {
     return message.includes("UNIQUE constraint failed");
 }
 
-function sqliteUniqueConstraintOnUsertagIs(error: unknown): boolean {
+function sqliteUniqueConstraintOnNametagIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
-    return message.includes("UNIQUE constraint failed: users.usertag");
+    return message.includes("UNIQUE constraint failed: users.nametag");
 }
 
 function sqliteUniqueConstraintOnConnectorKeyIs(error: unknown): boolean {

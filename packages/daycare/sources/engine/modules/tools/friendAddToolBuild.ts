@@ -7,7 +7,7 @@ const FRIEND_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 const schema = Type.Object(
     {
-        usertag: Type.String({ minLength: 1 })
+        nametag: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
 );
@@ -18,7 +18,7 @@ const resultSchema = Type.Object(
     {
         summary: Type.String(),
         status: Type.String(),
-        usertag: Type.String()
+        nametag: Type.String()
     },
     { additionalProperties: false }
 );
@@ -31,21 +31,21 @@ const returns: ToolResultContract<FriendAddResult> = {
 };
 
 /**
- * Sends or confirms a friend request by usertag.
- * Expects: caller is a frontend user with a generated usertag.
+ * Sends or confirms a friend request by nametag.
+ * Expects: caller is a frontend user with a generated nametag.
  */
 export function friendAddToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "friend_add",
-            description: "Send or accept a friend request by usertag.",
+            description: "Send or accept a friend request by nametag.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.descriptor.type === "user",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendAddArgs;
-            const targetUsertag = usertagNormalize(payload.usertag);
+            const targetNametag = nametagNormalize(payload.nametag);
             const users = toolContext.agentSystem.storage.users;
             const connections = toolContext.agentSystem.storage.connections;
 
@@ -53,16 +53,16 @@ export function friendAddToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myUsertag = me.usertag?.trim() ?? "";
-            if (!myUsertag) {
-                throw new Error("Current user does not have a usertag.");
+            const myNametag = me.nametag?.trim() ?? "";
+            if (!myNametag) {
+                throw new Error("Current user does not have a nametag.");
             }
-            const origin = `friend:${myUsertag}`;
+            const origin = `friend:${myNametag}`;
             const now = Date.now();
 
-            const target = await users.findByUsertag(targetUsertag);
+            const target = await users.findByNametag(targetNametag);
             if (!target) {
-                throw new Error(`User not found for usertag: ${targetUsertag}`);
+                throw new Error(`User not found for nametag: ${targetNametag}`);
             }
             if (target.id === me.id) {
                 throw new Error("Cannot add yourself as a friend.");
@@ -73,7 +73,7 @@ export function friendAddToolBuild(): ToolDefinition {
                 if (!owner) {
                     throw new Error("Subuser owner not found.");
                 }
-                const ownerTag = owner.usertag?.trim() ?? owner.id;
+                const ownerTag = owner.nametag?.trim() ?? owner.id;
                 const ownerConnection = await connections.find(me.id, owner.id);
                 if (!ownerConnection || !ownerConnection.requestedA || !ownerConnection.requestedB) {
                     throw new Error(`You are not friends with subuser owner ${ownerTag}.`);
@@ -85,7 +85,7 @@ export function friendAddToolBuild(): ToolDefinition {
                 }
                 const shareState = sideStateForUser(subuserShare, me.id);
                 if (shareState.myRequested && shareState.otherRequested) {
-                    throw new Error(`Already connected to shared subuser ${targetUsertag}.`);
+                    throw new Error(`Already connected to shared subuser ${targetNametag}.`);
                 }
                 if (!shareState.otherRequested) {
                     throw new Error("No pending share request for this subuser.");
@@ -96,11 +96,11 @@ export function friendAddToolBuild(): ToolDefinition {
                     type: "system_message",
                     origin,
                     text: messageBuildSystemText(
-                        `${myUsertag} accepted access to subuser "${target.name ?? target.id}" (${targetUsertag}).`,
+                        `${myNametag} accepted access to subuser "${target.name ?? target.id}" (${targetNametag}).`,
                         origin
                     )
                 });
-                return success("accepted_share", targetUsertag, toolCall);
+                return success("accepted_share", targetNametag, toolCall);
             }
 
             const existing = await connections.find(me.id, target.id);
@@ -110,19 +110,19 @@ export function friendAddToolBuild(): ToolDefinition {
                     type: "system_message",
                     origin,
                     text: messageBuildSystemText(
-                        `User ${myUsertag} wants to be your friend. Use friend_add("${myUsertag}") to accept.`,
+                        `User ${myNametag} wants to be your friend. Use friend_add("${myNametag}") to accept.`,
                         origin
                     )
                 });
-                return success("requested", targetUsertag, toolCall);
+                return success("requested", targetNametag, toolCall);
             }
 
             const state = sideStateForUser(existing, me.id);
             if (state.myRequested && state.otherRequested) {
-                throw new Error(`Already friends with ${targetUsertag}.`);
+                throw new Error(`Already friends with ${targetNametag}.`);
             }
             if (state.myRequested && !state.otherRequested) {
-                throw new Error(`Friend request to ${targetUsertag} is already pending.`);
+                throw new Error(`Friend request to ${targetNametag} is already pending.`);
             }
             if (!state.myRequested && state.otherRequested) {
                 await connections.upsertRequest(me.id, target.id, now);
@@ -130,14 +130,14 @@ export function friendAddToolBuild(): ToolDefinition {
                     type: "system_message",
                     origin,
                     text: messageBuildSystemText(
-                        `${myUsertag} accepted your friend request. You are now friends.`,
+                        `${myNametag} accepted your friend request. You are now friends.`,
                         origin
                     )
                 });
-                return success("accepted", targetUsertag, toolCall);
+                return success("accepted", targetNametag, toolCall);
             }
             if (state.myRequestedAt && now - state.myRequestedAt < FRIEND_COOLDOWN_MS) {
-                throw new Error(`Friend request cooldown is active for ${targetUsertag}. Try again later.`);
+                throw new Error(`Friend request cooldown is active for ${targetNametag}. Try again later.`);
             }
 
             await connections.upsertRequest(me.id, target.id, now);
@@ -145,22 +145,22 @@ export function friendAddToolBuild(): ToolDefinition {
                 type: "system_message",
                 origin,
                 text: messageBuildSystemText(
-                    `User ${myUsertag} wants to be your friend. Use friend_add("${myUsertag}") to accept.`,
+                    `User ${myNametag} wants to be your friend. Use friend_add("${myNametag}") to accept.`,
                     origin
                 )
             });
-            return success("requested", targetUsertag, toolCall);
+            return success("requested", targetNametag, toolCall);
         }
     };
 }
 
-function success(status: FriendAddResult["status"], usertag: string, toolCall: { id: string; name: string }) {
+function success(status: FriendAddResult["status"], nametag: string, toolCall: { id: string; name: string }) {
     const summary =
         status === "requested"
-            ? `Friend request sent to ${usertag}.`
+            ? `Friend request sent to ${nametag}.`
             : status === "accepted_share"
-              ? `Accepted shared access to ${usertag}.`
-              : `${usertag} accepted. You are now friends.`;
+              ? `Accepted shared access to ${nametag}.`
+              : `${nametag} accepted. You are now friends.`;
     const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -174,15 +174,15 @@ function success(status: FriendAddResult["status"], usertag: string, toolCall: {
         typedResult: {
             summary,
             status,
-            usertag
+            nametag
         }
     };
 }
 
-function usertagNormalize(value: string): string {
+function nametagNormalize(value: string): string {
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
-        throw new Error("usertag is required.");
+        throw new Error("nametag is required.");
     }
     return normalized;
 }

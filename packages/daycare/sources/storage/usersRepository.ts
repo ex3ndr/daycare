@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { createId } from "@paralleldrive/cuid2";
-import { usertagGenerate } from "../engine/friends/usertagGenerate.js";
+import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
 import type {
     CreateUserInput,
@@ -18,7 +18,7 @@ export class UsersRepository {
     private readonly db: DatabaseSync;
     private readonly usersById = new Map<string, UserWithConnectorKeysDbRecord>();
     private readonly userIdByConnectorKey = new Map<string, string>();
-    private readonly userIdByUsertag = new Map<string, string>();
+    private readonly userIdByNametag = new Map<string, string>();
     private readonly userLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
@@ -88,12 +88,12 @@ export class UsersRepository {
         return user;
     }
 
-    async findByUsertag(usertag: string): Promise<UserWithConnectorKeysDbRecord | null> {
-        const normalized = usertag.trim();
+    async findByNametag(nametag: string): Promise<UserWithConnectorKeysDbRecord | null> {
+        const normalized = nametag.trim();
         if (!normalized) {
             return null;
         }
-        const cachedUserId = this.userIdByUsertag.get(normalized);
+        const cachedUserId = this.userIdByNametag.get(normalized);
         if (cachedUserId) {
             return this.findById(cachedUserId);
         }
@@ -101,7 +101,7 @@ export class UsersRepository {
             return null;
         }
 
-        const row = this.db.prepare("SELECT id FROM users WHERE usertag = ? LIMIT 1").get(normalized) as
+        const row = this.db.prepare("SELECT id FROM users WHERE nametag = ? LIMIT 1").get(normalized) as
             | { id?: string }
             | undefined;
         const userId = row?.id?.trim() ?? "";
@@ -110,12 +110,12 @@ export class UsersRepository {
         }
 
         await this.cacheLock.inLock(() => {
-            this.userIdByUsertag.set(normalized, userId);
+            this.userIdByNametag.set(normalized, userId);
         });
         const user = await this.findById(userId);
         if (!user) {
             await this.cacheLock.inLock(() => {
-                this.userIdByUsertag.delete(normalized);
+                this.userIdByNametag.delete(normalized);
             });
             return null;
         }
@@ -153,7 +153,7 @@ export class UsersRepository {
                 isOwner: row.is_owner === 1,
                 parentUserId: row.parent_user_id ?? null,
                 name: row.name ?? null,
-                usertag: row.usertag ?? null,
+                nametag: row.nametag ?? null,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
                 connectorKeys: (keysByUserId.get(row.id) ?? []).map((keyRow) => ({
@@ -168,7 +168,7 @@ export class UsersRepository {
         await this.cacheLock.inLock(() => {
             this.usersById.clear();
             this.userIdByConnectorKey.clear();
-            this.userIdByUsertag.clear();
+            this.userIdByNametag.clear();
             for (const record of records) {
                 this.userCacheSet(record);
             }
@@ -205,30 +205,30 @@ export class UsersRepository {
             const parentUserId = input.parentUserId ?? null;
             const name = input.name ?? null;
             const connectorKey = input.connectorKey?.trim() ?? "";
-            const explicitUsertag = input.usertag?.trim() ?? "";
-            const shouldGenerateUsertag = explicitUsertag.length === 0;
-            const maxGeneratedUsertagAttempts = 100;
+            const explicitNametag = input.nametag?.trim() ?? "";
+            const shouldGenerateNametag = explicitNametag.length === 0;
+            const maxGeneratedNametagAttempts = 100;
 
-            let usertag: string | null = null;
-            for (let attempt = 0; attempt < maxGeneratedUsertagAttempts; attempt += 1) {
-                usertag = shouldGenerateUsertag ? usertagGenerate() : explicitUsertag;
+            let nametag: string | null = null;
+            for (let attempt = 0; attempt < maxGeneratedNametagAttempts; attempt += 1) {
+                nametag = shouldGenerateNametag ? nametagGenerate() : explicitNametag;
                 try {
                     this.db
                         .prepare(
-                            "INSERT INTO users (id, is_owner, parent_user_id, name, usertag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO users (id, is_owner, parent_user_id, name, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
                         )
-                        .run(id, isOwner ? 1 : 0, parentUserId, name, usertag, createdAt, updatedAt);
+                        .run(id, isOwner ? 1 : 0, parentUserId, name, nametag, createdAt, updatedAt);
                     break;
                 } catch (error) {
-                    if (!shouldGenerateUsertag || !sqliteUniqueConstraintOnUsertagIs(error)) {
+                    if (!shouldGenerateNametag || !sqliteUniqueConstraintOnNametagIs(error)) {
                         throw error;
                     }
-                    usertag = null;
+                    nametag = null;
                 }
             }
 
-            if (!usertag) {
-                throw new Error("Failed to generate unique usertag after 100 attempts.");
+            if (!nametag) {
+                throw new Error("Failed to generate unique nametag after 100 attempts.");
             }
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
@@ -246,7 +246,7 @@ export class UsersRepository {
                 isOwner,
                 parentUserId,
                 name,
-                usertag,
+                nametag,
                 createdAt,
                 updatedAt,
                 connectorKeys
@@ -299,8 +299,8 @@ export class UsersRepository {
                     for (const connectorKey of current.connectorKeys) {
                         this.userIdByConnectorKey.delete(connectorKey.connectorKey);
                     }
-                    if (current.usertag) {
-                        this.userIdByUsertag.delete(current.usertag);
+                    if (current.nametag) {
+                        this.userIdByNametag.delete(current.nametag);
                     }
                 }
                 this.usersById.delete(id);
@@ -378,7 +378,7 @@ export class UsersRepository {
             isOwner: userRow.is_owner === 1,
             parentUserId: userRow.parent_user_id ?? null,
             name: userRow.name ?? null,
-            usertag: userRow.usertag ?? null,
+            nametag: userRow.nametag ?? null,
             createdAt: userRow.created_at,
             updatedAt: userRow.updated_at,
             connectorKeys: keyRows.map((row) => ({
@@ -391,8 +391,8 @@ export class UsersRepository {
 
     private userCacheSet(record: UserWithConnectorKeysDbRecord): void {
         this.usersById.set(record.id, userClone(record));
-        if (record.usertag) {
-            this.userIdByUsertag.set(record.usertag, record.id);
+        if (record.nametag) {
+            this.userIdByNametag.set(record.nametag, record.id);
         }
         for (const connectorKey of record.connectorKeys) {
             this.userIdByConnectorKey.set(connectorKey.connectorKey, record.id);
@@ -400,9 +400,9 @@ export class UsersRepository {
     }
 }
 
-function sqliteUniqueConstraintOnUsertagIs(error: unknown): boolean {
+function sqliteUniqueConstraintOnNametagIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
-    return message.includes("UNIQUE constraint failed: users.usertag");
+    return message.includes("UNIQUE constraint failed: users.nametag");
 }
 
 function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeysDbRecord {

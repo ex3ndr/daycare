@@ -5,7 +5,7 @@ import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js
 
 const schema = Type.Object(
     {
-        usertag: Type.String({ minLength: 1 })
+        nametag: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
 );
@@ -16,7 +16,7 @@ const resultSchema = Type.Object(
     {
         summary: Type.String(),
         status: Type.String(),
-        usertag: Type.String()
+        nametag: Type.String()
     },
     { additionalProperties: false }
 );
@@ -29,21 +29,21 @@ const returns: ToolResultContract<FriendRemoveResult> = {
 };
 
 /**
- * Removes, rejects, or cancels a friend relationship by usertag.
- * Expects: caller is a frontend user with a generated usertag.
+ * Removes, rejects, or cancels a friend relationship by nametag.
+ * Expects: caller is a frontend user with a generated nametag.
  */
 export function friendRemoveToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "friend_remove",
-            description: "Unfriend, reject a request, or cancel a pending request by usertag.",
+            description: "Unfriend, reject a request, or cancel a pending request by nametag.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.descriptor.type === "user",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendRemoveArgs;
-            const targetUsertag = usertagNormalize(payload.usertag);
+            const targetNametag = nametagNormalize(payload.nametag);
             const users = toolContext.agentSystem.storage.users;
             const connections = toolContext.agentSystem.storage.connections;
 
@@ -51,14 +51,14 @@ export function friendRemoveToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myUsertag = me.usertag?.trim() ?? "";
-            if (!myUsertag) {
-                throw new Error("Current user does not have a usertag.");
+            const myNametag = me.nametag?.trim() ?? "";
+            if (!myNametag) {
+                throw new Error("Current user does not have a nametag.");
             }
 
-            const target = await users.findByUsertag(targetUsertag);
+            const target = await users.findByNametag(targetNametag);
             if (!target) {
-                throw new Error(`User not found for usertag: ${targetUsertag}`);
+                throw new Error(`User not found for nametag: ${targetNametag}`);
             }
             if (target.id === me.id) {
                 throw new Error("Cannot remove yourself.");
@@ -66,7 +66,7 @@ export function friendRemoveToolBuild(): ToolDefinition {
 
             const connection = await connections.find(me.id, target.id);
             if (!connection) {
-                throw new Error(`No relationship with ${targetUsertag}.`);
+                throw new Error(`No relationship with ${targetNametag}.`);
             }
 
             const state = sideStateForUser(connection, me.id);
@@ -77,70 +77,70 @@ export function friendRemoveToolBuild(): ToolDefinition {
 
                     const owner = await users.findById(target.parentUserId);
                     if (owner) {
-                        const origin = `friend:${myUsertag}`;
+                        const origin = `friend:${myNametag}`;
                         await toolContext.agentSystem.postToUserAgents(owner.id, {
                             type: "system_message",
                             origin,
                             text: messageBuildSystemText(
-                                `${myUsertag} removed access to subuser "${target.name ?? target.id}" (${targetUsertag}).`,
+                                `${myNametag} removed access to subuser "${target.name ?? target.id}" (${targetNametag}).`,
                                 origin
                             )
                         });
                     }
-                    return success("removed_share", targetUsertag, toolCall);
+                    return success("removed_share", targetNametag, toolCall);
                 }
                 if (!state.myRequested && state.otherRequested) {
                     const updated = await connections.clearSide(target.id, me.id);
                     await connectionDeleteIfEmpty(connections, target.id, me.id, updated);
-                    return success("rejected_share", targetUsertag, toolCall);
+                    return success("rejected_share", targetNametag, toolCall);
                 }
                 if (state.myRequested && !state.otherRequested) {
                     const updated = await connections.clearSide(me.id, target.id);
                     await connectionDeleteIfEmpty(connections, target.id, me.id, updated);
-                    return success("canceled_share", targetUsertag, toolCall);
+                    return success("canceled_share", targetNametag, toolCall);
                 }
 
-                throw new Error(`No relationship with ${targetUsertag}.`);
+                throw new Error(`No relationship with ${targetNametag}.`);
             }
 
             if (state.myRequested && state.otherRequested) {
                 await connections.clearSide(me.id, target.id);
                 await subuserShareCleanup(connections, me.id, target.id);
-                const origin = `friend:${myUsertag}`;
+                const origin = `friend:${myNametag}`;
                 await toolContext.agentSystem.postToUserAgents(target.id, {
                     type: "system_message",
                     origin,
-                    text: messageBuildSystemText(`${myUsertag} removed you as a friend.`, origin)
+                    text: messageBuildSystemText(`${myNametag} removed you as a friend.`, origin)
                 });
-                return success("unfriended", targetUsertag, toolCall);
+                return success("unfriended", targetNametag, toolCall);
             }
             if (!state.myRequested && state.otherRequested) {
                 await connections.clearSide(target.id, me.id);
-                return success("rejected", targetUsertag, toolCall);
+                return success("rejected", targetNametag, toolCall);
             }
             if (state.myRequested && !state.otherRequested) {
                 await connections.clearSide(me.id, target.id);
-                return success("canceled", targetUsertag, toolCall);
+                return success("canceled", targetNametag, toolCall);
             }
 
-            throw new Error(`No relationship with ${targetUsertag}.`);
+            throw new Error(`No relationship with ${targetNametag}.`);
         }
     };
 }
 
-function success(status: FriendRemoveResult["status"], usertag: string, toolCall: { id: string; name: string }) {
+function success(status: FriendRemoveResult["status"], nametag: string, toolCall: { id: string; name: string }) {
     const summary =
         status === "unfriended"
-            ? `Removed ${usertag} from friends.`
+            ? `Removed ${nametag} from friends.`
             : status === "rejected"
-              ? `Rejected friend request from ${usertag}.`
+              ? `Rejected friend request from ${nametag}.`
               : status === "removed_share"
-                ? `Removed shared access to ${usertag}.`
+                ? `Removed shared access to ${nametag}.`
                 : status === "rejected_share"
-                  ? `Rejected shared subuser offer from ${usertag}.`
+                  ? `Rejected shared subuser offer from ${nametag}.`
                   : status === "canceled_share"
-                    ? `Canceled pending shared subuser access to ${usertag}.`
-                    : `Canceled pending friend request to ${usertag}.`;
+                    ? `Canceled pending shared subuser access to ${nametag}.`
+                    : `Canceled pending friend request to ${nametag}.`;
     const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,
@@ -154,15 +154,15 @@ function success(status: FriendRemoveResult["status"], usertag: string, toolCall
         typedResult: {
             summary,
             status,
-            usertag
+            nametag
         }
     };
 }
 
-function usertagNormalize(value: string): string {
+function nametagNormalize(value: string): string {
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
-        throw new Error("usertag is required.");
+        throw new Error("nametag is required.");
     }
     return normalized;
 }

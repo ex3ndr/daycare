@@ -496,7 +496,7 @@ describe("AgentSystem", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
             const harness = await harnessCreate(dir);
-            const user = await harness.storage.users.create({ id: "target-user", usertag: "target-user-42" });
+            const user = await harness.storage.users.create({ id: "target-user", nametag: "target-user-42" });
             const permissions = { workingDir: "/tmp", writeDirs: ["/tmp"] };
 
             await harness.storage.agents.create({
