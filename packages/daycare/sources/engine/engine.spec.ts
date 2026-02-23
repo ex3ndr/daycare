@@ -55,6 +55,7 @@ describe("Engine reset command", () => {
             await commandHandler("/reset", context, descriptor);
 
             expect(postSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "123" }),
                 { descriptor },
                 { type: "reset", message: "Manual reset requested by the user.", context }
             );
@@ -121,6 +122,7 @@ describe("Engine reset command", () => {
 
             expect(postSpy).toHaveBeenCalledTimes(1);
             expect(postSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "123" }),
                 { descriptor },
                 { type: "reset", message: "Manual reset requested by the user.", context: { messageId: "2" } }
             );
@@ -396,7 +398,11 @@ describe("Engine compact command", () => {
 
             await commandHandler("/compact", context, descriptor);
 
-            expect(postSpy).toHaveBeenCalledWith({ descriptor }, { type: "compact", context });
+            expect(postSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "123" }),
+                { descriptor },
+                { type: "compact", context }
+            );
             expect(sendMessage).not.toHaveBeenCalled();
 
             await engine.modules.connectors.unregisterAll("test");
@@ -511,6 +517,7 @@ describe("Engine message batching", () => {
             await vi.advanceTimersByTimeAsync(1);
             expect(postSpy).toHaveBeenCalledTimes(1);
             expect(postSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "123" }),
                 { descriptor },
                 {
                     type: "message",

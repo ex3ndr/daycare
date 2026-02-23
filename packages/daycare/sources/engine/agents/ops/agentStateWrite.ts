@@ -1,4 +1,4 @@
-import type { Config } from "@/types";
+import type { Config, Context } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import type { AgentState } from "./agentTypes.js";
@@ -9,10 +9,11 @@ import type { AgentState } from "./agentTypes.js";
  */
 export async function agentStateWrite(
     storageOrConfig: Storage | Config,
-    agentId: string,
+    ctxOrAgentId: Context | string,
     state: AgentState
 ): Promise<void> {
     const storage = storageResolve(storageOrConfig);
+    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
     const existing = await storage.agents.findById(agentId);
     if (!existing) {
         throw new Error(`Agent descriptor missing for state write: ${agentId}`);

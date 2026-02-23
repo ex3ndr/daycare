@@ -11,12 +11,11 @@ export function rlmToolsForContextResolve(
     toolResolver: ToolResolverApi,
     context: Pick<ToolExecutionContext, "ctx" | "agent" | "allowedToolNames">
 ): Tool[] {
-    const userId = context.ctx?.userId;
-    const agentId = context.ctx?.agentId;
     const descriptor = context.agent?.descriptor;
+    const ctx = context.ctx;
     const visibleTools =
-        userId && agentId && descriptor
-            ? toolResolver.listToolsForAgent({ userId, agentId, descriptor })
+        descriptor && ctx
+            ? toolResolver.listToolsForAgent({ userId: ctx.userId, agentId: ctx.agentId, descriptor })
             : toolResolver.listTools();
 
     const allowedToolNames = context.allowedToolNames;

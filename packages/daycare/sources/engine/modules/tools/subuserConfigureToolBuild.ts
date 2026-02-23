@@ -1,6 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 
@@ -84,7 +85,12 @@ export function subuserConfigureToolBuild(): ToolDefinition {
             };
             const subuserHome = toolContext.agentSystem.userHomeForUserId(subuserId);
             const permissions = permissionBuildUser(subuserHome);
-            await agentDescriptorWrite(storage, gatewayAgent.id, updatedDescriptor, subuserId, permissions);
+            await agentDescriptorWrite(
+                storage,
+                contextForAgent({ userId: subuserId, agentId: gatewayAgent.id }),
+                updatedDescriptor,
+                permissions
+            );
             toolContext.agentSystem.updateAgentDescriptor(gatewayAgent.id, updatedDescriptor);
 
             const summary = `Subuser ${subuserId} gateway agent ${gatewayAgent.id} system prompt updated.`;
@@ -110,7 +116,7 @@ export function subuserConfigureToolBuild(): ToolDefinition {
 }
 
 async function assertCallerIsOwner(toolContext: ToolExecutionContext): Promise<void> {
-    const userId = toolContext.ctx?.userId;
+    const userId = toolContext.ctx.userId;
     if (!userId) {
         throw new Error("Tool context userId is required.");
     }

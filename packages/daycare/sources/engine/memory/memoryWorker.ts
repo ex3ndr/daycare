@@ -1,5 +1,6 @@
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
+import { type Context, contextForAgent } from "../agents/context.js";
 import type { AgentDescriptor } from "../agents/ops/agentDescriptorTypes.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { formatHistoryMessages } from "./infer/utils/formatHistoryMessages.js";
@@ -9,10 +10,16 @@ const logger = getLogger("engine.memory");
 const DEFAULT_INTERVAL_MS = 30_000;
 const DEFAULT_BATCH_SIZE = 10;
 
-export type MemoryWorkerPostFn = (
-    target: { descriptor: AgentDescriptor },
-    item: { type: "system_message"; text: string; origin: string }
-) => Promise<void>;
+export type MemoryWorkerPostFn =
+    | ((
+          ctx: Context,
+          target: { descriptor: AgentDescriptor },
+          item: { type: "system_message"; text: string; origin: string }
+      ) => Promise<void>)
+    | ((
+          target: { descriptor: AgentDescriptor },
+          item: { type: "system_message"; text: string; origin: string }
+      ) => Promise<void>);
 
 export type MemoryWorkerOptions = {
     storage: Storage;
@@ -140,14 +147,38 @@ export class MemoryWorker {
                     : `> Source: This transcript is from an automated agent performing background work. There is no human participant. Extract facts about what was done, what succeeded/failed, and what was learned about systems and processes.\n\n${transcript}`;
 
                 const descriptor: AgentDescriptor = { type: "memory-agent", id: session.agentId };
-                await this.postToAgent(
-                    { descriptor },
-                    {
-                        type: "system_message",
-                        text,
-                        origin: `memory-worker:${session.id}`
-                    }
-                );
+                const ctx = contextForAgent({ userId: agent.userId, agentId: session.agentId });
+                if (this.postToAgent.length >= 3) {
+                    await (
+                        this.postToAgent as (
+                            ctx: Context,
+                            target: { descriptor: AgentDescriptor },
+                            item: { type: "system_message"; text: string; origin: string }
+                        ) => Promise<void>
+                    )(
+                        ctx,
+                        { descriptor },
+                        {
+                            type: "system_message",
+                            text,
+                            origin: `memory-worker:${session.id}`
+                        }
+                    );
+                } else {
+                    await (
+                        this.postToAgent as (
+                            target: { descriptor: AgentDescriptor },
+                            item: { type: "system_message"; text: string; origin: string }
+                        ) => Promise<void>
+                    )(
+                        { descriptor },
+                        {
+                            type: "system_message",
+                            text,
+                            origin: `memory-worker:${session.id}`
+                        }
+                    );
+                }
 
                 const maxHistoryId = await this.storage.history.maxId(session.id);
                 const newProcessedUntil = maxHistoryId ?? invalidatedAt;

@@ -1,44 +1,49 @@
-import { createId } from "@paralleldrive/cuid2";
-import type { SessionPermissions } from "@/types";
+import type { Context, SessionPermissions } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 
 /**
  * Writes an agent descriptor into SQLite storage.
  * Expects: descriptor has been validated.
- * Resolves user ownership as existing agent userId -> provided userId -> owner -> new owner.
+ * Uses ctx as the authoritative user/agent identity.
  */
+export async function agentDescriptorWrite(
+    storage: Storage,
+    ctx: Context,
+    descriptor: AgentDescriptor,
+    defaultPermissions: SessionPermissions
+): Promise<void>;
 export async function agentDescriptorWrite(
     storage: Storage,
     agentId: string,
     descriptor: AgentDescriptor,
-    userId: string | undefined,
+    userId: string,
     defaultPermissions: SessionPermissions
+): Promise<void>;
+export async function agentDescriptorWrite(
+    storage: Storage,
+    ctxOrAgentId: Context | string,
+    descriptor: AgentDescriptor,
+    userIdOrDefaultPermissions: string | SessionPermissions,
+    maybeDefaultPermissions?: SessionPermissions
 ): Promise<void> {
-    const existing = await storage.agents.findById(agentId);
-    // Preserve existing ownership when present, otherwise resolve from caller/owner fallback chain.
-    let resolvedUserId = existing?.userId ?? userId;
-    if (!resolvedUserId) {
-        const users = await storage.users.findMany();
-        const owner = users.find((entry) => entry.isOwner) ?? users[0];
-        if (owner) {
-            resolvedUserId = owner.id;
-        } else {
-            resolvedUserId = createId();
-            const now = Date.now();
-            await storage.users.create({
-                id: resolvedUserId,
-                isOwner: true,
-                createdAt: now,
-                updatedAt: now
-            });
-        }
+    const ctx =
+        typeof ctxOrAgentId === "string"
+            ? { agentId: ctxOrAgentId, userId: userIdOrDefaultPermissions as string }
+            : ctxOrAgentId;
+    const defaultPermissions =
+        typeof userIdOrDefaultPermissions === "string"
+            ? (maybeDefaultPermissions as SessionPermissions)
+            : userIdOrDefaultPermissions;
+    const existing = await storage.agents.findById(ctx.agentId);
+    if (existing && existing.userId !== ctx.userId) {
+        throw new Error(`Agent belongs to another user: ${ctx.agentId}`);
     }
     const now = Date.now();
     const nextPermissions = existing?.permissions ?? defaultPermissions;
     await storage.agents.create({
-        id: agentId,
-        userId: resolvedUserId,
+        id: ctx.agentId,
+        userId: ctx.userId,
         type: descriptor.type,
         descriptor,
         activeSessionId: existing?.activeSessionId ?? null,

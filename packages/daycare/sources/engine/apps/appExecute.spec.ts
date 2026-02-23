@@ -55,12 +55,12 @@ describe("appExecute", () => {
         });
         await appFilesWrite(path.join(rootDir, "apps", "github-reviewer"));
 
-        const post = vi.fn(async (_target: unknown, _item: unknown) => undefined);
-        const postAndAwait = vi.fn(async (_target: unknown, _item: unknown) => ({
+        const post = vi.fn(async (_ctx: unknown, _target: unknown, _item: unknown) => undefined);
+        const postAndAwait = vi.fn(async (_ctx: unknown, _target: unknown, _item: unknown) => ({
             type: "message" as const,
             responseText: "App response."
         }));
-        const agentIdForTarget = vi.fn(async () => agentId);
+        const agentIdForTarget = vi.fn(async (_ctx: unknown, _target: unknown) => agentId);
         const updateAgentPermissions = vi.fn();
         const toolResolver = {
             listTools: () => [
@@ -135,7 +135,13 @@ describe("appExecute", () => {
             waitForResponse: true
         });
         expect(result).toEqual({ agentId, responseText: "App response." });
-        expect(agentIdForTarget).toHaveBeenCalledWith({
+        expect(agentIdForTarget).toHaveBeenCalledTimes(1);
+        const targetCall = agentIdForTarget.mock.calls[0];
+        if (!targetCall) {
+            throw new Error("Expected agentIdForTarget call");
+        }
+        expect(targetCall[0]).toEqual(context.ctx);
+        expect(targetCall[1]).toMatchObject({
             descriptor: {
                 type: "app",
                 id: expect.any(String),
@@ -153,7 +159,8 @@ describe("appExecute", () => {
         if (!firstCall) {
             throw new Error("Expected postAndAwait call");
         }
-        const item = firstCall[1] as unknown;
+        expect(firstCall[0]).toEqual(context.ctx);
+        const item = firstCall[2] as unknown;
         expect(item).toMatchObject({
             type: "message",
             message: {
@@ -207,12 +214,12 @@ describe("appExecute", () => {
         });
         await appFilesWrite(path.join(rootDir, "apps", "github-reviewer"));
 
-        const post = vi.fn(async (_target: unknown, _item: unknown) => undefined);
-        const postAndAwait = vi.fn(async (_target: unknown, _item: unknown) => ({
+        const post = vi.fn(async (_ctx: unknown, _target: unknown, _item: unknown) => undefined);
+        const postAndAwait = vi.fn(async (_ctx: unknown, _target: unknown, _item: unknown) => ({
             type: "message" as const,
             responseText: "Should not be used."
         }));
-        const agentIdForTarget = vi.fn(async () => agentId);
+        const agentIdForTarget = vi.fn(async (_ctx: unknown, _target: unknown) => agentId);
         const updateAgentPermissions = vi.fn();
         const toolResolver = {
             listTools: () => [
@@ -292,7 +299,8 @@ describe("appExecute", () => {
         if (!firstCall) {
             throw new Error("Expected post call");
         }
-        const item = firstCall[1] as { type: string; message?: { text?: string } };
+        expect(firstCall[0]).toEqual(context.ctx);
+        const item = firstCall[2] as { type: string; message?: { text?: string } };
         expect(item.type).toBe("message");
         expect(item.message?.text).toContain("Task:");
         expect(item.message?.text).toContain("Review PR #99");

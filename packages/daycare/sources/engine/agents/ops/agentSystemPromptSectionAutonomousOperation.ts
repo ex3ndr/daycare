@@ -8,9 +8,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders autonomous-operation guidance and optional per-agent prompt block.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionAutonomousOperation(
-    context: AgentSystemPromptContext = {}
-): Promise<string> {
+export async function agentSystemPromptSectionAutonomousOperation(context: AgentSystemPromptContext): Promise<string> {
     const descriptor = context.descriptor;
     const parentAgentId =
         descriptor &&

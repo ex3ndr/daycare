@@ -77,6 +77,7 @@ describe("Heartbeats", () => {
             await heartbeats.runNow();
 
             expect(agentSystemMock.postAndAwait).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1" }),
                 { descriptor: { type: "system", tag: "heartbeat" } },
                 expect.objectContaining({
                     type: "system_message",

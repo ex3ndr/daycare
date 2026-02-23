@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 
 import type { ToolExecutionContext } from "@/types";
+import { contextForAgent } from "../agents/context.js";
 import { agentStateRead } from "../agents/ops/agentStateRead.js";
 import { agentStateWrite } from "../agents/ops/agentStateWrite.js";
 import { appDiscover } from "./appDiscover.js";
@@ -43,8 +44,9 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
         appId: appDescriptor.id
     };
 
-    const agentId = await agentSystem.agentIdForTarget({ descriptor });
-    const state = await agentStateRead(storage, agentId);
+    const agentId = await agentSystem.agentIdForTarget(input.context.ctx, { descriptor });
+    const appCtx = contextForAgent({ userId: input.context.ctx.userId, agentId });
+    const state = await agentStateRead(storage, appCtx);
     if (!state) {
         throw new Error(`App agent state not found: ${agentId}`);
     }
@@ -54,7 +56,7 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
         permissions: appPermissions,
         updatedAt
     };
-    await agentStateWrite(storage, agentId, nextState);
+    await agentStateWrite(storage, appCtx, nextState);
     agentSystem.updateAgentPermissions(agentId, appPermissions, updatedAt);
 
     const message = {
@@ -63,11 +65,11 @@ export async function appExecute(input: AppExecuteInput): Promise<AppExecuteResu
         context: {}
     };
     if (!waitForResponse) {
-        await agentSystem.post({ agentId }, message);
+        await agentSystem.post(input.context.ctx, { agentId }, message);
         return { agentId, responseText: null };
     }
 
-    const result = await agentSystem.postAndAwait({ agentId }, message);
+    const result = await agentSystem.postAndAwait(input.context.ctx, { agentId }, message);
     if (result.type !== "message") {
         return { agentId, responseText: null };
     }

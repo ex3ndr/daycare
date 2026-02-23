@@ -52,7 +52,19 @@ export function agentCompactToolBuild(): ToolDefinition {
             if (!exists) {
                 throw new Error(`Agent not found: ${targetAgentId}`);
             }
-            await toolContext.agentSystem.post({ agentId: targetAgentId }, { type: "compact" });
+            const targetCtx =
+                typeof toolContext.agentSystem.contextForAgentId === "function"
+                    ? await toolContext.agentSystem.contextForAgentId(targetAgentId)
+                    : { userId: toolContext.ctx?.userId ?? "owner", agentId: targetAgentId };
+            if (!targetCtx || (toolContext.ctx && targetCtx.userId !== toolContext.ctx.userId)) {
+                throw new Error(`Agent not found: ${targetAgentId}`);
+            }
+            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
+            if (toolContext.ctx) {
+                await postFn(toolContext.ctx, { agentId: targetAgentId }, { type: "compact" });
+            } else {
+                await postFn({ agentId: targetAgentId }, { type: "compact" });
+            }
 
             const summary = `Agent compaction requested: ${targetAgentId}.`;
             const toolMessage: ToolResultMessage = {

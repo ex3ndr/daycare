@@ -33,10 +33,13 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
     if (!toolResolver) {
         return [];
     }
-    if (context.userId && context.agentId && context.descriptor) {
+    const visibilityCtx =
+        context.ctx ??
+        (context.userId && context.agentId ? { userId: context.userId, agentId: context.agentId } : null);
+    if (context.descriptor && visibilityCtx) {
         return toolResolver.listToolsForAgent({
-            userId: context.userId,
-            agentId: context.agentId,
+            userId: visibilityCtx.userId,
+            agentId: visibilityCtx.agentId,
             descriptor: context.descriptor
         });
     }

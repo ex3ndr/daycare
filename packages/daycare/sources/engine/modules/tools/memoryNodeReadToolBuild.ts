@@ -53,7 +53,7 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
             const payload = args as MemoryNodeReadArgs;
             const nodeId = payload.nodeId?.trim() || GRAPH_ROOT_NODE_ID;
 
-            const node = await memory.readNode(toolContext.ctx.userId, nodeId);
+            const node = await memory.readNode(toolContext.ctx, nodeId);
             if (!node) {
                 const summary = `Node not found: ${nodeId}`;
                 const toolMessage: ToolResultMessage = {
@@ -89,7 +89,7 @@ export function memoryNodeReadToolBuild(): ToolDefinition {
 
             // When reading root, append the full graph tree overview.
             if (nodeId === GRAPH_ROOT_NODE_ID) {
-                const tree = await memory.readGraph(toolContext.ctx.userId);
+                const tree = await memory.readGraph(toolContext.ctx);
                 lines.push("", "## Children", "");
 
                 const renderNode = (parentId: string, depth: number): void => {

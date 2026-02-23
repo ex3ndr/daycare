@@ -2,6 +2,7 @@ import type { Context } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
+import { contextForUser } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition } from "./heartbeatTypes.js";
@@ -35,14 +36,22 @@ export class Heartbeats {
             repository: options.storage.heartbeatTasks,
             intervalMs: options.intervalMs,
             onRun: async (tasks) => {
-                const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
-                const batch = heartbeatPromptBuildBatch(tasks);
-                await this.agentSystem.postAndAwait(target, {
-                    type: "system_message",
-                    text: batch.prompt,
-                    origin: "heartbeat",
-                    execute: true
-                });
+                const tasksByUser = new Map<string, typeof tasks>();
+                for (const task of tasks) {
+                    const list = tasksByUser.get(task.userId) ?? [];
+                    list.push(task);
+                    tasksByUser.set(task.userId, list);
+                }
+                for (const [userId, userTasks] of tasksByUser.entries()) {
+                    const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
+                    const batch = heartbeatPromptBuildBatch(userTasks);
+                    await this.agentSystem.postAndAwait(contextForUser({ userId }), target, {
+                        type: "system_message",
+                        text: batch.prompt,
+                        origin: "heartbeat",
+                        execute: true
+                    });
+                }
             },
             onError: async (error, taskIds) => {
                 logger.warn({ taskIds, error }, "error: Heartbeat task failed");

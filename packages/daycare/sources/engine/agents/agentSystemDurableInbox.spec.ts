@@ -232,10 +232,17 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
         }
     });
     try {
+        const parentDescriptor: AgentDescriptor = {
+            type: "cron",
+            id: createId(),
+            name: `parent-${createId()}`
+        };
+        await agentSystem.postAndAwait({ descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
+        const parentAgentId = await agentSystem.agentIdForTarget({ descriptor: parentDescriptor });
         const descriptor: AgentDescriptor = {
             type: "subagent",
             id: createId(),
-            parentAgentId: createId(),
+            parentAgentId,
             name: `subagent-${createId()}`
         };
         await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init subagent" });

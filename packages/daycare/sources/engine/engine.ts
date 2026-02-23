@@ -10,6 +10,7 @@ import { Storage } from "../storage/storage.js";
 import { InvalidateSync } from "../util/sync.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
+import { contextForUser } from "./agents/context.js";
 import { agentDescriptorTargetResolve } from "./agents/ops/agentDescriptorTargetResolve.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { appInstallToolBuild } from "./apps/appInstallToolBuild.js";
@@ -112,10 +113,6 @@ export class Engine {
         this.storage = Storage.open(this.config.current.dbPath);
         // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;
-        const fallbackUserIdResolve = async (): Promise<string> => {
-            const owner = await this.storage.users.findOwner();
-            return owner?.id ?? "owner";
-        };
         this.signals = new Signals({
             eventBus: this.eventBus,
             signalEvents: this.storage.signalEvents,
@@ -147,6 +144,7 @@ export class Engine {
                             `receive: Connector message received: connector=${connector} type=${item.descriptor.type} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
                         await this.agentSystem.post(
+                            descriptorContextResolve(item.descriptor),
                             { descriptor: item.descriptor },
                             { type: "message", message: item.message, context: item.context }
                         );
@@ -158,8 +156,7 @@ export class Engine {
         this.exposes = new Exposes({
             config: this.config,
             eventBus: this.eventBus,
-            exposeEndpoints: this.storage.exposeEndpoints,
-            fallbackUserIdResolve
+            exposeEndpoints: this.storage.exposeEndpoints
         });
 
         this.modules = new ModuleRegistry({
@@ -296,7 +293,7 @@ export class Engine {
             delayedSignals: this.delayedSignals
         });
 
-        this.memoryWorker.setPostFn((target, item) => this.agentSystem.post(target, item));
+        this.memoryWorker.setPostFn((ctx, target, item) => this.agentSystem.post(ctx, target, item));
 
         this.crons = new Crons({
             config: this.config,
@@ -329,8 +326,8 @@ export class Engine {
 
     async start(): Promise<void> {
         logger.debug("start: Engine.start() beginning");
-        const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
-        const ownerUserHome = this.agentSystem.userHomeForUserId(ownerUserId);
+        const ownerCtx = await this.agentSystem.ownerCtxEnsure();
+        const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
         await userHomeEnsure(ownerUserHome);
         await userHomeMigrate(this.config.current, this.storage);
 
@@ -495,7 +492,7 @@ export class Engine {
         }
         let tokens: AgentTokenEntry | null = null;
         try {
-            tokens = await this.agentSystem.tokensForTarget({ descriptor });
+            tokens = await this.agentSystem.tokensForTarget(descriptorContextResolve(descriptor), { descriptor });
         } catch (error) {
             logger.warn({ connector: target.connector, error }, "error: Context command failed to load tokens");
         }
@@ -512,7 +509,7 @@ export class Engine {
     }
 
     private async handleCompactCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
-        await this.agentSystem.post({ descriptor }, { type: "compact", context });
+        await this.agentSystem.post(descriptorContextResolve(descriptor), { descriptor }, { type: "compact", context });
     }
 
     private async handleResetCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
@@ -521,6 +518,7 @@ export class Engine {
             logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
         }
         await this.agentSystem.post(
+            descriptorContextResolve(descriptor),
             { descriptor },
             { type: "reset", message: "Manual reset requested by the user.", context }
         );
@@ -587,8 +585,8 @@ export class Engine {
                 return;
             }
             this.config.configSet(latest);
-            const ownerUserId = await this.agentSystem.ownerUserIdEnsure();
-            await userHomeEnsure(this.agentSystem.userHomeForUserId(ownerUserId));
+            const ownerCtx = await this.agentSystem.ownerCtxEnsure();
+            await userHomeEnsure(this.agentSystem.userHomeForUserId(ownerCtx.userId));
             await this.providerManager.reload();
             await this.pluginManager.reload();
             this.inferenceRouter.reload();
@@ -613,6 +611,16 @@ function parseCommand(command: string): { name: string; args: string[] } | null 
         return null;
     }
     return { name, args: parts };
+}
+
+function descriptorContextResolve(descriptor: AgentDescriptor) {
+    if (descriptor.type === "user") {
+        return contextForUser({ userId: descriptor.userId });
+    }
+    if (descriptor.type === "subuser") {
+        return contextForUser({ userId: descriptor.id });
+    }
+    return contextForUser({ userId: "owner" });
 }
 /**
  * Compares reloadable runtime config fields.

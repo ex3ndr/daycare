@@ -9,7 +9,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders runtime and channel environment details.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionEnvironment(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionEnvironment(context: AgentSystemPromptContext): Promise<string> {
     const descriptor = context.descriptor;
     const isForeground = descriptor?.type === "user";
     const template = await agentPromptBundledRead("SYSTEM_ENVIRONMENT.md");

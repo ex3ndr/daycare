@@ -1,6 +1,6 @@
 import type { Context } from "@mariozechner/pi-ai";
 
-import type { Config } from "@/types";
+import type { Config, Context as DaycareContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import type { AgentState } from "./agentTypes.js";
@@ -9,8 +9,12 @@ import type { AgentState } from "./agentTypes.js";
  * Reads agent state from SQLite storage.
  * Expects: migrations have been applied before reads.
  */
-export async function agentStateRead(storageOrConfig: Storage | Config, agentId: string): Promise<AgentState | null> {
+export async function agentStateRead(
+    storageOrConfig: Storage | Config,
+    ctxOrAgentId: DaycareContext | string
+): Promise<AgentState | null> {
     const storage = storageResolve(storageOrConfig);
+    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
     const record = await storage.agents.findById(agentId);
     if (!record) {
         return null;

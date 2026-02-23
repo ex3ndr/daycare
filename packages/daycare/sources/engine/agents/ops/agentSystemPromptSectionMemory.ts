@@ -11,7 +11,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders memory guidance using prompt-memory files.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionMemory(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionMemory(context: AgentSystemPromptContext): Promise<string> {
     const descriptor = context.descriptor;
     const isForeground = descriptor?.type === "user";
     if (!context.userHome) {

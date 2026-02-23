@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { Context } from "@mariozechner/pi-ai";
 
-import type { Config } from "@/types";
+import type { Config, Context as DaycareContext } from "@/types";
 import type { ProviderSettings } from "../../../settings.js";
 import { atomicWrite } from "../../../util/atomicWrite.js";
 import { agentPath } from "./agentPath.js";
@@ -21,12 +21,26 @@ type AgentInferencePromptWriteOptions = {
  */
 export async function agentInferencePromptWrite(
     config: Config,
+    ctx: DaycareContext,
+    options: AgentInferencePromptWriteOptions
+): Promise<void>;
+export async function agentInferencePromptWrite(
+    config: Config,
     agentId: string,
     options: AgentInferencePromptWriteOptions
+): Promise<void>;
+export async function agentInferencePromptWrite(
+    config: Config,
+    ctxOrAgentId: DaycareContext | string,
+    options: AgentInferencePromptWriteOptions
 ): Promise<void> {
+    const ctx =
+        typeof ctxOrAgentId === "string"
+            ? ({ userId: "owner", agentId: ctxOrAgentId } as DaycareContext)
+            : ctxOrAgentId;
     const { context, sessionId, providersOverride, iteration } = options;
     const at = Date.now();
-    const basePath = agentPath(config, agentId);
+    const basePath = agentPath(config, ctx);
     await fs.mkdir(basePath, { recursive: true });
     const filePath = path.join(basePath, "INFERENCE.md");
 

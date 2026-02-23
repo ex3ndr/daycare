@@ -55,8 +55,12 @@ export function memorySearchToolBuild(): ToolDefinition {
                 parentAgentId: toolContext.agent.id,
                 name: query
             };
-            const agentId = await toolContext.agentSystem.agentIdForTarget({ descriptor });
-            await toolContext.agentSystem.post({ agentId }, { type: "message", message: { text: query }, context: {} });
+            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { descriptor });
+            await toolContext.agentSystem.post(
+                toolContext.ctx,
+                { agentId },
+                { type: "message", message: { text: query }, context: {} }
+            );
 
             const summary = `Memory query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
             const toolMessage: ToolResultMessage = {

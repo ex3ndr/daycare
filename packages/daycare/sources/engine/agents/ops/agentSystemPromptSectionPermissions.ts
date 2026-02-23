@@ -11,7 +11,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders permissions details from current session permissions and config paths.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionPermissions(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionPermissions(context: AgentSystemPromptContext): Promise<string> {
     const permissions = context.permissions;
     const descriptor = context.descriptor;
     const workspace = permissions?.workingDir ?? "unknown";

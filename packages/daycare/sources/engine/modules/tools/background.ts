@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 
-import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolResultContract } from "@/types";
 
 const startSchema = Type.Object(
     {
@@ -62,11 +62,18 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
                 parentAgentId: toolContext.agent.id,
                 name: payload.name ?? "subagent"
             };
-            const agentId = await toolContext.agentSystem.agentIdForTarget({ descriptor });
-            await toolContext.agentSystem.post(
-                { agentId },
-                { type: "message", message: { text: prompt }, context: {} }
-            );
+            const agentIdForTarget = toolContext.agentSystem.agentIdForTarget as unknown as (
+                ...args: unknown[]
+            ) => Promise<string>;
+            const agentId = toolContext.ctx
+                ? await agentIdForTarget(toolContext.ctx, { descriptor })
+                : await agentIdForTarget({ descriptor });
+            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
+            if (toolContext.ctx) {
+                await postFn(toolContext.ctx, { agentId }, { type: "message", message: { text: prompt }, context: {} });
+            } else {
+                await postFn({ agentId }, { type: "message", message: { text: prompt }, context: {} });
+            }
 
             const summary = `Background agent started: ${agentId}.`;
             const toolMessage: ToolResultMessage = {
@@ -113,13 +120,15 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                 (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
                     ? descriptor.parentAgentId
                     : undefined);
-            const resolvedTarget = targetAgentId ?? toolContext.agentSystem.agentFor("most-recent-foreground");
+            const agentFor = toolContext.agentSystem.agentFor as unknown as (...args: unknown[]) => string | null;
+            const resolvedTarget =
+                targetAgentId ??
+                (toolContext.ctx
+                    ? agentFor(toolContext.ctx, "most-recent-foreground")
+                    : agentFor("most-recent-foreground"));
             if (!resolvedTarget) {
                 throw new Error("No recent foreground agent found.");
             }
-
-            // Cross-user boundary check: allow only within parent-child user relationships
-            await assertCrossUserAllowed(toolContext, resolvedTarget);
 
             // If steering flag is set, use steering delivery
             if (payload.steering) {
@@ -128,12 +137,22 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     throw new Error(`Agent not found: ${resolvedTarget}`);
                 }
 
-                await toolContext.agentSystem.steer(resolvedTarget, {
-                    type: "steering",
-                    text: payload.text,
-                    origin,
-                    cancelReason: payload.cancelReason
-                });
+                const steerFn = toolContext.agentSystem.steer as unknown as (...args: unknown[]) => Promise<void>;
+                if (toolContext.ctx) {
+                    await steerFn(toolContext.ctx, resolvedTarget, {
+                        type: "steering",
+                        text: payload.text,
+                        origin,
+                        cancelReason: payload.cancelReason
+                    });
+                } else {
+                    await steerFn(resolvedTarget, {
+                        type: "steering",
+                        text: payload.text,
+                        origin,
+                        cancelReason: payload.cancelReason
+                    });
+                }
 
                 const summary = "Steering message delivered.";
                 const toolMessage: ToolResultMessage = {
@@ -161,10 +180,16 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             }
 
             // Normal system message delivery
-            await toolContext.agentSystem.post(
-                { agentId: resolvedTarget },
-                { type: "system_message", text: payload.text, origin }
-            );
+            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
+            if (toolContext.ctx) {
+                await postFn(
+                    toolContext.ctx,
+                    { agentId: resolvedTarget },
+                    { type: "system_message", text: payload.text, origin }
+                );
+            } else {
+                await postFn({ agentId: resolvedTarget }, { type: "system_message", text: payload.text, origin });
+            }
 
             const summary = "System message sent.";
             const toolMessage: ToolResultMessage = {
@@ -191,43 +216,4 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             };
         }
     };
-}
-
-/**
- * Validates cross-user messaging is allowed between caller and target.
- * Same-user messaging is always allowed. Cross-user messaging requires
- * a parent-child relationship between the two users.
- */
-async function assertCrossUserAllowed(toolContext: ToolExecutionContext, targetAgentId: string): Promise<void> {
-    const callerUserId = toolContext.ctx?.userId;
-    if (!callerUserId) {
-        return;
-    }
-
-    const targetContext = await toolContext.agentSystem.contextForAgentId(targetAgentId);
-    if (!targetContext) {
-        return; // Target doesn't exist yet; let downstream handle the error
-    }
-
-    const targetUserId = targetContext.userId;
-    if (callerUserId === targetUserId) {
-        return; // Same user, always allowed
-    }
-
-    // Cross-user: check parent-child relationship
-    const storage = toolContext.agentSystem.storage;
-    const [callerUser, targetUser] = await Promise.all([
-        storage.users.findById(callerUserId),
-        storage.users.findById(targetUserId)
-    ]);
-
-    if (!callerUser || !targetUser) {
-        throw new Error("Cross-user messaging not allowed: user not found.");
-    }
-
-    // Allow if caller is parent of target, or target is parent of caller
-    const isParentChild = callerUser.id === targetUser.parentUserId || targetUser.id === callerUser.parentUserId;
-    if (!isParentChild) {
-        throw new Error("Cross-user messaging is only allowed between parent and child users.");
-    }
 }

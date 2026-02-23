@@ -88,10 +88,9 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
             const refs = memoryNodeIdsNormalize(payload.refs ?? [], [nodeId], { normalizeRootAlias: false });
 
             const now = Date.now();
-            const userId = toolContext.ctx.userId;
-            const existing = await memory.readNode(userId, nodeId);
+            const existing = await memory.readNode(toolContext.ctx, nodeId);
 
-            await memory.writeNode(userId, {
+            await memory.writeNode(toolContext.ctx, {
                 id: nodeId,
                 frontmatter: {
                     title,

@@ -2,7 +2,7 @@ import path from "node:path";
 
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
-import type { MessageContext, ToolExecutionContext } from "@/types";
+import type { Context, MessageContext, ToolExecutionContext } from "@/types";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
@@ -33,7 +33,7 @@ import { Skills } from "../skills/skills.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
-import { Context } from "./context.js";
+import { contextForAgent } from "./context.js";
 import { agentDescriptorRoleResolve } from "./ops/agentDescriptorRoleResolve.js";
 import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
 import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
@@ -73,8 +73,7 @@ import { messageContextReset } from "./ops/messageContextReset.js";
 const logger = getLogger("engine.agent");
 
 export class Agent {
-    readonly id: string;
-    readonly userId: string;
+    readonly ctx: Context;
     readonly descriptor: AgentDescriptor;
     readonly inbox: AgentInbox;
     readonly state: AgentState;
@@ -88,8 +87,7 @@ export class Agent {
     private endTurnCount = 0;
 
     private constructor(
-        id: string,
-        userId: string,
+        ctx: Context,
         descriptor: AgentDescriptor,
         state: AgentState,
         inbox: AgentInbox,
@@ -99,8 +97,7 @@ export class Agent {
         if (!userHome) {
             throw new Error("Agent user home is required.");
         }
-        this.id = id;
-        this.userId = userId;
+        this.ctx = ctx;
         this.descriptor = descriptor;
         this.state = state;
         this.inbox = inbox;
@@ -111,8 +108,16 @@ export class Agent {
 
     /**
      * Creates a new agent and persists descriptor + state + initial session row.
-     * Expects: agentId is a cuid2 value; descriptor is validated.
+     * Expects: ctx.agentId is a cuid2 value; descriptor is validated.
      */
+    static async create(
+        ctx: Context,
+        descriptor: AgentDescriptor,
+        inbox: AgentInbox,
+        agentSystem: AgentSystem,
+        userHome: UserHome
+    ): Promise<Agent>;
+
     static async create(
         agentId: string,
         descriptor: AgentDescriptor,
@@ -120,8 +125,42 @@ export class Agent {
         inbox: AgentInbox,
         agentSystem: AgentSystem,
         userHome: UserHome
+    ): Promise<Agent>;
+    static async create(
+        ctxOrAgentId: Context | string,
+        descriptor: AgentDescriptor,
+        userIdOrInbox: string | AgentInbox,
+        inboxOrAgentSystem: AgentInbox | AgentSystem,
+        agentSystemOrUserHome: AgentSystem | UserHome,
+        maybeUserHome?: UserHome
     ): Promise<Agent> {
-        if (!cuid2Is(agentId)) {
+        if (typeof ctxOrAgentId !== "string") {
+            return Agent.createWithContext(
+                ctxOrAgentId,
+                descriptor,
+                userIdOrInbox as AgentInbox,
+                inboxOrAgentSystem as AgentSystem,
+                agentSystemOrUserHome as UserHome
+            );
+        }
+        const ctx = contextForAgent({ agentId: ctxOrAgentId, userId: userIdOrInbox as string });
+        return Agent.createWithContext(
+            ctx,
+            descriptor,
+            inboxOrAgentSystem as AgentInbox,
+            agentSystemOrUserHome as AgentSystem,
+            maybeUserHome as UserHome
+        );
+    }
+
+    private static async createWithContext(
+        ctx: Context,
+        descriptor: AgentDescriptor,
+        inbox: AgentInbox,
+        agentSystem: AgentSystem,
+        userHome: UserHome
+    ): Promise<Agent> {
+        if (!cuid2Is(ctx.agentId)) {
             throw new Error("Agent id must be a cuid2 value.");
         }
         await userHomeEnsure(userHome);
@@ -139,18 +178,18 @@ export class Agent {
             state: "active"
         };
 
-        const agent = new Agent(agentId, userId, descriptor, state, inbox, agentSystem, userHome);
-        await agentDescriptorWrite(agentSystem.storage, agentId, descriptor, userId, basePermissions);
-        await agentStateWrite(agentSystem.storage, agentId, state);
+        const agent = new Agent(ctx, descriptor, state, inbox, agentSystem, userHome);
+        await agentDescriptorWrite(agentSystem.storage, ctx, descriptor, basePermissions);
+        await agentStateWrite(agentSystem.storage, ctx, state);
         state.activeSessionId = await agentSystem.storage.sessions.create({
-            agentId,
+            agentId: ctx.agentId,
             inferenceSessionId: state.inferenceSessionId,
             createdAt: now
         });
-        await agentStateWrite(agentSystem.storage, agentId, state);
+        await agentStateWrite(agentSystem.storage, ctx, state);
 
         agent.agentSystem.eventBus.emit("agent.created", {
-            agentId,
+            agentId: ctx.agentId,
             source: "agent",
             context: {}
         });
@@ -163,6 +202,14 @@ export class Agent {
      * Expects: state and descriptor already validated.
      */
     static restore(
+        ctx: Context,
+        descriptor: AgentDescriptor,
+        state: AgentState,
+        inbox: AgentInbox,
+        agentSystem: AgentSystem,
+        userHome: UserHome
+    ): Agent;
+    static restore(
         agentId: string,
         userId: string,
         descriptor: AgentDescriptor,
@@ -170,14 +217,45 @@ export class Agent {
         inbox: AgentInbox,
         agentSystem: AgentSystem,
         userHome: UserHome
+    ): Agent;
+    static restore(
+        ctxOrAgentId: Context | string,
+        userIdOrDescriptor: string | AgentDescriptor,
+        descriptorOrState: AgentDescriptor | AgentState,
+        stateOrInbox: AgentState | AgentInbox,
+        inboxOrAgentSystem: AgentInbox | AgentSystem,
+        agentSystemOrUserHome: AgentSystem | UserHome,
+        maybeUserHome?: UserHome
     ): Agent {
+        const ctx =
+            typeof ctxOrAgentId === "string"
+                ? contextForAgent({ agentId: ctxOrAgentId, userId: userIdOrDescriptor as string })
+                : ctxOrAgentId;
+        const descriptor =
+            typeof ctxOrAgentId === "string"
+                ? (descriptorOrState as AgentDescriptor)
+                : (userIdOrDescriptor as AgentDescriptor);
+        const state = (typeof ctxOrAgentId === "string" ? stateOrInbox : descriptorOrState) as AgentState;
+        const inbox = (typeof ctxOrAgentId === "string" ? inboxOrAgentSystem : stateOrInbox) as AgentInbox;
+        const agentSystem = (
+            typeof ctxOrAgentId === "string" ? agentSystemOrUserHome : inboxOrAgentSystem
+        ) as AgentSystem;
+        const userHome = (typeof ctxOrAgentId === "string" ? maybeUserHome : agentSystemOrUserHome) as UserHome;
         const basePermissions = permissionBuildUser(userHome);
         const permissions =
             descriptor.type === "permanent" && descriptor.workspaceDir
                 ? { ...basePermissions, workingDir: descriptor.workspaceDir }
                 : basePermissions;
         const refreshedState: AgentState = { ...state, permissions };
-        return new Agent(agentId, userId, descriptor, refreshedState, inbox, agentSystem, userHome);
+        return new Agent(ctx, descriptor, refreshedState, inbox, agentSystem, userHome);
+    }
+
+    get id(): string {
+        return this.ctx.agentId;
+    }
+
+    get userId(): string {
+        return this.ctx.userId;
     }
 
     start(): void {
@@ -409,7 +487,7 @@ export class Agent {
         const toolResolver = this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
         const visibleTools = toolResolver.listToolsForAgent({
-            userId: this.userId,
+            userId: this.ctx.userId,
             agentId: this.id,
             descriptor: this.descriptor
         });
@@ -426,14 +504,13 @@ export class Agent {
             model: providerSettings?.model,
             permissions: this.state.permissions,
             descriptor: this.descriptor,
-            userId: this.userId,
-            agentId: this.id,
+            ctx: this.ctx,
             agentSystem: this.agentSystem,
             userHome: this.userHome
         });
 
         try {
-            const wrote = await agentSystemPromptWrite(this.agentSystem.config.current, this.id, systemPrompt);
+            const wrote = await agentSystemPromptWrite(this.agentSystem.config.current, this.ctx, systemPrompt);
             if (wrote) {
                 logger.debug(`event: System prompt snapshot written agentId=${this.id}`);
             }
@@ -441,7 +518,7 @@ export class Agent {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
 
-        const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const contextTools = await this.listContextTools(toolResolver, source, {
             agentKind,
             rlmToolDescription
@@ -515,7 +592,7 @@ export class Agent {
             if (compactionAt !== null) {
                 pendingUserRecord = { ...pendingUserRecord, at: compactionAt + 1 };
             }
-            await agentHistoryAppend(this.agentSystem.storage, this.id, pendingUserRecord);
+            await agentHistoryAppend(this.agentSystem.storage, this.ctx, pendingUserRecord);
         }
 
         const ctx = this.state.context;
@@ -561,7 +638,7 @@ export class Agent {
                     verbose: this.agentSystem.config.current.verbose,
                     logger,
                     abortSignal: inferenceAbortController.signal,
-                    appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.id, record),
+                    appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
                     notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error)
                 });
             } finally {
@@ -606,7 +683,7 @@ export class Agent {
 
         this.state.context = { messages: contextForRun.messages };
         this.state.updatedAt = Date.now();
-        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+        await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
 
         await this.invalidateSessionIfNeeded();
 
@@ -663,7 +740,7 @@ export class Agent {
             : messageBuildSystemText(systemText, item.origin);
         if (item.silent) {
             const receivedAt = Date.now();
-            await agentHistoryAppend(this.agentSystem.storage, this.id, {
+            await agentHistoryAppend(this.agentSystem.storage, this.ctx, {
                 type: "user_message",
                 at: receivedAt,
                 text,
@@ -684,7 +761,7 @@ export class Agent {
             }
             this.state.context.messages.push(userMessage);
             this.state.updatedAt = receivedAt;
-            await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
             return null;
         }
 
@@ -701,7 +778,7 @@ export class Agent {
         const subscription = isInternalSignal
             ? null
             : await this.agentSystem.signals.subscriptionGet({
-                  ctx: { userId: this.userId, agentId: this.id },
+                  ctx: this.ctx,
                   pattern: item.subscriptionPattern
               });
         if (!isInternalSignal && !subscription) {
@@ -754,7 +831,7 @@ export class Agent {
         });
         this.state.tokens = null;
         this.state.updatedAt = now;
-        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+        await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         this.agentSystem.eventBus.emit("agent.reset", {
             agentId: this.id,
             context: item.context ?? {}
@@ -816,7 +893,7 @@ export class Agent {
         const estimatedTokens =
             typeof contextOverflowTokens === "number" && contextOverflowTokens > 0
                 ? contextOverflowTokens
-                : contextEstimateTokens(await agentHistoryLoad(this.agentSystem.storage, this.id));
+                : contextEstimateTokens(await agentHistoryLoad(this.agentSystem.storage, this.ctx));
 
         const reset: AgentInboxReset = {
             type: "reset",
@@ -851,13 +928,13 @@ export class Agent {
 
     private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
         await this.completePendingToolCalls("session_crashed");
-        const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const historyMessages = await this.buildHistoryContext(history);
         this.state.context = {
             messages: historyMessages
         };
         this.state.updatedAt = Date.now();
-        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+        await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         this.agentSystem.eventBus.emit("agent.restored", { agentId: this.id });
         return true;
     }
@@ -899,7 +976,7 @@ export class Agent {
             }
             const compactionAt = await this.applyCompactionSummary(summaryText);
             this.state.updatedAt = compactionAt;
-            await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
             return { ok: true };
         } catch (error) {
             if (isAbortError(error, compactionAbortController.signal)) {
@@ -939,7 +1016,7 @@ export class Agent {
      * Expects: called before rebuilding context or starting a new inference loop.
      */
     private async completePendingToolCalls(reason: "session_crashed" | "user_aborted"): Promise<void> {
-        const records = await agentHistoryLoad(this.agentSystem.storage, this.id);
+        const records = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const pendingRlm = reason === "session_crashed" ? agentHistoryPendingRlmResolve(records) : null;
         const pendingRlmToolCallId = pendingRlm?.start.toolCallId ?? null;
         const completionRecords = agentHistoryPendingToolResults(records, reason, Date.now()).filter(
@@ -948,14 +1025,14 @@ export class Agent {
         );
         let completedToolCalls = 0;
         for (const record of completionRecords) {
-            await agentHistoryAppend(this.agentSystem.storage, this.id, record);
+            await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
             records.push(record);
             completedToolCalls += 1;
         }
 
         if (pendingRlm) {
             const appendRecord = async (record: AgentHistoryRecord): Promise<void> => {
-                await agentHistoryAppend(this.agentSystem.storage, this.id, record);
+                await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
                 records.push(record);
             };
             const toolCall = pendingRlm.start.toolCallId;
@@ -1030,13 +1107,13 @@ export class Agent {
         }
 
         if (completedToolCalls > 0) {
-            const history = await agentHistoryLoad(this.agentSystem.storage, this.id);
+            const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
             const historyMessages = await this.buildHistoryContext(history);
             this.state.context = {
                 messages: historyMessages
             };
             this.state.updatedAt = Date.now();
-            await agentStateWrite(this.agentSystem.storage, this.id, this.state);
+            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
             logger.warn(
                 {
                     agentId: this.id,
@@ -1061,7 +1138,7 @@ export class Agent {
             assistant: this.agentSystem.config.current.settings.assistant ?? null,
             permissions: this.state.permissions,
             agent: this,
-            ctx: new Context(this.id, this.userId),
+            ctx: this.ctx,
             source,
             messageContext: {},
             agentSystem: this.agentSystem,
@@ -1092,6 +1169,7 @@ export class Agent {
         const detail = errorText ? `${reason} (${errorText})` : reason;
         try {
             await this.agentSystem.post(
+                this.ctx,
                 { agentId: parentAgentId },
                 {
                     type: "system_message",
@@ -1138,7 +1216,7 @@ export class Agent {
         }
     ): Promise<InferenceContext["tools"]> {
         const tools = toolResolver.listToolsForAgent({
-            userId: this.userId,
+            userId: this.ctx.userId,
             agentId: this.id,
             descriptor: this.descriptor
         });
@@ -1237,8 +1315,8 @@ export class Agent {
             resetMessage
         });
         this.state.tokens = null;
-        await agentStateWrite(this.agentSystem.storage, this.id, this.state);
-        await agentHistoryAppend(this.agentSystem.storage, this.id, {
+        await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
+        await agentHistoryAppend(this.agentSystem.storage, this.ctx, {
             type: "user_message",
             at: compactionAt,
             text: summaryWithContinue,

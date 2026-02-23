@@ -14,6 +14,7 @@ import {
     upsertPlugin
 } from "../../settings.js";
 import { requestShutdown } from "../../util/shutdown.js";
+import { contextForUser } from "../agents/context.js";
 import { agentBackgroundList } from "../agents/ops/agentBackgroundList.js";
 import { agentHistoryLoadAll } from "../agents/ops/agentHistoryLoadAll.js";
 import { agentList } from "../agents/ops/agentList.js";
@@ -318,7 +319,13 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         );
         const records = sessionId
             ? await options.runtime.storage.history.findBySessionId(sessionId)
-            : await agentHistoryLoadAll(options.runtime.storage, agentId, limit);
+            : await (async () => {
+                  const ctx = await options.runtime.agentSystem.contextForAgentId(agentId);
+                  if (!ctx) {
+                      return [];
+                  }
+                  return agentHistoryLoadAll(options.runtime.storage, ctx, limit);
+              })();
         logger.debug(`event: Agent history retrieved agentId=${agentId} recordCount=${records.length}`);
         return reply.send({ ok: true, records });
     });
@@ -326,14 +333,16 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
     app.post("/v1/engine/agents/:agentId/reset", async (request, reply) => {
         const agentId = (request.params as { agentId: string }).agentId;
         logger.debug(`event: POST /v1/engine/agents/:agentId/reset agentId=${agentId}`);
-        const ok = options.runtime.agentSystem.post(
-            { agentId },
-            { type: "reset", message: "Manual reset requested by the user." }
-        );
-        if (!ok) {
+        const targetCtx = await options.runtime.agentSystem.contextForAgentId(agentId);
+        if (!targetCtx) {
             logger.debug(`error: Agent reset failed agentId=${agentId}`);
             return reply.status(404).send({ ok: false, error: "Agent not found" });
         }
+        await options.runtime.agentSystem.post(
+            contextForUser({ userId: targetCtx.userId }),
+            { agentId },
+            { type: "reset", message: "Manual reset requested by the user." }
+        );
         logger.info({ agentId }, "event: Agent reset");
         return reply.send({ ok: true });
     });

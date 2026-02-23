@@ -3,9 +3,10 @@ import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
-import type { AgentState, SessionPermissions, ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import type { AgentState, SessionPermissions, ToolDefinition, ToolResultContract } from "@/types";
 import { pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
+import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import type { PermanentAgentSummary } from "../../agents/ops/agentPermanentTypes.js";
@@ -79,8 +80,12 @@ export function permanentAgentToolBuild(): ToolDefinition {
             const existingAgents = await agentPermanentList(storage);
             const resolvedAgent = resolveExistingAgent(existingAgents, payload.agentId, name);
             const agentId = resolvedAgent?.agentId ?? createId();
-            const ownerUserId = contextUserIdResolve(toolContext);
+            const ownerUserId = toolContext.ctx?.userId;
+            if (!ownerUserId) {
+                throw new Error("Tool context userId is required.");
+            }
             const ownerUserHome = toolContext.agentSystem.userHomeForUserId(ownerUserId);
+            const targetCtx = contextForAgent({ userId: ownerUserId, agentId });
             const resolvedWorkspaceDir = payload.workspaceDir
                 ? await resolveWorkspaceDir(ownerUserHome.home, payload.workspaceDir)
                 : (resolvedAgent?.descriptor.workspaceDir ?? null);
@@ -101,10 +106,10 @@ export function permanentAgentToolBuild(): ToolDefinition {
             const basePermissions = permissionBuildUser(ownerUserHome);
 
             if (resolvedAgent) {
-                await agentDescriptorWrite(storage, agentId, descriptor, ownerUserId, basePermissions);
+                await agentDescriptorWrite(storage, targetCtx, descriptor, basePermissions);
                 toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
 
-                const state = await agentStateRead(storage, agentId);
+                const state = await agentStateRead(storage, targetCtx);
                 if (!state) {
                     throw new Error("Permanent agent state not found.");
                 }
@@ -114,7 +119,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     permissions,
                     updatedAt: Date.now()
                 };
-                await agentStateWrite(storage, agentId, nextState);
+                await agentStateWrite(storage, targetCtx, nextState);
                 toolContext.agentSystem.updateAgentPermissions(agentId, nextState.permissions, nextState.updatedAt);
             } else {
                 const now = Date.now();
@@ -130,14 +135,14 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     updatedAt: now,
                     state: "active"
                 };
-                await agentDescriptorWrite(storage, agentId, descriptor, ownerUserId, basePermissions);
-                await agentStateWrite(storage, agentId, state);
+                await agentDescriptorWrite(storage, targetCtx, descriptor, basePermissions);
+                await agentStateWrite(storage, targetCtx, state);
                 state.activeSessionId = await storage.sessions.create({
                     agentId,
                     inferenceSessionId: state.inferenceSessionId,
                     createdAt: now
                 });
-                await agentStateWrite(storage, agentId, state);
+                await agentStateWrite(storage, targetCtx, state);
                 toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
                 toolContext.agentSystem.updateAgentPermissions(agentId, permissions, now);
             }
@@ -219,12 +224,4 @@ function updatePermissions(permissions: SessionPermissions, workspaceDir: string
         ...permissions,
         workingDir: workspaceDir
     };
-}
-
-function contextUserIdResolve(context: ToolExecutionContext): string {
-    const userId = context.ctx?.userId;
-    if (!userId) {
-        throw new Error("Tool context userId is required.");
-    }
-    return userId;
 }

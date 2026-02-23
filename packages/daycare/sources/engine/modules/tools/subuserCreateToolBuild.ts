@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
@@ -88,7 +89,12 @@ export function subuserCreateToolBuild(): ToolDefinition {
                 systemPrompt
             };
             const permissions = permissionBuildUser(subuserHome);
-            await agentDescriptorWrite(storage, gatewayAgentId, descriptor, subuserId, permissions);
+            await agentDescriptorWrite(
+                storage,
+                contextForAgent({ userId: subuserId, agentId: gatewayAgentId }),
+                descriptor,
+                permissions
+            );
 
             // Create a session and write agent state in one step
             const inferenceSessionId = createId();
@@ -97,7 +103,7 @@ export function subuserCreateToolBuild(): ToolDefinition {
                 inferenceSessionId,
                 createdAt: now
             });
-            await agentStateWrite(storage, gatewayAgentId, {
+            await agentStateWrite(storage, contextForAgent({ userId: subuserId, agentId: gatewayAgentId }), {
                 context: { messages: [] },
                 activeSessionId: sessionId,
                 inferenceSessionId,
@@ -133,7 +139,7 @@ export function subuserCreateToolBuild(): ToolDefinition {
 }
 
 async function assertCallerIsOwner(toolContext: ToolExecutionContext): Promise<void> {
-    const userId = toolContext.ctx?.userId;
+    const userId = toolContext.ctx.userId;
     if (!userId) {
         throw new Error("Tool context userId is required.");
     }

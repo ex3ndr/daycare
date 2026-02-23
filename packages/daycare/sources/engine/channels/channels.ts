@@ -15,6 +15,7 @@ import type { ChannelMessagesRepository } from "../../storage/channelMessagesRep
 import type { ChannelsRepository } from "../../storage/channelsRepository.js";
 import { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
+import { contextForUser } from "../agents/context.js";
 import type { Signals } from "../signals/signals.js";
 import { channelNameNormalize } from "./channelNameNormalize.js";
 
@@ -434,5 +435,5 @@ function cloneChannel(channel: ChannelRuntimeRecord): Channel {
 }
 
 function contextForUserId(userId: string): Context {
-    return { agentId: "channel", userId };
+    return contextForUser({ userId });
 }

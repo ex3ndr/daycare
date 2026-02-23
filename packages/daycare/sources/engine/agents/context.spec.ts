@@ -1,16 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { Context } from "./context.js";
+import { Context, contextForAgent, contextForUser } from "./context.js";
 
 describe("Context", () => {
-    it("stores agentId and userId from constructor", () => {
-        const context = new Context("agent-1", "user-1");
-        expect(context.agentId).toBe("agent-1");
+    it("builds a user-only context", () => {
+        const context = contextForUser({ userId: "user-1" });
         expect(context.userId).toBe("user-1");
+        expect(context.hasAgentId).toBe(false);
+    });
+
+    it("builds an agent context", () => {
+        const context = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+        expect(context.userId).toBe("user-1");
+        expect(context.agentId).toBe("agent-1");
+        expect(context.hasAgentId).toBe(true);
+    });
+
+    it("throws when agentId is read from user-only context", () => {
+        const context = contextForUser({ userId: "user-1" });
+        expect(() => context.agentId).toThrow("Context has no agentId");
     });
 
     it("is readonly", () => {
-        const context = new Context("agent-1", "user-1");
+        const context = new Context({ userId: "user-1", agentId: "agent-1" });
         const readonlyAssertion = (value: Context): void => {
             // @ts-expect-error Context fields are readonly
             value.agentId = "agent-2";

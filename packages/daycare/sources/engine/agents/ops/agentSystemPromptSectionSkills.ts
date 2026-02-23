@@ -11,7 +11,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders skills by loading dynamic skill definitions from config and plugins.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionSkills(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionSkills(context: AgentSystemPromptContext): Promise<string> {
     const configDir = context.agentSystem?.config?.current.configDir ?? "";
     const skillsPrompt = await (async () => {
         if (!configDir) {

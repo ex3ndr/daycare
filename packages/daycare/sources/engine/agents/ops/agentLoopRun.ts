@@ -32,7 +32,6 @@ import { toolExecutionResultOutcome } from "../../modules/tools/toolReturnOutcom
 import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
-import { Context } from "../context.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import { agentHistoryPendingToolResults } from "./agentHistoryPendingToolResults.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
@@ -141,7 +140,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const target = agentDescriptorTargetResolve(agent.descriptor);
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {
-        userId: agent.userId,
+        userId: agent.ctx.userId,
         agentId: agent.id,
         descriptor: agent.descriptor
     };
@@ -187,7 +186,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             );
             const inferenceSessionId = agent.state.inferenceSessionId ?? agent.id;
             try {
-                await agentInferencePromptWrite(agentSystem.config.current, agent.id, {
+                await agentInferencePromptWrite(agentSystem.config.current, agent.ctx, {
                     context,
                     sessionId: inferenceSessionId,
                     providersOverride: providersForAgent,
@@ -482,7 +481,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         assistant,
                         permissions: agent.state.permissions,
                         agent,
-                        ctx: new Context(agent.id, agent.userId),
+                        ctx: agent.ctx,
                         source,
                         messageContext: entry.context,
                         agentSystem,
@@ -620,7 +619,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     assistant,
                     permissions: agent.state.permissions,
                     agent,
-                    ctx: new Context(agent.id, agent.userId),
+                    ctx: agent.ctx,
                     source,
                     messageContext: entry.context,
                     agentSystem,
@@ -942,7 +941,11 @@ async function subagentDeliverResponse(
         return;
     }
     try {
-        await agentSystem.post({ agentId: parentAgentId }, { type: "system_message", text, origin: agent.id });
+        await agentSystem.post(
+            agent.ctx,
+            { agentId: parentAgentId },
+            { type: "system_message", text, origin: agent.id }
+        );
         logger.debug("event: Child agent <response> delivered to parent");
     } catch (error) {
         logger.warn({ agentId: agent.id, parentAgentId, error }, "error: Child agent response delivery failed");

@@ -7,7 +7,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders message formatting and delivery guidance from connector capabilities.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionFormatting(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionFormatting(context: AgentSystemPromptContext): Promise<string> {
     const descriptor = context.descriptor;
     const isForeground = descriptor?.type === "user";
     const connector = isForeground ? descriptor.connector : "";

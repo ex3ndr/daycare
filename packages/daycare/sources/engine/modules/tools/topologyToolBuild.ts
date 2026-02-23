@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { Context } from "../../agents/context.js";
+import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
@@ -161,7 +161,9 @@ export function topologyTool(
 
             // For subusers, filter exposes by userId via storage (public type lacks userId)
             const visibleExposeEndpoints = isSubuser
-                ? await storage.exposeEndpoints.findMany(new Context(callerAgentId, callerUserId))
+                ? await storage.exposeEndpoints.findMany(
+                      contextForAgent({ userId: callerUserId, agentId: callerAgentId })
+                  )
                 : exposeEndpoints;
 
             const exposeSummary = visibleExposeEndpoints

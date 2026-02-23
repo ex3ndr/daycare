@@ -11,7 +11,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Renders active inference model catalogs and model-selection guidance.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionModels(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionModels(context: AgentSystemPromptContext): Promise<string> {
     if (!context.agentSystem) {
         return "";
     }

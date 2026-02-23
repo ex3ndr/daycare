@@ -3,7 +3,7 @@
 
 // Config
 export type { Config } from "./config/configTypes.js";
-export { Context } from "./engine/agents/context.js";
+export { Context, contextForAgent, contextForUser } from "./engine/agents/context.js";
 export type { AgentDescriptor, AgentFetchStrategy } from "./engine/agents/ops/agentDescriptorTypes.js";
 // Agents
 export type {

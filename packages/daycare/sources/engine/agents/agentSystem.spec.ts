@@ -447,10 +447,13 @@ describe("AgentSystem", () => {
                 name: "worker"
             };
             await harness.agentSystem.postAndAwait(
+                parentContext,
                 { descriptor: subagentDescriptor },
                 { type: "reset", message: "subagent" }
             );
-            const subagentId = await harness.agentSystem.agentIdForTarget({ descriptor: subagentDescriptor });
+            const subagentId = await harness.agentSystem.agentIdForTarget(parentContext, {
+                descriptor: subagentDescriptor
+            });
             const subagentContext = await harness.agentSystem.contextForAgentId(subagentId);
 
             expect(subagentContext?.userId).toBe(parentContext.userId);
@@ -531,10 +534,17 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
         }
     });
     try {
+        const parentDescriptor: AgentDescriptor = {
+            type: "cron",
+            id: createId(),
+            name: `parent-${createId()}`
+        };
+        await agentSystem.postAndAwait({ descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
+        const parentAgentId = await agentSystem.agentIdForTarget({ descriptor: parentDescriptor });
         const descriptor: AgentDescriptor = {
             type: "subagent",
             id: createId(),
-            parentAgentId: createId(),
+            parentAgentId,
             name: `subagent-${createId()}`
         };
         await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init subagent" });

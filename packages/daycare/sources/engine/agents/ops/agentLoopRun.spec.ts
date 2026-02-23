@@ -17,6 +17,7 @@ import { ToolResolver } from "../../modules/toolResolver.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
+import { contextForAgent } from "../context.js";
 import { agentLoopRun } from "./agentLoopRun.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 
@@ -1295,6 +1296,7 @@ function optionsBuild(params: {
         entry: params.entry,
         agent: {
             id: "agent-1",
+            ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
             userId: "user-1",
             descriptor,
             inbox: {

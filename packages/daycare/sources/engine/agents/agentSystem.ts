@@ -4,6 +4,7 @@ import { createId } from "@paralleldrive/cuid2";
 import type {
     AgentModelOverride,
     AgentTokenEntry,
+    Context,
     DelayedSignalCancelRepeatKeyInput,
     DelayedSignalScheduleInput,
     SessionPermissions,
@@ -30,7 +31,7 @@ import type { PluginManager } from "../plugins/manager.js";
 import type { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
 import { Agent } from "./agent.js";
-import { Context } from "./context.js";
+import { contextForAgent, contextForUser } from "./context.js";
 import { agentDescriptorCacheKey } from "./ops/agentDescriptorCacheKey.js";
 import { agentDescriptorMatchesStrategy } from "./ops/agentDescriptorMatchesStrategy.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
@@ -61,8 +62,7 @@ type DelayedSignalsFacade = {
 };
 
 type AgentEntry = {
-    agentId: string;
-    userId: string;
+    ctx: Context;
     descriptor: AgentDescriptor;
     agent: Agent;
     inbox: AgentInbox;
@@ -173,9 +173,10 @@ export class AgentSystem {
 
         for (const record of records) {
             const agentId = record.id;
+            const ctx = contextForAgent({ userId: record.userId, agentId });
             let state: Awaited<ReturnType<typeof agentStateRead>> = null;
             try {
-                state = await agentStateRead(this.storage, agentId);
+                state = await agentStateRead(this.storage, ctx);
             } catch (error) {
                 logger.warn({ agentId, error }, "restore: Agent restore skipped due to invalid persisted data");
                 continue;
@@ -196,17 +197,16 @@ export class AgentSystem {
                         deliverAt: state.updatedAt + AGENT_POISON_PILL_DELAY_MS
                     });
                 }
-                const key = agentDescriptorCacheKey(descriptor);
+                const key = agentCacheKeyForCtx(ctx, descriptor);
                 this.keyMap.set(key, agentId);
                 logger.info({ agentId }, "restore: Agent restore skipped (sleeping)");
                 continue;
             }
             const inbox = new AgentInbox(agentId);
             const userHome = this.userHomeForUserId(record.userId);
-            const agent = Agent.restore(agentId, record.userId, descriptor, state, inbox, this, userHome);
+            const agent = Agent.restore(ctx, descriptor, state, inbox, this, userHome);
             const registered = this.registerEntry({
-                agentId,
-                userId: record.userId,
+                ctx,
                 descriptor,
                 agent,
                 inbox
@@ -233,21 +233,45 @@ export class AgentSystem {
         }
     }
 
-    async post(target: AgentPostTarget, item: AgentInboxItem): Promise<void> {
+    async post(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<void>;
+    async post(target: AgentPostTarget, item: AgentInboxItem): Promise<void>;
+    async post(
+        ctxOrTarget: Context | AgentPostTarget,
+        targetOrItem: AgentPostTarget | AgentInboxItem,
+        maybeItem?: AgentInboxItem
+    ): Promise<void> {
+        const ctx =
+            maybeItem === undefined
+                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
+                : (ctxOrTarget as Context);
+        const target = (maybeItem === undefined ? ctxOrTarget : targetOrItem) as AgentPostTarget;
+        const item = (maybeItem === undefined ? targetOrItem : maybeItem) as AgentInboxItem;
         if (this.stage === "idle" && (item.type === "message" || item.type === "system_message")) {
             const agentType = "descriptor" in target ? target.descriptor.type : "agent";
             logger.warn({ agentType }, "load: AgentSystem received message before load");
         }
         const targetLabel = "descriptor" in target ? `descriptor:${target.descriptor.type}` : `agent:${target.agentId}`;
         logger.debug(`receive: post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
-        const entry = await this.resolveEntry(target, item);
+        const entry = await this.resolveEntry(ctx, target, item);
         await this.enqueueEntry(entry, item, null);
-        logger.debug(`event: post() queued item agentId=${entry.agentId} inboxSize=${entry.inbox.size()}`);
+        logger.debug(`event: post() queued item agentId=${entry.ctx.agentId} inboxSize=${entry.inbox.size()}`);
         this.startEntryIfRunning(entry);
     }
 
-    async postAndAwait(target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult> {
-        const entry = await this.resolveEntry(target, item);
+    async postAndAwait(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult>;
+    async postAndAwait(target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult>;
+    async postAndAwait(
+        ctxOrTarget: Context | AgentPostTarget,
+        targetOrItem: AgentPostTarget | AgentInboxItem,
+        maybeItem?: AgentInboxItem
+    ): Promise<AgentInboxResult> {
+        const ctx =
+            maybeItem === undefined
+                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
+                : (ctxOrTarget as Context);
+        const target = (maybeItem === undefined ? ctxOrTarget : targetOrItem) as AgentPostTarget;
+        const item = (maybeItem === undefined ? targetOrItem : maybeItem) as AgentInboxItem;
+        const entry = await this.resolveEntry(ctx, target, item);
         const completion = this.createCompletion();
         await this.enqueueEntry(entry, item, completion.completion);
         this.startEntryIfRunning(entry);
@@ -258,17 +282,34 @@ export class AgentSystem {
      * Resolves a target to its concrete agent id, creating/restoring when needed.
      * Expects: descriptor targets are valid for agent creation.
      */
-    async agentIdForTarget(target: AgentPostTarget): Promise<string> {
-        const entry = await this.resolveEntry(target, {
+    async agentIdForTarget(ctx: Context, target: AgentPostTarget): Promise<string>;
+    async agentIdForTarget(target: AgentPostTarget): Promise<string>;
+    async agentIdForTarget(ctxOrTarget: Context | AgentPostTarget, maybeTarget?: AgentPostTarget): Promise<string> {
+        const ctx =
+            maybeTarget === undefined
+                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
+                : (ctxOrTarget as Context);
+        const target = (maybeTarget === undefined ? ctxOrTarget : maybeTarget) as AgentPostTarget;
+        const entry = await this.resolveEntry(ctx, target, {
             type: "message",
             message: { text: null },
             context: {}
         });
-        return entry.agentId;
+        return entry.ctx.agentId;
     }
 
-    async tokensForTarget(target: AgentPostTarget): Promise<AgentTokenEntry | null> {
-        const entry = await this.resolveEntry(target, {
+    async tokensForTarget(ctx: Context, target: AgentPostTarget): Promise<AgentTokenEntry | null>;
+    async tokensForTarget(target: AgentPostTarget): Promise<AgentTokenEntry | null>;
+    async tokensForTarget(
+        ctxOrTarget: Context | AgentPostTarget,
+        maybeTarget?: AgentPostTarget
+    ): Promise<AgentTokenEntry | null> {
+        const ctx =
+            maybeTarget === undefined
+                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
+                : (ctxOrTarget as Context);
+        const target = (maybeTarget === undefined ? ctxOrTarget : maybeTarget) as AgentPostTarget;
+        const entry = await this.resolveEntry(ctx, target, {
             type: "message",
             message: { text: null },
             context: {}
@@ -289,7 +330,11 @@ export class AgentSystem {
             return true;
         }
         try {
-            const descriptor = await agentDescriptorRead(this.storage, agentId);
+            const context = await this.contextForAgentId(agentId);
+            if (!context) {
+                return false;
+            }
+            const descriptor = await agentDescriptorRead(this.storage, context);
             return !!descriptor;
         } catch {
             return false;
@@ -303,13 +348,13 @@ export class AgentSystem {
     async contextForAgentId(agentId: string): Promise<Context | null> {
         const loaded = this.entries.get(agentId);
         if (loaded) {
-            return new Context(loaded.agentId, loaded.userId);
+            return loaded.ctx;
         }
         const record = await this.storage.agents.findById(agentId);
         if (!record) {
             return null;
         }
-        return new Context(record.id, record.userId);
+        return contextForAgent({ userId: record.userId, agentId: record.id });
     }
 
     async signalDeliver(signal: Signal, subscriptions: SignalSubscription[]): Promise<void> {
@@ -324,6 +369,7 @@ export class AgentSystem {
                 }
                 try {
                     await this.post(
+                        context,
                         { agentId: subscription.ctx.agentId },
                         {
                             type: "signal",
@@ -352,10 +398,23 @@ export class AgentSystem {
      * The current tool completes but remaining queued tools are cancelled.
      * Wakes the agent if sleeping.
      */
-    async steer(agentId: string, steering: AgentInboxSteering): Promise<void> {
+    async steer(ctx: Context, agentId: string, steering: AgentInboxSteering): Promise<void>;
+    async steer(agentId: string, steering: AgentInboxSteering): Promise<void>;
+    async steer(
+        ctxOrAgentId: Context | string,
+        agentIdOrSteering: string | AgentInboxSteering,
+        maybeSteering?: AgentInboxSteering
+    ): Promise<void> {
+        const ctx =
+            typeof ctxOrAgentId === "string" ? await this.postContextResolve({ agentId: ctxOrAgentId }) : ctxOrAgentId;
+        const agentId = (typeof ctxOrAgentId === "string" ? ctxOrAgentId : agentIdOrSteering) as string;
+        const steering = (typeof ctxOrAgentId === "string" ? agentIdOrSteering : maybeSteering) as AgentInboxSteering;
         const entry = this.entries.get(agentId);
         if (!entry) {
             throw new Error(`Agent not found: ${agentId}`);
+        }
+        if (ctx.userId !== entry.ctx.userId) {
+            throw new Error(`Cannot steer agent from another user: ${agentId}`);
         }
         let woke = false;
         await entry.lock.inLock(async () => {
@@ -363,7 +422,7 @@ export class AgentSystem {
             entry.inbox.steer(steering);
         });
         if (woke) {
-            await this.signalLifecycle(entry.agentId, "wake");
+            await this.signalLifecycle(entry.ctx.agentId, "wake");
         }
         logger.info({ agentId, origin: steering.origin }, "event: Steering message delivered");
         this.startEntryIfRunning(entry);
@@ -379,7 +438,7 @@ export class AgentSystem {
             return false;
         }
         const aborted = entry.agent.abortInference();
-        logger.info({ agentId: entry.agentId, aborted }, "event: Abort inference requested");
+        logger.info({ agentId: entry.ctx.agentId, aborted }, "event: Abort inference requested");
         return aborted;
     }
 
@@ -410,7 +469,7 @@ export class AgentSystem {
                 return;
             }
             entry.agent.state.state = "sleeping";
-            await agentStateWrite(this.storage, agentId, entry.agent.state);
+            await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
             this.eventBus.emit("agent.sleep", { agentId, reason });
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
             // Mark session for memory processing on idle
@@ -435,9 +494,16 @@ export class AgentSystem {
         }
     }
 
-    agentFor(strategy: AgentFetchStrategy): string | null {
+    agentFor(ctx: Context, strategy: AgentFetchStrategy): string | null;
+    agentFor(strategy: AgentFetchStrategy): string | null;
+    agentFor(ctxOrStrategy: Context | AgentFetchStrategy, maybeStrategy?: AgentFetchStrategy): string | null {
+        const ctx = typeof ctxOrStrategy === "string" ? null : ctxOrStrategy;
+        const strategy = (typeof ctxOrStrategy === "string" ? ctxOrStrategy : maybeStrategy) as AgentFetchStrategy;
         const candidates = Array.from(this.entries.values()).filter((entry) => {
-            return agentDescriptorMatchesStrategy(entry.descriptor, strategy);
+            return (
+                (ctx === null || entry.ctx.userId === ctx.userId) &&
+                agentDescriptorMatchesStrategy(entry.descriptor, strategy)
+            );
         });
         if (candidates.length === 0) {
             return null;
@@ -447,7 +513,7 @@ export class AgentSystem {
             const bTime = agentTimestampGet(b.agent.state.updatedAt);
             return bTime - aTime;
         });
-        return candidates[0]?.agentId ?? null;
+        return candidates[0]?.ctx.agentId ?? null;
     }
 
     /**
@@ -496,7 +562,7 @@ export class AgentSystem {
         }
         entry.agent.state.modelOverride = override;
         entry.agent.state.updatedAt = Date.now();
-        await agentStateWrite(this.storage, agentId, entry.agent.state);
+        await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
         return true;
     }
 
@@ -508,36 +574,62 @@ export class AgentSystem {
         await this.storage.inbox.delete(id);
     }
 
+    private async postContextResolve(target: AgentPostTarget): Promise<Context> {
+        if ("agentId" in target) {
+            const context = await this.contextForAgentId(target.agentId);
+            if (context) {
+                return context;
+            }
+            return contextForUser({ userId: "owner" });
+        }
+        if (target.descriptor.type === "user") {
+            const connectorKey = userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId);
+            const userId = await this.resolveUserIdForConnectorKey(connectorKey);
+            return contextForUser({ userId });
+        }
+        if (target.descriptor.type === "subuser") {
+            return contextForUser({ userId: target.descriptor.id });
+        }
+        return contextForUser({ userId: "owner" });
+    }
+
     private findLoadedEntry(target: AgentPostTarget): AgentEntry | null {
         if ("agentId" in target) {
             return this.entries.get(target.agentId) ?? null;
         }
-        const key = agentDescriptorCacheKey(target.descriptor);
-        const agentId = this.keyMap.get(key);
-        if (!agentId) {
-            return null;
+        const descriptorKey = agentDescriptorCacheKey(target.descriptor);
+        for (const entry of this.entries.values()) {
+            if (agentDescriptorCacheKey(entry.descriptor) === descriptorKey) {
+                return entry;
+            }
         }
-        return this.entries.get(agentId) ?? null;
+        return null;
     }
 
-    private async resolveEntry(target: AgentPostTarget, _item: AgentInboxItem): Promise<AgentEntry> {
+    private async resolveEntry(ctx: Context, target: AgentPostTarget, _item: AgentInboxItem): Promise<AgentEntry> {
         if ("agentId" in target) {
             const existing = this.entries.get(target.agentId);
             if (existing) {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
                     throw deadErrorBuild(target.agentId);
                 }
+                if (existing.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot post to agent from another user: ${target.agentId}`);
+                }
                 return existing;
             }
             const restored = await this.restoreAgent(target.agentId, { allowSleeping: true });
             if (restored) {
+                if (restored.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot post to agent from another user: ${target.agentId}`);
+                }
                 return restored;
             }
             throw new Error(`Agent not found: ${target.agentId}`);
         }
 
         const descriptor = target.descriptor;
-        const key = agentDescriptorCacheKey(descriptor);
+        const key = agentCacheKeyForCtx(ctx, descriptor);
         const existingAgentId = this.keyMap.get(key);
         if (existingAgentId) {
             const existing = this.entries.get(existingAgentId);
@@ -545,10 +637,16 @@ export class AgentSystem {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
                     throw deadErrorBuild(existingAgentId);
                 }
+                if (existing.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
+                }
                 return existing;
             }
             const restored = await this.restoreAgent(existingAgentId, { allowSleeping: true });
             if (restored) {
+                if (restored.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
+                }
                 return restored;
             }
         }
@@ -559,10 +657,16 @@ export class AgentSystem {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
                     throw deadErrorBuild(descriptor.id);
                 }
+                if (existing.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${descriptor.id}`);
+                }
                 return existing;
             }
             const restored = await this.restoreAgent(descriptor.id, { allowSleeping: true });
             if (restored) {
+                if (restored.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${descriptor.id}`);
+                }
                 return restored;
             }
         }
@@ -574,12 +678,15 @@ export class AgentSystem {
                 : descriptor;
         logger.debug(`event: Creating agent entry agentId=${agentId} type=${resolvedDescriptor.type}`);
         const inbox = new AgentInbox(agentId);
-        const userId = await this.resolveUserIdForDescriptor(resolvedDescriptor);
-        const userHome = this.userHomeForUserId(userId);
-        const agent = await Agent.create(agentId, resolvedDescriptor, userId, inbox, this, userHome);
+        const userId = await this.resolveUserIdForDescriptor(ctx, resolvedDescriptor);
+        if (userId !== ctx.userId) {
+            throw new Error(`Cannot create agent for another user: ${agentId}`);
+        }
+        const createdCtx = contextForAgent({ userId, agentId });
+        const userHome = this.userHomeForCtx(createdCtx);
+        const agent = await Agent.create(createdCtx, resolvedDescriptor, inbox, this, userHome);
         const entry = this.registerEntry({
-            agentId,
-            userId,
+            ctx: createdCtx,
             descriptor: resolvedDescriptor,
             agent,
             inbox
@@ -589,15 +696,13 @@ export class AgentSystem {
     }
 
     private registerEntry(input: {
-        agentId: string;
-        userId: string;
+        ctx: Context;
         descriptor: AgentDescriptor;
         agent: Agent;
         inbox: AgentInbox;
     }): AgentEntry {
         const entry: AgentEntry = {
-            agentId: input.agentId,
-            userId: input.userId,
+            ctx: input.ctx,
             descriptor: input.descriptor,
             agent: input.agent,
             inbox: input.inbox,
@@ -605,22 +710,22 @@ export class AgentSystem {
             terminating: false,
             lock: new AsyncLock()
         };
-        this.entries.set(input.agentId, entry);
-        const key = agentDescriptorCacheKey(input.descriptor);
-        this.keyMap.set(key, input.agentId);
+        this.entries.set(input.ctx.agentId, entry);
+        const key = agentCacheKeyForCtx(input.ctx, input.descriptor);
+        this.keyMap.set(key, input.ctx.agentId);
         return entry;
     }
 
     private startEntryIfRunning(entry: AgentEntry): void {
         if (this.stage !== "running") {
-            logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.agentId} reason=stage:${this.stage}`);
+            logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.ctx.agentId} reason=stage:${this.stage}`);
             return;
         }
         if (entry.running) {
-            logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.agentId} reason=already-running`);
+            logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.ctx.agentId} reason=already-running`);
             return;
         }
-        logger.debug(`start: startEntryIfRunning starting agentId=${entry.agentId} type=${entry.descriptor.type}`);
+        logger.debug(`start: startEntryIfRunning starting agentId=${entry.ctx.agentId} type=${entry.descriptor.type}`);
         entry.running = true;
         entry.agent.start();
     }
@@ -635,7 +740,13 @@ export class AgentSystem {
             woke = await this.wakeEntryIfSleeping(entry);
             const postedAt = Date.now();
             const generatedId = createId();
-            await this.storage.inbox.insert(generatedId, entry.agentId, postedAt, item.type, inboxItemSerialize(item));
+            await this.storage.inbox.insert(
+                generatedId,
+                entry.ctx.agentId,
+                postedAt,
+                item.type,
+                inboxItemSerialize(item)
+            );
             const queued = entry.inbox.post(item, completion, { id: generatedId, postedAt });
 
             if (queued.id !== generatedId) {
@@ -643,7 +754,7 @@ export class AgentSystem {
                 await this.storage.inbox.delete(generatedId);
                 await this.storage.inbox.insert(
                     queued.id,
-                    entry.agentId,
+                    entry.ctx.agentId,
                     queued.postedAt,
                     queued.item.type,
                     inboxItemSerialize(queued.item)
@@ -651,20 +762,20 @@ export class AgentSystem {
             }
         });
         if (woke) {
-            await this.signalLifecycle(entry.agentId, "wake");
+            await this.signalLifecycle(entry.ctx.agentId, "wake");
         }
     }
 
     private async replayPersistedInboxItems(entry: AgentEntry): Promise<void> {
         await entry.lock.inLock(async () => {
-            const rows = await this.storage.inbox.findByAgentId(entry.agentId);
+            const rows = await this.storage.inbox.findByAgentId(entry.ctx.agentId);
             for (const row of rows) {
                 try {
                     const item = inboxItemDeserialize(row.data);
                     entry.inbox.post(item, null, { id: row.id, postedAt: row.postedAt, merge: false });
                 } catch (error) {
                     logger.warn(
-                        { agentId: entry.agentId, inboxItemId: row.id, error },
+                        { agentId: entry.ctx.agentId, inboxItemId: row.id, error },
                         "restore: Dropping invalid persisted inbox row"
                     );
                     await this.storage.inbox.delete(row.id);
@@ -677,12 +788,12 @@ export class AgentSystem {
         if (entry.agent.state.state !== "sleeping") {
             return false;
         }
-        await this.cancelIdleSignal(entry.agentId);
-        await this.cancelPoisonPill(entry.agentId, { descriptor: entry.descriptor });
+        await this.cancelIdleSignal(entry.ctx.agentId);
+        await this.cancelPoisonPill(entry.ctx.agentId, { descriptor: entry.descriptor });
         entry.agent.state.state = "active";
-        await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
-        this.eventBus.emit("agent.woke", { agentId: entry.agentId });
-        logger.debug({ agentId: entry.agentId }, "event: Agent woke from sleep");
+        await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
+        this.eventBus.emit("agent.woke", { agentId: entry.ctx.agentId });
+        logger.debug({ agentId: entry.ctx.agentId }, "event: Agent woke from sleep");
         return true;
     }
 
@@ -825,8 +936,12 @@ export class AgentSystem {
         let descriptor: AgentDescriptor | null = null;
         let state: Awaited<ReturnType<typeof agentStateRead>> = null;
         try {
-            descriptor = await agentDescriptorRead(this.storage, agentId);
-            state = await agentStateRead(this.storage, agentId);
+            const context = await this.contextForAgentId(agentId);
+            if (!context) {
+                return;
+            }
+            descriptor = await agentDescriptorRead(this.storage, context);
+            state = await agentStateRead(this.storage, context);
         } catch (error) {
             logger.warn({ agentId, error }, "error: Poison-pill read failed");
             return;
@@ -840,7 +955,11 @@ export class AgentSystem {
         await this.cancelPoisonPill(agentId, { descriptor });
         state.state = "dead";
         state.updatedAt = Date.now();
-        await agentStateWrite(this.storage, agentId, state);
+        const context = await this.contextForAgentId(agentId);
+        if (!context) {
+            return;
+        }
+        await agentStateWrite(this.storage, context, state);
         await this.storage.inbox.deleteByAgentId(agentId);
         this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
     }
@@ -854,43 +973,45 @@ export class AgentSystem {
                 pending = [];
                 return;
             }
-            await this.cancelIdleSignal(entry.agentId);
-            await this.cancelPoisonPill(entry.agentId, { descriptor: entry.descriptor });
+            await this.cancelIdleSignal(entry.ctx.agentId);
+            await this.cancelPoisonPill(entry.ctx.agentId, { descriptor: entry.descriptor });
             entry.agent.state.state = "dead";
             entry.agent.state.updatedAt = Date.now();
-            await agentStateWrite(this.storage, entry.agentId, entry.agent.state);
+            await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
             pending = entry.inbox.drainPending();
-            await this.storage.inbox.deleteByAgentId(entry.agentId);
+            await this.storage.inbox.deleteByAgentId(entry.ctx.agentId);
             changed = true;
         });
         if (!changed) {
             return;
         }
         entry.running = false;
-        this.entries.delete(entry.agentId);
-        const key = agentDescriptorCacheKey(entry.descriptor);
+        this.entries.delete(entry.ctx.agentId);
+        const key = agentCacheKeyForCtx(entry.ctx, entry.descriptor);
         this.keyMap.delete(key);
-        const deadError = deadErrorBuild(entry.agentId);
+        const deadError = deadErrorBuild(entry.ctx.agentId);
         for (const queued of pending) {
             queued.completion?.reject(deadError);
         }
-        this.eventBus.emit("agent.dead", { agentId: entry.agentId, reason });
+        this.eventBus.emit("agent.dead", { agentId: entry.ctx.agentId, reason });
     }
 
     private async restoreAgent(agentId: string, options?: { allowSleeping?: boolean }): Promise<AgentEntry | null> {
         let descriptor: AgentDescriptor | null = null;
         let state: Awaited<ReturnType<typeof agentStateRead>> = null;
-        let recordUserId = "";
+        let ctx: Context | null = null;
         try {
-            descriptor = await agentDescriptorRead(this.storage, agentId);
-            state = await agentStateRead(this.storage, agentId);
-            const record = await this.storage.agents.findById(agentId);
-            recordUserId = record?.userId ?? "";
+            ctx = await this.contextForAgentId(agentId);
+            if (!ctx) {
+                return null;
+            }
+            descriptor = await agentDescriptorRead(this.storage, ctx);
+            state = await agentStateRead(this.storage, ctx);
         } catch (error) {
             logger.warn({ agentId, error }, "error: Agent restore failed due to invalid persisted data");
             return null;
         }
-        if (!descriptor || !state || !recordUserId) {
+        if (!descriptor || !state || !ctx) {
             return null;
         }
         if (state.state === "dead") {
@@ -900,11 +1021,10 @@ export class AgentSystem {
             return null;
         }
         const inbox = new AgentInbox(agentId);
-        const userHome = this.userHomeForUserId(recordUserId);
-        const agent = Agent.restore(agentId, recordUserId, descriptor, state, inbox, this, userHome);
+        const userHome = this.userHomeForCtx(ctx);
+        const agent = Agent.restore(ctx, descriptor, state, inbox, this, userHome);
         const entry = this.registerEntry({
-            agentId,
-            userId: recordUserId,
+            ctx,
             descriptor,
             agent,
             inbox
@@ -915,23 +1035,33 @@ export class AgentSystem {
         return entry;
     }
 
-    private async resolveUserIdForDescriptor(descriptor: AgentDescriptor): Promise<string> {
+    private async resolveUserIdForDescriptor(ctx: Context, descriptor: AgentDescriptor): Promise<string> {
         if (descriptor.type === "user") {
             const connectorKey = userConnectorKeyCreate(descriptor.connector, descriptor.userId);
             return this.resolveUserIdForConnectorKey(connectorKey);
         }
-        if (descriptor.type === "subagent" || descriptor.type === "app") {
+        if (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search") {
             const parent = await this.contextForAgentId(descriptor.parentAgentId);
             if (parent) {
                 return parent.userId;
             }
-            return this.ownerUserIdEnsure();
+            throw new Error("Parent agent not found");
+        }
+        if (descriptor.type === "memory-agent") {
+            const source = await this.contextForAgentId(descriptor.id);
+            if (source) {
+                return source.userId;
+            }
+            throw new Error("Source agent not found for memory-agent");
         }
         // Subuser gateway agents belong to the subuser — descriptor.id IS the subuser's userId
         if (descriptor.type === "subuser") {
             return descriptor.id;
         }
-        return this.ownerUserIdEnsure();
+        if (descriptor.type === "system" || descriptor.type === "cron" || descriptor.type === "permanent") {
+            return ctx.userId;
+        }
+        throw new Error("Cannot resolve user for descriptor");
     }
 
     private async resolveUserIdForConnectorKey(connectorKey: string): Promise<string> {
@@ -942,15 +1072,15 @@ export class AgentSystem {
                 return userId;
             }
         } catch (error) {
-            logger.warn({ connectorKey, error }, "warn: Failed to resolve connector user; falling back to owner");
+            logger.warn({ connectorKey, error }, "warn: Failed to resolve connector user");
         }
-        return this.ownerUserIdEnsure();
+        throw new Error("User not found for connector key");
     }
 
-    async ownerUserIdEnsure(): Promise<string> {
+    async ownerCtxEnsure(): Promise<Context> {
         const owner = await this.storage.users.findOwner();
         if (owner) {
-            return owner.id;
+            return contextForUser({ userId: owner.id });
         }
         const now = Date.now();
         const ownerId = createId();
@@ -961,11 +1091,11 @@ export class AgentSystem {
                 createdAt: now,
                 updatedAt: now
             });
-            return ownerId;
+            return contextForUser({ userId: ownerId });
         } catch {
             const recovered = await this.storage.users.findOwner();
             if (recovered) {
-                return recovered.id;
+                return contextForUser({ userId: recovered.id });
             }
             throw new Error("Failed to resolve owner user");
         }
@@ -977,6 +1107,14 @@ export class AgentSystem {
      */
     userHomeForUserId(userId: string): UserHome {
         return new UserHome(this.config.current.usersDir, userId);
+    }
+
+    /**
+     * Resolves a UserHome facade from caller context.
+     * Expects: ctx.userId belongs to an existing or soon-to-be-created runtime user.
+     */
+    userHomeForCtx(ctx: Context): UserHome {
+        return this.userHomeForUserId(ctx.userId);
     }
 
     private createCompletion(): {
@@ -1004,6 +1142,10 @@ export class AgentSystem {
 
 function lifecycleSignalTypeBuild(agentId: string, state: "wake" | "sleep" | "idle" | "poison-pill"): string {
     return `agent:${agentId}:${state}`;
+}
+
+function agentCacheKeyForCtx(ctx: Context, descriptor: AgentDescriptor): string {
+    return `${ctx.userId}:${agentDescriptorCacheKey(descriptor)}`;
 }
 
 function parsePoisonPillAgentId(signalType: string): string | null {

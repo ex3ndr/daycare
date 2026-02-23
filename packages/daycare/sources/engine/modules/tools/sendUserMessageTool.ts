@@ -55,16 +55,27 @@ export function sendUserMessageToolBuild(): ToolDefinition {
                 descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
                     ? descriptor.parentAgentId
                     : undefined;
-            const resolvedTarget = targetAgentId ?? toolContext.agentSystem.agentFor("most-recent-foreground");
+            const agentFor = toolContext.agentSystem.agentFor as unknown as (...args: unknown[]) => string | null;
+            const resolvedTarget =
+                targetAgentId ??
+                (toolContext.ctx
+                    ? agentFor(toolContext.ctx, "most-recent-foreground")
+                    : agentFor("most-recent-foreground"));
             if (!resolvedTarget) {
                 throw new Error("No foreground agent found to deliver the message.");
             }
 
             const wrappedText = messageBuildUserFacing(payload.text, origin);
-            await toolContext.agentSystem.post(
-                { agentId: resolvedTarget },
-                { type: "system_message", text: wrappedText, origin }
-            );
+            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
+            if (toolContext.ctx) {
+                await postFn(
+                    toolContext.ctx,
+                    { agentId: resolvedTarget },
+                    { type: "system_message", text: wrappedText, origin }
+                );
+            } else {
+                await postFn({ agentId: resolvedTarget }, { type: "system_message", text: wrappedText, origin });
+            }
 
             const summary = "Message queued for user delivery.";
             const toolMessage: ToolResultMessage = {
