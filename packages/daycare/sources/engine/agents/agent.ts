@@ -487,8 +487,7 @@ export class Agent {
         const toolResolver = this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
         const visibleTools = toolResolver.listToolsForAgent({
-            userId: this.ctx.userId,
-            agentId: this.id,
+            ctx: this.ctx,
             descriptor: this.descriptor
         });
         const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);
@@ -1216,8 +1215,7 @@ export class Agent {
         }
     ): Promise<InferenceContext["tools"]> {
         const tools = toolResolver.listToolsForAgent({
-            userId: this.ctx.userId,
-            agentId: this.id,
+            ctx: this.ctx,
             descriptor: this.descriptor
         });
         const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);

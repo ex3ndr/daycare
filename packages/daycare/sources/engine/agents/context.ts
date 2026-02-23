@@ -8,13 +8,10 @@ export class Context {
     readonly userId: string;
     readonly hasAgentId?: boolean;
 
-    constructor(input: { userId: string; agentId?: string });
-    constructor(agentId: string, userId: string);
-    constructor(inputOrAgentId: { userId: string; agentId?: string } | string, userId?: string) {
-        const normalized =
-            typeof inputOrAgentId === "string" ? { userId: userId ?? "", agentId: inputOrAgentId } : inputOrAgentId;
-        this.userId = normalized.userId;
-        contextAgentIds.set(this, normalized.agentId ?? null);
+    constructor(input: { userId: string; agentId?: string }) {
+        this.userId = requiredId(input.userId, "Context userId");
+        const agentId = input.agentId === undefined ? null : requiredId(input.agentId, "Context agentId");
+        contextAgentIds.set(this, agentId);
         Object.defineProperty(this, "hasAgentId", {
             configurable: false,
             enumerable: true,
@@ -47,4 +44,12 @@ export function contextForUser(input: { userId: string }): Context {
  */
 export function contextForAgent(input: { userId: string; agentId: string }): Context {
     return new Context({ userId: input.userId, agentId: input.agentId });
+}
+
+function requiredId(value: string, field: string): string {
+    const normalized = value.trim();
+    if (!normalized) {
+        throw new Error(`${field} is required.`);
+    }
+    return normalized;
 }

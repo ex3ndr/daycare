@@ -233,19 +233,7 @@ export class AgentSystem {
         }
     }
 
-    async post(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<void>;
-    async post(target: AgentPostTarget, item: AgentInboxItem): Promise<void>;
-    async post(
-        ctxOrTarget: Context | AgentPostTarget,
-        targetOrItem: AgentPostTarget | AgentInboxItem,
-        maybeItem?: AgentInboxItem
-    ): Promise<void> {
-        const ctx =
-            maybeItem === undefined
-                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
-                : (ctxOrTarget as Context);
-        const target = (maybeItem === undefined ? ctxOrTarget : targetOrItem) as AgentPostTarget;
-        const item = (maybeItem === undefined ? targetOrItem : maybeItem) as AgentInboxItem;
+    async post(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<void> {
         if (this.stage === "idle" && (item.type === "message" || item.type === "system_message")) {
             const agentType = "descriptor" in target ? target.descriptor.type : "agent";
             logger.warn({ agentType }, "load: AgentSystem received message before load");
@@ -258,19 +246,7 @@ export class AgentSystem {
         this.startEntryIfRunning(entry);
     }
 
-    async postAndAwait(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult>;
-    async postAndAwait(target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult>;
-    async postAndAwait(
-        ctxOrTarget: Context | AgentPostTarget,
-        targetOrItem: AgentPostTarget | AgentInboxItem,
-        maybeItem?: AgentInboxItem
-    ): Promise<AgentInboxResult> {
-        const ctx =
-            maybeItem === undefined
-                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
-                : (ctxOrTarget as Context);
-        const target = (maybeItem === undefined ? ctxOrTarget : targetOrItem) as AgentPostTarget;
-        const item = (maybeItem === undefined ? targetOrItem : maybeItem) as AgentInboxItem;
+    async postAndAwait(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult> {
         const entry = await this.resolveEntry(ctx, target, item);
         const completion = this.createCompletion();
         await this.enqueueEntry(entry, item, completion.completion);
@@ -282,14 +258,7 @@ export class AgentSystem {
      * Resolves a target to its concrete agent id, creating/restoring when needed.
      * Expects: descriptor targets are valid for agent creation.
      */
-    async agentIdForTarget(ctx: Context, target: AgentPostTarget): Promise<string>;
-    async agentIdForTarget(target: AgentPostTarget): Promise<string>;
-    async agentIdForTarget(ctxOrTarget: Context | AgentPostTarget, maybeTarget?: AgentPostTarget): Promise<string> {
-        const ctx =
-            maybeTarget === undefined
-                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
-                : (ctxOrTarget as Context);
-        const target = (maybeTarget === undefined ? ctxOrTarget : maybeTarget) as AgentPostTarget;
+    async agentIdForTarget(ctx: Context, target: AgentPostTarget): Promise<string> {
         const entry = await this.resolveEntry(ctx, target, {
             type: "message",
             message: { text: null },
@@ -298,17 +267,7 @@ export class AgentSystem {
         return entry.ctx.agentId;
     }
 
-    async tokensForTarget(ctx: Context, target: AgentPostTarget): Promise<AgentTokenEntry | null>;
-    async tokensForTarget(target: AgentPostTarget): Promise<AgentTokenEntry | null>;
-    async tokensForTarget(
-        ctxOrTarget: Context | AgentPostTarget,
-        maybeTarget?: AgentPostTarget
-    ): Promise<AgentTokenEntry | null> {
-        const ctx =
-            maybeTarget === undefined
-                ? await this.postContextResolve(ctxOrTarget as AgentPostTarget)
-                : (ctxOrTarget as Context);
-        const target = (maybeTarget === undefined ? ctxOrTarget : maybeTarget) as AgentPostTarget;
+    async tokensForTarget(ctx: Context, target: AgentPostTarget): Promise<AgentTokenEntry | null> {
         const entry = await this.resolveEntry(ctx, target, {
             type: "message",
             message: { text: null },
@@ -398,17 +357,7 @@ export class AgentSystem {
      * The current tool completes but remaining queued tools are cancelled.
      * Wakes the agent if sleeping.
      */
-    async steer(ctx: Context, agentId: string, steering: AgentInboxSteering): Promise<void>;
-    async steer(agentId: string, steering: AgentInboxSteering): Promise<void>;
-    async steer(
-        ctxOrAgentId: Context | string,
-        agentIdOrSteering: string | AgentInboxSteering,
-        maybeSteering?: AgentInboxSteering
-    ): Promise<void> {
-        const ctx =
-            typeof ctxOrAgentId === "string" ? await this.postContextResolve({ agentId: ctxOrAgentId }) : ctxOrAgentId;
-        const agentId = (typeof ctxOrAgentId === "string" ? ctxOrAgentId : agentIdOrSteering) as string;
-        const steering = (typeof ctxOrAgentId === "string" ? agentIdOrSteering : maybeSteering) as AgentInboxSteering;
+    async steer(ctx: Context, agentId: string, steering: AgentInboxSteering): Promise<void> {
         const entry = this.entries.get(agentId);
         if (!entry) {
             throw new Error(`Agent not found: ${agentId}`);
@@ -494,16 +443,9 @@ export class AgentSystem {
         }
     }
 
-    agentFor(ctx: Context, strategy: AgentFetchStrategy): string | null;
-    agentFor(strategy: AgentFetchStrategy): string | null;
-    agentFor(ctxOrStrategy: Context | AgentFetchStrategy, maybeStrategy?: AgentFetchStrategy): string | null {
-        const ctx = typeof ctxOrStrategy === "string" ? null : ctxOrStrategy;
-        const strategy = (typeof ctxOrStrategy === "string" ? ctxOrStrategy : maybeStrategy) as AgentFetchStrategy;
+    agentFor(ctx: Context, strategy: AgentFetchStrategy): string | null {
         const candidates = Array.from(this.entries.values()).filter((entry) => {
-            return (
-                (ctx === null || entry.ctx.userId === ctx.userId) &&
-                agentDescriptorMatchesStrategy(entry.descriptor, strategy)
-            );
+            return entry.ctx.userId === ctx.userId && agentDescriptorMatchesStrategy(entry.descriptor, strategy);
         });
         if (candidates.length === 0) {
             return null;
@@ -572,25 +514,6 @@ export class AgentSystem {
 
     async deleteInboxItem(id: string): Promise<void> {
         await this.storage.inbox.delete(id);
-    }
-
-    private async postContextResolve(target: AgentPostTarget): Promise<Context> {
-        if ("agentId" in target) {
-            const context = await this.contextForAgentId(target.agentId);
-            if (context) {
-                return context;
-            }
-            return contextForUser({ userId: "owner" });
-        }
-        if (target.descriptor.type === "user") {
-            const connectorKey = userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId);
-            const userId = await this.resolveUserIdForConnectorKey(connectorKey);
-            return contextForUser({ userId });
-        }
-        if (target.descriptor.type === "subuser") {
-            return contextForUser({ userId: target.descriptor.id });
-        }
-        return contextForUser({ userId: "owner" });
     }
 
     private findLoadedEntry(target: AgentPostTarget): AgentEntry | null {

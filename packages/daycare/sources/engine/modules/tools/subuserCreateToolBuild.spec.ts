@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import { Storage } from "../../../storage/storage.js";
+import { contextForAgent } from "../../agents/context.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
 
@@ -88,15 +89,13 @@ describe("subuserCreateToolBuild", () => {
         const tool = subuserCreateToolBuild();
         expect(
             tool.visibleByDefault?.({
-                userId: "u1",
-                agentId: "a1",
+                ctx: contextForAgent({ userId: "u1", agentId: "a1" }),
                 descriptor: { type: "subuser", id: "su1", name: "app", systemPrompt: "sp" }
             })
         ).toBe(false);
         expect(
             tool.visibleByDefault?.({
-                userId: "u1",
-                agentId: "a1",
+                ctx: contextForAgent({ userId: "u1", agentId: "a1" }),
                 descriptor: { type: "user", connector: "telegram", userId: "u1", channelId: "c1" }
             })
         ).toBe(true);

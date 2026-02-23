@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import { agentCompactToolBuild } from "./agentCompactTool.js";
 
 const toolCall = { id: "tool-1", name: "agent_compact" };
@@ -8,22 +9,24 @@ const toolCall = { id: "tool-1", name: "agent_compact" };
 describe("agentCompactToolBuild", () => {
     it("posts compact for an existing agent", async () => {
         const agentExists = vi.fn(async () => true);
+        const contextForAgentId = vi.fn(async () => contextForAgent({ userId: "user-1", agentId: "agent-target" }));
         const post = vi.fn(async () => undefined);
         const tool = agentCompactToolBuild();
-        const context = contextBuild({ agentExists, post });
+        const context = contextBuild({ agentExists, contextForAgentId, post });
 
         const result = await tool.execute({ agentId: "agent-target" }, context, toolCall);
 
         expect(agentExists).toHaveBeenCalledWith("agent-target");
-        expect(post).toHaveBeenCalledWith({ agentId: "agent-target" }, { type: "compact" });
+        expect(post).toHaveBeenCalledWith(context.ctx, { agentId: "agent-target" }, { type: "compact" });
         expect(result.typedResult.targetAgentId).toBe("agent-target");
     });
 
     it("throws when target agent does not exist", async () => {
         const agentExists = vi.fn(async () => false);
+        const contextForAgentId = vi.fn(async () => null);
         const post = vi.fn(async () => undefined);
         const tool = agentCompactToolBuild();
-        const context = contextBuild({ agentExists, post });
+        const context = contextBuild({ agentExists, contextForAgentId, post });
 
         await expect(tool.execute({ agentId: "missing-agent" }, context, toolCall)).rejects.toThrow(
             "Agent not found: missing-agent"
@@ -33,9 +36,10 @@ describe("agentCompactToolBuild", () => {
 
     it("throws when attempting to compact the current agent", async () => {
         const agentExists = vi.fn(async () => true);
+        const contextForAgentId = vi.fn(async () => contextForAgent({ userId: "user-1", agentId: "agent-source" }));
         const post = vi.fn(async () => undefined);
         const tool = agentCompactToolBuild();
-        const context = contextBuild({ agentExists, post });
+        const context = contextBuild({ agentExists, contextForAgentId, post });
 
         await expect(tool.execute({ agentId: "agent-source" }, context, toolCall)).rejects.toThrow(
             "Cannot compact the current agent."
@@ -47,7 +51,8 @@ describe("agentCompactToolBuild", () => {
 
 function contextBuild(agentSystem: {
     agentExists: (agentId: string) => Promise<boolean>;
-    post: (target: unknown, item: unknown) => Promise<void>;
+    contextForAgentId: (agentId: string) => Promise<unknown>;
+    post: (ctx: unknown, target: unknown, item: unknown) => Promise<void>;
 }): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -60,7 +65,7 @@ function contextBuild(agentSystem: {
             writeDirs: ["/tmp"]
         },
         agent: { id: "agent-source" } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId: "user-1", agentId: "agent-source" }),
         source: "test",
         messageContext: {},
         agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"],

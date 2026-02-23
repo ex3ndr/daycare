@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import { sendUserMessageToolBuild } from "./sendUserMessageTool.js";
 
 const toolCall = { id: "tool-1", name: "send_user_message" };
@@ -18,6 +19,7 @@ describe("sendUserMessageToolBuild", () => {
         const result = await tool.execute({ text: "task done" }, ctx, toolCall);
 
         expect(post).toHaveBeenCalledWith(
+            ctx.ctx,
             { agentId: "fg-1" },
             {
                 type: "system_message",
@@ -40,7 +42,11 @@ describe("sendUserMessageToolBuild", () => {
 
         await tool.execute({ text: "hello user" }, ctx, toolCall);
 
-        expect(post).toHaveBeenCalledWith({ agentId: "fg-main" }, expect.objectContaining({ type: "system_message" }));
+        expect(post).toHaveBeenCalledWith(
+            ctx.ctx,
+            { agentId: "fg-main" },
+            expect.objectContaining({ type: "system_message" })
+        );
     });
 
     it("throws when no foreground agent is found", async () => {
@@ -76,12 +82,12 @@ function contextBuild(opts: {
             id: opts.agentId,
             descriptor: opts.descriptor
         } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId: "user-1", agentId: opts.agentId }),
         source: "test",
         messageContext: {},
         agentSystem: {
             post: opts.post,
-            agentFor: () => opts.foregroundAgentId ?? undefined
+            agentFor: (_ctx: unknown) => opts.foregroundAgentId ?? undefined
         } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import { buildStartBackgroundAgentTool } from "./background.js";
 
 const toolCall = { id: "tool-1", name: "start_background_agent" };
@@ -26,6 +27,7 @@ describe("buildStartBackgroundAgentTool", () => {
 
         expect(calls).toEqual(["resolve", "post"]);
         expect(post).toHaveBeenCalledWith(
+            context.ctx,
             { agentId: "agent-123" },
             { type: "message", message: { text: "Do work" }, context: {} }
         );
@@ -44,8 +46,8 @@ function buildPermissions(overrides: Partial<SessionPermissions>): SessionPermis
 function contextBuild(
     permissions: SessionPermissions,
     agentSystem: {
-        agentIdForTarget: (target: unknown) => Promise<string>;
-        post: (target: unknown, item: unknown) => Promise<void>;
+        agentIdForTarget: (ctx: unknown, target: unknown) => Promise<string>;
+        post: (ctx: unknown, target: unknown, item: unknown) => Promise<void>;
     }
 ): ToolExecutionContext {
     return {
@@ -56,7 +58,7 @@ function contextBuild(
         assistant: null,
         permissions,
         agent: { id: "parent-agent" } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId: "user-1", agentId: "parent-agent" }),
         source: "test",
         messageContext: {},
         agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"],

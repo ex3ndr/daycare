@@ -53,27 +53,19 @@ export function agentResetToolBuild(): ToolDefinition {
             if (!exists) {
                 throw new Error(`Agent not found: ${targetAgentId}`);
             }
-            const targetCtx =
-                typeof toolContext.agentSystem.contextForAgentId === "function"
-                    ? await toolContext.agentSystem.contextForAgentId(targetAgentId)
-                    : { userId: toolContext.ctx?.userId ?? "owner", agentId: targetAgentId };
-            if (!targetCtx || (toolContext.ctx && targetCtx.userId !== toolContext.ctx.userId)) {
+            const targetCtx = await toolContext.agentSystem.contextForAgentId(targetAgentId);
+            if (!targetCtx || targetCtx.userId !== toolContext.ctx.userId) {
                 throw new Error(`Agent not found: ${targetAgentId}`);
             }
             const message = payload.message?.trim();
             if (payload.message !== undefined && !message) {
                 throw new Error("message must be non-empty when provided.");
             }
-            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
-            if (toolContext.ctx) {
-                await postFn(
-                    toolContext.ctx,
-                    { agentId: targetAgentId },
-                    message ? { type: "reset", message } : { type: "reset" }
-                );
-            } else {
-                await postFn({ agentId: targetAgentId }, message ? { type: "reset", message } : { type: "reset" });
-            }
+            await toolContext.agentSystem.post(
+                toolContext.ctx,
+                { agentId: targetAgentId },
+                message ? { type: "reset", message } : { type: "reset" }
+            );
 
             const summary = `Agent reset requested: ${targetAgentId}.`;
             const toolMessage: ToolResultMessage = {

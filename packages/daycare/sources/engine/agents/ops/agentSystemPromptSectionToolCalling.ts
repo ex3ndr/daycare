@@ -11,7 +11,7 @@ import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlis
  * Renders tool-calling guidance and concatenates optional no-tools enforcement text.
  * Expects: context matches agentSystemPrompt input shape.
  */
-export async function agentSystemPromptSectionToolCalling(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPromptSectionToolCalling(context: AgentSystemPromptContext): Promise<string> {
     const config = context.agentSystem?.config?.current;
     const availableTools = toolListVisibleResolve(context);
     const filteredTools = toolListAllowlistApply(availableTools, context);
@@ -33,13 +33,9 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
     if (!toolResolver) {
         return [];
     }
-    const visibilityCtx =
-        context.ctx ??
-        (context.userId && context.agentId ? { userId: context.userId, agentId: context.agentId } : null);
-    if (context.descriptor && visibilityCtx) {
+    if (context.descriptor) {
         return toolResolver.listToolsForAgent({
-            userId: visibilityCtx.userId,
-            agentId: visibilityCtx.agentId,
+            ctx: context.ctx,
             descriptor: context.descriptor
         });
     }

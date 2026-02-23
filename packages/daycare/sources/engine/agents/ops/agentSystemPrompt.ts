@@ -21,7 +21,7 @@ export type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Builds the system prompt by concatenating deterministic rendered sections.
  * Expects: section templates exist under engine/prompts.
  */
-export async function agentSystemPrompt(context: AgentSystemPromptContext = {}): Promise<string> {
+export async function agentSystemPrompt(context: AgentSystemPromptContext): Promise<string> {
     const agentPromptSection = context.descriptor
         ? await agentPromptResolve(context.descriptor)
         : { agentPrompt: "", replaceSystemPrompt: false };

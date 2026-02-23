@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contextForAgent } from "../../agents/context.js";
 import type { InferenceRouter } from "../inference/router.js";
 import { agentModelSetToolBuild } from "./agentModelSetToolBuild.js";
 
@@ -15,8 +16,7 @@ describe("agentModelSetToolBuild", () => {
     it("is visible only to user (foreground) agents", () => {
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "user", connector: "telegram", userId: "user-1", channelId: "channel-1" }
             })
         ).toBe(true);
@@ -25,8 +25,7 @@ describe("agentModelSetToolBuild", () => {
     it("is not visible to subagent descriptors", () => {
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "subagent", id: "sub-1", parentAgentId: "parent-1", name: "sub" }
             })
         ).toBe(false);
@@ -35,8 +34,7 @@ describe("agentModelSetToolBuild", () => {
     it("is not visible to permanent agent descriptors", () => {
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: {
                     type: "permanent",
                     id: "perm-1",
@@ -51,8 +49,7 @@ describe("agentModelSetToolBuild", () => {
     it("is not visible to cron descriptors", () => {
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "cron", id: "cron-1" }
             })
         ).toBe(false);

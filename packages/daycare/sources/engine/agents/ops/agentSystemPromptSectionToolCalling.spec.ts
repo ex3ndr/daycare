@@ -1,5 +1,6 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
+import { contextForAgent } from "../context.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentSystemPromptSectionToolCalling } from "./agentSystemPromptSectionToolCalling.js";
 
@@ -18,8 +19,7 @@ function buildMockTools(): Tool[] {
 function buildContext(overrides: Partial<AgentSystemPromptContext> = {}): AgentSystemPromptContext {
     const tools = buildMockTools();
     return {
-        userId: "user-1",
-        agentId: "agent-1",
+        ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         agentSystem: {
             config: {
                 current: {

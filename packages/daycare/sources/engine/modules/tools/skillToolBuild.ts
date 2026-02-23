@@ -87,31 +87,18 @@ export function skillToolBuild(): ToolDefinition {
                     parentAgentId: toolContext.agent.id,
                     name: skillSource
                 };
-                const agentIdForTarget = toolContext.agentSystem.agentIdForTarget as unknown as (
-                    ...args: unknown[]
-                ) => Promise<string>;
-                const agentId = toolContext.ctx
-                    ? await agentIdForTarget(toolContext.ctx, { descriptor })
-                    : await agentIdForTarget({ descriptor });
+                const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { descriptor });
 
                 const sandboxPrompt = skillSandboxPromptBuild(skillBody, prompt);
-                const postAndAwait = toolContext.agentSystem.postAndAwait as unknown as (
-                    ...args: unknown[]
-                ) => Promise<{ responseText?: string | null; type?: string }>;
-                const result = toolContext.ctx
-                    ? await postAndAwait(
-                          toolContext.ctx,
-                          { agentId },
-                          {
-                              type: "message",
-                              message: { text: sandboxPrompt },
-                              context: {}
-                          }
-                      )
-                    : await postAndAwait(
-                          { agentId },
-                          { type: "message", message: { text: sandboxPrompt }, context: {} }
-                      );
+                const result = await toolContext.agentSystem.postAndAwait(
+                    toolContext.ctx,
+                    { agentId },
+                    {
+                        type: "message",
+                        message: { text: sandboxPrompt },
+                        context: {}
+                    }
+                );
                 const responseText = "responseText" in result ? result.responseText : null;
                 const body =
                     responseText && responseText.trim().length > 0 ? responseText.trim() : "No response text returned.";

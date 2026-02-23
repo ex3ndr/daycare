@@ -6,6 +6,7 @@ import type { Context } from "@/types";
 
 import { configResolve } from "../../config/configResolve.js";
 import { Storage } from "../../storage/storage.js";
+import { contextForAgent } from "../agents/context.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Crons, type CronsOptions } from "./crons.js";
 
@@ -99,6 +100,7 @@ describe("Crons", () => {
             );
 
             expect(agentSystemMock.postAndAwait).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1", hasAgentId: false }),
                 { descriptor: { type: "system", tag: "cron" } },
                 expect.objectContaining({
                     type: "system_message",
@@ -114,8 +116,5 @@ describe("Crons", () => {
 });
 
 function contextBuild(userId: string): Context {
-    return {
-        agentId: "agent-1",
-        userId
-    };
+    return contextForAgent({ userId, agentId: "agent-1" });
 }

@@ -3,9 +3,19 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
-import type { AgentDescriptor, AgentState, Connector, Signal } from "@/types";
+import type {
+    AgentDescriptor,
+    AgentInboxItem,
+    AgentInboxResult,
+    AgentPostTarget,
+    AgentState,
+    Connector,
+    Context,
+    Signal
+} from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -19,6 +29,7 @@ import { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
 import { Agent } from "./agent.js";
 import { AgentSystem } from "./agentSystem.js";
+import { contextForUser } from "./context.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
@@ -108,7 +119,8 @@ describe("Agent", () => {
                 channelId: "channel-1",
                 userId: "user-1"
             };
-            const result = await agentSystem.postAndAwait(
+            const result = await postAndAwait(
+                agentSystem,
                 { descriptor },
                 {
                     type: "reset",
@@ -154,12 +166,12 @@ describe("Agent", () => {
                 id: createId(),
                 name: "Reset Session Agent"
             };
-            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "first reset" });
-            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "first reset" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const firstState = await agentStateRead(config, agentId);
             expect(firstState?.inferenceSessionId).toBeTruthy();
 
-            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "second reset" });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "second reset" });
             const secondState = await agentStateRead(config, agentId);
             expect(secondState?.inferenceSessionId).toBeTruthy();
             expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
@@ -200,7 +212,8 @@ describe("Agent", () => {
                 id: createId(),
                 name: "Executable prompt cron"
             };
-            await agentSystem.postAndAwait(
+            await postAndAwait(
+                agentSystem,
                 { descriptor },
                 {
                     type: "system_message",
@@ -210,7 +223,7 @@ describe("Agent", () => {
                 }
             );
 
-            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const history = await agentHistoryLoadAll(config, agentId);
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
@@ -255,7 +268,8 @@ describe("Agent", () => {
                 id: createId(),
                 name: "Executable prompt cron"
             };
-            await agentSystem.postAndAwait(
+            await postAndAwait(
+                agentSystem,
                 { descriptor },
                 {
                     type: "system_message",
@@ -265,7 +279,7 @@ describe("Agent", () => {
                 }
             );
 
-            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const history = await agentHistoryLoadAll(config, agentId);
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
@@ -311,7 +325,8 @@ describe("Agent", () => {
                 id: createId(),
                 name: "Executable prompt cron"
             };
-            await agentSystem.postAndAwait(
+            await postAndAwait(
+                agentSystem,
                 { descriptor },
                 {
                     type: "system_message",
@@ -321,7 +336,7 @@ describe("Agent", () => {
                 }
             );
 
-            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const history = await agentHistoryLoadAll(config, agentId);
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
@@ -409,11 +424,12 @@ describe("Agent", () => {
                 userId: "user-1"
             };
 
-            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "seed context" });
-            const agentId = await agentSystem.agentIdForTarget({ descriptor });
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "seed context" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const beforeCompaction = await agentStateRead(config, agentId);
             expect(beforeCompaction?.inferenceSessionId).toBeTruthy();
-            const result = await agentSystem.postAndAwait(
+            const result = await postAndAwait(
+                agentSystem,
                 { descriptor },
                 { type: "compact", context: { messageId: "88" } }
             );
@@ -515,8 +531,9 @@ describe("Agent", () => {
                 userId: "user-1"
             };
 
-            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "seed context" });
-            const result = await agentSystem.postAndAwait(
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "seed context" });
+            const result = await postAndAwait(
+                agentSystem,
                 { descriptor },
                 { type: "compact", context: { messageId: "89" } }
             );
@@ -563,7 +580,7 @@ describe("Agent", () => {
 
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
-            await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
+            await post(agentSystem, { descriptor }, { type: "reset", message: "init" });
             const ctx = await agentSystem.contextForAgentId(agentId);
             if (!ctx) {
                 throw new Error("Missing agent context");
@@ -577,7 +594,7 @@ describe("Agent", () => {
             await signals.unsubscribe({ ctx: { userId: ctx.userId, agentId }, pattern: "build:*:done" });
 
             await agentSystem.start();
-            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "flush queue" });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
             const history = await agentHistoryLoad(config, agentId);
             expect(historyHasSignalText(history)).toBe(false);
@@ -616,7 +633,7 @@ describe("Agent", () => {
 
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
-            await agentSystem.post({ descriptor }, { type: "reset", message: "init" });
+            await post(agentSystem, { descriptor }, { type: "reset", message: "init" });
             const ctx = await agentSystem.contextForAgentId(agentId);
             if (!ctx) {
                 throw new Error("Missing agent context");
@@ -635,7 +652,7 @@ describe("Agent", () => {
             });
 
             await agentSystem.start();
-            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "flush queue" });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
             const history = await agentHistoryLoadAll(config, agentId);
             expect(historyHasSignalText(history)).toBe(true);
@@ -674,11 +691,13 @@ describe("Agent", () => {
 
             const sourceAgentId = createId();
             const peerAgentId = createId();
-            await agentSystem.post(
+            await post(
+                agentSystem,
                 { descriptor: { type: "cron", id: sourceAgentId, name: "Source agent" } },
                 { type: "reset", message: "init source" }
             );
-            await agentSystem.post(
+            await post(
+                agentSystem,
                 { descriptor: { type: "cron", id: peerAgentId, name: "Peer agent" } },
                 { type: "reset", message: "init peer" }
             );
@@ -708,11 +727,12 @@ describe("Agent", () => {
             });
 
             await agentSystem.start();
-            await agentSystem.postAndAwait(
+            await postAndAwait(
+                agentSystem,
                 { agentId: sourceAgentId },
                 { type: "reset", message: "flush source queue" }
             );
-            await agentSystem.postAndAwait({ agentId: peerAgentId }, { type: "reset", message: "flush peer queue" });
+            await postAndAwait(agentSystem, { agentId: peerAgentId }, { type: "reset", message: "flush peer queue" });
 
             const sourceHistory = await agentHistoryLoadAll(config, sourceAgentId);
             expect(historyHasSignalText(sourceHistory)).toBe(false);
@@ -762,8 +782,8 @@ describe("Agent", () => {
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Lifecycle agent" };
 
-            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init lifecycle" });
-            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "wake lifecycle" });
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init lifecycle" });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "wake lifecycle" });
 
             unsubscribe();
 
@@ -815,7 +835,7 @@ describe("Agent", () => {
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Idle agent" };
 
-            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init idle lifecycle" });
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init idle lifecycle" });
 
             await vi.advanceTimersByTimeAsync(59_000);
             expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
@@ -865,7 +885,7 @@ describe("Agent", () => {
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
 
-            await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "initial sleep" });
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "initial sleep" });
             const signalType = `agent:${agentId}:idle`;
             const firstIdle = delayedSignals.list().find((entry) => entry.type === signalType);
             expect(firstIdle).toBeTruthy();
@@ -873,7 +893,7 @@ describe("Agent", () => {
 
             await vi.advanceTimersByTimeAsync(30_000);
 
-            await agentSystem.postAndAwait({ agentId }, { type: "reset", message: "wake before idle deadline" });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "wake before idle deadline" });
 
             const idleSignals = delayedSignals.list().filter((entry) => entry.type === signalType);
             expect(idleSignals).toHaveLength(1);
@@ -1004,6 +1024,69 @@ describe("Agent", () => {
         }
     });
 });
+
+async function postAndAwait(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    targetOrItem: AgentPostTarget | AgentInboxItem,
+    maybeItem?: AgentInboxItem
+): Promise<AgentInboxResult> {
+    if (maybeItem) {
+        return agentSystem.postAndAwait(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    return agentSystem.postAndAwait(
+        await callerCtxResolve(agentSystem, target),
+        target,
+        targetOrItem as AgentInboxItem
+    );
+}
+
+async function post(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    targetOrItem: AgentPostTarget | AgentInboxItem,
+    maybeItem?: AgentInboxItem
+): Promise<void> {
+    if (maybeItem) {
+        await agentSystem.post(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        return;
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    await agentSystem.post(await callerCtxResolve(agentSystem, target), target, targetOrItem as AgentInboxItem);
+}
+
+async function agentIdForTarget(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    maybeTarget?: AgentPostTarget
+): Promise<string> {
+    if (maybeTarget) {
+        return agentSystem.agentIdForTarget(ctxOrTarget as Context, maybeTarget);
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    return agentSystem.agentIdForTarget(await callerCtxResolve(agentSystem, target), target);
+}
+
+async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarget): Promise<Context> {
+    if ("agentId" in target) {
+        const targetCtx = await agentSystem.contextForAgentId(target.agentId);
+        if (!targetCtx) {
+            throw new Error(`Agent not found: ${target.agentId}`);
+        }
+        return contextForUser({ userId: targetCtx.userId });
+    }
+    if (target.descriptor.type === "user") {
+        const user = await agentSystem.storage.resolveUserByConnectorKey(
+            userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId)
+        );
+        return contextForUser({ userId: user.id });
+    }
+    if (target.descriptor.type === "subuser") {
+        return contextForUser({ userId: target.descriptor.id });
+    }
+    return agentSystem.ownerCtxEnsure();
+}
 
 function historyHasSignalText(records: Array<{ type: string; text?: string }>): boolean {
     return records.some(

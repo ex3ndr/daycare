@@ -34,7 +34,7 @@ describe("Channels", () => {
             await channels.addMember("dev", { agentId: "agent-bob", userId: "user-1" }, "bob");
             expect(subscribe).toHaveBeenCalledTimes(2);
             expect(subscribe).toHaveBeenCalledWith({
-                ctx: { userId: "user-1", agentId: "agent-alice" },
+                ctx: expect.objectContaining({ userId: "user-1", agentId: "agent-alice" }),
                 pattern: "channel.dev:*",
                 silent: false
             });
@@ -42,7 +42,7 @@ describe("Channels", () => {
             const removed = await channels.removeMember("dev", { agentId: "agent-bob", userId: "user-1" });
             expect(removed).toBe(true);
             expect(unsubscribe).toHaveBeenCalledWith({
-                ctx: { userId: "user-1", agentId: "agent-bob" },
+                ctx: expect.objectContaining({ userId: "user-1", agentId: "agent-bob" }),
                 pattern: "channel.dev:*"
             });
         } finally {
@@ -84,6 +84,7 @@ describe("Channels", () => {
             expect(unaddressed.deliveredAgentIds).toEqual(["agent-leader"]);
             expect(post).toHaveBeenCalledTimes(1);
             expect(post).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1", hasAgentId: false }),
                 { agentId: "agent-leader" },
                 expect.objectContaining({
                     type: "signal",
@@ -150,7 +151,7 @@ describe("Channels", () => {
 
             expect(second.list()).toHaveLength(1);
             expect(subscribe).toHaveBeenCalledWith({
-                ctx: { userId: "user-1", agentId: "agent-a" },
+                ctx: expect.objectContaining({ userId: "user-1", agentId: "agent-a" }),
                 pattern: "channel.ops:*",
                 silent: false
             });

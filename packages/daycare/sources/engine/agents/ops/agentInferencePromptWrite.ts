@@ -26,18 +26,9 @@ export async function agentInferencePromptWrite(
 ): Promise<void>;
 export async function agentInferencePromptWrite(
     config: Config,
-    agentId: string,
-    options: AgentInferencePromptWriteOptions
-): Promise<void>;
-export async function agentInferencePromptWrite(
-    config: Config,
-    ctxOrAgentId: DaycareContext | string,
+    ctx: DaycareContext,
     options: AgentInferencePromptWriteOptions
 ): Promise<void> {
-    const ctx =
-        typeof ctxOrAgentId === "string"
-            ? ({ userId: "owner", agentId: ctxOrAgentId } as DaycareContext)
-            : ctxOrAgentId;
     const { context, sessionId, providersOverride, iteration } = options;
     const at = Date.now();
     const basePath = agentPath(config, ctx);

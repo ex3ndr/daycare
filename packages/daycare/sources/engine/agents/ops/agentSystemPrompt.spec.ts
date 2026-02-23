@@ -4,8 +4,8 @@ import path from "node:path";
 
 import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
-
 import { UserHome } from "../../users/userHome.js";
+import { contextForAgent, contextForUser } from "../context.js";
 import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentSystemPrompt } from "./agentSystemPrompt.js";
@@ -17,6 +17,7 @@ describe("agentSystemPrompt", () => {
         const expected = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
 
         const rendered = await agentSystemPrompt({
+            ctx: contextForUser({ userId: "user-1" }),
             descriptor: { type: "memory-agent", id: "agent-1" }
         });
 
@@ -35,6 +36,7 @@ describe("agentSystemPrompt", () => {
         const expected = resolved.systemPrompt.trim();
 
         const rendered = await agentSystemPrompt({
+            ctx: contextForUser({ userId: "user-1" }),
             descriptor: { type: "system", tag: "architect" }
         });
 
@@ -54,6 +56,7 @@ describe("agentSystemPrompt", () => {
             await writeFile(path.join(userHome.knowledge, "TOOLS.md"), "tools\n", "utf8");
 
             const rendered = await agentSystemPrompt({
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-system-1" }),
                 descriptor: { type: "system", tag: "cron" },
                 userHome,
                 agentSystem: {
@@ -115,6 +118,7 @@ describe("agentSystemPrompt", () => {
             const rendered = await agentSystemPrompt({
                 provider: "openai",
                 model: "gpt-4.1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-user-1" }),
                 permissions: {
                     workingDir: "/tmp/workspace",
                     writeDirs: ["/tmp/workspace"]
@@ -213,8 +217,7 @@ describe("agentSystemPrompt", () => {
             const rendered = await agentSystemPrompt({
                 provider: "openai",
                 model: "gpt-4.1",
-                userId: "user-1",
-                agentId: "agent-runtime-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-runtime-1" }),
                 permissions: {
                     workingDir: "/tmp/workspace",
                     writeDirs: ["/tmp/workspace"]

@@ -74,11 +74,8 @@ export function sessionHistoryToolBuild(): ToolDefinition {
 
             const storage = toolContext.agentSystem.storage;
             const timeRange = sessionHistoryTimeRangeNormalize(payload.fromAt, payload.toAt);
-            const targetCtx =
-                typeof toolContext.agentSystem.contextForAgentId === "function"
-                    ? await toolContext.agentSystem.contextForAgentId(agentId)
-                    : { userId: toolContext.ctx?.userId ?? "owner", agentId };
-            if (!targetCtx || (toolContext.ctx && targetCtx.userId !== toolContext.ctx.userId)) {
+            const targetCtx = await toolContext.agentSystem.contextForAgentId(agentId);
+            if (!targetCtx || targetCtx.userId !== toolContext.ctx.userId) {
                 throw new Error(`Agent session not found: ${agentId}`);
             }
             const descriptor = await agentDescriptorRead(storage, targetCtx);

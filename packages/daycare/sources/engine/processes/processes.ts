@@ -142,14 +142,19 @@ export class Processes {
 
         if (options.repository) {
             this.repository = options.repository;
-            this.fallbackUserIdResolve = async () => "owner";
+            this.fallbackUserIdResolve = async () => {
+                throw new Error("Default process user is not configured.");
+            };
             this.ownedStorage = null;
         } else {
             const storage = Storage.open(path.join(this.baseDir, "daycare.db"));
             this.repository = storage.processes;
             this.fallbackUserIdResolve = async () => {
                 const owner = await storage.users.findOwner();
-                return owner?.id ?? "owner";
+                if (!owner?.id) {
+                    throw new Error("Default process user is not available.");
+                }
+                return owner.id;
             };
             this.ownedStorage = storage;
         }

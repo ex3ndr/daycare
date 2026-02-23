@@ -142,7 +142,7 @@ export class SignalSubscriptionsRepository {
     }
 
     async findMatching(ctx: Context, signalType: string): Promise<SignalSubscriptionDbRecord[]> {
-        const userId = (ctx.userId ?? "").trim();
+        const userId = ctx.userId.trim();
         if (!userId) {
             return [];
         }
@@ -214,8 +214,8 @@ function subscriptionKeyBuild(ctx: Context, pattern: string): string {
 }
 
 function contextKeysNormalize(ctx: Context): { userId: string; agentId: string } | null {
-    const userId = (ctx.userId ?? "").trim();
-    const agentId = (ctx.agentId ?? "").trim();
+    const userId = ctx.userId.trim();
+    const agentId = ctx.agentId.trim();
     if (!userId || !agentId) {
         return null;
     }

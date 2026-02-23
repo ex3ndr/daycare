@@ -7,6 +7,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
+import { contextForAgent } from "../context.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 
 describe("agentInferencePromptWrite", () => {
@@ -26,8 +27,9 @@ describe("agentInferencePromptWrite", () => {
                 ],
                 tools: []
             };
+            const ctx = contextForAgent({ userId: "user-1", agentId });
 
-            await agentInferencePromptWrite(config, agentId, {
+            await agentInferencePromptWrite(config, ctx, {
                 context,
                 sessionId: "session-1",
                 providersOverride: [{ id: "openai", model: "gpt-5-mini" }],

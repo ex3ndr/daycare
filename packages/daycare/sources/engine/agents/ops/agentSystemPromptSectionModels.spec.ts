@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { listProviderModels } from "../../../providers/models.js";
+import { contextForAgent } from "../context.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentSystemPromptSectionModels } from "./agentSystemPromptSectionModels.js";
 
@@ -8,7 +9,9 @@ type AgentSystemPromptAgentSystem = NonNullable<AgentSystemPromptContext["agentS
 
 describe("agentSystemPromptSectionModels", () => {
     it("returns an empty section when agentSystem context is missing", async () => {
-        const section = await agentSystemPromptSectionModels({});
+        const section = await agentSystemPromptSectionModels({
+            ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" })
+        });
         expect(section).toBe("");
     });
 
@@ -57,6 +60,7 @@ function contextBuild(
     modelContext: Pick<AgentSystemPromptContext, "model" | "provider"> = {}
 ): AgentSystemPromptContext {
     return {
+        ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         model: modelContext.model ?? "unknown",
         provider: modelContext.provider ?? "unknown",
         agentSystem: {

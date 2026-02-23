@@ -91,10 +91,7 @@ export function subuserListToolBuild(): ToolDefinition {
 }
 
 async function assertCallerIsOwner(toolContext: ToolExecutionContext): Promise<void> {
-    const userId = toolContext.ctx?.userId;
-    if (!userId) {
-        throw new Error("Tool context userId is required.");
-    }
+    const userId = toolContext.ctx.userId;
     const user = await toolContext.agentSystem.storage.users.findById(userId);
     if (!user || !user.isOwner) {
         throw new Error("Only the owner user can list subusers.");

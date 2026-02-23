@@ -62,18 +62,12 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
                 parentAgentId: toolContext.agent.id,
                 name: payload.name ?? "subagent"
             };
-            const agentIdForTarget = toolContext.agentSystem.agentIdForTarget as unknown as (
-                ...args: unknown[]
-            ) => Promise<string>;
-            const agentId = toolContext.ctx
-                ? await agentIdForTarget(toolContext.ctx, { descriptor })
-                : await agentIdForTarget({ descriptor });
-            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
-            if (toolContext.ctx) {
-                await postFn(toolContext.ctx, { agentId }, { type: "message", message: { text: prompt }, context: {} });
-            } else {
-                await postFn({ agentId }, { type: "message", message: { text: prompt }, context: {} });
-            }
+            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { descriptor });
+            await toolContext.agentSystem.post(
+                toolContext.ctx,
+                { agentId },
+                { type: "message", message: { text: prompt }, context: {} }
+            );
 
             const summary = `Background agent started: ${agentId}.`;
             const toolMessage: ToolResultMessage = {
@@ -120,12 +114,8 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                 (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
                     ? descriptor.parentAgentId
                     : undefined);
-            const agentFor = toolContext.agentSystem.agentFor as unknown as (...args: unknown[]) => string | null;
             const resolvedTarget =
-                targetAgentId ??
-                (toolContext.ctx
-                    ? agentFor(toolContext.ctx, "most-recent-foreground")
-                    : agentFor("most-recent-foreground"));
+                targetAgentId ?? toolContext.agentSystem.agentFor(toolContext.ctx, "most-recent-foreground");
             if (!resolvedTarget) {
                 throw new Error("No recent foreground agent found.");
             }
@@ -137,22 +127,12 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     throw new Error(`Agent not found: ${resolvedTarget}`);
                 }
 
-                const steerFn = toolContext.agentSystem.steer as unknown as (...args: unknown[]) => Promise<void>;
-                if (toolContext.ctx) {
-                    await steerFn(toolContext.ctx, resolvedTarget, {
-                        type: "steering",
-                        text: payload.text,
-                        origin,
-                        cancelReason: payload.cancelReason
-                    });
-                } else {
-                    await steerFn(resolvedTarget, {
-                        type: "steering",
-                        text: payload.text,
-                        origin,
-                        cancelReason: payload.cancelReason
-                    });
-                }
+                await toolContext.agentSystem.steer(toolContext.ctx, resolvedTarget, {
+                    type: "steering",
+                    text: payload.text,
+                    origin,
+                    cancelReason: payload.cancelReason
+                });
 
                 const summary = "Steering message delivered.";
                 const toolMessage: ToolResultMessage = {
@@ -180,16 +160,11 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             }
 
             // Normal system message delivery
-            const postFn = toolContext.agentSystem.post as unknown as (...args: unknown[]) => Promise<void>;
-            if (toolContext.ctx) {
-                await postFn(
-                    toolContext.ctx,
-                    { agentId: resolvedTarget },
-                    { type: "system_message", text: payload.text, origin }
-                );
-            } else {
-                await postFn({ agentId: resolvedTarget }, { type: "system_message", text: payload.text, origin });
-            }
+            await toolContext.agentSystem.post(
+                toolContext.ctx,
+                { agentId: resolvedTarget },
+                { type: "system_message", text: payload.text, origin }
+            );
 
             const summary = "System message sent.";
             const toolMessage: ToolResultMessage = {

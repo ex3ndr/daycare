@@ -262,7 +262,7 @@ function signalSubscriptionInputNormalize(input: { ctx: Context; pattern: string
     ctx: Context;
     pattern: string;
 } {
-    const userId = (input.ctx.userId ?? "").trim();
+    const userId = input.ctx.userId.trim();
     if (!userId) {
         throw new Error("Signal subscription userId is required");
     }
@@ -270,7 +270,13 @@ function signalSubscriptionInputNormalize(input: { ctx: Context; pattern: string
     if (!pattern) {
         throw new Error("Signal subscription pattern is required");
     }
-    const agentId = (input.ctx.agentId ?? "").trim();
+    let inputAgentId: string;
+    try {
+        inputAgentId = input.ctx.agentId;
+    } catch {
+        throw new Error("Signal subscription agentId is required");
+    }
+    const agentId = inputAgentId.trim();
     if (!agentId) {
         throw new Error("Signal subscription agentId is required");
     }

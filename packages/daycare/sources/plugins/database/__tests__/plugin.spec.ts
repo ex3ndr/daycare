@@ -118,7 +118,7 @@ describe("database plugin", () => {
             assistant: null,
             permissions,
             agent,
-            ctx: new Context(agent.id, agent.userId),
+            ctx: new Context({ userId: agent.userId, agentId: agent.id }),
             source: "test",
             messageContext,
             agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],

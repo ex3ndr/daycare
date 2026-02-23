@@ -15,9 +15,7 @@ import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 
 export type ToolVisibilityContext = {
-    ctx?: Context;
-    userId?: string;
-    agentId?: string;
+    ctx: Context;
     descriptor: AgentDescriptor;
 };
 

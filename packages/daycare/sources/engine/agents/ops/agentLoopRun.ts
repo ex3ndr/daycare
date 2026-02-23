@@ -140,8 +140,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const target = agentDescriptorTargetResolve(agent.descriptor);
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {
-        userId: agent.ctx.userId,
-        agentId: agent.id,
+        ctx: agent.ctx,
         descriptor: agent.descriptor
     };
     const allowedToolNames = agentToolExecutionAllowlistResolve(agent.descriptor, {

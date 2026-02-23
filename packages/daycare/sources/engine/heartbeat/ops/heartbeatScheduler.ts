@@ -81,7 +81,7 @@ export class HeartbeatScheduler {
 
         const taskId = providedId ?? (await this.generateTaskIdFromTitle(title));
         const existing = await this.repository.findById(taskId);
-        const userId = (ctx.userId ?? "").trim();
+        const userId = ctx.userId.trim();
         if (!userId) {
             throw new Error("Heartbeat userId is required.");
         }
@@ -122,7 +122,7 @@ export class HeartbeatScheduler {
         if (!taskIdIsSafe(taskId)) {
             throw new Error("Heartbeat id contains invalid characters.");
         }
-        const userId = (ctx.userId ?? "").trim();
+        const userId = ctx.userId.trim();
         if (!userId) {
             return false;
         }

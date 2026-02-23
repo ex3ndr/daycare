@@ -2,6 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
@@ -11,15 +12,16 @@ describe("rlmToolsForContextResolve", () => {
         const listToolsForAgent = vi.fn(() => [toolBuild("memory_node_read"), toolBuild("memory_node_write")]);
         const resolver = resolverBuild({ listTools, listToolsForAgent });
         const descriptor = descriptorBuild();
+        const ctx = contextForAgent({ userId: "u1", agentId: "a1" });
         const context = contextBuild({
-            ctx: { userId: "u1", agentId: "a1" },
+            ctx,
             agent: agentBuild(descriptor)
         });
 
         const resolved = rlmToolsForContextResolve(resolver, context);
 
         expect(resolved.map((tool) => tool.name)).toEqual(["memory_node_read", "memory_node_write"]);
-        expect(listToolsForAgent).toHaveBeenCalledWith({ userId: "u1", agentId: "a1", descriptor });
+        expect(listToolsForAgent).toHaveBeenCalledWith({ ctx, descriptor });
         expect(listTools).not.toHaveBeenCalled();
     });
 
@@ -45,7 +47,7 @@ describe("rlmToolsForContextResolve", () => {
         ]);
         const resolver = resolverBuild({ listTools, listToolsForAgent });
         const context = contextBuild({
-            ctx: { userId: "u1", agentId: "a1" },
+            ctx: contextForAgent({ userId: "u1", agentId: "a1" }),
             agent: agentBuild(descriptorBuild()),
             allowedToolNames: new Set(["memory_node_read", "memory_node_write", "run_python", "skip"])
         });

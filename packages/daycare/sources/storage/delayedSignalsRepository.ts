@@ -135,35 +135,36 @@ export class DelayedSignalsRepository {
     }
 
     async findMany(ctx: Context): Promise<DelayedSignalDbRecord[]> {
-        return this.findAll(ctx);
-    }
-
-    async findAll(ctx?: Context): Promise<DelayedSignalDbRecord[]> {
-        const userId = ctx?.userId?.trim() ?? "";
-        const hasScope = ctx !== undefined;
-        if (hasScope && !userId) {
-            return [];
-        }
-        if (this.allSignalsLoaded && !hasScope) {
-            return delayedSignalsSort(Array.from(this.signalsById.values())).map((entry) => delayedSignalClone(entry));
-        }
-
-        const rows = hasScope
-            ? (this.db
-                  .prepare("SELECT * FROM signals_delayed WHERE user_id = ? ORDER BY deliver_at ASC, id ASC")
-                  .all(userId) as DatabaseDelayedSignalRow[])
-            : (this.db
-                  .prepare("SELECT * FROM signals_delayed ORDER BY deliver_at ASC, id ASC")
-                  .all() as DatabaseDelayedSignalRow[]);
+        const userId = contextUserIdRequire(ctx);
+        const rows = this.db
+            .prepare("SELECT * FROM signals_delayed WHERE user_id = ? ORDER BY deliver_at ASC, id ASC")
+            .all(userId) as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
                 this.signalCacheSet(record);
             }
-            if (!hasScope) {
-                this.allSignalsLoaded = true;
+        });
+
+        return parsed.map((entry) => delayedSignalClone(entry));
+    }
+
+    async findAll(): Promise<DelayedSignalDbRecord[]> {
+        if (this.allSignalsLoaded) {
+            return delayedSignalsSort(Array.from(this.signalsById.values())).map((entry) => delayedSignalClone(entry));
+        }
+
+        const rows = this.db
+            .prepare("SELECT * FROM signals_delayed ORDER BY deliver_at ASC, id ASC")
+            .all() as DatabaseDelayedSignalRow[];
+        const parsed = rows.map((row) => this.signalParse(row));
+
+        await this.cacheLock.inLock(() => {
+            for (const record of parsed) {
+                this.signalCacheSet(record);
             }
+            this.allSignalsLoaded = true;
         });
 
         return parsed.map((entry) => delayedSignalClone(entry));
@@ -183,10 +184,7 @@ export class DelayedSignalsRepository {
     }
 
     async deleteByRepeatKey(ctx: Context, type: string, repeatKey: string): Promise<number> {
-        const normalizedUserId = (ctx.userId ?? "").trim();
-        if (!normalizedUserId) {
-            return 0;
-        }
+        const normalizedUserId = contextUserIdRequire(ctx);
         const removed = this.db
             .prepare("DELETE FROM signals_delayed WHERE user_id = ? AND type = ? AND repeat_key = ?")
             .run(normalizedUserId, type, repeatKey);
@@ -247,6 +245,14 @@ export class DelayedSignalsRepository {
 
 function delayedSignalsSort(records: DelayedSignalDbRecord[]): DelayedSignalDbRecord[] {
     return records.slice().sort((left, right) => left.deliverAt - right.deliverAt || left.id.localeCompare(right.id));
+}
+
+function contextUserIdRequire(ctx: Context): string {
+    const userId = ctx.userId.trim();
+    if (!userId) {
+        throw new Error("Delayed signal context userId is required.");
+    }
+    return userId;
 }
 
 function delayedSignalClone(record: DelayedSignalDbRecord): DelayedSignalDbRecord {

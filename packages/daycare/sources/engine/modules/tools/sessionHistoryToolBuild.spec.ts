@@ -1,13 +1,14 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
+import type { AssistantMessage, Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
+import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentHistoryAppend } from "../../agents/ops/agentHistoryAppend.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
@@ -57,7 +58,7 @@ describe("sessionHistoryToolBuild", () => {
                 providerId: "openai",
                 modelId: "gpt-test"
             }));
-            const context = buildContext(currentAgentId, config, completeMock);
+            const context = buildContext(currentAgentId, userId, config, completeMock);
             const result = await tool.execute({ agentId: targetAgentId }, context, toolCall);
 
             const text = contentText(result.toolMessage.content);
@@ -66,7 +67,7 @@ describe("sessionHistoryToolBuild", () => {
             expect(text).toContain("Summary:");
             expect(text).toContain("reviewed history");
             expect(completeMock).toHaveBeenCalledTimes(1);
-            const summaryContext = completeMock.mock.calls[0]?.[0] as Context | undefined;
+            const summaryContext = completeMock.mock.calls[0]?.[0] as InferenceContext | undefined;
             expect(summaryContext).toBeDefined();
             expect(summaryContext?.messages).toHaveLength(1);
             const details = result.toolMessage.details as {
@@ -124,7 +125,7 @@ describe("sessionHistoryToolBuild", () => {
                 providerId: "openai",
                 modelId: "gpt-test"
             }));
-            const context = buildContext(currentAgentId, config, completeMock);
+            const context = buildContext(currentAgentId, userId, config, completeMock);
             const result = await tool.execute(
                 { agentId: targetAgentId, summarized: false, fromAt: 20, toAt: 40 },
                 context,
@@ -186,7 +187,7 @@ describe("sessionHistoryToolBuild", () => {
                 providerId: "openai",
                 modelId: "gpt-test"
             }));
-            const context = buildContext(currentAgentId, config, completeMock);
+            const context = buildContext(currentAgentId, userId, config, completeMock);
 
             await expect(
                 tool.execute({ agentId: targetAgentId, summarized: false, fromAt: 41, toAt: 40 }, context, toolCall)
@@ -200,8 +201,9 @@ describe("sessionHistoryToolBuild", () => {
 
 function buildContext(
     agentId: string,
+    userId: string,
     config: ReturnType<typeof configResolve>,
-    completeMock: (context: Context) => Promise<{
+    completeMock: (context: InferenceContext) => Promise<{
         message: AssistantMessage;
         providerId: string;
         modelId: string;
@@ -214,14 +216,15 @@ function buildContext(
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: permissionBuildUser(new UserHome(config.usersDir, "tool-user")),
+        permissions: permissionBuildUser(new UserHome(config.usersDir, userId)),
         agent: { id: agentId } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId, agentId }),
         source: "test",
         messageContext: {},
         agentSystem: {
             config: { current: config },
             storage,
+            contextForAgentId: async (targetAgentId: string) => contextForAgent({ userId, agentId: targetAgentId }),
             inferenceRouter: {
                 complete: completeMock
             }

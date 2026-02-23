@@ -108,7 +108,7 @@ export class CronScheduler {
         ctx: Context,
         definition: Omit<CronTaskDefinition, "id" | "userId"> & { id?: string }
     ): Promise<CronTaskDbRecord> {
-        const userId = (ctx.userId ?? "").trim();
+        const userId = ctx.userId.trim();
         if (!userId) {
             throw new Error("Cron userId is required.");
         }
@@ -145,7 +145,7 @@ export class CronScheduler {
     }
 
     async deleteTask(ctx: Context, taskId: string): Promise<boolean> {
-        const userId = (ctx.userId ?? "").trim();
+        const userId = ctx.userId.trim();
         if (!userId) {
             return false;
         }

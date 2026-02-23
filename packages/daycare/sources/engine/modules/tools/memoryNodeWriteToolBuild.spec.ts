@@ -1,6 +1,6 @@
 import { isCuid } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
-
+import { contextForAgent } from "../../agents/context.js";
 import type { GraphNode } from "../../memory/graph/graphTypes.js";
 import { memoryNodeWriteToolBuild } from "./memoryNodeWriteToolBuild.js";
 
@@ -28,15 +28,13 @@ describe("memoryNodeWriteToolBuild", () => {
     it("is visible by default only for memory-agent descriptors", () => {
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "memory-agent", id: "source-agent-1" }
             })
         ).toBe(true);
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "user", connector: "telegram", userId: "user-1", channelId: "channel-1" }
             })
         ).toBe(false);

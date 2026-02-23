@@ -4,11 +4,12 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentDescriptor } from "@/types";
+import type { AgentDescriptor, AgentInboxItem, AgentInboxResult, AgentPostTarget, Context } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { Heartbeats } from "../heartbeat/heartbeats.js";
@@ -21,6 +22,7 @@ import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
 import { Signals } from "../signals/signals.js";
 import { AgentSystem } from "./agentSystem.js";
+import { contextForUser } from "./context.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 
@@ -69,7 +71,7 @@ describe("AgentSystem", () => {
             expect(firstSchedule).toBeTruthy();
 
             vi.setSystemTime(new Date("2025-01-01T00:30:00.000Z"));
-            await harness.agentSystem.postAndAwait({ agentId }, { type: "reset", message: "wake and sleep again" });
+            await postAndAwait(harness.agentSystem, { agentId }, { type: "reset", message: "wake and sleep again" });
 
             const poisonSignals = delayedSignals.list().filter((event) => event.type === signalType);
             expect(poisonSignals).toHaveLength(1);
@@ -94,7 +96,7 @@ describe("AgentSystem", () => {
 
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
-            await harness.agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init cron" });
+            await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init cron" });
 
             expect(delayedSignals.list().some((event) => event.type === `agent:${agentId}:poison-pill`)).toBe(false);
         } finally {
@@ -140,7 +142,7 @@ describe("AgentSystem", () => {
 
             const agentId = createId();
             const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
-            await harness.agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init cron" });
+            await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init cron" });
             await harness.signals.generate({
                 type: `agent:${agentId}:poison-pill`,
                 source: { type: "system", userId: "user-1" }
@@ -181,7 +183,8 @@ describe("AgentSystem", () => {
             await harness.agentSystem.start();
 
             const agentId = await subagentCreate(harness.agentSystem, harness.eventBus);
-            await harness.agentSystem.post(
+            await post(
+                harness.agentSystem,
                 { agentId },
                 { type: "message", message: { text: "start long work" }, context: {} }
             );
@@ -193,7 +196,8 @@ describe("AgentSystem", () => {
                 type: `agent:${agentId}:poison-pill`,
                 source: { type: "system", userId: "user-1" }
             });
-            const queued = harness.agentSystem.postAndAwait(
+            const queued = postAndAwait(
+                harness.agentSystem,
                 { agentId },
                 { type: "reset", message: "queued after poison-pill" }
             );
@@ -206,7 +210,7 @@ describe("AgentSystem", () => {
                 expect(calls).toBeGreaterThanOrEqual(2);
             });
             await expect(
-                harness.agentSystem.postAndAwait({ agentId }, { type: "reset", message: "dead check" })
+                postAndAwait(harness.agentSystem, { agentId }, { type: "reset", message: "dead check" })
             ).rejects.toThrow(`Agent is dead: ${agentId}`);
             await vi.waitFor(async () => {
                 const state = await agentStateRead(harness.config, agentId);
@@ -314,7 +318,7 @@ describe("AgentSystem", () => {
             await second.agentSystem.load();
             expect(delayedSignalsB.list().some((event) => event.type === `agent:${agentId}:poison-pill`)).toBe(false);
             await expect(
-                second.agentSystem.postAndAwait({ agentId }, { type: "reset", message: "dead restore" })
+                postAndAwait(second.agentSystem, { agentId }, { type: "reset", message: "dead restore" })
             ).rejects.toThrow(`Agent is dead: ${agentId}`);
         } finally {
             delayedSignalsA?.stop();
@@ -337,13 +341,13 @@ describe("AgentSystem", () => {
                 userId: "connector-user-1",
                 channelId: "channel-a"
             };
-            await harness.agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init user" });
-            const agentId = await harness.agentSystem.agentIdForTarget({ descriptor });
+            await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init user" });
+            const agentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             const ctx = await harness.agentSystem.contextForAgentId(agentId);
             const linked = await harness.storage.users.findByConnectorKey("telegram:connector-user-1");
 
-            expect(ctx?.userId).toBeTruthy();
-            expect(linked?.id).toBe(ctx?.userId);
+            expect(ctx).toBeTruthy();
+            expect(linked?.id).toBe(ctx!.userId);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -362,8 +366,8 @@ describe("AgentSystem", () => {
                 userId: "connector-user-scope",
                 channelId: "channel-a"
             };
-            await harness.agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init scoped user" });
-            const agentId = await harness.agentSystem.agentIdForTarget({ descriptor });
+            await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init scoped user" });
+            const agentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             const context = await harness.agentSystem.contextForAgentId(agentId);
             if (!context) {
                 throw new Error("Agent context missing");
@@ -402,11 +406,11 @@ describe("AgentSystem", () => {
                 userId: "connector-user-2",
                 channelId: "channel-b"
             };
-            await harness.agentSystem.postAndAwait({ descriptor: first }, { type: "reset", message: "first" });
-            await harness.agentSystem.postAndAwait({ descriptor: second }, { type: "reset", message: "second" });
+            await postAndAwait(harness.agentSystem, { descriptor: first }, { type: "reset", message: "first" });
+            await postAndAwait(harness.agentSystem, { descriptor: second }, { type: "reset", message: "second" });
 
-            const firstAgentId = await harness.agentSystem.agentIdForTarget({ descriptor: first });
-            const secondAgentId = await harness.agentSystem.agentIdForTarget({ descriptor: second });
+            const firstAgentId = await agentIdForTarget(harness.agentSystem, { descriptor: first });
+            const secondAgentId = await agentIdForTarget(harness.agentSystem, { descriptor: second });
             const firstContext = await harness.agentSystem.contextForAgentId(firstAgentId);
             const secondContext = await harness.agentSystem.contextForAgentId(secondAgentId);
 
@@ -430,11 +434,12 @@ describe("AgentSystem", () => {
                 userId: "connector-user-3",
                 channelId: "channel-a"
             };
-            await harness.agentSystem.postAndAwait(
+            await postAndAwait(
+                harness.agentSystem,
                 { descriptor: parentDescriptor },
                 { type: "reset", message: "parent" }
             );
-            const parentAgentId = await harness.agentSystem.agentIdForTarget({ descriptor: parentDescriptor });
+            const parentAgentId = await agentIdForTarget(harness.agentSystem, { descriptor: parentDescriptor });
             const parentContext = await harness.agentSystem.contextForAgentId(parentAgentId);
             if (!parentContext) {
                 throw new Error("Parent agent context missing");
@@ -446,12 +451,13 @@ describe("AgentSystem", () => {
                 parentAgentId,
                 name: "worker"
             };
-            await harness.agentSystem.postAndAwait(
+            await postAndAwait(
+                harness.agentSystem,
                 parentContext,
                 { descriptor: subagentDescriptor },
                 { type: "reset", message: "subagent" }
             );
-            const subagentId = await harness.agentSystem.agentIdForTarget(parentContext, {
+            const subagentId = await agentIdForTarget(harness.agentSystem, parentContext, {
                 descriptor: subagentDescriptor
             });
             const subagentContext = await harness.agentSystem.contextForAgentId(subagentId);
@@ -539,15 +545,15 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
             id: createId(),
             name: `parent-${createId()}`
         };
-        await agentSystem.postAndAwait({ descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
-        const parentAgentId = await agentSystem.agentIdForTarget({ descriptor: parentDescriptor });
+        await postAndAwait(agentSystem, { descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
+        const parentAgentId = await agentIdForTarget(agentSystem, { descriptor: parentDescriptor });
         const descriptor: AgentDescriptor = {
             type: "subagent",
             id: createId(),
             parentAgentId,
             name: `subagent-${createId()}`
         };
-        await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init subagent" });
+        await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init subagent" });
     } finally {
         unsubscribe();
     }
@@ -579,4 +585,67 @@ function inferenceResponse(text: string) {
             timestamp: Date.now()
         }
     };
+}
+
+async function postAndAwait(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    targetOrItem: AgentPostTarget | AgentInboxItem,
+    maybeItem?: AgentInboxItem
+): Promise<AgentInboxResult> {
+    if (maybeItem) {
+        return agentSystem.postAndAwait(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    return agentSystem.postAndAwait(
+        await callerCtxResolve(agentSystem, target),
+        target,
+        targetOrItem as AgentInboxItem
+    );
+}
+
+async function post(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    targetOrItem: AgentPostTarget | AgentInboxItem,
+    maybeItem?: AgentInboxItem
+): Promise<void> {
+    if (maybeItem) {
+        await agentSystem.post(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        return;
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    await agentSystem.post(await callerCtxResolve(agentSystem, target), target, targetOrItem as AgentInboxItem);
+}
+
+async function agentIdForTarget(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    maybeTarget?: AgentPostTarget
+): Promise<string> {
+    if (maybeTarget) {
+        return agentSystem.agentIdForTarget(ctxOrTarget as Context, maybeTarget);
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    return agentSystem.agentIdForTarget(await callerCtxResolve(agentSystem, target), target);
+}
+
+async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarget): Promise<Context> {
+    if ("agentId" in target) {
+        const targetCtx = await agentSystem.contextForAgentId(target.agentId);
+        if (!targetCtx) {
+            throw new Error(`Agent not found: ${target.agentId}`);
+        }
+        return contextForUser({ userId: targetCtx.userId });
+    }
+    if (target.descriptor.type === "user") {
+        const user = await agentSystem.storage.resolveUserByConnectorKey(
+            userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId)
+        );
+        return contextForUser({ userId: user.id });
+    }
+    if (target.descriptor.type === "subuser") {
+        return contextForUser({ userId: target.descriptor.id });
+    }
+    return agentSystem.ownerCtxEnsure();
 }

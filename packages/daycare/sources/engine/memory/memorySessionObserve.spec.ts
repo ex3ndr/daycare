@@ -67,7 +67,7 @@ describe("memorySessionObserve", () => {
                 files: []
             });
 
-            const ctx = new Context("agent-1", owner.id);
+            const ctx = new Context({ userId: owner.id, agentId: "agent-1" });
             const records = await storage.history.findBySessionId(sessionId);
             const xml =
                 "<observations>\n<observation><text>The person wanted to push their latest changes to production as part of the release cycle</text><context>During a release planning session, the person asked to deploy to production. They seemed confident the changes were ready and wanted to move forward quickly.</context></observation>\n</observations>";
@@ -123,7 +123,7 @@ describe("memorySessionObserve", () => {
                 files: []
             });
 
-            const ctx = new Context("agent-bg", owner.id);
+            const ctx = new Context({ userId: owner.id, agentId: "agent-bg" });
             const records = await storage.history.findBySessionId(sessionId);
             const xml = "<observations></observations>";
             const router = mockInferenceRouter(xml);
@@ -159,7 +159,7 @@ describe("memorySessionObserve", () => {
             if (!owner) {
                 throw new Error("Owner user missing");
             }
-            const ctx = new Context("agent-1", owner.id);
+            const ctx = new Context({ userId: owner.id, agentId: "agent-1" });
             const router = mockInferenceRouter("<observations></observations>");
 
             const observations = await memorySessionObserve({

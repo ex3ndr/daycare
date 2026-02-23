@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentDescriptor, AgentSkill, SessionPermissions, ToolExecutionContext } from "@/types";
+import { contextForAgent } from "../../agents/context.js";
 import { skillToolBuild } from "./skillToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "skill" };
@@ -46,12 +47,15 @@ describe("skillToolBuild", () => {
             const result = await tool.execute({ name: "deploy", prompt: "Deploy version 1.2.3" }, context, toolCall);
 
             expect(agentIdForTarget).toHaveBeenCalledTimes(1);
+            expect(agentIdForTarget).toHaveBeenNthCalledWith(1, context.ctx, expect.any(Object));
             expect(agentIdForTarget).toHaveBeenCalledWith(
+                context.ctx,
                 expect.objectContaining({
                     descriptor: expect.objectContaining({ name: "deploy Skill" })
                 })
             );
             expect(postAndAwait).toHaveBeenCalledWith(
+                context.ctx,
                 { agentId: "agent-sub" },
                 expect.objectContaining({
                     type: "message",
@@ -239,8 +243,12 @@ function contextBuild(input?: {
     descriptor?: AgentDescriptor;
     connectorRegistry?: { get: (id: string) => unknown };
     agentSystem?: {
-        agentIdForTarget?: (target: unknown) => Promise<string>;
-        postAndAwait?: (target: unknown, item: unknown) => Promise<{ responseText: string | null; type: "message" }>;
+        agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
+        postAndAwait?: (
+            ctx: unknown,
+            target: unknown,
+            item: unknown
+        ) => Promise<{ responseText: string | null; type: "message" }>;
     };
 }): ToolExecutionContext {
     const agentIdForTarget = input?.agentSystem?.agentIdForTarget ?? (async () => "agent-sub");
@@ -255,7 +263,7 @@ function contextBuild(input?: {
         assistant: null,
         permissions: input?.permissions ?? permissionsBuild({}),
         agent: { id: "agent-parent", descriptor: input?.descriptor } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId: "user-1", agentId: "agent-parent" }),
         source: "test",
         messageContext: {},
         skills: input?.skills ?? [],

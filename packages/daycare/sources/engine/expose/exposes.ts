@@ -52,7 +52,11 @@ export class Exposes implements ExposeProviderRegistrationApi {
         void options.eventBus;
         if (options.exposeEndpoints) {
             this.exposeEndpoints = options.exposeEndpoints;
-            this.fallbackUserIdResolve = options.fallbackUserIdResolve ?? (async () => "owner");
+            this.fallbackUserIdResolve =
+                options.fallbackUserIdResolve ??
+                (async () => {
+                    throw new Error("Default expose user is not configured.");
+                });
             return;
         }
 
@@ -62,7 +66,10 @@ export class Exposes implements ExposeProviderRegistrationApi {
             options.fallbackUserIdResolve ??
             (async () => {
                 const owner = await storage.users.findOwner();
-                return owner?.id ?? "owner";
+                if (!owner?.id) {
+                    throw new Error("Default expose user is not available.");
+                }
+                return owner.id;
             });
     }
 

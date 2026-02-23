@@ -2,6 +2,7 @@ import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext, ToolExecutionResult, ToolVisibilityContext } from "@/types";
+import { contextForAgent } from "../agents/context.js";
 import { ToolResolver } from "./toolResolver.js";
 
 const textResultSchema = Type.Object({ text: Type.String() }, { additionalProperties: false });
@@ -365,8 +366,7 @@ function toolExecutionContextCreate(overrides: Partial<ToolExecutionContext> = {
 
 function toolVisibilityContextCreate(overrides: Partial<ToolVisibilityContext> = {}): ToolVisibilityContext {
     return {
-        userId: "user-1",
-        agentId: "agent-1",
+        ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         descriptor: {
             type: "user",
             connector: "telegram",

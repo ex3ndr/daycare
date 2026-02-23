@@ -80,10 +80,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
             const existingAgents = await agentPermanentList(storage);
             const resolvedAgent = resolveExistingAgent(existingAgents, payload.agentId, name);
             const agentId = resolvedAgent?.agentId ?? createId();
-            const ownerUserId = toolContext.ctx?.userId;
-            if (!ownerUserId) {
-                throw new Error("Tool context userId is required.");
-            }
+            const ownerUserId = contextUserIdResolve(toolContext);
             const ownerUserHome = toolContext.agentSystem.userHomeForUserId(ownerUserId);
             const targetCtx = contextForAgent({ userId: ownerUserId, agentId });
             const resolvedWorkspaceDir = payload.workspaceDir
@@ -224,4 +221,12 @@ function updatePermissions(permissions: SessionPermissions, workspaceDir: string
         ...permissions,
         workingDir: workspaceDir
     };
+}
+
+function contextUserIdResolve(toolContext: { ctx: { userId?: string } | null | undefined }): string {
+    const userId = toolContext.ctx?.userId;
+    if (typeof userId !== "string" || userId.trim().length === 0) {
+        throw new Error("Tool context userId is required.");
+    }
+    return userId.trim();
 }

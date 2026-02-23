@@ -179,18 +179,17 @@ describe("rlmToolBuild", () => {
             execute: runtimeExecute as unknown as ToolResolverApi["execute"]
         };
         const tool = rlmToolBuild(runtimeResolver);
+        const context = createContext({ toolResolver: runtimeResolver });
 
-        const result = await tool.execute(
-            { code: "echo('runtime')" },
-            createContext({ toolResolver: runtimeResolver }),
-            { id: "tool-call-contextual", name: "run_python" }
-        );
+        const result = await tool.execute({ code: "echo('runtime')" }, context, {
+            id: "tool-call-contextual",
+            name: "run_python"
+        });
 
         expect(result.toolMessage.isError).toBe(false);
         expect(messageText(result)).toContain("runtime");
         expect(listToolsForAgent).toHaveBeenCalledWith({
-            userId: "user-1",
-            agentId: "agent-1",
+            ctx: context.ctx,
             descriptor: {
                 type: "user",
                 connector: "telegram",
@@ -273,7 +272,7 @@ function createContext(overrides: Partial<ToolExecutionContext> = {}): ToolExecu
             writeDirs: []
         },
         agent,
-        ctx: new Context("agent-1", "user-1"),
+        ctx: new Context({ userId: "user-1", agentId: "agent-1" }),
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

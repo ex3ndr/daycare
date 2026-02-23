@@ -2,6 +2,7 @@ import type { Context } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
+import { contextForUser } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { CronTaskDefinition } from "./cronTypes.js";
@@ -41,7 +42,7 @@ export class Crons {
                     `event: CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "system:cron"}`
                 );
 
-                await this.agentSystem.postAndAwait(target, {
+                await this.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
                     type: "system_message",
                     text: cronTaskPromptBuild(task),
                     origin: "cron",

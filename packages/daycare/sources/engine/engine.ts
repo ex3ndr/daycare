@@ -620,7 +620,7 @@ function descriptorContextResolve(descriptor: AgentDescriptor) {
     if (descriptor.type === "subuser") {
         return contextForUser({ userId: descriptor.id });
     }
-    return contextForUser({ userId: "owner" });
+    throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
 }
 /**
  * Compares reloadable runtime config fields.

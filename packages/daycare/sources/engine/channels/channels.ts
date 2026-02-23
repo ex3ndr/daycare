@@ -15,7 +15,7 @@ import type { ChannelMessagesRepository } from "../../storage/channelMessagesRep
 import type { ChannelsRepository } from "../../storage/channelsRepository.js";
 import { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
-import { contextForUser } from "../agents/context.js";
+import { contextForAgent, contextForUser } from "../agents/context.js";
 import type { Signals } from "../signals/signals.js";
 import { channelNameNormalize } from "./channelNameNormalize.js";
 
@@ -185,11 +185,11 @@ export class Channels {
     async addMember(channelName: string, ctx: Context, username: string): Promise<Channel> {
         const channel = this.channelRequire(channelName);
         const normalizedUsername = usernameNormalize(username);
-        const normalizedAgentId = (ctx.agentId ?? "").trim();
+        const normalizedAgentId = ctx.agentId.trim();
         if (!normalizedAgentId) {
             throw new Error("Channel member agent id is required.");
         }
-        const normalizedUserId = (ctx.userId ?? "").trim();
+        const normalizedUserId = ctx.userId.trim();
         if (!normalizedUserId) {
             throw new Error("Channel member user id is required.");
         }
@@ -236,7 +236,7 @@ export class Channels {
         this.items.set(channel.name, cloneRuntimeChannel(channel));
 
         await this.signals.subscribe({
-            ctx: { userId: normalizedUserId, agentId: normalizedAgentId },
+            ctx: contextForAgent({ userId: normalizedUserId, agentId: normalizedAgentId }),
             pattern: channelPatternBuild(channel.name),
             silent: false
         });
@@ -245,7 +245,7 @@ export class Channels {
 
     async removeMember(channelName: string, ctx: Context): Promise<boolean> {
         const channel = this.channelRequire(channelName);
-        const normalizedAgentId = (ctx.agentId ?? "").trim();
+        const normalizedAgentId = ctx.agentId.trim();
         if (!normalizedAgentId) {
             throw new Error("Channel member agent id is required.");
         }
@@ -260,12 +260,9 @@ export class Channels {
         await this.channels.update(channel.id, { updatedAt: channel.updatedAt });
         this.items.set(channel.name, cloneRuntimeChannel(channel));
 
-        const normalizedUserId = (ctx.userId ?? "").trim();
-        if (!normalizedUserId) {
-            return true;
-        }
+        const normalizedUserId = ctx.userId.trim();
         await this.signals.unsubscribe({
-            ctx: { userId: normalizedUserId, agentId: normalizedAgentId },
+            ctx: contextForAgent({ userId: normalizedUserId, agentId: normalizedAgentId }),
             pattern: channelPatternBuild(channel.name)
         });
         return true;
@@ -328,6 +325,7 @@ export class Channels {
         await Promise.all(
             deliveredAgentIds.map((targetAgentId) =>
                 this.agentSystem.post(
+                    contextForUser({ userId: channel.userId }),
                     { agentId: targetAgentId } satisfies AgentPostTarget,
                     {
                         type: "signal",

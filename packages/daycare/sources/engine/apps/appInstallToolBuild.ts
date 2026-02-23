@@ -82,9 +82,10 @@ export function appInstallToolBuild(apps: Apps): ToolDefinition {
 }
 
 function contextUserIdResolve(context: ToolExecutionContext): string {
-    const userId = context.ctx?.userId;
-    if (!userId) {
+    const contextWithOptionalCtx = context as unknown as { ctx?: { userId?: string } | null };
+    const userId = contextWithOptionalCtx.ctx?.userId;
+    if (typeof userId !== "string" || userId.trim().length === 0) {
         throw new Error("Tool context userId is required.");
     }
-    return userId;
+    return userId.trim();
 }

@@ -3,10 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
-import type { AgentDescriptor } from "@/types";
+import type { AgentDescriptor, AgentInboxItem, AgentInboxResult, AgentPostTarget, Context } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { Storage } from "../../storage/storage.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { Heartbeats } from "../heartbeat/heartbeats.js";
@@ -18,6 +19,7 @@ import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { Signals } from "../signals/signals.js";
 import { AgentSystem } from "./agentSystem.js";
+import { contextForUser } from "./context.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { inboxItemDeserialize } from "./ops/inboxItemDeserialize.js";
 
@@ -29,15 +31,17 @@ describe("AgentSystem durable inboxes", () => {
             await harness.agentSystem.load();
 
             const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-merge" };
-            await harness.agentSystem.post(
+            await post(
+                harness.agentSystem,
                 { descriptor },
                 { type: "message", message: { text: "first" }, context: { messageId: "m-1" } }
             );
-            await harness.agentSystem.post(
+            await post(
+                harness.agentSystem,
                 { descriptor },
                 { type: "message", message: { text: "second" }, context: { messageId: "m-2" } }
             );
-            const agentId = await harness.agentSystem.agentIdForTarget({ descriptor });
+            const agentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             const rows = await harness.storage.inbox.findByAgentId(agentId);
 
             expect(rows).toHaveLength(1);
@@ -60,8 +64,8 @@ describe("AgentSystem durable inboxes", () => {
             await harness.agentSystem.start();
 
             const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-delete" };
-            await harness.agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "seed" });
-            const agentId = await harness.agentSystem.agentIdForTarget({ descriptor });
+            await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "seed" });
+            const agentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             const rows = await harness.storage.inbox.findByAgentId(agentId);
 
             expect(rows).toEqual([]);
@@ -76,11 +80,12 @@ describe("AgentSystem durable inboxes", () => {
             const first = await harnessCreate(dir);
             await first.agentSystem.load();
             const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-replay" };
-            await first.agentSystem.post(
+            await post(
+                first.agentSystem,
                 { descriptor },
                 { type: "message", message: { text: "replay-me" }, context: { messageId: "m-replay" } }
             );
-            const agentId = await first.agentSystem.agentIdForTarget({ descriptor });
+            const agentId = await agentIdForTarget(first.agentSystem, { descriptor });
             const beforeRestart = await first.storage.inbox.findByAgentId(agentId);
             expect(beforeRestart).toHaveLength(1);
             const second = await harnessCreate(dir, {
@@ -237,15 +242,15 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
             id: createId(),
             name: `parent-${createId()}`
         };
-        await agentSystem.postAndAwait({ descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
-        const parentAgentId = await agentSystem.agentIdForTarget({ descriptor: parentDescriptor });
+        await postAndAwait(agentSystem, { descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
+        const parentAgentId = await agentIdForTarget(agentSystem, { descriptor: parentDescriptor });
         const descriptor: AgentDescriptor = {
             type: "subagent",
             id: createId(),
             parentAgentId,
             name: `subagent-${createId()}`
         };
-        await agentSystem.postAndAwait({ descriptor }, { type: "reset", message: "init subagent" });
+        await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init subagent" });
     } finally {
         unsubscribe();
     }
@@ -277,4 +282,67 @@ function inferenceResponse(text: string) {
             timestamp: Date.now()
         }
     };
+}
+
+async function postAndAwait(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    targetOrItem: AgentPostTarget | AgentInboxItem,
+    maybeItem?: AgentInboxItem
+): Promise<AgentInboxResult> {
+    if (maybeItem) {
+        return agentSystem.postAndAwait(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    return agentSystem.postAndAwait(
+        await callerCtxResolve(agentSystem, target),
+        target,
+        targetOrItem as AgentInboxItem
+    );
+}
+
+async function post(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    targetOrItem: AgentPostTarget | AgentInboxItem,
+    maybeItem?: AgentInboxItem
+): Promise<void> {
+    if (maybeItem) {
+        await agentSystem.post(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        return;
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    await agentSystem.post(await callerCtxResolve(agentSystem, target), target, targetOrItem as AgentInboxItem);
+}
+
+async function agentIdForTarget(
+    agentSystem: AgentSystem,
+    ctxOrTarget: Context | AgentPostTarget,
+    maybeTarget?: AgentPostTarget
+): Promise<string> {
+    if (maybeTarget) {
+        return agentSystem.agentIdForTarget(ctxOrTarget as Context, maybeTarget);
+    }
+    const target = ctxOrTarget as AgentPostTarget;
+    return agentSystem.agentIdForTarget(await callerCtxResolve(agentSystem, target), target);
+}
+
+async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarget): Promise<Context> {
+    if ("agentId" in target) {
+        const targetCtx = await agentSystem.contextForAgentId(target.agentId);
+        if (!targetCtx) {
+            throw new Error(`Agent not found: ${target.agentId}`);
+        }
+        return contextForUser({ userId: targetCtx.userId });
+    }
+    if (target.descriptor.type === "user") {
+        const user = await agentSystem.storage.resolveUserByConnectorKey(
+            userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId)
+        );
+        return contextForUser({ userId: user.id });
+    }
+    if (target.descriptor.type === "subuser") {
+        return contextForUser({ userId: target.descriptor.id });
+    }
+    return agentSystem.ownerCtxEnsure();
 }

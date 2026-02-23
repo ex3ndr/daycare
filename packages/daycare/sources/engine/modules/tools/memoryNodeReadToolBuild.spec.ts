@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-
+import { contextForAgent } from "../../agents/context.js";
 import type { GraphNode, GraphTree } from "../../memory/graph/graphTypes.js";
 import { memoryNodeReadToolBuild } from "./memoryNodeReadToolBuild.js";
 
@@ -56,15 +56,13 @@ describe("memoryNodeReadToolBuild", () => {
     it("is visible by default only for memory-agent descriptors", () => {
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "memory-agent", id: "source-agent-1" }
             })
         ).toBe(true);
         expect(
             tool.visibleByDefault?.({
-                userId: "user-1",
-                agentId: "agent-1",
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 descriptor: { type: "user", connector: "telegram", userId: "user-1", channelId: "channel-1" }
             })
         ).toBe(false);
