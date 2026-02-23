@@ -124,7 +124,7 @@ ARG PYTHON_VERSIONS="3.14 3.13 3.12 3.11 3.10"
 ENV PYENV_ROOT=/root/.pyenv
 ENV PATH=$PYENV_ROOT/bin:$PATH
 RUN git -c advice.detachedHead=0 clone --depth 1 https://github.com/pyenv/pyenv.git "$PYENV_ROOT" \
-    && echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /etc/profile \
+    && echo 'export PYENV_ROOT="/root/.pyenv"' >> /etc/profile \
     && echo 'export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"' >> /etc/profile \
     && echo 'eval "$(pyenv init - bash)"' >> /etc/profile \
     && cd "$PYENV_ROOT" \
