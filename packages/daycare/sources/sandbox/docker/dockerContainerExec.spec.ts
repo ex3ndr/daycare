@@ -33,9 +33,9 @@ describe("dockerContainerExec", () => {
 
         const result = await dockerContainerExec(docker, container, {
             command: ["echo", "ok"],
-            cwd: "/home/user-1",
+            cwd: "/home",
             env: {
-                HOME: "/home/user-1",
+                HOME: "/home",
                 DEBUG: "1"
             }
         });
@@ -44,8 +44,8 @@ describe("dockerContainerExec", () => {
             Cmd: ["echo", "ok"],
             AttachStdout: true,
             AttachStderr: true,
-            WorkingDir: "/home/user-1",
-            Env: ["HOME=/home/user-1", "DEBUG=1"]
+            WorkingDir: "/home",
+            Env: ["HOME=/home", "DEBUG=1"]
         });
         expect(result).toEqual({
             stdout: "hello",

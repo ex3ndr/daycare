@@ -109,7 +109,7 @@ describe("Sandbox docker integration", () => {
         });
 
         const read = await sandbox.read({
-            path: "/home/u123/documents/notes.txt",
+            path: "/home/documents/notes.txt",
             raw: true
         });
 
@@ -134,7 +134,7 @@ describe("Sandbox docker integration", () => {
         });
 
         const result = await sandbox.write({
-            path: "/home/u123/documents/output.txt",
+            path: "/home/documents/output.txt",
             content: "docker-write"
         });
 

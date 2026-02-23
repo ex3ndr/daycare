@@ -9,13 +9,13 @@ describe("sandboxPathHostToContainer", () => {
 
     it("rewrites host home path to container home", () => {
         const rewritten = sandboxPathHostToContainer(hostHomeDir, userId, hostHomeDir);
-        expect(rewritten).toBe("/home/u123");
+        expect(rewritten).toBe("/home");
     });
 
     it("rewrites nested host home paths", () => {
         const targetPath = path.join(hostHomeDir, "desktop", "project", "file.ts");
         const rewritten = sandboxPathHostToContainer(hostHomeDir, userId, targetPath);
-        expect(rewritten).toBe("/home/u123/desktop/project/file.ts");
+        expect(rewritten).toBe("/home/desktop/project/file.ts");
     });
 
     it("keeps paths outside host home unchanged", () => {

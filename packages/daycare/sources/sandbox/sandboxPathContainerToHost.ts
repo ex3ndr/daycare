@@ -9,7 +9,7 @@ export function sandboxPathContainerToHost(hostHomeDir: string, userId: string, 
         return targetPath;
     }
 
-    const containerHomeDir = path.posix.join("/home", userId);
+    const containerHomeDir = "/home";
     const normalizedTarget = path.posix.normalize(targetPath);
 
     if (normalizedTarget === containerHomeDir) {

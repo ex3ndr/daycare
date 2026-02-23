@@ -29,13 +29,12 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
     }
 
     const hostHomeDir = path.resolve(config.hostHomeDir);
-    const containerHomeDir = `/home/${config.userId}`;
+    const containerHomeDir = "/home";
 
     try {
         const created = await docker.createContainer({
             name: containerName,
             Image: `${config.image}:${config.tag}`,
-            Cmd: ["sleep", "infinity"],
             WorkingDir: containerHomeDir,
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`],

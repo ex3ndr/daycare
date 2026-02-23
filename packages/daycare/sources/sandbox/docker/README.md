@@ -6,7 +6,7 @@ The sandbox Docker runtime adds a container layer around `sandbox-runtime` (`srt
 
 - `Sandbox.read()` and `Sandbox.write()` run on the host filesystem.
 - `Sandbox.exec()` runs in a long-lived Docker container when Docker is enabled.
-- The host user home (`<usersDir>/<userId>/home`) is bind-mounted to `/home/<userId>` in the container.
+- The host user home (`<usersDir>/<userId>/home`) is bind-mounted to `/home` in the container.
 
 ## Settings
 
@@ -52,7 +52,7 @@ graph TD
 Examples:
 
 - Host: `/data/users/u123/home/desktop/project`
-- Container: `/home/u123/desktop/project`
+- Container: `/home/desktop/project`
 
 The runtime rewrites:
 

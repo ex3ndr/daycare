@@ -96,7 +96,7 @@ Enable Docker runtime in `settings.json`:
 
 Path mapping when Docker is enabled:
 - host: `/data/users/<userId>/home/...`
-- container: `/home/<userId>/...`
+- container: `/home/...`
 
 ## Tool Context
 

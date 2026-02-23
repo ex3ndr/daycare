@@ -7,12 +7,12 @@ describe("sandboxPathContainerToHost", () => {
     const userId = "u123";
 
     it("rewrites container home path to host home", () => {
-        const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, "/home/u123");
+        const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, "/home");
         expect(rewritten).toBe("/data/users/u123/home");
     });
 
     it("rewrites nested container home paths", () => {
-        const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, "/home/u123/desktop/project/file.ts");
+        const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, "/home/desktop/project/file.ts");
         expect(rewritten).toBe("/data/users/u123/home/desktop/project/file.ts");
     });
 
@@ -22,14 +22,8 @@ describe("sandboxPathContainerToHost", () => {
         expect(rewritten).toBe(outsidePath);
     });
 
-    it("does not rewrite lookalike user ids", () => {
-        const lookalikePath = "/home/u1234/desktop/file.ts";
-        const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, lookalikePath);
-        expect(rewritten).toBe(lookalikePath);
-    });
-
     it("keeps relative paths unchanged", () => {
-        const relativePath = "home/u123/desktop/file.ts";
+        const relativePath = "home/desktop/file.ts";
         const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, relativePath);
         expect(rewritten).toBe(relativePath);
     });

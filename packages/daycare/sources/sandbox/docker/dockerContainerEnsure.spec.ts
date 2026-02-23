@@ -71,10 +71,9 @@ describe("dockerContainerEnsure", () => {
         expect(docker.createContainer).toHaveBeenCalledWith({
             name: "daycare-sandbox-user-1",
             Image: "daycare-sandbox:latest",
-            Cmd: ["sleep", "infinity"],
-            WorkingDir: "/home/user-1",
+            WorkingDir: "/home",
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home/user-1"],
+                Binds: ["/data/users/user-1/home:/home"],
                 Runtime: "runsc"
             }
         });

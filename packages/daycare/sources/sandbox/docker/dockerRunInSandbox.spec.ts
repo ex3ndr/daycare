@@ -28,10 +28,12 @@ describe("dockerRunInSandbox", () => {
                 exitCode: 0
             })
             .mockImplementationOnce(async (_dockerConfig, args) => {
-                const settingsArgIndex = args.command.indexOf("--settings");
-                const settingsContainerPath = args.command[settingsArgIndex + 1];
+                // Command is wrapped as: ["bash", "-lc", "node <cli> --settings <path> -c <cmd>"]
+                const bashCmd = args.command[2] ?? "";
+                const settingsMatch = bashCmd.match(/--settings\s+(\S+)/);
+                const settingsContainerPath = settingsMatch?.[1];
                 if (!settingsContainerPath) {
-                    throw new Error("Expected --settings path argument.");
+                    throw new Error("Expected --settings path in bash command string.");
                 }
                 capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
                 const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
@@ -76,18 +78,18 @@ describe("dockerRunInSandbox", () => {
         });
         expect(capturedRuntimeConfig).toEqual({
             filesystem: {
-                allowWrite: ["/home/u123", "/home/u123/desktop"],
-                denyRead: ["/home/u123/.ssh"],
-                denyWrite: ["/home/u123/.aws"]
+                allowWrite: ["/home", "/home/desktop"],
+                denyRead: ["/home/.ssh"],
+                denyWrite: ["/home/.aws"]
             },
             network: {
                 allowedDomains: ["example.com"],
                 deniedDomains: []
             }
         });
-        expect(capturedEnv?.HOME).toBe("/home/u123");
-        expect(capturedEnv?.TMPDIR).toBe("/home/u123/.tmp");
-        expect(capturedCwd).toBe("/home/u123/desktop/project");
+        expect(capturedEnv?.HOME).toBe("/home");
+        expect(capturedEnv?.TMPDIR).toBe("/home/.tmp");
+        expect(capturedCwd).toBe("/home/desktop/project");
         await expect(fs.access(capturedSettingsHostPath ?? "")).rejects.toThrow();
         dockerExecSpy.mockRestore();
         await fs.rm(workspace, { recursive: true, force: true });

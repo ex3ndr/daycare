@@ -4,7 +4,10 @@ import path from "node:path";
 
 import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../engine/permissions.js";
+import { getLogger } from "../log.js";
 import { envNormalize } from "../util/envNormalize.js";
+
+const logger = getLogger("sandbox");
 import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { runInSandbox } from "./runtime.js";
@@ -209,6 +212,9 @@ export class Sandbox {
             homeDir: this.homeDir
         });
 
+        const useDocker = this.docker?.enabled === true;
+        logger.debug(`exec: command=${JSON.stringify(args.command)} cwd=${cwd} docker=${useDocker}`);
+
         try {
             const runtimeConfig = {
                 filesystem,
@@ -225,19 +231,18 @@ export class Sandbox {
                 timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
                 maxBufferBytes: MAX_EXEC_BUFFER
             };
-            const result =
-                this.docker?.enabled === true
-                    ? await dockerRunInSandbox(args.command, runtimeConfig, {
-                          ...runtimeOptions,
-                          docker: {
-                              image: this.docker.image,
-                              tag: this.docker.tag,
-                              socketPath: this.docker.socketPath,
-                              runtime: this.docker.runtime,
-                              userId: this.docker.userId
-                          }
-                      })
-                    : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
+            const result = useDocker
+                ? await dockerRunInSandbox(args.command, runtimeConfig, {
+                      ...runtimeOptions,
+                      docker: {
+                          image: this.docker!.image,
+                          tag: this.docker!.tag,
+                          socketPath: this.docker!.socketPath,
+                          runtime: this.docker!.runtime,
+                          userId: this.docker!.userId
+                      }
+                  })
+                : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
             return {
                 stdout: sandboxText(result.stdout),
                 stderr: sandboxText(result.stderr),
@@ -253,10 +258,16 @@ export class Sandbox {
                 code?: number | string | null;
                 signal?: NodeJS.Signals | null;
             };
+            const exitCode = typeof execError.code === "number" ? execError.code : null;
+            const stderr = sandboxText(execError.stderr);
+            logger.warn(
+                `exec: failed exitCode=${exitCode} signal=${execError.signal ?? "none"} error=${execError.message}` +
+                    (stderr ? ` stderr=${stderr.slice(0, 500)}` : "")
+            );
             return {
                 stdout: sandboxText(execError.stdout),
-                stderr: sandboxText(execError.stderr),
-                exitCode: typeof execError.code === "number" ? execError.code : null,
+                stderr,
+                exitCode,
                 signal: typeof execError.signal === "string" ? execError.signal : null,
                 failed: true,
                 cwd

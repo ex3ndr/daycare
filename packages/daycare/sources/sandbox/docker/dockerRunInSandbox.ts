@@ -3,11 +3,14 @@ import path from "node:path";
 
 import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 
+import { getLogger } from "../../log.js";
+import { shellQuote } from "../../util/shellQuote.js";
 import { sandboxHomeRedefine } from "../sandboxHomeRedefine.js";
 import { sandboxPathHostToContainer } from "../sandboxPathHostToContainer.js";
 import { dockerContainersShared } from "./dockerContainersShared.js";
 import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerTypes.js";
 
+const logger = getLogger("sandbox.docker");
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_BUFFER_BYTES = 1_000_000;
 
@@ -55,8 +58,13 @@ export async function dockerRunInSandbox(
     await fs.writeFile(settingsHostPath, JSON.stringify(runtimeConfig), "utf8");
 
     try {
+        logger.debug(`exec: resolving sandbox-runtime CLI path in container`);
         const cliResolveResult = await dockerContainersShared.exec(dockerConfig, {
-            command: ["node", "-p", "require.resolve('@anthropic-ai/sandbox-runtime/dist/cli.js')"],
+            command: [
+                "bash",
+                "-lc",
+                "node -p \"require.resolve('@anthropic-ai/sandbox-runtime/dist/cli.js')\""
+            ],
             cwd: containerCwd,
             env: containerEnv,
             timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -64,16 +72,22 @@ export async function dockerRunInSandbox(
         });
 
         const srtCliPath = cliPathResolveFromResult(cliResolveResult);
+        logger.debug(`exec: resolved CLI path=${srtCliPath} cwd=${containerCwd} command=${JSON.stringify(command)}`);
 
         const result = await dockerContainersShared.exec(dockerConfig, {
-            command: ["node", srtCliPath, "--settings", settingsContainerPath, "-c", command],
+            command: ["bash", "-lc", `node ${srtCliPath} --settings ${settingsContainerPath} -c ${shellQuote(command)}`],
             cwd: containerCwd,
             env: containerEnv,
             timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
             maxBufferBytes: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES
         });
 
+        logger.debug(`exec: completed exitCode=${result.exitCode}`);
         if (result.exitCode !== 0) {
+            logger.warn(
+                `exec: non-zero exit exitCode=${result.exitCode}` +
+                    (result.stderr ? ` stderr=${result.stderr.slice(0, 500)}` : "")
+            );
             throw dockerExecErrorBuild(result);
         }
 

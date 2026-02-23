@@ -15,12 +15,12 @@ export function sandboxPathHostToContainer(hostHomeDir: string, userId: string, 
 
     if (relativePath.startsWith("..") || relativePath === "") {
         if (relativePath === "") {
-            return path.posix.join("/home", userId);
+            return "/home";
         }
         return targetPath;
     }
 
-    const containerHomeDir = path.posix.join("/home", userId);
+    const containerHomeDir = "/home";
     const containerRelativePath = relativePath.split(path.sep).join(path.posix.sep);
     return path.posix.join(containerHomeDir, containerRelativePath);
 }
