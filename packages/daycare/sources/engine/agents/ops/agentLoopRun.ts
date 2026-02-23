@@ -5,7 +5,6 @@ import type { AgentSkill, Connector } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { tagExtract, tagExtractAll } from "../../../util/tagExtract.js";
-import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
@@ -55,7 +54,6 @@ type AgentLoopRunOptions = {
     connectorRegistry: ConnectorRegistry;
     inferenceRouter: InferenceRouter;
     toolResolver: ToolResolverApi;
-    fileStore: FileFolder;
     authStore: AuthStore;
     eventBus: EngineEventBus;
     assistant: AssistantSettings | null;
@@ -103,7 +101,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         connectorRegistry,
         inferenceRouter,
         toolResolver,
-        fileStore,
         authStore,
         eventBus,
         assistant,
@@ -331,8 +328,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     sayFiles.length > 0
                         ? await sayFileResolve({
                               files: sayFiles,
-                              fileStore,
-                              permissions: agent.state.permissions,
+                              sandbox: agent.sandbox,
                               logger
                           })
                         : [];
@@ -474,11 +470,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     const preamble = montyRuntimePreambleBuild(availableTools);
                     const executionContext = {
                         connectorRegistry,
-                        fileStore,
+                        sandbox: agent.sandbox,
                         auth: authStore,
                         logger,
                         assistant,
-                        permissions: agent.state.permissions,
                         agent,
                         ctx: agent.ctx,
                         source,
@@ -612,11 +607,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
                 const toolResult = await toolResolver.execute(toolCall, {
                     connectorRegistry,
-                    fileStore,
+                    sandbox: agent.sandbox,
                     auth: authStore,
                     logger,
                     assistant,
-                    permissions: agent.state.permissions,
                     agent,
                     ctx: agent.ctx,
                     source,

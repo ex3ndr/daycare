@@ -119,7 +119,18 @@ export type {
 export type { AgentSkill } from "./engine/skills/skillTypes.js";
 // Files
 export type { FileReference } from "./files/types.js";
+// Sandbox
+export { Sandbox } from "./sandbox/sandbox.js";
 export type { SandboxPackageManager } from "./sandbox/sandboxPackageManagers.js";
+export type {
+    SandboxConfig,
+    SandboxExecArgs,
+    SandboxExecResult,
+    SandboxReadArgs,
+    SandboxReadResult,
+    SandboxWriteArgs,
+    SandboxWriteResult
+} from "./sandbox/sandboxTypes.js";
 // Storage
 export type {
     UserConnectorKeyDbRecord,

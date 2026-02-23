@@ -235,14 +235,10 @@ function toolResultBuild(isError: boolean, text: string): ToolExecutionResult {
 function contextBuild(): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir: "/workspace",
-            writeDirs: ["/workspace"]
-        },
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",

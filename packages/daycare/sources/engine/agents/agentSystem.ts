@@ -504,7 +504,10 @@ export class AgentSystem {
         if (!entry) {
             return;
         }
-        entry.agent.state.permissions = permissions;
+        const current = entry.agent.state.permissions;
+        current.workingDir = permissions.workingDir;
+        current.writeDirs = [...permissions.writeDirs];
+        current.readDirs = [...(permissions.readDirs ?? [])];
         entry.agent.state.updatedAt = updatedAt;
     }
 

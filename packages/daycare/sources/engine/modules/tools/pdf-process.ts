@@ -1,10 +1,6 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { isWithinSecure, openSecure } from "../../../sandbox/pathResolveSecure.js";
-import { sandboxCanRead } from "../../../sandbox/sandboxCanRead.js";
 import { pdfExtract, pdfSignatureIs } from "../media/pdfExtract.js";
 
 const DEFAULT_PDF_MAX_CHARS = 20_000;
@@ -63,16 +59,19 @@ export function pdfProcessTool(): ToolDefinition<typeof schema, PdfProcessResult
         returns: pdfProcessReturns,
         execute: async (args, context, toolCall) => {
             const payload = args as PdfProcessArgs;
-            const workingDir = context.permissions.workingDir;
+            const workingDir = context.sandbox.workingDir;
             if (!workingDir) {
                 throw new Error("Workspace is not configured.");
             }
 
-            const normalizedPath = path.isAbsolute(payload.path)
-                ? path.resolve(payload.path)
-                : path.resolve(workingDir, payload.path);
-            const resolvedPath = await sandboxCanRead(context.permissions, normalizedPath);
-            const pdfBuffer = await pdfBufferReadSecure(resolvedPath);
+            const readResult = await context.sandbox.read({
+                path: payload.path,
+                binary: true
+            });
+            if (readResult.type !== "binary") {
+                throw new Error("Path is not a regular file.");
+            }
+            const pdfBuffer = readResult.content;
             if (!pdfSignatureIs(pdfBuffer)) {
                 throw new Error("Path is not a PDF file.");
             }
@@ -85,7 +84,7 @@ export function pdfProcessTool(): ToolDefinition<typeof schema, PdfProcessResult
                 logger: context.logger
             });
             const clampedText = textClamp(extracted.text, payload.maxChars ?? DEFAULT_PDF_MAX_CHARS);
-            const displayPath = displayPathFormat(workingDir, resolvedPath);
+            const displayPath = readResult.displayPath;
             const summary = [
                 `Processed PDF: ${displayPath}`,
                 `pages=${extracted.pagesProcessed}/${extracted.totalPages}`,
@@ -126,28 +125,6 @@ export function pdfProcessTool(): ToolDefinition<typeof schema, PdfProcessResult
     };
 }
 
-async function pdfBufferReadSecure(resolvedPath: string): Promise<Buffer> {
-    const stats = await fs.lstat(resolvedPath);
-    if (stats.isSymbolicLink()) {
-        throw new Error("Cannot process symbolic link.");
-    }
-    if (!stats.isFile()) {
-        throw new Error("Path is not a file.");
-    }
-
-    const handle = await openSecure(resolvedPath, "r");
-    try {
-        const handleStats = await handle.stat();
-        if (!handleStats.isFile()) {
-            throw new Error("Path is not a file.");
-        }
-        const data = await handle.readFile();
-        return Buffer.isBuffer(data) ? data : Buffer.from(data);
-    } finally {
-        await handle.close();
-    }
-}
-
 function textClamp(text: string, maxChars: number): string {
     if (text.length <= maxChars) {
         return text;
@@ -166,11 +143,4 @@ function pdfTextPartBuild(summary: string, text: string): { type: "text"; text: 
         type: "text",
         text: `${summary}\n\nExtracted text:\n${text}`
     };
-}
-
-function displayPathFormat(workingDir: string, target: string): string {
-    if (isWithinSecure(workingDir, target)) {
-        return path.relative(workingDir, target) || ".";
-    }
-    return target;
 }

@@ -3,27 +3,27 @@ import path from "node:path";
 
 import type { Logger } from "pino";
 
-import type { ConnectorFile, ConnectorFileDisposition, FileReference, SessionPermissions } from "@/types";
+import type { ConnectorFile, ConnectorFileDisposition, FileReference } from "@/types";
 import { openSecure, pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
-import type { FileFolder } from "../../files/fileFolder.js";
+import type { Sandbox } from "../../../sandbox/sandbox.js";
+import { sanitizeFilename } from "../../../util/filename.js";
 
 export type SayFileResolveInput = {
     files: Array<{ path: string; mode: ConnectorFileDisposition }>;
-    fileStore: FileFolder;
-    permissions: SessionPermissions;
+    sandbox: Sandbox;
     logger: Logger;
 };
 
 /**
  * Resolves say-mode file descriptors into connector-ready files.
- * Expects: paths are absolute or workspace-relative to `permissions.workingDir`.
+ * Expects: paths are absolute or workspace-relative to `sandbox.workingDir`.
  */
 export async function sayFileResolve(input: SayFileResolveInput): Promise<ConnectorFile[]> {
     const resolved: ConnectorFile[] = [];
 
     for (const item of input.files) {
         try {
-            const file = await sayFileReferenceResolve(item.path, input.fileStore, input.permissions);
+            const file = await sayFileReferenceResolve(item.path, input.sandbox);
             if (!file) {
                 continue;
             }
@@ -36,13 +36,9 @@ export async function sayFileResolve(input: SayFileResolveInput): Promise<Connec
     return resolved;
 }
 
-async function sayFileReferenceResolve(
-    filePath: string,
-    fileStore: FileFolder,
-    permissions: SessionPermissions
-): Promise<FileReference | null> {
-    const normalizedInputPath = pathNormalize(filePath, permissions.workingDir);
-    const allowedDirs = [permissions.workingDir, ...permissions.writeDirs];
+async function sayFileReferenceResolve(filePath: string, sandbox: Sandbox): Promise<FileReference | null> {
+    const normalizedInputPath = pathNormalize(filePath, sandbox.workingDir);
+    const allowedDirs = [sandbox.permissions.workingDir, ...sandbox.permissions.writeDirs];
     const { realPath } = await pathResolveSecure(allowedDirs, normalizedInputPath);
 
     const stats = await fs.lstat(realPath);
@@ -60,18 +56,26 @@ async function sayFileReferenceResolve(
         throw new Error("Path is not a file");
     }
 
-    const saved = await fileStore.saveFromPath({
-        name: path.basename(realPath),
-        mimeType: mimeTypeResolve(realPath),
-        path: realPath
+    const name = sanitizeFilename(path.basename(realPath));
+    const downloadPath = path.join(sandbox.homeDir, "downloads", name);
+    const secureHandle = await openSecure(realPath, "r");
+    let content: Buffer;
+    try {
+        content = await secureHandle.readFile();
+    } finally {
+        await secureHandle.close();
+    }
+    const saved = await sandbox.write({
+        path: downloadPath,
+        content
     });
 
     return {
-        id: saved.id,
-        name: saved.name,
-        mimeType: saved.mimeType,
-        size: saved.size,
-        path: saved.path
+        id: saved.sandboxPath,
+        name,
+        mimeType: mimeTypeResolve(realPath),
+        size: saved.bytes,
+        path: saved.resolvedPath
     };
 }
 

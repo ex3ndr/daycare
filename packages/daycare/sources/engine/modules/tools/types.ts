@@ -1,13 +1,13 @@
 import type { Tool, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 import type { Logger } from "pino";
-import type { AgentDescriptor, Context, MessageContext, SessionPermissions } from "@/types";
+import type { AgentDescriptor, Context, MessageContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
+import type { Sandbox } from "../../../sandbox/sandbox.js";
 import type { AssistantSettings } from "../../../settings.js";
 import type { Agent } from "../../agents/agent.js";
 import type { AgentSystem } from "../../agents/agentSystem.js";
 import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
-import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Memory } from "../../memory/memory.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
@@ -21,11 +21,10 @@ export type ToolVisibilityContext = {
 
 export type ToolExecutionContext<_State = Record<string, unknown>> = {
     connectorRegistry: ConnectorRegistry;
-    fileStore: FileFolder;
+    sandbox: Sandbox;
     auth: AuthStore;
     logger: Logger;
     assistant: AssistantSettings | null;
-    permissions: SessionPermissions;
     agent: Agent;
     ctx: Context;
     source: string;

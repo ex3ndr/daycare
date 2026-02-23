@@ -95,14 +95,10 @@ function contextBuild(workspaceDir: string): ToolExecutionContext {
     const toolResolver = new ToolResolver();
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir: workspaceDir,
-            writeDirs: [workspaceDir]
-        },
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
         ctx: { agentId: "agent-1", userId: "user-1" } as ToolExecutionContext["ctx"],
         source: "test",

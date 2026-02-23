@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { SessionPermissions, ToolExecutionContext } from "@/types";
+import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import { Storage } from "../../../storage/storage.js";
 import { UserHome } from "../../users/userHome.js";
@@ -80,11 +80,10 @@ function contextBuild(
 ): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: { workingDir: "/workspace", writeDirs: ["/workspace"] } as SessionPermissions,
         agent: { id: "caller-agent" } as unknown as ToolExecutionContext["agent"],
         ctx: { agentId: "caller-agent", userId } as unknown as ToolExecutionContext["ctx"],
         source: "test",

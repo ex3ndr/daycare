@@ -254,14 +254,17 @@ function contextBuild(input?: {
     const agentIdForTarget = input?.agentSystem?.agentIdForTarget ?? (async () => "agent-sub");
     const postAndAwait =
         input?.agentSystem?.postAndAwait ?? (async () => ({ type: "message" as const, responseText: "ok" }));
+    const permissions = input?.permissions ?? permissionsBuild({});
 
     return {
         connectorRegistry: (input?.connectorRegistry ?? null) as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: {
+            permissions,
+            workingDir: permissions.workingDir
+        } as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: input?.permissions ?? permissionsBuild({}),
         agent: { id: "agent-parent", descriptor: input?.descriptor } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-parent" }),
         source: "test",

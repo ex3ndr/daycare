@@ -1,6 +1,10 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { sanitizeFilename } from "../../../util/filename.js";
+import { FileFolder } from "../../files/fileFolder.js";
 import type { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
 import type { ImageGenerationRequest } from "../images/types.js";
 
@@ -97,6 +101,7 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
             if (!provider) {
                 throw new Error(`Unknown image provider: ${providerId}`);
             }
+            const tempFileStore = new FileFolder(path.join(toolContext.sandbox.homeDir, "tmp", "image-generation"));
 
             const result = await provider.generate(
                 {
@@ -106,39 +111,56 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                     model: payload.model
                 },
                 {
-                    fileStore: toolContext.fileStore,
+                    fileStore: tempFileStore,
                     auth: toolContext.auth,
                     logger: toolContext.logger
                 }
             );
 
-            const downloadsDir = toolContext.fileStore.path;
+            const downloadsDir = path.join(toolContext.sandbox.homeDir, "downloads");
             const createdAt = new Date();
             const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
+            const downloadsDirSandboxPath = `~/${path.relative(toolContext.sandbox.homeDir, downloadsDir)}`;
 
-            const summary = `Generated ${result.files.length} image(s) with ${providerId}. Saved under ${downloadsDir}.`;
+            const summary = `Generated ${result.files.length} image(s) with ${providerId}. Saved under ${downloadsDirSandboxPath}.`;
             const content: Array<{ type: "text"; text: string }> = [
                 {
                     type: "text",
                     text: summary
                 }
             ];
-            const savedFiles: Array<{ id: string; name: string; path: string; mimeType: string; size: number }> = [];
+            const savedFiles: Array<{
+                id: string;
+                name: string;
+                path: string;
+                resolvedPath: string;
+                mimeType: string;
+                size: number;
+            }> = [];
             for (const [index, file] of result.files.entries()) {
                 if (!file.mimeType.startsWith("image/")) {
                     continue;
                 }
                 const suffix = result.files.length > 1 ? `-${index + 1}` : "";
                 const extension = imageExtensionResolve(file.mimeType);
-                const saved = await toolContext.fileStore.saveFromPath({
-                    name: `${timestamp}${suffix}${extension}`,
-                    mimeType: file.mimeType,
-                    path: file.path
+                const fileName = sanitizeFilename(`${timestamp}${suffix}${extension}`);
+                const targetPath = path.join(downloadsDir, fileName);
+                const sourceContent = await fs.readFile(file.path);
+                const saved = await toolContext.sandbox.write({
+                    path: targetPath,
+                    content: sourceContent
                 });
-                savedFiles.push(saved);
+                savedFiles.push({
+                    id: saved.sandboxPath,
+                    name: fileName,
+                    path: saved.sandboxPath,
+                    resolvedPath: saved.resolvedPath,
+                    mimeType: file.mimeType,
+                    size: saved.bytes
+                });
                 content.push({
                     type: "text",
-                    text: `Image file: ${saved.path} (${file.mimeType})`
+                    text: `Image file: ${saved.sandboxPath} (${file.mimeType})`
                 });
             }
 
@@ -156,11 +178,12 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                         size: file.size
                     })),
                     downloads: {
-                        dir: downloadsDir,
+                        dir: downloadsDirSandboxPath,
                         files: savedFiles.map((file) => ({
                             id: file.id,
                             name: file.name,
                             path: file.path,
+                            resolvedPath: file.resolvedPath,
                             mimeType: file.mimeType,
                             size: file.size
                         }))
@@ -176,7 +199,7 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                     summary,
                     provider: providerId,
                     fileCount: savedFiles.length,
-                    downloadsDir
+                    downloadsDir: downloadsDirSandboxPath
                 }
             };
         }

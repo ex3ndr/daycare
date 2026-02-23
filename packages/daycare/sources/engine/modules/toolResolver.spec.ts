@@ -346,14 +346,10 @@ describe("ToolResolver", () => {
 function toolExecutionContextCreate(overrides: Partial<ToolExecutionContext> = {}): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir: "/tmp",
-            writeDirs: []
-        },
         agent: null as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",

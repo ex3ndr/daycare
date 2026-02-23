@@ -52,7 +52,7 @@ export function skillToolBuild(): ToolDefinition {
             if (!requested) {
                 throw new Error("Skill name is required.");
             }
-            const workingDir = toolContext.permissions.workingDir;
+            const workingDir = toolContext.sandbox.workingDir;
             if (!workingDir) {
                 throw new Error("Workspace is not configured.");
             }
@@ -60,7 +60,7 @@ export function skillToolBuild(): ToolDefinition {
             const skill = await skillTargetResolve(
                 requested,
                 toolContext.skills ?? [],
-                toolContext.permissions,
+                toolContext.sandbox.permissions,
                 workingDir
             );
             if (!skill) {
@@ -72,7 +72,7 @@ export function skillToolBuild(): ToolDefinition {
             // Notify connector about skill activation (fire-and-forget for user agents)
             void skillNotifyConnector(skill.name, toolContext);
 
-            const resolvedSkillPath = await skillPathResolveReadable(toolContext.permissions, skill.path);
+            const resolvedSkillPath = await skillPathResolveReadable(toolContext.sandbox.permissions, skill.path);
             const skillBody = await skillContentLoad(resolvedSkillPath);
             if (skill.sandbox === true) {
                 const skillSource = skillSourceBuild(skill.name);

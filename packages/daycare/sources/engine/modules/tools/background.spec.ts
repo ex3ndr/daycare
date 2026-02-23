@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { SessionPermissions, ToolExecutionContext } from "@/types";
+import type { ToolExecutionContext } from "@/types";
 import { contextForAgent } from "../../agents/context.js";
 import { buildStartBackgroundAgentTool } from "./background.js";
 
@@ -18,7 +18,7 @@ describe("buildStartBackgroundAgentTool", () => {
         });
 
         const tool = buildStartBackgroundAgentTool();
-        const context = contextBuild(buildPermissions({}), {
+        const context = contextBuild({
             agentIdForTarget: resolveTarget,
             post
         });
@@ -35,28 +35,16 @@ describe("buildStartBackgroundAgentTool", () => {
     });
 });
 
-function buildPermissions(overrides: Partial<SessionPermissions>): SessionPermissions {
-    return {
-        workingDir: "/workspace",
-        writeDirs: ["/workspace"],
-        ...overrides
-    };
-}
-
-function contextBuild(
-    permissions: SessionPermissions,
-    agentSystem: {
-        agentIdForTarget: (ctx: unknown, target: unknown) => Promise<string>;
-        post: (ctx: unknown, target: unknown, item: unknown) => Promise<void>;
-    }
-): ToolExecutionContext {
+function contextBuild(agentSystem: {
+    agentIdForTarget: (ctx: unknown, target: unknown) => Promise<string>;
+    post: (ctx: unknown, target: unknown, item: unknown) => Promise<void>;
+}): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions,
         agent: { id: "parent-agent" } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "user-1", agentId: "parent-agent" }),
         source: "test",

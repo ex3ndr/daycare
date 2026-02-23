@@ -52,7 +52,7 @@ export function appInstallToolBuild(apps: Apps): ToolDefinition {
             }
             const resolvedSource = path.isAbsolute(source)
                 ? path.resolve(source)
-                : path.resolve(context.permissions.workingDir, source);
+                : path.resolve(context.sandbox.workingDir, source);
             const userId = contextUserIdResolve(context);
             const appsDir = context.agentSystem.userHomeForUserId(userId).apps;
 

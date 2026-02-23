@@ -6,6 +6,7 @@ import type { Context, MessageContext, ToolExecutionContext } from "@/types";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
+import { Sandbox } from "../../sandbox/sandbox.js";
 import { tagExtractAll } from "../../util/tagExtract.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
@@ -83,6 +84,7 @@ export class Agent {
     private inferenceAbortController: AbortController | null = null;
     private readonly userHome: UserHome;
     private readonly files: Files;
+    readonly sandbox: Sandbox;
     private endTurnCount = 0;
 
     private constructor(
@@ -103,6 +105,10 @@ export class Agent {
         this.agentSystem = agentSystem;
         this.userHome = userHome;
         this.files = new Files(this.userHome.home);
+        this.sandbox = new Sandbox({
+            homeDir: this.userHome.home,
+            permissions: this.state.permissions
+        });
     }
 
     /**
@@ -549,7 +555,6 @@ export class Agent {
                     connectorRegistry: this.agentSystem.connectorRegistry,
                     inferenceRouter: this.agentSystem.inferenceRouter,
                     toolResolver,
-                    fileStore: this.files.downloads,
                     authStore: this.agentSystem.authStore,
                     eventBus: this.agentSystem.eventBus,
                     assistant: this.agentSystem.config.current.settings.assistant ?? null,
@@ -1055,11 +1060,10 @@ export class Agent {
 
         return {
             connectorRegistry: this.agentSystem.connectorRegistry,
-            fileStore: this.files.downloads,
+            sandbox: this.sandbox,
             auth: this.agentSystem.authStore,
             logger,
             assistant: this.agentSystem.config.current.settings.assistant ?? null,
-            permissions: this.state.permissions,
             agent: this,
             ctx: this.ctx,
             source,

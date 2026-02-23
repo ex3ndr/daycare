@@ -13,12 +13,10 @@ vi.mock("../../../util/renderToPng.js", () => ({
 
 describe("buildMermaidPngTool", () => {
     it("renders a png file from mermaid source", async () => {
-        const saveBuffer = vi.fn(async (options: { name: string; mimeType: string; data: Buffer }) => ({
-            id: "file-1",
-            name: options.name,
-            path: "/tmp/file-1.png",
-            mimeType: options.mimeType,
-            size: options.data.byteLength
+        const write = vi.fn(async (_args: { path: string; content: Buffer }) => ({
+            bytes: 3,
+            resolvedPath: "/tmp/home/downloads/pipeline.png",
+            sandboxPath: "~/downloads/pipeline.png"
         }));
 
         const tool = buildMermaidPngTool();
@@ -27,27 +25,26 @@ describe("buildMermaidPngTool", () => {
                 mermaid: "graph LR\n  A --> B",
                 name: "pipeline"
             },
-            contextBuild(saveBuffer),
+            contextBuild(write),
             { id: "call-1", name: "generate_mermaid_png" }
         );
 
-        expect(saveBuffer).toHaveBeenCalledTimes(1);
+        expect(write).toHaveBeenCalledTimes(1);
         expect(mocks.renderToPng).toHaveBeenCalledTimes(1);
-        expect(saveBuffer.mock.calls[0]?.[0]).toMatchObject({
-            name: "pipeline.png",
-            mimeType: "image/png"
+        expect(write.mock.calls[0]?.[0]).toMatchObject({
+            path: "/tmp/home/downloads/pipeline.png"
         });
         expect(result.toolMessage.isError).toBe(false);
         expect(result.toolMessage.content).toEqual([
             {
                 type: "text",
-                text: "Generated Mermaid PNG: /tmp/file-1.png"
+                text: "Generated Mermaid PNG: ~/downloads/pipeline.png"
             }
         ]);
     });
 
     it("rejects fenced markdown input", async () => {
-        const saveBuffer = vi.fn();
+        const write = vi.fn();
         const tool = buildMermaidPngTool();
 
         await expect(
@@ -55,16 +52,16 @@ describe("buildMermaidPngTool", () => {
                 {
                     mermaid: "```mermaid\ngraph LR\n  A --> B\n```"
                 },
-                contextBuild(saveBuffer),
+                contextBuild(write),
                 { id: "call-1", name: "generate_mermaid_png" }
             )
         ).rejects.toThrow("raw Mermaid source without ``` fences");
 
-        expect(saveBuffer).not.toHaveBeenCalled();
+        expect(write).not.toHaveBeenCalled();
     });
 
     it("rejects unknown theme", async () => {
-        const saveBuffer = vi.fn();
+        const write = vi.fn();
         const tool = buildMermaidPngTool();
 
         await expect(
@@ -73,34 +70,31 @@ describe("buildMermaidPngTool", () => {
                     mermaid: "graph LR\n  A --> B",
                     theme: "not-a-theme"
                 },
-                contextBuild(saveBuffer),
+                contextBuild(write),
                 { id: "call-1", name: "generate_mermaid_png" }
             )
         ).rejects.toThrow("Unknown Mermaid theme");
 
-        expect(saveBuffer).not.toHaveBeenCalled();
+        expect(write).not.toHaveBeenCalled();
     });
 });
 
 function contextBuild(
-    saveBuffer: (options: { name: string; mimeType: string; data: Buffer }) => Promise<{
-        id: string;
-        name: string;
-        path: string;
-        mimeType: string;
-        size: number;
+    write: (options: { path: string; content: Buffer }) => Promise<{
+        bytes: number;
+        resolvedPath: string;
+        sandboxPath: string;
     }>
 ): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: { saveBuffer } as unknown as ToolExecutionContext["fileStore"],
+        sandbox: {
+            homeDir: "/tmp/home",
+            write
+        } as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir: "/tmp",
-            writeDirs: []
-        },
         agent: { id: "agent-test" } as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",

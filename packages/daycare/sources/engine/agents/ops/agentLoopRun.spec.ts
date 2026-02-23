@@ -5,7 +5,6 @@ import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentSkill, Connector, ToolExecutionResult } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
-import type { FileFolder } from "../../files/fileFolder.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
@@ -1157,8 +1156,7 @@ describe("agentLoopRun say tag", () => {
                     connector,
                     inferenceRouter,
                     toolResolver,
-                    say: true,
-                    fileStore: fileStoreBuild()
+                    say: true
                 })
             );
 
@@ -1172,13 +1170,11 @@ describe("agentLoopRun say tag", () => {
                 text: "second",
                 files: [
                     {
-                        id: "file-1",
+                        id: "~/downloads/file-1__report.pdf",
                         name: "file-1__report.pdf",
                         mimeType: "application/pdf",
-                        size: 10,
-                        path: expect.stringMatching(
-                            /(?:\/private)?\/tmp\/daycare-file-tag-[^/]+\/file-1__report\.pdf$/
-                        ),
+                        size: 6,
+                        path: "/tmp/downloads/file-1__report.pdf",
                         sendAs: "document"
                     }
                 ],
@@ -1217,8 +1213,7 @@ describe("agentLoopRun say tag", () => {
                     connector,
                     inferenceRouter,
                     toolResolver,
-                    say: true,
-                    fileStore: fileStoreBuild()
+                    say: true
                 })
             );
 
@@ -1227,13 +1222,11 @@ describe("agentLoopRun say tag", () => {
                 text: null,
                 files: [
                     {
-                        id: "file-1",
+                        id: "~/downloads/file-1__report.pdf",
                         name: "file-1__report.pdf",
                         mimeType: "application/pdf",
-                        size: 10,
-                        path: expect.stringMatching(
-                            /(?:\/private)?\/tmp\/daycare-file-tag-[^/]+\/file-1__report\.pdf$/
-                        ),
+                        size: 6,
+                        path: "/tmp/downloads/file-1__report.pdf",
                         sendAs: "auto"
                     }
                 ],
@@ -1259,7 +1252,6 @@ function optionsBuild(params: {
     abortSignal?: AbortSignal;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     inferenceSessionId?: string;
-    fileStore?: FileFolder;
 }) {
     const logger = {
         debug: vi.fn(),
@@ -1309,6 +1301,19 @@ function optionsBuild(params: {
                     workingDir: "/tmp",
                     writeDirs: ["/tmp"]
                 }
+            },
+            sandbox: {
+                homeDir: "/tmp",
+                workingDir: "/tmp",
+                permissions: {
+                    workingDir: "/tmp",
+                    writeDirs: ["/tmp"]
+                },
+                write: vi.fn(async (args: { path: string; content: string | Buffer }) => ({
+                    bytes: Buffer.isBuffer(args.content) ? args.content.byteLength : Buffer.byteLength(args.content),
+                    resolvedPath: args.path,
+                    sandboxPath: `~/${path.relative("/tmp", args.path)}`
+                }))
             }
         } as unknown as Agent,
         source: "telegram",
@@ -1317,7 +1322,6 @@ function optionsBuild(params: {
         connectorRegistry,
         inferenceRouter: params.inferenceRouter,
         toolResolver: params.toolResolver,
-        fileStore: params.fileStore ?? ({} as FileFolder),
         authStore: {} as AuthStore,
         eventBus: { emit: vi.fn() } as unknown as EngineEventBus,
         assistant: null,
@@ -1479,18 +1483,4 @@ function toolResultTextBuild(toolCallId: string, toolName: string, text: string)
         },
         typedResult: { text }
     };
-}
-
-function fileStoreBuild(): FileFolder {
-    return {
-        saveFromPath: async (options: { name: string; mimeType: string; path: string }) => {
-            return {
-                id: "file-1",
-                name: options.name,
-                path: options.path,
-                mimeType: options.mimeType,
-                size: 10
-            };
-        }
-    } as unknown as FileFolder;
 }

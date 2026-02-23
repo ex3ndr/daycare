@@ -12,6 +12,7 @@ import { Agent } from "../../engine/agents/agent.js";
 import { contextForAgent } from "../../engine/agents/context.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
+import { Sandbox } from "../../sandbox/sandbox.js";
 import { buildExecTool, buildWorkspaceReadTool, formatExecOutput } from "./tool.js";
 
 const execToolCall = { id: "tool-call-1", name: "exec" };
@@ -176,23 +177,20 @@ describe("exec tool allowedDomains", () => {
         }
     });
 
-    itIfSandbox("maps HOME to provided home path", async () => {
+    itIfSandbox("maps HOME to sandbox home path", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir, [workingDir]);
-        const home = path.join(workingDir, ".daycare-home");
-        await fs.mkdir(home, { recursive: true });
 
         const result = await tool.execute(
             {
                 command: "printf '%s' \"$HOME\"",
-                home,
                 allowedDomains: ["example.com"]
             },
             context,
             execToolCall
         );
         const text = toolMessageText(result.toolMessage.content);
-        const expectedHome = await fs.realpath(home);
+        const expectedHome = context.sandbox.homeDir;
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain(`stdout:\n${expectedHome}`);
     });
@@ -217,30 +215,12 @@ describe("exec tool allowedDomains", () => {
         }
     });
 
-    itIfSandbox("rejects HOME path when not write-granted", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const home = path.join(workingDir, ".daycare-home");
-
-        await expect(
-            tool.execute(
-                {
-                    command: "echo ok",
-                    home,
-                    allowedDomains: ["example.com"]
-                },
-                context,
-                execToolCall
-            )
-        ).rejects.toThrow("Path is outside the allowed directories.");
-    });
-
     itIfSandbox("does not mutate tool context permissions", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir, [workingDir]);
         const original = {
-            workingDir: context.permissions.workingDir,
-            writeDirs: [...context.permissions.writeDirs]
+            workingDir: context.sandbox.permissions.workingDir,
+            writeDirs: [...context.sandbox.permissions.writeDirs]
         };
 
         const result = await tool.execute(
@@ -252,7 +232,7 @@ describe("exec tool allowedDomains", () => {
             execToolCall
         );
         expect(result.toolMessage.isError).toBe(false);
-        expect(context.permissions).toEqual(original);
+        expect(context.sandbox.permissions).toEqual(original);
     });
 });
 
@@ -315,13 +295,16 @@ function createContext(workingDir: string, writeDirs: string[] = []): ToolExecut
         {} as unknown as Parameters<typeof Agent.restore>[4],
         new UserHome(path.join(workingDir, "users"), "user-1")
     );
+    const sandbox = new Sandbox({
+        homeDir: workingDir,
+        permissions: state.permissions
+    });
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox,
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: state.permissions,
         agent,
         ctx,
         source: "test",

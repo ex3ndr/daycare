@@ -50,7 +50,7 @@ describe("process_start permissions", () => {
             { id: "call-0b", name: "process_start" }
         );
 
-        expect(context.permissions).toEqual(original);
+        expect(context.sandbox.permissions).toEqual(original);
     });
 
     it("does not forward caller write grants", async () => {
@@ -82,11 +82,10 @@ describe("process_start permissions", () => {
 function createContext(permissions: SessionPermissions): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: { permissions } as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: null as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions,
         agent: null as unknown as ToolExecutionContext["agent"],
         ctx: { agentId: "agent-1", userId: "user-1" } as ToolExecutionContext["ctx"],
         source: "test",

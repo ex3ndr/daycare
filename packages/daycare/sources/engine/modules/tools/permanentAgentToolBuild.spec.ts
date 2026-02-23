@@ -28,7 +28,7 @@ describe("permanentAgentToolBuild", () => {
             const storage = Storage.open(config.dbPath);
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
-            const context = contextBuild(buildPermissions({}), {
+            const context = contextBuild({
                 config: { current: config },
                 storage,
                 updateAgentDescriptor,
@@ -75,7 +75,7 @@ describe("permanentAgentToolBuild", () => {
             );
             const storage = Storage.open(config.dbPath);
             const tool = permanentAgentToolBuild();
-            const context = contextBuild(buildPermissions({}), {
+            const context = contextBuild({
                 config: { current: config },
                 storage,
                 updateAgentDescriptor: vi.fn(),
@@ -114,7 +114,7 @@ describe("permanentAgentToolBuild", () => {
             const storage = Storage.open(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = {
-                ...contextBuild(buildPermissions({}), {
+                ...contextBuild({
                     config: { current: config },
                     storage,
                     updateAgentDescriptor: vi.fn(),
@@ -141,31 +141,19 @@ describe("permanentAgentToolBuild", () => {
     });
 });
 
-function buildPermissions(overrides: Partial<SessionPermissions>): SessionPermissions {
-    return {
-        workingDir: "/workspace",
-        writeDirs: ["/workspace"],
-        ...overrides
-    };
-}
-
-function contextBuild(
-    permissions: SessionPermissions,
-    agentSystem: {
-        config: { current: ReturnType<typeof configResolve> };
-        storage: Storage;
-        updateAgentDescriptor: (agentId: string, descriptor: unknown) => void;
-        updateAgentPermissions: (agentId: string, nextPermissions: SessionPermissions, updatedAt: number) => void;
-        userHomeForUserId?: (userId: string) => UserHome;
-    }
-): ToolExecutionContext {
+function contextBuild(agentSystem: {
+    config: { current: ReturnType<typeof configResolve> };
+    storage: Storage;
+    updateAgentDescriptor: (agentId: string, descriptor: unknown) => void;
+    updateAgentPermissions: (agentId: string, nextPermissions: SessionPermissions, updatedAt: number) => void;
+    userHomeForUserId?: (userId: string) => UserHome;
+}): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions,
         agent: { id: "creator-agent" } as unknown as ToolExecutionContext["agent"],
         ctx: {
             agentId: "creator-agent",

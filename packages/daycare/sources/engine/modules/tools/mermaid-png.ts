@@ -1,8 +1,10 @@
+import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { renderMermaid, THEMES } from "beautiful-mermaid";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { sanitizeFilename } from "../../../util/filename.js";
 import { renderToPng } from "../../../util/renderToPng.js";
 
 const schema = Type.Object(
@@ -79,13 +81,14 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
             const png = await renderToPng(svg, {
                 width: payload.width ?? 1600
             });
-            const stored = await context.fileStore.saveBuffer({
-                name: mermaidPngNameResolve(payload.name),
-                mimeType: "image/png",
-                data: png
+            const fileName = sanitizeFilename(mermaidPngNameResolve(payload.name));
+            const targetPath = path.join(context.sandbox.homeDir, "downloads", fileName);
+            const stored = await context.sandbox.write({
+                path: targetPath,
+                content: png
             });
 
-            const summary = `Generated Mermaid PNG: ${stored.path}`;
+            const summary = `Generated Mermaid PNG: ${stored.sandboxPath}`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -97,10 +100,12 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
                     }
                 ],
                 details: {
-                    fileId: stored.id,
-                    name: stored.name,
-                    mimeType: stored.mimeType,
-                    size: stored.size,
+                    fileId: stored.sandboxPath,
+                    name: fileName,
+                    mimeType: "image/png",
+                    size: stored.bytes,
+                    path: stored.sandboxPath,
+                    resolvedPath: stored.resolvedPath,
                     theme: themeName,
                     width: payload.width ?? 1600
                 },
@@ -112,8 +117,8 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
                 toolMessage,
                 typedResult: {
                     summary,
-                    fileId: stored.id,
-                    fileName: stored.name,
+                    fileId: stored.sandboxPath,
+                    fileName,
                     theme: themeName,
                     width: payload.width ?? 1600
                 }

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { AgentState, ToolExecutionContext } from "@/types";
+import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
@@ -507,11 +507,10 @@ function contextBuild(
     const storage = storageResolve(config);
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: permissionBuildUser(new UserHome(config.usersDir, options.callerUserId)),
         agent: { id: options.callerAgentId } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: options.callerUserId, agentId: options.callerAgentId }),
         source: "test",
@@ -526,7 +525,7 @@ function contextBuild(
     };
 }
 
-function stateBuild(permissions: ToolExecutionContext["permissions"], updatedAt: number): AgentState {
+function stateBuild(permissions: SessionPermissions, updatedAt: number): AgentState {
     return {
         context: { messages: [] },
         permissions,

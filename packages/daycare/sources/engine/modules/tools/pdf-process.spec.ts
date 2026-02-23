@@ -50,16 +50,26 @@ describe("pdfProcessTool", () => {
 });
 
 function contextCreate(workingDir: string): ToolExecutionContext {
+    const read = vi.fn(async (args: { path: string }) => {
+        const resolvedPath = path.resolve(args.path);
+        const content = await fs.readFile(resolvedPath);
+        return {
+            type: "binary" as const,
+            content,
+            bytes: content.byteLength,
+            resolvedPath,
+            displayPath: resolvedPath
+        };
+    });
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: {
+            workingDir,
+            read
+        } as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: { warn: vi.fn() } as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir,
-            writeDirs: []
-        },
         agent: null as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",

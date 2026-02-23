@@ -70,14 +70,10 @@ function contextBuild(opts: {
 }): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore: null as unknown as ToolExecutionContext["fileStore"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir: "/tmp",
-            writeDirs: ["/tmp"]
-        },
         agent: {
             id: opts.agentId,
             descriptor: opts.descriptor

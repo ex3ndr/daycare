@@ -11,6 +11,7 @@ import type {
     ToolResultContract
 } from "@/types";
 import { openSecure, pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
+import { sanitizeFilename } from "../../../util/filename.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
 const schema = Type.Object(
@@ -154,7 +155,7 @@ async function resolveFile(payload: SendFileArgs, context: ToolExecutionContext)
     }
 
     // Securely resolve path, following symlinks and verifying containment
-    const allowedDirs = [context.permissions.workingDir, ...context.permissions.writeDirs];
+    const allowedDirs = [context.sandbox.permissions.workingDir, ...context.sandbox.permissions.writeDirs];
     const { realPath: resolved } = await pathResolveSecure(allowedDirs, payload.path!);
 
     // Use lstat to check for symlinks, then open securely to prevent TOCTOU
@@ -179,17 +180,25 @@ async function resolveFile(payload: SendFileArgs, context: ToolExecutionContext)
     if (!mimeType) {
         throw new Error("mimeType is required when sending a path");
     }
-    const name = payload.name ?? path.basename(resolved);
-    const stored = await context.fileStore.saveFromPath({
-        name,
-        mimeType,
-        path: resolved
+    const handleForRead = await openSecure(resolved, "r");
+    let data: Buffer;
+    try {
+        data = await handleForRead.readFile();
+    } finally {
+        await handleForRead.close();
+    }
+
+    const name = sanitizeFilename(payload.name ?? path.basename(resolved));
+    const targetPath = path.join(context.sandbox.homeDir, "downloads", name);
+    const stored = await context.sandbox.write({
+        path: targetPath,
+        content: data
     });
     return {
-        id: stored.id,
-        name: stored.name,
-        mimeType: stored.mimeType,
-        size: stored.size,
-        path: stored.path
+        id: stored.sandboxPath,
+        name,
+        mimeType,
+        size: stored.bytes,
+        path: stored.resolvedPath
     };
 }

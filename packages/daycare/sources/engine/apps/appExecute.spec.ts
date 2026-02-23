@@ -85,14 +85,10 @@ describe("appExecute", () => {
 
         const context = {
             connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-            fileStore: null as unknown as ToolExecutionContext["fileStore"],
+            sandbox: null as unknown as ToolExecutionContext["sandbox"],
             auth: null as unknown as ToolExecutionContext["auth"],
             logger: console as unknown as ToolExecutionContext["logger"],
             assistant: null,
-            permissions: {
-                workingDir: rootDir,
-                writeDirs: [rootDir]
-            },
             agent: { id: "parent-agent" } as ToolExecutionContext["agent"],
             ctx: { agentId: "parent-agent", userId: "user-1" } as ToolExecutionContext["ctx"],
             source: "test",
@@ -243,14 +239,10 @@ describe("appExecute", () => {
 
         const context = {
             connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-            fileStore: null as unknown as ToolExecutionContext["fileStore"],
+            sandbox: null as unknown as ToolExecutionContext["sandbox"],
             auth: null as unknown as ToolExecutionContext["auth"],
             logger: console as unknown as ToolExecutionContext["logger"],
             assistant: null,
-            permissions: {
-                workingDir: rootDir,
-                writeDirs: [rootDir]
-            },
             agent: { id: "parent-agent" } as ToolExecutionContext["agent"],
             ctx: { agentId: "parent-agent", userId: "user-1" } as ToolExecutionContext["ctx"],
             source: "test",

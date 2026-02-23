@@ -112,11 +112,13 @@ describe("database plugin", () => {
 
         const result = await modules.tools.execute(toolCall, {
             connectorRegistry: modules.connectors,
-            fileStore,
+            sandbox: {
+                permissions,
+                workingDir: permissions.workingDir
+            } as unknown as Parameters<typeof modules.tools.execute>[1]["sandbox"],
             auth,
             logger: getLogger("test.database.tool"),
             assistant: null,
-            permissions,
             agent,
             ctx,
             source: "test",

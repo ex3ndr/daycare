@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
-import { FileFolder } from "../../files/fileFolder.js";
+import { Sandbox } from "../../../sandbox/sandbox.js";
 import { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
 import { buildImageGenerationTool } from "./image-generation.js";
 
@@ -40,16 +40,17 @@ describe("buildImageGenerationTool", () => {
             });
 
             const downloads = result.toolMessage.details?.downloads as
-                | { dir: string; files: Array<{ path: string }> }
+                | { dir: string; files: Array<{ path: string; resolvedPath: string }> }
                 | undefined;
-            expect(downloads?.dir).toBe(path.join(tempDir, "downloads"));
+            expect(downloads?.dir).toBe("~/downloads");
             expect(downloads?.files).toHaveLength(1);
             const generatedPath = downloads?.files[0]?.path;
+            const generatedResolvedPath = downloads?.files[0]?.resolvedPath;
             expect(generatedPath).toBeTruthy();
-            if (!generatedPath) {
+            if (!generatedPath || !generatedResolvedPath) {
                 throw new Error("Missing generated file path");
             }
-            const generatedData = await fs.readFile(generatedPath, "utf8");
+            const generatedData = await fs.readFile(generatedResolvedPath, "utf8");
             expect(generatedData).toBe("png-bytes");
             const content = result.toolMessage.content as Array<{ type: string; data?: string; text?: string }>;
             expect(content.every((block) => block.type === "text")).toBe(true);
@@ -62,17 +63,19 @@ describe("buildImageGenerationTool", () => {
 });
 
 function contextBuild(workingDir: string): ToolExecutionContext {
-    const fileStore = new FileFolder(path.join(workingDir, "downloads"));
+    const permissions = {
+        workingDir,
+        writeDirs: [workingDir]
+    };
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        fileStore,
+        sandbox: new Sandbox({
+            homeDir: workingDir,
+            permissions
+        }),
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        permissions: {
-            workingDir,
-            writeDirs: []
-        },
         agent: { id: "agent-test" } as unknown as ToolExecutionContext["agent"],
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",
