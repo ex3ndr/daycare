@@ -248,7 +248,11 @@ function delayedSignalsSort(records: DelayedSignalDbRecord[]): DelayedSignalDbRe
 }
 
 function contextUserIdRequire(ctx: Context): string {
-    const userId = ctx.userId.trim();
+    const userIdRaw = (ctx as unknown as { userId?: unknown }).userId;
+    if (typeof userIdRaw !== "string") {
+        throw new Error("Delayed signal context userId is required.");
+    }
+    const userId = userIdRaw.trim();
     if (!userId) {
         throw new Error("Delayed signal context userId is required.");
     }

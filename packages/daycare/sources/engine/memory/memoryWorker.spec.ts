@@ -70,7 +70,9 @@ describe("MemoryWorker", () => {
             await vi.advanceTimersByTimeAsync(150);
 
             expect(postFn).toHaveBeenCalledOnce();
-            const [target, item] = postFn.mock.calls[0];
+            const [ctx, target, item] = postFn.mock.calls[0];
+            expect(ctx.userId).toBeTypeOf("string");
+            expect(ctx.agentId).toBe("agent-1");
             expect(target.descriptor).toEqual({ type: "memory-agent", id: "agent-1" });
             expect(item.type).toBe("system_message");
             expect(item.text).toContain("hello");
@@ -119,7 +121,7 @@ describe("MemoryWorker", () => {
             await vi.advanceTimersByTimeAsync(150);
 
             expect(postFn).toHaveBeenCalledOnce();
-            const [, item] = postFn.mock.calls[0];
+            const [, , item] = postFn.mock.calls[0];
             // Foreground agent (user) gets standard labels and no preamble
             expect(item.text).toContain("## User");
             expect(item.text).not.toContain("## System Message");
