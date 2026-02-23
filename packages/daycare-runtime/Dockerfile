@@ -5,7 +5,7 @@ ARG TARGETOS
 ARG TARGETARCH
 
 ENV LANG="C.UTF-8"
-ENV HOME=/root
+ENV HOME=/home
 ENV DEBIAN_FRONTEND=noninteractive
 
 ### BASE ###
