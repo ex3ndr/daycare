@@ -5,6 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentState, ToolExecutionContext } from "@/types";
 import { Agent } from "../../engine/agents/agent.js";
+import { contextForAgent } from "../../engine/agents/context.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import { buildMontyPythonTool } from "./tool.js";
@@ -82,6 +83,7 @@ function createContext(workingDir: string): ToolExecutionContext {
         parentAgentId: "system",
         name: "system"
     } as const;
+    const ctx = contextForAgent({ userId: "user-1", agentId });
     const now = Date.now();
     const state: AgentState = {
         context: { messages: [] },
@@ -97,12 +99,11 @@ function createContext(workingDir: string): ToolExecutionContext {
     };
 
     const agent = Agent.restore(
-        agentId,
-        "user-1",
+        ctx,
         descriptor,
         state,
         new AgentInbox(agentId),
-        {} as unknown as Parameters<typeof Agent.restore>[5],
+        {} as unknown as Parameters<typeof Agent.restore>[4],
         new UserHome(path.join(workingDir, "users"), "user-1")
     );
 
@@ -114,7 +115,7 @@ function createContext(workingDir: string): ToolExecutionContext {
         assistant: null,
         permissions: state.permissions,
         agent,
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx,
         source: "test",
         messageContext,
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

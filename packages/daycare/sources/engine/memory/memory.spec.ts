@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { contextForUser } from "../agents/context.js";
 import type { GraphNode } from "./graph/graphTypes.js";
 import { Memory } from "./memory.js";
 
@@ -20,8 +21,9 @@ describe("Memory", () => {
 
     it("readGraph returns virtual root and creates graph directory", async () => {
         const memory = new Memory({ usersDir });
+        const ctx = contextForUser({ userId: "usr_001" });
 
-        const tree = await memory.readGraph("usr_001");
+        const tree = await memory.readGraph(ctx);
 
         expect(tree.root.id).toBe("__root__");
         expect(tree.root.content).toContain("Memory Graph");
@@ -32,6 +34,7 @@ describe("Memory", () => {
 
     it("readNode returns virtual root with children refs populated", async () => {
         const memory = new Memory({ usersDir });
+        const ctx = contextForUser({ userId: "usr_001" });
         const child: GraphNode = {
             id: "child-1",
             frontmatter: {
@@ -44,9 +47,9 @@ describe("Memory", () => {
             content: "body",
             refs: []
         };
-        await memory.writeNode("usr_001", child);
+        await memory.writeNode(ctx, child);
 
-        const root = await memory.readNode("usr_001", "__root__");
+        const root = await memory.readNode(ctx, "__root__");
 
         expect(root).not.toBeNull();
         expect(root!.id).toBe("__root__");
@@ -56,6 +59,7 @@ describe("Memory", () => {
 
     it("append updates body and updatedAt while preserving frontmatter", async () => {
         const memory = new Memory({ usersDir });
+        const ctx = contextForUser({ userId: "usr_001" });
         const node: GraphNode = {
             id: "node-1",
             frontmatter: {
@@ -69,10 +73,10 @@ describe("Memory", () => {
             refs: []
         };
 
-        await memory.writeNode("usr_001", node);
-        await memory.append("usr_001", "node-1", "Appended line");
+        await memory.writeNode(ctx, node);
+        await memory.append(ctx, "node-1", "Appended line");
 
-        const updated = await memory.readNode("usr_001", "node-1");
+        const updated = await memory.readNode(ctx, "node-1");
         expect(updated).not.toBeNull();
         expect(updated?.frontmatter.title).toBe("Preference");
         expect(updated?.frontmatter.description).toBe("User preference");

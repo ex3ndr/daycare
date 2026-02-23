@@ -9,10 +9,9 @@ import type { AgentDescriptor } from "./agentDescriptorTypes.js";
  */
 export async function agentDescriptorRead(
     storageOrConfig: Storage | Config,
-    ctxOrAgentId: Context | string
+    ctx: Context
 ): Promise<AgentDescriptor | null> {
     const storage = storageResolve(storageOrConfig);
-    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
-    const record = await storage.agents.findById(agentId);
+    const record = await storage.agents.findById(ctx.agentId);
     return record?.descriptor ?? null;
 }

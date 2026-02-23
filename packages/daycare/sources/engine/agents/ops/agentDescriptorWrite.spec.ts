@@ -9,6 +9,7 @@ import { configResolve } from "../../../config/configResolve.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
+import { contextForAgent } from "../context.js";
 import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 
 describe("agentDescriptorWrite", () => {
@@ -25,6 +26,7 @@ describe("agentDescriptorWrite", () => {
             const storage = storageResolve(config);
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const ctx = contextForAgent({ userId, agentId });
 
             let now = 1000;
             vi.spyOn(Date, "now").mockImplementation(() => {
@@ -34,26 +36,24 @@ describe("agentDescriptorWrite", () => {
 
             await agentDescriptorWrite(
                 storage,
-                agentId,
+                ctx,
                 {
                     type: "cron",
                     id: agentId,
                     name: "first"
                 },
-                userId,
                 permissions
             );
             const firstRecord = await storage.agents.findById(agentId);
 
             await agentDescriptorWrite(
                 storage,
-                agentId,
+                ctx,
                 {
                     type: "cron",
                     id: agentId,
                     name: "second"
                 },
-                userId,
                 permissions
             );
 

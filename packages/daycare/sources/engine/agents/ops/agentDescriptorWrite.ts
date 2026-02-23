@@ -12,29 +12,7 @@ export async function agentDescriptorWrite(
     ctx: Context,
     descriptor: AgentDescriptor,
     defaultPermissions: SessionPermissions
-): Promise<void>;
-export async function agentDescriptorWrite(
-    storage: Storage,
-    agentId: string,
-    descriptor: AgentDescriptor,
-    userId: string,
-    defaultPermissions: SessionPermissions
-): Promise<void>;
-export async function agentDescriptorWrite(
-    storage: Storage,
-    ctxOrAgentId: Context | string,
-    descriptor: AgentDescriptor,
-    userIdOrDefaultPermissions: string | SessionPermissions,
-    maybeDefaultPermissions?: SessionPermissions
 ): Promise<void> {
-    const ctx =
-        typeof ctxOrAgentId === "string"
-            ? { agentId: ctxOrAgentId, userId: userIdOrDefaultPermissions as string }
-            : ctxOrAgentId;
-    const defaultPermissions =
-        typeof userIdOrDefaultPermissions === "string"
-            ? (maybeDefaultPermissions as SessionPermissions)
-            : userIdOrDefaultPermissions;
     const existing = await storage.agents.findById(ctx.agentId);
     if (existing && existing.userId !== ctx.userId) {
         throw new Error(`Agent belongs to another user: ${ctx.agentId}`);

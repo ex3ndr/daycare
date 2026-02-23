@@ -33,7 +33,6 @@ import { Skills } from "../skills/skills.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
-import { contextForAgent } from "./context.js";
 import { agentDescriptorRoleResolve } from "./ops/agentDescriptorRoleResolve.js";
 import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
 import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
@@ -116,49 +115,6 @@ export class Agent {
         inbox: AgentInbox,
         agentSystem: AgentSystem,
         userHome: UserHome
-    ): Promise<Agent>;
-
-    static async create(
-        agentId: string,
-        descriptor: AgentDescriptor,
-        userId: string,
-        inbox: AgentInbox,
-        agentSystem: AgentSystem,
-        userHome: UserHome
-    ): Promise<Agent>;
-    static async create(
-        ctxOrAgentId: Context | string,
-        descriptor: AgentDescriptor,
-        userIdOrInbox: string | AgentInbox,
-        inboxOrAgentSystem: AgentInbox | AgentSystem,
-        agentSystemOrUserHome: AgentSystem | UserHome,
-        maybeUserHome?: UserHome
-    ): Promise<Agent> {
-        if (typeof ctxOrAgentId !== "string") {
-            return Agent.createWithContext(
-                ctxOrAgentId,
-                descriptor,
-                userIdOrInbox as AgentInbox,
-                inboxOrAgentSystem as AgentSystem,
-                agentSystemOrUserHome as UserHome
-            );
-        }
-        const ctx = contextForAgent({ agentId: ctxOrAgentId, userId: userIdOrInbox as string });
-        return Agent.createWithContext(
-            ctx,
-            descriptor,
-            inboxOrAgentSystem as AgentInbox,
-            agentSystemOrUserHome as AgentSystem,
-            maybeUserHome as UserHome
-        );
-    }
-
-    private static async createWithContext(
-        ctx: Context,
-        descriptor: AgentDescriptor,
-        inbox: AgentInbox,
-        agentSystem: AgentSystem,
-        userHome: UserHome
     ): Promise<Agent> {
         if (!cuid2Is(ctx.agentId)) {
             throw new Error("Agent id must be a cuid2 value.");
@@ -208,39 +164,7 @@ export class Agent {
         inbox: AgentInbox,
         agentSystem: AgentSystem,
         userHome: UserHome
-    ): Agent;
-    static restore(
-        agentId: string,
-        userId: string,
-        descriptor: AgentDescriptor,
-        state: AgentState,
-        inbox: AgentInbox,
-        agentSystem: AgentSystem,
-        userHome: UserHome
-    ): Agent;
-    static restore(
-        ctxOrAgentId: Context | string,
-        userIdOrDescriptor: string | AgentDescriptor,
-        descriptorOrState: AgentDescriptor | AgentState,
-        stateOrInbox: AgentState | AgentInbox,
-        inboxOrAgentSystem: AgentInbox | AgentSystem,
-        agentSystemOrUserHome: AgentSystem | UserHome,
-        maybeUserHome?: UserHome
     ): Agent {
-        const ctx =
-            typeof ctxOrAgentId === "string"
-                ? contextForAgent({ agentId: ctxOrAgentId, userId: userIdOrDescriptor as string })
-                : ctxOrAgentId;
-        const descriptor =
-            typeof ctxOrAgentId === "string"
-                ? (descriptorOrState as AgentDescriptor)
-                : (userIdOrDescriptor as AgentDescriptor);
-        const state = (typeof ctxOrAgentId === "string" ? stateOrInbox : descriptorOrState) as AgentState;
-        const inbox = (typeof ctxOrAgentId === "string" ? inboxOrAgentSystem : stateOrInbox) as AgentInbox;
-        const agentSystem = (
-            typeof ctxOrAgentId === "string" ? agentSystemOrUserHome : inboxOrAgentSystem
-        ) as AgentSystem;
-        const userHome = (typeof ctxOrAgentId === "string" ? maybeUserHome : agentSystemOrUserHome) as UserHome;
         const basePermissions = permissionBuildUser(userHome);
         const permissions =
             descriptor.type === "permanent" && descriptor.workspaceDir

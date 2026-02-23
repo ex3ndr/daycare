@@ -1,11 +1,13 @@
 import type { FastifyInstance } from "fastify";
 
 import type { GraphNode, GraphTree } from "@/types";
+import type { Context } from "../agents/context.js";
+import { contextForUser } from "../agents/context.js";
 
 type MemoryRoutesRuntime = {
     memory: {
-        readGraph: (userId: string) => Promise<GraphTree>;
-        readNode: (userId: string, nodeId: string) => Promise<GraphNode | null>;
+        readGraph: (ctx: Context) => Promise<GraphTree>;
+        readNode: (ctx: Context, nodeId: string) => Promise<GraphNode | null>;
     };
 };
 
@@ -26,7 +28,7 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
         }
 
         try {
-            const tree = await runtime.memory.readGraph(userId);
+            const tree = await runtime.memory.readGraph(contextForUser({ userId }));
             return reply.send({ ok: true, graph: graphTreeJsonBuild(tree) });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to read memory graph";
@@ -43,7 +45,7 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
         }
 
         try {
-            const node = await runtime.memory.readNode(userId, nodeId);
+            const node = await runtime.memory.readNode(contextForUser({ userId }), nodeId);
             if (!node) {
                 return reply.status(404).send({ ok: false, error: `Node not found: ${nodeId}` });
             }

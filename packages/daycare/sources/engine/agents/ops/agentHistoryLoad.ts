@@ -7,13 +7,9 @@ import type { AgentHistoryRecord } from "./agentTypes.js";
  * Loads history records for the active session.
  * Expects: records are ordered chronologically from oldest to newest.
  */
-export async function agentHistoryLoad(
-    storageOrConfig: Storage | Config,
-    ctxOrAgentId: Context | string
-): Promise<AgentHistoryRecord[]> {
+export async function agentHistoryLoad(storageOrConfig: Storage | Config, ctx: Context): Promise<AgentHistoryRecord[]> {
     const storage = storageResolve(storageOrConfig);
-    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
-    const agent = await storage.agents.findById(agentId);
+    const agent = await storage.agents.findById(ctx.agentId);
     if (!agent?.activeSessionId) {
         return [];
     }

@@ -8,6 +8,7 @@ import type { AgentState, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
+import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
 import type { Crons } from "../../cron/crons.js";
@@ -92,31 +93,31 @@ describe("topologyTool", () => {
             );
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
+            const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
             await agentDescriptorWrite(
                 storageResolve(config),
-                "agent-caller",
+                callerCtx,
                 {
                     type: "subagent",
                     id: "agent-caller",
                     parentAgentId: "agent-other",
                     name: "monitor"
                 },
-                "user-1",
                 permissions
             );
-            await agentStateWrite(config, "agent-caller", stateBuild(permissions, 50));
+            await agentStateWrite(config, callerCtx, stateBuild(permissions, 50));
 
+            const otherCtx = contextForAgent({ userId: "user-1", agentId: "agent-other" });
             await agentDescriptorWrite(
                 storageResolve(config),
-                "agent-other",
+                otherCtx,
                 {
                     type: "system",
                     tag: "cron"
                 },
-                "user-1",
                 permissions
             );
-            await agentStateWrite(config, "agent-other", stateBuild(permissions, 10));
+            await agentStateWrite(config, otherCtx, stateBuild(permissions, 10));
 
             const tool = topologyTool(
                 {
@@ -257,23 +258,23 @@ describe("topologyTool", () => {
             const ownerPerms = permissionBuildUser(ownerHome);
             const subuserPerms = permissionBuildUser(subuserHome);
 
+            const ownerCtx = contextForAgent({ userId: ownerUserId, agentId: "owner-agent" });
             await agentDescriptorWrite(
                 storage,
-                "owner-agent",
+                ownerCtx,
                 { type: "user", connector: "telegram", userId: "u1", channelId: "c1" },
-                ownerUserId,
                 ownerPerms
             );
-            await agentStateWrite(config, "owner-agent", stateBuild(ownerPerms, 100));
+            await agentStateWrite(config, ownerCtx, stateBuild(ownerPerms, 100));
 
+            const subuserCtx = contextForAgent({ userId: "subuser-1", agentId: "subuser-gateway" });
             await agentDescriptorWrite(
                 storage,
-                "subuser-gateway",
+                subuserCtx,
                 { type: "subuser", id: "subuser-1", name: "my-app", systemPrompt: "Hello" },
-                "subuser-1",
                 subuserPerms
             );
-            await agentStateWrite(config, "subuser-gateway", stateBuild(subuserPerms, 50));
+            await agentStateWrite(config, subuserCtx, stateBuild(subuserPerms, 50));
 
             const tool = topologyTool(
                 {
@@ -340,34 +341,34 @@ describe("topologyTool", () => {
             const ownerHome = new UserHome(config.usersDir, ownerUserId);
             const ownerPerms = permissionBuildUser(ownerHome);
 
+            const ownerCtx = contextForAgent({ userId: ownerUserId, agentId: "owner-main" });
             await agentDescriptorWrite(
                 storage,
-                "owner-main",
+                ownerCtx,
                 { type: "user", connector: "telegram", userId: "u1", channelId: "c1" },
-                ownerUserId,
                 ownerPerms
             );
-            await agentStateWrite(config, "owner-main", stateBuild(ownerPerms, 100));
+            await agentStateWrite(config, ownerCtx, stateBuild(ownerPerms, 100));
 
             const subAPerms = permissionBuildUser(new UserHome(config.usersDir, "sub-a"));
+            const subACtx = contextForAgent({ userId: "sub-a", agentId: "gateway-a" });
             await agentDescriptorWrite(
                 storage,
-                "gateway-a",
+                subACtx,
                 { type: "subuser", id: "sub-a", name: "app-a", systemPrompt: "Prompt A" },
-                "sub-a",
                 subAPerms
             );
-            await agentStateWrite(config, "gateway-a", stateBuild(subAPerms, 50));
+            await agentStateWrite(config, subACtx, stateBuild(subAPerms, 50));
 
             const subBPerms = permissionBuildUser(new UserHome(config.usersDir, "sub-b"));
+            const subBCtx = contextForAgent({ userId: "sub-b", agentId: "gateway-b" });
             await agentDescriptorWrite(
                 storage,
-                "gateway-b",
+                subBCtx,
                 { type: "subuser", id: "sub-b", name: "app-b", systemPrompt: "Prompt B" },
-                "sub-b",
                 subBPerms
             );
-            await agentStateWrite(config, "gateway-b", stateBuild(subBPerms, 50));
+            await agentStateWrite(config, subBCtx, stateBuild(subBPerms, 50));
 
             const tool = topologyTool(
                 { listTasks: async () => [] } as unknown as Crons,
@@ -411,19 +412,19 @@ describe("topologyTool", () => {
             );
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
+            const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
             await agentDescriptorWrite(
                 storageResolve(config),
-                "agent-caller",
+                callerCtx,
                 {
                     type: "user",
                     connector: "telegram",
                     userId: "u1",
                     channelId: "c1"
                 },
-                "user-1",
                 permissions
             );
-            await agentStateWrite(config, "agent-caller", stateBuild(permissions, 100));
+            await agentStateWrite(config, callerCtx, stateBuild(permissions, 100));
 
             const tool = topologyTool(
                 {
@@ -512,10 +513,7 @@ function contextBuild(
         assistant: null,
         permissions: permissionBuildUser(new UserHome(config.usersDir, options.callerUserId)),
         agent: { id: options.callerAgentId } as unknown as ToolExecutionContext["agent"],
-        ctx: {
-            agentId: options.callerAgentId,
-            userId: options.callerUserId
-        } as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId: options.callerUserId, agentId: options.callerAgentId }),
         source: "test",
         messageContext: {},
         agentSystem: {

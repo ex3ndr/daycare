@@ -29,7 +29,7 @@ import { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
 import { Agent } from "./agent.js";
 import { AgentSystem } from "./agentSystem.js";
-import { contextForUser } from "./context.js";
+import { contextForAgent, contextForUser } from "./context.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
@@ -64,19 +64,20 @@ describe("Agent", () => {
             };
             const userId = createId();
             const userHome = agentSystem.userHomeForUserId(userId);
-            await Agent.create(agentId, descriptor, userId, new AgentInbox(agentId), agentSystem, userHome);
+            const ctx = contextForAgent({ userId, agentId });
+            await Agent.create(ctx, descriptor, new AgentInbox(agentId), agentSystem, userHome);
 
-            const restoredDescriptor = await agentDescriptorRead(config, agentId);
+            const restoredDescriptor = await agentDescriptorRead(config, ctx);
             expect(restoredDescriptor).toEqual(descriptor);
 
-            const state = await agentStateRead(config, agentId);
+            const state = await agentStateRead(config, ctx);
             if (!state) {
                 throw new Error("State not found");
             }
             expect(state.permissions.workingDir).toBe(userHome.desktop);
             expect(state?.activeSessionId).toBeTruthy();
 
-            const history = await agentHistoryLoad(config, agentId);
+            const history = await agentHistoryLoad(config, ctx);
             expect(history).toEqual([]);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -168,11 +169,11 @@ describe("Agent", () => {
             };
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "first reset" });
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const firstState = await agentStateRead(config, agentId);
+            const firstState = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
             expect(firstState?.inferenceSessionId).toBeTruthy();
 
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "second reset" });
-            const secondState = await agentStateRead(config, agentId);
+            const secondState = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
             expect(secondState?.inferenceSessionId).toBeTruthy();
             expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
         } finally {
@@ -224,7 +225,7 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(config, agentId);
+            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -280,7 +281,7 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(config, agentId);
+            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -337,7 +338,7 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(config, agentId);
+            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -426,7 +427,7 @@ describe("Agent", () => {
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "seed context" });
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const beforeCompaction = await agentStateRead(config, agentId);
+            const beforeCompaction = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
             expect(beforeCompaction?.inferenceSessionId).toBeTruthy();
             const result = await postAndAwait(
                 agentSystem,
@@ -444,10 +445,10 @@ describe("Agent", () => {
                 replyToMessageId: "88"
             });
 
-            const state = await agentStateRead(config, agentId);
+            const state = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
             expect(state?.activeSessionId).toBeTruthy();
             expect(state?.activeSessionId).not.toBe(beforeCompaction?.activeSessionId);
-            const history = await agentHistoryLoad(config, agentId);
+            const history = await agentHistoryLoad(config, await contextForAgentIdRequire(agentSystem, agentId));
             const firstHistoryRecord = history[0];
             expect(firstHistoryRecord?.type).toBe("user_message");
             if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
@@ -596,7 +597,7 @@ describe("Agent", () => {
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
-            const history = await agentHistoryLoad(config, agentId);
+            const history = await agentHistoryLoad(config, await contextForAgentIdRequire(agentSystem, agentId));
             expect(historyHasSignalText(history)).toBe(false);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -654,7 +655,7 @@ describe("Agent", () => {
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
-            const history = await agentHistoryLoadAll(config, agentId);
+            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
             expect(historyHasSignalText(history)).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -734,10 +735,16 @@ describe("Agent", () => {
             );
             await postAndAwait(agentSystem, { agentId: peerAgentId }, { type: "reset", message: "flush peer queue" });
 
-            const sourceHistory = await agentHistoryLoadAll(config, sourceAgentId);
+            const sourceHistory = await agentHistoryLoadAll(
+                config,
+                await contextForAgentIdRequire(agentSystem, sourceAgentId)
+            );
             expect(historyHasSignalText(sourceHistory)).toBe(false);
 
-            const peerHistory = await agentHistoryLoadAll(config, peerAgentId);
+            const peerHistory = await agentHistoryLoadAll(
+                config,
+                await contextForAgentIdRequire(agentSystem, peerAgentId)
+            );
             expect(historyHasSignalText(peerHistory)).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -947,8 +954,7 @@ describe("Agent", () => {
             };
 
             const agent = Agent.restore(
-                agentId,
-                userId,
+                contextForAgent({ userId, agentId }),
                 descriptor,
                 staleState,
                 new AgentInbox(agentId),
@@ -1008,8 +1014,7 @@ describe("Agent", () => {
             };
 
             const agent = Agent.restore(
-                agentId,
-                userId,
+                contextForAgent({ userId, agentId }),
                 descriptor,
                 staleState,
                 new AgentInbox(agentId),
@@ -1086,6 +1091,14 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();
+}
+
+async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {
+    const ctx = await agentSystem.contextForAgentId(agentId);
+    if (!ctx) {
+        throw new Error(`Agent not found: ${agentId}`);
+    }
+    return ctx;
 }
 
 function historyHasSignalText(records: Array<{ type: string; text?: string }>): boolean {

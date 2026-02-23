@@ -1,6 +1,7 @@
 import fastify from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { contextForUser } from "../agents/context.js";
 import { graphTreeJsonBuild, serverMemoryRoutesRegister } from "./serverMemoryRoutesRegister.js";
 
 describe("serverMemoryRoutesRegister", () => {
@@ -69,11 +70,11 @@ describe("serverMemoryRoutesRegister", () => {
         expect(payload.ok).toBe(true);
         expect(payload.graph.root.id).toBe("__root__");
         expect(payload.graph.children.__root__?.map((entry) => entry.id)).toEqual(["node-1"]);
-        expect(readGraph).toHaveBeenCalledWith("usr_1");
+        expect(readGraph).toHaveBeenCalledWith(contextForUser({ userId: "usr_1" }));
     });
 
     it("returns node payload and 404 for missing node", async () => {
-        const readNode = vi.fn(async (_userId: string, nodeId: string) => {
+        const readNode = vi.fn(async (_ctx: unknown, nodeId: string) => {
             if (nodeId === "known") {
                 return {
                     id: "known",

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import { Storage } from "../../../storage/storage.js";
+import { contextForAgent } from "../../agents/context.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
 import { UserHome } from "../../users/userHome.js";
@@ -48,7 +49,10 @@ describe("permanentAgentToolBuild", () => {
             const agents = await agentPermanentList(config);
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created).not.toBeNull();
-            const state = await agentStateRead(config, created!.agentId);
+            const state = await agentStateRead(
+                config,
+                contextForAgent({ userId: "creator-user", agentId: created!.agentId })
+            );
             expect(state?.permissions.writeDirs).toContain(
                 path.resolve(path.join(dir, "users", "creator-user", "home"))
             );

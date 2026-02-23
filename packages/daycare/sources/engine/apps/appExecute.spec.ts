@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
 import { Storage } from "../../storage/storage.js";
+import { contextForAgent } from "../agents/context.js";
 import { agentStateRead } from "../agents/ops/agentStateRead.js";
 import { appExecute } from "./appExecute.js";
 import type { AppDescriptor } from "./appTypes.js";
@@ -175,7 +176,7 @@ describe("appExecute", () => {
         });
         expect(Object.keys(item as Record<string, unknown>).sort()).toEqual(["context", "message", "type"]);
 
-        const updated = await agentStateRead(config, agentId);
+        const updated = await agentStateRead(config, contextForAgent({ userId: "user-1", agentId }));
         expect(updated?.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));
         expect(updated?.permissions.writeDirs).toEqual([path.join(rootDir, "apps", "github-reviewer", "data")]);
         storage.close();

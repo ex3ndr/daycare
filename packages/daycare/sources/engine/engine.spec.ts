@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AgentDescriptor, Connector, ConnectorMessage, MessageContext } from "@/types";
 import { configResolve } from "../config/configResolve.js";
+import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
 
@@ -54,8 +55,9 @@ describe("Engine reset command", () => {
 
             await commandHandler("/reset", context, descriptor);
 
+            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "123" }),
+                expect.objectContaining({ userId: user.id }),
                 { descriptor },
                 { type: "reset", message: "Manual reset requested by the user.", context }
             );
@@ -120,9 +122,10 @@ describe("Engine reset command", () => {
             await commandHandler("/reset", { messageId: "2" }, descriptor);
             await vi.advanceTimersByTimeAsync(100);
 
+            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(postSpy).toHaveBeenCalledTimes(1);
             expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "123" }),
+                expect.objectContaining({ userId: user.id }),
                 { descriptor },
                 { type: "reset", message: "Manual reset requested by the user.", context: { messageId: "2" } }
             );
@@ -398,8 +401,9 @@ describe("Engine compact command", () => {
 
             await commandHandler("/compact", context, descriptor);
 
+            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "123" }),
+                expect.objectContaining({ userId: user.id }),
                 { descriptor },
                 { type: "compact", context }
             );
@@ -515,9 +519,10 @@ describe("Engine message batching", () => {
             expect(postSpy).not.toHaveBeenCalled();
 
             await vi.advanceTimersByTimeAsync(1);
+            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(postSpy).toHaveBeenCalledTimes(1);
             expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "123" }),
+                expect.objectContaining({ userId: user.id }),
                 { descriptor },
                 {
                     type: "message",

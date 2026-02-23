@@ -8,6 +8,7 @@ import { configResolve } from "../../../config/configResolve.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
+import { contextForAgent } from "../context.js";
 import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentStateRead } from "./agentStateRead.js";
 import { agentStateWrite } from "./agentStateWrite.js";
@@ -21,15 +22,15 @@ describe("agentStateRead", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const ctx = contextForAgent({ userId, agentId });
             await agentDescriptorWrite(
                 storageResolve(config),
-                agentId,
+                ctx,
                 {
                     type: "cron",
                     id: agentId,
                     name: "state"
                 },
-                userId,
                 permissions
             );
             const sessionId = await storageResolve(config).sessions.create({
@@ -50,9 +51,9 @@ describe("agentStateRead", () => {
                 updatedAt: 2,
                 state: "active"
             };
-            await agentStateWrite(config, agentId, state);
+            await agentStateWrite(config, ctx, state);
 
-            const restored = await agentStateRead(config, agentId);
+            const restored = await agentStateRead(config, ctx);
 
             expect(restored?.context.messages).toEqual([]);
             expect(restored?.inferenceSessionId).toBe("session-1");
@@ -65,10 +66,11 @@ describe("agentStateRead", () => {
     it("returns null when state does not exist", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-state-"));
         const agentId = createId();
+        const ctx = contextForAgent({ userId: createId(), agentId });
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
 
-            const restored = await agentStateRead(config, agentId);
+            const restored = await agentStateRead(config, ctx);
             expect(restored).toBeNull();
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -82,15 +84,15 @@ describe("agentStateRead", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const ctx = contextForAgent({ userId, agentId });
             await agentDescriptorWrite(
                 storageResolve(config),
-                agentId,
+                ctx,
                 {
                     type: "cron",
                     id: agentId,
                     name: "state"
                 },
-                userId,
                 permissions
             );
             const state: AgentState = {
@@ -102,9 +104,9 @@ describe("agentStateRead", () => {
                 updatedAt: 2,
                 state: "dead"
             };
-            await agentStateWrite(config, agentId, state);
+            await agentStateWrite(config, ctx, state);
 
-            const restored = await agentStateRead(config, agentId);
+            const restored = await agentStateRead(config, ctx);
 
             expect(restored?.state).toBe("dead");
         } finally {

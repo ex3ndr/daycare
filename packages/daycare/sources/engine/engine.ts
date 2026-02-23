@@ -7,6 +7,7 @@ import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
 import { Storage } from "../storage/storage.js";
+import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { InvalidateSync } from "../util/sync.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
@@ -143,8 +144,9 @@ export class Engine {
                         logger.debug(
                             `receive: Connector message received: connector=${connector} type=${item.descriptor.type} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
+                        const ctx = await this.descriptorContextResolve(item.descriptor);
                         await this.agentSystem.post(
-                            descriptorContextResolve(item.descriptor),
+                            ctx,
                             { descriptor: item.descriptor },
                             { type: "message", message: item.message, context: item.context }
                         );
@@ -492,7 +494,8 @@ export class Engine {
         }
         let tokens: AgentTokenEntry | null = null;
         try {
-            tokens = await this.agentSystem.tokensForTarget(descriptorContextResolve(descriptor), { descriptor });
+            const ctx = await this.descriptorContextResolve(descriptor);
+            tokens = await this.agentSystem.tokensForTarget(ctx, { descriptor });
         } catch (error) {
             logger.warn({ connector: target.connector, error }, "error: Context command failed to load tokens");
         }
@@ -509,7 +512,8 @@ export class Engine {
     }
 
     private async handleCompactCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
-        await this.agentSystem.post(descriptorContextResolve(descriptor), { descriptor }, { type: "compact", context });
+        const ctx = await this.descriptorContextResolve(descriptor);
+        await this.agentSystem.post(ctx, { descriptor }, { type: "compact", context });
     }
 
     private async handleResetCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
@@ -517,8 +521,9 @@ export class Engine {
         if (dropped > 0) {
             logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
         }
+        const ctx = await this.descriptorContextResolve(descriptor);
         await this.agentSystem.post(
-            descriptorContextResolve(descriptor),
+            ctx,
             { descriptor },
             { type: "reset", message: "Manual reset requested by the user.", context }
         );
@@ -563,6 +568,29 @@ export class Engine {
         } catch (error) {
             logger.error({ kind, error }, "error: Connector callback failed");
         }
+    }
+
+    /**
+     * Resolves runtime user context from an incoming descriptor.
+     * Expects: user descriptors map connector identity to an internal user id.
+     */
+    private async descriptorContextResolve(descriptor: AgentDescriptor) {
+        if (descriptor.type === "user") {
+            const connectorKey = userConnectorKeyCreate(descriptor.connector, descriptor.userId);
+            try {
+                const user = await this.storage.resolveUserByConnectorKey(connectorKey);
+                return contextForUser({ userId: user.id });
+            } catch (error) {
+                const detail = error instanceof Error ? error.message : String(error);
+                throw new Error(`Failed to resolve user for connector key ${connectorKey}: ${detail}`, {
+                    cause: error
+                });
+            }
+        }
+        if (descriptor.type === "subuser") {
+            return contextForUser({ userId: descriptor.id });
+        }
+        throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
     }
 
     private async reloadApplyLatest(): Promise<void> {
@@ -611,16 +639,6 @@ function parseCommand(command: string): { name: string; args: string[] } | null 
         return null;
     }
     return { name, args: parts };
-}
-
-function descriptorContextResolve(descriptor: AgentDescriptor) {
-    if (descriptor.type === "user") {
-        return contextForUser({ userId: descriptor.userId });
-    }
-    if (descriptor.type === "subuser") {
-        return contextForUser({ userId: descriptor.id });
-    }
-    throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
 }
 /**
  * Compares reloadable runtime config fields.

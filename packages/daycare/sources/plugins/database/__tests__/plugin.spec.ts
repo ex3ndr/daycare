@@ -8,7 +8,7 @@ import type { AgentState, SessionPermissions } from "@/types";
 import { AuthStore } from "../../../auth/store.js";
 import { configResolve } from "../../../config/configResolve.js";
 import { Agent } from "../../../engine/agents/agent.js";
-import { Context } from "../../../engine/agents/context.js";
+import { contextForAgent } from "../../../engine/agents/context.js";
 import { AgentInbox } from "../../../engine/agents/ops/agentInbox.js";
 import { FileFolder } from "../../../engine/files/fileFolder.js";
 import { ModuleRegistry } from "../../../engine/modules/moduleRegistry.js";
@@ -47,6 +47,7 @@ describe("database plugin", () => {
             parentAgentId: "system",
             name: "system"
         } as const;
+        const ctx = contextForAgent({ userId: "user-1", agentId });
         const state: AgentState = {
             context: { messages: [] },
             permissions,
@@ -57,12 +58,11 @@ describe("database plugin", () => {
             state: "active"
         };
         const agent = Agent.restore(
-            agentId,
-            "user-1",
+            ctx,
             descriptor,
             state,
             new AgentInbox(agentId),
-            {} as unknown as Parameters<typeof Agent.restore>[5],
+            {} as unknown as Parameters<typeof Agent.restore>[4],
             new UserHome(path.join(baseDir, "users"), "user-1")
         );
         const api = {
@@ -118,7 +118,7 @@ describe("database plugin", () => {
             assistant: null,
             permissions,
             agent,
-            ctx: new Context({ userId: agent.userId, agentId: agent.id }),
+            ctx,
             source: "test",
             messageContext,
             agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],

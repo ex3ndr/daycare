@@ -120,7 +120,10 @@ describe("AgentSystem", () => {
             const agentId = await subagentCreate(harness.agentSystem, harness.eventBus);
             await vi.advanceTimersByTimeAsync(POISON_PILL_DELAY_MS);
             await vi.waitFor(async () => {
-                const state = await agentStateRead(harness.config, agentId);
+                const state = await agentStateRead(
+                    harness.config,
+                    await contextForAgentIdRequire(harness.agentSystem, agentId)
+                );
                 expect(state?.state).toBe("dead");
             });
         } finally {
@@ -148,7 +151,10 @@ describe("AgentSystem", () => {
                 source: { type: "system", userId: "user-1" }
             });
 
-            const state = await agentStateRead(harness.config, agentId);
+            const state = await agentStateRead(
+                harness.config,
+                await contextForAgentIdRequire(harness.agentSystem, agentId)
+            );
             expect(state?.state).toBe("sleeping");
         } finally {
             delayedSignals?.stop();
@@ -213,7 +219,10 @@ describe("AgentSystem", () => {
                 postAndAwait(harness.agentSystem, { agentId }, { type: "reset", message: "dead check" })
             ).rejects.toThrow(`Agent is dead: ${agentId}`);
             await vi.waitFor(async () => {
-                const state = await agentStateRead(harness.config, agentId);
+                const state = await agentStateRead(
+                    harness.config,
+                    await contextForAgentIdRequire(harness.agentSystem, agentId)
+                );
                 expect(state?.state).toBe("dead");
             });
         } finally {
@@ -236,7 +245,10 @@ describe("AgentSystem", () => {
             await first.agentSystem.start();
 
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
-            const beforeRestart = await agentStateRead(first.config, agentId);
+            const beforeRestart = await agentStateRead(
+                first.config,
+                await contextForAgentIdRequire(first.agentSystem, agentId)
+            );
             expect(beforeRestart?.state).toBe("sleeping");
             delayedSignalsA.stop();
 
@@ -248,7 +260,10 @@ describe("AgentSystem", () => {
             await delayedSignalsB.start();
 
             await vi.waitFor(async () => {
-                const state = await agentStateRead(second.config, agentId);
+                const state = await agentStateRead(
+                    second.config,
+                    await contextForAgentIdRequire(second.agentSystem, agentId)
+                );
                 expect(state?.state).toBe("dead");
             });
         } finally {
@@ -273,7 +288,10 @@ describe("AgentSystem", () => {
             await first.agentSystem.start();
 
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
-            const beforeRestart = await agentStateRead(first.config, agentId);
+            const beforeRestart = await agentStateRead(
+                first.config,
+                await contextForAgentIdRequire(first.agentSystem, agentId)
+            );
             expect(beforeRestart?.state).toBe("sleeping");
             delayedSignalsA.stop();
 
@@ -305,12 +323,15 @@ describe("AgentSystem", () => {
             await first.agentSystem.start();
 
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
-            const current = await agentStateRead(first.config, agentId);
+            const current = await agentStateRead(
+                first.config,
+                await contextForAgentIdRequire(first.agentSystem, agentId)
+            );
             if (!current) {
                 throw new Error("Missing state for subagent");
             }
             const deadState = { ...current, state: "dead" as const, updatedAt: Date.now() };
-            await agentStateWrite(first.config, agentId, deadState);
+            await agentStateWrite(first.config, await contextForAgentIdRequire(first.agentSystem, agentId), deadState);
             delayedSignalsA.stop();
 
             const second = await harnessCreate(dir);
@@ -372,7 +393,10 @@ describe("AgentSystem", () => {
             if (!context) {
                 throw new Error("Agent context missing");
             }
-            const state = await agentStateRead(harness.config, agentId);
+            const state = await agentStateRead(
+                harness.config,
+                await contextForAgentIdRequire(harness.agentSystem, agentId)
+            );
             if (!state) {
                 throw new Error("Agent state missing");
             }
@@ -648,4 +672,12 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();
+}
+
+async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {
+    const ctx = await agentSystem.contextForAgentId(agentId);
+    if (!ctx) {
+        throw new Error(`Agent not found: ${agentId}`);
+    }
+    return ctx;
 }

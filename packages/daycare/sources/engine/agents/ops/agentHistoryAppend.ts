@@ -9,10 +9,9 @@ import type { AgentHistoryRecord } from "./agentTypes.js";
  */
 export async function agentHistoryAppend(
     storageOrConfig: Storage | Config,
-    ctxOrAgentId: Context | string,
+    ctx: Context,
     record: AgentHistoryRecord
 ): Promise<void> {
     const storage = storageResolve(storageOrConfig);
-    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
-    await storage.appendHistory(agentId, record);
+    await storage.appendHistory(ctx.agentId, record);
 }

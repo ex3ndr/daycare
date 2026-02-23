@@ -24,13 +24,12 @@ export class Memory {
         this.usersDir = options.usersDir;
     }
 
-    resolveMemoryDir(ctxOrUserId: Context | string): string {
-        const userId = typeof ctxOrUserId === "string" ? ctxOrUserId : ctxOrUserId.userId;
-        return path.join(this.usersDir, userId, "memory", "graph");
+    resolveMemoryDir(ctx: Context): string {
+        return path.join(this.usersDir, ctx.userId, "memory", "graph");
     }
 
-    async readGraph(ctxOrUserId: Context | string): Promise<GraphTree> {
-        const memoryDir = this.resolveMemoryDir(ctxOrUserId);
+    async readGraph(ctx: Context): Promise<GraphTree> {
+        const memoryDir = this.resolveMemoryDir(ctx);
         await fs.mkdir(memoryDir, { recursive: true });
         const root = await graphRootNodeRead();
         const nodes = await graphStoreRead(memoryDir);
@@ -38,14 +37,14 @@ export class Memory {
         return graphTreeBuild(nodes);
     }
 
-    async readNode(ctxOrUserId: Context | string, nodeId: string): Promise<GraphNode | null> {
+    async readNode(ctx: Context, nodeId: string): Promise<GraphNode | null> {
         if (nodeId === GRAPH_ROOT_NODE_ID) {
             // Build the full tree so root.refs reflects its actual children.
-            const tree = await this.readGraph(ctxOrUserId);
+            const tree = await this.readGraph(ctx);
             const childIds = (tree.children.get(GRAPH_ROOT_NODE_ID) ?? []).map((c) => c.id);
             return { ...tree.root, refs: childIds };
         }
-        const memoryDir = this.resolveMemoryDir(ctxOrUserId);
+        const memoryDir = this.resolveMemoryDir(ctx);
         const filename = `${nodeId}.md`;
         const filePath = path.join(memoryDir, filename);
 
@@ -60,13 +59,13 @@ export class Memory {
         }
     }
 
-    async writeNode(ctxOrUserId: Context | string, node: GraphNode): Promise<void> {
-        const memoryDir = this.resolveMemoryDir(ctxOrUserId);
+    async writeNode(ctx: Context, node: GraphNode): Promise<void> {
+        const memoryDir = this.resolveMemoryDir(ctx);
         await graphStoreWrite(memoryDir, node);
     }
 
-    async append(ctxOrUserId: Context | string, nodeId: string, content: string): Promise<void> {
-        const node = await this.readNode(ctxOrUserId, nodeId);
+    async append(ctx: Context, nodeId: string, content: string): Promise<void> {
+        const node = await this.readNode(ctx, nodeId);
         if (!node) {
             throw new Error(`Memory node not found: ${nodeId}`);
         }
@@ -81,6 +80,6 @@ export class Memory {
             content: `${node.content}${separator}${content}`
         };
 
-        await this.writeNode(ctxOrUserId, updatedNode);
+        await this.writeNode(ctx, updatedNode);
     }
 }

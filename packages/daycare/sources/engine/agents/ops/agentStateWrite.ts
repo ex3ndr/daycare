@@ -9,17 +9,16 @@ import type { AgentState } from "./agentTypes.js";
  */
 export async function agentStateWrite(
     storageOrConfig: Storage | Config,
-    ctxOrAgentId: Context | string,
+    ctx: Context,
     state: AgentState
 ): Promise<void> {
     const storage = storageResolve(storageOrConfig);
-    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
-    const existing = await storage.agents.findById(agentId);
+    const existing = await storage.agents.findById(ctx.agentId);
     if (!existing) {
-        throw new Error(`Agent descriptor missing for state write: ${agentId}`);
+        throw new Error(`Agent descriptor missing for state write: ${ctx.agentId}`);
     }
 
-    await storage.agents.update(agentId, {
+    await storage.agents.update(ctx.agentId, {
         activeSessionId: state.activeSessionId ?? existing.activeSessionId ?? null,
         permissions: state.permissions,
         tokens: state.tokens,

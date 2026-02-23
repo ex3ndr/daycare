@@ -9,6 +9,7 @@ const itIfSandbox = process.env.CI ? it.skip : it;
 
 import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/types";
 import { Agent } from "../../engine/agents/agent.js";
+import { contextForAgent } from "../../engine/agents/context.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import { buildExecTool, buildWorkspaceReadTool, formatExecOutput } from "./tool.js";
@@ -305,13 +306,13 @@ function createContext(workingDir: string, writeDirs: string[] = []): ToolExecut
         updatedAt: now,
         state: "active"
     };
+    const ctx = contextForAgent({ userId: "user-1", agentId });
     const agent = Agent.restore(
-        agentId,
-        "user-1",
+        ctx,
         descriptor,
         state,
         new AgentInbox(agentId),
-        {} as unknown as Parameters<typeof Agent.restore>[5],
+        {} as unknown as Parameters<typeof Agent.restore>[4],
         new UserHome(path.join(workingDir, "users"), "user-1")
     );
     return {
@@ -322,7 +323,7 @@ function createContext(workingDir: string, writeDirs: string[] = []): ToolExecut
         assistant: null,
         permissions: state.permissions,
         agent,
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx,
         source: "test",
         messageContext,
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

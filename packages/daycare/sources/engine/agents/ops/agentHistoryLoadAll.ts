@@ -10,10 +10,9 @@ import type { AgentHistoryRecord } from "./agentTypes.js";
  */
 export async function agentHistoryLoadAll(
     storageOrConfig: Storage | Config,
-    ctxOrAgentId: Context | string,
+    ctx: Context,
     limit?: number
 ): Promise<AgentHistoryRecord[]> {
     const storage = storageResolve(storageOrConfig);
-    const agentId = typeof ctxOrAgentId === "string" ? ctxOrAgentId : ctxOrAgentId.agentId;
-    return storage.history.findByAgentId(agentId, limit);
+    return storage.history.findByAgentId(ctx.agentId, limit);
 }

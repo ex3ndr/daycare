@@ -32,20 +32,20 @@ describe("sessionHistoryToolBuild", () => {
             const targetAgentId = createId();
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
             await agentDescriptorWrite(
                 storageResolve(config),
-                targetAgentId,
+                targetCtx,
                 {
                     type: "subagent",
                     id: targetAgentId,
                     parentAgentId: currentAgentId,
                     name: "worker"
                 },
-                userId,
                 permissions
             );
-            await agentHistoryAppend(config, targetAgentId, { type: "note", at: 10, text: "start" });
-            await agentHistoryAppend(config, targetAgentId, {
+            await agentHistoryAppend(config, targetCtx, { type: "note", at: 10, text: "start" });
+            await agentHistoryAppend(config, targetCtx, {
                 type: "user_message",
                 at: 20,
                 text: "check logs",
@@ -95,25 +95,25 @@ describe("sessionHistoryToolBuild", () => {
             const targetAgentId = createId();
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
             await agentDescriptorWrite(
                 storageResolve(config),
-                targetAgentId,
+                targetCtx,
                 {
                     type: "subagent",
                     id: targetAgentId,
                     parentAgentId: currentAgentId,
                     name: "worker"
                 },
-                userId,
                 permissions
             );
-            await agentHistoryAppend(config, targetAgentId, { type: "note", at: 10, text: "start" });
-            await agentHistoryAppend(config, targetAgentId, {
+            await agentHistoryAppend(config, targetCtx, { type: "note", at: 10, text: "start" });
+            await agentHistoryAppend(config, targetCtx, {
                 type: "note",
                 at: 30,
                 text: "done"
             });
-            await agentHistoryAppend(config, targetAgentId, {
+            await agentHistoryAppend(config, targetCtx, {
                 type: "note",
                 at: 50,
                 text: "late"
@@ -167,19 +167,19 @@ describe("sessionHistoryToolBuild", () => {
             const targetAgentId = createId();
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
             await agentDescriptorWrite(
                 storageResolve(config),
-                targetAgentId,
+                targetCtx,
                 {
                     type: "subagent",
                     id: targetAgentId,
                     parentAgentId: currentAgentId,
                     name: "worker"
                 },
-                userId,
                 permissions
             );
-            await agentHistoryAppend(config, targetAgentId, { type: "note", at: 10, text: "start" });
+            await agentHistoryAppend(config, targetCtx, { type: "note", at: 10, text: "start" });
 
             const tool = sessionHistoryToolBuild();
             const completeMock = vi.fn(async (..._args: unknown[]) => ({

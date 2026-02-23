@@ -9,6 +9,7 @@ import { storageResolve } from "../../../storage/storageResolve.js";
 import { storageUpgrade } from "../../../storage/storageUpgrade.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
+import { contextForAgent } from "../context.js";
 import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentHistoryAppend } from "./agentHistoryAppend.js";
 import { agentHistoryLoad } from "./agentHistoryLoad.js";
@@ -24,26 +25,26 @@ describe("agentHistoryLoad", () => {
             await storageUpgrade(config);
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
+            const ctx = contextForAgent({ userId, agentId });
             await agentDescriptorWrite(
                 storageResolve(config),
-                agentId,
+                ctx,
                 {
                     type: "cron",
                     id: agentId,
                     name: "history"
                 },
-                userId,
                 permissions
             );
 
-            const initial = await agentStateRead(config, agentId);
+            const initial = await agentStateRead(config, ctx);
             if (!initial) {
                 throw new Error("State missing");
             }
 
             const firstSession = await storageResolve(config).sessions.create({ agentId, createdAt: 1 });
-            await agentStateWrite(config, agentId, { ...initial, activeSessionId: firstSession });
-            await agentHistoryAppend(config, agentId, {
+            await agentStateWrite(config, ctx, { ...initial, activeSessionId: firstSession });
+            await agentHistoryAppend(config, ctx, {
                 type: "user_message",
                 at: 2,
                 text: "first",
@@ -51,19 +52,19 @@ describe("agentHistoryLoad", () => {
             });
 
             const secondSession = await storageResolve(config).sessions.create({ agentId, createdAt: 3 });
-            await agentStateWrite(config, agentId, {
+            await agentStateWrite(config, ctx, {
                 ...initial,
                 activeSessionId: secondSession,
                 updatedAt: 3
             });
-            await agentHistoryAppend(config, agentId, {
+            await agentHistoryAppend(config, ctx, {
                 type: "user_message",
                 at: 4,
                 text: "second",
                 files: []
             });
 
-            const records = await agentHistoryLoad(config, agentId);
+            const records = await agentHistoryLoad(config, ctx);
             expect(records).toHaveLength(1);
             expect(records[0]).toEqual({ type: "user_message", at: 4, text: "second", files: [] });
         } finally {

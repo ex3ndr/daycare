@@ -125,7 +125,10 @@ describe("AgentSystem durable inboxes", () => {
             });
 
             await vi.waitFor(async () => {
-                const state = await agentStateRead(harness.storage, agentId);
+                const state = await agentStateRead(
+                    harness.storage,
+                    await contextForAgentIdRequire(harness.agentSystem, agentId)
+                );
                 expect(state?.state).toBe("dead");
             });
             await vi.waitFor(async () => {
@@ -161,7 +164,10 @@ describe("AgentSystem durable inboxes", () => {
             });
 
             await vi.waitFor(async () => {
-                const state = await agentStateRead(second.storage, agentId);
+                const state = await agentStateRead(
+                    second.storage,
+                    await contextForAgentIdRequire(second.agentSystem, agentId)
+                );
                 expect(state?.state).toBe("dead");
             });
             await vi.waitFor(async () => {
@@ -345,4 +351,12 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();
+}
+
+async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {
+    const ctx = await agentSystem.contextForAgentId(agentId);
+    if (!ctx) {
+        throw new Error(`Agent not found: ${agentId}`);
+    }
+    return ctx;
 }
