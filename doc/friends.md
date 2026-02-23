@@ -8,7 +8,7 @@ The Friends system adds three user tools:
 - `friend_unshare_subuser(friendUsertag, subuserId)`
 
 It is built on:
-- `users.usertag` (unique, nullable for legacy records)
+- `users.usertag` (required, unique)
 - `connections` table with one canonical row per user pair (`user_a_id < user_b_id`)
 - `AgentSystem.postToUserAgents()` for cross-user frontend delivery
 
@@ -24,7 +24,7 @@ erDiagram
         integer is_owner
         text parent_user_id
         text name
-        text usertag "unique when not null"
+        text usertag "required, unique"
         integer created_at
         integer updated_at
     }

@@ -43,6 +43,10 @@ describe("migration20260225RequireUsertag", () => {
                 expect(row.usertag).not.toBeNull();
                 expect((row.usertag ?? "").trim()).not.toBe("");
             }
+            const legacyA = rows.find((row) => row.id === "legacy-a");
+            const legacyB = rows.find((row) => row.id === "legacy-b");
+            expect((legacyA?.usertag ?? "").trim()).not.toBe("");
+            expect((legacyB?.usertag ?? "").trim()).not.toBe("");
 
             const indexes = db.prepare("PRAGMA index_list(users)").all() as Array<{ name: string }>;
             expect(indexes.map((index) => index.name)).toContain("idx_users_usertag_required");
@@ -61,7 +65,7 @@ describe("migration20260225RequireUsertag", () => {
         }
     });
 
-    it("handles collisions when deriving usertags for legacy users", () => {
+    it("assigns generated usertags for legacy users", () => {
         const db = databaseOpen(":memory:");
         try {
             migration20260220AddUsers.up(db);
@@ -70,7 +74,7 @@ describe("migration20260225RequireUsertag", () => {
             db.prepare("INSERT INTO users (id, is_owner, usertag, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(
                 "owner",
                 1,
-                "user-alpha",
+                "ownerseed123",
                 1,
                 1
             );
@@ -87,7 +91,8 @@ describe("migration20260225RequireUsertag", () => {
                 | { usertag: string }
                 | undefined;
             expect(alpha?.usertag).toBeTruthy();
-            expect(alpha?.usertag).not.toBe("user-alpha");
+            expect((alpha?.usertag ?? "").trim()).not.toBe("");
+            expect(alpha?.usertag).not.toBe("ownerseed123");
         } finally {
             db.close();
         }

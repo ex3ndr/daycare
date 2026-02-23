@@ -1,14 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { generateUsername } from "unique-username-generator";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usertagGenerate } from "./usertagGenerate.js";
 
+vi.mock("unique-username-generator", () => ({
+    generateUsername: vi.fn()
+}));
+
 describe("usertagGenerate", () => {
-    it("generates adjective-noun-NN format", () => {
-        const tag = usertagGenerate();
-        expect(tag).toMatch(/^[a-z]+-[a-z]+-[1-9][0-9]$/);
+    const generateUsernameMock = vi.mocked(generateUsername);
+
+    beforeEach(() => {
+        generateUsernameMock.mockReset();
     });
 
-    it("produces varied output across multiple calls", () => {
-        const tags = new Set(Array.from({ length: 20 }, () => usertagGenerate()));
-        expect(tags.size).toBeGreaterThan(1);
+    it("delegates to unique-username-generator with no separator and 3 digits", () => {
+        generateUsernameMock.mockReturnValue("sample123");
+        expect(usertagGenerate()).toBe("sample123");
+        expect(generateUsernameMock).toHaveBeenCalledWith("", 3);
     });
 });

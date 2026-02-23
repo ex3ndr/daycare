@@ -1,3 +1,4 @@
+import { usertagGenerate } from "../../engine/friends/usertagGenerate.js";
 import type { Migration } from "./migrationTypes.js";
 
 /**
@@ -32,7 +33,7 @@ export const migration20260225RequireUsertag: Migration = {
         for (const user of usersMissingTags) {
             let nextTag = "";
             for (let attempt = 0; attempt < 1_000; attempt += 1) {
-                const candidate = usertagForUserIdBuild(user.id, attempt);
+                const candidate = usertagGenerate();
                 if (existingTags.has(candidate)) {
                     continue;
                 }
@@ -69,20 +70,3 @@ export const migration20260225RequireUsertag: Migration = {
         `);
     }
 };
-
-function usertagForUserIdBuild(userId: string, attempt: number): string {
-    const normalized = userId
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-    const baseRaw = normalized.length > 0 ? `user-${normalized}` : "user-generated";
-    if (attempt === 0) {
-        return baseRaw.slice(0, 48);
-    }
-
-    const suffix = `-${attempt + 1}`;
-    const maxBaseLength = Math.max(1, 48 - suffix.length);
-    const base = baseRaw.slice(0, maxBaseLength);
-    return `${base}${suffix}`;
-}

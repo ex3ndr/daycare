@@ -8,6 +8,7 @@ This migration makes `users.usertag` required for all existing and future users.
 - Backfills missing/empty usertags for existing rows
 - Adds a full unique index on `users(usertag)`
 - Adds insert/update triggers that reject null or empty usertags
+- Uses `unique-username-generator` for generated usertags (`separator=""`, `randomDigits=3`)
 
 ## Data Flow
 
@@ -15,7 +16,7 @@ This migration makes `users.usertag` required for all existing and future users.
 flowchart TD
     A[Read users table] --> B[Collect existing non-empty usertags]
     B --> C[Find users with null or empty usertag]
-    C --> D[Derive deterministic usertag from user id]
+    C --> D[Generate usertag via unique-username-generator]
     D --> E{Collision?}
     E -- Yes --> D
     E -- No --> F[Update user.usertag]
