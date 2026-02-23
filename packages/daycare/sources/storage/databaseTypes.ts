@@ -335,7 +335,7 @@ export type DatabaseUserRow = {
     is_owner: number;
     parent_user_id: string | null;
     name: string | null;
-    nametag: string | null;
+    nametag: string;
     created_at: number;
     updated_at: number;
 };
@@ -351,7 +351,7 @@ export type UserDbRecord = {
     isOwner: boolean;
     parentUserId: string | null;
     name: string | null;
-    nametag: string | null;
+    nametag: string;
     createdAt: number;
     updatedAt: number;
 };

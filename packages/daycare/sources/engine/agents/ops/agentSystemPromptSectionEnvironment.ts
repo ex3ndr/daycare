@@ -35,5 +35,5 @@ async function nametagResolve(context: AgentSystemPromptContext): Promise<string
         return null;
     }
     const user = await storage.users.findById(context.ctx.userId);
-    return user?.nametag ?? null;
+    return user?.nametag ?? null; // null when user record not found
 }

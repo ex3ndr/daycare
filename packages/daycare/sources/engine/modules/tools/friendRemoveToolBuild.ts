@@ -51,10 +51,7 @@ export function friendRemoveToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myNametag = me.nametag?.trim() ?? "";
-            if (!myNametag) {
-                throw new Error("Current user does not have a nametag.");
-            }
+            const myNametag = me.nametag;
 
             const target = await users.findByNametag(targetNametag);
             if (!target) {

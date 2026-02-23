@@ -59,10 +59,7 @@ export function friendShareSubuserToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myNametag = me.nametag?.trim() ?? "";
-            if (!myNametag) {
-                throw new Error("Current user does not have a nametag.");
-            }
+            const myNametag = me.nametag;
 
             const friend = await users.findByNametag(targetNametag);
             if (!friend) {
@@ -83,10 +80,7 @@ export function friendShareSubuserToolBuild(): ToolDefinition {
                 throw new Error("Subuser does not belong to the calling user.");
             }
 
-            const subuserNametag = subuser.nametag?.trim() ?? "";
-            if (!subuserNametag) {
-                throw new Error("Subuser does not have a nametag.");
-            }
+            const subuserNametag = subuser.nametag;
 
             const friendship = await connections.find(me.id, friend.id);
             if (!friendship || !friendship.requestedA || !friendship.requestedB) {

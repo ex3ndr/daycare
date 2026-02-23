@@ -57,10 +57,7 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myNametag = me.nametag?.trim() ?? "";
-            if (!myNametag) {
-                throw new Error("Current user does not have a nametag.");
-            }
+            const myNametag = me.nametag;
 
             const friend = await users.findByNametag(targetNametag);
             if (!friend) {
@@ -92,7 +89,7 @@ export function friendUnshareSubuserToolBuild(): ToolDefinition {
 
             const origin = `friend:${myNametag}`;
             const subuserName = subuser.name ?? subuser.id;
-            const subuserNametag = subuser.nametag?.trim() ?? "unknown";
+            const subuserNametag = subuser.nametag;
             await toolContext.agentSystem.postToUserAgents(friend.id, {
                 type: "system_message",
                 origin,

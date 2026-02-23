@@ -153,7 +153,7 @@ export class UsersRepository {
                 isOwner: row.is_owner === 1,
                 parentUserId: row.parent_user_id ?? null,
                 name: row.name ?? null,
-                nametag: row.nametag ?? null,
+                nametag: row.nametag,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
                 connectorKeys: (keysByUserId.get(row.id) ?? []).map((keyRow) => ({
@@ -299,9 +299,7 @@ export class UsersRepository {
                     for (const connectorKey of current.connectorKeys) {
                         this.userIdByConnectorKey.delete(connectorKey.connectorKey);
                     }
-                    if (current.nametag) {
-                        this.userIdByNametag.delete(current.nametag);
-                    }
+                    this.userIdByNametag.delete(current.nametag);
                 }
                 this.usersById.delete(id);
             });
@@ -378,7 +376,7 @@ export class UsersRepository {
             isOwner: userRow.is_owner === 1,
             parentUserId: userRow.parent_user_id ?? null,
             name: userRow.name ?? null,
-            nametag: userRow.nametag ?? null,
+            nametag: userRow.nametag,
             createdAt: userRow.created_at,
             updatedAt: userRow.updated_at,
             connectorKeys: keyRows.map((row) => ({
@@ -391,9 +389,7 @@ export class UsersRepository {
 
     private userCacheSet(record: UserWithConnectorKeysDbRecord): void {
         this.usersById.set(record.id, userClone(record));
-        if (record.nametag) {
-            this.userIdByNametag.set(record.nametag, record.id);
-        }
+        this.userIdByNametag.set(record.nametag, record.id);
         for (const connectorKey of record.connectorKeys) {
             this.userIdByConnectorKey.set(connectorKey.connectorKey, record.id);
         }

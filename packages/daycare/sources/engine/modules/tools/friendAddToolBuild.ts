@@ -53,10 +53,7 @@ export function friendAddToolBuild(): ToolDefinition {
             if (!me) {
                 throw new Error("Current user not found.");
             }
-            const myNametag = me.nametag?.trim() ?? "";
-            if (!myNametag) {
-                throw new Error("Current user does not have a nametag.");
-            }
+            const myNametag = me.nametag;
             const origin = `friend:${myNametag}`;
             const now = Date.now();
 
@@ -73,7 +70,7 @@ export function friendAddToolBuild(): ToolDefinition {
                 if (!owner) {
                     throw new Error("Subuser owner not found.");
                 }
-                const ownerTag = owner.nametag?.trim() ?? owner.id;
+                const ownerTag = owner.nametag;
                 const ownerConnection = await connections.find(me.id, owner.id);
                 if (!ownerConnection || !ownerConnection.requestedA || !ownerConnection.requestedB) {
                     throw new Error(`You are not friends with subuser owner ${ownerTag}.`);

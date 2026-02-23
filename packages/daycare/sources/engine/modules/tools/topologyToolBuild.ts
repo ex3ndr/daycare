@@ -413,14 +413,12 @@ async function listFriendLinesBuild(
         )
     )
         .filter(
-            (
-                entry
-            ): entry is { id: string; parentUserId: string | null; nametag: string | null; name: string | null } =>
+            (entry): entry is { id: string; parentUserId: string | null; nametag: string; name: string | null } =>
                 !!entry
         )
         .sort((left, right) => {
-            const leftTag = left.nametag ?? left.id;
-            const rightTag = right.nametag ?? right.id;
+            const leftTag = left.nametag;
+            const rightTag = right.nametag;
             return leftTag.localeCompare(rightTag);
         });
 
@@ -440,7 +438,7 @@ async function listFriendLinesBuild(
     const lines: string[] = [];
     for (let i = 0; i < friendUsers.length; i += 1) {
         const friend = friendUsers[i]!;
-        const friendTag = friend.nametag ?? friend.id;
+        const friendTag = friend.nametag;
         lines.push(friendTag);
 
         const [outgoing, incoming] = await Promise.all([
@@ -511,7 +509,7 @@ async function sharedSubuserLinesBuild(options: {
         }
         options.userCache.set(subuserId, subuser);
         const subuserName = subuser.name ?? subuser.id;
-        const subuserTag = subuser.nametag ?? "none";
+        const subuserTag = subuser.nametag;
         const gateway = options.gatewayBySubuserId.get(subuserId) ?? "none";
         const status = connection.requestedA && connection.requestedB ? "active" : "pending";
         const arrow = options.direction === "out" ? "→" : "←";

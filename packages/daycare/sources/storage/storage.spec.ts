@@ -37,7 +37,7 @@ describe("Storage", () => {
             expect(users).toHaveLength(2);
             const resolved = users.find((entry) => entry.id === firstId);
             expect(resolved?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:alice"]);
-            expect((resolved?.nametag ?? "").trim()).not.toBe("");
+            expect(resolved?.nametag).toBeTruthy();
         } finally {
             storage.close();
         }
