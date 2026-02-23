@@ -1,8 +1,10 @@
 import type { AgentHistoryRecord } from "@/types";
+import { usertagGenerate } from "../engine/friends/usertagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
 import { AgentsRepository } from "./agentsRepository.js";
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
 import { ChannelsRepository } from "./channelsRepository.js";
+import { ConnectionsRepository } from "./connectionsRepository.js";
 import { CronTasksRepository } from "./cronTasksRepository.js";
 import { databaseOpen } from "./databaseOpen.js";
 import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
@@ -35,6 +37,7 @@ export class Storage {
     readonly delayedSignals: DelayedSignalsRepository;
     readonly channels: ChannelsRepository;
     readonly channelMessages: ChannelMessagesRepository;
+    readonly connections: ConnectionsRepository;
     readonly exposeEndpoints: ExposeEndpointsRepository;
     readonly processes: ProcessesRepository;
 
@@ -55,6 +58,7 @@ export class Storage {
         this.delayedSignals = new DelayedSignalsRepository(connection);
         this.channels = new ChannelsRepository(connection);
         this.channelMessages = new ChannelMessagesRepository(connection);
+        this.connections = new ConnectionsRepository(connection);
         this.exposeEndpoints = new ExposeEndpointsRepository(connection);
         this.processes = new ProcessesRepository(connection);
     }
@@ -74,7 +78,11 @@ export class Storage {
     }
 
     async createUser(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {
-        return this.users.create(input);
+        const normalizedUsertag = input.usertag?.trim() ?? "";
+        if (normalizedUsertag) {
+            return this.users.create({ ...input, usertag: normalizedUsertag });
+        }
+        return this.userCreateWithGeneratedUsertag(input);
     }
 
     async resolveUserByConnectorKey(connectorKey: string): Promise<UserWithConnectorKeysDbRecord> {
@@ -91,12 +99,12 @@ export class Storage {
             }
             const users = await this.users.findMany();
             try {
-                return await this.users.create({
+                return await this.userCreateWithGeneratedUsertag({
                     isOwner: users.length === 0,
                     connectorKey: normalized
                 });
             } catch (error) {
-                if (!sqliteUniqueConstraintErrorIs(error)) {
+                if (!sqliteUniqueConstraintOnConnectorKeyIs(error)) {
                     throw error;
                 }
                 const raced = await this.users.findByConnectorKey(normalized);
@@ -171,9 +179,35 @@ export class Storage {
         this.connectorKeyLocks.set(connectorKey, lock);
         return lock;
     }
+
+    private async userCreateWithGeneratedUsertag(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {
+        const MAX_USER_TAG_ATTEMPTS = 100;
+        for (let attempt = 0; attempt < MAX_USER_TAG_ATTEMPTS; attempt += 1) {
+            const usertag = usertagGenerate();
+            try {
+                return await this.users.create({ ...input, usertag });
+            } catch (error) {
+                if (sqliteUniqueConstraintOnUsertagIs(error)) {
+                    continue;
+                }
+                throw error;
+            }
+        }
+        throw new Error("Failed to generate unique usertag after 100 attempts.");
+    }
 }
 
 function sqliteUniqueConstraintErrorIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
     return message.includes("UNIQUE constraint failed");
+}
+
+function sqliteUniqueConstraintOnUsertagIs(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return message.includes("UNIQUE constraint failed: users.usertag");
+}
+
+function sqliteUniqueConstraintOnConnectorKeyIs(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return sqliteUniqueConstraintErrorIs(error) && message.includes("user_connector_keys.connector_key");
 }

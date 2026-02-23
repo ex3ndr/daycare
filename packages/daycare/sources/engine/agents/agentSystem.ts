@@ -255,6 +255,21 @@ export class AgentSystem {
     }
 
     /**
+     * Posts an inbox item to all user-facing agents owned by a specific user.
+     * Expects: targetUserId is an internal user id.
+     */
+    async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void> {
+        const records = await this.storage.agents.findByUserId(targetUserId);
+        const frontendAgents = records.filter((record) => record.descriptor.type === "user");
+        await Promise.all(
+            frontendAgents.map(async (record) => {
+                const targetCtx = contextForAgent({ userId: targetUserId, agentId: record.id });
+                await this.post(targetCtx, { agentId: record.id }, item);
+            })
+        );
+    }
+
+    /**
      * Resolves a target to its concrete agent id, creating/restoring when needed.
      * Expects: descriptor targets are valid for agent creation.
      */

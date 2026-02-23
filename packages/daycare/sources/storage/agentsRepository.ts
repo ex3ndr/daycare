@@ -60,6 +60,26 @@ export class AgentsRepository {
         return parsed.map((entry) => agentClone(entry));
     }
 
+    async findByUserId(userId: string): Promise<AgentDbRecord[]> {
+        if (this.allAgentsLoaded) {
+            const filtered = Array.from(this.agentsById.values()).filter((record) => record.userId === userId);
+            return agentsSort(filtered).map((record) => agentClone(record));
+        }
+
+        const rows = this.db
+            .prepare("SELECT * FROM agents WHERE user_id = ? ORDER BY updated_at ASC")
+            .all(userId) as DatabaseAgentRow[];
+        const parsed = rows.map((row) => this.agentParse(row));
+
+        await this.cacheLock.inLock(() => {
+            for (const record of parsed) {
+                this.agentCacheSet(record);
+            }
+        });
+
+        return parsed.map((record) => agentClone(record));
+    }
+
     async create(record: AgentDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             this.db

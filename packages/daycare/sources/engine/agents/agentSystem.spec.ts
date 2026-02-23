@@ -491,6 +491,77 @@ describe("AgentSystem", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("posts cross-user items to all frontend agents for a target user", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            const user = await harness.storage.users.create({ id: "target-user", usertag: "target-user-42" });
+            const permissions = { workingDir: "/tmp", writeDirs: ["/tmp"] };
+
+            await harness.storage.agents.create({
+                id: "user-agent-1",
+                userId: user.id,
+                type: "user",
+                descriptor: { type: "user", connector: "telegram", userId: "conn", channelId: "chan-1" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await harness.storage.agents.create({
+                id: "user-agent-2",
+                userId: user.id,
+                type: "user",
+                descriptor: { type: "user", connector: "telegram", userId: "conn", channelId: "chan-2" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 2,
+                updatedAt: 2
+            });
+            await harness.storage.agents.create({
+                id: "subagent-1",
+                userId: user.id,
+                type: "subagent",
+                descriptor: { type: "subagent", id: "subagent-1", parentAgentId: "parent", name: "worker" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 3,
+                updatedAt: 3
+            });
+
+            const item: AgentInboxItem = {
+                type: "system_message",
+                text: "<system_message>hello</system_message>"
+            };
+            const post = vi.spyOn(harness.agentSystem, "post").mockResolvedValue();
+
+            await harness.agentSystem.postToUserAgents(user.id, item);
+
+            expect(post).toHaveBeenCalledTimes(2);
+            expect(post).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: user.id, agentId: "user-agent-1" }),
+                { agentId: "user-agent-1" },
+                item
+            );
+            expect(post).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: user.id, agentId: "user-agent-2" }),
+                { agentId: "user-agent-2" },
+                item
+            );
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 async function harnessCreate(

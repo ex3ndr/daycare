@@ -17,6 +17,7 @@ export class UsersRepository {
     private readonly db: DatabaseSync;
     private readonly usersById = new Map<string, UserWithConnectorKeysDbRecord>();
     private readonly userIdByConnectorKey = new Map<string, string>();
+    private readonly userIdByUsertag = new Map<string, string>();
     private readonly userLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
@@ -86,6 +87,40 @@ export class UsersRepository {
         return user;
     }
 
+    async findByUsertag(usertag: string): Promise<UserWithConnectorKeysDbRecord | null> {
+        const normalized = usertag.trim();
+        if (!normalized) {
+            return null;
+        }
+        const cachedUserId = this.userIdByUsertag.get(normalized);
+        if (cachedUserId) {
+            return this.findById(cachedUserId);
+        }
+        if (this.allUsersLoaded) {
+            return null;
+        }
+
+        const row = this.db.prepare("SELECT id FROM users WHERE usertag = ? LIMIT 1").get(normalized) as
+            | { id?: string }
+            | undefined;
+        const userId = row?.id?.trim() ?? "";
+        if (!userId) {
+            return null;
+        }
+
+        await this.cacheLock.inLock(() => {
+            this.userIdByUsertag.set(normalized, userId);
+        });
+        const user = await this.findById(userId);
+        if (!user) {
+            await this.cacheLock.inLock(() => {
+                this.userIdByUsertag.delete(normalized);
+            });
+            return null;
+        }
+        return user;
+    }
+
     async findMany(): Promise<UserWithConnectorKeysDbRecord[]> {
         if (this.allUsersLoaded) {
             return usersSort(Array.from(this.usersById.values())).map((user) => userClone(user));
@@ -117,6 +152,7 @@ export class UsersRepository {
                 isOwner: row.is_owner === 1,
                 parentUserId: row.parent_user_id ?? null,
                 name: row.name ?? null,
+                usertag: row.usertag ?? null,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
                 connectorKeys: (keysByUserId.get(row.id) ?? []).map((keyRow) => ({
@@ -131,6 +167,7 @@ export class UsersRepository {
         await this.cacheLock.inLock(() => {
             this.usersById.clear();
             this.userIdByConnectorKey.clear();
+            this.userIdByUsertag.clear();
             for (const record of records) {
                 this.userCacheSet(record);
             }
@@ -166,13 +203,14 @@ export class UsersRepository {
             const isOwner = input.isOwner ?? false;
             const parentUserId = input.parentUserId ?? null;
             const name = input.name ?? null;
+            const usertag = input.usertag?.trim() || null;
             const connectorKey = input.connectorKey?.trim() ?? "";
 
             this.db
                 .prepare(
-                    "INSERT INTO users (id, is_owner, parent_user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO users (id, is_owner, parent_user_id, name, usertag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
                 )
-                .run(id, isOwner ? 1 : 0, parentUserId, name, createdAt, updatedAt);
+                .run(id, isOwner ? 1 : 0, parentUserId, name, usertag, createdAt, updatedAt);
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
             if (connectorKey) {
@@ -189,6 +227,7 @@ export class UsersRepository {
                 isOwner,
                 parentUserId,
                 name,
+                usertag,
                 createdAt,
                 updatedAt,
                 connectorKeys
@@ -240,6 +279,9 @@ export class UsersRepository {
                 if (current) {
                     for (const connectorKey of current.connectorKeys) {
                         this.userIdByConnectorKey.delete(connectorKey.connectorKey);
+                    }
+                    if (current.usertag) {
+                        this.userIdByUsertag.delete(current.usertag);
                     }
                 }
                 this.usersById.delete(id);
@@ -317,6 +359,7 @@ export class UsersRepository {
             isOwner: userRow.is_owner === 1,
             parentUserId: userRow.parent_user_id ?? null,
             name: userRow.name ?? null,
+            usertag: userRow.usertag ?? null,
             createdAt: userRow.created_at,
             updatedAt: userRow.updated_at,
             connectorKeys: keyRows.map((row) => ({
@@ -329,6 +372,9 @@ export class UsersRepository {
 
     private userCacheSet(record: UserWithConnectorKeysDbRecord): void {
         this.usersById.set(record.id, userClone(record));
+        if (record.usertag) {
+            this.userIdByUsertag.set(record.usertag, record.id);
+        }
         for (const connectorKey of record.connectorKeys) {
             this.userIdByConnectorKey.set(connectorKey.connectorKey, record.id);
         }

@@ -134,4 +134,52 @@ describe("AgentsRepository", () => {
             storage.close();
         }
     });
+
+    it("finds agents by user id", async () => {
+        const storage = Storage.open(":memory:");
+        try {
+            const users = await storage.users.findMany();
+            const ownerUser = users[0];
+            if (!ownerUser) {
+                throw new Error("Owner user missing");
+            }
+            const otherUser = await storage.users.create({ usertag: "other-user-42" });
+            const repo = new AgentsRepository(storage.db);
+
+            await repo.create({
+                id: "agent-owner",
+                userId: ownerUser.id,
+                type: "cron",
+                descriptor: { type: "cron", id: "agent-owner", name: "owner" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "agent-other",
+                userId: otherUser.id,
+                type: "cron",
+                descriptor: { type: "cron", id: "agent-other", name: "other" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 2,
+                updatedAt: 2
+            });
+
+            const ownerAgents = await repo.findByUserId(ownerUser.id);
+            expect(ownerAgents.map((agent) => agent.id)).toEqual(["agent-owner"]);
+
+            const otherAgents = await repo.findByUserId(otherUser.id);
+            expect(otherAgents.map((agent) => agent.id)).toEqual(["agent-other"]);
+        } finally {
+            storage.close();
+        }
+    });
 });

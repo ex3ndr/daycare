@@ -335,6 +335,7 @@ export type DatabaseUserRow = {
     is_owner: number;
     parent_user_id: string | null;
     name: string | null;
+    usertag: string | null;
     created_at: number;
     updated_at: number;
 };
@@ -350,8 +351,27 @@ export type UserDbRecord = {
     isOwner: boolean;
     parentUserId: string | null;
     name: string | null;
+    usertag: string | null;
     createdAt: number;
     updatedAt: number;
+};
+
+export type DatabaseConnectionRow = {
+    user_a_id: string;
+    user_b_id: string;
+    requested_a: number;
+    requested_b: number;
+    requested_a_at: number | null;
+    requested_b_at: number | null;
+};
+
+export type ConnectionDbRecord = {
+    userAId: string;
+    userBId: string;
+    requestedA: boolean;
+    requestedB: boolean;
+    requestedAAt: number | null;
+    requestedBAt: number | null;
 };
 
 export type UserConnectorKeyDbRecord = {
@@ -380,6 +400,7 @@ export type CreateUserInput = {
     isOwner?: boolean;
     parentUserId?: string;
     name?: string;
+    usertag?: string;
     createdAt?: number;
     updatedAt?: number;
     connectorKey?: string;
