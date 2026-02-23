@@ -72,8 +72,15 @@ describe("sandboxCanWrite", () => {
         const permissions = buildPermissions(workingDir, [homeDir]);
 
         await expect(sandboxCanWrite(permissions, sensitiveFile)).rejects.toThrow(
-            "Write access denied for sensitive paths."
+            "Read access denied for denied paths."
         );
+    });
+
+    it("denies writes when target path is not readable", async () => {
+        const permissions = buildPermissions(workingDir, [homeDir]);
+        const target = path.join(homeDir, "notes", "blind-write.txt");
+
+        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow("Read access denied for denied paths.");
     });
 
     it("denies writing dangerous filenames in allowed writeDirs", async () => {
