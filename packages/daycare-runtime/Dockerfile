@@ -8,6 +8,16 @@ ENV LANG="C.UTF-8"
 ENV HOME=/home
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Tool data directories – pinned under /root so /home can be safely mounted at runtime
+ENV MISE_DATA_DIR=/root/.local/share/mise
+ENV MISE_CONFIG_DIR=/root/.config/mise
+ENV MISE_STATE_DIR=/root/.local/state/mise
+ENV MISE_CACHE_DIR=/root/.cache/mise
+ENV CARGO_HOME=/root/.cargo
+ENV RUSTUP_HOME=/root/.rustup
+ENV GOPATH=/root/go
+ENV PIPX_HOME=/root/.local/share/pipx
+
 ### BASE ###
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -99,7 +109,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && mise settings add disable_backends asdf \
     && mise settings add disable_backends vfox
 
-ENV PATH=$HOME/.local/share/mise/shims:$PATH
+ENV PATH=$MISE_DATA_DIR/shims:$PATH
 
 ### LLVM ###
 
@@ -121,10 +131,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 ARG PYTHON_VERSIONS="3.14 3.13 3.12 3.11 3.10"
 
 # Install pyenv
-ENV PYENV_ROOT=/home/.pyenv
+ENV PYENV_ROOT=/root/.pyenv
 ENV PATH=$PYENV_ROOT/bin:$PATH
 RUN git -c advice.detachedHead=0 clone --depth 1 https://github.com/pyenv/pyenv.git "$PYENV_ROOT" \
-    && echo 'export PYENV_ROOT="/home/.pyenv"' >> /etc/profile \
+    && echo 'export PYENV_ROOT="/root/.pyenv"' >> /etc/profile \
     && echo 'export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"' >> /etc/profile \
     && echo 'eval "$(pyenv init - bash)"' >> /etc/profile \
     && cd "$PYENV_ROOT" \
@@ -134,12 +144,12 @@ RUN git -c advice.detachedHead=0 clone --depth 1 https://github.com/pyenv/pyenv.
     && rm -rf "$PYENV_ROOT/cache"
 
 # Install pipx for common global package managers (e.g. poetry)
-ENV PIPX_BIN_DIR=/home/.local/bin
+ENV PIPX_BIN_DIR=/root/.local/bin
 ENV PATH=$PIPX_BIN_DIR:$PATH
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,target=/home/.cache/pip \
-    --mount=type=cache,target=/home/.cache/pipx \
+    --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pipx \
     apt-get update \
     && apt-get install -y --no-install-recommends pipx=1.4.* \
     && rm -rf /var/lib/apt/lists/* \
@@ -157,7 +167,7 @@ ENV UV_NO_PROGRESS=1
 ARG NVM_VERSION=v0.40.2
 ARG NODE_VERSION=22
 
-ENV NVM_DIR=/home/.nvm
+ENV NVM_DIR=/root/.nvm
 # Corepack tries to do too much - disable some of its features:
 # https://github.com/nodejs/corepack/blob/main/README.md
 ENV COREPACK_DEFAULT_TO_LATEST=0
@@ -165,9 +175,9 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 ENV COREPACK_ENABLE_AUTO_PIN=0
 ENV COREPACK_ENABLE_STRICT=0
 
-RUN --mount=type=cache,target=/home/.npm \
-    --mount=type=cache,target=/home/.cache/yarn \
-    --mount=type=cache,target=/home/.local/share/pnpm/store \
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/root/.cache/yarn \
+    --mount=type=cache,target=/root/.local/share/pnpm/store \
     git -c advice.detachedHead=0 clone --branch "$NVM_VERSION" --depth 1 https://github.com/nvm-sh/nvm.git "$NVM_DIR" \
     && echo 'source $NVM_DIR/nvm.sh' >> /etc/profile \
     && echo "prettier\neslint\ntypescript" > $NVM_DIR/default-packages \
@@ -188,7 +198,7 @@ RUN --mount=type=cache,target=/home/.npm \
 ### BUN ###
 
 ARG BUN_VERSION=1.2.14
-RUN --mount=type=cache,target=/home/.cache/mise \
+RUN --mount=type=cache,target=$MISE_CACHE_DIR \
     mise use --global "bun@${BUN_VERSION}" \
     && mise cache clear || true
 
@@ -201,7 +211,7 @@ ARG MAVEN_VERSION=3.9.10
 ARG AMD_JAVA_VERSIONS="25 24 23 22 21 17 11"
 ARG ARM_JAVA_VERSIONS="25 24 23 22 21 17"
 
-RUN --mount=type=cache,target=/home/.cache/mise \
+RUN --mount=type=cache,target=$MISE_CACHE_DIR \
     JAVA_VERSIONS="$( [ "$TARGETARCH" = "arm64" ] && echo "$ARM_JAVA_VERSIONS" || echo "$AMD_JAVA_VERSIONS" )" \
     && for v in $JAVA_VERSIONS; do mise install "java@${v}"; done \
     && mise use --global "java@${JAVA_VERSIONS%% *}" \
@@ -212,7 +222,7 @@ RUN --mount=type=cache,target=/home/.cache/mise \
 ### SWIFT ###
 
 ARG SWIFT_VERSIONS="6.2 6.1 5.10"
-ENV SWIFTLY_BIN_DIR=/home/.swiftly/bin
+ENV SWIFTLY_BIN_DIR=/root/.swiftly/bin
 ENV PATH=$SWIFTLY_BIN_DIR:$PATH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -228,11 +238,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ### RUST ###
 
 ARG RUST_VERSIONS="1.92.0 1.91.1 1.90.0 1.89.0 1.88.0 1.87.0 1.86.0 1.85.1 1.84.1 1.83.0"
-RUN --mount=type=cache,target=/home/.cargo/registry \
-    --mount=type=cache,target=/home/.cargo/git \
+RUN --mount=type=cache,target=$CARGO_HOME/registry \
+    --mount=type=cache,target=$CARGO_HOME/git \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none \
-    && . "$HOME/.cargo/env" \
-    && echo 'source $HOME/.cargo/env' >> /etc/profile \
+    && . "$CARGO_HOME/env" \
+    && echo 'source $CARGO_HOME/env' >> /etc/profile \
     && rustup toolchain install $RUST_VERSIONS --profile minimal --component rustfmt --component clippy \
     && rustup default ${RUST_VERSIONS%% *}
 
@@ -241,7 +251,7 @@ RUN --mount=type=cache,target=/home/.cargo/registry \
 ARG RUBY_VERSIONS="3.4.4 3.3.8 3.2.3"
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,target=/home/.cache/mise \
+    --mount=type=cache,target=$MISE_CACHE_DIR \
     apt-get update && apt-get install -y --no-install-recommends \
     libyaml-dev=0.2.* \
     libgmp-dev=2:6.3.* \
@@ -252,8 +262,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 ### C++ ###
 # gcc is already installed via apt-get above, so these are just additional linters, etc.
-RUN --mount=type=cache,target=/home/.cache/pip \
-    --mount=type=cache,target=/home/.cache/pipx \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pipx \
     pipx install --pip-args="--no-cache-dir --no-compile --root-user-action=ignore" cpplint==2.0.* clang-tidy==20.1.* clang-format==20.1.* cmakelang==0.6.*
 
 ### BAZEL ###
@@ -270,8 +280,8 @@ ARG GO_VERSIONS="1.25.1 1.24.3 1.23.8 1.22.12"
 ARG GOLANG_CI_LINT_VERSION=2.1.6
 
 # Go defaults GOROOT to /usr/local/go - we just need to update PATH
-ENV PATH=/usr/local/go/bin:$HOME/go/bin:$PATH
-RUN --mount=type=cache,target=/home/.cache/mise \
+ENV PATH=/usr/local/go/bin:$GOPATH/bin:$PATH
+RUN --mount=type=cache,target=$MISE_CACHE_DIR \
     for v in $GO_VERSIONS; do mise install "go@${v}"; done \
     && mise use --global "go@${GO_VERSIONS%% *}" \
     && mise use --global "golangci-lint@${GOLANG_CI_LINT_VERSION}" \
@@ -280,8 +290,8 @@ RUN --mount=type=cache,target=/home/.cache/mise \
 ### PHP ###
 
 ARG PHP_VERSIONS="8.5 8.4 8.3 8.2"
-ENV PHPENV_ROOT=/home/.phpenv
-ENV PATH=/home/.phpenv/bin:/home/.phpenv/shims:$PATH
+ENV PHPENV_ROOT=/root/.phpenv
+ENV PATH=/root/.phpenv/bin:/root/.phpenv/shims:$PATH
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -292,8 +302,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libonig-dev=6.9.* libpng-dev=1.6.* libzip-dev=1.7.* \
         libssl-dev zlib1g-dev libcurl4-openssl-dev libreadline-dev libtidy-dev libxslt1-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && git clone https://github.com/phpenv/phpenv.git /home/.phpenv \
-    && git clone https://github.com/php-build/php-build.git /home/.phpenv/plugins/php-build \
+    && git clone https://github.com/phpenv/phpenv.git /root/.phpenv \
+    && git clone https://github.com/php-build/php-build.git /root/.phpenv/plugins/php-build \
     && echo 'eval "$(phpenv init - bash)"' >> /etc/profile \
     && bash -lc '\
         eval "$(phpenv init -)" && \
@@ -303,7 +313,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         phpenv rehash && \
         phpenv global "${PHP_VERSIONS%% *}snapshot" \
     ' \
-    && rm -rf /home/.phpenv/cache
+    && rm -rf /root/.phpenv/cache
 
 # Composer
 RUN curl -sS https://getcomposer.org/installer | php \
@@ -313,7 +323,7 @@ RUN curl -sS https://getcomposer.org/installer | php \
 
 ARG ERLANG_VERSION=27.1.2
 ARG ELIXIR_VERSION=1.18.3
-RUN --mount=type=cache,target=/home/.cache/mise \
+RUN --mount=type=cache,target=$MISE_CACHE_DIR \
     mise install "erlang@${ERLANG_VERSION}" "elixir@${ELIXIR_VERSION}-otp-27" \
     && mise use --global "erlang@${ERLANG_VERSION}" "elixir@${ELIXIR_VERSION}-otp-27" \
     && mise cache clear || true
