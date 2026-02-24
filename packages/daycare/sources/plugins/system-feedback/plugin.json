@@ -1,0 +1,6 @@
+{
+  "id": "system-feedback",
+  "name": "System Feedback",
+  "description": "Tool for logging and forwarding structured system feedback from agents.",
+  "entry": "./plugin.js"
+}
