@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
 
@@ -34,9 +35,12 @@ const DOCKER_READONLY_LABEL = "daycare.readonly";
 const DOCKER_NETWORK_LABEL = "daycare.network";
 const DOCKER_DNS_PROFILE_LABEL = "daycare.dns.profile";
 const DOCKER_DNS_SERVERS_LABEL = "daycare.dns.servers";
+const DOCKER_DNS_RESOLVER_LABEL = "daycare.dns.resolver";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
+const DOCKER_DNS_RESOLVER_DOCKER = "docker";
+const DOCKER_DNS_RESOLVER_BIND = "bind";
 
 /**
  * Ensures a long-lived sandbox container exists and is running for a user.
@@ -55,6 +59,7 @@ export async function dockerContainerEnsure(
         localDnsServers: config.localDnsServers
     });
     const dnsServersLabel = dockerDnsServersLabelResolve(dnsProfile.dnsServers);
+    const dnsResolverLabel = dnsProfile.dnsServers ? DOCKER_DNS_RESOLVER_BIND : DOCKER_DNS_RESOLVER_DOCKER;
     const existing = docker.getContainer(containerName);
 
     try {
@@ -68,7 +73,8 @@ export async function dockerContainerEnsure(
             config.capDrop,
             config.networkName,
             dnsProfile.profileLabel,
-            dnsServersLabel
+            dnsServersLabel,
+            dnsResolverLabel
         );
         if (staleReason) {
             logger.warn(
@@ -99,6 +105,11 @@ export async function dockerContainerEnsure(
     const securityOpt = config.unconfinedSecurity ? [...DOCKER_SECURITY_OPT_UNCONFINED] : undefined;
     const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
     const readOnlyLabel = config.readOnly ? "1" : "0";
+    const dnsResolvBind = await dockerDnsResolvBindResolve(hostHomeDir, dnsProfile.dnsServers);
+    const binds = [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`];
+    if (dnsResolvBind) {
+        binds.push(dnsResolvBind);
+    }
 
     try {
         const created = await docker.createContainer({
@@ -113,10 +124,11 @@ export async function dockerContainerEnsure(
                 [DOCKER_READONLY_LABEL]: readOnlyLabel,
                 [DOCKER_NETWORK_LABEL]: config.networkName,
                 [DOCKER_DNS_PROFILE_LABEL]: dnsProfile.profileLabel,
-                [DOCKER_DNS_SERVERS_LABEL]: dnsServersLabel
+                [DOCKER_DNS_SERVERS_LABEL]: dnsServersLabel,
+                [DOCKER_DNS_RESOLVER_LABEL]: dnsResolverLabel
             },
             HostConfig: {
-                Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
+                Binds: binds,
                 NetworkMode: config.networkName,
                 ...(dnsProfile.dnsServers ? { Dns: dnsProfile.dnsServers } : {}),
                 ...(config.runtime ? { Runtime: config.runtime } : {}),
@@ -182,7 +194,8 @@ function containerStaleReasonResolve(
     capDrop: string[],
     expectedNetworkName: string,
     expectedDnsProfileLabel: string,
-    expectedDnsServersLabel: string
+    expectedDnsServersLabel: string,
+    expectedDnsResolverLabel: string
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -193,6 +206,7 @@ function containerStaleReasonResolve(
     const networkLabel = labels?.[DOCKER_NETWORK_LABEL];
     const dnsProfileLabel = labels?.[DOCKER_DNS_PROFILE_LABEL];
     const dnsServersLabel = labels?.[DOCKER_DNS_SERVERS_LABEL];
+    const dnsResolverLabel = labels?.[DOCKER_DNS_RESOLVER_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -219,6 +233,9 @@ function containerStaleReasonResolve(
     }
     if (!dnsServersLabel) {
         return "missing-dns-servers-label";
+    }
+    if (!dnsResolverLabel) {
+        return "missing-dns-resolver-label";
     }
     const networkState = dockerContainerNetworkStateResolve(details, expectedNetworkName);
     if (networkState !== "correct") {
@@ -247,6 +264,9 @@ function containerStaleReasonResolve(
     if (dnsServersLabel !== expectedDnsServersLabel) {
         return `dns-servers-mismatch:${dnsServersLabel}->${expectedDnsServersLabel}`;
     }
+    if (dnsResolverLabel !== expectedDnsResolverLabel) {
+        return `dns-resolver-mismatch:${dnsResolverLabel}->${expectedDnsResolverLabel}`;
+    }
     return null;
 }
 
@@ -261,4 +281,27 @@ function dockerDnsServersLabelResolve(dnsServers: string[] | undefined): string 
         return "default";
     }
     return dnsServers.join(",");
+}
+
+async function dockerDnsResolvBindResolve(
+    hostHomeDir: string,
+    dnsServers: string[] | undefined
+): Promise<string | null> {
+    if (!dnsServers || dnsServers.length === 0) {
+        return null;
+    }
+    const hostTmpDir = path.join(hostHomeDir, ".tmp");
+    const hostResolvPath = path.join(hostTmpDir, "daycare-resolv.conf");
+    await fs.mkdir(hostTmpDir, { recursive: true });
+    await fs.writeFile(hostResolvPath, dockerResolvContentBuild(dnsServers), "utf8");
+    return `${hostResolvPath}:/etc/resolv.conf:ro`;
+}
+
+function dockerResolvContentBuild(dnsServers: string[]): string {
+    const lines = ["# Managed by Daycare"];
+    for (const dnsServer of dnsServers) {
+        lines.push(`nameserver ${dnsServer}`);
+    }
+    lines.push("options ndots:0");
+    return `${lines.join("\n")}\n`;
 }

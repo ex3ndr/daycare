@@ -92,6 +92,7 @@ graph TD
 - Users listed in `docker.allowLocalNetworkingForUsers` are placed on `daycare-local`.
 - `daycare-isolated` containers use `docker.isolatedDnsServers` (defaults to public resolvers).
 - `daycare-local` containers use Docker's default DNS unless `docker.localDnsServers` is configured.
+- When DNS servers are configured, Daycare bind-mounts a generated `/etc/resolv.conf` so runtime resolution does not rely on Docker's embedded `127.0.0.11` resolver.
 - If an existing container is attached to the wrong network (for example after settings changes), it is stopped, removed, and recreated on the expected network.
 
 ## Image Version Guard

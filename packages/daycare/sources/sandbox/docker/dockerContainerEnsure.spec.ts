@@ -16,8 +16,8 @@ const baseConfig: DockerContainerResolvedConfig = {
     capDrop: [],
     userId: "user-1",
     networkName: "daycare-isolated",
-    hostHomeDir: "/data/users/user-1/home",
-    hostSkillsActiveDir: "/data/users/user-1/skills/active"
+    hostHomeDir: "/tmp/daycare-home-user-1",
+    hostSkillsActiveDir: "/tmp/daycare-skills-user-1"
 };
 const IMAGE_REF = "daycare-sandbox:latest";
 const CURRENT_IMAGE_ID = "sha256:image-current";
@@ -35,7 +35,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.capabilities": "add=;drop=",
                         "daycare.readonly": "0",
                         "daycare.dns.profile": "public",
-                        "daycare.dns.servers": "1.1.1.1,8.8.8.8"
+                        "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                        "daycare.dns.resolver": "bind"
                     }
                 }
             }),
@@ -74,7 +75,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.capabilities": "add=;drop=",
                         "daycare.readonly": "0",
                         "daycare.dns.profile": "public",
-                        "daycare.dns.servers": "1.1.1.1,8.8.8.8"
+                        "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                        "daycare.dns.resolver": "bind"
                     }
                 }
             }),
@@ -112,7 +114,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.readonly": "0",
                         "daycare.network": "daycare-local",
                         "daycare.dns.profile": "default",
-                        "daycare.dns.servers": "default"
+                        "daycare.dns.servers": "default",
+                        "daycare.dns.resolver": "docker"
                     }
                 },
                 NetworkSettings: {
@@ -180,10 +183,15 @@ describe("dockerContainerEnsure", () => {
                 "daycare.readonly": "0",
                 "daycare.network": "daycare-isolated",
                 "daycare.dns.profile": "public",
-                "daycare.dns.servers": "1.1.1.1,8.8.8.8"
+                "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                "daycare.dns.resolver": "bind"
             },
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Binds: [
+                    "/tmp/daycare-home-user-1:/home",
+                    "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
+                ],
                 NetworkMode: "daycare-isolated",
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc"
@@ -235,10 +243,11 @@ describe("dockerContainerEnsure", () => {
                 "daycare.readonly": "0",
                 "daycare.network": "daycare-local",
                 "daycare.dns.profile": "default",
-                "daycare.dns.servers": "default"
+                "daycare.dns.servers": "default",
+                "daycare.dns.resolver": "docker"
             },
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Binds: ["/tmp/daycare-home-user-1:/home", "/tmp/daycare-skills-user-1:/shared/skills:ro"],
                 NetworkMode: "daycare-local",
                 Runtime: "runsc"
             },
@@ -289,10 +298,15 @@ describe("dockerContainerEnsure", () => {
                 "daycare.readonly": "0",
                 "daycare.network": "daycare-local",
                 "daycare.dns.profile": "private",
-                "daycare.dns.servers": "192.168.1.1,192.168.1.2"
+                "daycare.dns.servers": "192.168.1.1,192.168.1.2",
+                "daycare.dns.resolver": "bind"
             },
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Binds: [
+                    "/tmp/daycare-home-user-1:/home",
+                    "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
+                ],
                 NetworkMode: "daycare-local",
                 Dns: ["192.168.1.1", "192.168.1.2"],
                 Runtime: "runsc"
@@ -417,10 +431,15 @@ describe("dockerContainerEnsure", () => {
                 "daycare.readonly": "0",
                 "daycare.network": "daycare-isolated",
                 "daycare.dns.profile": "public",
-                "daycare.dns.servers": "1.1.1.1,8.8.8.8"
+                "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                "daycare.dns.resolver": "bind"
             },
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Binds: [
+                    "/tmp/daycare-home-user-1:/home",
+                    "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
+                ],
                 NetworkMode: "daycare-isolated",
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
@@ -512,10 +531,15 @@ describe("dockerContainerEnsure", () => {
                 "daycare.readonly": "1",
                 "daycare.network": "daycare-isolated",
                 "daycare.dns.profile": "public",
-                "daycare.dns.servers": "1.1.1.1,8.8.8.8"
+                "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                "daycare.dns.resolver": "bind"
             },
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Binds: [
+                    "/tmp/daycare-home-user-1:/home",
+                    "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
+                ],
                 NetworkMode: "daycare-isolated",
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
@@ -568,10 +592,15 @@ describe("dockerContainerEnsure", () => {
                 "daycare.readonly": "0",
                 "daycare.network": "daycare-isolated",
                 "daycare.dns.profile": "public",
-                "daycare.dns.servers": "1.1.1.1,8.8.8.8"
+                "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                "daycare.dns.resolver": "bind"
             },
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Binds: [
+                    "/tmp/daycare-home-user-1:/home",
+                    "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
+                ],
                 NetworkMode: "daycare-isolated",
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",

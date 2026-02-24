@@ -34,6 +34,8 @@ Optional DNS settings can override default resolver behavior:
 - `daycare-isolated` containers use `docker.isolatedDnsServers` (default: `1.1.1.1`, `8.8.8.8`) so they do not
   depend on local DNS infrastructure.
 - `daycare-local` containers use Docker default DNS unless `docker.localDnsServers` is set.
+- When DNS servers are configured, Daycare bind-mounts a generated `/etc/resolv.conf` with those resolvers to avoid
+  Docker embedded DNS (`127.0.0.11`) runtime issues.
 - If a user's existing container is on the wrong network, Daycare recreates it on the correct one.
 
 ## Network Selection Flow
@@ -50,7 +52,11 @@ flowchart TD
     E --> I[dockerContainerEnsure]
     G --> I
     H --> I
-    I --> J{container on expected network and DNS profile?}
+    I --> I1{dns servers configured?}
+    I1 -- yes --> I2[bind generated /etc/resolv.conf]
+    I1 -- no --> I3[use Docker default resolver path]
+    I2 --> J{container on expected network and DNS profile?}
+    I3 --> J
     J -- yes --> K[Reuse container]
     J -- no --> L[Stop and remove]
     L --> M[Create with expected network and DNS]
