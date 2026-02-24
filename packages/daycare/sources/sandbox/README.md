@@ -25,10 +25,12 @@ const sandbox = new Sandbox({
         tag: "latest",
         socketPath: "/var/run/docker.sock",
         runtime: "runsc",
+        readOnly: false,
         unconfinedSecurity: false,
         capAdd: [],
         capDrop: [],
-        userId: ctx.userId
+        userId: ctx.userId,
+        skillsActiveDir: userHome.skillsActive
     }
 });
 ```
@@ -93,6 +95,7 @@ Enable Docker runtime in `settings.json`:
         "tag": "latest",
         "socketPath": "/var/run/docker.sock",
         "runtime": "runsc",
+        "readOnly": false,
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
         "capDrop": ["MKNOD"]

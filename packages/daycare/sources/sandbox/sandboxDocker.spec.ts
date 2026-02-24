@@ -82,6 +82,7 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
+                readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
@@ -102,6 +103,7 @@ describe("Sandbox docker integration", () => {
             enableWeakerNestedSandbox: true
         });
         expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[2]?.docker).toMatchObject({
+            readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: []
@@ -120,6 +122,7 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
+                readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
@@ -149,6 +152,7 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
+                readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],

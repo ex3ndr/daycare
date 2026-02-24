@@ -25,6 +25,7 @@ const DOCKER_IMAGE_VERSION_LABEL = "daycare.image.version";
 const DOCKER_IMAGE_ID_LABEL = "daycare.image.id";
 const DOCKER_SECURITY_PROFILE_LABEL = "daycare.security.profile";
 const DOCKER_CAPABILITIES_LABEL = "daycare.capabilities";
+const DOCKER_READONLY_LABEL = "daycare.readonly";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
@@ -44,6 +45,7 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
         const staleReason = containerStaleReasonResolve(
             details,
             imageId,
+            config.readOnly,
             config.unconfinedSecurity,
             config.capAdd,
             config.capDrop
@@ -76,6 +78,7 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
         : DOCKER_SECURITY_PROFILE_DEFAULT;
     const securityOpt = config.unconfinedSecurity ? [...DOCKER_SECURITY_OPT_UNCONFINED] : undefined;
     const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
+    const readOnlyLabel = config.readOnly ? "1" : "0";
 
     try {
         const created = await docker.createContainer({
@@ -86,11 +89,13 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
                 [DOCKER_IMAGE_VERSION_LABEL]: DOCKER_IMAGE_VERSION,
                 [DOCKER_IMAGE_ID_LABEL]: imageId,
                 [DOCKER_SECURITY_PROFILE_LABEL]: securityProfile,
-                [DOCKER_CAPABILITIES_LABEL]: capabilitiesLabel
+                [DOCKER_CAPABILITIES_LABEL]: capabilitiesLabel,
+                [DOCKER_READONLY_LABEL]: readOnlyLabel
             },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
                 ...(config.runtime ? { Runtime: config.runtime } : {}),
+                ...(config.readOnly ? { ReadonlyRootfs: true } : {}),
                 ...(config.capAdd.length > 0 ? { CapAdd: config.capAdd } : {}),
                 ...(config.capDrop.length > 0 ? { CapDrop: config.capDrop } : {}),
                 ...(securityOpt ? { SecurityOpt: securityOpt } : {})
@@ -141,6 +146,7 @@ async function removeContainerIfNeeded(container: Docker.Container): Promise<voi
 function containerStaleReasonResolve(
     details: DockerContainerInspect,
     expectedImageId: string,
+    readOnly: boolean,
     unconfinedSecurity: boolean,
     capAdd: string[],
     capDrop: string[]
@@ -150,6 +156,7 @@ function containerStaleReasonResolve(
     const imageId = labels?.[DOCKER_IMAGE_ID_LABEL];
     const securityProfile = labels?.[DOCKER_SECURITY_PROFILE_LABEL];
     const capabilities = labels?.[DOCKER_CAPABILITIES_LABEL];
+    const readOnlyLabel = labels?.[DOCKER_READONLY_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -168,6 +175,9 @@ function containerStaleReasonResolve(
     if (!capabilities) {
         return "missing-capabilities-label";
     }
+    if (!readOnlyLabel) {
+        return "missing-readonly-label";
+    }
     const expectedSecurityProfile = unconfinedSecurity
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
@@ -177,6 +187,10 @@ function containerStaleReasonResolve(
     const expectedCapabilities = dockerCapabilitiesLabelBuild(capAdd, capDrop);
     if (capabilities !== expectedCapabilities) {
         return `capabilities-mismatch:${capabilities}->${expectedCapabilities}`;
+    }
+    const expectedReadOnlyLabel = readOnly ? "1" : "0";
+    if (readOnlyLabel !== expectedReadOnlyLabel) {
+        return `readonly-mismatch:${readOnlyLabel}->${expectedReadOnlyLabel}`;
     }
     return null;
 }

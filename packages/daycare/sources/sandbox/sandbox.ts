@@ -238,6 +238,7 @@ export class Sandbox {
                           tag: this.docker!.tag,
                           socketPath: this.docker!.socketPath,
                           runtime: this.docker!.runtime,
+                          readOnly: this.docker!.readOnly,
                           unconfinedSecurity: this.docker!.unconfinedSecurity,
                           capAdd: this.docker!.capAdd,
                           capDrop: this.docker!.capDrop,

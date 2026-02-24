@@ -57,6 +57,7 @@ export type DockerSettings = {
     tag?: string;
     socketPath?: string;
     runtime?: string;
+    readOnly?: boolean;
     unconfinedSecurity?: boolean;
     capAdd?: string[];
     capDrop?: string[];
@@ -68,6 +69,7 @@ export type ResolvedDockerSettings = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    readOnly: boolean;
     unconfinedSecurity: boolean;
     capAdd: string[];
     capDrop: string[];

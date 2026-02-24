@@ -31,6 +31,7 @@ describe("configSettingsParse", () => {
                 tag: "latest",
                 socketPath: "/var/run/docker.sock",
                 runtime: "runsc",
+                readOnly: true,
                 unconfinedSecurity: true,
                 capAdd: ["NET_ADMIN"],
                 capDrop: ["MKNOD"]
@@ -43,6 +44,7 @@ describe("configSettingsParse", () => {
             tag: "latest",
             socketPath: "/var/run/docker.sock",
             runtime: "runsc",
+            readOnly: true,
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
             capDrop: ["MKNOD"]

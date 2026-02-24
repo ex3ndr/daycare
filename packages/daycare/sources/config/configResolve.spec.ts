@@ -87,6 +87,7 @@ describe("configResolve", () => {
             tag: "latest",
             socketPath: undefined,
             runtime: undefined,
+            readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: []
@@ -111,6 +112,7 @@ describe("configResolve", () => {
             tag: "latest",
             socketPath: undefined,
             runtime: undefined,
+            readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: []
@@ -127,6 +129,7 @@ describe("configResolve", () => {
                     tag: "v2",
                     socketPath: "/var/run/docker.sock",
                     runtime: "runsc",
+                    readOnly: true,
                     unconfinedSecurity: true,
                     capAdd: ["NET_ADMIN"],
                     capDrop: ["MKNOD"]
@@ -140,6 +143,7 @@ describe("configResolve", () => {
             tag: "v2",
             socketPath: "/var/run/docker.sock",
             runtime: "runsc",
+            readOnly: true,
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
             capDrop: ["MKNOD"]

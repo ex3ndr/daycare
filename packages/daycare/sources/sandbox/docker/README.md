@@ -21,6 +21,7 @@ Configure Docker runtime in `settings.json`:
         "tag": "latest",
         "socketPath": "/var/run/docker.sock",
         "runtime": "runsc",
+        "readOnly": false,
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
         "capDrop": ["MKNOD"]
@@ -35,6 +36,7 @@ Defaults when omitted:
 - `tag`: `latest`
 - `socketPath`: `undefined` (Docker default)
 - `runtime`: `undefined` (Docker default)
+- `readOnly`: `false`
 - `unconfinedSecurity`: `false`
 - `capAdd`: `[]`
 - `capDrop`: `[]`
@@ -47,6 +49,13 @@ When `capAdd`/`capDrop` are set, sandbox containers are created with matching Do
 
 - `HostConfig.CapAdd`
 - `HostConfig.CapDrop`
+
+When `readOnly` is `true`, sandbox containers are created with:
+
+- `HostConfig.ReadonlyRootfs: true`
+
+The `/home` bind mount remains writable, so only mounted home content is writable while the rest of the root filesystem
+is read-only.
 
 ## Execution Flow
 
@@ -68,6 +77,7 @@ Each sandbox container is stamped at creation time with:
 - `daycare.image.id` from `docker image inspect` (`dockerImageIdResolve`)
 - `daycare.security.profile` from `docker.unconfinedSecurity`
 - `daycare.capabilities` from `docker.capAdd`/`docker.capDrop`
+- `daycare.readonly` from `docker.readOnly`
 
 `dockerContainerEnsure` compares these labels against current values. If any label is missing or mismatched, the
 container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure

@@ -117,6 +117,7 @@ export class Agent {
                       tag: dockerSettings.tag,
                       socketPath: dockerSettings.socketPath,
                       runtime: dockerSettings.runtime,
+                      readOnly: dockerSettings.readOnly,
                       unconfinedSecurity: dockerSettings.unconfinedSecurity,
                       capAdd: dockerSettings.capAdd,
                       capDrop: dockerSettings.capDrop,

@@ -23,6 +23,7 @@ describe("dockerRunInSandbox", () => {
         let capturedEnv: NodeJS.ProcessEnv | undefined;
         let capturedCwd: string | undefined;
         let capturedCommand: string | undefined;
+        let capturedReadOnly: boolean | undefined;
         let capturedUnconfinedSecurity: boolean | undefined;
         let capturedCapAdd: string[] | undefined;
         let capturedCapDrop: string[] | undefined;
@@ -35,6 +36,7 @@ describe("dockerRunInSandbox", () => {
             if (!settingsContainerPath) {
                 throw new Error("Expected --settings path in bash command string.");
             }
+            capturedReadOnly = dockerConfig.readOnly;
             capturedUnconfinedSecurity = dockerConfig.unconfinedSecurity;
             capturedCapAdd = dockerConfig.capAdd;
             capturedCapDrop = dockerConfig.capDrop;
@@ -71,6 +73,7 @@ describe("dockerRunInSandbox", () => {
                 docker: {
                     image: "daycare-sandbox",
                     tag: "latest",
+                    readOnly: false,
                     unconfinedSecurity: false,
                     capAdd: [],
                     capDrop: [],
@@ -98,6 +101,7 @@ describe("dockerRunInSandbox", () => {
         expect(capturedEnv?.HOME).toBe("/home");
         expect(capturedEnv?.TMPDIR).toBe("/home/.tmp");
         expect(capturedCwd).toBe("/home/desktop/project");
+        expect(capturedReadOnly).toBe(false);
         expect(capturedUnconfinedSecurity).toBe(false);
         expect(capturedCapAdd).toEqual([]);
         expect(capturedCapDrop).toEqual([]);
@@ -140,6 +144,7 @@ describe("dockerRunInSandbox", () => {
                     docker: {
                         image: "daycare-sandbox",
                         tag: "latest",
+                        readOnly: false,
                         unconfinedSecurity: false,
                         capAdd: [],
                         capDrop: [],

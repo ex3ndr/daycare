@@ -10,6 +10,7 @@ const baseConfig: DockerContainerConfig = {
     tag: "latest",
     socketPath: "/var/run/docker.sock",
     runtime: "runsc",
+    readOnly: false,
     unconfinedSecurity: false,
     capAdd: [],
     capDrop: [],
@@ -30,7 +31,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
-                        "daycare.capabilities": "add=;drop="
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0"
                     }
                 }
             }),
@@ -66,7 +68,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
-                        "daycare.capabilities": "add=;drop="
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0"
                     }
                 }
             }),
@@ -123,7 +126,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.version": DOCKER_IMAGE_VERSION,
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "default",
-                "daycare.capabilities": "add=;drop="
+                "daycare.capabilities": "add=;drop=",
+                "daycare.readonly": "0"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
@@ -142,7 +146,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.version": "0",
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
-                        "daycare.capabilities": "add=;drop="
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0"
                     }
                 }
             }),
@@ -178,7 +183,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
                         "daycare.image.id": "sha256:outdated",
                         "daycare.security.profile": "default",
-                        "daycare.capabilities": "add=;drop="
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0"
                     }
                 }
             }),
@@ -239,7 +245,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.version": DOCKER_IMAGE_VERSION,
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "unconfined",
-                "daycare.capabilities": "add=;drop="
+                "daycare.capabilities": "add=;drop=",
+                "daycare.readonly": "0"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
@@ -258,7 +265,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
-                        "daycare.capabilities": "add=;drop="
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0"
                     }
                 }
             }),
@@ -286,6 +294,51 @@ describe("dockerContainerEnsure", () => {
         expect(existing.stop).toHaveBeenCalledTimes(1);
         expect(existing.remove).toHaveBeenCalledTimes(1);
         expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
+    it("creates container with readonly rootfs when enabled", async () => {
+        const existing = {
+            inspect: vi.fn().mockRejectedValue({ statusCode: 404 }),
+            start: vi.fn(),
+            stop: vi.fn(),
+            remove: vi.fn()
+        } as unknown as Docker.Container;
+
+        const created = {
+            inspect: vi.fn(),
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        await dockerContainerEnsure(docker, {
+            ...baseConfig,
+            readOnly: true
+        });
+
+        expect(docker.createContainer).toHaveBeenCalledWith({
+            name: "daycare-sandbox-user-1",
+            Image: IMAGE_REF,
+            WorkingDir: "/home",
+            Labels: {
+                "daycare.image.version": DOCKER_IMAGE_VERSION,
+                "daycare.image.id": CURRENT_IMAGE_ID,
+                "daycare.security.profile": "default",
+                "daycare.capabilities": "add=;drop=",
+                "daycare.readonly": "1"
+            },
+            HostConfig: {
+                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Runtime: "runsc",
+                ReadonlyRootfs: true
+            }
+        });
     });
 
     it("creates container with capAdd and capDrop", async () => {
@@ -323,7 +376,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.version": DOCKER_IMAGE_VERSION,
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "default",
-                "daycare.capabilities": "add=NET_ADMIN,SYS_ADMIN;drop=MKNOD"
+                "daycare.capabilities": "add=NET_ADMIN,SYS_ADMIN;drop=MKNOD",
+                "daycare.readonly": "0"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
@@ -343,7 +397,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
-                        "daycare.capabilities": "add=NET_ADMIN;drop="
+                        "daycare.capabilities": "add=NET_ADMIN;drop=",
+                        "daycare.readonly": "0"
                     }
                 }
             }),
@@ -365,6 +420,46 @@ describe("dockerContainerEnsure", () => {
         const result = await dockerContainerEnsure(docker, {
             ...baseConfig,
             capAdd: ["NET_ADMIN", "SYS_ADMIN"]
+        });
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
+    it("recreates container when readonly label does not match", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default",
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0"
+                    }
+                }
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, {
+            ...baseConfig,
+            readOnly: true
         });
 
         expect(result).toBe(created);

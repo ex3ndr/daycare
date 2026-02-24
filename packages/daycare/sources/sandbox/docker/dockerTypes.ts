@@ -5,6 +5,7 @@ export type DockerContainerConfig = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    readOnly: boolean;
     unconfinedSecurity: boolean;
     capAdd: string[];
     capDrop: string[];

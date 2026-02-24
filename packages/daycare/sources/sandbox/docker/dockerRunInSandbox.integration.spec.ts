@@ -44,6 +44,7 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
         config = {
             image: IMAGE,
             tag: TAG,
+            readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],
