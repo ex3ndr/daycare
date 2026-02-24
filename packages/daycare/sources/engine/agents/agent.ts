@@ -11,8 +11,6 @@ import { Sandbox } from "../../sandbox/sandbox.js";
 import { tagExtractAll } from "../../util/tagExtract.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
-import type { FileFolder } from "../files/fileFolder.js";
-import { Files } from "../files/files.js";
 import { messageBuildSystemSilentText } from "../messages/messageBuildSystemSilentText.js";
 import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
@@ -85,7 +83,6 @@ export class Agent {
     private started = false;
     private inferenceAbortController: AbortController | null = null;
     private readonly userHome: UserHome;
-    private readonly files: Files;
     readonly sandbox: Sandbox;
     private endTurnCount = 0;
 
@@ -106,7 +103,6 @@ export class Agent {
         this.inbox = inbox;
         this.agentSystem = agentSystem;
         this.userHome = userHome;
-        this.files = new Files(this.userHome.home);
         const dockerSettings = this.agentSystem.config?.current?.settings?.docker;
         this.sandbox = new Sandbox({
             homeDir: this.userHome.home,
@@ -407,7 +403,8 @@ export class Agent {
         this.state.updatedAt = receivedAt;
 
         const rawText = entry.message.rawText ?? entry.message.text ?? "";
-        const files = await this.messageFilesNormalize(entry.message.files ?? []);
+        const files = toFileReferences(entry.message.files ?? []);
+        entry.message.files = files;
         let compactionAt: number | null = null;
         let pendingUserRecord: AgentHistoryRecord | null = {
             type: "user_message",
@@ -1154,28 +1151,6 @@ export class Agent {
         }
     }
 
-    private async messageFilesNormalize(
-        files: Array<{ id: string; name: string; path: string; mimeType: string; size: number }>
-    ): Promise<Array<{ id: string; name: string; path: string; mimeType: string; size: number }>> {
-        const copied = toFileReferences(files);
-        if (copied.length === 0) {
-            return copied;
-        }
-        const relocated: Array<{ id: string; name: string; path: string; mimeType: string; size: number }> = [];
-        for (const file of copied) {
-            try {
-                relocated.push(await fileStoreCopyIfNeeded(this.files.downloads, this.userHome.downloads, file));
-            } catch (error) {
-                logger.warn(
-                    { agentId: this.id, filePath: file.path, error },
-                    "warn: Failed to route file to user home"
-                );
-                relocated.push(file);
-            }
-        }
-        return relocated;
-    }
-
     private async listContextTools(
         toolResolver: ToolResolverApi,
         source?: string,
@@ -1297,30 +1272,6 @@ export class Agent {
 
 function isChannelSignalType(type: string): boolean {
     return type.startsWith("channel.") && type.endsWith(":message");
-}
-
-async function fileStoreCopyIfNeeded(
-    fileStore: FileFolder,
-    targetDir: string,
-    file: { id: string; name: string; path: string; mimeType: string; size: number }
-): Promise<{ id: string; name: string; path: string; mimeType: string; size: number }> {
-    const resolvedPath = path.resolve(file.path);
-    const normalizedTarget = path.resolve(targetDir);
-    if (resolvedPath === normalizedTarget || resolvedPath.startsWith(`${normalizedTarget}${path.sep}`)) {
-        return file;
-    }
-    const stored = await fileStore.saveFromPath({
-        name: file.name,
-        mimeType: file.mimeType,
-        path: resolvedPath
-    });
-    return {
-        id: stored.id,
-        name: stored.name,
-        path: stored.path,
-        mimeType: stored.mimeType,
-        size: stored.size
-    };
 }
 
 function toFileReferences(

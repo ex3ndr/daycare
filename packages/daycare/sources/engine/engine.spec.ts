@@ -589,4 +589,81 @@ describe("Engine message batching", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("routes incoming connector files from staging to user downloads before posting", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const messageState: {
+                handler?: (
+                    message: ConnectorMessage,
+                    context: MessageContext,
+                    descriptor: AgentDescriptor
+                ) => void | Promise<void>;
+            } = {};
+
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: (handler) => {
+                    messageState.handler = handler;
+                    return () => undefined;
+                },
+                sendMessage: async () => undefined
+            };
+
+            const registerResult = engine.modules.connectors.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
+            const handler = messageState.handler;
+            if (!handler) {
+                throw new Error("Expected message handler to be registered");
+            }
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "123",
+                userId: "123"
+            };
+            const stagedDir = path.join(config.dataDir, "tmp", "staging");
+            const stagedPath = path.join(stagedDir, "photo.jpg");
+            await fs.mkdir(stagedDir, { recursive: true });
+            await fs.writeFile(stagedPath, Buffer.from("image-bytes"));
+
+            await handler(
+                {
+                    text: "photo",
+                    files: [
+                        {
+                            id: "file-1",
+                            name: "photo.jpg",
+                            mimeType: "image/jpeg",
+                            size: 11,
+                            path: stagedPath
+                        }
+                    ]
+                },
+                { messageId: "1" },
+                descriptor
+            );
+
+            await new Promise((resolve) => setTimeout(resolve, 120));
+            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+            const postPayload = postSpy.mock.calls[0]?.[2] as { type: string; message: ConnectorMessage };
+            const postedPath = postPayload.message.files?.[0]?.path ?? "";
+            const expectedDownloadsDir = path.join(config.usersDir, user.id, "home", "downloads");
+
+            expect(postSpy).toHaveBeenCalledTimes(1);
+            expect(postPayload.type).toBe("message");
+            expect(postedPath.startsWith(`${path.resolve(expectedDownloadsDir)}${path.sep}`)).toBe(true);
+            expect(postedPath).not.toContain(`${path.sep}tmp${path.sep}staging${path.sep}`);
+            await expect(fs.access(stagedPath)).rejects.toThrow();
+
+            await engine.modules.connectors.unregisterAll("test");
+            await engine.shutdown();
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });

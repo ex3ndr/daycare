@@ -24,7 +24,17 @@ const imageGenerationResultSchema = Type.Object(
         summary: Type.String(),
         provider: Type.String(),
         fileCount: Type.Number(),
-        downloadsDir: Type.String()
+        generated: Type.Array(
+            Type.Object(
+                {
+                    name: Type.String(),
+                    path: Type.String(),
+                    mimeType: Type.String(),
+                    size: Type.Number()
+                },
+                { additionalProperties: false }
+            )
+        )
     },
     { additionalProperties: false }
 );
@@ -33,7 +43,12 @@ type ImageGenerationResult = {
     summary: string;
     provider: string;
     fileCount: number;
-    downloadsDir: string;
+    generated: Array<{
+        name: string;
+        path: string;
+        mimeType: string;
+        size: number;
+    }>;
 };
 
 const imageGenerationReturns: ToolResultContract<ImageGenerationResult> = {
@@ -117,18 +132,11 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                 }
             );
 
-            const downloadsDir = path.join(toolContext.sandbox.homeDir, "downloads");
+            const outputDir = path.join(toolContext.sandbox.homeDir, "downloads");
             const createdAt = new Date();
             const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
-            const downloadsDirSandboxPath = `~/${path.relative(toolContext.sandbox.homeDir, downloadsDir)}`;
-
-            const summary = `Generated ${result.files.length} image(s) with ${providerId}. Saved under ${downloadsDirSandboxPath}.`;
-            const content: Array<{ type: "text"; text: string }> = [
-                {
-                    type: "text",
-                    text: summary
-                }
-            ];
+            const outputDirSandboxPath = `~/${path.relative(toolContext.sandbox.homeDir, outputDir)}`;
+            const content: Array<{ type: "text"; text: string }> = [];
             const savedFiles: Array<{
                 id: string;
                 name: string;
@@ -144,7 +152,7 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                 const suffix = result.files.length > 1 ? `-${index + 1}` : "";
                 const extension = imageExtensionResolve(file.mimeType);
                 const fileName = sanitizeFilename(`${timestamp}${suffix}${extension}`);
-                const targetPath = path.join(downloadsDir, fileName);
+                const targetPath = path.join(outputDir, fileName);
                 const sourceContent = await fs.readFile(file.path);
                 const saved = await toolContext.sandbox.write({
                     path: targetPath,
@@ -163,6 +171,14 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                     text: `Image file: ${saved.sandboxPath} (${file.mimeType})`
                 });
             }
+            const summary =
+                savedFiles.length > 0
+                    ? `Generated ${savedFiles.length} image(s) with ${providerId}. Saved to ${outputDirSandboxPath}: ${savedFiles.map((file) => file.path).join(", ")}.`
+                    : `Generated 0 image files with ${providerId}.`;
+            content.unshift({
+                type: "text",
+                text: summary
+            });
 
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
@@ -178,7 +194,7 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                         size: file.size
                     })),
                     downloads: {
-                        dir: downloadsDirSandboxPath,
+                        dir: outputDirSandboxPath,
                         files: savedFiles.map((file) => ({
                             id: file.id,
                             name: file.name,
@@ -199,7 +215,12 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                     summary,
                     provider: providerId,
                     fileCount: savedFiles.length,
-                    downloadsDir: downloadsDirSandboxPath
+                    generated: savedFiles.map((file) => ({
+                        name: file.name,
+                        path: file.path,
+                        mimeType: file.mimeType,
+                        size: file.size
+                    }))
                 }
             };
         }

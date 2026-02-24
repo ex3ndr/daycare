@@ -1,8 +1,9 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import Docker from "dockerode";
 
-import type { AgentDescriptor, AgentTokenEntry, Config, MessageContext } from "@/types";
+import type { AgentDescriptor, AgentTokenEntry, Config, ConnectorMessage, Context, MessageContext } from "@/types";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
 import { getLogger } from "../log.js";
@@ -173,9 +174,12 @@ export class Engine {
         });
 
         this.modules = new ModuleRegistry({
-            onMessage: async (message, context, descriptor) => {
-                this.incomingMessages.post({ descriptor, message, context });
-            },
+            onMessage: async (message, context, descriptor) =>
+                this.runConnectorCallback("message", async () => {
+                    const ctx = await this.descriptorContextResolve(descriptor);
+                    const normalized = await this.messageFilesToDownloads(ctx, message);
+                    this.incomingMessages.post({ descriptor, message: normalized, context });
+                }),
             onCommand: async (command, context, descriptor) =>
                 this.runConnectorCallback("command", async () => {
                     const connector = descriptor.type === "user" ? descriptor.connector : "unknown";
@@ -625,6 +629,62 @@ export class Engine {
         throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
     }
 
+    /**
+     * Routes connector-emitted file paths into the recipient user's downloads folder.
+     * Expects: ctx resolves to the descriptor's owning user.
+     */
+    private async messageFilesToDownloads(ctx: Context, message: ConnectorMessage): Promise<ConnectorMessage> {
+        const files = message.files;
+        if (!files || files.length === 0) {
+            return message;
+        }
+
+        const userHome = this.agentSystem.userHomeForUserId(ctx.userId);
+        await userHomeEnsure(userHome);
+        const downloadsDir = path.resolve(userHome.downloads);
+        const stagingDir = path.resolve(this.config.current.dataDir, "tmp", "staging");
+        const downloadsStore = new FileFolder(downloadsDir);
+        const normalizedFiles: NonNullable<ConnectorMessage["files"]> = [];
+
+        for (const file of files) {
+            const resolvedPath = path.resolve(file.path);
+            if (pathWithin(downloadsDir, resolvedPath)) {
+                normalizedFiles.push(file);
+                continue;
+            }
+
+            try {
+                const saved = await downloadsStore.saveFromPath({
+                    name: file.name,
+                    mimeType: file.mimeType,
+                    path: resolvedPath
+                });
+                if (pathWithin(stagingDir, resolvedPath)) {
+                    await fs.rm(resolvedPath, { force: true });
+                }
+                normalizedFiles.push({
+                    ...file,
+                    id: saved.id,
+                    name: saved.name,
+                    path: saved.path,
+                    mimeType: saved.mimeType,
+                    size: saved.size
+                });
+            } catch (error) {
+                logger.warn(
+                    { userId: ctx.userId, filePath: file.path, error },
+                    "warn: Failed to route connector file to user downloads"
+                );
+                normalizedFiles.push(file);
+            }
+        }
+
+        return {
+            ...message,
+            files: normalizedFiles
+        };
+    }
+
     private async reloadApplyLatest(): Promise<void> {
         const config = await configLoad(this.config.current.settingsPath, { verbose: this.config.current.verbose });
         if (!this.isReloadable(config)) {
@@ -695,4 +755,10 @@ function configReloadPathsEqual(left: Config, right: Config): boolean {
         left.authPath === right.authPath &&
         left.socketPath === right.socketPath
     );
+}
+
+function pathWithin(parentDir: string, targetPath: string): boolean {
+    const resolvedParent = path.resolve(parentDir);
+    const resolvedTarget = path.resolve(targetPath);
+    return resolvedTarget === resolvedParent || resolvedTarget.startsWith(`${resolvedParent}${path.sep}`);
 }

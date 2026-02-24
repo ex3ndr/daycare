@@ -32,4 +32,16 @@ describe("sandboxReadDenyPathsBuild", () => {
 
         expect(new Set(result).size).toBe(result.length);
     });
+
+    it("still denies parent OS home when remapped home is nested under it", () => {
+        const result = sandboxReadDenyPathsBuild({
+            platform: "darwin",
+            homeDir: "/Users/host/.dev/users/u-1/home",
+            osHomeDir: "/Users/host",
+            daycareConfigDir: "/Users/host/.daycare"
+        });
+
+        expect(result).toContain(path.resolve("/Users/host"));
+        expect(result).toContain(path.resolve("/Users/host/.daycare"));
+    });
 });

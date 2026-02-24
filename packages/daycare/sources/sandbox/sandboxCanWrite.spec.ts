@@ -83,6 +83,20 @@ describe("sandboxCanWrite", () => {
         await expect(sandboxCanWrite(permissions, target)).rejects.toThrow(`Write permission denied: ${target}`);
     });
 
+    it("allows writes in OS-home paths when that home is explicitly readable", async () => {
+        const userHomeDir = path.join(homeDir, ".dev", "users", "usr_123", "home");
+        const userWorkspaceDir = path.join(userHomeDir, "desktop");
+        const userDownloadsDir = path.join(userHomeDir, "downloads");
+        await fs.mkdir(userWorkspaceDir, { recursive: true });
+        await fs.mkdir(userDownloadsDir, { recursive: true });
+        const permissions = buildPermissions(userWorkspaceDir, [userHomeDir], [userHomeDir]);
+        const target = path.join(userDownloadsDir, "image.png");
+
+        const result = await sandboxCanWrite(permissions, target);
+
+        expect(result).toBe(path.join(await fs.realpath(userDownloadsDir), "image.png"));
+    });
+
     it("denies writing dangerous filenames in allowed writeDirs", async () => {
         const permissions = buildPermissions(workingDir, [outsideDir]);
 
@@ -115,9 +129,10 @@ describe("sandboxCanWrite", () => {
     });
 });
 
-function buildPermissions(workingDir: string, writeDirs: string[]): SessionPermissions {
+function buildPermissions(workingDir: string, writeDirs: string[], readDirs: string[] = []): SessionPermissions {
     return {
         workingDir: path.resolve(workingDir),
-        writeDirs: writeDirs.map((entry) => path.resolve(entry))
+        writeDirs: writeDirs.map((entry) => path.resolve(entry)),
+        ...(readDirs.length > 0 ? { readDirs: readDirs.map((entry) => path.resolve(entry)) } : {})
     };
 }

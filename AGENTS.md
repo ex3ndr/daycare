@@ -79,7 +79,6 @@
 - commit after each ready-to-use change using Angular-style commits
 - build before each commit and run tests
 - document every change in `/doc/` with mermaid diagrams
-- after finishing each task, run the `/review-code` skill to get a CodeRabbit review
 - do not use barrel `index.ts` files
 - avoid backward-compatibility shims for internal code
 

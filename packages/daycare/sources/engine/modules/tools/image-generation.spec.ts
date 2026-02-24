@@ -52,6 +52,15 @@ describe("buildImageGenerationTool", () => {
             }
             const generatedData = await fs.readFile(generatedResolvedPath, "utf8");
             expect(generatedData).toBe("png-bytes");
+            expect(result.typedResult.generated).toEqual([
+                expect.objectContaining({
+                    name: expect.stringMatching(/\.png$/),
+                    path: generatedPath,
+                    mimeType: "image/png",
+                    size: 9
+                })
+            ]);
+            expect(result.typedResult.summary).toContain(generatedPath);
             const content = result.toolMessage.content as Array<{ type: string; data?: string; text?: string }>;
             expect(content.every((block) => block.type === "text")).toBe(true);
             expect(content.some((block) => (block.text ?? "").includes(generatedPath))).toBe(true);
