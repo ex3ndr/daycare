@@ -54,7 +54,14 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         agentSystemPromptSectionModels(context)
     ]);
 
-    return renderedSections
+    const allSections = [...renderedSections];
+    if (context.extraSections) {
+        for (const extra of context.extraSections) {
+            allSections.push(extra);
+        }
+    }
+
+    return allSections
         .map((section) => section.trim())
         .filter((section) => section.length > 0)
         .join(SECTION_SEPARATOR)

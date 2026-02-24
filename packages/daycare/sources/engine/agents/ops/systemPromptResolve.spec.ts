@@ -53,7 +53,7 @@ async function setupUserWithAgent(
             type: "user",
             descriptor: { type: "user", connector: "test", userId, channelId: "ch1" },
             activeSessionId: null,
-            permissions: { readDirs: [], writeDirs: [], execute: [] },
+            permissions: { workingDir: "/tmp", writeDirs: [] },
             tokens: null,
             stats: {},
             lifecycle: "active",

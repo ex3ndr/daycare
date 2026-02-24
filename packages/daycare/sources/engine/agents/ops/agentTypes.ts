@@ -107,6 +107,10 @@ export type AgentHistoryRecord =
           at: number;
           text: string;
           files: FileReference[];
+          /** Set when a first-message prompt was prepended to the user's text. */
+          firstMessagePrepended?: boolean;
+          /** The prompt text that was prepended, for reconstruction of original message. */
+          firstMessagePrompt?: string;
       }
     | {
           type: "assistant_message";

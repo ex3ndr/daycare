@@ -53,6 +53,7 @@ import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentToolExecutionAllowlistResolve } from "./ops/agentToolExecutionAllowlistResolve.js";
+import { systemPromptResolve } from "./ops/systemPromptResolve.js";
 import type {
     AgentHistoryRecord,
     AgentInboxCompact,
@@ -449,6 +450,27 @@ export class Agent {
                 ? await rlmToolDescriptionBuild(visibleTools)
                 : undefined;
 
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+        const isFirstMessage = history.length === 0;
+
+        // Resolve configured system prompts (global, per-user, conditional)
+        const resolvedPrompts = await systemPromptResolve(
+            this.agentSystem.storage,
+            this.ctx.userId,
+            isFirstMessage
+        );
+
+        // Prepend first-message prompt to user message text if applicable
+        if (resolvedPrompts.firstMessagePrompt && entry.message.text !== null) {
+            entry.message.text = `${resolvedPrompts.firstMessagePrompt}\n\n${entry.message.text}`;
+            pendingUserRecord = {
+                ...pendingUserRecord!,
+                text: entry.message.rawText ?? entry.message.text,
+                firstMessagePrepended: true,
+                firstMessagePrompt: resolvedPrompts.firstMessagePrompt
+            } as AgentHistoryRecord & { type: "user_message" };
+        }
+
         await agentPromptFilesEnsure(agentPromptPathsResolve(this.userHome));
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
         const systemPrompt = await agentSystemPrompt({
@@ -458,7 +480,8 @@ export class Agent {
             descriptor: this.descriptor,
             ctx: this.ctx,
             agentSystem: this.agentSystem,
-            userHome: this.userHome
+            userHome: this.userHome,
+            extraSections: resolvedPrompts.systemPromptSections
         });
 
         try {
@@ -469,8 +492,6 @@ export class Agent {
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
-
-        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const contextTools = await this.listContextTools(toolResolver, source, {
             agentKind,
             rlmToolDescription

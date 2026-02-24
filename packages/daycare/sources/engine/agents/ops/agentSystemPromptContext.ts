@@ -15,4 +15,6 @@ export type AgentSystemPromptContext = {
     agentSystem?: AgentSystemPromptAgentSystem;
     descriptor?: AgentDescriptor;
     userHome?: UserHome;
+    /** Extra sections appended after all standard sections (e.g. configured system prompts). */
+    extraSections?: string[];
 };
