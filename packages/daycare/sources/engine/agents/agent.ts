@@ -117,6 +117,7 @@ export class Agent {
                       tag: dockerSettings.tag,
                       socketPath: dockerSettings.socketPath,
                       runtime: dockerSettings.runtime,
+                      enableWeakerNestedSandbox: dockerSettings.enableWeakerNestedSandbox,
                       readOnly: dockerSettings.readOnly,
                       unconfinedSecurity: dockerSettings.unconfinedSecurity,
                       capAdd: dockerSettings.capAdd,

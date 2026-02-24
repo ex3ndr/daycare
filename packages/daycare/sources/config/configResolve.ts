@@ -72,6 +72,7 @@ function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSett
         tag: docker?.tag ?? DEFAULT_DOCKER_TAG,
         socketPath: docker?.socketPath,
         runtime: docker?.runtime,
+        enableWeakerNestedSandbox: docker?.enableWeakerNestedSandbox ?? false,
         readOnly: docker?.readOnly ?? false,
         unconfinedSecurity: docker?.unconfinedSecurity ?? false,
         capAdd: dockerCapabilityListNormalize(docker?.capAdd),

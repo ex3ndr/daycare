@@ -21,6 +21,7 @@ Configure Docker runtime in `settings.json`:
         "tag": "latest",
         "socketPath": "/var/run/docker.sock",
         "runtime": "runsc",
+        "enableWeakerNestedSandbox": false,
         "readOnly": false,
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
@@ -36,6 +37,7 @@ Defaults when omitted:
 - `tag`: `latest`
 - `socketPath`: `undefined` (Docker default)
 - `runtime`: `undefined` (Docker default)
+- `enableWeakerNestedSandbox`: `false`
 - `readOnly`: `false`
 - `unconfinedSecurity`: `false`
 - `capAdd`: `[]`
@@ -56,6 +58,10 @@ When `readOnly` is `true`, sandbox containers are created with:
 
 The `/home` bind mount remains writable, so only mounted home content is writable while the rest of the root filesystem
 is read-only.
+
+When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
+
+- `enableWeakerNestedSandbox: true`
 
 ## Execution Flow
 

@@ -76,6 +76,7 @@ export type SandboxDockerConfig = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    enableWeakerNestedSandbox: boolean;
     readOnly: boolean;
     unconfinedSecurity: boolean;
     capAdd: string[];

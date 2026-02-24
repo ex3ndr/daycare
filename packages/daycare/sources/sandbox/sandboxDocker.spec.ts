@@ -82,6 +82,7 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
+                enableWeakerNestedSandbox: false,
                 readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],
@@ -99,9 +100,7 @@ describe("Sandbox docker integration", () => {
         expect(result.failed).toBe(false);
         expect(result.stdout).toBe("docker");
         expect(dockerRunInSandbox).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]).toMatchObject({
-            enableWeakerNestedSandbox: true
-        });
+        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]).not.toHaveProperty("enableWeakerNestedSandbox");
         expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[2]?.docker).toMatchObject({
             readOnly: false,
             unconfinedSecurity: false,
@@ -109,6 +108,39 @@ describe("Sandbox docker integration", () => {
             capDrop: []
         });
         expect(runInSandbox).not.toHaveBeenCalled();
+    });
+
+    it("passes weaker nested sandbox flag when enabled in docker settings", async () => {
+        vi.mocked(dockerRunInSandbox).mockResolvedValue({
+            stdout: "docker",
+            stderr: ""
+        });
+
+        const sandbox = new Sandbox({
+            homeDir,
+            permissions,
+            docker: {
+                enabled: true,
+                image: "daycare-sandbox",
+                tag: "latest",
+                enableWeakerNestedSandbox: true,
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "u123",
+                skillsActiveDir
+            }
+        });
+
+        await sandbox.exec({
+            command: "echo docker",
+            allowedDomains: ["example.com"]
+        });
+
+        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]).toMatchObject({
+            enableWeakerNestedSandbox: true
+        });
     });
 
     it("rewrites container read paths back to host paths", async () => {
@@ -122,6 +154,7 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
+                enableWeakerNestedSandbox: false,
                 readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],
@@ -152,6 +185,7 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
+                enableWeakerNestedSandbox: false,
                 readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],

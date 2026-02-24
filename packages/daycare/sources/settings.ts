@@ -57,6 +57,7 @@ export type DockerSettings = {
     tag?: string;
     socketPath?: string;
     runtime?: string;
+    enableWeakerNestedSandbox?: boolean;
     readOnly?: boolean;
     unconfinedSecurity?: boolean;
     capAdd?: string[];
@@ -69,6 +70,7 @@ export type ResolvedDockerSettings = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    enableWeakerNestedSandbox: boolean;
     readOnly: boolean;
     unconfinedSecurity: boolean;
     capAdd: string[];
