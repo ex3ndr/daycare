@@ -20,8 +20,8 @@ import { migration20260222ImportSignals } from "./20260222_import_signals.js";
 import { migration20260222SessionEndedAt } from "./20260222_session_ended_at.js";
 import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_users.js";
 import { migration20260224AddMemoryColumns } from "./20260224_add_memory_columns.js";
-import { migration20260225RequireUsertag } from "./20260225_require_usertag.js";
 import { migration20260224AddSystemPrompts } from "./20260224_add_system_prompts.js";
+import { migration20260225RequireUsertag } from "./20260225_require_usertag.js";
 import { migration20260226RenameUsertagToNametag } from "./20260226_rename_usertag_to_nametag.js";
 import type { Migration } from "./migrationTypes.js";
 

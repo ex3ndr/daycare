@@ -7,6 +7,7 @@ import {
   BookOpen,
   Clock,
   Database,
+  FileText,
   LayoutDashboard,
   MessageSquare,
   Monitor,
@@ -82,6 +83,11 @@ const data = {
       title: "Processes",
       url: "/processes",
       icon: Monitor
+    },
+    {
+      title: "Prompts",
+      url: "/prompts",
+      icon: FileText
     },
     {
       title: "Telemetry",

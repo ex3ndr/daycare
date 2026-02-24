@@ -53,7 +53,6 @@ import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentToolExecutionAllowlistResolve } from "./ops/agentToolExecutionAllowlistResolve.js";
-import { systemPromptResolve } from "./ops/systemPromptResolve.js";
 import type {
     AgentHistoryRecord,
     AgentInboxCompact,
@@ -71,6 +70,7 @@ import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatus } from "./ops/contextCompactionStatus.js";
 import { contextEstimateTokens } from "./ops/contextEstimateTokens.js";
 import { messageContextReset } from "./ops/messageContextReset.js";
+import { systemPromptResolve } from "./ops/systemPromptResolve.js";
 
 const logger = getLogger("engine.agent");
 
@@ -454,11 +454,7 @@ export class Agent {
         const isFirstMessage = history.length === 0;
 
         // Resolve configured system prompts (global, per-user, conditional)
-        const resolvedPrompts = await systemPromptResolve(
-            this.agentSystem.storage,
-            this.ctx.userId,
-            isFirstMessage
-        );
+        const resolvedPrompts = await systemPromptResolve(this.agentSystem.storage, this.ctx.userId, isFirstMessage);
 
         // Prepend first-message prompt to user message text if applicable
         if (resolvedPrompts.firstMessagePrompt && entry.message.text !== null) {

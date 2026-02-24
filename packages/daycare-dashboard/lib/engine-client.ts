@@ -250,9 +250,37 @@ type SignalGenerateResponse = {
 export type UserSummary = {
   id: string;
   isOwner: boolean;
+  nametag: string;
   createdAt: number;
   updatedAt: number;
 };
+
+export type SystemPromptScope = "global" | "user";
+export type SystemPromptKind = "system" | "first_message";
+export type SystemPromptCondition = "new_user" | "returning_user";
+
+export type SystemPrompt = {
+  id: string;
+  scope: SystemPromptScope;
+  userId: string | null;
+  kind: SystemPromptKind;
+  condition: SystemPromptCondition | null;
+  prompt: string;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type SystemPromptCreateInput = {
+  scope: SystemPromptScope;
+  userId?: string | null;
+  kind: SystemPromptKind;
+  condition?: SystemPromptCondition | null;
+  prompt: string;
+  enabled?: boolean;
+};
+
+export type SystemPromptUpdateInput = Partial<SystemPromptCreateInput>;
 
 type UsersResponse = {
   users?: UserSummary[];
@@ -380,6 +408,56 @@ export async function fetchAgentHistory(agentId: string, options?: { limit?: num
   }
   const data = await fetchJSON<AgentHistoryResponse>(`/api/v1/engine/agents/${encoded}/history?${query}`);
   return data.records ?? [];
+}
+
+type SystemPromptsResponse = {
+  prompts?: SystemPrompt[];
+};
+
+type SystemPromptResponse = {
+  prompt?: SystemPrompt;
+};
+
+export async function fetchSystemPrompts() {
+  const data = await fetchJSON<SystemPromptsResponse>("/api/v1/engine/system-prompts");
+  return data.prompts ?? [];
+}
+
+export async function createSystemPrompt(input: SystemPromptCreateInput): Promise<SystemPrompt> {
+  const response = await fetch("/api/v1/engine/system-prompts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  const data = (await response.json()) as SystemPromptResponse;
+  return data.prompt!;
+}
+
+export async function updateSystemPrompt(id: string, input: SystemPromptUpdateInput): Promise<SystemPrompt> {
+  const encoded = encodeURIComponent(id);
+  const response = await fetch(`/api/v1/engine/system-prompts/${encoded}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  const data = (await response.json()) as SystemPromptResponse;
+  return data.prompt!;
+}
+
+export async function deleteSystemPrompt(id: string): Promise<void> {
+  const encoded = encodeURIComponent(id);
+  const response = await fetch(`/api/v1/engine/system-prompts/${encoded}`, {
+    method: "DELETE"
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
 }
 
 export async function fetchMemoryGraph(userId: string): Promise<MemoryGraph> {
