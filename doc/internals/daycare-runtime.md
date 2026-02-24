@@ -27,14 +27,14 @@ flowchart TD
 
 The runtime assumes `/home` is mounted from outside and can be reset between runs.
 - container `HOME` points to `/home/developer`
-- Docker sandbox execution rewrites `HOME` and temp/cache vars under `/home/developer` while keeping the bind mount root at `/home`
+- Docker sandbox execution keeps the bind mount root as `/home` for runtime path rewriting
 - cache directories are routed through `/home/developer/.cache`
 - writable runtime state (Go modules, Cargo cache) stays under `/home/developer`
 - toolchain installs for Rust/Go/Node live outside `/home` so remount/reset does not remove them
 
 ```mermaid
 flowchart LR
-    A[/home (external mount)] --> B[/home/developer runtime home]
+    A[/home (external mount)] --> B[cache + workspace state]
     B --> C[/home/developer/.cargo + /home/developer/go]
     D[/usr/local/rustup + /usr/local/go + /root/.nvm] --> E[installed toolchains]
     B -. resettable .-> F[new session home]

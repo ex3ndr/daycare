@@ -107,8 +107,8 @@ describe("dockerRunInSandbox", () => {
                 deniedDomains: []
             }
         });
-        expect(capturedEnv?.HOME).toBe("/home/developer");
-        expect(capturedEnv?.TMPDIR).toBe("/home/developer/.tmp");
+        expect(capturedEnv?.HOME).toBe("/home");
+        expect(capturedEnv?.TMPDIR).toBe("/home/.tmp");
         expect(capturedCwd).toBe("/home/desktop/project");
         expect(capturedReadOnly).toBe(false);
         expect(capturedUnconfinedSecurity).toBe(false);
