@@ -87,7 +87,9 @@ describe("configResolve", () => {
             tag: "latest",
             socketPath: undefined,
             runtime: undefined,
-            unconfinedSecurity: false
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: []
         });
         expect(config.settings.docker).toEqual(config.docker);
     });
@@ -109,7 +111,9 @@ describe("configResolve", () => {
             tag: "latest",
             socketPath: undefined,
             runtime: undefined,
-            unconfinedSecurity: false
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: []
         });
     });
 
@@ -123,7 +127,9 @@ describe("configResolve", () => {
                     tag: "v2",
                     socketPath: "/var/run/docker.sock",
                     runtime: "runsc",
-                    unconfinedSecurity: true
+                    unconfinedSecurity: true,
+                    capAdd: ["NET_ADMIN"],
+                    capDrop: ["MKNOD"]
                 }
             },
             configPath
@@ -134,7 +140,25 @@ describe("configResolve", () => {
             tag: "v2",
             socketPath: "/var/run/docker.sock",
             runtime: "runsc",
-            unconfinedSecurity: true
+            unconfinedSecurity: true,
+            capAdd: ["NET_ADMIN"],
+            capDrop: ["MKNOD"]
         });
+    });
+
+    it("normalizes docker capability lists", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                docker: {
+                    capAdd: [" SYS_ADMIN ", "NET_ADMIN", "NET_ADMIN"],
+                    capDrop: ["MKNOD", " MKNOD "]
+                }
+            },
+            configPath
+        );
+
+        expect(config.docker.capAdd).toEqual(["NET_ADMIN", "SYS_ADMIN"]);
+        expect(config.docker.capDrop).toEqual(["MKNOD"]);
     });
 });

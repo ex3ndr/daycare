@@ -31,7 +31,9 @@ describe("configSettingsParse", () => {
                 tag: "latest",
                 socketPath: "/var/run/docker.sock",
                 runtime: "runsc",
-                unconfinedSecurity: true
+                unconfinedSecurity: true,
+                capAdd: ["NET_ADMIN"],
+                capDrop: ["MKNOD"]
             }
         });
 
@@ -41,7 +43,9 @@ describe("configSettingsParse", () => {
             tag: "latest",
             socketPath: "/var/run/docker.sock",
             runtime: "runsc",
-            unconfinedSecurity: true
+            unconfinedSecurity: true,
+            capAdd: ["NET_ADMIN"],
+            capDrop: ["MKNOD"]
         });
     });
 

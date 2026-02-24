@@ -55,7 +55,9 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     tag: z.string().min(1).optional(),
                     socketPath: z.string().min(1).optional(),
                     runtime: z.string().min(1).optional(),
-                    unconfinedSecurity: z.boolean().optional()
+                    unconfinedSecurity: z.boolean().optional(),
+                    capAdd: z.array(z.string().min(1)).optional(),
+                    capDrop: z.array(z.string().min(1)).optional()
                 })
                 .passthrough()
                 .optional(),

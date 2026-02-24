@@ -58,6 +58,8 @@ export type DockerSettings = {
     socketPath?: string;
     runtime?: string;
     unconfinedSecurity?: boolean;
+    capAdd?: string[];
+    capDrop?: string[];
 };
 
 export type ResolvedDockerSettings = {
@@ -67,6 +69,8 @@ export type ResolvedDockerSettings = {
     socketPath?: string;
     runtime?: string;
     unconfinedSecurity: boolean;
+    capAdd: string[];
+    capDrop: string[];
 };
 
 export type FeaturesConfig = {

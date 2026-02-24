@@ -77,6 +77,8 @@ export type SandboxDockerConfig = {
     socketPath?: string;
     runtime?: string;
     unconfinedSecurity: boolean;
+    capAdd: string[];
+    capDrop: string[];
     userId: string;
     skillsActiveDir: string;
 };

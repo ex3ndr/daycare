@@ -6,6 +6,8 @@ export type DockerContainerConfig = {
     socketPath?: string;
     runtime?: string;
     unconfinedSecurity: boolean;
+    capAdd: string[];
+    capDrop: string[];
     userId: string;
     hostHomeDir: string;
     hostSkillsActiveDir: string;

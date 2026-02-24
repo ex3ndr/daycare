@@ -83,6 +83,8 @@ describe("Sandbox docker integration", () => {
                 image: "daycare-sandbox",
                 tag: "latest",
                 unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
                 userId: "u123",
                 skillsActiveDir
             }
@@ -100,7 +102,9 @@ describe("Sandbox docker integration", () => {
             enableWeakerNestedSandbox: true
         });
         expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[2]?.docker).toMatchObject({
-            unconfinedSecurity: false
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: []
         });
         expect(runInSandbox).not.toHaveBeenCalled();
     });
@@ -117,6 +121,8 @@ describe("Sandbox docker integration", () => {
                 image: "daycare-sandbox",
                 tag: "latest",
                 unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
                 userId: "u123",
                 skillsActiveDir
             }
@@ -144,6 +150,8 @@ describe("Sandbox docker integration", () => {
                 image: "daycare-sandbox",
                 tag: "latest",
                 unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
                 userId: "u123",
                 skillsActiveDir
             }

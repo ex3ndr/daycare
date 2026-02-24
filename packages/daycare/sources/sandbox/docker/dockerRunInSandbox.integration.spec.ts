@@ -45,6 +45,8 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
             image: IMAGE,
             tag: TAG,
             unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: [],
             userId,
             hostHomeDir: homeDir,
             hostSkillsActiveDir: skillsActiveDir

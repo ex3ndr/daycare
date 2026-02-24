@@ -72,6 +72,22 @@ function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSett
         tag: docker?.tag ?? DEFAULT_DOCKER_TAG,
         socketPath: docker?.socketPath,
         runtime: docker?.runtime,
-        unconfinedSecurity: docker?.unconfinedSecurity ?? false
+        unconfinedSecurity: docker?.unconfinedSecurity ?? false,
+        capAdd: dockerCapabilityListNormalize(docker?.capAdd),
+        capDrop: dockerCapabilityListNormalize(docker?.capDrop)
     };
+}
+
+function dockerCapabilityListNormalize(input: string[] | undefined): string[] {
+    if (!input || input.length === 0) {
+        return [];
+    }
+    return Array.from(
+        new Set(
+            input
+                .map((entry) => entry.trim())
+                .filter((entry) => entry.length > 0)
+                .sort()
+        )
+    );
 }

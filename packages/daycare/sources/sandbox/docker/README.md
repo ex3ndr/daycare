@@ -21,7 +21,9 @@ Configure Docker runtime in `settings.json`:
         "tag": "latest",
         "socketPath": "/var/run/docker.sock",
         "runtime": "runsc",
-        "unconfinedSecurity": false
+        "unconfinedSecurity": false,
+        "capAdd": ["NET_ADMIN"],
+        "capDrop": ["MKNOD"]
     }
 }
 ```
@@ -34,10 +36,17 @@ Defaults when omitted:
 - `socketPath`: `undefined` (Docker default)
 - `runtime`: `undefined` (Docker default)
 - `unconfinedSecurity`: `false`
+- `capAdd`: `[]`
+- `capDrop`: `[]`
 
 When `unconfinedSecurity` is `true`, sandbox containers are created with:
 
 - `SecurityOpt: ["seccomp=unconfined", "apparmor=unconfined"]`
+
+When `capAdd`/`capDrop` are set, sandbox containers are created with matching Docker capability options:
+
+- `HostConfig.CapAdd`
+- `HostConfig.CapDrop`
 
 ## Execution Flow
 
@@ -57,8 +66,10 @@ Each sandbox container is stamped at creation time with:
 
 - `daycare.image.version` from `DOCKER_IMAGE_VERSION` in `dockerImageVersion.ts`
 - `daycare.image.id` from `docker image inspect` (`dockerImageIdResolve`)
+- `daycare.security.profile` from `docker.unconfinedSecurity`
+- `daycare.capabilities` from `docker.capAdd`/`docker.capDrop`
 
-`dockerContainerEnsure` compares these labels against current values. If either label is missing or mismatched, the
+`dockerContainerEnsure` compares these labels against current values. If any label is missing or mismatched, the
 container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure
 flow.
 

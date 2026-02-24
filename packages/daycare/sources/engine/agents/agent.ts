@@ -118,6 +118,8 @@ export class Agent {
                       socketPath: dockerSettings.socketPath,
                       runtime: dockerSettings.runtime,
                       unconfinedSecurity: dockerSettings.unconfinedSecurity,
+                      capAdd: dockerSettings.capAdd,
+                      capDrop: dockerSettings.capDrop,
                       userId: this.ctx.userId,
                       skillsActiveDir: this.userHome.skillsActive
                   }

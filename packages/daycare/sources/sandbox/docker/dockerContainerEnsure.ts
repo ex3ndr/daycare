@@ -24,6 +24,7 @@ const logger = getLogger("sandbox.docker");
 const DOCKER_IMAGE_VERSION_LABEL = "daycare.image.version";
 const DOCKER_IMAGE_ID_LABEL = "daycare.image.id";
 const DOCKER_SECURITY_PROFILE_LABEL = "daycare.security.profile";
+const DOCKER_CAPABILITIES_LABEL = "daycare.capabilities";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
@@ -40,7 +41,13 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
 
     try {
         const details = (await existing.inspect()) as DockerContainerInspect;
-        const staleReason = containerStaleReasonResolve(details, imageId, config.unconfinedSecurity);
+        const staleReason = containerStaleReasonResolve(
+            details,
+            imageId,
+            config.unconfinedSecurity,
+            config.capAdd,
+            config.capDrop
+        );
         if (staleReason) {
             logger.warn(
                 { containerName, imageRef, staleReason },
@@ -68,6 +75,7 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
     const securityOpt = config.unconfinedSecurity ? [...DOCKER_SECURITY_OPT_UNCONFINED] : undefined;
+    const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
 
     try {
         const created = await docker.createContainer({
@@ -77,11 +85,14 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
             Labels: {
                 [DOCKER_IMAGE_VERSION_LABEL]: DOCKER_IMAGE_VERSION,
                 [DOCKER_IMAGE_ID_LABEL]: imageId,
-                [DOCKER_SECURITY_PROFILE_LABEL]: securityProfile
+                [DOCKER_SECURITY_PROFILE_LABEL]: securityProfile,
+                [DOCKER_CAPABILITIES_LABEL]: capabilitiesLabel
             },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
                 ...(config.runtime ? { Runtime: config.runtime } : {}),
+                ...(config.capAdd.length > 0 ? { CapAdd: config.capAdd } : {}),
+                ...(config.capDrop.length > 0 ? { CapDrop: config.capDrop } : {}),
                 ...(securityOpt ? { SecurityOpt: securityOpt } : {})
             }
         });
@@ -130,12 +141,15 @@ async function removeContainerIfNeeded(container: Docker.Container): Promise<voi
 function containerStaleReasonResolve(
     details: DockerContainerInspect,
     expectedImageId: string,
-    unconfinedSecurity: boolean
+    unconfinedSecurity: boolean,
+    capAdd: string[],
+    capDrop: string[]
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
     const imageId = labels?.[DOCKER_IMAGE_ID_LABEL];
     const securityProfile = labels?.[DOCKER_SECURITY_PROFILE_LABEL];
+    const capabilities = labels?.[DOCKER_CAPABILITIES_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -151,11 +165,24 @@ function containerStaleReasonResolve(
     if (!securityProfile) {
         return "missing-security-profile-label";
     }
+    if (!capabilities) {
+        return "missing-capabilities-label";
+    }
     const expectedSecurityProfile = unconfinedSecurity
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
     if (securityProfile !== expectedSecurityProfile) {
         return `security-profile-mismatch:${securityProfile}->${expectedSecurityProfile}`;
     }
+    const expectedCapabilities = dockerCapabilitiesLabelBuild(capAdd, capDrop);
+    if (capabilities !== expectedCapabilities) {
+        return `capabilities-mismatch:${capabilities}->${expectedCapabilities}`;
+    }
     return null;
+}
+
+function dockerCapabilitiesLabelBuild(capAdd: string[], capDrop: string[]): string {
+    const normalizedAdd = [...capAdd].sort();
+    const normalizedDrop = [...capDrop].sort();
+    return `add=${normalizedAdd.join(",")};drop=${normalizedDrop.join(",")}`;
 }

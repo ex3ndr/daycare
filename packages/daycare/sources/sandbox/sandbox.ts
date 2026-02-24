@@ -239,6 +239,8 @@ export class Sandbox {
                           socketPath: this.docker!.socketPath,
                           runtime: this.docker!.runtime,
                           unconfinedSecurity: this.docker!.unconfinedSecurity,
+                          capAdd: this.docker!.capAdd,
+                          capDrop: this.docker!.capDrop,
                           userId: this.docker!.userId,
                           hostSkillsActiveDir: this.docker!.skillsActiveDir
                       }
