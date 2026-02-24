@@ -17,6 +17,11 @@ ENV LANG="C.UTF-8"
 ENV HOME=/home
 ENV DEBIAN_FRONTEND=noninteractive
 
+ENV XDG_CACHE_HOME=/home/.cache
+ENV NPM_CONFIG_CACHE=$XDG_CACHE_HOME/npm
+ENV YARN_CACHE_FOLDER=$XDG_CACHE_HOME/yarn
+ENV PNPM_STORE_DIR=/home/.local/share/pnpm/store
+
 ### BASE ###
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -24,6 +29,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update \
     && apt-get install -y --no-install-recommends \
         binutils=2.42-* \
+        bubblewrap \
         sudo=1.9.* \
         build-essential=12.10* \
         bzr=2.7.* \
@@ -72,6 +78,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         protobuf-compiler=3.21.* \
         ripgrep=14.1.* \
         rsync=3.2.* \
+        socat \
         software-properties-common=0.99.* \
         sqlite3=3.45.* \
         swig3.0=3.0.* \
@@ -106,7 +113,9 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 ENV COREPACK_ENABLE_AUTO_PIN=0
 ENV COREPACK_ENABLE_STRICT=0
 
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,target=$NPM_CONFIG_CACHE \
+    --mount=type=cache,target=$YARN_CACHE_FOLDER \
+    --mount=type=cache,target=$PNPM_STORE_DIR \
     git -c advice.detachedHead=0 clone --branch "$NVM_VERSION" --depth 1 https://github.com/nvm-sh/nvm.git "$NVM_DIR" \
     && echo 'source $NVM_DIR/nvm.sh' >> /etc/profile \
     && echo "prettier\neslint\ntypescript" > $NVM_DIR/default-packages \
@@ -126,6 +135,10 @@ RUN --mount=type=cache,target=/root/.npm \
 
 COPY setup_daycare.sh /opt/daycare/setup_daycare.sh
 RUN chmod +x /opt/daycare/setup_daycare.sh
+
+### CLEANUP ###
+
+RUN find /home -mindepth 1 -delete
 
 ### ENTRYPOINT ###
 

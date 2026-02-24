@@ -17,11 +17,21 @@ ENV LANG="C.UTF-8"
 ENV HOME=/home
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Tool data directories – pinned under /root so /home can be safely mounted at runtime
+# Route caches through /home so they can be cleaned before finalizing the image.
+ENV XDG_CACHE_HOME=/home/.cache
+ENV NPM_CONFIG_CACHE=$XDG_CACHE_HOME/npm
+ENV YARN_CACHE_FOLDER=$XDG_CACHE_HOME/yarn
+ENV PNPM_STORE_DIR=/home/.local/share/pnpm/store
+ENV PIP_CACHE_DIR=$XDG_CACHE_HOME/pip
+ENV PYTHON_BUILD_CACHE_PATH=$XDG_CACHE_HOME/pyenv
+ENV CCACHE_DIR=$XDG_CACHE_HOME/ccache
+ENV UV_CACHE_DIR=$XDG_CACHE_HOME/uv
+
+# Keep tool installation data under /root while caches are redirected to /home.
 ENV MISE_DATA_DIR=/root/.local/share/mise
 ENV MISE_CONFIG_DIR=/root/.config/mise
 ENV MISE_STATE_DIR=/root/.local/state/mise
-ENV MISE_CACHE_DIR=/root/.cache/mise
+ENV MISE_CACHE_DIR=$XDG_CACHE_HOME/mise
 ENV CARGO_HOME=/root/.cargo
 ENV RUSTUP_HOME=/root/.rustup
 ENV GOPATH=/root/go
@@ -34,6 +44,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update \
     && apt-get install -y --no-install-recommends \
         binutils=2.42-* \
+        bubblewrap \
         sudo=1.9.* \
         build-essential=12.10* \
         bzr=2.7.* \
@@ -82,6 +93,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         protobuf-compiler=3.21.* \
         ripgrep=14.1.* \
         rsync=3.2.* \
+        socat \
         software-properties-common=0.99.* \
         sqlite3=3.45.* \
         swig3.0=3.0.* \
@@ -164,8 +176,8 @@ ENV PIPX_BIN_DIR=/root/.local/bin
 ENV PATH=$PIPX_BIN_DIR:$PATH
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/root/.cache/pipx \
+    --mount=type=cache,target=$PIP_CACHE_DIR \
+    --mount=type=cache,target=$XDG_CACHE_HOME/pipx \
     apt-get update \
     && apt-get install -y --no-install-recommends pipx=1.4.* \
     && rm -rf /var/lib/apt/lists/* \
@@ -191,9 +203,9 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 ENV COREPACK_ENABLE_AUTO_PIN=0
 ENV COREPACK_ENABLE_STRICT=0
 
-RUN --mount=type=cache,target=/root/.npm \
-    --mount=type=cache,target=/root/.cache/yarn \
-    --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,target=$NPM_CONFIG_CACHE \
+    --mount=type=cache,target=$YARN_CACHE_FOLDER \
+    --mount=type=cache,target=$PNPM_STORE_DIR \
     git -c advice.detachedHead=0 clone --branch "$NVM_VERSION" --depth 1 https://github.com/nvm-sh/nvm.git "$NVM_DIR" \
     && echo 'source $NVM_DIR/nvm.sh' >> /etc/profile \
     && echo "prettier\neslint\ntypescript" > $NVM_DIR/default-packages \
@@ -277,8 +289,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 ### C++ ###
 # gcc is already installed via apt-get above, so these are just additional linters, etc.
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/root/.cache/pipx \
+RUN --mount=type=cache,target=$PIP_CACHE_DIR \
+    --mount=type=cache,target=$XDG_CACHE_HOME/pipx \
     pipx install --pip-args="--no-cache-dir --no-compile --root-user-action=ignore" cpplint==2.0.* clang-tidy==20.1.* clang-format==20.1.* cmakelang==0.6.*
 
 ### BAZEL ###
@@ -361,6 +373,10 @@ RUN chmod +x /opt/verify.sh \
         PHP_VERSIONS="$PHP_VERSIONS" \
         JAVA_VERSIONS="$( [ "$TARGETARCH" = "arm64" ] && echo "$ARM_JAVA_VERSIONS" || echo "$AMD_JAVA_VERSIONS" )" \
         "/opt/verify.sh"
+
+### CLEANUP ###
+
+RUN find /home -mindepth 1 -delete
 
 ### ENTRYPOINT ###
 
