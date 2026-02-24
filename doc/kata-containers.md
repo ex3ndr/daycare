@@ -52,6 +52,53 @@ sudo apt-get install -y --allow-downgrades \
 sudo apt-mark hold docker-ce docker-ce-cli docker-ce-rootless-extras
 ```
 
+## DNS Resolution in Kata VMs
+
+In some Docker + Kata setups, Docker's embedded DNS resolver (`127.0.0.11`) is not reachable from inside the Kata guest.
+
+Typical symptoms inside the sandbox container:
+
+- `curl 1.1.1.1` works (raw network path is up)
+- `curl google.com` fails with `Could not resolve host`
+- `nslookup google.com` shows resolver errors against `127.0.0.11`
+
+Daycare avoids this path when DNS servers are explicitly configured (`docker.isolatedDnsServers` or
+`docker.localDnsServers`): it generates a resolver file on the host and bind-mounts it into the container as
+`/etc/resolv.conf` (read-only). This bypasses Docker's embedded DNS stub.
+
+```mermaid
+flowchart TD
+    A[Container DNS request] --> B{Using Docker embedded resolver?}
+    B -->|yes| C[127.0.0.11 path in Kata]
+    C --> D[May fail to resolve domains]
+    B -->|no| E[Bind-mounted /etc/resolv.conf]
+    E --> F[Query explicit DNS servers]
+    F --> G[Stable domain resolution]
+```
+
+Recommended Daycare settings for local-network-enabled users:
+
+```json
+{
+    "docker": {
+        "allowLocalNetworkingForUsers": ["user-admin"],
+        "localDnsServers": ["10.255.253.1"]
+    }
+}
+```
+
+Quick verification:
+
+```bash
+# Inside the running sandbox container
+cat /etc/resolv.conf
+getent hosts google.com
+curl -I https://google.com
+```
+
+If `/etc/resolv.conf` still points to `127.0.0.11`, recreate the sandbox container so it picks up the latest DNS
+profile and resolver mode labels.
+
 ## Required Capabilities
 
 The Kata runtime container (the outer pod/container that launches the VM) needs two Linux capabilities:
