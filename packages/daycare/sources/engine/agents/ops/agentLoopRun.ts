@@ -61,6 +61,7 @@ type AgentLoopRunOptions = {
     heartbeats: Heartbeats;
     memory: Memory;
     skills: Skills;
+    skillsActiveRoot?: string;
     providersForAgent: ProviderSettings[];
     verbose: boolean;
     logger: Logger;
@@ -153,6 +154,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
             try {
                 activeSkills = await skills.list();
+                await skills.syncToActive(options.skillsActiveRoot, activeSkills);
                 availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
                 const rlmToolDescription =
                     agentSystem.config.current.features.rlm && !noToolsModeEnabled
@@ -483,6 +485,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         memory,
                         toolResolver,
                         skills: activeSkills,
+                        skillsActiveRoot: options.skillsActiveRoot,
                         appendHistoryRecord,
                         rlmToolOnly: false,
                         allowedToolNames
@@ -620,6 +623,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     memory,
                     toolResolver,
                     skills: activeSkills,
+                    skillsActiveRoot: options.skillsActiveRoot,
                     appendHistoryRecord,
                     rlmToolOnly: agentSystem.config.current.features.rlm,
                     allowedToolNames

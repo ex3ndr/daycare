@@ -236,6 +236,8 @@ All registrations are automatically cleaned up when the plugin unloads.
 Plugin skills are listed alongside core/config/user skills and invoked through the `skill` tool. `SKILL.md` supports:
 - `sandbox: true` to run the skill in a forked subagent.
 - `permissions` tags are not used at runtime anymore. Sandboxed skills run with fixed subagent permissions.
+- Before each inference step, plugin skills are copied into the per-user active runtime root:
+  `users/<userId>/skills/active/<activationKey>/SKILL.md` where `activationKey` is derived from `skill.id`.
 
 ---
 

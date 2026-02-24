@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 
 import Handlebars from "handlebars";
@@ -22,7 +23,9 @@ export async function agentSystemPromptSectionSkills(context: AgentSystemPromptC
         const skills = new Skills({
             configRoot: configSkillsRoot,
             pluginManager,
-            userRoot: context.userHome?.skills
+            userPersonalRoot: context.userHome?.skillsPersonal,
+            userActiveRoot: context.userHome?.skillsActive,
+            agentsRoot: path.join(os.homedir(), ".agents", "skills")
         });
         return skillPromptFormat(await skills.list());
     })();

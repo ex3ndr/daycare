@@ -20,7 +20,7 @@ export type DockerRunInSandboxOptions = {
     home: string;
     timeoutMs?: number;
     maxBufferBytes?: number;
-    docker: Omit<DockerContainerConfig, "hostHomeDir">;
+    docker: Omit<DockerContainerConfig, "hostHomeDir" | "hostSkillsActiveDir"> & { hostSkillsActiveDir: string };
 };
 
 /**
@@ -35,10 +35,16 @@ export async function dockerRunInSandbox(
     const hostHomeDir = path.resolve(options.home);
     const dockerConfig: DockerContainerConfig = {
         ...options.docker,
-        hostHomeDir
+        hostHomeDir,
+        hostSkillsActiveDir: path.resolve(options.docker.hostSkillsActiveDir)
     };
 
-    const runtimeConfig = runtimeConfigPathRewrite(config, hostHomeDir, options.docker.userId);
+    const runtimeConfig = runtimeConfigPathRewrite(
+        config,
+        hostHomeDir,
+        options.docker.userId,
+        dockerConfig.hostSkillsActiveDir
+    );
     const settingsHostPath = path.join(
         hostHomeDir,
         ".tmp",
@@ -48,11 +54,16 @@ export async function dockerRunInSandbox(
         env: options.env ?? process.env,
         home: hostHomeDir
     });
-    const containerEnv = envPathRewrite(env, hostHomeDir, options.docker.userId);
+    const containerEnv = envPathRewrite(env, hostHomeDir, options.docker.userId, dockerConfig.hostSkillsActiveDir);
     const containerCwd = options.cwd
-        ? sandboxPathHostToContainer(hostHomeDir, options.docker.userId, options.cwd)
+        ? sandboxPathHostToContainer(hostHomeDir, options.docker.userId, options.cwd, dockerConfig.hostSkillsActiveDir)
         : undefined;
-    const settingsContainerPath = sandboxPathHostToContainer(hostHomeDir, options.docker.userId, settingsHostPath);
+    const settingsContainerPath = sandboxPathHostToContainer(
+        hostHomeDir,
+        options.docker.userId,
+        settingsHostPath,
+        dockerConfig.hostSkillsActiveDir
+    );
 
     await fs.mkdir(path.dirname(settingsHostPath), { recursive: true });
     await fs.writeFile(settingsHostPath, JSON.stringify(runtimeConfig), "utf8");
@@ -60,11 +71,7 @@ export async function dockerRunInSandbox(
     try {
         logger.debug(`exec: resolving sandbox-runtime CLI path in container`);
         const cliResolveResult = await dockerContainersShared.exec(dockerConfig, {
-            command: [
-                "bash",
-                "-lc",
-                "node -p \"require.resolve('@anthropic-ai/sandbox-runtime/dist/cli.js')\""
-            ],
+            command: ["bash", "-lc", "node -p \"require.resolve('@anthropic-ai/sandbox-runtime/dist/cli.js')\""],
             cwd: containerCwd,
             env: containerEnv,
             timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -75,7 +82,11 @@ export async function dockerRunInSandbox(
         logger.debug(`exec: resolved CLI path=${srtCliPath} cwd=${containerCwd} command=${JSON.stringify(command)}`);
 
         const result = await dockerContainersShared.exec(dockerConfig, {
-            command: ["bash", "-lc", `node ${srtCliPath} --settings ${settingsContainerPath} -c ${shellQuote(command)}`],
+            command: [
+                "bash",
+                "-lc",
+                `node ${srtCliPath} --settings ${settingsContainerPath} -c ${shellQuote(command)}`
+            ],
             cwd: containerCwd,
             env: containerEnv,
             timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -103,7 +114,8 @@ export async function dockerRunInSandbox(
 function runtimeConfigPathRewrite(
     config: SandboxRuntimeConfig,
     hostHomeDir: string,
-    userId: string
+    userId: string,
+    hostSkillsActiveDir: string
 ): SandboxRuntimeConfig {
     if (!config.filesystem) {
         return config;
@@ -114,24 +126,31 @@ function runtimeConfigPathRewrite(
         filesystem: {
             ...config.filesystem,
             allowWrite: config.filesystem.allowWrite.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry)
+                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir)
             ),
-            denyRead: config.filesystem.denyRead.map((entry) => sandboxPathHostToContainer(hostHomeDir, userId, entry)),
+            denyRead: config.filesystem.denyRead.map((entry) =>
+                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir)
+            ),
             denyWrite: config.filesystem.denyWrite.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry)
+                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir)
             )
         }
     };
 }
 
-function envPathRewrite(env: NodeJS.ProcessEnv, hostHomeDir: string, userId: string): NodeJS.ProcessEnv {
+function envPathRewrite(
+    env: NodeJS.ProcessEnv,
+    hostHomeDir: string,
+    userId: string,
+    hostSkillsActiveDir: string
+): NodeJS.ProcessEnv {
     const rewritten: NodeJS.ProcessEnv = {};
 
     for (const [key, value] of Object.entries(env)) {
         if (value === undefined) {
             continue;
         }
-        rewritten[key] = sandboxPathHostToContainer(hostHomeDir, userId, value);
+        rewritten[key] = sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir);
     }
 
     return rewritten;

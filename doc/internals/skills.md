@@ -22,6 +22,10 @@ Daycare also loads shared user-authored skills from `~/.agents/skills/`.
 This source is framework-agnostic so the same skill folder can be reused
 across multiple local agent runtimes.
 
+Per-user skills are split into:
+- `skills/personal/`: user-authored skills
+- `skills/active/`: system-managed activation copies used at runtime
+
 Each skill is a folder containing a `SKILL.md` file. The folder name becomes
 the skill name shown to the agent.
 
@@ -37,29 +41,33 @@ The skills section prompt (`SYSTEM_SKILLS.md`) contains mandatory invocation gui
 ## Skills catalog flow (code)
 
 Daycare's skills catalog is coordinated by the `Skills` facade. The facade
-reads all four sources (core, config, user, plugin) on demand and returns one
-combined list to both prompt formatting and inference-time tool context updates.
+reads all five sources (core, config, user personal, plugin, agents) on demand,
+then syncs activation copies before inference tool execution.
 
 ```mermaid
 flowchart TD
   Agent[Agent.handleMessage] --> SkillsFacade[Skills facade]
   SkillsFacade --> Core[skillListCore]
   SkillsFacade --> Config[skillListConfig(configDir/skills)]
-  SkillsFacade --> User[skillListUser(~/.agents/skills)]
+  SkillsFacade --> User[skillListUser(users/.../skills/personal)]
+  SkillsFacade --> Agents[skillListAgents(~/.agents/skills)]
   SkillsFacade --> Plugin[skillListRegistered]
   Core[skillListCore] --> FromRoot[skillListFromRoot]
   Config --> FromRoot
   User --> FromRoot
+  Agents --> FromRoot
   FromRoot --> Resolve[skillResolve]
   Resolve --> Sort[skillSort]
   Plugin --> Resolve
   Plugin --> Sort
   Sort --> SkillsList[combined AgentSkill[]]
+  SkillsList --> Sync[skillActivationSync to skills/active]
   SkillsList --> Prompt[skillPromptFormat]
   Agent --> Loop[agentLoopRun]
   Loop --> SkillsFacade
   Loop --> SkillTool[skill tool execute()]
-  SkillTool --> Content[skillContentLoad]
+  SkillTool --> ActiveLoad[load from skills/active/<activationKey>/SKILL.md]
+  ActiveLoad --> Content[skillContentLoad]
 ```
 
 ## Skill ID prefixes
@@ -68,7 +76,18 @@ flowchart TD
 - `core:<relative-path>`
 - `config:<relative-path>`
 - `user:<relative-path>`
+- `agents:<relative-path>`
 - `plugin:<plugin-id>/<relative-path>`
+
+Activation keys are built from `skill.id` (replace `:` and `/` with `--`, sanitize to `[a-zA-Z0-9._-]`).
+This avoids cross-source collisions and path traversal from skill names.
+
+```mermaid
+flowchart LR
+  SkillId[skill.id] --> Key[skillActivationKeyBuild]
+  Key --> ActivePath[skills/active/<activationKey>]
+  ActivePath --> Mount[/shared/skills in Docker]
+```
 
 ## SKILL.md format (Agent Skills spec)
 
@@ -96,7 +115,7 @@ flowchart LR
 ## Loading and unloading
 
 - **Load**: call `skill(name: "...")`; tool resolves metadata and skill body.
-- **Read before inference**: skills are read from disk before each inference call.
+- **Read before inference**: skills are read from disk and synced to `skills/active` before each inference call.
 - **Unload**: stop calling that skill.
 
 ```mermaid

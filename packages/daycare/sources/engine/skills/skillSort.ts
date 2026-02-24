@@ -1,9 +1,9 @@
 import type { AgentSkill } from "./skillTypes.js";
 
 /**
- * Orders skills by display name and path for stable prompt output.
+ * Orders skills by display name and source path for stable prompt output.
  *
- * Expects: skills is any array; returns a new array sorted by name then path.
+ * Expects: skills is any array; returns a new array sorted by name then source path.
  */
 export function skillSort(skills: AgentSkill[]): AgentSkill[] {
     return [...skills].sort((a, b) => {
@@ -11,6 +11,6 @@ export function skillSort(skills: AgentSkill[]): AgentSkill[] {
         if (nameSort !== 0) {
             return nameSort;
         }
-        return a.path.localeCompare(b.path);
+        return a.sourcePath.localeCompare(b.sourcePath);
     });
 }

@@ -20,15 +20,18 @@ vi.mock("./docker/dockerRunInSandbox.js", () => ({
 describe("Sandbox docker integration", () => {
     let rootDir: string;
     let homeDir: string;
+    let skillsActiveDir: string;
     let workingDir: string;
     let permissions: SessionPermissions;
 
     beforeEach(async () => {
         rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-sandbox-docker-"));
         homeDir = path.join(rootDir, "home");
+        skillsActiveDir = path.join(rootDir, "skills", "active");
         workingDir = path.join(homeDir, "desktop");
         await fs.mkdir(workingDir, { recursive: true });
         await fs.mkdir(path.join(homeDir, "documents"), { recursive: true });
+        await fs.mkdir(skillsActiveDir, { recursive: true });
 
         permissions = {
             workingDir,
@@ -78,7 +81,8 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
-                userId: "u123"
+                userId: "u123",
+                skillsActiveDir
             }
         });
 
@@ -104,7 +108,8 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
-                userId: "u123"
+                userId: "u123",
+                skillsActiveDir
             }
         });
 
@@ -129,7 +134,8 @@ describe("Sandbox docker integration", () => {
                 enabled: true,
                 image: "daycare-sandbox",
                 tag: "latest",
-                userId: "u123"
+                userId: "u123",
+                skillsActiveDir
             }
         });
 

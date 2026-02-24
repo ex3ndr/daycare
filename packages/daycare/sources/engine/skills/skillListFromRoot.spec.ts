@@ -27,7 +27,7 @@ describe("skillListFromRoot", () => {
             expect(skill?.id).toBe("core:deploy");
             expect(skill?.name).toBe("deploy");
             expect(skill?.description).toBe("Use <cron>");
-            expect(skill?.path).toBe(path.resolve(coreSkillPath));
+            expect(skill?.sourcePath).toBe(path.resolve(coreSkillPath));
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }

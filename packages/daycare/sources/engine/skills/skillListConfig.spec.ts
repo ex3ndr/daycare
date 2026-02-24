@@ -25,7 +25,7 @@ describe("skillListConfig", () => {
             expect(skill?.source).toBe("config");
             expect(skill?.id).toBe("config:holocube");
             expect(skill?.name).toBe("holocube");
-            expect(skill?.path).toBe(path.resolve(skillPath));
+            expect(skill?.sourcePath).toBe(path.resolve(skillPath));
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }

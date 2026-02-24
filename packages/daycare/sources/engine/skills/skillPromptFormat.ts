@@ -5,13 +5,13 @@ import type { AgentSkill } from "./skillTypes.js";
 /**
  * Formats available skills into an XML list for the skills system section.
  *
- * Expects: skills may include duplicates; the first entry per path is used.
+ * Expects: skills may include duplicates; the first entry per id is used.
  */
 export function skillPromptFormat(skills: AgentSkill[]): string {
     const unique = new Map<string, AgentSkill>();
     for (const skill of skills) {
-        if (!unique.has(skill.path)) {
-            unique.set(skill.path, skill);
+        if (!unique.has(skill.id)) {
+            unique.set(skill.id, skill);
         }
     }
     const ordered = skillSort(Array.from(unique.values()));

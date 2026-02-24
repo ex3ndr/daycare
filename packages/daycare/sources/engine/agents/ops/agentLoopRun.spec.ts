@@ -137,7 +137,7 @@ describe("agentLoopRun", () => {
                 id: "config:alpha",
                 name: "alpha",
                 description: "first",
-                path: "/tmp/alpha/SKILL.md",
+                sourcePath: "/tmp/alpha/SKILL.md",
                 source: "config"
             }
         ];
@@ -146,7 +146,7 @@ describe("agentLoopRun", () => {
                 id: "config:beta",
                 name: "beta",
                 description: "second",
-                path: "/tmp/beta/SKILL.md",
+                sourcePath: "/tmp/beta/SKILL.md",
                 source: "config"
             }
         ];
@@ -154,7 +154,8 @@ describe("agentLoopRun", () => {
             .fn(async (): Promise<AgentSkill[]> => firstSkills)
             .mockResolvedValueOnce(firstSkills)
             .mockResolvedValueOnce(secondSkills);
-        const skills = { list: skillsList } as unknown as Skills;
+        const syncToActive = vi.fn(async () => undefined);
+        const skills = { list: skillsList, syncToActive } as unknown as Skills;
         const tools: Tool[] = [
             {
                 name: "run_python",
@@ -209,6 +210,7 @@ describe("agentLoopRun", () => {
         );
 
         expect(skillsList).toHaveBeenCalledTimes(2);
+        expect(syncToActive).toHaveBeenCalledTimes(2);
         expect(toolDescriptionsSeen).toHaveLength(2);
         expect(toolDescriptionsSeen[0]).toContain("Execute Python code to complete the task.");
         expect(toolDescriptionsSeen[1]).toContain("Execute Python code to complete the task.");
@@ -1263,7 +1265,8 @@ function optionsBuild(params: {
     const skills =
         params.skills ??
         ({
-            list: vi.fn(async (): Promise<AgentSkill[]> => [])
+            list: vi.fn(async (): Promise<AgentSkill[]> => []),
+            syncToActive: vi.fn(async () => undefined)
         } as unknown as Skills);
     const descriptor =
         params.agentType === "subagent"
@@ -1340,6 +1343,7 @@ function optionsBuild(params: {
         heartbeats: {} as Heartbeats,
         memory: {} as Memory,
         skills,
+        skillsActiveRoot: "/tmp/skills/active",
         providersForAgent: [],
         verbose: false,
         logger: logger as never,

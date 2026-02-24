@@ -29,20 +29,24 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
     const userId = `test-${process.pid}`;
     let rootDir: string;
     let homeDir: string;
+    let skillsActiveDir: string;
     let containers: DockerContainers;
     let config: DockerContainerConfig;
 
     beforeEach(async () => {
         rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-docker-integration-"));
         homeDir = path.join(rootDir, "home");
+        skillsActiveDir = path.join(rootDir, "skills", "active");
         await fs.mkdir(homeDir, { recursive: true });
+        await fs.mkdir(skillsActiveDir, { recursive: true });
 
         containers = new DockerContainers();
         config = {
             image: IMAGE,
             tag: TAG,
             userId,
-            hostHomeDir: homeDir
+            hostHomeDir: homeDir,
+            hostSkillsActiveDir: skillsActiveDir
         };
     });
 
@@ -90,7 +94,7 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
     // nvm is sourced via /etc/profile — use login shell for node commands
     it("runs node inside the container", async () => {
         const result = await containers.exec(config, {
-            command: ["bash", "-lc", "node -e \"console.log(JSON.stringify({v: process.version, ok: true}))\""],
+            command: ["bash", "-lc", 'node -e "console.log(JSON.stringify({v: process.version, ok: true}))"'],
             timeoutMs: 30_000
         });
 

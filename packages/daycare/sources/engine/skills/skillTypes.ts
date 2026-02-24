@@ -7,8 +7,8 @@ export type AgentSkill = {
     description?: string | null;
     sandbox?: boolean;
     permissions?: string[];
-    path: string;
-    source: "core" | "config" | "plugin" | "user";
+    sourcePath: string;
+    source: "core" | "config" | "plugin" | "user" | "agents";
     pluginId?: string;
 };
 
@@ -27,4 +27,5 @@ export type SkillSource =
     | { source: "core"; root?: string }
     | { source: "config"; root?: string }
     | { source: "user"; root?: string }
+    | { source: "agents"; root?: string }
     | { source: "plugin"; pluginId: string };

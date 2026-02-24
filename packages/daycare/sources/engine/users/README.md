@@ -5,6 +5,12 @@ This module provides per-user filesystem isolation under `config.usersDir`:
 ```text
 <configDir>/users/<userId>/
   skills/
+    active/
+      <activationKey>/
+        SKILL.md
+    personal/
+      <skill-folder>/
+        SKILL.md
   apps/
     <app-id>/
       APP.md
@@ -37,10 +43,10 @@ This module provides per-user filesystem isolation under `config.usersDir`:
 flowchart TD
     A[AgentSystem resolves userId] --> B[UserHome(usersDir, userId)]
     B --> C[userHomeEnsure]
-    C --> D[skills, apps, home/* directories]
+    C --> D[skills/active, skills/personal, apps, home/* directories]
     C --> E[knowledge files ensured]
     B --> F[permissionBuildUser]
-    F --> G[Agent session permissions]
+    F --> G[Agent session permissions + skills active read access]
     B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
     B --> I[prompt paths: home/knowledge/*.md]
 ```

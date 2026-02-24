@@ -10,7 +10,8 @@ const baseConfig: DockerContainerConfig = {
     socketPath: "/var/run/docker.sock",
     runtime: "runsc",
     userId: "user-1",
-    hostHomeDir: "/data/users/user-1/home"
+    hostHomeDir: "/data/users/user-1/home",
+    hostSkillsActiveDir: "/data/users/user-1/skills/active"
 };
 
 describe("dockerContainerEnsure", () => {
@@ -73,7 +74,7 @@ describe("dockerContainerEnsure", () => {
             Image: "daycare-sandbox:latest",
             WorkingDir: "/home",
             HostConfig: {
-                Binds: ["/data/users/user-1/home:/home"],
+                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
                 Runtime: "runsc"
             }
         });

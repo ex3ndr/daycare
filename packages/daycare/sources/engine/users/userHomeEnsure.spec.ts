@@ -25,6 +25,8 @@ describe("userHomeEnsure", () => {
         const expectedDirs = [
             userHome.root,
             userHome.skills,
+            userHome.skillsPersonal,
+            userHome.skillsActive,
             userHome.apps,
             userHome.home,
             userHome.desktop,

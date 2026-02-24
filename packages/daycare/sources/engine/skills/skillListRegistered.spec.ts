@@ -29,7 +29,7 @@ describe("skillListRegistered", () => {
             expect(skill?.source).toBe("plugin");
             expect(skill?.pluginId).toBe("alpha");
             expect(skill?.id).toBe("plugin:alpha/plugin-skill");
-            expect(skill?.path).toBe(path.resolve(pluginSkillPath));
+            expect(skill?.sourcePath).toBe(path.resolve(pluginSkillPath));
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }

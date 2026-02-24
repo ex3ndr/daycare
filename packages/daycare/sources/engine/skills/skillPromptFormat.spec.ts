@@ -10,7 +10,7 @@ describe("skillPromptFormat", () => {
                 id: "core:deploy",
                 name: "deploy",
                 description: "Use <cron> & heartbeat",
-                path: "/tmp/deploy/SKILL.md",
+                sourcePath: "/tmp/deploy/SKILL.md",
                 source: "core",
                 sandbox: true
             },
@@ -18,7 +18,7 @@ describe("skillPromptFormat", () => {
                 id: "plugin:alpha/tooling",
                 name: "tooling",
                 description: "Manage <xml>",
-                path: "/tmp/plugin/skill/SKILL.md",
+                sourcePath: "/tmp/plugin/skill/SKILL.md",
                 source: "plugin",
                 pluginId: "alpha"
             },
@@ -26,7 +26,7 @@ describe("skillPromptFormat", () => {
                 id: "core:deploy",
                 name: "deploy",
                 description: "Use <cron> & heartbeat",
-                path: "/tmp/deploy/SKILL.md",
+                sourcePath: "/tmp/deploy/SKILL.md",
                 source: "core"
             }
         ];

@@ -32,6 +32,7 @@ describe("skillResolve", () => {
             const skill = await skillResolve(skillPath, { source: "config", root: baseDir }, baseDir);
             expect(skill?.sandbox).toBe(true);
             expect(skill?.permissions).toEqual(["@read:/workspace", "@network"]);
+            expect(skill?.sourcePath).toBe(path.resolve(skillPath));
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }
@@ -63,6 +64,22 @@ describe("skillResolve", () => {
             const skill = await skillResolve(skillPath, { source: "config", root: baseDir }, baseDir);
             expect(skill?.sandbox).toBeUndefined();
             expect(skill?.permissions).toBeUndefined();
+        } finally {
+            await fs.rm(baseDir, { recursive: true, force: true });
+        }
+    });
+
+    it("builds agents source ids for ~/.agents/skills entries", async () => {
+        const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-resolve-"));
+        try {
+            const skillDir = path.join(baseDir, "agents-helper");
+            await fs.mkdir(skillDir, { recursive: true });
+            const skillPath = path.join(skillDir, "SKILL.md");
+            await fs.writeFile(skillPath, "---\nname: agents-helper\n---\n\n# Helper");
+
+            const skill = await skillResolve(skillPath, { source: "agents", root: baseDir }, baseDir);
+            expect(skill?.id).toBe("agents:agents-helper");
+            expect(skill?.source).toBe("agents");
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }

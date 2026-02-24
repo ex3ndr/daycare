@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { skillListUser } from "./skillListUser.js";
 
 describe("skillListUser", () => {
-    it("loads skills from user skills root", async () => {
+    it("loads skills from user personal skills root", async () => {
         const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-user-skills-"));
 
         try {
@@ -23,7 +23,7 @@ describe("skillListUser", () => {
             expect(skill?.source).toBe("user");
             expect(skill?.id).toBe("user:bridge-builder");
             expect(skill?.name).toBe("bridge-builder");
-            expect(skill?.path).toBe(path.resolve(skillPath));
+            expect(skill?.sourcePath).toBe(path.resolve(skillPath));
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }
@@ -34,25 +34,34 @@ describe("skillListUser", () => {
         await expect(skillListUser(userRoot)).resolves.toEqual([]);
     });
 
-    it("loads all skills from the provided user root", async () => {
+    it("loads all skills from the provided personal root only", async () => {
         const userRoot = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-user-scoped-skills-"));
+        const personalRoot = path.join(userRoot, "personal");
+        const activeRoot = path.join(userRoot, "active");
 
         try {
-            const systemSkillDir = path.join(userRoot, "system-one");
+            const systemSkillDir = path.join(personalRoot, "system-one");
             await fs.mkdir(systemSkillDir, { recursive: true });
             await fs.writeFile(
                 path.join(systemSkillDir, "SKILL.md"),
                 "---\nname: system-one\ndescription: System skill\n---\n\nSystem body"
             );
 
-            const userSkillDir = path.join(userRoot, "user-two");
+            const userSkillDir = path.join(personalRoot, "user-two");
             await fs.mkdir(userSkillDir, { recursive: true });
             await fs.writeFile(
                 path.join(userSkillDir, "SKILL.md"),
                 "---\nname: user-two\ndescription: User skill\n---\n\nUser body"
             );
 
-            const skills = await skillListUser(userRoot);
+            const syncedSkillDir = path.join(activeRoot, "config--skip-me");
+            await fs.mkdir(syncedSkillDir, { recursive: true });
+            await fs.writeFile(
+                path.join(syncedSkillDir, "SKILL.md"),
+                "---\nname: skip-me\ndescription: Active copy\n---\n\nActive body"
+            );
+
+            const skills = await skillListUser(personalRoot);
             const names = skills.map((skill) => skill.name).sort();
             expect(names).toEqual(["system-one", "user-two"]);
         } finally {

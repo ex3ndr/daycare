@@ -13,6 +13,6 @@ export function permissionBuildUser(userHome: UserHome): SessionPermissions {
     return {
         workingDir: userHome.desktop,
         writeDirs: [userHome.home],
-        readDirs: [userHome.skills, path.join(configDir, "skills")]
+        readDirs: [userHome.skills, userHome.skillsActive, path.join(configDir, "skills")]
     };
 }

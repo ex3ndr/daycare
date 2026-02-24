@@ -24,7 +24,7 @@ const skills: AgentSkill[] = [
         name: "scheduling",
         description: "Set up recurring tasks",
         source: "core",
-        path: "/tmp/skills/scheduling/SKILL.md",
+        sourcePath: "/tmp/skills/scheduling/SKILL.md",
         sandbox: true
     }
 ];

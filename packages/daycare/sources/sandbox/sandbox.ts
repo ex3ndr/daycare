@@ -8,6 +8,7 @@ import { getLogger } from "../log.js";
 import { envNormalize } from "../util/envNormalize.js";
 
 const logger = getLogger("sandbox");
+
 import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { runInSandbox } from "./runtime.js";
@@ -239,7 +240,8 @@ export class Sandbox {
                           tag: this.docker!.tag,
                           socketPath: this.docker!.socketPath,
                           runtime: this.docker!.runtime,
-                          userId: this.docker!.userId
+                          userId: this.docker!.userId,
+                          hostSkillsActiveDir: this.docker!.skillsActiveDir
                       }
                   })
                 : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
@@ -318,7 +320,7 @@ export class Sandbox {
         if (!this.docker?.enabled) {
             return targetPath;
         }
-        return sandboxPathContainerToHost(this.homeDir, this.docker.userId, targetPath);
+        return sandboxPathContainerToHost(this.homeDir, this.docker.userId, targetPath, this.docker.skillsActiveDir);
     }
 }
 

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AgentDescriptor, AgentSkill, SessionPermissions, ToolExecutionContext } from "@/types";
 import { contextForAgent } from "../../agents/context.js";
+import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
 import { skillToolBuild } from "./skillToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "skill" };
@@ -26,6 +27,64 @@ describe("skillToolBuild", () => {
             expect(contentText(result.toolMessage.content)).toContain("# scheduling");
         } finally {
             await fs.rm(path.dirname(path.dirname(skillPath)), { recursive: true, force: true });
+        }
+    });
+
+    it("loads named skills from active root and prepends host base directory", async () => {
+        const skillPath = await skillFileCreateWithBody("scheduling", false, "# source");
+        const activeRoot = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-active-host-"));
+        try {
+            const skill = skillBuild(skillPath, { name: "scheduling", id: "core:scheduling", source: "core" });
+            const activationKey = skillActivationKeyBuild(skill.id);
+            const activeSkillDir = path.join(activeRoot, activationKey);
+            await fs.mkdir(activeSkillDir, { recursive: true });
+            await fs.writeFile(
+                path.join(activeSkillDir, "SKILL.md"),
+                "---\nname: scheduling\n---\n\n# active\nUse active copy."
+            );
+
+            const tool = skillToolBuild();
+            const context = contextBuild({
+                skills: [skill],
+                skillsActiveRoot: activeRoot
+            });
+
+            const result = await tool.execute({ name: "scheduling" }, context, toolCall);
+            const text = contentText(result.toolMessage.content);
+            expect(text).toContain(`Base directory for this skill: ${path.join(activeRoot, activationKey)}`);
+            expect(text).toContain("Skill name: scheduling");
+            expect(text).toContain("# active");
+            expect(text).not.toContain("# source");
+        } finally {
+            await fs.rm(path.dirname(path.dirname(skillPath)), { recursive: true, force: true });
+            await fs.rm(activeRoot, { recursive: true, force: true });
+        }
+    });
+
+    it("prepends container base directory for active skills in docker mode", async () => {
+        const skillPath = await skillFileCreate("deploy", false);
+        const activeRoot = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-active-docker-"));
+        try {
+            const skill = skillBuild(skillPath, { name: "deploy", id: "core:deploy", source: "core" });
+            const activationKey = skillActivationKeyBuild(skill.id);
+            const activeSkillDir = path.join(activeRoot, activationKey);
+            await fs.mkdir(activeSkillDir, { recursive: true });
+            await fs.writeFile(path.join(activeSkillDir, "SKILL.md"), "---\nname: deploy\n---\n\n# active docker");
+
+            const tool = skillToolBuild();
+            const context = contextBuild({
+                skills: [skill],
+                skillsActiveRoot: activeRoot,
+                dockerEnabled: true
+            });
+
+            const result = await tool.execute({ name: "deploy" }, context, toolCall);
+            expect(contentText(result.toolMessage.content)).toContain(
+                `Base directory for this skill: /shared/skills/${activationKey}`
+            );
+        } finally {
+            await fs.rm(path.dirname(path.dirname(skillPath)), { recursive: true, force: true });
+            await fs.rm(activeRoot, { recursive: true, force: true });
         }
     });
 
@@ -240,6 +299,8 @@ describe("skillToolBuild", () => {
 function contextBuild(input?: {
     permissions?: SessionPermissions;
     skills?: AgentSkill[];
+    skillsActiveRoot?: string;
+    dockerEnabled?: boolean;
     descriptor?: AgentDescriptor;
     connectorRegistry?: { get: (id: string) => unknown };
     agentSystem?: {
@@ -260,7 +321,8 @@ function contextBuild(input?: {
         connectorRegistry: (input?.connectorRegistry ?? null) as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: {
             permissions,
-            workingDir: permissions.workingDir
+            workingDir: permissions.workingDir,
+            docker: input?.dockerEnabled ? { enabled: true, image: "img", tag: "latest", userId: "user-1" } : undefined
         } as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
@@ -270,6 +332,7 @@ function contextBuild(input?: {
         source: "test",
         messageContext: {},
         skills: input?.skills ?? [],
+        skillsActiveRoot: input?.skillsActiveRoot,
         agentSystem: {
             agentIdForTarget,
             postAndAwait
@@ -293,7 +356,7 @@ function skillBuild(skillPath: string, overrides: Partial<AgentSkill> & Pick<Age
         id,
         name: overrides.name,
         description: null,
-        path: skillPath,
+        sourcePath: skillPath,
         source,
         sandbox: overrides.sandbox,
         permissions: overrides.permissions

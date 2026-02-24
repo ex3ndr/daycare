@@ -47,7 +47,7 @@ export async function skillResolve(filePath: string, source: SkillSource, root?:
         description,
         sandbox: metadata.sandbox,
         permissions: metadata.permissions,
-        path: resolvedPath,
+        sourcePath: resolvedPath,
         source: source.source,
         pluginId: source.source === "plugin" ? source.pluginId : undefined
     };
@@ -139,6 +139,9 @@ function skillIdBuild(filePath: string, source: SkillSource, root?: string): str
     }
     if (source.source === "user") {
         return `user:${normalized}`;
+    }
+    if (source.source === "agents") {
+        return `agents:${normalized}`;
     }
     return `core:${normalized}`;
 }

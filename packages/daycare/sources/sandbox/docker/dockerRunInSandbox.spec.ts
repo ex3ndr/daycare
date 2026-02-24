@@ -12,7 +12,9 @@ describe("dockerRunInSandbox", () => {
     it("rewrites sandbox config paths and runs srt in container", async () => {
         const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-docker-run-"));
         const homeDir = path.join(workspace, "home");
+        const skillsActiveDir = path.join(workspace, "skills", "active");
         await fs.mkdir(path.join(homeDir, "desktop", "project"), { recursive: true });
+        await fs.mkdir(skillsActiveDir, { recursive: true });
 
         const userId = "u123";
         const dockerExecSpy = vi.spyOn(dockerContainersShared, "exec");
@@ -35,7 +37,12 @@ describe("dockerRunInSandbox", () => {
                 if (!settingsContainerPath) {
                     throw new Error("Expected --settings path in bash command string.");
                 }
-                capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
+                capturedSettingsHostPath = sandboxPathContainerToHost(
+                    homeDir,
+                    userId,
+                    settingsContainerPath,
+                    skillsActiveDir
+                );
                 const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
                 capturedRuntimeConfig = JSON.parse(rawConfig) as Record<string, unknown>;
                 capturedEnv = args.env;
@@ -67,7 +74,8 @@ describe("dockerRunInSandbox", () => {
                 docker: {
                     image: "daycare-sandbox",
                     tag: "latest",
-                    userId
+                    userId,
+                    hostSkillsActiveDir: skillsActiveDir
                 }
             }
         );
@@ -98,7 +106,9 @@ describe("dockerRunInSandbox", () => {
     it("throws exec-like error when container command fails", async () => {
         const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-docker-run-fail-"));
         const homeDir = path.join(workspace, "home");
+        const skillsActiveDir = path.join(workspace, "skills", "active");
         await fs.mkdir(homeDir, { recursive: true });
+        await fs.mkdir(skillsActiveDir, { recursive: true });
 
         const dockerExecSpy = vi.spyOn(dockerContainersShared, "exec");
         dockerExecSpy
@@ -132,7 +142,8 @@ describe("dockerRunInSandbox", () => {
                     docker: {
                         image: "daycare-sandbox",
                         tag: "latest",
-                        userId: "u123"
+                        userId: "u123",
+                        hostSkillsActiveDir: skillsActiveDir
                     }
                 }
             )

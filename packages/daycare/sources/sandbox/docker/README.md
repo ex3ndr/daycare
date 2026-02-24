@@ -7,6 +7,7 @@ The sandbox Docker runtime adds a container layer around `sandbox-runtime` (`srt
 - `Sandbox.read()` and `Sandbox.write()` run on the host filesystem.
 - `Sandbox.exec()` runs in a long-lived Docker container when Docker is enabled.
 - The host user home (`<usersDir>/<userId>/home`) is bind-mounted to `/home` in the container.
+- The host active skills root (`<usersDir>/<userId>/skills/active`) is bind-mounted read-only to `/shared/skills`.
 
 ## Settings
 
@@ -53,6 +54,8 @@ Examples:
 
 - Host: `/data/users/u123/home/desktop/project`
 - Container: `/home/desktop/project`
+- Host: `/data/users/u123/skills/active/core--scheduling`
+- Container: `/shared/skills/core--scheduling`
 
 The runtime rewrites:
 

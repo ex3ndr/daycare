@@ -11,6 +11,8 @@ describe("UserHome", () => {
 
         expect(userHome.root).toBe(path.join(usersDir, "usr_123"));
         expect(userHome.skills).toBe(path.join(usersDir, "usr_123", "skills"));
+        expect(userHome.skillsPersonal).toBe(path.join(usersDir, "usr_123", "skills", "personal"));
+        expect(userHome.skillsActive).toBe(path.join(usersDir, "usr_123", "skills", "active"));
         expect(userHome.apps).toBe(path.join(usersDir, "usr_123", "apps"));
         expect(userHome.home).toBe(path.join(usersDir, "usr_123", "home"));
         expect(userHome.desktop).toBe(path.join(usersDir, "usr_123", "home", "desktop"));

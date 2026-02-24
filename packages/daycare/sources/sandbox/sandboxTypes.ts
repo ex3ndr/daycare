@@ -77,6 +77,7 @@ export type SandboxDockerConfig = {
     socketPath?: string;
     runtime?: string;
     userId: string;
+    skillsActiveDir: string;
 };
 
 export type SandboxConfig = {

@@ -29,7 +29,9 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
     }
 
     const hostHomeDir = path.resolve(config.hostHomeDir);
+    const hostSkillsActiveDir = path.resolve(config.hostSkillsActiveDir);
     const containerHomeDir = "/home";
+    const containerSkillsDir = "/shared/skills";
 
     try {
         const created = await docker.createContainer({
@@ -37,7 +39,7 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
             Image: `${config.image}:${config.tag}`,
             WorkingDir: containerHomeDir,
             HostConfig: {
-                Binds: [`${hostHomeDir}:${containerHomeDir}`],
+                Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
                 ...(config.runtime ? { Runtime: config.runtime } : {})
             }
         });

@@ -4,13 +4,29 @@ import path from "node:path";
  * Rewrites a container /home/<userId> path into its host mounted home directory path.
  * Expects: targetPath uses POSIX separators when provided as a container path.
  */
-export function sandboxPathContainerToHost(hostHomeDir: string, userId: string, targetPath: string): string {
+export function sandboxPathContainerToHost(
+    hostHomeDir: string,
+    _userId: string,
+    targetPath: string,
+    hostSkillsActiveDir?: string
+): string {
     if (!path.posix.isAbsolute(targetPath)) {
         return targetPath;
     }
 
     const containerHomeDir = "/home";
+    const containerSkillsDir = "/shared/skills";
     const normalizedTarget = path.posix.normalize(targetPath);
+
+    if (hostSkillsActiveDir) {
+        if (normalizedTarget === containerSkillsDir) {
+            return path.resolve(hostSkillsActiveDir);
+        }
+        if (normalizedTarget.startsWith(`${containerSkillsDir}/`)) {
+            const relativePath = normalizedTarget.slice(containerSkillsDir.length + 1);
+            return path.resolve(hostSkillsActiveDir, ...relativePath.split("/"));
+        }
+    }
 
     if (normalizedTarget === containerHomeDir) {
         return path.resolve(hostHomeDir);

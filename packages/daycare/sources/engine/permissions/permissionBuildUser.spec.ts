@@ -12,6 +12,10 @@ describe("permissionBuildUser", () => {
 
         expect(permissions.workingDir).toBe(userHome.desktop);
         expect(permissions.writeDirs).toEqual([userHome.home]);
-        expect(permissions.readDirs).toEqual([userHome.skills, path.resolve("/tmp/daycare-users/skills")]);
+        expect(permissions.readDirs).toEqual([
+            userHome.skills,
+            userHome.skillsActive,
+            path.resolve("/tmp/daycare-users/skills")
+        ]);
     });
 });

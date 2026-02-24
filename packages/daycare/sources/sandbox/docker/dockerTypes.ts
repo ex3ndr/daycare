@@ -7,6 +7,7 @@ export type DockerContainerConfig = {
     runtime?: string;
     userId: string;
     hostHomeDir: string;
+    hostSkillsActiveDir: string;
 };
 
 export type DockerContainerExecArgs = {

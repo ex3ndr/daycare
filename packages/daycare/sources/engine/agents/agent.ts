@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
@@ -116,7 +117,8 @@ export class Agent {
                       tag: dockerSettings.tag,
                       socketPath: dockerSettings.socketPath,
                       runtime: dockerSettings.runtime,
-                      userId: this.ctx.userId
+                      userId: this.ctx.userId,
+                      skillsActiveDir: this.userHome.skillsActive
                   }
                 : undefined
         });
@@ -421,7 +423,9 @@ export class Agent {
         const skills = new Skills({
             configRoot: configSkillsRoot,
             pluginManager,
-            userRoot: this.userHome.skills
+            userPersonalRoot: this.userHome.skillsPersonal,
+            userActiveRoot: this.userHome.skillsActive,
+            agentsRoot: path.join(os.homedir(), ".agents", "skills")
         });
         const agentKind = this.resolveAgentKind();
 
@@ -573,6 +577,7 @@ export class Agent {
                     heartbeats: this.agentSystem.heartbeats,
                     memory: this.agentSystem.memory,
                     skills,
+                    skillsActiveRoot: this.userHome.skillsActive,
                     providersForAgent,
                     verbose: this.agentSystem.config.current.verbose,
                     logger,
