@@ -22,38 +22,29 @@ describe("dockerRunInSandbox", () => {
         let capturedSettingsHostPath: string | null = null;
         let capturedEnv: NodeJS.ProcessEnv | undefined;
         let capturedCwd: string | undefined;
+        let capturedCommand: string | undefined;
 
-        dockerExecSpy
-            .mockResolvedValueOnce({
-                stdout: "/app/node_modules/@anthropic-ai/sandbox-runtime/dist/cli.js\n",
+        dockerExecSpy.mockImplementationOnce(async (_dockerConfig, args) => {
+            // Command is wrapped as: ["bash", "-lc", "/usr/local/bin/srt --settings <path> -c <cmd>"]
+            const bashCmd = args.command[2] ?? "";
+            const settingsMatch = bashCmd.match(/--settings\s+(\S+)/);
+            const settingsContainerPath = settingsMatch?.[1];
+            if (!settingsContainerPath) {
+                throw new Error("Expected --settings path in bash command string.");
+            }
+            capturedCommand = bashCmd;
+            capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
+            const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
+            capturedRuntimeConfig = JSON.parse(rawConfig) as Record<string, unknown>;
+            capturedEnv = args.env;
+            capturedCwd = args.cwd;
+
+            return {
+                stdout: "done",
                 stderr: "",
                 exitCode: 0
-            })
-            .mockImplementationOnce(async (_dockerConfig, args) => {
-                // Command is wrapped as: ["bash", "-lc", "node <cli> --settings <path> -c <cmd>"]
-                const bashCmd = args.command[2] ?? "";
-                const settingsMatch = bashCmd.match(/--settings\s+(\S+)/);
-                const settingsContainerPath = settingsMatch?.[1];
-                if (!settingsContainerPath) {
-                    throw new Error("Expected --settings path in bash command string.");
-                }
-                capturedSettingsHostPath = sandboxPathContainerToHost(
-                    homeDir,
-                    userId,
-                    settingsContainerPath,
-                    skillsActiveDir
-                );
-                const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
-                capturedRuntimeConfig = JSON.parse(rawConfig) as Record<string, unknown>;
-                capturedEnv = args.env;
-                capturedCwd = args.cwd;
-
-                return {
-                    stdout: "done",
-                    stderr: "",
-                    exitCode: 0
-                };
-            });
+            };
+        });
 
         const result = await dockerRunInSandbox(
             "echo ok",
@@ -98,6 +89,7 @@ describe("dockerRunInSandbox", () => {
         expect(capturedEnv?.HOME).toBe("/home");
         expect(capturedEnv?.TMPDIR).toBe("/home/.tmp");
         expect(capturedCwd).toBe("/home/desktop/project");
+        expect(capturedCommand).toContain("/usr/local/bin/srt --settings ");
         await expect(fs.access(capturedSettingsHostPath ?? "")).rejects.toThrow();
         dockerExecSpy.mockRestore();
         await fs.rm(workspace, { recursive: true, force: true });
@@ -111,17 +103,11 @@ describe("dockerRunInSandbox", () => {
         await fs.mkdir(skillsActiveDir, { recursive: true });
 
         const dockerExecSpy = vi.spyOn(dockerContainersShared, "exec");
-        dockerExecSpy
-            .mockResolvedValueOnce({
-                stdout: "/app/node_modules/@anthropic-ai/sandbox-runtime/dist/cli.js\n",
-                stderr: "",
-                exitCode: 0
-            })
-            .mockResolvedValueOnce({
-                stdout: "partial",
-                stderr: "failed",
-                exitCode: 17
-            });
+        dockerExecSpy.mockResolvedValueOnce({
+            stdout: "partial",
+            stderr: "failed",
+            exitCode: 17
+        });
 
         await expect(
             dockerRunInSandbox(

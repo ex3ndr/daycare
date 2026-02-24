@@ -104,23 +104,13 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
         expect(parsed.v).toMatch(/^v\d+/);
     });
 
-    it("can resolve sandbox-runtime CLI path", async () => {
-        // sandbox-runtime is installed globally — resolve from nvm's global node_modules
+    it("has runnable srt binary", async () => {
         const result = await containers.exec(config, {
-            command: [
-                "bash",
-                "-lc",
-                "node -e \"console.log(require.resolve('@anthropic-ai/sandbox-runtime/dist/cli.js'))\""
-            ],
+            command: ["bash", "-lc", "srt --help >/dev/null"],
             timeoutMs: 30_000
         });
 
-        if (result.exitCode !== 0) {
-            // May fail if sandbox-runtime isn't globally installed in this image build
-            expect(result.stderr).toContain("MODULE_NOT_FOUND");
-            return;
-        }
-        expect(result.stdout.trim()).toMatch(/cli\.js$/);
+        expect(result.exitCode).toBe(0);
     });
 
     it("mounts host home directory into container", async () => {

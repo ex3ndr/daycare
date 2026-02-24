@@ -1,1 +1,1 @@
-export const DOCKER_IMAGE_VERSION = "1";
+export const DOCKER_IMAGE_VERSION = "2";

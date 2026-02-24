@@ -7,7 +7,7 @@ Added `packages/daycare-runtime` as a Daycare-adapted runtime image based on `op
 Key adjustments:
 - renamed setup contract from `CODEX_ENV_*` to `DAYCARE_ENV_*`
 - renamed setup script path to `/opt/daycare/setup_daycare.sh`
-- installed global Node tool `@anthropic-ai/sandbox-runtime`
+- added a bun-compiled `srt` binary at `/usr/local/bin/srt` with seccomp vendor assets in `/usr/local/lib/srt/vendor`
 - changed container entrypoint to `sleep infinity`
 
 ## Runtime Layout
@@ -18,7 +18,9 @@ flowchart TD
     B --> C[Install language toolchains]
     C --> C1[Python via pyenv]
     C --> C2[Node 18/20/22/24 via nvm]
-    C2 --> C3[Global @anthropic-ai/sandbox-runtime]
+    B --> S1[Build srt with bun --compile]
+    S1 --> S2[/usr/local/bin/srt symlink]
+    S1 --> S3[/usr/local/lib/srt/vendor/seccomp]
     C --> C4[Rust via rustup]
     C --> C5[Go via mise]
     C --> C6[Swift/Ruby/PHP/Java]

@@ -41,7 +41,7 @@ graph TD
     B -->|false| C[runInSandbox on host]
     B -->|true| D[dockerRunInSandbox]
     D --> E[DockerContainers.ensure]
-    E --> F[docker exec node srt-cli]
+    E --> F[docker exec /usr/local/bin/srt]
     F --> G[srt policy inside container]
 ```
 

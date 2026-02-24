@@ -13,6 +13,7 @@ import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerT
 const logger = getLogger("sandbox.docker");
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_BUFFER_BYTES = 1_000_000;
+const SRT_CONTAINER_PATH = "/usr/local/bin/srt";
 
 export type DockerRunInSandboxOptions = {
     cwd?: string;
@@ -69,23 +70,15 @@ export async function dockerRunInSandbox(
     await fs.writeFile(settingsHostPath, JSON.stringify(runtimeConfig), "utf8");
 
     try {
-        logger.debug(`exec: resolving sandbox-runtime CLI path in container`);
-        const cliResolveResult = await dockerContainersShared.exec(dockerConfig, {
-            command: ["bash", "-lc", "node -p \"require.resolve('@anthropic-ai/sandbox-runtime/dist/cli.js')\""],
-            cwd: containerCwd,
-            env: containerEnv,
-            timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-            maxBufferBytes: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES
-        });
-
-        const srtCliPath = cliPathResolveFromResult(cliResolveResult);
-        logger.debug(`exec: resolved CLI path=${srtCliPath} cwd=${containerCwd} command=${JSON.stringify(command)}`);
+        logger.debug(
+            `exec: running srt path=${SRT_CONTAINER_PATH} cwd=${containerCwd} command=${JSON.stringify(command)}`
+        );
 
         const result = await dockerContainersShared.exec(dockerConfig, {
             command: [
                 "bash",
                 "-lc",
-                `node ${srtCliPath} --settings ${settingsContainerPath} -c ${shellQuote(command)}`
+                `${SRT_CONTAINER_PATH} --settings ${settingsContainerPath} -c ${shellQuote(command)}`
             ],
             cwd: containerCwd,
             env: containerEnv,
@@ -154,24 +147,6 @@ function envPathRewrite(
     }
 
     return rewritten;
-}
-
-function cliPathResolveFromResult(result: DockerContainerExecResult): string {
-    if (result.exitCode !== 0) {
-        throw dockerExecErrorBuild(result);
-    }
-
-    const lines = result.stdout
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-
-    const cliPath = lines.at(-1);
-    if (!cliPath) {
-        throw new Error("Failed to resolve sandbox-runtime CLI path inside Docker container.");
-    }
-
-    return cliPath;
 }
 
 function dockerExecErrorBuild(result: DockerContainerExecResult): Error & {

@@ -8,7 +8,7 @@ It provides a multi-language development container with pinned toolchains (Pytho
 
 - naming switched from `codex` to `daycare`
 - runtime selector variables use `DAYCARE_ENV_*`
-- Node setup installs global `@anthropic-ai/sandbox-runtime`
+- sandbox runtime is a bun-compiled `srt` binary at `/usr/local/bin/srt` with vendored seccomp assets under `/usr/local/lib/srt/vendor`
 - container entrypoint is `sleep infinity`
 
 ## Build

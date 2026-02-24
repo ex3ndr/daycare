@@ -6,9 +6,6 @@ import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../engine/permissions.js";
 import { getLogger } from "../log.js";
 import { envNormalize } from "../util/envNormalize.js";
-
-const logger = getLogger("sandbox");
-
 import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { runInSandbox } from "./runtime.js";
@@ -29,6 +26,7 @@ import type {
     SandboxWriteResult
 } from "./sandboxTypes.js";
 
+const logger = getLogger("sandbox");
 const READ_MAX_LINES = 2000;
 const READ_MAX_BYTES = 50 * 1024;
 const DEFAULT_EXEC_TIMEOUT = 30_000;

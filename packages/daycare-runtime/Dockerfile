@@ -1,4 +1,13 @@
 # syntax=docker/dockerfile:1.7
+FROM oven/bun:1 AS srt-builder
+
+WORKDIR /build
+
+RUN bun init -y \
+    && bun add @anthropic-ai/sandbox-runtime@0.0.34
+
+RUN bun build --compile node_modules/@anthropic-ai/sandbox-runtime/dist/cli.js --outfile srt
+
 FROM ubuntu:24.04
 
 ARG TARGETOS
@@ -90,6 +99,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         fd-find=9.0.* \
         universal-ctags=5.9.* \
     && rm -rf /var/lib/apt/lists/*
+
+### SRT ###
+
+COPY --from=srt-builder /build/srt /usr/local/lib/srt/srt
+COPY --from=srt-builder /build/node_modules/@anthropic-ai/sandbox-runtime/vendor /usr/local/lib/srt/vendor
+RUN chmod +x /usr/local/lib/srt/srt \
+    && ln -s /usr/local/lib/srt/srt /usr/local/bin/srt
 
 ### MISE ###
 
@@ -189,7 +205,6 @@ RUN --mount=type=cache,target=/root/.npm \
     && nvm install 24 && nvm use 24 && npm install -g npm@11.4 pnpm@10.12 && corepack enable && corepack install -g yarn \
     && nvm alias default "$NODE_VERSION" \
     && nvm use "$NODE_VERSION" \
-    && npm install -g @anthropic-ai/sandbox-runtime \
     && nvm cache clear \
     && npm cache clean --force || true \
     && pnpm store prune || true \
