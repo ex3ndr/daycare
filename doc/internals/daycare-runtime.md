@@ -2,44 +2,37 @@
 
 ## Summary
 
-Added `packages/daycare-runtime` as a Daycare-adapted runtime image based on `openai/codex-universal`.
+`packages/daycare-runtime` provides two Dockerfiles:
+- `Dockerfile.minimal`: base runtime with srt + Node.js toolchain
+- `Dockerfile`: full runtime copied from `Dockerfile.minimal` and extended with Python/pip/uv, Rust, and Go
 
-Key adjustments:
-- renamed setup contract from `CODEX_ENV_*` to `DAYCARE_ENV_*`
-- renamed setup script path to `/opt/daycare/setup_daycare.sh`
-- added a bun-compiled `srt` binary at `/usr/local/bin/srt` with seccomp vendor assets in `/usr/local/lib/srt/vendor`
-- changed container entrypoint to `sleep infinity`
+Both images keep `ENTRYPOINT ["sleep", "infinity"]` and use `/opt/daycare/setup_daycare.sh` for env-based setup.
 
-## Runtime Layout
+## Full Image Layout
 
 ```mermaid
 flowchart TD
-    A[Docker build] --> B[Install base apt packages]
-    B --> C[Install language toolchains]
-    C --> C1[Python via pyenv]
-    C --> C2[Node 18/20/22/24 via nvm]
-    B --> S1[Build srt with bun --compile]
-    S1 --> S2[/usr/local/bin/srt symlink]
-    S1 --> S3[/usr/local/lib/srt/vendor/seccomp]
-    C --> C4[Rust via rustup]
-    C --> C5[Go via mise]
-    C --> C6[Swift/Ruby/PHP/Java]
-    C --> D[Copy /opt/daycare/setup_daycare.sh]
-    D --> E[Run verify.sh during build]
-    E --> F[Final image]
-    F --> G[ENTRYPOINT sleep infinity]
+    A[Start from Dockerfile.minimal baseline] --> B[Install base apt packages]
+    B --> C[Build and copy srt binary]
+    C --> D[Install Node.js via nvm]
+    D --> E[Install Python + pip + uv]
+    E --> F[Install Rust via rustup]
+    F --> G[Install Go tarball]
+    G --> H[Copy setup_daycare.sh]
+    H --> I[Cleanup /home caches]
+    I --> J[Final image]
 ```
 
-## Setup Contract
+## Read-only Home Behavior
 
-`/opt/daycare/setup_daycare.sh` reads these variables:
-- `DAYCARE_ENV_PYTHON_VERSION`
-- `DAYCARE_ENV_NODE_VERSION`
-- `DAYCARE_ENV_RUST_VERSION`
-- `DAYCARE_ENV_GO_VERSION`
-- `DAYCARE_ENV_SWIFT_VERSION`
-- `DAYCARE_ENV_RUBY_VERSION`
-- `DAYCARE_ENV_PHP_VERSION`
-- `DAYCARE_ENV_JAVA_VERSION`
+The runtime assumes `/home` is mounted from outside and can be reset between runs.
+- cache directories are routed through `/home/.cache`
+- toolchain installs for Rust/Go/Node live outside `/home` so remount/reset does not remove them
 
-When set, each variable switches the active runtime to that installed version.
+```mermaid
+flowchart LR
+    A[/home (external mount)] --> B[cache + workspace state]
+    C[/root/.cargo + /usr/local/go + /root/.nvm] --> D[installed toolchains]
+    B -. resettable .-> E[new session home]
+    D --> F[toolchains still available]
+```

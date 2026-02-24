@@ -20,9 +20,17 @@ echo "Configuring language runtimes..."
 # if the versions differ.
 
 if [ -n "${DAYCARE_ENV_PYTHON_VERSION}" ]; then
-    echo "# Python: ${DAYCARE_ENV_PYTHON_VERSION}"
-    pyenv global "${DAYCARE_ENV_PYTHON_VERSION}"
-    python3 --version
+    if command -v pyenv >/dev/null 2>&1; then
+        echo "# Python: ${DAYCARE_ENV_PYTHON_VERSION}"
+        pyenv global "${DAYCARE_ENV_PYTHON_VERSION}"
+        python3 --version
+    else
+        current=$(python3 --version | awk '{print $2}')
+        echo "# Python: ${DAYCARE_ENV_PYTHON_VERSION} (system: ${current})"
+        if [[ "${current}" != "${DAYCARE_ENV_PYTHON_VERSION}"* ]]; then
+            echo "  pyenv not installed; keeping system Python ${current}"
+        fi
+    fi
 fi
 
 if [ -n "${DAYCARE_ENV_NODE_VERSION}" ]; then
@@ -57,8 +65,12 @@ if [ -n "${DAYCARE_ENV_GO_VERSION}" ]; then
     current=$(go version | awk '{print $3}')   # ==> go1.23.8
     echo "# Go: go${DAYCARE_ENV_GO_VERSION} (default: ${current})"
     if [ "${current}" != "go${DAYCARE_ENV_GO_VERSION}" ]; then
-        mise use --global "go@${DAYCARE_ENV_GO_VERSION}"
-        go version
+        if command -v mise >/dev/null 2>&1; then
+            mise use --global "go@${DAYCARE_ENV_GO_VERSION}"
+            go version
+        else
+            echo "  mise not installed; keeping system Go ${current}"
+        fi
     fi
 fi
 
