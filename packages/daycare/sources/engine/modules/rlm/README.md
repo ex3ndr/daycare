@@ -65,6 +65,9 @@ The preamble is regenerated from the current tool set when context tools are bui
 - tool-call mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM.md` into the `run_python` description
 - tag mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM_INLINE.md` into the no-tools system section
 
+Shared Python execution instructions (calling conventions, error handling, print usage) live in
+`sources/prompts/TOOLS_PYTHON.md` and are injected into both templates via `{{{pythonTools}}}`.
+
 Execution uses a separate runtime preamble from `montyRuntimePreambleBuild()` that excludes
 prompt comments and includes compact `TYPE_CHECKING`-guarded function stubs so runtime preamble
 still carries callable tool names/signatures.
