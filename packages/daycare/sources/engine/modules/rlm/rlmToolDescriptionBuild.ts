@@ -6,6 +6,7 @@ import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 
 type RlmToolDescriptionTemplateContext = {
     preamble: string;
+    pythonTools: string;
 };
 
 let rlmToolDescriptionTemplatePromise: Promise<HandlebarsTemplateDelegate<RlmToolDescriptionTemplateContext>> | null =
@@ -17,8 +18,19 @@ let rlmToolDescriptionTemplatePromise: Promise<HandlebarsTemplateDelegate<RlmToo
  */
 export async function rlmToolDescriptionBuild(tools: Tool[]): Promise<string> {
     const preamble = montyPreambleBuild(tools);
+    const pythonTools = await toolsPythonRead();
     const template = await rlmToolDescriptionTemplateCompile();
-    return template({ preamble }).trim();
+    return template({ preamble, pythonTools }).trim();
+}
+
+let pythonToolsPromise: Promise<string> | null = null;
+
+/** Reads and caches the shared TOOLS_PYTHON.md Python execution instructions. */
+function toolsPythonRead(): Promise<string> {
+    if (!pythonToolsPromise) {
+        pythonToolsPromise = agentPromptBundledRead("TOOLS_PYTHON.md");
+    }
+    return pythonToolsPromise;
 }
 
 async function rlmToolDescriptionTemplateCompile(): Promise<

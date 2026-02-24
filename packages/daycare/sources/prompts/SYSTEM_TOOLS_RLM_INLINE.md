@@ -12,11 +12,7 @@ If you include `<say>` in the same response, put all `<say>` blocks before the f
 Any `<say>` block after the first `<run_python>` is trimmed and not delivered.
 {{/if}}
 No escaping is needed.
-Call functions directly (no `await`).
-Use `try/except ToolError` for tool failures.
-Use `print()` for debug output.
-Tools return plain LLM strings. Do not assume structured objects, arrays, or typed payloads.
-The value of the final expression is returned.
+{{{pythonTools}}}
 Put the value you want to return as the final expression line; do not use `print()` for the final return value.
 Execution results are sent back as user messages wrapped in `<python_result>...</python_result>`.
 {{#if isForeground}}

@@ -8,11 +8,7 @@ The following functions are available:
 {{{preamble}}}
 ```
 
-Call tool functions directly (no `await`).
-Use `try/except ToolError` for tool failures.
-Use `print()` for debug output.
-Tools return plain LLM strings. Do not assume structured objects, arrays, or typed payloads.
-The value of the final expression is returned.
+{{{pythonTools}}}
 
 Example multi-line script (single run):
 ```python
