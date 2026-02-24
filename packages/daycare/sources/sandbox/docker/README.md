@@ -86,6 +86,8 @@ graph TD
 
 - Every Docker sandbox user is isolated by default on `daycare-isolated`.
 - Users listed in `docker.allowLocalNetworkingForUsers` are placed on `daycare-local`.
+- `daycare-isolated` containers use explicit public DNS resolvers (`1.1.1.1`, `8.8.8.8`).
+- `daycare-local` containers use Docker's default DNS behavior.
 - If an existing container is attached to the wrong network (for example after settings changes), it is stopped, removed, and recreated on the expected network.
 
 ## Image Version Guard

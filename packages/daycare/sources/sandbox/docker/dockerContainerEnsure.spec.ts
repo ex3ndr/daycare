@@ -33,7 +33,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
                         "daycare.capabilities": "add=;drop=",
-                        "daycare.readonly": "0"
+                        "daycare.readonly": "0",
+                        "daycare.dns.profile": "public"
                     }
                 }
             }),
@@ -70,7 +71,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.image.id": CURRENT_IMAGE_ID,
                         "daycare.security.profile": "default",
                         "daycare.capabilities": "add=;drop=",
-                        "daycare.readonly": "0"
+                        "daycare.readonly": "0",
+                        "daycare.dns.profile": "public"
                     }
                 }
             }),
@@ -106,7 +108,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.security.profile": "default",
                         "daycare.capabilities": "add=;drop=",
                         "daycare.readonly": "0",
-                        "daycare.network": "daycare-local"
+                        "daycare.network": "daycare-local",
+                        "daycare.dns.profile": "default"
                     }
                 },
                 NetworkSettings: {
@@ -172,11 +175,13 @@ describe("dockerContainerEnsure", () => {
                 "daycare.security.profile": "default",
                 "daycare.capabilities": "add=;drop=",
                 "daycare.readonly": "0",
-                "daycare.network": "daycare-isolated"
+                "daycare.network": "daycare-isolated",
+                "daycare.dns.profile": "public"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
                 NetworkMode: "daycare-isolated",
+                Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc"
             },
             NetworkingConfig: {
@@ -186,6 +191,58 @@ describe("dockerContainerEnsure", () => {
             }
         });
         expect(created.start).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses default DNS policy for local network containers", async () => {
+        const existing = {
+            inspect: vi.fn().mockRejectedValue({ statusCode: 404 }),
+            start: vi.fn(),
+            stop: vi.fn(),
+            remove: vi.fn()
+        } as unknown as Docker.Container;
+
+        const created = {
+            inspect: vi.fn(),
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        await dockerContainerEnsure(docker, {
+            ...baseConfig,
+            networkName: "daycare-local"
+        });
+
+        expect(docker.createContainer).toHaveBeenCalledWith({
+            name: "daycare-sandbox-user-1",
+            Image: IMAGE_REF,
+            WorkingDir: "/home",
+            Labels: {
+                "daycare.image.version": DOCKER_IMAGE_VERSION,
+                "daycare.image.id": CURRENT_IMAGE_ID,
+                "daycare.security.profile": "default",
+                "daycare.capabilities": "add=;drop=",
+                "daycare.readonly": "0",
+                "daycare.network": "daycare-local",
+                "daycare.dns.profile": "default"
+            },
+            HostConfig: {
+                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                NetworkMode: "daycare-local",
+                Runtime: "runsc"
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    "daycare-local": {}
+                }
+            }
+        });
     });
 
     it("recreates container when image version label does not match", async () => {
@@ -298,11 +355,13 @@ describe("dockerContainerEnsure", () => {
                 "daycare.security.profile": "unconfined",
                 "daycare.capabilities": "add=;drop=",
                 "daycare.readonly": "0",
-                "daycare.network": "daycare-isolated"
+                "daycare.network": "daycare-isolated",
+                "daycare.dns.profile": "public"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
                 NetworkMode: "daycare-isolated",
+                Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
                 SecurityOpt: ["seccomp=unconfined", "apparmor=unconfined"]
             },
@@ -390,11 +449,13 @@ describe("dockerContainerEnsure", () => {
                 "daycare.security.profile": "default",
                 "daycare.capabilities": "add=;drop=",
                 "daycare.readonly": "1",
-                "daycare.network": "daycare-isolated"
+                "daycare.network": "daycare-isolated",
+                "daycare.dns.profile": "public"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
                 NetworkMode: "daycare-isolated",
+                Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
                 ReadonlyRootfs: true
             },
@@ -443,11 +504,13 @@ describe("dockerContainerEnsure", () => {
                 "daycare.security.profile": "default",
                 "daycare.capabilities": "add=NET_ADMIN,SYS_ADMIN;drop=MKNOD",
                 "daycare.readonly": "0",
-                "daycare.network": "daycare-isolated"
+                "daycare.network": "daycare-isolated",
+                "daycare.dns.profile": "public"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
                 NetworkMode: "daycare-isolated",
+                Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
                 CapAdd: ["NET_ADMIN", "SYS_ADMIN"],
                 CapDrop: ["MKNOD"]

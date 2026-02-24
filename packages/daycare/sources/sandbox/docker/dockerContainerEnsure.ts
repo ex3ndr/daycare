@@ -4,6 +4,7 @@ import type Docker from "dockerode";
 import { getLogger } from "../../log.js";
 import { dockerContainerNameBuild } from "./dockerContainerNameBuild.js";
 import { dockerContainerNetworkStateResolve } from "./dockerContainerNetworkStateResolve.js";
+import { dockerDnsProfileResolve } from "./dockerDnsProfileResolve.js";
 import { dockerImageIdResolve } from "./dockerImageIdResolve.js";
 import { DOCKER_IMAGE_VERSION } from "./dockerImageVersion.js";
 import type { DockerContainerResolvedConfig } from "./dockerTypes.js";
@@ -31,6 +32,7 @@ const DOCKER_SECURITY_PROFILE_LABEL = "daycare.security.profile";
 const DOCKER_CAPABILITIES_LABEL = "daycare.capabilities";
 const DOCKER_READONLY_LABEL = "daycare.readonly";
 const DOCKER_NETWORK_LABEL = "daycare.network";
+const DOCKER_DNS_PROFILE_LABEL = "daycare.dns.profile";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
@@ -57,7 +59,8 @@ export async function dockerContainerEnsure(
             config.unconfinedSecurity,
             config.capAdd,
             config.capDrop,
-            config.networkName
+            config.networkName,
+            dockerDnsProfileResolve(config.networkName).profileLabel
         );
         if (staleReason) {
             logger.warn(
@@ -88,6 +91,7 @@ export async function dockerContainerEnsure(
     const securityOpt = config.unconfinedSecurity ? [...DOCKER_SECURITY_OPT_UNCONFINED] : undefined;
     const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
     const readOnlyLabel = config.readOnly ? "1" : "0";
+    const dnsProfile = dockerDnsProfileResolve(config.networkName);
 
     try {
         const created = await docker.createContainer({
@@ -100,11 +104,13 @@ export async function dockerContainerEnsure(
                 [DOCKER_SECURITY_PROFILE_LABEL]: securityProfile,
                 [DOCKER_CAPABILITIES_LABEL]: capabilitiesLabel,
                 [DOCKER_READONLY_LABEL]: readOnlyLabel,
-                [DOCKER_NETWORK_LABEL]: config.networkName
+                [DOCKER_NETWORK_LABEL]: config.networkName,
+                [DOCKER_DNS_PROFILE_LABEL]: dnsProfile.profileLabel
             },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
                 NetworkMode: config.networkName,
+                ...(dnsProfile.dnsServers ? { Dns: dnsProfile.dnsServers } : {}),
                 ...(config.runtime ? { Runtime: config.runtime } : {}),
                 ...(config.readOnly ? { ReadonlyRootfs: true } : {}),
                 ...(config.capAdd.length > 0 ? { CapAdd: config.capAdd } : {}),
@@ -166,7 +172,8 @@ function containerStaleReasonResolve(
     unconfinedSecurity: boolean,
     capAdd: string[],
     capDrop: string[],
-    expectedNetworkName: string
+    expectedNetworkName: string,
+    expectedDnsProfileLabel: string
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -175,6 +182,7 @@ function containerStaleReasonResolve(
     const capabilities = labels?.[DOCKER_CAPABILITIES_LABEL];
     const readOnlyLabel = labels?.[DOCKER_READONLY_LABEL];
     const networkLabel = labels?.[DOCKER_NETWORK_LABEL];
+    const dnsProfileLabel = labels?.[DOCKER_DNS_PROFILE_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -196,6 +204,9 @@ function containerStaleReasonResolve(
     if (!readOnlyLabel) {
         return "missing-readonly-label";
     }
+    if (!dnsProfileLabel) {
+        return "missing-dns-profile-label";
+    }
     const networkState = dockerContainerNetworkStateResolve(details, expectedNetworkName);
     if (networkState !== "correct") {
         return `network-mismatch:${expectedNetworkName}`;
@@ -216,6 +227,9 @@ function containerStaleReasonResolve(
     }
     if (networkLabel && networkLabel !== expectedNetworkName) {
         return `network-label-mismatch:${networkLabel}->${expectedNetworkName}`;
+    }
+    if (dnsProfileLabel !== expectedDnsProfileLabel) {
+        return `dns-profile-mismatch:${dnsProfileLabel}->${expectedDnsProfileLabel}`;
     }
     return null;
 }
