@@ -37,9 +37,7 @@ if [ -n "${DAYCARE_ENV_NODE_VERSION}" ]; then
     current=$(node -v | cut -d. -f1)   # ==> v20
     echo "# Node.js: v${DAYCARE_ENV_NODE_VERSION} (default: ${current})"
     if [ "${current}" != "v${DAYCARE_ENV_NODE_VERSION}" ]; then
-        nvm alias default "${DAYCARE_ENV_NODE_VERSION}"
-        nvm use --save "${DAYCARE_ENV_NODE_VERSION}"
-        corepack enable
+        echo "  runtime is read-only outside /home; keeping Node ${current}"
     fi
 fi
 
@@ -56,8 +54,7 @@ if [ -n "${DAYCARE_ENV_RUST_VERSION}" ]; then
     current=$(rustc --version | awk '{print $2}')   # ==> 1.86.0
     echo "# Rust: ${DAYCARE_ENV_RUST_VERSION} (default: ${current})"
     if [ "${current}" != "${DAYCARE_ENV_RUST_VERSION}" ]; then
-       rustup default "${DAYCARE_ENV_RUST_VERSION}"
-       rustc --version
+       echo "  runtime is read-only outside /home; keeping Rust ${current}"
     fi
 fi
 
@@ -65,12 +62,7 @@ if [ -n "${DAYCARE_ENV_GO_VERSION}" ]; then
     current=$(go version | awk '{print $3}')   # ==> go1.23.8
     echo "# Go: go${DAYCARE_ENV_GO_VERSION} (default: ${current})"
     if [ "${current}" != "go${DAYCARE_ENV_GO_VERSION}" ]; then
-        if command -v mise >/dev/null 2>&1; then
-            mise use --global "go@${DAYCARE_ENV_GO_VERSION}"
-            go version
-        else
-            echo "  mise not installed; keeping system Go ${current}"
-        fi
+        echo "  runtime is read-only outside /home; keeping Go ${current}"
     fi
 fi
 

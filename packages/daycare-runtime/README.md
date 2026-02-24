@@ -48,8 +48,10 @@ If you want to apply env-based runtime switching manually inside the container:
 | Environment variable | Description | Supported versions |
 | --- | --- | --- |
 | `DAYCARE_ENV_PYTHON_VERSION` | Python version hint for setup script | System Python in image (`3.12.x` on Ubuntu 24.04) |
-| `DAYCARE_ENV_NODE_VERSION` | Node.js version to activate | `22` (installed via nvm) |
-| `DAYCARE_ENV_RUST_VERSION` | Rust toolchain to activate | `stable` (installed via rustup) |
+| `DAYCARE_ENV_NODE_VERSION` | Node.js version hint for setup script | `22` (installed via nvm) |
+| `DAYCARE_ENV_RUST_VERSION` | Rust toolchain version hint for setup script | `stable` (installed via rustup) |
 | `DAYCARE_ENV_GO_VERSION` | Go version hint for setup script | `1.25.1` (installed in image) |
+
+The runtime assumes only `/home` is writable. Runtime setup does not mutate toolchain installations in read-only paths.
 
 See `packages/daycare-runtime/Dockerfile` for the full package list and exact pinned versions.

@@ -27,12 +27,14 @@ flowchart TD
 
 The runtime assumes `/home` is mounted from outside and can be reset between runs.
 - cache directories are routed through `/home/.cache`
+- writable runtime state (Go modules, Cargo cache) stays under `/home`
 - toolchain installs for Rust/Go/Node live outside `/home` so remount/reset does not remove them
 
 ```mermaid
 flowchart LR
     A[/home (external mount)] --> B[cache + workspace state]
-    C[/root/.cargo + /usr/local/go + /root/.nvm] --> D[installed toolchains]
-    B -. resettable .-> E[new session home]
-    D --> F[toolchains still available]
+    B --> C[/home/.cargo + /home/go]
+    D[/usr/local/rustup + /usr/local/go + /root/.nvm] --> E[installed toolchains]
+    B -. resettable .-> F[new session home]
+    E --> G[toolchains still available]
 ```

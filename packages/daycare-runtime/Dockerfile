@@ -23,11 +23,13 @@ ENV YARN_CACHE_FOLDER=$XDG_CACHE_HOME/yarn
 ENV PNPM_STORE_DIR=/home/.local/share/pnpm/store
 ENV PIP_CACHE_DIR=$XDG_CACHE_HOME/pip
 ENV UV_CACHE_DIR=$XDG_CACHE_HOME/uv
-ENV CARGO_HOME=/root/.cargo
-ENV RUSTUP_HOME=/root/.rustup
+ENV CARGO_HOME=/home/.cargo
+ENV RUSTUP_HOME=/usr/local/rustup
 ENV GOROOT=/usr/local/go
-ENV GOPATH=/root/go
-ENV PATH=$GOROOT/bin:$GOPATH/bin:$CARGO_HOME/bin:$PATH
+ENV GOPATH=/home/go
+ENV GOMODCACHE=$GOPATH/pkg/mod
+ENV GOCACHE=$XDG_CACHE_HOME/go-build
+ENV PATH=$GOROOT/bin:$GOPATH/bin:$CARGO_HOME/bin:/usr/local/cargo/bin:$PATH
 
 ### BASE ###
 
@@ -159,13 +161,15 @@ ENV UV_NO_PROGRESS=1
 ### RUST ###
 
 ARG RUST_VERSION=stable
-RUN --mount=type=cache,target=$CARGO_HOME/registry \
-    --mount=type=cache,target=$CARGO_HOME/git \
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "$RUST_VERSION" \
-    && . "$CARGO_HOME/env" \
-    && echo 'source $CARGO_HOME/env' >> /etc/profile \
-    && rustc --version \
-    && cargo --version
+    && CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup /usr/local/cargo/bin/rustc --version \
+    && CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup /usr/local/cargo/bin/cargo --version \
+    && echo 'export RUSTUP_HOME=/usr/local/rustup' >> /etc/profile \
+    && echo 'export CARGO_HOME=/home/.cargo' >> /etc/profile \
+    && echo 'export PATH="/usr/local/cargo/bin:$CARGO_HOME/bin:$PATH"' >> /etc/profile
 
 ### GO ###
 
