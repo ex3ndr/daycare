@@ -54,6 +54,7 @@ import { friendShareSubuserToolBuild } from "./modules/tools/friendShareSubuserT
 import { friendUnshareSubuserToolBuild } from "./modules/tools/friendUnshareSubuserToolBuild.js";
 import { buildHeartbeatAddTool, buildHeartbeatRemoveTool, buildHeartbeatRunTool } from "./modules/tools/heartbeat.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
+import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
 import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
 import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
 import { memorySearchToolBuild } from "./modules/tools/memorySearchToolBuild.js";
@@ -297,6 +298,7 @@ export class Engine {
             storage: this.storage,
             connectorRegistry: this.modules.connectors,
             imageRegistry: this.modules.images,
+            mediaRegistry: this.modules.mediaAnalysis,
             toolResolver: this.modules.tools,
             pluginManager: this.pluginManager,
             inferenceRouter: this.inferenceRouter,
@@ -406,6 +408,7 @@ export class Engine {
         this.modules.tools.register("core", friendShareSubuserToolBuild());
         this.modules.tools.register("core", friendUnshareSubuserToolBuild());
         this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
+        this.modules.tools.register("core", buildMediaAnalysisTool(this.modules.mediaAnalysis));
         this.modules.tools.register("core", buildMermaidPngTool());
         this.modules.tools.register("core", buildReactionTool());
         this.modules.tools.register("core", buildSendFileTool());
@@ -428,7 +431,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: cron, heartbeat, topology, background, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: cron, heartbeat, topology, background, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();
@@ -507,7 +510,8 @@ export class Engine {
             noTools: rlmNoToolsModeIs(this.config.current.features),
             rlm: this.config.current.features.rlm,
             connectorRegistry: this.modules.connectors,
-            imageRegistry: this.modules.images
+            imageRegistry: this.modules.images,
+            mediaRegistry: this.modules.mediaAnalysis
         });
     }
 

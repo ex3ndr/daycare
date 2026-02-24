@@ -22,3 +22,17 @@ flowchart LR
     K --> A[skills/active/<activationKey>]
     A --> D[/shared/skills mount ro]
 ```
+
+## Plugin Media Analysis Registration
+
+Plugins can register multi-modal file analyzers via `registerMediaAnalysisProvider(provider)`.
+
+Each provider declares `supportedTypes` (`image`, `video`, `audio`, `pdf`), and core `media_analyze` tool routing uses these capabilities.
+
+```mermaid
+flowchart LR
+    Plugin[Plugin load] --> Registrar[PluginRegistrar]
+    Registrar --> Registry[MediaAnalysisRegistry]
+    Tool[media_analyze tool] --> Registry
+    Registry --> Provider[MediaAnalysisProvider analyze()]
+```

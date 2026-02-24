@@ -1493,7 +1493,8 @@ function optionsBuild(params: {
                     }
                 }
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         } as unknown as AgentSystem,
         heartbeats: {} as Heartbeats,
         memory: {} as Memory,

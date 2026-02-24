@@ -28,6 +28,8 @@ function createRegistrar() {
         unregisterTool: vi.fn(),
         registerImageProvider: vi.fn(),
         unregisterImageProvider: vi.fn(),
+        registerMediaAnalysisProvider: vi.fn(),
+        unregisterMediaAnalysisProvider: vi.fn(),
         registerConnector: vi.fn(),
         unregisterConnector: vi.fn()
     } as unknown as PluginRegistrar;

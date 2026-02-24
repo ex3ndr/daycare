@@ -1202,7 +1202,8 @@ export class Agent {
             rlm: this.agentSystem.config.current.features.rlm,
             rlmToolDescription,
             connectorRegistry: this.agentSystem.connectorRegistry,
-            imageRegistry: this.agentSystem.imageRegistry
+            imageRegistry: this.agentSystem.imageRegistry,
+            mediaRegistry: this.agentSystem.mediaRegistry
         });
     }
 

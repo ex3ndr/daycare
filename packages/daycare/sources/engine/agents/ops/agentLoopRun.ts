@@ -169,7 +169,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     rlm: agentSystem.config.current.features.rlm,
                     rlmToolDescription,
                     connectorRegistry,
-                    imageRegistry: agentSystem.imageRegistry
+                    imageRegistry: agentSystem.imageRegistry,
+                    mediaRegistry: agentSystem.mediaRegistry
                 });
                 logger.debug(
                     `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`

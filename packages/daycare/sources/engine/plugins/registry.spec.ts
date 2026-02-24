@@ -83,4 +83,29 @@ describe("PluginRegistrar command registration", () => {
             replyToMessageId: "77"
         });
     });
+
+    it("registers and unregisters media analysis providers", async () => {
+        const modules = new ModuleRegistry({
+            onMessage: async () => undefined
+        });
+        const registry = new PluginRegistry(modules);
+        const registrar = registry.createRegistrar("media-instance");
+
+        registrar.registerMediaAnalysisProvider({
+            id: "media-provider",
+            label: "Media Provider",
+            supportedTypes: ["image", "audio"],
+            analyze: async () => ({ text: "ok" })
+        });
+        expect(modules.mediaAnalysis.get("media-provider")).toEqual(
+            expect.objectContaining({
+                id: "media-provider",
+                label: "Media Provider",
+                supportedTypes: ["image", "audio"]
+            })
+        );
+
+        await registrar.unregisterAll();
+        expect(modules.mediaAnalysis.get("media-provider")).toBeNull();
+    });
 });

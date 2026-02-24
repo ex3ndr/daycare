@@ -26,6 +26,7 @@ import { Memory } from "../memory/memory.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
+import type { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import type { Signals } from "../signals/signals.js";
@@ -77,6 +78,7 @@ export type AgentSystemOptions = {
     storage?: Storage;
     connectorRegistry: ConnectorRegistry;
     imageRegistry: ImageGenerationRegistry;
+    mediaRegistry: MediaAnalysisRegistry;
     toolResolver: ToolResolver;
     pluginManager: PluginManager;
     inferenceRouter: InferenceRouter;
@@ -91,6 +93,7 @@ export class AgentSystem {
     readonly storage: Storage;
     readonly connectorRegistry: ConnectorRegistry;
     readonly imageRegistry: ImageGenerationRegistry;
+    readonly mediaRegistry: MediaAnalysisRegistry;
     readonly toolResolver: ToolResolver;
     readonly pluginManager: PluginManager;
     readonly inferenceRouter: InferenceRouter;
@@ -110,6 +113,7 @@ export class AgentSystem {
         this.storage = options.storage ?? storageResolve(this.config.current);
         this.connectorRegistry = options.connectorRegistry;
         this.imageRegistry = options.imageRegistry;
+        this.mediaRegistry = options.mediaRegistry;
         this.toolResolver = options.toolResolver;
         this.pluginManager = options.pluginManager;
         this.inferenceRouter = options.inferenceRouter;

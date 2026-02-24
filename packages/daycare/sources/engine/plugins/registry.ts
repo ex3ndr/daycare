@@ -6,6 +6,7 @@ import type {
     ConnectorMessage,
     ImageGenerationProvider,
     InferenceProvider,
+    MediaAnalysisProvider,
     MessageContext,
     PluginCommandDefinition,
     ToolDefinition
@@ -15,6 +16,7 @@ import type { CommandRegistry } from "../modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRegistry } from "../modules/inferenceRegistry.js";
+import type { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import type { ModuleRegistry } from "../modules/moduleRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
 
@@ -23,6 +25,7 @@ type PluginRegistrations = {
     providers: Set<string>;
     tools: Set<string>;
     images: Set<string>;
+    mediaAnalysis: Set<string>;
     commands: Set<string>;
     skills: Set<string>;
 };
@@ -33,6 +36,7 @@ export class PluginRegistrar {
     private connectorRegistry: ConnectorRegistry;
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
+    private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
     private registrations: PluginRegistrations;
 
@@ -42,6 +46,7 @@ export class PluginRegistrar {
         connectorRegistry: ConnectorRegistry,
         inferenceRegistry: InferenceRegistry,
         imageRegistry: ImageGenerationRegistry,
+        mediaAnalysisRegistry: MediaAnalysisRegistry,
         toolResolver: ToolResolver
     ) {
         this.pluginId = pluginId;
@@ -49,12 +54,14 @@ export class PluginRegistrar {
         this.connectorRegistry = connectorRegistry;
         this.inferenceRegistry = inferenceRegistry;
         this.imageRegistry = imageRegistry;
+        this.mediaAnalysisRegistry = mediaAnalysisRegistry;
         this.toolResolver = toolResolver;
         this.registrations = {
             connectors: new Set(),
             providers: new Set(),
             tools: new Set(),
             images: new Set(),
+            mediaAnalysis: new Set(),
             commands: new Set(),
             skills: new Set()
         };
@@ -125,6 +132,16 @@ export class PluginRegistrar {
         this.registrations.images.delete(id);
     }
 
+    registerMediaAnalysisProvider(provider: MediaAnalysisProvider): void {
+        this.mediaAnalysisRegistry.register(this.pluginId, provider);
+        this.registrations.mediaAnalysis.add(provider.id);
+    }
+
+    unregisterMediaAnalysisProvider(id: string): void {
+        this.mediaAnalysisRegistry.unregister(id);
+        this.registrations.mediaAnalysis.delete(id);
+    }
+
     registerSkill(skillPath: string): void {
         const resolved = path.resolve(skillPath);
         this.registrations.skills.add(resolved);
@@ -149,6 +166,9 @@ export class PluginRegistrar {
         for (const id of this.registrations.images) {
             this.imageRegistry.unregister(id);
         }
+        for (const id of this.registrations.mediaAnalysis) {
+            this.mediaAnalysisRegistry.unregister(id);
+        }
         for (const name of this.registrations.tools) {
             this.toolResolver.unregister(name);
         }
@@ -158,6 +178,7 @@ export class PluginRegistrar {
         this.registrations.connectors.clear();
         this.registrations.providers.clear();
         this.registrations.images.clear();
+        this.registrations.mediaAnalysis.clear();
         this.registrations.tools.clear();
         this.registrations.commands.clear();
         this.registrations.skills.clear();
@@ -169,6 +190,7 @@ export class PluginRegistry {
     private connectorRegistry: ConnectorRegistry;
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
+    private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
 
     constructor(modules: ModuleRegistry) {
@@ -176,6 +198,7 @@ export class PluginRegistry {
         this.connectorRegistry = modules.connectors;
         this.inferenceRegistry = modules.inference;
         this.imageRegistry = modules.images;
+        this.mediaAnalysisRegistry = modules.mediaAnalysis;
         this.toolResolver = modules.tools;
     }
 
@@ -186,6 +209,7 @@ export class PluginRegistry {
             this.connectorRegistry,
             this.inferenceRegistry,
             this.imageRegistry,
+            this.mediaAnalysisRegistry,
             this.toolResolver
         );
     }

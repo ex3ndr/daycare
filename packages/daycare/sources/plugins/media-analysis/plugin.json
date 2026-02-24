@@ -1,0 +1,6 @@
+{
+  "id": "media-analysis",
+  "name": "Media Analysis",
+  "description": "Gemini-powered analysis for images, video, audio, and PDF files.",
+  "entry": "./plugin.js"
+}

@@ -9,6 +9,7 @@ const baseTools = [
     { name: "send_file", description: "", parameters: {} },
     { name: "set_reaction", description: "", parameters: {} },
     { name: "generate_image", description: "", parameters: {} },
+    { name: "media_analyze", description: "", parameters: {} },
     { name: "send_user_message", description: "", parameters: {} },
     { name: "agent_reset", description: "", parameters: {} },
     { name: "agent_compact", description: "", parameters: {} },
@@ -24,7 +25,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
@@ -45,7 +47,8 @@ describe("toolListContextBuild", () => {
                 get: () => connector,
                 list: () => ["slack"]
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
@@ -64,7 +67,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
@@ -85,7 +89,8 @@ describe("toolListContextBuild", () => {
                 get: () => connector,
                 list: () => ["slack"]
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
@@ -100,11 +105,27 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
         expect(names).not.toContain("generate_image");
+    });
+
+    it("removes media analysis tool when no providers", () => {
+        const result = toolListContextBuild({
+            tools: baseTools,
+            connectorRegistry: {
+                get: () => null,
+                list: () => []
+            },
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
+        });
+
+        const names = result.map((tool) => tool.name);
+        expect(names).not.toContain("media_analyze");
     });
 
     it("removes send_user_message for foreground agents", () => {
@@ -116,7 +137,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
@@ -133,7 +155,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         const names = result.map((tool) => tool.name);
@@ -150,7 +173,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         expect(result).toEqual([]);
@@ -178,7 +202,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         expect(result.map((tool) => tool.name)).toEqual(["run_python", "skip"]);
@@ -195,7 +220,8 @@ describe("toolListContextBuild", () => {
                 get: () => null,
                 list: () => []
             },
-            imageRegistry: { list: () => [] }
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
         });
 
         expect(result.map((tool) => tool.name)).toEqual(["run_python"]);

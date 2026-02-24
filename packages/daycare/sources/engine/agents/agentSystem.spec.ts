@@ -17,6 +17,7 @@ import { EngineEventBus } from "../ipc/events.js";
 import { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
+import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
@@ -609,6 +610,7 @@ async function harnessCreate(
             onMessage: async () => undefined
         }),
         imageRegistry: new ImageGenerationRegistry(),
+        mediaRegistry: new MediaAnalysisRegistry(),
         toolResolver: new ToolResolver(),
         pluginManager,
         inferenceRouter,

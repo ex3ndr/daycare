@@ -53,6 +53,8 @@ describeIf("nano-banana-pro image generation", () => {
                     registeredProvider = provider;
                 },
                 unregisterImageProvider: () => undefined,
+                registerMediaAnalysisProvider: () => undefined,
+                unregisterMediaAnalysisProvider: () => undefined,
                 registerInferenceProvider: () => undefined,
                 unregisterInferenceProvider: () => undefined,
                 registerTool: () => undefined,

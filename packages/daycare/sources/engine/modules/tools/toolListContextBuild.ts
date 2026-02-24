@@ -2,6 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
+import type { MediaAnalysisRegistry } from "../mediaAnalysisRegistry.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "../rlm/rlmConstants.js";
 
 type ToolListOptions = {
@@ -13,6 +14,7 @@ type ToolListOptions = {
     noTools?: boolean;
     connectorRegistry: Pick<ConnectorRegistry, "get" | "list">;
     imageRegistry: Pick<ImageGenerationRegistry, "list">;
+    mediaRegistry: Pick<MediaAnalysisRegistry, "list">;
 };
 
 const BACKGROUND_TOOL_DENYLIST = new Set(["set_reaction", "send_file", "agent_reset", "agent_compact"]);
@@ -55,6 +57,9 @@ export function toolListContextBuild(options: ToolListOptions): Tool[] {
     let filtered = tools;
     if (options.imageRegistry.list().length === 0) {
         filtered = filtered.filter((tool) => tool.name !== "generate_image");
+    }
+    if (options.mediaRegistry.list().length === 0) {
+        filtered = filtered.filter((tool) => tool.name !== "media_analyze");
     }
     return toolListFilterConnectorCapabilities(filtered, supportsFiles, supportsReactions);
 }

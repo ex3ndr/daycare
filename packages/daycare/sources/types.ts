@@ -74,13 +74,13 @@ export type {
 } from "./engine/modules/connectors/types.js";
 // Images
 export type { ImageGenerationProvider } from "./engine/modules/images/types.js";
-
 // Inference
 export type {
     InferenceClient,
     InferenceProvider,
     InferenceProviderOptions
 } from "./engine/modules/inference/types.js";
+export type { MediaAnalysisProvider, MediaType } from "./engine/modules/media-analysis/types.js";
 // Tools
 export type {
     ToolDefinition,

@@ -89,3 +89,9 @@ These are not inference providers but plugin tools that use external APIs for we
 |--------|-------------|
 | `nano-banana-pro` | Image generation (uses Google API key) |
 | OpenAI (built-in) | Image generation via DALL-E |
+
+## Media analysis
+
+| Plugin | Description |
+|--------|-------------|
+| `media-analysis` | Analyze image/video/audio/pdf files via Gemini (uses Google API key) |

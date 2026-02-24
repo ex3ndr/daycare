@@ -11,6 +11,7 @@ Plugins can register:
 - **Tools** - Functions callable by the LLM
 - **Inference Providers** - Custom LLM backends
 - **Image Providers** - Image generation backends
+- **Media Analysis Providers** - Multi-modal file analysis backends
 
 ## Plugin Structure
 
@@ -219,6 +220,10 @@ type PluginRegistrar = {
   // Image Providers
   registerImageProvider(provider: ImageGenerationProvider): void;
   unregisterImageProvider(id: string): void;
+
+  // Media Analysis Providers
+  registerMediaAnalysisProvider(provider: MediaAnalysisProvider): void;
+  unregisterMediaAnalysisProvider(id: string): void;
 
   // Skills
   registerSkill(path: string): void; // SKILL.md metadata powers the `skill` tool.
@@ -611,6 +616,7 @@ export const plugin = definePlugin({
 | `shell` | Tools | File system operations (read/write/edit/exec) |
 | `monty-python` | Tool | Sandboxed Python snippets via Monty |
 | `nano-banana-pro` | Image Provider | Image generation |
+| `media-analysis` | Media Analysis Provider | Gemini-powered analysis for image/video/audio/pdf |
 
 ---
 
@@ -647,6 +653,7 @@ flowchart TD
     IR[InferenceRegistry]
     TR[ToolResolver]
     IMG[ImageGenerationRegistry]
+    MAR[MediaAnalysisRegistry]
   end
 
   subgraph Events
@@ -662,6 +669,7 @@ flowchart TD
   PR --> IR
   PR --> TR
   PR --> IMG
+  PR --> MAR
 ```
 
 ---
@@ -681,3 +689,4 @@ Module type definitions:
 - `sources/engine/tools/types.ts` - Tool interface
 - `sources/engine/inference/types.ts` - Inference provider interface
 - `sources/engine/images/types.ts` - Image generation interface
+- `sources/engine/modules/media-analysis/types.ts` - Media analysis interface
