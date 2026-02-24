@@ -14,13 +14,13 @@ ARG TARGETOS
 ARG TARGETARCH
 
 ENV LANG="C.UTF-8"
-ENV HOME=/home
+ENV HOME=/home/developer
 ENV DEBIAN_FRONTEND=noninteractive
 
-ENV XDG_CACHE_HOME=/home/.cache
+ENV XDG_CACHE_HOME=/home/developer/.cache
 ENV NPM_CONFIG_CACHE=$XDG_CACHE_HOME/npm
 ENV YARN_CACHE_FOLDER=$XDG_CACHE_HOME/yarn
-ENV PNPM_STORE_DIR=/home/.local/share/pnpm/store
+ENV PNPM_STORE_DIR=/home/developer/.local/share/pnpm/store
 
 ### BASE ###
 

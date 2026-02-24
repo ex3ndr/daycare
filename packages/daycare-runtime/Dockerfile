@@ -193,8 +193,7 @@ RUN chmod +x /opt/daycare/setup_daycare.sh
 
 ### CLEANUP ###
 
-RUN find /home -mindepth 1 -delete \
-    && mkdir -p /home/developer
+RUN find /home -mindepth 1 -delete
 
 ### ENTRYPOINT ###
 
