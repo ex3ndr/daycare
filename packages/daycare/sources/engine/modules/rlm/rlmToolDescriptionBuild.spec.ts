@@ -19,7 +19,7 @@ describe("rlmToolDescriptionBuild", () => {
         expect(description).toContain("Execute Python code to complete the task.");
         expect(description).toContain("Prefer one multi-line Python script for the full task");
         expect(description).toContain("Do not split one task into multiple separate Python scripts");
-        expect(description).toContain("Tools return plain LLM strings");
+        expect(description).toContain("minimal Python runtime with strict typing");
         expect(description).toContain("The following functions are available:");
         expect(description).toContain("```python");
         expect(description).toContain('SkillResponse = TypedDict("SkillResponse", {})');

@@ -23,7 +23,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("You may include multiple `<run_python>` blocks in one response.");
         expect(prompt).toContain("executed sequentially from top to bottom");
         expect(prompt).toContain("all remaining `<run_python>` blocks in that response are skipped");
-        expect(prompt).toContain("Tools return plain LLM strings");
+        expect(prompt).toContain("minimal Python runtime with strict typing");
         expect(prompt).toContain("Any `<say>` block after the first `<run_python>` is trimmed and not delivered");
         expect(prompt).not.toContain("<say> after <run_python> was ignored");
         expect(prompt).toContain("```python");
