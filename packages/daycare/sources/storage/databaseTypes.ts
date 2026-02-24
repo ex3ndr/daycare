@@ -406,6 +406,34 @@ export type CreateUserInput = {
     connectorKey?: string;
 };
 
+export type SystemPromptScope = "global" | "user";
+export type SystemPromptKind = "system" | "first_message";
+export type SystemPromptCondition = "new_user" | "returning_user";
+
+export type DatabaseSystemPromptRow = {
+    id: string;
+    scope: SystemPromptScope;
+    user_id: string | null;
+    kind: SystemPromptKind;
+    condition: string | null;
+    prompt: string;
+    enabled: number;
+    created_at: number;
+    updated_at: number;
+};
+
+export type SystemPromptDbRecord = {
+    id: string;
+    scope: SystemPromptScope;
+    userId: string | null;
+    kind: SystemPromptKind;
+    condition: SystemPromptCondition | null;
+    prompt: string;
+    enabled: boolean;
+    createdAt: number;
+    updatedAt: number;
+};
+
 export type UpdateUserInput = {
     isOwner?: boolean;
     createdAt?: number;
