@@ -50,7 +50,7 @@
     "@hapi/boom": "^10.0.1",
     "@mariozechner/pi-ai": "0.50.3",
     "@paralleldrive/cuid2": "^2.2.2",
-    "@pydantic/monty": "0.0.4",
+    "@pydantic/monty": "0.0.7",
     "@sinclair/typebox": "^0.34.41",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "bcryptjs": "^2.4.3",

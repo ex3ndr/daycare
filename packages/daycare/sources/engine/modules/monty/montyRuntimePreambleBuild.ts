@@ -1,6 +1,6 @@
 import type { Tool } from "@mariozechner/pi-ai";
 
-import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
+import { RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
 import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
 
@@ -15,11 +15,12 @@ export function montyRuntimePreambleBuild(tools: Tool[]): string {
         "",
         "ToolError = RuntimeError",
         "",
-        "if TYPE_CHECKING:",
-        `    def ${RLM_PRINT_FUNCTION_NAME}(*values: Any) -> None:`,
-        `        raise NotImplementedError("${RLM_PRINT_FUNCTION_NAME} is provided by runtime.")`,
-        ""
+        "if TYPE_CHECKING:"
     ];
+
+    if (callableTools.length === 0) {
+        lines.push("    pass");
+    }
 
     for (const tool of callableTools) {
         const signature = montyPythonSignatureBuild(tool);

@@ -41,9 +41,6 @@ describe("montyPreambleBuild", () => {
             "ToolError = RuntimeError",
             "",
             "# Typed tool stubs for code assistance only.",
-            "def __daycare_print__(*values: Any) -> None:",
-            '    raise NotImplementedError("__daycare_print__ is provided by runtime.")',
-            "",
             'ReadFileResponse = TypedDict("ReadFileResponse", { "summary": str, "size": int })',
             "",
             "def read_file(path: str, retries: int | None = None, verbose: bool | None = None) -> ReadFileResponse:",
@@ -111,9 +108,6 @@ describe("montyPreambleBuild", () => {
             "ToolError = RuntimeError",
             "",
             "# Typed tool stubs for code assistance only.",
-            "def __daycare_print__(*values: Any) -> None:",
-            '    raise NotImplementedError("__daycare_print__ is provided by runtime.")',
-            "",
             'SearchV2ResponseRowsItem = TypedDict("SearchV2ResponseRowsItem", { "title": str, "score": float })',
             "",
             'SearchV2Response = TypedDict("SearchV2Response", { "rows": list[SearchV2ResponseRowsItem] })',
@@ -147,9 +141,7 @@ describe("montyPreambleBuild", () => {
             "",
             "ToolError = RuntimeError",
             "",
-            "# Typed tool stubs for code assistance only.",
-            "def __daycare_print__(*values: Any) -> None:",
-            '    raise NotImplementedError("__daycare_print__ is provided by runtime.")'
+            "# Typed tool stubs for code assistance only."
         ].join("\n");
 
         expect(result).toBe(expected);

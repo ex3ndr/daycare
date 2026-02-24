@@ -23,14 +23,31 @@ describe("montyRuntimePreambleBuild", () => {
             "ToolError = RuntimeError",
             "",
             "if TYPE_CHECKING:",
-            "    def __daycare_print__(*values: Any) -> None:",
-            '        raise NotImplementedError("__daycare_print__ is provided by runtime.")',
-            "",
             "    def echo(text: str) -> Any:",
             '        raise NotImplementedError("echo is provided by runtime.")'
         ].join("\n");
         expect(result).toBe(expected);
         expect(result).not.toContain("if False:");
         expect(result).not.toContain("# You have the following tools");
+    });
+
+    it("renders pass when no callable runtime tools remain", () => {
+        const result = montyRuntimePreambleBuild([
+            {
+                name: "run_python",
+                description: "meta",
+                parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+            }
+        ]);
+        const expected = [
+            "from typing import Any, TYPE_CHECKING",
+            "",
+            "ToolError = RuntimeError",
+            "",
+            "if TYPE_CHECKING:",
+            "    pass"
+        ].join("\n");
+
+        expect(result).toBe(expected);
     });
 });

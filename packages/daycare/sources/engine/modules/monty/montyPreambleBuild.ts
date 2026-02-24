@@ -1,7 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 
-import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
+import { RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
 import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
 import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
@@ -27,10 +27,7 @@ export function montyPreambleBuild(tools: Tool[]): string {
         "",
         "ToolError = RuntimeError",
         "",
-        "# Typed tool stubs for code assistance only.",
-        `def ${RLM_PRINT_FUNCTION_NAME}(*values: Any) -> None:`,
-        `    raise NotImplementedError("${RLM_PRINT_FUNCTION_NAME} is provided by runtime.")`,
-        ""
+        "# Typed tool stubs for code assistance only."
     ];
 
     for (const tool of callableTools) {

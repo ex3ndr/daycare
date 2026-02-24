@@ -37,6 +37,7 @@ describe("rlmRestore", () => {
                 "    value = echo('first')",
                 "except ToolError:",
                 "    value = 'recovered'",
+                "print(value)",
                 "result = echo(value)",
                 "result"
             ].join("\n"),
@@ -49,6 +50,7 @@ describe("rlmRestore", () => {
         });
 
         expect(result.output).toBe('{"text":"recovered"}');
+        expect(result.printOutput).toEqual(["recovered"]);
         expect(result.toolCallCount).toBe(1);
         expect(callbackRecords).toEqual(["rlm_tool_call", "rlm_tool_result", "rlm_complete"]);
     });

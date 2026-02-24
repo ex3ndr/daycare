@@ -3,12 +3,17 @@ import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
 
 import type { AgentHistoryRlmStartRecord, AgentHistoryRlmToolCallRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
-import { RLM_PRINT_FUNCTION_NAME, RLM_TOOL_NAME } from "./rlmConstants.js";
+import { RLM_TOOL_NAME } from "./rlmConstants.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 import type { RlmCheckSteeringCallback, RlmExecuteResult, RlmHistoryCallback } from "./rlmExecute.js";
 import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 const RLM_RESTART_MESSAGE = "Process was restarted";
+
+type PrintCaptureState = {
+    buffer: string;
+    lines: string[];
+};
 
 /**
  * Restores RLM execution from a persisted tool-call snapshot and continues execution.
@@ -27,8 +32,12 @@ export async function rlmRestore(
     );
     const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
     const printOutput = [...lastToolCall.printOutput];
+    const printCapture = printCaptureCreate(printOutput);
+    const printCallback = (...values: unknown[]): void => {
+        printCaptureAppend(printCapture, values);
+    };
     let toolCallCount = lastToolCall.toolCallCount;
-    const restored = MontySnapshot.load(Buffer.from(lastToolCall.snapshot, "base64"));
+    const restored = MontySnapshot.load(Buffer.from(lastToolCall.snapshot, "base64"), { printCallback });
     let progress: MontySnapshot | MontyComplete = restored.resume({
         exception: {
             type: "RuntimeError",
@@ -37,12 +46,6 @@ export async function rlmRestore(
     });
 
     while (progress instanceof MontySnapshot) {
-        if (progress.functionName === RLM_PRINT_FUNCTION_NAME) {
-            printOutput.push(printLineBuild(progress.args));
-            progress = progress.resume({ returnValue: null });
-            continue;
-        }
-
         const tool = toolByName.get(progress.functionName);
         if (!tool) {
             progress = progress.resume({
@@ -55,6 +58,7 @@ export async function rlmRestore(
         }
 
         const snapshotDump = progress.dump();
+        printCaptureFlushTrailing(printCapture);
         const at = Date.now();
         let args: unknown = { args: progress.args, kwargs: progress.kwargs };
         let parsedArgs: unknown = null;
@@ -131,6 +135,7 @@ export async function rlmRestore(
         // Check for steering after each tool completes
         const steering = checkSteering?.();
         if (steering) {
+            printCaptureFlushTrailing(printCapture);
             // Build result showing work done before interruption
             const printOutputSoFar =
                 printOutput.length > 0 ? `Print output so far:\n${printOutput.join("\n")}\n\n` : "";
@@ -164,9 +169,10 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
             return steeringResult;
         }
 
-        progress = snapshotResumeWithDurationReset(snapshotDump, resumeOptions);
+        progress = snapshotResumeWithDurationReset(snapshotDump, resumeOptions, printCallback);
     }
 
+    printCaptureFlushTrailing(printCapture);
     const result = {
         output: valueFormat(progress.output),
         printOutput,
@@ -186,14 +192,50 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
 
 function snapshotResumeWithDurationReset(
     snapshotDump: Uint8Array,
-    options: { returnValue: unknown } | { exception: { type: string; message: string } }
+    options: { returnValue: unknown } | { exception: { type: string; message: string } },
+    printCallback: (...values: unknown[]) => void
 ): MontySnapshot | MontyComplete {
-    const restored = MontySnapshot.load(Buffer.from(snapshotDump));
+    const restored = MontySnapshot.load(Buffer.from(snapshotDump), { printCallback });
     return restored.resume(options);
 }
 
 function snapshotEncode(snapshotDump: Uint8Array): string {
     return Buffer.from(snapshotDump).toString("base64");
+}
+
+function printCaptureCreate(lines: string[]): PrintCaptureState {
+    return { buffer: "", lines };
+}
+
+function printCaptureAppend(state: PrintCaptureState, args: unknown[]): void {
+    if (args.length >= 2 && (args[0] === "stdout" || args[0] === "stderr") && typeof args[1] === "string") {
+        if (args[0] !== "stdout") {
+            return;
+        }
+        state.buffer += args[1];
+        printCaptureConsumeLines(state);
+        return;
+    }
+
+    state.lines.push(printLineBuild(args));
+}
+
+function printCaptureConsumeLines(state: PrintCaptureState): void {
+    let newlineIndex = state.buffer.indexOf("\n");
+    while (newlineIndex >= 0) {
+        const line = state.buffer.slice(0, newlineIndex).replace(/\r$/, "");
+        state.lines.push(line.trimEnd());
+        state.buffer = state.buffer.slice(newlineIndex + 1);
+        newlineIndex = state.buffer.indexOf("\n");
+    }
+}
+
+function printCaptureFlushTrailing(state: PrintCaptureState): void {
+    if (state.buffer.length === 0) {
+        return;
+    }
+    state.lines.push(state.buffer.replace(/\r$/, "").trimEnd());
+    state.buffer = "";
 }
 
 function printLineBuild(args: unknown[]): string {
