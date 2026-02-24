@@ -10,11 +10,13 @@ RUN corepack enable && corepack prepare yarn@1.22.22 --activate
 
 COPY package.json yarn.lock ./
 COPY packages/daycare/package.json packages/daycare/package.json
+COPY packages/daycare-dashboard/package.json packages/daycare-dashboard/package.json
 COPY packages/daycare-factory/package.json packages/daycare-factory/package.json
 
 RUN yarn install --frozen-lockfile
 
 COPY packages/daycare packages/daycare
+COPY packages/daycare-dashboard packages/daycare-dashboard
 COPY packages/daycare-factory packages/daycare-factory
 
 RUN yarn workspace daycare-cli run build \

@@ -77,6 +77,20 @@ flowchart LR
   C --> G[Generated artifacts in out/]
 ```
 
+## Docker Builder Inputs
+
+`packages/daycare-factory/Dockerfile` now copies `packages/daycare-dashboard` into the builder stage.
+`daycare-cli` build depends on `../daycare-dashboard` (`build:export`) and fails when that workspace is missing.
+
+```mermaid
+flowchart TD
+  A[Builder copies only daycare + daycare-factory] --> B[daycare-cli build runs]
+  B --> C[yarn --cwd ../daycare-dashboard build:export]
+  C --> D[Missing workspace or script resolution failure]
+  E[Builder also copies daycare-dashboard package + sources] --> F[daycare-cli build finds dashboard workspace]
+  F --> G[Factory image build succeeds]
+```
+
 ## Config contract
 
 Required field:

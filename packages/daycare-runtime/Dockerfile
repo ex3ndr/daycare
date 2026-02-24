@@ -163,8 +163,8 @@ ENV UV_NO_PROGRESS=1
 ARG RUST_VERSION=stable
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "$RUST_VERSION" \
+    export HOME=/root CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "$RUST_VERSION" \
     && CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup /usr/local/cargo/bin/rustc --version \
     && CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup /usr/local/cargo/bin/cargo --version \
     && echo 'export RUSTUP_HOME=/usr/local/rustup' >> /etc/profile \
