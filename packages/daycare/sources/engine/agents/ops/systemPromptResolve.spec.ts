@@ -80,9 +80,7 @@ describe("systemPromptResolve", () => {
         const storage = createStorage();
         try {
             await setupUser(storage, "u1");
-            await storage.systemPrompts.create(
-                makePrompt({ id: "g1", scope: "global", prompt: "Be concise." })
-            );
+            await storage.systemPrompts.create(makePrompt({ id: "g1", scope: "global", prompt: "Be concise." }));
 
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Be concise."]);

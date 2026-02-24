@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-
+import { createId } from "@paralleldrive/cuid2";
 import fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
 
@@ -89,6 +89,22 @@ const channelMemberAddSchema = z.object({
 });
 const channelMemberRemoveSchema = z.object({
     agentId: z.string().min(1)
+});
+const systemPromptCreateSchema = z.object({
+    scope: z.enum(["global", "user"]),
+    userId: z.string().min(1).nullable().optional(),
+    kind: z.enum(["system", "first_message"]),
+    condition: z.enum(["new_user", "returning_user"]).nullable().optional(),
+    prompt: z.string().min(1),
+    enabled: z.boolean().optional()
+});
+const systemPromptUpdateSchema = z.object({
+    scope: z.enum(["global", "user"]).optional(),
+    userId: z.string().min(1).nullable().optional(),
+    kind: z.enum(["system", "first_message"]).optional(),
+    condition: z.enum(["new_user", "returning_user"]).nullable().optional(),
+    prompt: z.string().min(1).optional(),
+    enabled: z.boolean().optional()
 });
 
 export async function startEngineServer(options: EngineServerOptions): Promise<EngineServer> {
@@ -280,6 +296,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         const mapped = users.map((user) => ({
             id: user.id,
             isOwner: user.isOwner,
+            nametag: user.nametag,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         }));
@@ -579,6 +596,78 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             logger.debug("event: SSE connection closed");
             unsubscribe();
         });
+    });
+
+    // System prompts CRUD
+    app.get("/v1/engine/system-prompts", async (_request, reply) => {
+        logger.debug("event: GET /v1/engine/system-prompts");
+        const prompts = await options.runtime.storage.systemPrompts.findMany();
+        logger.debug(`event: System prompts retrieved count=${prompts.length}`);
+        return reply.send({ ok: true, prompts });
+    });
+
+    app.get("/v1/engine/system-prompts/:id", async (request, reply) => {
+        const id = (request.params as { id: string }).id;
+        logger.debug(`event: GET /v1/engine/system-prompts/${id}`);
+        const prompt = await options.runtime.storage.systemPrompts.findById(id);
+        if (!prompt) {
+            return reply.status(404).send({ ok: false, error: `System prompt not found: ${id}` });
+        }
+        return reply.send({ ok: true, prompt });
+    });
+
+    app.post("/v1/engine/system-prompts", async (request, reply) => {
+        logger.debug("event: POST /v1/engine/system-prompts");
+        const payload = parseBody(systemPromptCreateSchema, request.body, reply);
+        if (!payload) return;
+        const now = Date.now();
+        const record = {
+            id: createId(),
+            scope: payload.scope,
+            userId: payload.userId ?? null,
+            kind: payload.kind,
+            condition: payload.condition ?? null,
+            prompt: payload.prompt,
+            enabled: payload.enabled !== false,
+            createdAt: now,
+            updatedAt: now
+        };
+        await options.runtime.storage.systemPrompts.create(record);
+        logger.info({ promptId: record.id, scope: record.scope, kind: record.kind }, "event: System prompt created");
+        return reply.send({ ok: true, prompt: record });
+    });
+
+    app.put("/v1/engine/system-prompts/:id", async (request, reply) => {
+        const id = (request.params as { id: string }).id;
+        logger.debug(`event: PUT /v1/engine/system-prompts/${id}`);
+        const payload = parseBody(systemPromptUpdateSchema, request.body, reply);
+        if (!payload) return;
+        const existing = await options.runtime.storage.systemPrompts.findById(id);
+        if (!existing) {
+            return reply.status(404).send({ ok: false, error: `System prompt not found: ${id}` });
+        }
+        const updates: Record<string, unknown> = { updatedAt: Date.now() };
+        if (payload.scope !== undefined) updates.scope = payload.scope;
+        if (payload.userId !== undefined) updates.userId = payload.userId;
+        if (payload.kind !== undefined) updates.kind = payload.kind;
+        if (payload.condition !== undefined) updates.condition = payload.condition;
+        if (payload.prompt !== undefined) updates.prompt = payload.prompt;
+        if (payload.enabled !== undefined) updates.enabled = payload.enabled;
+        await options.runtime.storage.systemPrompts.updateById(id, updates);
+        const updated = await options.runtime.storage.systemPrompts.findById(id);
+        logger.info({ promptId: id }, "event: System prompt updated");
+        return reply.send({ ok: true, prompt: updated });
+    });
+
+    app.delete("/v1/engine/system-prompts/:id", async (request, reply) => {
+        const id = (request.params as { id: string }).id;
+        logger.debug(`event: DELETE /v1/engine/system-prompts/${id}`);
+        const deleted = await options.runtime.storage.systemPrompts.deleteById(id);
+        if (!deleted) {
+            return reply.status(404).send({ ok: false, error: `System prompt not found: ${id}` });
+        }
+        logger.info({ promptId: id }, "event: System prompt deleted");
+        return reply.send({ ok: true });
     });
 
     logger.debug("start: Starting server listen");

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { Storage } from "./storage.js";
 import type { SystemPromptDbRecord } from "./databaseTypes.js";
+import { Storage } from "./storage.js";
 
 function createStorage(): Storage {
     return Storage.open(":memory:");
@@ -70,9 +69,7 @@ describe("SystemPromptsRepository", () => {
         const storage = createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "g1", scope: "global" }));
-            await storage.systemPrompts.create(
-                makePrompt({ id: "u1", scope: "user", userId: "user-abc" })
-            );
+            await storage.systemPrompts.create(makePrompt({ id: "u1", scope: "user", userId: "user-abc" }));
 
             const globals = await storage.systemPrompts.findByScope("global");
             expect(globals).toHaveLength(1);
@@ -154,15 +151,9 @@ describe("SystemPromptsRepository", () => {
     it("stores and retrieves condition field", async () => {
         const storage = createStorage();
         try {
-            await storage.systemPrompts.create(
-                makePrompt({ id: "p1", condition: "new_user" })
-            );
-            await storage.systemPrompts.create(
-                makePrompt({ id: "p2", condition: "returning_user" })
-            );
-            await storage.systemPrompts.create(
-                makePrompt({ id: "p3", condition: null })
-            );
+            await storage.systemPrompts.create(makePrompt({ id: "p1", condition: "new_user" }));
+            await storage.systemPrompts.create(makePrompt({ id: "p2", condition: "returning_user" }));
+            await storage.systemPrompts.create(makePrompt({ id: "p3", condition: null }));
 
             const p1 = await storage.systemPrompts.findById("p1");
             expect(p1!.condition).toBe("new_user");
@@ -180,9 +171,7 @@ describe("SystemPromptsRepository", () => {
     it("stores first_message kind", async () => {
         const storage = createStorage();
         try {
-            await storage.systemPrompts.create(
-                makePrompt({ id: "fm1", kind: "first_message", prompt: "Welcome!" })
-            );
+            await storage.systemPrompts.create(makePrompt({ id: "fm1", kind: "first_message", prompt: "Welcome!" }));
 
             const found = await storage.systemPrompts.findById("fm1");
             expect(found!.kind).toBe("first_message");
