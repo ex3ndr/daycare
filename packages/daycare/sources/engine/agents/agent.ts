@@ -578,6 +578,7 @@ export class Agent {
                     memory: this.agentSystem.memory,
                     skills,
                     skillsActiveRoot: this.userHome.skillsActive,
+                    skillsPersonalRoot: this.userHome.skillsPersonal,
                     providersForAgent,
                     verbose: this.agentSystem.config.current.verbose,
                     logger,

@@ -62,6 +62,7 @@ type AgentLoopRunOptions = {
     memory: Memory;
     skills: Skills;
     skillsActiveRoot?: string;
+    skillsPersonalRoot?: string;
     providersForAgent: ProviderSettings[];
     verbose: boolean;
     logger: Logger;
@@ -486,6 +487,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         toolResolver,
                         skills: activeSkills,
                         skillsActiveRoot: options.skillsActiveRoot,
+                        skillsPersonalRoot: options.skillsPersonalRoot,
                         appendHistoryRecord,
                         rlmToolOnly: false,
                         allowedToolNames
@@ -624,6 +626,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     toolResolver,
                     skills: activeSkills,
                     skillsActiveRoot: options.skillsActiveRoot,
+                    skillsPersonalRoot: options.skillsPersonalRoot,
                     appendHistoryRecord,
                     rlmToolOnly: agentSystem.config.current.features.rlm,
                     allowedToolNames

@@ -65,6 +65,8 @@ import { buildSignalGenerateTool } from "./modules/tools/signal.js";
 import { signalEventsCsvToolBuild } from "./modules/tools/signalEventsCsvToolBuild.js";
 import { buildSignalSubscribeTool } from "./modules/tools/signalSubscribeToolBuild.js";
 import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToolBuild.js";
+import { skillAddToolBuild } from "./modules/tools/skillAddToolBuild.js";
+import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { skipToolBuild } from "./modules/tools/skipTool.js";
 import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
@@ -371,6 +373,8 @@ export class Engine {
         this.modules.tools.register("core", sendUserMessageToolBuild());
         this.modules.tools.register("core", skipToolBuild());
         this.modules.tools.register("core", skillToolBuild());
+        this.modules.tools.register("core", skillAddToolBuild());
+        this.modules.tools.register("core", skillRemoveToolBuild());
         this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.exposes));
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
