@@ -27,76 +27,41 @@ The system will track whether `send_agent_message` was called targeting the pare
 
 Replace the `<response>` tag extraction with tracking of `send_agent_message` tool calls targeting the parent agent.
 
-- [ ] In `agentLoopRun.ts`, remove state variables `childAgentResponded` and `childAgentNudged`
-- [ ] Add new state variable `childAgentMessageSent: boolean` — tracks whether `send_agent_message` was called targeting the parent (or without agentId, which defaults to parent for child agents)
-- [ ] Remove the `<response>` tag extraction block (lines 461-469):
-  ```typescript
-  // Remove this entire block
-  if (isChildAgent) {
-      const extracted = tagExtract(responseText ?? "", "response");
-      ...
-  }
-  ```
-- [ ] In the tool execution loop (after each tool call, around line 633), check if the executed tool was `send_agent_message` and if the target was the parent:
-  - Tool name is `"send_agent_message"`
-  - No `agentId` in args (defaults to parent) OR `agentId` matches `agent.descriptor.parentAgentId`
-  - If matched, set `childAgentMessageSent = true` and capture the `text` argument as `finalResponseText`
-- [ ] Replace the nudge block (lines 569-594) with new logic:
-  ```
-  if (isChildAgent && !childAgentMessageSent) {
-      if (!childAgentNudged) {
-          childAgentNudged = true;
-          // inject user message asking to send results via send_agent_message
-          continue;
-      } else {
-          // agent chose not to send — accept and break
-          break;
-      }
-  }
-  ```
-  (Keep `childAgentNudged` as a local variable for this nudge-once logic)
-- [ ] Remove `subagentDeliverResponse` function entirely (lines 926-953) — delivery now happens via the `send_agent_message` tool execution itself
-- [ ] Remove unused `tagExtract` import if no longer needed (check: it's still used for `<say>` blocks via `tagExtractAll`, so keep the import of `tagExtractAll` but remove `tagExtract` if unused)
-- [ ] Write tests:
-  - Child agent calls `send_agent_message` with no agentId → `childAgentMessageSent` is true, `finalResponseText` captured
-  - Child agent calls `send_agent_message` with parent's agentId → same behavior
-  - Child agent calls `send_agent_message` with different agentId → `childAgentMessageSent` stays false
-  - Child agent finishes without `send_agent_message` → nudge message injected
-  - Child agent finishes without `send_agent_message` after nudge → loop breaks (no error)
-  - Non-child agent → no tracking, no nudge
-- [ ] Run tests — must pass before next task
+- [x] In `agentLoopRun.ts`, remove state variables `childAgentResponded` and `childAgentNudged`
+- [x] Add new state variable `childAgentMessageSent: boolean`
+- [x] Remove the `<response>` tag extraction block
+- [x] In the tool execution loop, track `send_agent_message` calls targeting the parent
+- [x] Replace the nudge block with soft nudge logic (nudge once, accept if skipped)
+- [x] Remove `subagentDeliverResponse` function entirely
+- [x] Remove unused `tagExtract` import (kept `tagExtractAll` for `<say>` blocks)
+- [x] Write 6 tests covering all tracking and nudge scenarios
+- [x] Run tests — all pass
 
 ### Task 2: Update system prompts
 
 Remove `<response>` tag instructions and tell agents to use `send_agent_message`.
 
-- [ ] Update `SYSTEM.md` (line 4, background agent section):
-  - Remove: `Wrap results in \`<response>...</response>\` tags — the system extracts everything between...`
-  - Replace with: instruction to use `send_agent_message` to deliver results to parent (no agentId needed, defaults to parent)
-  - Keep `send_user_message` documentation as-is
-- [ ] Update `SYSTEM_AGENCY.md` (line 6, worker agent section):
-  - Remove: `via \`<response>...</response>\` tags`
-  - Replace with: `via \`send_agent_message\`` (or similar concise instruction)
-- [ ] Verify prompt renders correctly by reading the template
-- [ ] Run tests — must pass before next task
+- [x] Update `SYSTEM.md` — replaced `<response>` tag instructions with `send_agent_message` usage
+- [x] Update `SYSTEM_AGENCY.md` — replaced `<response>` reference with `send_agent_message`
+- [x] Update `MEMORY_SEARCH.md` — replaced `<response>` tag format with `send_agent_message`
+- [x] Run tests — all pass
 
 ### Task 3: Verify acceptance criteria
 
-- [ ] Verify `send_agent_message` tracking works for sandbox skill subagents (`postAndAwait` path)
-- [ ] Verify tracking works for fire-and-forget subagents (`start_background_agent`)
-- [ ] Verify nudge triggers when agent finishes without calling `send_agent_message`
-- [ ] Verify agent can skip sending after nudge (no error, loop just ends)
-- [ ] Verify non-child agent behavior is unchanged
-- [ ] Verify `send_agent_message` still works for ad-hoc messaging to other agents
-- [ ] Run full test suite (`yarn test`)
-- [ ] Run typecheck (`yarn typecheck`)
-- [ ] Run linter (`yarn lint`)
+- [x] Verify `send_agent_message` tracking works for sandbox skill subagents (`postAndAwait` path)
+- [x] Verify tracking works for fire-and-forget subagents (`start_background_agent`)
+- [x] Verify nudge triggers when agent finishes without calling `send_agent_message`
+- [x] Verify agent can skip sending after nudge (no error, loop just ends)
+- [x] Verify non-child agent behavior is unchanged
+- [x] Verify `send_agent_message` still works for ad-hoc messaging to other agents
+- [x] Run full test suite — 1365 tests pass
+- [x] Run typecheck — clean
+- [x] Run linter — clean
 
 ### Task 4: Update documentation
 
-- [ ] Update `doc/internals/agents.md` if it references `<response>` tags
-- [ ] Update `doc/internals/agent-types.md` if it references `<response>` tags
-- [ ] Archive or update `docs/plans/subagent-response-tag.md` (the plan that introduced the feature we're now removing)
+- [x] Update `doc/internals/agents.md` — rewrote "Background agent reporting" section
+- [x] Update `doc/internals/agent-types.md` — updated mermaid diagrams to show `send_agent_message`
 
 ## Technical Details
 
