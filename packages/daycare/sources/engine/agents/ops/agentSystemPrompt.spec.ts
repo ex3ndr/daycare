@@ -13,6 +13,24 @@ import { agentSystemPrompt } from "./agentSystemPrompt.js";
 type AgentSystemPromptParameter = NonNullable<Parameters<typeof agentSystemPrompt>[0]>;
 
 describe("agentSystemPrompt", () => {
+    it("renders plugin prompt sections and collects system prompt images", async () => {
+        const context: AgentSystemPromptParameter = {
+            ctx: contextForUser({ userId: "user-1" }),
+            descriptor: { type: "memory-agent", id: "memory-1" },
+            pluginPrompts: [
+                { text: "Telegram profile available.", images: ["/tmp/downloads/profile-telegram-1.jpg"] },
+                { text: "Preferred language: French." }
+            ]
+        };
+
+        const rendered = await agentSystemPrompt(context);
+
+        expect(rendered).toContain("## Plugin Context");
+        expect(rendered).toContain("Telegram profile available.");
+        expect(rendered).toContain("Preferred language: French.");
+        expect(context.systemPromptImages).toEqual(["/tmp/downloads/profile-telegram-1.jpg"]);
+    });
+
     it("returns replacement prompt for memory-agent descriptor", async () => {
         const expected = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
 

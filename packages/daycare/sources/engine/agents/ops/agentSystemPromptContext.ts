@@ -1,4 +1,4 @@
-import type { AgentDescriptor, Context, SessionPermissions } from "@/types";
+import type { AgentDescriptor, Context, PluginSystemPromptResult, SessionPermissions } from "@/types";
 import type { UserHome } from "../../users/userHome.js";
 import type { AgentSystem } from "../agentSystem.js";
 
@@ -15,6 +15,12 @@ export type AgentSystemPromptContext = {
     agentSystem?: AgentSystemPromptAgentSystem;
     descriptor?: AgentDescriptor;
     userHome?: UserHome;
+    pluginPrompts?: PluginSystemPromptResult[];
+    /**
+     * Populated during prompt rendering and forwarded with inference context.
+     * Contains absolute image paths returned by plugin prompt sections.
+     */
+    systemPromptImages?: string[];
     /** Extra sections appended after all standard sections (e.g. configured system prompts). */
     extraSections?: string[];
 };

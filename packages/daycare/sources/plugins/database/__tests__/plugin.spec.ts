@@ -136,7 +136,9 @@ describe("database plugin", () => {
         expect(doc).toContain("Create users table");
 
         const prompt =
-            typeof instance.systemPrompt === "function" ? await instance.systemPrompt() : (instance.systemPrompt ?? "");
+            typeof instance.systemPrompt === "function"
+                ? await instance.systemPrompt({ ctx })
+                : (instance.systemPrompt ?? "");
         expect(prompt).toContain("Database plugin is active.");
         expect(prompt).toContain(doc.trim());
 

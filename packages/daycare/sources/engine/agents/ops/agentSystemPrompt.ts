@@ -8,6 +8,7 @@ import { agentSystemPromptSectionFormatting } from "./agentSystemPromptSectionFo
 import { agentSystemPromptSectionMemory } from "./agentSystemPromptSectionMemory.js";
 import { agentSystemPromptSectionModels } from "./agentSystemPromptSectionModels.js";
 import { agentSystemPromptSectionPermissions } from "./agentSystemPromptSectionPermissions.js";
+import { agentSystemPromptSectionPlugins } from "./agentSystemPromptSectionPlugins.js";
 import { agentSystemPromptSectionPreamble } from "./agentSystemPromptSectionPreamble.js";
 import { agentSystemPromptSectionSkills } from "./agentSystemPromptSectionSkills.js";
 import { agentSystemPromptSectionToolCalling } from "./agentSystemPromptSectionToolCalling.js";
@@ -22,6 +23,7 @@ export type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: section templates exist under engine/prompts.
  */
 export async function agentSystemPrompt(context: AgentSystemPromptContext): Promise<string> {
+    context.systemPromptImages = agentSystemPromptImagesResolve(context);
     const agentPromptSection = context.descriptor
         ? await agentPromptResolve(context.descriptor)
         : { agentPrompt: "", replaceSystemPrompt: false };
@@ -30,11 +32,12 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         if (!replaced) {
             throw new Error("System prompt replacement requires a non-empty agent prompt.");
         }
-        const [toolSection, skillsSection] = await Promise.all([
+        const [pluginSection, toolSection, skillsSection] = await Promise.all([
+            agentSystemPromptSectionPlugins(context),
             agentSystemPromptSectionToolCalling(context),
             agentSystemPromptSectionSkills(context)
         ]);
-        return [replaced, toolSection.trim(), skillsSection.trim()]
+        return [replaced, pluginSection.trim(), toolSection.trim(), skillsSection.trim()]
             .filter((section) => section.length > 0)
             .join(SECTION_SEPARATOR)
             .trim();
@@ -47,6 +50,7 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         agentSystemPromptSectionPermissions(context),
         agentSystemPromptSectionToolCalling(context),
         agentSystemPromptSectionAgentsTopologySignalsChannels(context),
+        agentSystemPromptSectionPlugins(context),
         agentSystemPromptSectionSkills(context),
         agentSystemPromptSectionFormatting(context),
         agentSystemPromptSectionMemory(context),
@@ -66,4 +70,15 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         .filter((section) => section.length > 0)
         .join(SECTION_SEPARATOR)
         .trim();
+}
+
+function agentSystemPromptImagesResolve(context: AgentSystemPromptContext): string[] | undefined {
+    const images = (context.pluginPrompts ?? [])
+        .flatMap((prompt) => prompt.images ?? [])
+        .map((imagePath) => imagePath.trim())
+        .filter((imagePath) => imagePath.length > 0);
+    if (images.length === 0) {
+        return undefined;
+    }
+    return Array.from(new Set(images));
 }

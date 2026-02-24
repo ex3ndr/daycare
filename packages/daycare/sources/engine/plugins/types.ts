@@ -3,6 +3,8 @@ import type { ZodType } from "zod";
 import type { ExposeProviderRegistrationApi } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
+import type { Context } from "../agents/context.js";
+import type { AgentDescriptor } from "../agents/ops/agentDescriptorTypes.js";
 import type { FileFolder } from "../files/fileFolder.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { Processes } from "../processes/processes.js";
@@ -30,12 +32,28 @@ export type PluginApi<TSettings = unknown> = {
     };
 };
 
+export type PluginSystemPromptContext = {
+    ctx: Context;
+    descriptor?: AgentDescriptor;
+    userDownloadsDir?: string;
+};
+
+export type PluginSystemPromptResult = {
+    text: string;
+    images?: string[];
+};
+
 export type PluginInstance = {
     load?: () => Promise<void>;
     unload?: () => Promise<void>;
     preStart?: () => Promise<void>;
     postStart?: () => Promise<void>;
-    systemPrompt?: (() => Promise<string | null> | string | null) | string | null;
+    systemPrompt?:
+        | ((
+              context: PluginSystemPromptContext
+          ) => Promise<string | PluginSystemPromptResult | null> | string | PluginSystemPromptResult | null)
+        | string
+        | null;
 };
 
 export type PromptChoice<TValue extends string> = {

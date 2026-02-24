@@ -2,7 +2,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { ZodError } from "zod";
-import type { ExposeProviderRegistrationApi, PluginApi, PluginInstance, PluginModule } from "@/types";
+import type {
+    ExposeProviderRegistrationApi,
+    PluginApi,
+    PluginInstance,
+    PluginModule,
+    PluginSystemPromptContext,
+    PluginSystemPromptResult
+} from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
@@ -114,17 +121,18 @@ export class PluginManager {
         return results;
     }
 
-    async getSystemPrompts(): Promise<string[]> {
-        const prompts: string[] = [];
+    async getSystemPrompts(context: PluginSystemPromptContext): Promise<PluginSystemPromptResult[]> {
+        const prompts: PluginSystemPromptResult[] = [];
         for (const entry of this.loaded.values()) {
             const candidate = entry.instance.systemPrompt;
             if (!candidate) {
                 continue;
             }
             try {
-                const value = typeof candidate === "function" ? await candidate() : candidate;
-                if (typeof value === "string" && value.trim().length > 0) {
-                    prompts.push(value.trim());
+                const value = typeof candidate === "function" ? await candidate(context) : candidate;
+                const normalized = pluginSystemPromptNormalize(value);
+                if (normalized) {
+                    prompts.push(normalized);
                 }
             } catch (error) {
                 this.logger.warn({ error }, "error: Plugin system prompt failed");
@@ -418,6 +426,28 @@ export class PluginManager {
         }
         return resolution.allowed;
     }
+}
+
+function pluginSystemPromptNormalize(value: string | PluginSystemPromptResult | null): PluginSystemPromptResult | null {
+    if (typeof value === "string") {
+        const text = value.trim();
+        if (!text) {
+            return null;
+        }
+        return { text };
+    }
+    if (!value) {
+        return null;
+    }
+    const text = value.text.trim();
+    if (!text) {
+        return null;
+    }
+    const images = value.images
+        ?.filter((imagePath): imagePath is string => typeof imagePath === "string")
+        .map((imagePath) => imagePath.trim())
+        .filter((imagePath) => imagePath.length > 0);
+    return images && images.length > 0 ? { text, images } : { text };
 }
 
 function buildPluginEvent(source: { pluginId: string; instanceId: string }, event: PluginEventInput): PluginEvent {

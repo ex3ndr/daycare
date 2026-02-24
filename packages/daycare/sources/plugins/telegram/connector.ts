@@ -204,6 +204,10 @@ export class TelegramConnector implements Connector {
         };
     }
 
+    botGet(): TelegramBot {
+        return this.bot;
+    }
+
     updateCommands(commands: SlashCommandEntry[]): void {
         this.pendingCommands = commands;
         if (!this.commandSyncEnabled) {

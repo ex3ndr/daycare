@@ -36,3 +36,34 @@ flowchart LR
     Tool[media_analyze tool] --> Registry
     Registry --> Provider[MediaAnalysisProvider analyze()]
 ```
+
+## Plugin System Prompt Context
+
+Plugins can provide dynamic system prompt fragments via `PluginInstance.systemPrompt`.
+
+- `systemPrompt` may be a static string or function:
+  `(context: PluginSystemPromptContext) => Promise<string | PluginSystemPromptResult | null> | string | PluginSystemPromptResult | null`
+- `PluginSystemPromptContext` includes:
+  - `ctx` (user-scoped runtime context)
+  - `descriptor` (current agent descriptor, when available)
+  - `userDownloadsDir` (absolute path to user-visible downloads folder)
+- `PluginSystemPromptResult` includes:
+  - `text` (markdown/text prompt fragment)
+  - `images` (optional absolute image paths for multimodal system prompt context)
+
+```mermaid
+sequenceDiagram
+    participant Agent as Agent.handleMessage
+    participant PM as PluginManager
+    participant Plugin as PluginInstance
+    participant Prompt as agentSystemPrompt
+    participant LLM as Inference Context
+
+    Agent->>PM: getSystemPrompts({ ctx, descriptor, userDownloadsDir })
+    PM->>Plugin: systemPrompt(context)
+    Plugin-->>PM: string or { text, images }
+    PM-->>Agent: PluginSystemPromptResult[]
+    Agent->>Prompt: pluginPrompts passed in context
+    Prompt-->>Agent: prompt text + systemPromptImages
+    Agent->>LLM: Context { systemPrompt, systemPromptImages }
+```

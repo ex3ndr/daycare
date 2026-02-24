@@ -48,7 +48,7 @@ import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
 import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
-import { agentSystemPrompt } from "./ops/agentSystemPrompt.js";
+import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentToolExecutionAllowlistResolve } from "./ops/agentToolExecutionAllowlistResolve.js";
 import type {
@@ -466,7 +466,15 @@ export class Agent {
 
         await agentPromptFilesEnsure(agentPromptPathsResolve(this.userHome));
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
-        const systemPrompt = await agentSystemPrompt({
+        const pluginPrompts =
+            typeof pluginManager.getSystemPrompts === "function"
+                ? await pluginManager.getSystemPrompts({
+                      ctx: this.ctx,
+                      descriptor: this.descriptor,
+                      userDownloadsDir: this.userHome.downloads
+                  })
+                : [];
+        const systemPromptContext: AgentSystemPromptContext = {
             provider: providerSettings?.id,
             model: providerSettings?.model,
             permissions: this.state.permissions,
@@ -474,8 +482,10 @@ export class Agent {
             ctx: this.ctx,
             agentSystem: this.agentSystem,
             userHome: this.userHome,
+            pluginPrompts,
             extraSections: resolvedPrompts.systemPromptSections
-        });
+        };
+        const systemPrompt = await agentSystemPrompt(systemPromptContext);
 
         try {
             const wrote = await agentSystemPromptWrite(this.agentSystem.config.current, this.ctx, systemPrompt);
@@ -562,11 +572,14 @@ export class Agent {
         }
 
         const ctx = this.state.context;
-        const contextForRun: InferenceContext = {
+        const contextForRun: InferenceContext & { systemPromptImages?: string[] } = {
             ...ctx,
             tools: contextTools,
             systemPrompt
         };
+        if (systemPromptContext.systemPromptImages && systemPromptContext.systemPromptImages.length > 0) {
+            contextForRun.systemPromptImages = systemPromptContext.systemPromptImages;
+        }
 
         if (!contextForRun.messages) {
             contextForRun.messages = [];

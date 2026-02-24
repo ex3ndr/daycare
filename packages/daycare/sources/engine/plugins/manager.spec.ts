@@ -6,6 +6,7 @@ import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings } from "../../settings.js";
+import { contextForUser } from "../agents/context.js";
 import { ConfigModule } from "../config/configModule.js";
 import { FileFolder } from "../files/fileFolder.js";
 import { InferenceRouter } from "../modules/inference/router.js";
@@ -550,5 +551,71 @@ export const plugin = {
             tmpDir: path.join(dir, "tmp"),
             isDirectory: true
         });
+    });
+
+    it("normalizes plugin system prompts from strings and structured return values", async () => {
+        const dir = await createTempDir();
+        const pluginSource = `import { z } from "zod";
+
+export const plugin = {
+  settingsSchema: z.object({
+    mode: z.enum(["literal", "dynamic", "structured"])
+  }),
+  create: (api) => {
+    if (api.settings.mode === "literal") {
+      return {
+        systemPrompt: "  Literal prompt  "
+      };
+    }
+    if (api.settings.mode === "dynamic") {
+      return {
+        systemPrompt: async (context) => "  Dynamic for " + context.ctx.userId + "  "
+      };
+    }
+    return {
+      systemPrompt: async (context) => ({
+        text: "  Structured prompt  ",
+        images: [
+          context.userDownloadsDir + "/avatar.jpg",
+          "  ",
+          100
+        ]
+      })
+    };
+  }
+};
+`;
+        const entryPath = await writePluginFile(dir, pluginSource);
+        const { manager } = createManager(entryPath, "prompt-types", dir);
+
+        await manager.load({
+            instanceId: "prompt-literal",
+            pluginId: "prompt-types",
+            enabled: true,
+            settings: { mode: "literal" }
+        });
+        await manager.load({
+            instanceId: "prompt-dynamic",
+            pluginId: "prompt-types",
+            enabled: true,
+            settings: { mode: "dynamic" }
+        });
+        await manager.load({
+            instanceId: "prompt-structured",
+            pluginId: "prompt-types",
+            enabled: true,
+            settings: { mode: "structured" }
+        });
+
+        const prompts = await manager.getSystemPrompts({
+            ctx: contextForUser({ userId: "user-77" }),
+            userDownloadsDir: "/tmp/user-downloads"
+        });
+
+        expect(prompts).toEqual([
+            { text: "Literal prompt" },
+            { text: "Dynamic for user-77" },
+            { text: "Structured prompt", images: ["/tmp/user-downloads/avatar.jpg"] }
+        ]);
     });
 });

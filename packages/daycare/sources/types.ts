@@ -101,7 +101,9 @@ export type {
     PluginInstance,
     PluginModule,
     PluginOnboardingApi,
-    PluginOnboardingResult
+    PluginOnboardingResult,
+    PluginSystemPromptContext,
+    PluginSystemPromptResult
 } from "./engine/plugins/types.js";
 // Signals
 export type {
