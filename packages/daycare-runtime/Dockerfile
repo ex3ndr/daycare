@@ -151,7 +151,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         python3-pip \
         python3-venv \
     && rm -rf /var/lib/apt/lists/* \
-    && python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip uv \
+    && python3 -m pip install --no-cache-dir --break-system-packages --upgrade uv \
     && python3 --version \
     && pip3 --version \
     && uv --version
