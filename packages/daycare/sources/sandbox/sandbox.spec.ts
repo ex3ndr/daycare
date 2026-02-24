@@ -108,9 +108,7 @@ describe("Sandbox", () => {
         await fs.mkdir(path.dirname(appPath), { recursive: true });
         await fs.writeFile(appPath, "app", "utf8");
 
-        await expect(sandbox.read({ path: appPath })).rejects.toThrow(
-            "App directories are not accessible from non-app agents."
-        );
+        await expect(sandbox.read({ path: appPath })).rejects.toThrow(`Read permission denied: ${appPath}`);
     });
 
     it("writes new files and creates parent directories", async () => {
@@ -142,7 +140,7 @@ describe("Sandbox", () => {
     it("rejects writing outside granted directories", async () => {
         const outputPath = path.join(outsideDir, "out.txt");
         await expect(sandbox.write({ path: outputPath, content: "nope" })).rejects.toThrow(
-            "Path is outside the allowed directories."
+            `Write permission denied: ${outputPath}`
         );
     });
 

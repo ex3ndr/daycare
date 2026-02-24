@@ -15,24 +15,37 @@ import { sandboxSensitiveDenyPathsBuild } from "./sandboxSensitiveDenyPathsBuild
  * Expects: target is an absolute path.
  */
 export async function sandboxCanWrite(permissions: SessionPermissions, target: string): Promise<string> {
+    const requestedPath = path.resolve(target);
     const allowedDirs = [...permissions.writeDirs];
-    const result = await pathResolveSecure(allowedDirs, target);
+    const result = await pathResolveSecure(allowedDirs, requestedPath).catch((error: unknown) => {
+        if (error instanceof Error && error.message === "Path is outside the allowed directories.") {
+            throw writePermissionDeniedError(requestedPath);
+        }
+        throw error;
+    });
     const access = sandboxAppsAccessCheck(permissions, result.realPath);
     if (!access.allowed) {
-        throw new Error(access.reason ?? "Write access denied.");
+        throw writePermissionDeniedError(requestedPath);
     }
 
     // Require readability of the target (or nearest existing parent) before writes.
     const readCheckTarget = await writableReadCheckTargetResolve(result.realPath);
-    await sandboxCanRead(permissions, readCheckTarget);
+    try {
+        await sandboxCanRead(permissions, readCheckTarget);
+    } catch (error) {
+        if (isReadPermissionDeniedError(error)) {
+            throw writePermissionDeniedError(requestedPath);
+        }
+        throw error;
+    }
 
     // Keep write behavior aligned with sandbox-runtime deny protections.
     if (sandboxPathDenyCheck(result.realPath, sandboxSensitiveDenyPathsBuild())) {
-        throw new Error("Write access denied for sensitive paths.");
+        throw writePermissionDeniedError(requestedPath);
     }
 
     if (sandboxDangerousFileCheck(result.realPath, sandboxDangerousFilesBuild())) {
-        throw new Error("Write access denied for dangerous files or directories.");
+        throw writePermissionDeniedError(requestedPath);
     }
 
     return result.realPath;
@@ -56,4 +69,12 @@ async function writableReadCheckTargetResolve(target: string): Promise<string> {
         }
         current = parent;
     }
+}
+
+function writePermissionDeniedError(target: string): Error {
+    return new Error(`Write permission denied: ${target}`);
+}
+
+function isReadPermissionDeniedError(error: unknown): boolean {
+    return error instanceof Error && error.message.startsWith("Read permission denied:");
 }

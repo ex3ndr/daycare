@@ -207,7 +207,7 @@ describe("skillToolBuild", () => {
             });
 
             await expect(tool.execute({ name: skillPath }, context, toolCall)).rejects.toThrow(
-                "Read access denied for denied paths."
+                `Read permission denied: ${skillPath}`
             );
         } finally {
             await fs.rm(homeBaseDir, { recursive: true, force: true });
@@ -245,7 +245,7 @@ describe("skillToolBuild", () => {
             });
 
             await expect(tool.execute({ name: "restricted" }, context, toolCall)).rejects.toThrow(
-                "Read access denied for denied paths."
+                `Read permission denied: ${skillPath}`
             );
         } finally {
             await fs.rm(homeBaseDir, { recursive: true, force: true });

@@ -62,7 +62,7 @@ describe("sandboxCanRead", () => {
         const permissions = buildPermissions(workingDir, [homeDir]);
 
         await expect(sandboxCanRead(permissions, homeSensitiveFile)).rejects.toThrow(
-            "Read access denied for denied paths."
+            `Read permission denied: ${homeSensitiveFile}`
         );
     });
 
@@ -70,7 +70,7 @@ describe("sandboxCanRead", () => {
         const permissions = buildPermissions(workingDir, []);
 
         await expect(sandboxCanRead(permissions, homeRandomFile)).rejects.toThrow(
-            "Read access denied for denied paths."
+            `Read permission denied: ${homeRandomFile}`
         );
     });
 
@@ -86,7 +86,7 @@ describe("sandboxCanRead", () => {
         const permissions = buildPermissions(workingDir, [path.join(homeDir, "allowed")]);
 
         await expect(sandboxCanRead(permissions, homeWriteDirFile)).rejects.toThrow(
-            "Read access denied for denied paths."
+            `Read permission denied: ${homeWriteDirFile}`
         );
     });
 
@@ -121,9 +121,7 @@ describe("sandboxCanRead", () => {
     it("denies non-app agents from reading app directories", async () => {
         const permissions = buildPermissions(workingDir, [workingDir]);
 
-        await expect(sandboxCanRead(permissions, appFile)).rejects.toThrow(
-            "App directories are not accessible from non-app agents."
-        );
+        await expect(sandboxCanRead(permissions, appFile)).rejects.toThrow(`Read permission denied: ${appFile}`);
     });
 
     it("allows app agents to read their own app directory", async () => {
@@ -142,7 +140,7 @@ describe("sandboxCanRead", () => {
         const permissions = buildPermissions(appDataDir, [appDataDir]);
 
         await expect(sandboxCanRead(permissions, otherAppFile)).rejects.toThrow(
-            "App agents can only access their own app directory."
+            `Read permission denied: ${otherAppFile}`
         );
     });
 });

@@ -40,7 +40,7 @@ describe("sandboxCanWrite", () => {
         const permissions = buildPermissions(workingDir, []);
         const target = path.join(workingDir, "nested", "output.txt");
 
-        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow("Path is outside the allowed directories.");
+        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow(`Write permission denied: ${target}`);
     });
 
     it("allows writing within explicitly granted write directories", async () => {
@@ -65,14 +65,14 @@ describe("sandboxCanWrite", () => {
         const permissions = buildPermissions(workingDir, []);
         const target = path.join(outsideDir, "blocked.txt");
 
-        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow("Path is outside the allowed directories.");
+        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow(`Write permission denied: ${target}`);
     });
 
     it("denies writing to sensitive paths even when parent is in writeDirs", async () => {
         const permissions = buildPermissions(workingDir, [homeDir]);
 
         await expect(sandboxCanWrite(permissions, sensitiveFile)).rejects.toThrow(
-            "Read access denied for denied paths."
+            `Write permission denied: ${sensitiveFile}`
         );
     });
 
@@ -80,14 +80,14 @@ describe("sandboxCanWrite", () => {
         const permissions = buildPermissions(workingDir, [homeDir]);
         const target = path.join(homeDir, "notes", "blind-write.txt");
 
-        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow("Read access denied for denied paths.");
+        await expect(sandboxCanWrite(permissions, target)).rejects.toThrow(`Write permission denied: ${target}`);
     });
 
     it("denies writing dangerous filenames in allowed writeDirs", async () => {
         const permissions = buildPermissions(workingDir, [outsideDir]);
 
         await expect(sandboxCanWrite(permissions, dangerousFile)).rejects.toThrow(
-            "Write access denied for dangerous files or directories."
+            `Write permission denied: ${dangerousFile}`
         );
     });
 
@@ -95,7 +95,7 @@ describe("sandboxCanWrite", () => {
         const permissions = buildPermissions(workingDir, [outsideDir]);
 
         await expect(sandboxCanWrite(permissions, dangerousHookFile)).rejects.toThrow(
-            "Write access denied for dangerous files or directories."
+            `Write permission denied: ${dangerousHookFile}`
         );
     });
 
@@ -111,9 +111,7 @@ describe("sandboxCanWrite", () => {
     it("denies non-app agents from writing app directories", async () => {
         const permissions = buildPermissions(workingDir, [workingDir]);
 
-        await expect(sandboxCanWrite(permissions, appFile)).rejects.toThrow(
-            "App directories are not accessible from non-app agents."
-        );
+        await expect(sandboxCanWrite(permissions, appFile)).rejects.toThrow(`Write permission denied: ${appFile}`);
     });
 });
 

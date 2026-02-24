@@ -13,16 +13,17 @@ import { sandboxSensitiveDenyPathsBuild } from "./sandboxSensitiveDenyPathsBuild
  * Expects: target is an absolute path.
  */
 export async function sandboxCanRead(permissions: SessionPermissions, target: string): Promise<string> {
+    const requestedPath = path.resolve(target);
     // Read uses a broad allowlist, then applies hard deny-lists.
-    const allowedDirs = [path.parse(target).root];
-    const result = await pathResolveSecure(allowedDirs, target);
+    const allowedDirs = [path.parse(requestedPath).root];
+    const result = await pathResolveSecure(allowedDirs, requestedPath);
     const access = sandboxAppsAccessCheck(permissions, result.realPath);
     if (!access.allowed) {
-        throw new Error(access.reason ?? "Read access denied.");
+        throw readPermissionDeniedError(requestedPath);
     }
 
     if (sandboxPathDenyCheck(result.realPath, sandboxSensitiveDenyPathsBuild())) {
-        throw new Error("Read access denied for denied paths.");
+        throw readPermissionDeniedError(requestedPath);
     }
 
     const explicitlyAllowedDirs = [permissions.workingDir, ...(permissions.readDirs ?? [])];
@@ -33,7 +34,7 @@ export async function sandboxCanRead(permissions: SessionPermissions, target: st
     }
 
     if (sandboxPathDenyCheck(result.realPath, sandboxReadBoundaryDenyPathsBuild())) {
-        throw new Error("Read access denied for denied paths.");
+        throw readPermissionDeniedError(requestedPath);
     }
 
     return result.realPath;
@@ -45,4 +46,8 @@ async function existingPathResolve(target: string): Promise<string> {
     } catch {
         return path.resolve(target);
     }
+}
+
+function readPermissionDeniedError(target: string): Error {
+    return new Error(`Read permission denied: ${target}`);
 }
