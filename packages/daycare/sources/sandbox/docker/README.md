@@ -20,7 +20,8 @@ Configure Docker runtime in `settings.json`:
         "image": "daycare-sandbox",
         "tag": "latest",
         "socketPath": "/var/run/docker.sock",
-        "runtime": "runsc"
+        "runtime": "runsc",
+        "unconfinedSecurity": false
     }
 }
 ```
@@ -32,6 +33,11 @@ Defaults when omitted:
 - `tag`: `latest`
 - `socketPath`: `undefined` (Docker default)
 - `runtime`: `undefined` (Docker default)
+- `unconfinedSecurity`: `false`
+
+When `unconfinedSecurity` is `true`, sandbox containers are created with:
+
+- `SecurityOpt: ["seccomp=unconfined", "apparmor=unconfined"]`
 
 ## Execution Flow
 

@@ -25,6 +25,7 @@ const sandbox = new Sandbox({
         tag: "latest",
         socketPath: "/var/run/docker.sock",
         runtime: "runsc",
+        unconfinedSecurity: false,
         userId: ctx.userId
     }
 });
@@ -89,7 +90,8 @@ Enable Docker runtime in `settings.json`:
         "image": "daycare-sandbox",
         "tag": "latest",
         "socketPath": "/var/run/docker.sock",
-        "runtime": "runsc"
+        "runtime": "runsc",
+        "unconfinedSecurity": false
     }
 }
 ```

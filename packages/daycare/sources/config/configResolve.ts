@@ -71,6 +71,7 @@ function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSett
         image: docker?.image ?? DEFAULT_DOCKER_IMAGE,
         tag: docker?.tag ?? DEFAULT_DOCKER_TAG,
         socketPath: docker?.socketPath,
-        runtime: docker?.runtime
+        runtime: docker?.runtime,
+        unconfinedSecurity: docker?.unconfinedSecurity ?? false
     };
 }

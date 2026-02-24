@@ -57,6 +57,7 @@ export type DockerSettings = {
     tag?: string;
     socketPath?: string;
     runtime?: string;
+    unconfinedSecurity?: boolean;
 };
 
 export type ResolvedDockerSettings = {
@@ -65,6 +66,7 @@ export type ResolvedDockerSettings = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    unconfinedSecurity: boolean;
 };
 
 export type FeaturesConfig = {

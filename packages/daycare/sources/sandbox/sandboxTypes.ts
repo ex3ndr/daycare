@@ -76,6 +76,7 @@ export type SandboxDockerConfig = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    unconfinedSecurity: boolean;
     userId: string;
     skillsActiveDir: string;
 };

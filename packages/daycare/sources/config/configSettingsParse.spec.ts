@@ -30,7 +30,8 @@ describe("configSettingsParse", () => {
                 image: "daycare-sandbox",
                 tag: "latest",
                 socketPath: "/var/run/docker.sock",
-                runtime: "runsc"
+                runtime: "runsc",
+                unconfinedSecurity: true
             }
         });
 
@@ -39,7 +40,8 @@ describe("configSettingsParse", () => {
             image: "daycare-sandbox",
             tag: "latest",
             socketPath: "/var/run/docker.sock",
-            runtime: "runsc"
+            runtime: "runsc",
+            unconfinedSecurity: true
         });
     });
 

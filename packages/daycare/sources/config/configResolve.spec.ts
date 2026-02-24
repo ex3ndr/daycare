@@ -86,7 +86,8 @@ describe("configResolve", () => {
             image: "daycare-sandbox",
             tag: "latest",
             socketPath: undefined,
-            runtime: undefined
+            runtime: undefined,
+            unconfinedSecurity: false
         });
         expect(config.settings.docker).toEqual(config.docker);
     });
@@ -107,7 +108,8 @@ describe("configResolve", () => {
             image: "custom-sandbox",
             tag: "latest",
             socketPath: undefined,
-            runtime: undefined
+            runtime: undefined,
+            unconfinedSecurity: false
         });
     });
 
@@ -120,7 +122,8 @@ describe("configResolve", () => {
                     image: "daycare-sandbox",
                     tag: "v2",
                     socketPath: "/var/run/docker.sock",
-                    runtime: "runsc"
+                    runtime: "runsc",
+                    unconfinedSecurity: true
                 }
             },
             configPath
@@ -130,7 +133,8 @@ describe("configResolve", () => {
             image: "daycare-sandbox",
             tag: "v2",
             socketPath: "/var/run/docker.sock",
-            runtime: "runsc"
+            runtime: "runsc",
+            unconfinedSecurity: true
         });
     });
 });

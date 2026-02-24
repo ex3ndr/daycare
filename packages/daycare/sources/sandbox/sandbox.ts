@@ -238,6 +238,7 @@ export class Sandbox {
                           tag: this.docker!.tag,
                           socketPath: this.docker!.socketPath,
                           runtime: this.docker!.runtime,
+                          unconfinedSecurity: this.docker!.unconfinedSecurity,
                           userId: this.docker!.userId,
                           hostSkillsActiveDir: this.docker!.skillsActiveDir
                       }

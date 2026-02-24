@@ -10,6 +10,7 @@ const baseConfig: DockerContainerConfig = {
     tag: "latest",
     socketPath: "/var/run/docker.sock",
     runtime: "runsc",
+    unconfinedSecurity: false,
     userId: "user-1",
     hostHomeDir: "/data/users/user-1/home",
     hostSkillsActiveDir: "/data/users/user-1/skills/active"
@@ -25,7 +26,8 @@ describe("dockerContainerEnsure", () => {
                 Config: {
                     Labels: {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
-                        "daycare.image.id": CURRENT_IMAGE_ID
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default"
                     }
                 }
             }),
@@ -59,7 +61,8 @@ describe("dockerContainerEnsure", () => {
                 Config: {
                     Labels: {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
-                        "daycare.image.id": CURRENT_IMAGE_ID
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default"
                     }
                 }
             }),
@@ -114,7 +117,8 @@ describe("dockerContainerEnsure", () => {
             WorkingDir: "/home",
             Labels: {
                 "daycare.image.version": DOCKER_IMAGE_VERSION,
-                "daycare.image.id": CURRENT_IMAGE_ID
+                "daycare.image.id": CURRENT_IMAGE_ID,
+                "daycare.security.profile": "default"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
@@ -131,7 +135,8 @@ describe("dockerContainerEnsure", () => {
                 Config: {
                     Labels: {
                         "daycare.image.version": "0",
-                        "daycare.image.id": CURRENT_IMAGE_ID
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default"
                     }
                 }
             }),
@@ -165,7 +170,8 @@ describe("dockerContainerEnsure", () => {
                 Config: {
                     Labels: {
                         "daycare.image.version": DOCKER_IMAGE_VERSION,
-                        "daycare.image.id": "sha256:outdated"
+                        "daycare.image.id": "sha256:outdated",
+                        "daycare.security.profile": "default"
                     }
                 }
             }),
@@ -185,6 +191,87 @@ describe("dockerContainerEnsure", () => {
         } as unknown as Docker;
 
         const result = await dockerContainerEnsure(docker, baseConfig);
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
+    it("creates container with unconfined security opts when enabled", async () => {
+        const existing = {
+            inspect: vi.fn().mockRejectedValue({ statusCode: 404 }),
+            start: vi.fn(),
+            stop: vi.fn(),
+            remove: vi.fn()
+        } as unknown as Docker.Container;
+
+        const created = {
+            inspect: vi.fn(),
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        await dockerContainerEnsure(docker, {
+            ...baseConfig,
+            unconfinedSecurity: true
+        });
+
+        expect(docker.createContainer).toHaveBeenCalledWith({
+            name: "daycare-sandbox-user-1",
+            Image: IMAGE_REF,
+            WorkingDir: "/home",
+            Labels: {
+                "daycare.image.version": DOCKER_IMAGE_VERSION,
+                "daycare.image.id": CURRENT_IMAGE_ID,
+                "daycare.security.profile": "unconfined"
+            },
+            HostConfig: {
+                Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                Runtime: "runsc",
+                SecurityOpt: ["seccomp=unconfined", "apparmor=unconfined"]
+            }
+        });
+    });
+
+    it("recreates container when security profile label does not match", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default"
+                    }
+                }
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, {
+            ...baseConfig,
+            unconfinedSecurity: true
+        });
 
         expect(result).toBe(created);
         expect(existing.stop).toHaveBeenCalledTimes(1);

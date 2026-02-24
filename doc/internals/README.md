@@ -54,6 +54,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `exec-filesystem-denylist.md` - sandbox default deny read/write paths for sensitive files
 - `exec-write-permission-parity.md` - `exec` now uses caller writeDirs instead of forced `/tmp`
 - `sandbox-weaker-nested.md` - `enableWeakerNestedSandbox` runtime config usage
+- `docker-security-unconfined.md` - docker `SecurityOpt` unconfined mode for sandbox containers
 - `durable-process-manager.md` - durable process lifecycle and restart behavior
 - `logging.md` - logging configuration and output
 - `system-prompt-debug.md` - system prompt snapshot storage for inference

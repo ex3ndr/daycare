@@ -23,8 +23,9 @@ describe("dockerRunInSandbox", () => {
         let capturedEnv: NodeJS.ProcessEnv | undefined;
         let capturedCwd: string | undefined;
         let capturedCommand: string | undefined;
+        let capturedUnconfinedSecurity: boolean | undefined;
 
-        dockerExecSpy.mockImplementationOnce(async (_dockerConfig, args) => {
+        dockerExecSpy.mockImplementationOnce(async (dockerConfig, args) => {
             // Command is wrapped as: ["bash", "-lc", "/usr/local/bin/srt --settings <path> -c <cmd>"]
             const bashCmd = args.command[2] ?? "";
             const settingsMatch = bashCmd.match(/--settings\s+(\S+)/);
@@ -32,6 +33,7 @@ describe("dockerRunInSandbox", () => {
             if (!settingsContainerPath) {
                 throw new Error("Expected --settings path in bash command string.");
             }
+            capturedUnconfinedSecurity = dockerConfig.unconfinedSecurity;
             capturedCommand = bashCmd;
             capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
             const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
@@ -65,6 +67,7 @@ describe("dockerRunInSandbox", () => {
                 docker: {
                     image: "daycare-sandbox",
                     tag: "latest",
+                    unconfinedSecurity: false,
                     userId,
                     hostSkillsActiveDir: skillsActiveDir
                 }
@@ -89,6 +92,7 @@ describe("dockerRunInSandbox", () => {
         expect(capturedEnv?.HOME).toBe("/home");
         expect(capturedEnv?.TMPDIR).toBe("/home/.tmp");
         expect(capturedCwd).toBe("/home/desktop/project");
+        expect(capturedUnconfinedSecurity).toBe(false);
         expect(capturedCommand).toContain("/usr/local/bin/srt --settings ");
         await expect(fs.access(capturedSettingsHostPath ?? "")).rejects.toThrow();
         dockerExecSpy.mockRestore();
@@ -128,6 +132,7 @@ describe("dockerRunInSandbox", () => {
                     docker: {
                         image: "daycare-sandbox",
                         tag: "latest",
+                        unconfinedSecurity: false,
                         userId: "u123",
                         hostSkillsActiveDir: skillsActiveDir
                     }

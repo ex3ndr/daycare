@@ -23,6 +23,10 @@ type DockerContainerInspect = {
 const logger = getLogger("sandbox.docker");
 const DOCKER_IMAGE_VERSION_LABEL = "daycare.image.version";
 const DOCKER_IMAGE_ID_LABEL = "daycare.image.id";
+const DOCKER_SECURITY_PROFILE_LABEL = "daycare.security.profile";
+const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
+const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
+const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
 
 /**
  * Ensures a long-lived sandbox container exists and is running for a user.
@@ -36,7 +40,7 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
 
     try {
         const details = (await existing.inspect()) as DockerContainerInspect;
-        const staleReason = containerStaleReasonResolve(details, imageId);
+        const staleReason = containerStaleReasonResolve(details, imageId, config.unconfinedSecurity);
         if (staleReason) {
             logger.warn(
                 { containerName, imageRef, staleReason },
@@ -60,6 +64,10 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
     const hostSkillsActiveDir = path.resolve(config.hostSkillsActiveDir);
     const containerHomeDir = "/home";
     const containerSkillsDir = "/shared/skills";
+    const securityProfile = config.unconfinedSecurity
+        ? DOCKER_SECURITY_PROFILE_UNCONFINED
+        : DOCKER_SECURITY_PROFILE_DEFAULT;
+    const securityOpt = config.unconfinedSecurity ? [...DOCKER_SECURITY_OPT_UNCONFINED] : undefined;
 
     try {
         const created = await docker.createContainer({
@@ -68,11 +76,13 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
             WorkingDir: containerHomeDir,
             Labels: {
                 [DOCKER_IMAGE_VERSION_LABEL]: DOCKER_IMAGE_VERSION,
-                [DOCKER_IMAGE_ID_LABEL]: imageId
+                [DOCKER_IMAGE_ID_LABEL]: imageId,
+                [DOCKER_SECURITY_PROFILE_LABEL]: securityProfile
             },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
-                ...(config.runtime ? { Runtime: config.runtime } : {})
+                ...(config.runtime ? { Runtime: config.runtime } : {}),
+                ...(securityOpt ? { SecurityOpt: securityOpt } : {})
             }
         });
         await startContainerIfNeeded(created);
@@ -117,10 +127,15 @@ async function removeContainerIfNeeded(container: Docker.Container): Promise<voi
     }
 }
 
-function containerStaleReasonResolve(details: DockerContainerInspect, expectedImageId: string): string | null {
+function containerStaleReasonResolve(
+    details: DockerContainerInspect,
+    expectedImageId: string,
+    unconfinedSecurity: boolean
+): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
     const imageId = labels?.[DOCKER_IMAGE_ID_LABEL];
+    const securityProfile = labels?.[DOCKER_SECURITY_PROFILE_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -132,6 +147,15 @@ function containerStaleReasonResolve(details: DockerContainerInspect, expectedIm
     }
     if (imageId !== expectedImageId) {
         return "image-id-mismatch";
+    }
+    if (!securityProfile) {
+        return "missing-security-profile-label";
+    }
+    const expectedSecurityProfile = unconfinedSecurity
+        ? DOCKER_SECURITY_PROFILE_UNCONFINED
+        : DOCKER_SECURITY_PROFILE_DEFAULT;
+    if (securityProfile !== expectedSecurityProfile) {
+        return `security-profile-mismatch:${securityProfile}->${expectedSecurityProfile}`;
     }
     return null;
 }

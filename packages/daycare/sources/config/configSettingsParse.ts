@@ -54,7 +54,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     image: z.string().min(1).optional(),
                     tag: z.string().min(1).optional(),
                     socketPath: z.string().min(1).optional(),
-                    runtime: z.string().min(1).optional()
+                    runtime: z.string().min(1).optional(),
+                    unconfinedSecurity: z.boolean().optional()
                 })
                 .passthrough()
                 .optional(),

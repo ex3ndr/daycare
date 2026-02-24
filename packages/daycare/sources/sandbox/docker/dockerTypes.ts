@@ -5,6 +5,7 @@ export type DockerContainerConfig = {
     tag: string;
     socketPath?: string;
     runtime?: string;
+    unconfinedSecurity: boolean;
     userId: string;
     hostHomeDir: string;
     hostSkillsActiveDir: string;

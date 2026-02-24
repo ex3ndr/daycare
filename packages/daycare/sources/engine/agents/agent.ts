@@ -117,6 +117,7 @@ export class Agent {
                       tag: dockerSettings.tag,
                       socketPath: dockerSettings.socketPath,
                       runtime: dockerSettings.runtime,
+                      unconfinedSecurity: dockerSettings.unconfinedSecurity,
                       userId: this.ctx.userId,
                       skillsActiveDir: this.userHome.skillsActive
                   }
