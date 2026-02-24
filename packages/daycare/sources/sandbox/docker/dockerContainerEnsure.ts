@@ -1,12 +1,28 @@
 import path from "node:path";
 import type Docker from "dockerode";
 
+import { getLogger } from "../../log.js";
 import { dockerContainerNameBuild } from "./dockerContainerNameBuild.js";
+import { dockerImageIdResolve } from "./dockerImageIdResolve.js";
+import { DOCKER_IMAGE_VERSION } from "./dockerImageVersion.js";
 import type { DockerContainerConfig } from "./dockerTypes.js";
 
 type DockerError = {
     statusCode?: number;
 };
+
+type DockerContainerInspect = {
+    State?: {
+        Running?: boolean;
+    };
+    Config?: {
+        Labels?: Record<string, string>;
+    };
+};
+
+const logger = getLogger("sandbox.docker");
+const DOCKER_IMAGE_VERSION_LABEL = "daycare.image.version";
+const DOCKER_IMAGE_ID_LABEL = "daycare.image.id";
 
 /**
  * Ensures a long-lived sandbox container exists and is running for a user.
@@ -14,14 +30,26 @@ type DockerError = {
  */
 export async function dockerContainerEnsure(docker: Docker, config: DockerContainerConfig): Promise<Docker.Container> {
     const containerName = dockerContainerNameBuild(config.userId);
+    const imageRef = `${config.image}:${config.tag}`;
+    const imageId = await dockerImageIdResolve(docker, imageRef);
     const existing = docker.getContainer(containerName);
 
     try {
-        const details = await existing.inspect();
-        if (!details.State?.Running) {
+        const details = (await existing.inspect()) as DockerContainerInspect;
+        const staleReason = containerStaleReasonResolve(details, imageId);
+        if (staleReason) {
+            logger.warn(
+                { containerName, imageRef, staleReason },
+                "stale: Removing Docker sandbox container because image metadata changed"
+            );
+            await stopContainerIfNeeded(existing);
+            await removeContainerIfNeeded(existing);
+        } else if (!details.State?.Running) {
             await startContainerIfNeeded(existing);
+            return existing;
+        } else {
+            return existing;
         }
-        return existing;
     } catch (error) {
         if ((error as DockerError).statusCode !== 404) {
             throw error;
@@ -36,8 +64,12 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
     try {
         const created = await docker.createContainer({
             name: containerName,
-            Image: `${config.image}:${config.tag}`,
+            Image: imageRef,
             WorkingDir: containerHomeDir,
+            Labels: {
+                [DOCKER_IMAGE_VERSION_LABEL]: DOCKER_IMAGE_VERSION,
+                [DOCKER_IMAGE_ID_LABEL]: imageId
+            },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
                 ...(config.runtime ? { Runtime: config.runtime } : {})
@@ -63,4 +95,43 @@ async function startContainerIfNeeded(container: Docker.Container): Promise<void
             throw error;
         }
     }
+}
+
+async function stopContainerIfNeeded(container: Docker.Container): Promise<void> {
+    try {
+        await container.stop();
+    } catch (error) {
+        if ((error as DockerError).statusCode !== 304) {
+            throw error;
+        }
+    }
+}
+
+async function removeContainerIfNeeded(container: Docker.Container): Promise<void> {
+    try {
+        await container.remove();
+    } catch (error) {
+        if ((error as DockerError).statusCode !== 404) {
+            throw error;
+        }
+    }
+}
+
+function containerStaleReasonResolve(details: DockerContainerInspect, expectedImageId: string): string | null {
+    const labels = details.Config?.Labels;
+    const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
+    const imageId = labels?.[DOCKER_IMAGE_ID_LABEL];
+    if (!version) {
+        return "missing-version-label";
+    }
+    if (!imageId) {
+        return "missing-image-id-label";
+    }
+    if (version !== DOCKER_IMAGE_VERSION) {
+        return `version-mismatch:${version}->${DOCKER_IMAGE_VERSION}`;
+    }
+    if (imageId !== expectedImageId) {
+        return "image-id-mismatch";
+    }
+    return null;
 }

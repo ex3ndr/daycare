@@ -1,11 +1,14 @@
 import path from "node:path";
 
+import Docker from "dockerode";
+
 import type { AgentDescriptor, AgentTokenEntry, Config, MessageContext } from "@/types";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
+import { dockerContainersStaleRemove } from "../sandbox/docker/dockerContainersStaleRemove.js";
 import { Storage } from "../storage/storage.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { InvalidateSync } from "../util/sync.js";
@@ -339,6 +342,17 @@ export class Engine {
         const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
         await userHomeEnsure(ownerUserHome);
         await userHomeMigrate(this.config.current, this.storage);
+        if (this.config.current.docker.enabled) {
+            const imageRef = `${this.config.current.docker.image}:${this.config.current.docker.tag}`;
+            try {
+                const docker = this.config.current.docker.socketPath
+                    ? new Docker({ socketPath: this.config.current.docker.socketPath })
+                    : new Docker();
+                await dockerContainersStaleRemove(docker, imageRef);
+            } catch (error) {
+                logger.warn({ imageRef, error }, "stale: Failed to remove stale Docker sandbox containers on startup");
+            }
+        }
 
         logger.debug("load: Loading agents");
         await this.agentSystem.load();

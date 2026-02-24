@@ -45,6 +45,41 @@ graph TD
     F --> G[srt policy inside container]
 ```
 
+## Image Version Guard
+
+Each sandbox container is stamped at creation time with:
+
+- `daycare.image.version` from `DOCKER_IMAGE_VERSION` in `dockerImageVersion.ts`
+- `daycare.image.id` from `docker image inspect` (`dockerImageIdResolve`)
+
+`dockerContainerEnsure` compares these labels against current values. If either label is missing or mismatched, the
+container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure
+flow.
+
+At engine startup, when Docker is enabled, Daycare scans all `daycare-sandbox-*` containers and proactively removes
+stale ones before normal startup continues.
+
+```mermaid
+flowchart TD
+    A[Engine.start] --> B{docker.enabled}
+    B -- no --> Z[skip]
+    B -- yes --> C[resolve current image id]
+    C --> D[list daycare-sandbox-* containers]
+    D --> E{for each container\nlabels match?}
+    E -- yes --> F[keep container]
+    E -- no --> G[stop + remove container]
+    F --> H[done]
+    G --> H
+```
+
+### Bumping `DOCKER_IMAGE_VERSION`
+
+Bump `DOCKER_IMAGE_VERSION` manually when sandbox image behavior changes in an incompatible way:
+
+1. Update `DOCKER_IMAGE_VERSION` in `dockerImageVersion.ts` (e.g. `"1"` -> `"2"`).
+2. Deploy/restart engine.
+3. Startup removes stale containers, and ensure recreates containers lazily when execution needs them.
+
 ## Path Translation
 
 - Host to container: `sandboxPathHostToContainer()`

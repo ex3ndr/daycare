@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AgentDescriptor, Connector, ConnectorMessage, MessageContext } from "@/types";
 import { configResolve } from "../config/configResolve.js";
+import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
@@ -199,6 +200,56 @@ describe("Engine startup plugin hooks", () => {
 
             await engine.shutdown();
         } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("Engine Docker stale container cleanup", () => {
+    it("runs startup stale scan when docker is enabled", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    docker: { enabled: true, image: "daycare-sandbox", tag: "latest" }
+                },
+                path.join(dir, "settings.json")
+            );
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.start();
+
+            expect(staleRemoveSpy).toHaveBeenCalledTimes(1);
+            expect(staleRemoveSpy).toHaveBeenCalledWith(expect.anything(), "daycare-sandbox:latest");
+
+            await engine.shutdown();
+        } finally {
+            staleRemoveSpy.mockRestore();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("skips startup stale scan when docker is disabled", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        try {
+            const config = configResolve(
+                { engine: { dataDir: dir }, docker: { enabled: false } },
+                path.join(dir, "settings.json")
+            );
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.start();
+
+            expect(staleRemoveSpy).not.toHaveBeenCalled();
+
+            await engine.shutdown();
+        } finally {
+            staleRemoveSpy.mockRestore();
             await rm(dir, { recursive: true, force: true });
         }
     });
