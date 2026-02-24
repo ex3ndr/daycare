@@ -35,7 +35,8 @@ describe("configSettingsParse", () => {
                 readOnly: true,
                 unconfinedSecurity: true,
                 capAdd: ["NET_ADMIN"],
-                capDrop: ["MKNOD"]
+                capDrop: ["MKNOD"],
+                allowLocalNetworkingForUsers: ["user-1", "user-2"]
             }
         });
 
@@ -49,7 +50,8 @@ describe("configSettingsParse", () => {
             readOnly: true,
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
-            capDrop: ["MKNOD"]
+            capDrop: ["MKNOD"],
+            allowLocalNetworkingForUsers: ["user-1", "user-2"]
         });
     });
 
@@ -68,5 +70,15 @@ describe("configSettingsParse", () => {
         expect(parsed.docker).toEqual({
             enabled: true
         });
+    });
+
+    it("accepts docker local-network user allowlist", () => {
+        const parsed = configSettingsParse({
+            docker: {
+                allowLocalNetworkingForUsers: ["user-1"]
+            }
+        });
+
+        expect(parsed.docker?.allowLocalNetworkingForUsers).toEqual(["user-1"]);
     });
 });

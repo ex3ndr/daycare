@@ -3,9 +3,10 @@ import type Docker from "dockerode";
 
 import { getLogger } from "../../log.js";
 import { dockerContainerNameBuild } from "./dockerContainerNameBuild.js";
+import { dockerContainerNetworkStateResolve } from "./dockerContainerNetworkStateResolve.js";
 import { dockerImageIdResolve } from "./dockerImageIdResolve.js";
 import { DOCKER_IMAGE_VERSION } from "./dockerImageVersion.js";
-import type { DockerContainerConfig } from "./dockerTypes.js";
+import type { DockerContainerResolvedConfig } from "./dockerTypes.js";
 
 type DockerError = {
     statusCode?: number;
@@ -18,6 +19,9 @@ type DockerContainerInspect = {
     Config?: {
         Labels?: Record<string, string>;
     };
+    NetworkSettings?: {
+        Networks?: Record<string, unknown>;
+    };
 };
 
 const logger = getLogger("sandbox.docker");
@@ -26,6 +30,7 @@ const DOCKER_IMAGE_ID_LABEL = "daycare.image.id";
 const DOCKER_SECURITY_PROFILE_LABEL = "daycare.security.profile";
 const DOCKER_CAPABILITIES_LABEL = "daycare.capabilities";
 const DOCKER_READONLY_LABEL = "daycare.readonly";
+const DOCKER_NETWORK_LABEL = "daycare.network";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
@@ -34,7 +39,10 @@ const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfin
  * Ensures a long-lived sandbox container exists and is running for a user.
  * Expects: image:tag exists locally and hostHomeDir is an absolute host path.
  */
-export async function dockerContainerEnsure(docker: Docker, config: DockerContainerConfig): Promise<Docker.Container> {
+export async function dockerContainerEnsure(
+    docker: Docker,
+    config: DockerContainerResolvedConfig
+): Promise<Docker.Container> {
     const containerName = dockerContainerNameBuild(config.userId);
     const imageRef = `${config.image}:${config.tag}`;
     const imageId = await dockerImageIdResolve(docker, imageRef);
@@ -48,12 +56,13 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
             config.readOnly,
             config.unconfinedSecurity,
             config.capAdd,
-            config.capDrop
+            config.capDrop,
+            config.networkName
         );
         if (staleReason) {
             logger.warn(
                 { containerName, imageRef, staleReason },
-                "stale: Removing Docker sandbox container because image metadata changed"
+                "stale: Removing Docker sandbox container because configuration changed"
             );
             await stopContainerIfNeeded(existing);
             await removeContainerIfNeeded(existing);
@@ -90,15 +99,22 @@ export async function dockerContainerEnsure(docker: Docker, config: DockerContai
                 [DOCKER_IMAGE_ID_LABEL]: imageId,
                 [DOCKER_SECURITY_PROFILE_LABEL]: securityProfile,
                 [DOCKER_CAPABILITIES_LABEL]: capabilitiesLabel,
-                [DOCKER_READONLY_LABEL]: readOnlyLabel
+                [DOCKER_READONLY_LABEL]: readOnlyLabel,
+                [DOCKER_NETWORK_LABEL]: config.networkName
             },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
+                NetworkMode: config.networkName,
                 ...(config.runtime ? { Runtime: config.runtime } : {}),
                 ...(config.readOnly ? { ReadonlyRootfs: true } : {}),
                 ...(config.capAdd.length > 0 ? { CapAdd: config.capAdd } : {}),
                 ...(config.capDrop.length > 0 ? { CapDrop: config.capDrop } : {}),
                 ...(securityOpt ? { SecurityOpt: securityOpt } : {})
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    [config.networkName]: {}
+                }
             }
         });
         await startContainerIfNeeded(created);
@@ -149,7 +165,8 @@ function containerStaleReasonResolve(
     readOnly: boolean,
     unconfinedSecurity: boolean,
     capAdd: string[],
-    capDrop: string[]
+    capDrop: string[],
+    expectedNetworkName: string
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -157,6 +174,7 @@ function containerStaleReasonResolve(
     const securityProfile = labels?.[DOCKER_SECURITY_PROFILE_LABEL];
     const capabilities = labels?.[DOCKER_CAPABILITIES_LABEL];
     const readOnlyLabel = labels?.[DOCKER_READONLY_LABEL];
+    const networkLabel = labels?.[DOCKER_NETWORK_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -178,6 +196,10 @@ function containerStaleReasonResolve(
     if (!readOnlyLabel) {
         return "missing-readonly-label";
     }
+    const networkState = dockerContainerNetworkStateResolve(details, expectedNetworkName);
+    if (networkState !== "correct") {
+        return `network-mismatch:${expectedNetworkName}`;
+    }
     const expectedSecurityProfile = unconfinedSecurity
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
@@ -191,6 +213,9 @@ function containerStaleReasonResolve(
     const expectedReadOnlyLabel = readOnly ? "1" : "0";
     if (readOnlyLabel !== expectedReadOnlyLabel) {
         return `readonly-mismatch:${readOnlyLabel}->${expectedReadOnlyLabel}`;
+    }
+    if (networkLabel && networkLabel !== expectedNetworkName) {
+        return `network-label-mismatch:${networkLabel}->${expectedNetworkName}`;
     }
     return null;
 }

@@ -27,6 +27,7 @@ describe("dockerRunInSandbox", () => {
         let capturedUnconfinedSecurity: boolean | undefined;
         let capturedCapAdd: string[] | undefined;
         let capturedCapDrop: string[] | undefined;
+        let capturedLocalNetworkAllowlist: string[] | undefined;
 
         dockerExecSpy.mockImplementationOnce(async (dockerConfig, args) => {
             // Command is wrapped as: ["bash", "-lc", "/usr/local/bin/srt --settings <path> -c <cmd>"]
@@ -40,6 +41,7 @@ describe("dockerRunInSandbox", () => {
             capturedUnconfinedSecurity = dockerConfig.unconfinedSecurity;
             capturedCapAdd = dockerConfig.capAdd;
             capturedCapDrop = dockerConfig.capDrop;
+            capturedLocalNetworkAllowlist = dockerConfig.allowLocalNetworkingForUsers;
             capturedCommand = bashCmd;
             capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
             const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
@@ -77,6 +79,7 @@ describe("dockerRunInSandbox", () => {
                     unconfinedSecurity: false,
                     capAdd: [],
                     capDrop: [],
+                    allowLocalNetworkingForUsers: ["u123"],
                     userId,
                     hostSkillsActiveDir: skillsActiveDir
                 }
@@ -105,6 +108,7 @@ describe("dockerRunInSandbox", () => {
         expect(capturedUnconfinedSecurity).toBe(false);
         expect(capturedCapAdd).toEqual([]);
         expect(capturedCapDrop).toEqual([]);
+        expect(capturedLocalNetworkAllowlist).toEqual(["u123"]);
         expect(capturedCommand).toContain("/usr/local/bin/srt --settings ");
         await expect(fs.access(capturedSettingsHostPath ?? "")).rejects.toThrow();
         dockerExecSpy.mockRestore();

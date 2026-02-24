@@ -91,7 +91,8 @@ describe("configResolve", () => {
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
-            capDrop: []
+            capDrop: [],
+            allowLocalNetworkingForUsers: []
         });
         expect(config.settings.docker).toEqual(config.docker);
     });
@@ -117,7 +118,8 @@ describe("configResolve", () => {
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
-            capDrop: []
+            capDrop: [],
+            allowLocalNetworkingForUsers: []
         });
     });
 
@@ -150,7 +152,8 @@ describe("configResolve", () => {
             readOnly: true,
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
-            capDrop: ["MKNOD"]
+            capDrop: ["MKNOD"],
+            allowLocalNetworkingForUsers: []
         });
     });
 
@@ -168,5 +171,19 @@ describe("configResolve", () => {
 
         expect(config.docker.capAdd).toEqual(["NET_ADMIN", "SYS_ADMIN"]);
         expect(config.docker.capDrop).toEqual(["MKNOD"]);
+    });
+
+    it("normalizes docker local-network user allowlist", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                docker: {
+                    allowLocalNetworkingForUsers: [" user-b ", "user-a", "user-a", " "]
+                }
+            },
+            configPath
+        );
+
+        expect(config.docker.allowLocalNetworkingForUsers).toEqual(["user-a", "user-b"]);
     });
 });

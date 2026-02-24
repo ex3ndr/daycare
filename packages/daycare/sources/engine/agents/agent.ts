@@ -122,6 +122,7 @@ export class Agent {
                       unconfinedSecurity: dockerSettings.unconfinedSecurity,
                       capAdd: dockerSettings.capAdd,
                       capDrop: dockerSettings.capDrop,
+                      allowLocalNetworkingForUsers: dockerSettings.allowLocalNetworkingForUsers,
                       userId: this.ctx.userId,
                       skillsActiveDir: this.userHome.skillsActive
                   }

@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { dockerContainerEnsure } from "./dockerContainerEnsure.js";
 import { DOCKER_IMAGE_VERSION } from "./dockerImageVersion.js";
-import type { DockerContainerConfig } from "./dockerTypes.js";
+import type { DockerContainerResolvedConfig } from "./dockerTypes.js";
 
-const baseConfig: DockerContainerConfig = {
+const baseConfig: DockerContainerResolvedConfig = {
     image: "daycare-sandbox",
     tag: "latest",
     socketPath: "/var/run/docker.sock",
@@ -15,6 +15,7 @@ const baseConfig: DockerContainerConfig = {
     capAdd: [],
     capDrop: [],
     userId: "user-1",
+    networkName: "daycare-isolated",
     hostHomeDir: "/data/users/user-1/home",
     hostSkillsActiveDir: "/data/users/user-1/skills/active"
 };
@@ -94,6 +95,49 @@ describe("dockerContainerEnsure", () => {
         expect(container.remove).not.toHaveBeenCalled();
     });
 
+    it("recreates container when attached to the wrong network", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default",
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0",
+                        "daycare.network": "daycare-local"
+                    }
+                },
+                NetworkSettings: {
+                    Networks: {
+                        "daycare-local": {}
+                    }
+                }
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, baseConfig);
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
     it("creates and starts container when missing", async () => {
         const existing = {
             inspect: vi.fn().mockRejectedValue({ statusCode: 404 }),
@@ -127,11 +171,18 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "default",
                 "daycare.capabilities": "add=;drop=",
-                "daycare.readonly": "0"
+                "daycare.readonly": "0",
+                "daycare.network": "daycare-isolated"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                NetworkMode: "daycare-isolated",
                 Runtime: "runsc"
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    "daycare-isolated": {}
+                }
             }
         });
         expect(created.start).toHaveBeenCalledTimes(1);
@@ -246,12 +297,19 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "unconfined",
                 "daycare.capabilities": "add=;drop=",
-                "daycare.readonly": "0"
+                "daycare.readonly": "0",
+                "daycare.network": "daycare-isolated"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                NetworkMode: "daycare-isolated",
                 Runtime: "runsc",
                 SecurityOpt: ["seccomp=unconfined", "apparmor=unconfined"]
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    "daycare-isolated": {}
+                }
             }
         });
     });
@@ -331,12 +389,19 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "default",
                 "daycare.capabilities": "add=;drop=",
-                "daycare.readonly": "1"
+                "daycare.readonly": "1",
+                "daycare.network": "daycare-isolated"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                NetworkMode: "daycare-isolated",
                 Runtime: "runsc",
                 ReadonlyRootfs: true
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    "daycare-isolated": {}
+                }
             }
         });
     });
@@ -377,13 +442,20 @@ describe("dockerContainerEnsure", () => {
                 "daycare.image.id": CURRENT_IMAGE_ID,
                 "daycare.security.profile": "default",
                 "daycare.capabilities": "add=NET_ADMIN,SYS_ADMIN;drop=MKNOD",
-                "daycare.readonly": "0"
+                "daycare.readonly": "0",
+                "daycare.network": "daycare-isolated"
             },
             HostConfig: {
                 Binds: ["/data/users/user-1/home:/home", "/data/users/user-1/skills/active:/shared/skills:ro"],
+                NetworkMode: "daycare-isolated",
                 Runtime: "runsc",
                 CapAdd: ["NET_ADMIN", "SYS_ADMIN"],
                 CapDrop: ["MKNOD"]
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    "daycare-isolated": {}
+                }
             }
         });
     });

@@ -76,11 +76,26 @@ function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSett
         readOnly: docker?.readOnly ?? false,
         unconfinedSecurity: docker?.unconfinedSecurity ?? false,
         capAdd: dockerCapabilityListNormalize(docker?.capAdd),
-        capDrop: dockerCapabilityListNormalize(docker?.capDrop)
+        capDrop: dockerCapabilityListNormalize(docker?.capDrop),
+        allowLocalNetworkingForUsers: dockerUserIdListNormalize(docker?.allowLocalNetworkingForUsers)
     };
 }
 
 function dockerCapabilityListNormalize(input: string[] | undefined): string[] {
+    if (!input || input.length === 0) {
+        return [];
+    }
+    return Array.from(
+        new Set(
+            input
+                .map((entry) => entry.trim())
+                .filter((entry) => entry.length > 0)
+                .sort()
+        )
+    );
+}
+
+function dockerUserIdListNormalize(input: string[] | undefined): string[] {
     if (!input || input.length === 0) {
         return [];
     }

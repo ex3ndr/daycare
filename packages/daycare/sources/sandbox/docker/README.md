@@ -25,7 +25,8 @@ Configure Docker runtime in `settings.json`:
         "readOnly": false,
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
-        "capDrop": ["MKNOD"]
+        "capDrop": ["MKNOD"],
+        "allowLocalNetworkingForUsers": ["user-admin"]
     }
 }
 ```
@@ -42,6 +43,7 @@ Defaults when omitted:
 - `unconfinedSecurity`: `false`
 - `capAdd`: `[]`
 - `capDrop`: `[]`
+- `allowLocalNetworkingForUsers`: `[]`
 
 When `unconfinedSecurity` is `true`, sandbox containers are created with:
 
@@ -71,9 +73,20 @@ graph TD
     B -->|false| C[runInSandbox on host]
     B -->|true| D[dockerRunInSandbox]
     D --> E[DockerContainers.ensure]
-    E --> F[docker exec /usr/local/bin/srt]
+    E --> E1[dockerNetworksEnsure]
+    E1 --> E2{userId in docker.allowLocalNetworkingForUsers}
+    E2 -->|yes| E3[network daycare-local]
+    E2 -->|no| E4[network daycare-isolated]
+    E3 --> F[docker exec /usr/local/bin/srt]
+    E4 --> F
     F --> G[srt policy inside container]
 ```
+
+## Docker Network Isolation
+
+- Every Docker sandbox user is isolated by default on `daycare-isolated`.
+- Users listed in `docker.allowLocalNetworkingForUsers` are placed on `daycare-local`.
+- If an existing container is attached to the wrong network (for example after settings changes), it is stopped, removed, and recreated on the expected network.
 
 ## Image Version Guard
 

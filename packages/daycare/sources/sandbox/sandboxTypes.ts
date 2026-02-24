@@ -81,6 +81,7 @@ export type SandboxDockerConfig = {
     unconfinedSecurity: boolean;
     capAdd: string[];
     capDrop: string[];
+    allowLocalNetworkingForUsers?: string[];
     userId: string;
     skillsActiveDir: string;
 };

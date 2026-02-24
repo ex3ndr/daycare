@@ -87,6 +87,7 @@ describe("Sandbox docker integration", () => {
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
+                allowLocalNetworkingForUsers: ["u123"],
                 userId: "u123",
                 skillsActiveDir
             }
@@ -105,7 +106,8 @@ describe("Sandbox docker integration", () => {
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
-            capDrop: []
+            capDrop: [],
+            allowLocalNetworkingForUsers: ["u123"]
         });
         expect(runInSandbox).not.toHaveBeenCalled();
     });

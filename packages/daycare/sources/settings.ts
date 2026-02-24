@@ -62,6 +62,7 @@ export type DockerSettings = {
     unconfinedSecurity?: boolean;
     capAdd?: string[];
     capDrop?: string[];
+    allowLocalNetworkingForUsers?: string[];
 };
 
 export type ResolvedDockerSettings = {
@@ -75,6 +76,7 @@ export type ResolvedDockerSettings = {
     unconfinedSecurity: boolean;
     capAdd: string[];
     capDrop: string[];
+    allowLocalNetworkingForUsers: string[];
 };
 
 export type FeaturesConfig = {

@@ -9,9 +9,14 @@ export type DockerContainerConfig = {
     unconfinedSecurity: boolean;
     capAdd: string[];
     capDrop: string[];
+    allowLocalNetworkingForUsers?: string[];
     userId: string;
     hostHomeDir: string;
     hostSkillsActiveDir: string;
+};
+
+export type DockerContainerResolvedConfig = DockerContainerConfig & {
+    networkName: string;
 };
 
 export type DockerContainerExecArgs = {

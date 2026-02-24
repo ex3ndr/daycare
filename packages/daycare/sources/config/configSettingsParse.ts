@@ -59,7 +59,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     readOnly: z.boolean().optional(),
                     unconfinedSecurity: z.boolean().optional(),
                     capAdd: z.array(z.string().min(1)).optional(),
-                    capDrop: z.array(z.string().min(1)).optional()
+                    capDrop: z.array(z.string().min(1)).optional(),
+                    allowLocalNetworkingForUsers: z.array(z.string().min(1)).optional()
                 })
                 .passthrough()
                 .optional(),

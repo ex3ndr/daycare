@@ -242,6 +242,7 @@ export class Sandbox {
                           unconfinedSecurity: this.docker!.unconfinedSecurity,
                           capAdd: this.docker!.capAdd,
                           capDrop: this.docker!.capDrop,
+                          allowLocalNetworkingForUsers: this.docker!.allowLocalNetworkingForUsers,
                           userId: this.docker!.userId,
                           hostSkillsActiveDir: this.docker!.skillsActiveDir
                       }

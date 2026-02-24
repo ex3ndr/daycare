@@ -30,6 +30,7 @@ const sandbox = new Sandbox({
         unconfinedSecurity: false,
         capAdd: [],
         capDrop: [],
+        allowLocalNetworkingForUsers: [],
         userId: ctx.userId,
         skillsActiveDir: userHome.skillsActive
     }
@@ -100,7 +101,8 @@ Enable Docker runtime in `settings.json`:
         "readOnly": false,
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
-        "capDrop": ["MKNOD"]
+        "capDrop": ["MKNOD"],
+        "allowLocalNetworkingForUsers": ["user-admin"]
     }
 }
 ```
