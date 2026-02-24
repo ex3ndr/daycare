@@ -664,7 +664,7 @@ function inferenceResponse(text: string) {
         modelId: "gpt-4.1",
         message: {
             role: "assistant" as const,
-            content: [{ type: "text" as const, text: `<response>${text}</response>` }],
+            content: [{ type: "text" as const, text }],
             api: "openai-responses" as const,
             provider: "openai",
             model: "gpt-4.1",

@@ -45,11 +45,11 @@ flowchart LR
 ```
 
 ## System message delivery
-`send_agent_message` posts a `system_message` inbox item (used for intermediate updates
-or ad-hoc messaging). Subagent final responses are auto-delivered via `<response>` tag
-extraction (see "Background agent reporting"). The agent wraps incoming system message
-text as a `<system_message>` tag before running the inference loop. When a target agent id
-is omitted, the tool resolves the most recent foreground agent.
+`send_agent_message` posts a `system_message` inbox item. It is used for both ad-hoc
+messaging and delivering final results from child agents to their parents. The agent wraps
+incoming system message text as a `<system_message>` tag before running the inference loop.
+When a target agent id is omitted, child agents default to their parent; other agents
+resolve the most recent foreground agent.
 
 ```mermaid
 flowchart LR
@@ -201,12 +201,12 @@ sequenceDiagram
 ```
 
 ## Background agent reporting
-Subagents report results by emitting `<response>...</response>` tags in their text output.
-The harness (`agentLoopRun`) extracts content between the first `<response>` and last
-`</response>` (case-insensitive), strips the tag from the model context, and `handleMessage`
-auto-delivers the extracted text to the parent agent as a `system_message`. If the model
-omits the tag, the harness nudges it once; if still missing, it generates an error response.
-`send_agent_message` remains available for intermediate updates or messaging other agents.
+Subagents deliver results to their parent by calling `send_agent_message` (no `agentId`
+needed — it defaults to the parent). The harness (`agentLoopRun`) tracks whether
+`send_agent_message` was called targeting the parent. If the agent finishes without
+sending, the harness nudges it once; if the agent still chooses not to send, that is
+accepted. The `send_agent_message` tool is used for both final results and intermediate
+updates.
 
 ```mermaid
 sequenceDiagram
@@ -217,20 +217,19 @@ sequenceDiagram
   Foreground->>AgentSystem: start_background_agent(prompt)
   AgentSystem->>Subagent: enqueue prompt
   Subagent->>Harness: inference loop
-  Harness->>Harness: extract <response> tag
-  alt tag found
-    Harness-->>Subagent: responseText = extracted content
-  else tag missing
-    Harness->>Harness: nudge (inject user message)
+  Harness->>Harness: execute tools
+  alt send_agent_message called
+    Subagent->>AgentSystem: post(system_message to parent)
+    AgentSystem->>Foreground: enqueue system_message
+  else no message sent
+    Harness->>Harness: nudge (ask to call send_agent_message)
     Harness->>Harness: re-run inference
-    alt tag found after nudge
-      Harness-->>Subagent: responseText = extracted content
-    else still missing
-      Harness-->>Subagent: responseText = error
+    alt sends after nudge
+      Subagent->>AgentSystem: post(system_message to parent)
+    else still no send
+      Harness-->>Subagent: accepted (no error)
     end
   end
-  Subagent->>AgentSystem: auto-deliver responseText to parent
-  AgentSystem->>Foreground: enqueue system_message
 ```
 
 ## Resetting agents

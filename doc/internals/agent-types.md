@@ -96,7 +96,7 @@ sequenceDiagram
   AgentSystem->>MemSearch: post query message
   MemSearch->>Graph: memory_node_read (root)
   MemSearch->>Graph: memory_node_read (relevant nodes)
-  MemSearch->>Parent: response tag with answer
+  MemSearch->>Parent: send_agent_message with answer
 ```
 
 Key differences from regular subagents:
@@ -136,7 +136,7 @@ flowchart LR
   MemWorker[Memory worker] -->|transcript| MemAgent[Memory-agent]
   Subagent -->|send_agent_message| User
   AppAgent -->|send_agent_message| User
-  MemSearch -->|response tag| User
+  MemSearch -->|send_agent_message| User
   MemAgent -->|memory_node_write| Graph[(Memory graph)]
   MemSearch -->|memory_node_read| Graph
 ```

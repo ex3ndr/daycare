@@ -40,13 +40,7 @@ Root
 
 ## Response Format
 
-Respond with your findings wrapped in a `<response>` tag:
-
-```
-<response>
-[Your synthesized answer here, citing specific nodes when relevant]
-</response>
-```
+When you have your findings, use `send_agent_message` to deliver them to your parent agent. No `agentId` needed — it defaults to your parent.
 
 ## Rules
 

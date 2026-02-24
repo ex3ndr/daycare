@@ -4,7 +4,7 @@ import type { Logger } from "pino";
 import type { AgentSkill, Connector } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
-import { tagExtract, tagExtractAll } from "../../../util/tagExtract.js";
+import { tagExtractAll } from "../../../util/tagExtract.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
@@ -133,7 +133,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         agent.descriptor.type === "app" ||
         agent.descriptor.type === "memory-search";
     let childAgentNudged = false;
-    let childAgentResponded = false;
+    let childAgentMessageSent = false;
     const agentKind =
         agent.descriptor.type === "user" || agent.descriptor.type === "subuser" ? "foreground" : "background";
     const target = agentDescriptorTargetResolve(agent.descriptor);
@@ -404,11 +404,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 const hasResponseText = trimmedText.length > 0;
                 if (hasRunPythonTag) {
                     // Hide raw <run_python> payloads from end users; execution result is injected next turn.
-                    finalResponseText = null;
+                    if (!childAgentMessageSent) {
+                        finalResponseText = null;
+                    }
                     lastResponseTextSent = true;
                     logger.debug("event: noTools run_python tag detected; suppressing raw response text");
                 } else {
-                    finalResponseText = hasResponseText ? effectiveResponseText : null;
+                    // Don't overwrite finalResponseText if child agent already sent via send_agent_message
+                    if (!childAgentMessageSent) {
+                        finalResponseText = hasResponseText ? effectiveResponseText : null;
+                    }
                     lastResponseTextSent = false;
                 }
                 if (hasResponseText && !hasRunPythonTag && connector && targetId) {
@@ -458,15 +463,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 );
             }
 
-            // Child-agent <response> tag: check on every iteration, deliver each one to parent
-            if (isChildAgent) {
-                const extracted = tagExtract(responseText ?? "", "response");
-                if (extracted !== null) {
-                    finalResponseText = extracted;
-                    childAgentResponded = true;
-                    await subagentDeliverResponse(agentSystem, agent, extracted, logger);
-                }
-            }
+            // Child-agent: track send_agent_message calls targeting the parent
+            // (handled below in the tool execution loop)
 
             if (noToolsModeEnabled) {
                 if (hasRunPythonTag) {
@@ -567,8 +565,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             }
 
             if (toolCalls.length === 0) {
-                // Child-agent final iteration: nudge if no <response> tag was ever emitted
-                if (isChildAgent && !childAgentResponded) {
+                // Child-agent: soft nudge if send_agent_message was never called targeting parent
+                if (isChildAgent && !childAgentMessageSent) {
                     if (!childAgentNudged) {
                         childAgentNudged = true;
                         context.messages.push({
@@ -576,21 +574,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             content: [
                                 {
                                     type: "text",
-                                    text: "You must wrap your final answer in <response>...</response> tags. Emit your response now."
+                                    text: "You haven't sent your results to your parent agent yet. Use the send_agent_message tool to deliver your results. No agentId is needed — it defaults to your parent."
                                 }
                             ],
                             timestamp: Date.now()
                         });
-                        logger.debug("event: Child agent nudged to emit <response> tag");
+                        logger.debug("event: Child agent nudged to call send_agent_message");
                         continue;
-                    } else {
-                        finalResponseText = "Error: child agent did not produce a response.";
-                        logger.warn(
-                            { agentId: agent.id },
-                            "error: Child agent failed to emit <response> tag after nudge"
-                        );
-                        break;
                     }
+                    // Agent chose not to send after nudge — accept and break
+                    logger.debug("event: Child agent did not send after nudge, accepting");
                 }
                 logger.debug(`event: No tool calls, breaking inference loop iteration=${iteration}`);
                 break;
@@ -653,6 +646,22 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     },
                     appendHistoryRecord
                 );
+
+                // Track send_agent_message calls targeting the parent for child agents
+                if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
+                    const args = toolCall.arguments as { agentId?: string; text?: string };
+                    const parentId =
+                        "parentAgentId" in agent.descriptor
+                            ? (agent.descriptor as { parentAgentId?: string }).parentAgentId
+                            : undefined;
+                    if (!args.agentId || args.agentId === parentId) {
+                        childAgentMessageSent = true;
+                        if (args.text) {
+                            finalResponseText = args.text;
+                        }
+                        logger.debug("event: Child agent sent message to parent via send_agent_message");
+                    }
+                }
 
                 // Check for skip: direct skip tool call or run_python that internally called skip()
                 if (toolCall.name === SKIP_TOOL_NAME || toolResult.skipTurn) {
@@ -916,39 +925,6 @@ async function historyPendingToolCallsComplete(
     const completionRecords = agentHistoryPendingToolResults(historyRecords, reason, Date.now());
     for (const record of completionRecords) {
         await historyRecordAppend(historyRecords, record, appendHistoryRecord);
-    }
-}
-
-/**
- * Delivers a <response> tag payload from a child background agent to its parent agent.
- * Called inline during the inference loop so intermediate responses arrive immediately.
- */
-async function subagentDeliverResponse(
-    agentSystem: AgentSystem,
-    agent: Agent,
-    text: string,
-    logger: Logger
-): Promise<void> {
-    if (
-        agent.descriptor.type !== "subagent" &&
-        agent.descriptor.type !== "app" &&
-        agent.descriptor.type !== "memory-search"
-    ) {
-        return;
-    }
-    const parentAgentId = agent.descriptor.parentAgentId ?? null;
-    if (!parentAgentId) {
-        return;
-    }
-    try {
-        await agentSystem.post(
-            agent.ctx,
-            { agentId: parentAgentId },
-            { type: "system_message", text, origin: agent.id }
-        );
-        logger.debug("event: Child agent <response> delivered to parent");
-    } catch (error) {
-        logger.warn({ agentId: agent.id, parentAgentId, error }, "error: Child agent response delivery failed");
     }
 }
 

@@ -791,6 +791,161 @@ describe("agentLoopRun", () => {
     });
 });
 
+describe("agentLoopRun child agent send_agent_message tracking", () => {
+    it("captures responseText when child agent calls send_agent_message without agentId", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const entry = entryBuild();
+        const context = contextBuild();
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([
+                { type: "text", text: "Working on it" },
+                toolCallBuild("call-1", "send_agent_message", { text: "Here are the results" })
+            ]),
+            assistantMessageBuild([{ type: "text", text: "Done" }])
+        ]);
+        const toolResolver = toolResolverBuild(async (toolCall) =>
+            toolResultTextBuild(toolCall.id, toolCall.name, "Message sent.")
+        );
+
+        const result = await agentLoopRun(
+            optionsBuild({ entry, context, connector, inferenceRouter, toolResolver, agentType: "subagent" })
+        );
+
+        expect(result.responseText).toBe("Here are the results");
+    });
+
+    it("captures responseText when child agent calls send_agent_message with parent agentId", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const entry = entryBuild();
+        const context = contextBuild();
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([
+                { type: "text", text: "Working" },
+                toolCallBuild("call-1", "send_agent_message", {
+                    text: "Results for parent",
+                    agentId: "agent-parent"
+                })
+            ]),
+            assistantMessageBuild([{ type: "text", text: "Done" }])
+        ]);
+        const toolResolver = toolResolverBuild(async (toolCall) =>
+            toolResultTextBuild(toolCall.id, toolCall.name, "Message sent.")
+        );
+
+        const result = await agentLoopRun(
+            optionsBuild({ entry, context, connector, inferenceRouter, toolResolver, agentType: "subagent" })
+        );
+
+        expect(result.responseText).toBe("Results for parent");
+    });
+
+    it("does not track send_agent_message targeting a different agent", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const entry = entryBuild();
+        const context = contextBuild();
+        // First response: send to a different agent. Second response: model stops without tool calls.
+        // Third response: after nudge, model stops again without sending.
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([
+                { type: "text", text: "Sending to other" },
+                toolCallBuild("call-1", "send_agent_message", {
+                    text: "Message for other",
+                    agentId: "other-agent"
+                })
+            ]),
+            assistantMessageBuild([{ type: "text", text: "All done" }]),
+            assistantMessageBuild([{ type: "text", text: "I have nothing more to send" }])
+        ]);
+        const toolResolver = toolResolverBuild(async (toolCall) =>
+            toolResultTextBuild(toolCall.id, toolCall.name, "Sent.")
+        );
+
+        const result = await agentLoopRun(
+            optionsBuild({ entry, context, connector, inferenceRouter, toolResolver, agentType: "subagent" })
+        );
+
+        // responseText should not be "Message for other" since it was sent to a different agent
+        expect(result.responseText).not.toBe("Message for other");
+    });
+
+    it("nudges child agent when it finishes without calling send_agent_message", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const entry = entryBuild();
+        const context = contextBuild();
+        // First response: no tool calls (triggers nudge). Second: sends message after nudge.
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([{ type: "text", text: "Let me think..." }]),
+            assistantMessageBuild([
+                toolCallBuild("call-1", "send_agent_message", { text: "Here are the results after nudge" })
+            ]),
+            assistantMessageBuild([{ type: "text", text: "Done" }])
+        ]);
+        const toolResolver = toolResolverBuild(async (toolCall) =>
+            toolResultTextBuild(toolCall.id, toolCall.name, "Message sent.")
+        );
+
+        const result = await agentLoopRun(
+            optionsBuild({ entry, context, connector, inferenceRouter, toolResolver, agentType: "subagent" })
+        );
+
+        // Nudge message should have been injected into context
+        const nudgeMessage = context.messages.find(
+            (m) =>
+                m.role === "user" &&
+                Array.isArray(m.content) &&
+                m.content.some(
+                    (c: { type: string; text?: string }) => c.type === "text" && c.text?.includes("send_agent_message")
+                )
+        );
+        expect(nudgeMessage).toBeDefined();
+        expect(result.responseText).toBe("Here are the results after nudge");
+    });
+
+    it("accepts when child agent chooses not to send after nudge", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const entry = entryBuild();
+        const context = contextBuild();
+        // First response: no tool calls (triggers nudge). Second: still no tool calls (accepted).
+        const inferenceRouter = inferenceRouterBuild([
+            assistantMessageBuild([{ type: "text", text: "Thinking..." }]),
+            assistantMessageBuild([{ type: "text", text: "Nothing to report" }])
+        ]);
+        const toolResolver = toolResolverBuild(async () => {
+            throw new Error("unexpected tool call");
+        });
+
+        const result = await agentLoopRun(
+            optionsBuild({ entry, context, connector, inferenceRouter, toolResolver, agentType: "subagent" })
+        );
+
+        // No error — agent simply chose not to send. responseText reflects last text.
+        expect(result.responseText).not.toContain("Error");
+    });
+
+    it("does not nudge non-child agents", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const entry = entryBuild();
+        const context = contextBuild();
+        const inferenceRouter = inferenceRouterBuild([assistantMessageBuild([{ type: "text", text: "Hello user" }])]);
+        const toolResolver = toolResolverBuild(async () => {
+            throw new Error("unexpected tool call");
+        });
+
+        const result = await agentLoopRun(optionsBuild({ entry, context, connector, inferenceRouter, toolResolver }));
+
+        // No nudge for user agents — just returns normally
+        expect(result.responseText).toBe("Hello user");
+        // Only 1 message: the assistant message (user message is pushed by agent.ts, not agentLoopRun)
+        expect(context.messages.length).toBe(1);
+    });
+});
+
 describe("agentLoopRun say tag", () => {
     it("sends only say block content when say feature enabled", async () => {
         const connectorSend = vi.fn(async () => undefined);
