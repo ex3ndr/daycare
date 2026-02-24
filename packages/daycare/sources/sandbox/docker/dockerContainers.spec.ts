@@ -46,7 +46,9 @@ describe("DockerContainers", () => {
             userId: "user-1",
             hostHomeDir: "/tmp/home",
             hostSkillsActiveDir: "/tmp/skills",
-            allowLocalNetworkingForUsers: ["user-2"]
+            allowLocalNetworkingForUsers: ["user-2"],
+            isolatedDnsServers: ["9.9.9.9"],
+            localDnsServers: ["192.168.1.1"]
         };
         const args = {
             command: ["echo", "ok"]
@@ -62,7 +64,9 @@ describe("DockerContainers", () => {
             expect.any(Object),
             expect.objectContaining({
                 userId: "user-1",
-                networkName: "daycare-isolated"
+                networkName: "daycare-isolated",
+                isolatedDnsServers: ["9.9.9.9"],
+                localDnsServers: ["192.168.1.1"]
             })
         );
     });

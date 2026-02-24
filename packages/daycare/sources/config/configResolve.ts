@@ -8,6 +8,7 @@ import type { Config, ConfigOverrides } from "./configTypes.js";
 
 const DEFAULT_DOCKER_IMAGE = "daycare-sandbox";
 const DEFAULT_DOCKER_TAG = "latest";
+const DEFAULT_DOCKER_ISOLATED_DNS_SERVERS = ["1.1.1.1", "8.8.8.8"];
 
 /**
  * Resolves derived paths and defaults into an immutable Config snapshot.
@@ -77,7 +78,9 @@ function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSett
         unconfinedSecurity: docker?.unconfinedSecurity ?? false,
         capAdd: dockerCapabilityListNormalize(docker?.capAdd),
         capDrop: dockerCapabilityListNormalize(docker?.capDrop),
-        allowLocalNetworkingForUsers: dockerUserIdListNormalize(docker?.allowLocalNetworkingForUsers)
+        allowLocalNetworkingForUsers: dockerUserIdListNormalize(docker?.allowLocalNetworkingForUsers),
+        isolatedDnsServers: dockerDnsListNormalize(docker?.isolatedDnsServers, DEFAULT_DOCKER_ISOLATED_DNS_SERVERS),
+        localDnsServers: dockerDnsListNormalize(docker?.localDnsServers, [])
     };
 }
 
@@ -107,4 +110,22 @@ function dockerUserIdListNormalize(input: string[] | undefined): string[] {
                 .sort()
         )
     );
+}
+
+function dockerDnsListNormalize(input: string[] | undefined, fallback: string[]): string[] {
+    const source = input && input.length > 0 ? input : fallback;
+    if (source.length === 0) {
+        return [];
+    }
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const entry of source) {
+        const normalized = entry.trim();
+        if (normalized.length === 0 || seen.has(normalized)) {
+            continue;
+        }
+        seen.add(normalized);
+        result.push(normalized);
+    }
+    return result;
 }

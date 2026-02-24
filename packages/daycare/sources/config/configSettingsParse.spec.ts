@@ -36,7 +36,9 @@ describe("configSettingsParse", () => {
                 unconfinedSecurity: true,
                 capAdd: ["NET_ADMIN"],
                 capDrop: ["MKNOD"],
-                allowLocalNetworkingForUsers: ["user-1", "user-2"]
+                allowLocalNetworkingForUsers: ["user-1", "user-2"],
+                isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+                localDnsServers: ["192.168.0.1"]
             }
         });
 
@@ -51,7 +53,9 @@ describe("configSettingsParse", () => {
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
             capDrop: ["MKNOD"],
-            allowLocalNetworkingForUsers: ["user-1", "user-2"]
+            allowLocalNetworkingForUsers: ["user-1", "user-2"],
+            isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+            localDnsServers: ["192.168.0.1"]
         });
     });
 
@@ -80,5 +84,17 @@ describe("configSettingsParse", () => {
         });
 
         expect(parsed.docker?.allowLocalNetworkingForUsers).toEqual(["user-1"]);
+    });
+
+    it("accepts docker dns settings", () => {
+        const parsed = configSettingsParse({
+            docker: {
+                isolatedDnsServers: ["9.9.9.9"],
+                localDnsServers: ["192.168.1.1"]
+            }
+        });
+
+        expect(parsed.docker?.isolatedDnsServers).toEqual(["9.9.9.9"]);
+        expect(parsed.docker?.localDnsServers).toEqual(["192.168.1.1"]);
     });
 });

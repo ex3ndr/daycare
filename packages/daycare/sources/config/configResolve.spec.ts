@@ -92,7 +92,9 @@ describe("configResolve", () => {
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],
-            allowLocalNetworkingForUsers: []
+            allowLocalNetworkingForUsers: [],
+            isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+            localDnsServers: []
         });
         expect(config.settings.docker).toEqual(config.docker);
     });
@@ -119,7 +121,9 @@ describe("configResolve", () => {
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],
-            allowLocalNetworkingForUsers: []
+            allowLocalNetworkingForUsers: [],
+            isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+            localDnsServers: []
         });
     });
 
@@ -153,7 +157,9 @@ describe("configResolve", () => {
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
             capDrop: ["MKNOD"],
-            allowLocalNetworkingForUsers: []
+            allowLocalNetworkingForUsers: [],
+            isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+            localDnsServers: []
         });
     });
 
@@ -185,5 +191,21 @@ describe("configResolve", () => {
         );
 
         expect(config.docker.allowLocalNetworkingForUsers).toEqual(["user-a", "user-b"]);
+    });
+
+    it("normalizes docker dns server lists", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                docker: {
+                    isolatedDnsServers: [" 9.9.9.9 ", "1.1.1.1", "9.9.9.9", " "],
+                    localDnsServers: [" 192.168.1.1 ", "8.8.8.8", "192.168.1.1"]
+                }
+            },
+            configPath
+        );
+
+        expect(config.docker.isolatedDnsServers).toEqual(["9.9.9.9", "1.1.1.1"]);
+        expect(config.docker.localDnsServers).toEqual(["192.168.1.1", "8.8.8.8"]);
     });
 });

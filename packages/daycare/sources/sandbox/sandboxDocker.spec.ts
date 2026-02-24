@@ -88,6 +88,8 @@ describe("Sandbox docker integration", () => {
                 capAdd: [],
                 capDrop: [],
                 allowLocalNetworkingForUsers: ["u123"],
+                isolatedDnsServers: ["9.9.9.9"],
+                localDnsServers: ["192.168.1.1"],
                 userId: "u123",
                 skillsActiveDir
             }
@@ -107,7 +109,9 @@ describe("Sandbox docker integration", () => {
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],
-            allowLocalNetworkingForUsers: ["u123"]
+            allowLocalNetworkingForUsers: ["u123"],
+            isolatedDnsServers: ["9.9.9.9"],
+            localDnsServers: ["192.168.1.1"]
         });
         expect(runInSandbox).not.toHaveBeenCalled();
     });

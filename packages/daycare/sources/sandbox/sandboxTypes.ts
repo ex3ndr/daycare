@@ -82,6 +82,8 @@ export type SandboxDockerConfig = {
     capAdd: string[];
     capDrop: string[];
     allowLocalNetworkingForUsers?: string[];
+    isolatedDnsServers?: string[];
+    localDnsServers?: string[];
     userId: string;
     skillsActiveDir: string;
 };

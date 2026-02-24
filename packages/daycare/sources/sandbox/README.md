@@ -102,7 +102,9 @@ Enable Docker runtime in `settings.json`:
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
         "capDrop": ["MKNOD"],
-        "allowLocalNetworkingForUsers": ["user-admin"]
+        "allowLocalNetworkingForUsers": ["user-admin"],
+        "isolatedDnsServers": ["1.1.1.1", "8.8.8.8"],
+        "localDnsServers": ["192.168.0.1"]
     }
 }
 ```

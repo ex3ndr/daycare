@@ -28,6 +28,8 @@ describe("dockerRunInSandbox", () => {
         let capturedCapAdd: string[] | undefined;
         let capturedCapDrop: string[] | undefined;
         let capturedLocalNetworkAllowlist: string[] | undefined;
+        let capturedIsolatedDnsServers: string[] | undefined;
+        let capturedLocalDnsServers: string[] | undefined;
 
         dockerExecSpy.mockImplementationOnce(async (dockerConfig, args) => {
             // Command is wrapped as: ["bash", "-lc", "/usr/local/bin/srt --settings <path> -c <cmd>"]
@@ -42,6 +44,8 @@ describe("dockerRunInSandbox", () => {
             capturedCapAdd = dockerConfig.capAdd;
             capturedCapDrop = dockerConfig.capDrop;
             capturedLocalNetworkAllowlist = dockerConfig.allowLocalNetworkingForUsers;
+            capturedIsolatedDnsServers = dockerConfig.isolatedDnsServers;
+            capturedLocalDnsServers = dockerConfig.localDnsServers;
             capturedCommand = bashCmd;
             capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
             const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
@@ -80,6 +84,8 @@ describe("dockerRunInSandbox", () => {
                     capAdd: [],
                     capDrop: [],
                     allowLocalNetworkingForUsers: ["u123"],
+                    isolatedDnsServers: ["9.9.9.9"],
+                    localDnsServers: ["192.168.1.1"],
                     userId,
                     hostSkillsActiveDir: skillsActiveDir
                 }
@@ -109,6 +115,8 @@ describe("dockerRunInSandbox", () => {
         expect(capturedCapAdd).toEqual([]);
         expect(capturedCapDrop).toEqual([]);
         expect(capturedLocalNetworkAllowlist).toEqual(["u123"]);
+        expect(capturedIsolatedDnsServers).toEqual(["9.9.9.9"]);
+        expect(capturedLocalDnsServers).toEqual(["192.168.1.1"]);
         expect(capturedCommand).toContain("/usr/local/bin/srt --settings ");
         await expect(fs.access(capturedSettingsHostPath ?? "")).rejects.toThrow();
         dockerExecSpy.mockRestore();

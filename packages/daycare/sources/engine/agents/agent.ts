@@ -123,6 +123,8 @@ export class Agent {
                       capAdd: dockerSettings.capAdd,
                       capDrop: dockerSettings.capDrop,
                       allowLocalNetworkingForUsers: dockerSettings.allowLocalNetworkingForUsers,
+                      isolatedDnsServers: dockerSettings.isolatedDnsServers,
+                      localDnsServers: dockerSettings.localDnsServers,
                       userId: this.ctx.userId,
                       skillsActiveDir: this.userHome.skillsActive
                   }

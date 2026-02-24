@@ -243,6 +243,8 @@ export class Sandbox {
                           capAdd: this.docker!.capAdd,
                           capDrop: this.docker!.capDrop,
                           allowLocalNetworkingForUsers: this.docker!.allowLocalNetworkingForUsers,
+                          isolatedDnsServers: this.docker!.isolatedDnsServers,
+                          localDnsServers: this.docker!.localDnsServers,
                           userId: this.docker!.userId,
                           hostSkillsActiveDir: this.docker!.skillsActiveDir
                       }

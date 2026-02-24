@@ -63,6 +63,8 @@ export type DockerSettings = {
     capAdd?: string[];
     capDrop?: string[];
     allowLocalNetworkingForUsers?: string[];
+    isolatedDnsServers?: string[];
+    localDnsServers?: string[];
 };
 
 export type ResolvedDockerSettings = {
@@ -77,6 +79,8 @@ export type ResolvedDockerSettings = {
     capAdd: string[];
     capDrop: string[];
     allowLocalNetworkingForUsers: string[];
+    isolatedDnsServers: string[];
+    localDnsServers: string[];
 };
 
 export type FeaturesConfig = {

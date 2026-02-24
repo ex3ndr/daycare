@@ -10,6 +10,8 @@ export type DockerContainerConfig = {
     capAdd: string[];
     capDrop: string[];
     allowLocalNetworkingForUsers?: string[];
+    isolatedDnsServers?: string[];
+    localDnsServers?: string[];
     userId: string;
     hostHomeDir: string;
     hostSkillsActiveDir: string;

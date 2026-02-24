@@ -33,6 +33,7 @@ const DOCKER_CAPABILITIES_LABEL = "daycare.capabilities";
 const DOCKER_READONLY_LABEL = "daycare.readonly";
 const DOCKER_NETWORK_LABEL = "daycare.network";
 const DOCKER_DNS_PROFILE_LABEL = "daycare.dns.profile";
+const DOCKER_DNS_SERVERS_LABEL = "daycare.dns.servers";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
@@ -48,6 +49,12 @@ export async function dockerContainerEnsure(
     const containerName = dockerContainerNameBuild(config.userId);
     const imageRef = `${config.image}:${config.tag}`;
     const imageId = await dockerImageIdResolve(docker, imageRef);
+    const dnsProfile = dockerDnsProfileResolve({
+        networkName: config.networkName,
+        isolatedDnsServers: config.isolatedDnsServers,
+        localDnsServers: config.localDnsServers
+    });
+    const dnsServersLabel = dockerDnsServersLabelResolve(dnsProfile.dnsServers);
     const existing = docker.getContainer(containerName);
 
     try {
@@ -60,7 +67,8 @@ export async function dockerContainerEnsure(
             config.capAdd,
             config.capDrop,
             config.networkName,
-            dockerDnsProfileResolve(config.networkName).profileLabel
+            dnsProfile.profileLabel,
+            dnsServersLabel
         );
         if (staleReason) {
             logger.warn(
@@ -91,7 +99,6 @@ export async function dockerContainerEnsure(
     const securityOpt = config.unconfinedSecurity ? [...DOCKER_SECURITY_OPT_UNCONFINED] : undefined;
     const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
     const readOnlyLabel = config.readOnly ? "1" : "0";
-    const dnsProfile = dockerDnsProfileResolve(config.networkName);
 
     try {
         const created = await docker.createContainer({
@@ -105,7 +112,8 @@ export async function dockerContainerEnsure(
                 [DOCKER_CAPABILITIES_LABEL]: capabilitiesLabel,
                 [DOCKER_READONLY_LABEL]: readOnlyLabel,
                 [DOCKER_NETWORK_LABEL]: config.networkName,
-                [DOCKER_DNS_PROFILE_LABEL]: dnsProfile.profileLabel
+                [DOCKER_DNS_PROFILE_LABEL]: dnsProfile.profileLabel,
+                [DOCKER_DNS_SERVERS_LABEL]: dnsServersLabel
             },
             HostConfig: {
                 Binds: [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`],
@@ -173,7 +181,8 @@ function containerStaleReasonResolve(
     capAdd: string[],
     capDrop: string[],
     expectedNetworkName: string,
-    expectedDnsProfileLabel: string
+    expectedDnsProfileLabel: string,
+    expectedDnsServersLabel: string
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -183,6 +192,7 @@ function containerStaleReasonResolve(
     const readOnlyLabel = labels?.[DOCKER_READONLY_LABEL];
     const networkLabel = labels?.[DOCKER_NETWORK_LABEL];
     const dnsProfileLabel = labels?.[DOCKER_DNS_PROFILE_LABEL];
+    const dnsServersLabel = labels?.[DOCKER_DNS_SERVERS_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -206,6 +216,9 @@ function containerStaleReasonResolve(
     }
     if (!dnsProfileLabel) {
         return "missing-dns-profile-label";
+    }
+    if (!dnsServersLabel) {
+        return "missing-dns-servers-label";
     }
     const networkState = dockerContainerNetworkStateResolve(details, expectedNetworkName);
     if (networkState !== "correct") {
@@ -231,6 +244,9 @@ function containerStaleReasonResolve(
     if (dnsProfileLabel !== expectedDnsProfileLabel) {
         return `dns-profile-mismatch:${dnsProfileLabel}->${expectedDnsProfileLabel}`;
     }
+    if (dnsServersLabel !== expectedDnsServersLabel) {
+        return `dns-servers-mismatch:${dnsServersLabel}->${expectedDnsServersLabel}`;
+    }
     return null;
 }
 
@@ -238,4 +254,11 @@ function dockerCapabilitiesLabelBuild(capAdd: string[], capDrop: string[]): stri
     const normalizedAdd = [...capAdd].sort();
     const normalizedDrop = [...capDrop].sort();
     return `add=${normalizedAdd.join(",")};drop=${normalizedDrop.join(",")}`;
+}
+
+function dockerDnsServersLabelResolve(dnsServers: string[] | undefined): string {
+    if (!dnsServers || dnsServers.length === 0) {
+        return "default";
+    }
+    return dnsServers.join(",");
 }

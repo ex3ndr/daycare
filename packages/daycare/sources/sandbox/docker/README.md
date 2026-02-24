@@ -26,7 +26,9 @@ Configure Docker runtime in `settings.json`:
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
         "capDrop": ["MKNOD"],
-        "allowLocalNetworkingForUsers": ["user-admin"]
+        "allowLocalNetworkingForUsers": ["user-admin"],
+        "isolatedDnsServers": ["1.1.1.1", "8.8.8.8"],
+        "localDnsServers": ["192.168.0.1"]
     }
 }
 ```
@@ -44,6 +46,8 @@ Defaults when omitted:
 - `capAdd`: `[]`
 - `capDrop`: `[]`
 - `allowLocalNetworkingForUsers`: `[]`
+- `isolatedDnsServers`: `["1.1.1.1", "8.8.8.8"]`
+- `localDnsServers`: `[]`
 
 When `unconfinedSecurity` is `true`, sandbox containers are created with:
 
@@ -86,8 +90,8 @@ graph TD
 
 - Every Docker sandbox user is isolated by default on `daycare-isolated`.
 - Users listed in `docker.allowLocalNetworkingForUsers` are placed on `daycare-local`.
-- `daycare-isolated` containers use explicit public DNS resolvers (`1.1.1.1`, `8.8.8.8`).
-- `daycare-local` containers use Docker's default DNS behavior.
+- `daycare-isolated` containers use `docker.isolatedDnsServers` (defaults to public resolvers).
+- `daycare-local` containers use Docker's default DNS unless `docker.localDnsServers` is configured.
 - If an existing container is attached to the wrong network (for example after settings changes), it is stopped, removed, and recreated on the expected network.
 
 ## Image Version Guard
@@ -99,6 +103,9 @@ Each sandbox container is stamped at creation time with:
 - `daycare.security.profile` from `docker.unconfinedSecurity`
 - `daycare.capabilities` from `docker.capAdd`/`docker.capDrop`
 - `daycare.readonly` from `docker.readOnly`
+- `daycare.network` from selected Docker network (`daycare-isolated` or `daycare-local`)
+- `daycare.dns.profile` from DNS policy (`public`, `private`, or `default`)
+- `daycare.dns.servers` from configured DNS servers (`default` when Docker DNS is used)
 
 `dockerContainerEnsure` compares these labels against current values. If any label is missing or mismatched, the
 container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure
