@@ -14,19 +14,19 @@ ARG TARGETOS
 ARG TARGETARCH
 
 ENV LANG="C.UTF-8"
-ENV HOME=/home
+ENV HOME=/home/developer
 ENV DEBIAN_FRONTEND=noninteractive
 
-ENV XDG_CACHE_HOME=/home/.cache
+ENV XDG_CACHE_HOME=/home/developer/.cache
 ENV NPM_CONFIG_CACHE=$XDG_CACHE_HOME/npm
 ENV YARN_CACHE_FOLDER=$XDG_CACHE_HOME/yarn
-ENV PNPM_STORE_DIR=/home/.local/share/pnpm/store
+ENV PNPM_STORE_DIR=/home/developer/.local/share/pnpm/store
 ENV PIP_CACHE_DIR=$XDG_CACHE_HOME/pip
 ENV UV_CACHE_DIR=$XDG_CACHE_HOME/uv
-ENV CARGO_HOME=/home/.cargo
+ENV CARGO_HOME=/home/developer/.cargo
 ENV RUSTUP_HOME=/usr/local/rustup
 ENV GOROOT=/usr/local/go
-ENV GOPATH=/home/go
+ENV GOPATH=/home/developer/go
 ENV GOMODCACHE=$GOPATH/pkg/mod
 ENV GOCACHE=$XDG_CACHE_HOME/go-build
 ENV PATH=$GOROOT/bin:$GOPATH/bin:$CARGO_HOME/bin:/usr/local/cargo/bin:$PATH
@@ -168,7 +168,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup /usr/local/cargo/bin/rustc --version \
     && CARGO_HOME=/usr/local/cargo RUSTUP_HOME=/usr/local/rustup /usr/local/cargo/bin/cargo --version \
     && echo 'export RUSTUP_HOME=/usr/local/rustup' >> /etc/profile \
-    && echo 'export CARGO_HOME=/home/.cargo' >> /etc/profile \
+    && echo 'export CARGO_HOME=/home/developer/.cargo' >> /etc/profile \
     && echo 'export PATH="/usr/local/cargo/bin:$CARGO_HOME/bin:$PATH"' >> /etc/profile
 
 ### GO ###
@@ -193,7 +193,8 @@ RUN chmod +x /opt/daycare/setup_daycare.sh
 
 ### CLEANUP ###
 
-RUN find /home -mindepth 1 -delete
+RUN find /home -mindepth 1 -delete \
+    && mkdir -p /home/developer
 
 ### ENTRYPOINT ###
 

@@ -26,14 +26,15 @@ flowchart TD
 ## Read-only Home Behavior
 
 The runtime assumes `/home` is mounted from outside and can be reset between runs.
-- cache directories are routed through `/home/.cache`
-- writable runtime state (Go modules, Cargo cache) stays under `/home`
+- container `HOME` points to `/home/developer`
+- cache directories are routed through `/home/developer/.cache`
+- writable runtime state (Go modules, Cargo cache) stays under `/home/developer`
 - toolchain installs for Rust/Go/Node live outside `/home` so remount/reset does not remove them
 
 ```mermaid
 flowchart LR
     A[/home (external mount)] --> B[cache + workspace state]
-    B --> C[/home/.cargo + /home/go]
+    B --> C[/home/developer/.cargo + /home/developer/go]
     D[/usr/local/rustup + /usr/local/go + /root/.nvm] --> E[installed toolchains]
     B -. resettable .-> F[new session home]
     E --> G[toolchains still available]
