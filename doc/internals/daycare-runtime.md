@@ -26,7 +26,7 @@ flowchart TD
 ## Read-only Home Behavior
 
 The runtime assumes `/home` is mounted from outside and can be reset between runs.
-- container `HOME` points to `/home/developer`
+- container `HOME` points to `/home`
 - Docker sandbox execution keeps the bind mount root as `/home` for runtime path rewriting
 - cache directories are routed through `/home/developer/.cache`
 - writable runtime state (Go modules, Cargo cache) stays under `/home/developer`

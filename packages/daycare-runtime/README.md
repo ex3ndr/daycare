@@ -52,7 +52,7 @@ If you want to apply env-based runtime switching manually inside the container:
 | `DAYCARE_ENV_RUST_VERSION` | Rust toolchain version hint for setup script | `stable` (installed via rustup) |
 | `DAYCARE_ENV_GO_VERSION` | Go version hint for setup script | `1.25.1` (installed in image) |
 
-The runtime assumes only `/home` is writable. `HOME` is set to `/home/developer`, and writable caches/tool state are kept under `/home/developer`.
+The runtime assumes only `/home` is writable. `HOME` is set to `/home`, and writable caches/tool state are kept under `/home/developer`.
 Runtime setup does not mutate toolchain installations in read-only paths.
 
 See `packages/daycare-runtime/Dockerfile` for the full package list and exact pinned versions.

@@ -14,7 +14,7 @@ ARG TARGETOS
 ARG TARGETARCH
 
 ENV LANG="C.UTF-8"
-ENV HOME=/home/developer
+ENV HOME=/home
 ENV DEBIAN_FRONTEND=noninteractive
 
 ENV XDG_CACHE_HOME=/home/developer/.cache
