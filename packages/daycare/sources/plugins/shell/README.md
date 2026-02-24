@@ -1,8 +1,7 @@
 # Shell Plugin
 
 The shell plugin provides workspace file tools (`read`, `write`, `edit`, `write_output`), search/list helpers
-(`grep`, `find`, `ls`), test execution (`run_tests`), one-shot command execution (`exec`), and durable process
-management tools.
+(`grep`, `find`, `ls`), one-shot command execution (`exec`), and durable process management tools.
 
 ## Filesystem Helper Tools
 
@@ -10,8 +9,6 @@ management tools.
 - `grep`: runs `rg --json` and returns `file:line:content` rows with output-size guards.
 - `find`: runs `fd --glob --hidden`, respects ignore rules, and excludes `.git` and `node_modules`.
 - `ls`: runs `ls -1apL`, sorts output alphabetically, and applies entry/size truncation.
-- `run_tests`: runs `yarn test` (or a provided test command override) inside the workspace. This tool is excluded from
-  CI environments.
 
 ## Read Tool Notes
 
