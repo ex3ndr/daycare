@@ -16,7 +16,7 @@ type RegisteredProvider = {
     analyze: (request: unknown, context: unknown) => Promise<{ text: string }>;
 };
 
-describe("media-analysis plugin", () => {
+describe("gemini-media plugin", () => {
     const tempDirs: string[] = [];
 
     afterEach(async () => {
@@ -28,7 +28,7 @@ describe("media-analysis plugin", () => {
     });
 
     it("registers provider and analyzes image/audio with mocked Gemini", async () => {
-        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-media-analysis-"));
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-gemini-media-"));
         tempDirs.push(dir);
 
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
@@ -85,10 +85,10 @@ describe("media-analysis plugin", () => {
             supportedTypes: ["image", "audio"]
         });
         const api: PluginApi<typeof settings> = {
-            instance: { instanceId: "media-analysis-main", pluginId: "media-analysis", enabled: true },
+            instance: { instanceId: "gemini-media-main", pluginId: "gemini-media", enabled: true },
             settings,
             engineSettings: {},
-            logger: getLogger("test.media-analysis"),
+            logger: getLogger("test.gemini-media"),
             auth,
             dataDir: dir,
             tmpDir: path.join(dir, "tmp"),
@@ -104,7 +104,7 @@ describe("media-analysis plugin", () => {
                     throw new Error("Inference not available in tests");
                 }
             },
-            processes: new Processes(dir, getLogger("test.processes.media-analysis")),
+            processes: new Processes(dir, getLogger("test.processes.gemini-media")),
             mode: "runtime",
             events: {
                 emit: () => undefined
@@ -133,7 +133,7 @@ describe("media-analysis plugin", () => {
             },
             {
                 auth,
-                logger: getLogger("test.media-analysis.image")
+                logger: getLogger("test.gemini-media.image")
             }
         );
         const audioResult = await registrationState.provider.analyze(
@@ -145,7 +145,7 @@ describe("media-analysis plugin", () => {
             },
             {
                 auth,
-                logger: getLogger("test.media-analysis.audio")
+                logger: getLogger("test.gemini-media.audio")
             }
         );
 
@@ -211,11 +211,11 @@ describe("media-analysis plugin", () => {
         });
 
         await instance.unload?.();
-        expect(registrationState.unregisteredProviderId).toBe("media-analysis");
+        expect(registrationState.unregisteredProviderId).toBe("gemini-media");
     });
 
     it("rejects files larger than maxFileSizeBytes before fetch", async () => {
-        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-media-analysis-"));
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-gemini-media-"));
         tempDirs.push(dir);
 
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
@@ -251,10 +251,10 @@ describe("media-analysis plugin", () => {
             maxFileSizeBytes: 2
         });
         const api: PluginApi<typeof settings> = {
-            instance: { instanceId: "media-analysis-main", pluginId: "media-analysis", enabled: true },
+            instance: { instanceId: "gemini-media-main", pluginId: "gemini-media", enabled: true },
             settings,
             engineSettings: {},
-            logger: getLogger("test.media-analysis"),
+            logger: getLogger("test.gemini-media"),
             auth,
             dataDir: dir,
             tmpDir: path.join(dir, "tmp"),
@@ -270,7 +270,7 @@ describe("media-analysis plugin", () => {
                     throw new Error("Inference not available in tests");
                 }
             },
-            processes: new Processes(dir, getLogger("test.processes.media-analysis")),
+            processes: new Processes(dir, getLogger("test.processes.gemini-media")),
             mode: "runtime",
             events: {
                 emit: () => undefined
@@ -297,7 +297,7 @@ describe("media-analysis plugin", () => {
                 },
                 {
                     auth,
-                    logger: getLogger("test.media-analysis.image")
+                    logger: getLogger("test.gemini-media.image")
                 }
             )
         ).rejects.toThrow("Media file too large");

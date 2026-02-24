@@ -73,7 +73,7 @@ export const plugin = definePlugin({
                     analyze: async (request, mediaContext) => {
                         const apiKey = await mediaContext.auth.getApiKey(authId);
                         if (!apiKey) {
-                            throw new Error("Missing media-analysis apiKey in auth store");
+                            throw new Error("Missing gemini-media apiKey in auth store");
                         }
 
                         const model = request.model ?? settings.model ?? DEFAULT_MODEL;

@@ -29,4 +29,4 @@ Gemini model family from Google.
 
 - `gemini-search` - Web search using Gemini with Search Grounding (reuses Google credentials)
 - `nano-banana-pro` - Image generation (reuses Google API key)
-- `media-analysis` - Multi-modal media analysis (reuses Google API key)
+- `gemini-media` - Multi-modal media analysis (reuses Google API key)

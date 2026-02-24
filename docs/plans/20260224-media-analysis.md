@@ -4,7 +4,7 @@
 Add a multi-modal media analysis capability that mirrors the image generation architecture. A single `media_analyze` agent tool accepts a file path (image, video, audio, or PDF) and an optional prompt, detects the media type, routes to a registered provider, and returns the model's text analysis.
 
 - **Problem**: agents cannot understand media content (images, videos, audio, PDFs) via a unified tool
-- **Solution**: `MediaAnalysisRegistry` + `MediaAnalysisProvider` type + `media-analysis` Gemini plugin + `media_analyze` core tool
+- **Solution**: `MediaAnalysisRegistry` + `MediaAnalysisProvider` type + `gemini-media` plugin + `media_analyze` core tool
 - **Pattern**: mirrors `ImageGenerationRegistry` / `ImageGenerationProvider` / `nano-banana-pro` / `generate_image`
 
 ### Key behaviors
@@ -103,9 +103,9 @@ Add a multi-modal media analysis capability that mirrors the image generation ar
 - [x] Write `media-analysis.spec.ts`: success case with mock provider, default prompt used when prompt omitted, no provider error, unknown provider error, unsupported media type error
 - [x] Run tests — must pass before task 6
 
-### Task 6: Create `media-analysis` Gemini plugin
-- [x] Create `sources/plugins/media-analysis/plugin.json` with id `media-analysis`
-- [x] Create `sources/plugins/media-analysis/plugin.ts`:
+### Task 6: Create `gemini-media` plugin
+- [x] Create `sources/plugins/gemini-media/plugin.json` with id `gemini-media`
+- [x] Create `sources/plugins/gemini-media/plugin.ts`:
   - Settings schema: `model` (optional, default `gemini-3-flash-preview`), `baseUrl` (optional), `providerId` (optional), `label` (optional), `authId` (optional), `supportedTypes` (optional array of MediaType, default all four)
   - Onboarding: check for existing `google` API key, prompt if missing
   - `load()`: register media analysis provider via `api.registrar.registerMediaAnalysisProvider()`
@@ -118,8 +118,8 @@ Add a multi-modal media analysis capability that mirrors the image generation ar
 - [x] ➕ Add plugin-side reliability guards:
   - Reject files larger than `maxFileSizeBytes` (default 20 MB) before inline upload
   - Add `requestTimeoutMs` (default 60s) with `AbortController` for Gemini requests
-- [x] Create `sources/plugins/media-analysis/README.md` documenting the plugin
-- [x] Write `sources/plugins/media-analysis/__tests__/plugin.integration.spec.ts` testing provider with mocked fetch for image and audio cases, plus oversized-file rejection
+- [x] Create `sources/plugins/gemini-media/README.md` documenting the plugin
+- [x] Write `sources/plugins/gemini-media/__tests__/plugin.integration.spec.ts` testing provider with mocked fetch for image and audio cases, plus oversized-file rejection
 - [x] Run tests — must pass before task 7
 
 ### Task 7: Verify acceptance criteria
@@ -236,4 +236,4 @@ type MediaAnalysisToolResult = {
 - Test provider routing when multiple providers are registered with different type support
 
 **Configuration:**
-- Add `media-analysis` plugin instance to `.daycare/settings.json` with `google` auth
+- Add `gemini-media` plugin instance to `.daycare/settings.json` with `google` auth

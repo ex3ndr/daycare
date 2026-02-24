@@ -94,4 +94,4 @@ These are not inference providers but plugin tools that use external APIs for we
 
 | Plugin | Description |
 |--------|-------------|
-| `media-analysis` | Analyze image/video/audio/pdf files via Gemini (uses Google API key) |
+| `gemini-media` | Analyze image/video/audio/pdf files via Gemini (uses Google API key) |

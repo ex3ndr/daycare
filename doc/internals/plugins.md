@@ -616,7 +616,7 @@ export const plugin = definePlugin({
 | `shell` | Tools | File system operations (read/write/edit/exec) |
 | `monty-python` | Tool | Sandboxed Python snippets via Monty |
 | `nano-banana-pro` | Image Provider | Image generation |
-| `media-analysis` | Media Analysis Provider | Gemini-powered analysis for image/video/audio/pdf |
+| `gemini-media` | Media Analysis Provider | Gemini-powered analysis for image/video/audio/pdf |
 
 ---
 

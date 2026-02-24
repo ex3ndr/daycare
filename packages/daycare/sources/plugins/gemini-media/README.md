@@ -1,6 +1,6 @@
 # Media Analysis Plugin
 
-The `media-analysis` plugin registers a `MediaAnalysisProvider` backed by Gemini `generateContent` with `inlineData` inputs.
+The `gemini-media` plugin registers a `MediaAnalysisProvider` backed by Gemini `generateContent` with `inlineData` inputs.
 
 ## What it does
 
@@ -26,7 +26,7 @@ The `media-analysis` plugin registers a `MediaAnalysisProvider` backed by Gemini
 sequenceDiagram
     participant Tool as media_analyze tool
     participant Registry as MediaAnalysisRegistry
-    participant Plugin as media-analysis provider
+    participant Plugin as gemini-media provider
     participant Gemini as Gemini API
 
     Tool->>Registry: resolve provider by media type
