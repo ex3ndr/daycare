@@ -19,9 +19,12 @@ for node in nodes["results"][:50]:
     print(data["content"])
 ```
 
-Tool output shown to the model is truncated. For large results, write them to `/home/outputs/` instead:
+Tool output shown to the model is truncated. Prefer filesystem helpers for large results:
 ```python
-data = some_tool_with_large_output()
-with open("/home/outputs/result.txt", "w") as f:
-    f.write(str(data))
+grep_results = grep(pattern="TODO", path=".", glob="*.ts", limit=200)
+find_results = find(pattern="*.md", path=".", limit=200)
+ls_results = ls(path=".", limit=200)
+payload = {"grep": grep_results, "find": find_results, "ls": ls_results}
+write_output(name="search-results", content=str(payload))  # Python repr format; json module unavailable.
+"Results written to /home/outputs/search-results.md"
 ```
