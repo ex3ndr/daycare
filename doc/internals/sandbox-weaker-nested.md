@@ -1,16 +1,18 @@
 # Sandbox Weaker Nested Flag
 
-Daycare now sets `enableWeakerNestedSandbox: true` on sandbox runtime configs used for:
+Daycare now enables `enableWeakerNestedSandbox: true` only when execution is inside Docker:
 
-- one-shot `exec` tool commands
-- durable managed processes
-- direct `runInSandbox` calls (defaulted when omitted)
+- one-shot `exec` tool commands using Docker sandbox containers
+- durable managed processes when Daycare itself runs in Docker
+- direct `runInSandbox` calls when Docker environment markers are detected
 
-This keeps behavior consistent across all runtime entry points.
+Non-Docker host execution omits the flag.
 
 ```mermaid
 flowchart TD
-  A[Tool or scheduler command] --> B[Sandbox config builder]
-  B --> C[enableWeakerNestedSandbox=true]
-  C --> D[@anthropic-ai/sandbox-runtime CLI]
+  A[Tool or scheduler command] --> B{Running in Docker?}
+  B -->|yes| C[set enableWeakerNestedSandbox=true]
+  B -->|no| D[omit enableWeakerNestedSandbox]
+  C --> E[@anthropic-ai/sandbox-runtime CLI]
+  D --> E
 ```

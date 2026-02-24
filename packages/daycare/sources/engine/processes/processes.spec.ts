@@ -1,13 +1,18 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
 const itIfSandbox = process.env.CI ? it.skip : it;
 
+vi.mock("../../sandbox/sandboxDockerEnvironmentIs.js", () => ({
+    sandboxDockerEnvironmentIs: vi.fn()
+}));
+
 import type { SessionPermissions } from "@/types";
 import { getLogger } from "../../log.js";
+import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironmentIs.js";
 import { Storage } from "../../storage/storage.js";
 import { Processes } from "./processes.js";
 
@@ -27,6 +32,7 @@ describe("Processes", () => {
             workingDir: workspaceDir,
             writeDirs: [workspaceDir]
         };
+        vi.mocked(sandboxDockerEnvironmentIs).mockResolvedValue(false);
         managers = [];
     });
 
@@ -61,9 +67,36 @@ describe("Processes", () => {
             const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
                 network?: { allowedDomains?: string[] };
                 allowUnixSockets?: string[];
+                enableWeakerNestedSandbox?: boolean;
             };
             expect(config.network?.allowedDomains).toEqual(["example.com"]);
             expect(config.allowUnixSockets).toBeUndefined();
+            expect(config.enableWeakerNestedSandbox).toBeUndefined();
+        },
+        TEST_TIMEOUT_MS
+    );
+
+    it(
+        "enables weaker nested sandbox in process config when runtime is inside docker",
+        async () => {
+            vi.mocked(sandboxDockerEnvironmentIs).mockResolvedValueOnce(true);
+            const manager = await createManager(baseDir);
+            const created = await manager.create(
+                {
+                    command: `node -e "console.log('weaker-nested-enabled')"`,
+                    keepAlive: false,
+                    cwd: workspaceDir,
+                    userId: "user-1",
+                    allowedDomains: ["example.com"]
+                },
+                permissions
+            );
+
+            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
+            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
+                enableWeakerNestedSandbox?: boolean;
+            };
+            expect(config.enableWeakerNestedSandbox).toBe(true);
         },
         TEST_TIMEOUT_MS
     );

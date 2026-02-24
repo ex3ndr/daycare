@@ -221,7 +221,7 @@ export class Sandbox {
                     allowedDomains,
                     deniedDomains: []
                 },
-                enableWeakerNestedSandbox: true
+                ...(useDocker ? { enableWeakerNestedSandbox: true } : {})
             };
             const runtimeOptions = {
                 cwd,

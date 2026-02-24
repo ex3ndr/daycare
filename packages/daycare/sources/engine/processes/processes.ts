@@ -10,6 +10,7 @@ import type { SandboxPackageManager, SessionPermissions } from "@/types";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
+import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironmentIs.js";
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
@@ -467,7 +468,13 @@ export class Processes {
     }
 
     private async startRecordLocked(record: ProcessRecord, options: { incrementRestart: boolean }): Promise<void> {
-        const sandboxConfig = buildSandboxConfig(record.allowedDomains, record.permissions, record.allowLocalBinding);
+        const enableWeakerNestedSandbox = await sandboxDockerEnvironmentIs();
+        const sandboxConfig = buildSandboxConfig(
+            record.allowedDomains,
+            record.permissions,
+            record.allowLocalBinding,
+            enableWeakerNestedSandbox
+        );
         await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
         const baseEnv = { ...process.env, ...record.env };
         const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
@@ -615,7 +622,8 @@ export class Processes {
 function buildSandboxConfig(
     allowedDomains: string[],
     permissions: SessionPermissions,
-    allowLocalBinding: boolean
+    allowLocalBinding: boolean,
+    enableWeakerNestedSandbox: boolean
 ): SandboxRuntimeConfig {
     return {
         filesystem: sandboxFilesystemPolicyBuild({
@@ -627,7 +635,7 @@ function buildSandboxConfig(
             deniedDomains: [],
             ...(allowLocalBinding ? { allowLocalBinding: true } : {})
         },
-        enableWeakerNestedSandbox: true
+        ...(enableWeakerNestedSandbox ? { enableWeakerNestedSandbox: true } : {})
     };
 }
 

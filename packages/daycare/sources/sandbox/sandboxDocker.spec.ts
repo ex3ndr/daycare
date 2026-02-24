@@ -65,6 +65,7 @@ describe("Sandbox docker integration", () => {
         expect(result.failed).toBe(false);
         expect(result.stdout).toBe("host");
         expect(runInSandbox).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(runInSandbox).mock.calls[0]?.[1]).not.toHaveProperty("enableWeakerNestedSandbox");
         expect(dockerRunInSandbox).not.toHaveBeenCalled();
     });
 
@@ -94,6 +95,9 @@ describe("Sandbox docker integration", () => {
         expect(result.failed).toBe(false);
         expect(result.stdout).toBe("docker");
         expect(dockerRunInSandbox).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]).toMatchObject({
+            enableWeakerNestedSandbox: true
+        });
         expect(runInSandbox).not.toHaveBeenCalled();
     });
 

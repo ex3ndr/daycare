@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 
 import { getLogger } from "../log.js";
+import { sandboxDockerEnvironmentIs } from "./sandboxDockerEnvironmentIs.js";
 import { sandboxHomeRedefine } from "./sandboxHomeRedefine.js";
 
 const logger = getLogger("sandbox.runtime");
@@ -15,7 +16,6 @@ const srtCliPath = nodeRequire.resolve("@anthropic-ai/sandbox-runtime/dist/cli.j
 const execFile = promisify(execFileCallback);
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_BUFFER_BYTES = 1_000_000;
-const DEFAULT_ENABLE_WEAKER_NESTED_SANDBOX = true;
 
 /**
  * Runs a command with a per-call sandbox config.
@@ -32,9 +32,12 @@ export async function runInSandbox(
         maxBufferBytes?: number;
     } = {}
 ): Promise<{ stdout: string; stderr: string }> {
+    const defaultEnableWeakerNestedSandbox = await sandboxDockerEnvironmentIs();
+    const enableWeakerNestedSandbox =
+        config.enableWeakerNestedSandbox ?? (defaultEnableWeakerNestedSandbox ? true : undefined);
     const runtimeConfig: SandboxRuntimeConfig = {
         ...config,
-        enableWeakerNestedSandbox: config.enableWeakerNestedSandbox ?? DEFAULT_ENABLE_WEAKER_NESTED_SANDBOX
+        ...(enableWeakerNestedSandbox === undefined ? {} : { enableWeakerNestedSandbox })
     };
     const settingsPath = path.join(
         os.tmpdir(),
