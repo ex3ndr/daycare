@@ -34,6 +34,7 @@ export async function dockerRunInSandbox(
     options: DockerRunInSandboxOptions
 ): Promise<{ stdout: string; stderr: string }> {
     const hostHomeDir = path.resolve(options.home);
+    const hostDeveloperHomeDir = path.join(hostHomeDir, "developer");
     const dockerConfig: DockerContainerConfig = {
         ...options.docker,
         hostHomeDir,
@@ -53,7 +54,7 @@ export async function dockerRunInSandbox(
     );
     const { env } = await sandboxHomeRedefine({
         env: options.env ?? process.env,
-        home: hostHomeDir
+        home: hostDeveloperHomeDir
     });
     const containerEnv = envPathRewrite(env, hostHomeDir, options.docker.userId, dockerConfig.hostSkillsActiveDir);
     const containerCwd = options.cwd
