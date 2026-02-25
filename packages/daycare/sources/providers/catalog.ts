@@ -4,6 +4,7 @@ import { openAiCompatibleProvider } from "./openai-compatible.js";
 import { buildOpenAiImageProvider } from "./openai-image.js";
 import { createPiAiProviderDefinition } from "./pi-ai.js";
 import type { ProviderDefinition } from "./types.js";
+import { zenProvider } from "./zen.js";
 
 const PROVIDERS: ProviderDefinition[] = [
     createPiAiProviderDefinition({
@@ -32,6 +33,7 @@ const PROVIDERS: ProviderDefinition[] = [
         description: "OpenRouter inference provider.",
         auth: "apiKey"
     }),
+    zenProvider,
     createPiAiProviderDefinition({
         id: "groq",
         name: "Groq",

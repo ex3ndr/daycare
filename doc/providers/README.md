@@ -63,6 +63,7 @@ Each model has a size classification: `small`, `normal`, or `large`. The inferen
 | [Kimi For Coding](kimi-coding.md) | apiKey | Inference | Kimi K2 models |
 | [HuggingFace](huggingface.md) | apiKey | Inference | Open models via HF |
 | [OpenCode](opencode.md) | apiKey | Inference | Multi-vendor gateway |
+| [Zen](zen.md) | apiKey | Inference | OpenCode Zen gateway |
 | [Z.AI](zai.md) | apiKey | Inference | GLM model family |
 | [MiniMax CN](minimax-cn.md) | apiKey | Inference | MiniMax (China endpoint) |
 | [OpenAI Compatible](openai-compatible.md) | apiKey | Inference | Any OpenAI-compatible endpoint |

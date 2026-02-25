@@ -33,7 +33,8 @@ const providers = [
     { id: "xai", apiKeyEnv: ["XAI_API_KEY"], modelEnv: ["XAI_MODEL"] },
     { id: "cerebras", apiKeyEnv: ["CEREBRAS_API_KEY"], modelEnv: ["CEREBRAS_MODEL"] },
     { id: "minimax", apiKeyEnv: ["MINIMAX_API_KEY"], modelEnv: ["MINIMAX_MODEL"] },
-    { id: "kimi-coding", apiKeyEnv: ["KIMI_API_KEY"], modelEnv: ["KIMI_MODEL"] }
+    { id: "kimi-coding", apiKeyEnv: ["KIMI_API_KEY"], modelEnv: ["KIMI_MODEL"] },
+    { id: "zen", apiKeyEnv: ["ZEN_API_KEY"], modelEnv: ["ZEN_MODEL"] }
 ];
 
 const fallbackModels: Record<string, string[]> = {

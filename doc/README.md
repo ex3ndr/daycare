@@ -54,6 +54,7 @@ Inference and image generation providers. See the [providers overview](providers
 | [Vercel AI Gateway](providers/vercel-ai.md) | apiKey | Multi-vendor |
 | [GitHub Copilot](providers/github-copilot.md) | oauth | Multi-vendor via Copilot |
 | [OpenCode](providers/opencode.md) | apiKey | Multi-vendor gateway |
+| [Zen](providers/zen.md) | apiKey | OpenCode Zen gateway |
 | [Google Antigravity](providers/google-antigravity.md) | oauth | Multi-vendor via Google |
 | [Google Gemini CLI](providers/google-gemini-cli.md) | oauth | Gemini via Cloud Code Assist |
 | [OpenAI Codex](providers/openai-codex.md) | oauth | Codex-optimized models |
