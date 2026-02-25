@@ -48,11 +48,8 @@ export function agentHistorySummary(records: AgentHistoryRecord[]): AgentHistory
             lastNote = record.text;
             continue;
         }
-        if (record.type === "tool_result") {
-            const toolName = record.output.toolMessage.toolName;
-            if (typeof toolName === "string" && toolName.trim().length > 0) {
-                lastToolName = toolName;
-            }
+        if (record.type === "rlm_tool_result") {
+            lastToolName = record.toolName;
         }
     }
 
@@ -72,7 +69,6 @@ function buildEmptyCounts(): AgentHistorySummaryCounts {
     return {
         user_message: 0,
         assistant_message: 0,
-        tool_result: 0,
         rlm_start: 0,
         rlm_tool_call: 0,
         rlm_tool_result: 0,

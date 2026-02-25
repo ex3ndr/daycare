@@ -1,13 +1,6 @@
-import type { Context, ToolCall } from "@mariozechner/pi-ai";
+import type { Context } from "@mariozechner/pi-ai";
 
-import type {
-    ConnectorMessage,
-    FileReference,
-    MessageContext,
-    SessionPermissions,
-    Signal,
-    ToolExecutionResult
-} from "@/types";
+import type { ConnectorMessage, FileReference, MessageContext, SessionPermissions, Signal } from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 
 export type AgentMessage = {
@@ -117,14 +110,7 @@ export type AgentHistoryRecord =
           at: number;
           text: string;
           files: FileReference[];
-          toolCalls: ToolCall[];
           tokens: AgentTokenEntry | null;
-      }
-    | {
-          type: "tool_result";
-          at: number;
-          toolCallId: string;
-          output: ToolExecutionResult;
       }
     | AgentHistoryRlmStartRecord
     | AgentHistoryRlmToolCallRecord

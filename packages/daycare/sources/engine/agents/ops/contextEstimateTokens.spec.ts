@@ -1,30 +1,12 @@
-import type { ToolCall } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
-import type { AgentHistoryRecord, ToolExecutionResult } from "@/types";
+
+import type { AgentHistoryRecord, FileReference } from "@/types";
 import { contextEstimateTokens } from "./contextEstimateTokens.js";
 
 describe("contextEstimateTokens", () => {
-    it("estimates tokens from user, assistant, and tool records", () => {
+    it("estimates tokens from user and assistant records", () => {
         const userText = "abcd";
         const assistantText = "hello!";
-        const toolCall: ToolCall = {
-            type: "toolCall",
-            id: "tool-1",
-            name: "exec",
-            arguments: { cmd: "ls" }
-        };
-        const toolOutputText = "tool-output";
-        const toolResult: ToolExecutionResult = {
-            toolMessage: {
-                role: "toolResult",
-                toolCallId: "tool-1",
-                toolName: "exec",
-                content: [{ type: "text", text: toolOutputText }],
-                isError: false,
-                timestamp: Date.now()
-            },
-            typedResult: { text: toolOutputText }
-        };
 
         const history: AgentHistoryRecord[] = [
             { type: "user_message", at: 1, text: userText, files: [] },
@@ -33,61 +15,39 @@ describe("contextEstimateTokens", () => {
                 at: 2,
                 text: assistantText,
                 files: [],
-                toolCalls: [toolCall],
-                tokens: {
-                    provider: "test",
-                    model: "test-model",
-                    size: {
-                        input: 1,
-                        output: 1,
-                        cacheRead: 0,
-                        cacheWrite: 0,
-                        total: 2
-                    }
-                }
-            },
-            { type: "tool_result", at: 3, toolCallId: "tool-1", output: toolResult }
+                tokens: null
+            }
         ];
 
-        const symbols =
-            userText.length + assistantText.length + JSON.stringify(toolCall).length + toolOutputText.length;
+        const symbols = userText.length + assistantText.length;
         const expected = Math.ceil(symbols / 4);
 
         expect(contextEstimateTokens(history)).toBe(expected);
     });
 
-    it("does not scale image estimates with inline data size", () => {
-        const smallImage = "x".repeat(8);
-        const largeImage = "x".repeat(8000);
-        const smallResult: ToolExecutionResult = {
-            toolMessage: {
-                role: "toolResult",
-                toolCallId: "tool-1",
-                toolName: "image_generation",
-                content: [{ type: "image", data: smallImage, mimeType: "image/png" }],
-                isError: false,
-                timestamp: Date.now()
-            },
-            typedResult: { text: "" }
+    it("uses fixed estimate for image attachments", () => {
+        const imageFile: FileReference = {
+            id: "f1",
+            name: "image.png",
+            path: "/tmp/image.png",
+            mimeType: "image/png",
+            size: 123
         };
-        const largeResult: ToolExecutionResult = {
-            toolMessage: {
-                role: "toolResult",
-                toolCallId: "tool-1",
-                toolName: "image_generation",
-                content: [{ type: "image", data: largeImage, mimeType: "image/png" }],
-                isError: false,
-                timestamp: Date.now()
-            },
-            typedResult: { text: "" }
+        const user: AgentHistoryRecord = {
+            type: "user_message",
+            at: 1,
+            text: "see image",
+            files: [imageFile]
         };
-        const smallHistory: AgentHistoryRecord[] = [
-            { type: "tool_result", at: 1, toolCallId: "tool-1", output: smallResult }
-        ];
-        const largeHistory: AgentHistoryRecord[] = [
-            { type: "tool_result", at: 1, toolCallId: "tool-1", output: largeResult }
-        ];
+        const assistant: AgentHistoryRecord = {
+            type: "assistant_message",
+            at: 2,
+            text: "ack",
+            files: [imageFile],
+            tokens: null
+        };
 
-        expect(contextEstimateTokens(largeHistory)).toBe(contextEstimateTokens(smallHistory));
+        const estimated = contextEstimateTokens([user, assistant]);
+        expect(estimated).toBeGreaterThan(Math.ceil(("see image".length + "ack".length) / 4));
     });
 });

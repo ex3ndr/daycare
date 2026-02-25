@@ -1,4 +1,3 @@
-import type { ToolCall } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 
 import type { AgentHistoryRecord } from "@/types";
@@ -6,20 +5,13 @@ import { agentHistoryContext } from "./agentHistoryContext.js";
 
 describe("agentHistoryContext", () => {
     it("skips RLM checkpoint records while rebuilding context messages", async () => {
-        const toolCall: ToolCall = {
-            type: "toolCall",
-            id: "run-python-1",
-            name: "run_python",
-            arguments: { code: "echo('x')" }
-        };
         const records: AgentHistoryRecord[] = [
             { type: "user_message", at: 3, text: "run", files: [] },
             {
                 type: "assistant_message",
                 at: 4,
-                text: "",
+                text: "Working on it",
                 files: [],
-                toolCalls: [toolCall],
                 tokens: null
             },
             {
@@ -55,41 +47,23 @@ describe("agentHistoryContext", () => {
                 printOutput: [],
                 toolCallCount: 1,
                 isError: false
-            },
-            {
-                type: "tool_result",
-                at: 9,
-                toolCallId: "run-python-1",
-                output: {
-                    toolMessage: {
-                        role: "toolResult",
-                        toolCallId: "run-python-1",
-                        toolName: "run_python",
-                        content: [{ type: "text", text: "Python execution completed." }],
-                        isError: false,
-                        timestamp: 9
-                    },
-                    typedResult: { text: "Python execution completed." }
-                }
             }
         ];
 
         const messages = await agentHistoryContext(records, "agent-1");
 
-        expect(messages).toHaveLength(3);
+        expect(messages).toHaveLength(2);
         expect(messages[0]?.role).toBe("user");
         expect(messages[1]?.role).toBe("assistant");
-        expect(messages[2]?.role).toBe("toolResult");
     });
 
-    it("replays assistant_rewrite records during restore without inferring trims", async () => {
+    it("replays assistant_rewrite records during restore", async () => {
         const records: AgentHistoryRecord[] = [
             {
                 type: "assistant_message",
                 at: 2,
                 text: "<say>before</say><run_python>echo()</run_python><say>after</say>",
                 files: [],
-                toolCalls: [],
                 tokens: null
             },
             {
@@ -98,13 +72,6 @@ describe("agentHistoryContext", () => {
                 assistantAt: 2,
                 text: "<say>before</say><run_python>echo()</run_python>",
                 reason: "run_python_say_after_trim"
-            },
-            {
-                type: "assistant_rewrite",
-                at: 4,
-                assistantAt: 2,
-                text: "<say>before</say><run_python>echo()</run_python>",
-                reason: "run_python_failure_trim"
             }
         ];
 
@@ -129,7 +96,6 @@ describe("agentHistoryContext", () => {
                 at: 10,
                 text: "first raw",
                 files: [],
-                toolCalls: [],
                 tokens: null
             },
             {
@@ -137,7 +103,6 @@ describe("agentHistoryContext", () => {
                 at: 20,
                 text: "second untouched",
                 files: [],
-                toolCalls: [],
                 tokens: null
             },
             {
@@ -165,118 +130,5 @@ describe("agentHistoryContext", () => {
         const secondTextPart = second.content.find((part) => part.type === "text");
         expect(firstTextPart && "text" in firstTextPart ? firstTextPart.text : "").toBe("first rewritten");
         expect(secondTextPart && "text" in secondTextPart ? secondTextPart.text : "").toBe("second untouched");
-    });
-
-    it("drops orphaned tool_result records that do not follow a matching assistant tool call", async () => {
-        const records: AgentHistoryRecord[] = [
-            {
-                type: "assistant_message",
-                at: 1,
-                text: "",
-                files: [],
-                toolCalls: [
-                    {
-                        type: "toolCall",
-                        id: "tool-1",
-                        name: "read_file",
-                        arguments: {}
-                    }
-                ],
-                tokens: null
-            },
-            {
-                type: "user_message",
-                at: 2,
-                text: "new request",
-                files: []
-            },
-            {
-                type: "tool_result",
-                at: 3,
-                toolCallId: "tool-1",
-                output: {
-                    toolMessage: {
-                        role: "toolResult",
-                        toolCallId: "tool-1",
-                        toolName: "read_file",
-                        content: [{ type: "text", text: "late result" }],
-                        isError: false,
-                        timestamp: 3
-                    },
-                    typedResult: { text: "late result" }
-                }
-            }
-        ];
-
-        const messages = await agentHistoryContext(records, "agent-1");
-
-        expect(messages).toHaveLength(2);
-        expect(messages[0]?.role).toBe("assistant");
-        expect(messages[1]?.role).toBe("user");
-    });
-
-    it("keeps a contiguous batch of matching tool_result records for one assistant turn", async () => {
-        const records: AgentHistoryRecord[] = [
-            {
-                type: "assistant_message",
-                at: 1,
-                text: "",
-                files: [],
-                toolCalls: [
-                    {
-                        type: "toolCall",
-                        id: "tool-1",
-                        name: "read_file",
-                        arguments: {}
-                    },
-                    {
-                        type: "toolCall",
-                        id: "tool-2",
-                        name: "write_file",
-                        arguments: {}
-                    }
-                ],
-                tokens: null
-            },
-            {
-                type: "tool_result",
-                at: 2,
-                toolCallId: "tool-1",
-                output: {
-                    toolMessage: {
-                        role: "toolResult",
-                        toolCallId: "tool-1",
-                        toolName: "read_file",
-                        content: [{ type: "text", text: "ok-1" }],
-                        isError: false,
-                        timestamp: 2
-                    },
-                    typedResult: { text: "ok-1" }
-                }
-            },
-            {
-                type: "tool_result",
-                at: 3,
-                toolCallId: "tool-2",
-                output: {
-                    toolMessage: {
-                        role: "toolResult",
-                        toolCallId: "tool-2",
-                        toolName: "write_file",
-                        content: [{ type: "text", text: "ok-2" }],
-                        isError: false,
-                        timestamp: 3
-                    },
-                    typedResult: { text: "ok-2" }
-                }
-            }
-        ];
-
-        const messages = await agentHistoryContext(records, "agent-1");
-
-        expect(messages).toHaveLength(3);
-        expect(messages[0]?.role).toBe("assistant");
-        expect(messages[1]?.role).toBe("toolResult");
-        expect(messages[2]?.role).toBe("toolResult");
     });
 });

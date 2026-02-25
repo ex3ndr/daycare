@@ -11,7 +11,6 @@ import { agentHistoryLoad } from "../../agents/ops/agentHistoryLoad.js";
 import { agentHistorySummary } from "../../agents/ops/agentHistorySummary.js";
 import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
-import { toolResultFormatVerbose } from "./toolResultFormatVerbose.js";
 
 const schema = Type.Object(
     {
@@ -183,7 +182,6 @@ function summaryInputBuild(agentId: string, records: AgentHistoryRecord[]): stri
             `types: user=${summary.counts.user_message}`,
             `assistant=${summary.counts.assistant_message}`,
             `assistant_rewrite=${summary.counts.assistant_rewrite}`,
-            `tool_result=${summary.counts.tool_result}`,
             `note=${summary.counts.note}`
         ].join(" "),
         omittedCount > 0
@@ -253,7 +251,7 @@ function recordSummaryLineBuild(record: AgentHistoryRecord): string {
     if (record.type === "rlm_complete") {
         return `${prefix} rlm_complete toolCallId=${record.toolCallId} isError=${record.isError} toolCalls=${record.toolCallCount}`;
     }
-    return `${prefix} tool_result toolCallId=${record.toolCallId} ${singleLine(toolResultFormatVerbose(record.output))}`;
+    return `${prefix} unknown`;
 }
 
 function singleLine(value: string): string {

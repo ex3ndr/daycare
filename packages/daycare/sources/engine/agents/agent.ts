@@ -18,15 +18,12 @@ import { messageExtractText } from "../messages/messageExtractText.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { executablePromptExpand } from "../modules/executablePrompts/executablePromptExpand.js";
 import { montyRuntimePreambleBuild } from "../modules/monty/montyRuntimePreambleBuild.js";
-import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
 import { rlmErrorTextBuild } from "../modules/rlm/rlmErrorTextBuild.js";
 import { rlmExecute } from "../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmRestore } from "../modules/rlm/rlmRestore.js";
 import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
-import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
 import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
-import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { Skills } from "../skills/skills.js";
@@ -489,7 +486,7 @@ export class Agent {
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
-        const contextTools = this.listContextTools();
+        const contextTools: InferenceContext["tools"] = [];
         const compactionStatus = contextCompactionStatus(
             history,
             this.agentSystem.config.current.settings.agents.emergencyContextLimit,
@@ -1050,14 +1047,12 @@ export class Agent {
         };
         const toolCall = pendingRlm.start.toolCallId;
         let toolResultText = "";
-        let toolResultIsError = false;
         let restoreMessage = "RLM execution completed after restart. Output: (empty)";
 
         if (!pendingRlm.lastSnapshot) {
             const message = "Process was restarted before any tool call";
             await appendRecord(rlmHistoryCompleteErrorRecordBuild(toolCall, message));
             toolResultText = rlmErrorTextBuild(new Error(message));
-            toolResultIsError = true;
             restoreMessage = `RLM execution failed after restart. ${message}`;
         } else {
             const source =
@@ -1098,22 +1093,15 @@ export class Agent {
                     )
                 );
                 toolResultText = rlmErrorTextBuild(error);
-                toolResultIsError = true;
                 restoreMessage = `RLM execution failed after restart. ${message}`;
             }
         }
 
-        const result = rlmToolResultBuild({ id: toolCall, name: RLM_TOOL_NAME }, toolResultText, toolResultIsError);
-        await appendRecord({
-            type: "tool_result",
-            at: Date.now(),
-            toolCallId: toolCall,
-            output: result
-        });
+        const restoreText = [restoreMessage, toolResultText].filter((part) => part.trim().length > 0).join("\n\n");
         await appendRecord({
             type: "user_message",
             at: Date.now(),
-            text: messageBuildSystemText(restoreMessage, "rlm_restore"),
+            text: messageBuildSystemText(restoreText, "rlm_restore"),
             files: []
         });
 
@@ -1189,10 +1177,6 @@ export class Agent {
                 "error: Child agent failure notification failed"
             );
         }
-    }
-
-    private listContextTools(): InferenceContext["tools"] {
-        return toolListContextBuild();
     }
 
     private resolveAgentKind(): "background" | "foreground" {

@@ -20,28 +20,10 @@ describe("formatHistoryMessages", () => {
                 at: 1000,
                 text: "Hi!",
                 files: [],
-                toolCalls: [],
                 tokens: null
             }
         ];
         expect(formatHistoryMessages(records)).toBe("## Assistant\n\nHi!");
-    });
-
-    it("formats assistant message with tool calls", () => {
-        const records: AgentHistoryRecord[] = [
-            {
-                type: "assistant_message",
-                at: 1000,
-                text: "Let me check.",
-                files: [],
-                toolCalls: [{ type: "toolCall", id: "tc1", name: "read_file", arguments: { path: "/tmp/a.txt" } }],
-                tokens: null
-            }
-        ];
-        const result = formatHistoryMessages(records);
-        expect(result).toContain("## Assistant\n\nLet me check.");
-        expect(result).toContain("### Tool Call: read_file");
-        expect(result).toContain("/tmp/a.txt");
     });
 
     it("formats note records", () => {
@@ -49,35 +31,38 @@ describe("formatHistoryMessages", () => {
         expect(formatHistoryMessages(records)).toBe("> Note: session started");
     });
 
-    it("skips rlm_start records", () => {
+    it("skips internal RLM records", () => {
         const records: AgentHistoryRecord[] = [
-            { type: "rlm_start", at: 1000, toolCallId: "tc1", code: "x", preamble: "y" }
+            { type: "rlm_start", at: 1000, toolCallId: "tc1", code: "x", preamble: "y" },
+            {
+                type: "rlm_tool_call",
+                at: 1001,
+                toolCallId: "tc1",
+                snapshot: "AQID",
+                printOutput: [],
+                toolCallCount: 0,
+                toolName: "read",
+                toolArgs: {}
+            },
+            {
+                type: "rlm_tool_result",
+                at: 1002,
+                toolCallId: "tc1",
+                toolName: "read",
+                toolResult: "ok",
+                toolIsError: false
+            },
+            {
+                type: "rlm_complete",
+                at: 1003,
+                toolCallId: "tc1",
+                output: "ok",
+                printOutput: [],
+                toolCallCount: 1,
+                isError: false
+            }
         ];
         expect(formatHistoryMessages(records)).toBe("");
-    });
-
-    it("formats tool result with text content", () => {
-        const records = [
-            {
-                type: "tool_result" as const,
-                at: 1000,
-                toolCallId: "tc1",
-                output: {
-                    toolMessage: {
-                        role: "tool" as const,
-                        toolCallId: "tc1",
-                        toolName: "read_file",
-                        isError: false,
-                        timestamp: 1000,
-                        content: [{ type: "text" as const, text: "file contents here" }]
-                    },
-                    typedResult: {}
-                }
-            }
-        ] as unknown as AgentHistoryRecord[];
-        const result = formatHistoryMessages(records);
-        expect(result).toContain("### Tool Result");
-        expect(result).toContain("file contents here");
     });
 
     it("joins multiple records with double newlines", () => {
@@ -88,7 +73,6 @@ describe("formatHistoryMessages", () => {
                 at: 1001,
                 text: "A",
                 files: [],
-                toolCalls: [],
                 tokens: null
             }
         ];
@@ -104,17 +88,10 @@ describe("formatHistoryMessages", () => {
                 at: 1001,
                 text: "Done.",
                 files: [],
-                toolCalls: [],
                 tokens: null
             }
         ];
         const result = formatHistoryMessages(records, false);
         expect(result).toBe("## System Message\n\nrun task\n\n## Agent\n\nDone.");
-    });
-
-    it("uses foreground labels by default", () => {
-        const records: AgentHistoryRecord[] = [{ type: "user_message", at: 1000, text: "hi", files: [] }];
-        expect(formatHistoryMessages(records)).toBe("## User\n\nhi");
-        expect(formatHistoryMessages(records, true)).toBe("## User\n\nhi");
     });
 });

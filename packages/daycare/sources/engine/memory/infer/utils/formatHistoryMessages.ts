@@ -1,5 +1,3 @@
-import type { ToolResultMessage } from "@mariozechner/pi-ai";
-
 import type { AgentHistoryRecord } from "@/types";
 
 /**
@@ -23,17 +21,7 @@ export function formatHistoryMessages(records: AgentHistoryRecord[], isForegroun
                 if (record.text.length > 0) {
                     parts.push(`## ${assistantLabel}\n\n${record.text}`);
                 }
-                for (const toolCall of record.toolCalls) {
-                    const args = JSON.stringify(toolCall.arguments, null, 2);
-                    parts.push(`### Tool Call: ${toolCall.name}\n\n\`\`\`\n${args}\n\`\`\``);
-                }
                 break;
-
-            case "tool_result": {
-                const text = toolResultExtractText(record.output.toolMessage.content);
-                parts.push(`### Tool Result\n\n\`\`\`\n${text}\n\`\`\``);
-                break;
-            }
 
             case "note":
                 parts.push(`> Note: ${record.text}`);
@@ -46,17 +34,4 @@ export function formatHistoryMessages(records: AgentHistoryRecord[], isForegroun
     }
 
     return parts.join("\n\n");
-}
-
-/** Extracts text from ToolResultMessage content blocks. */
-function toolResultExtractText(content: ToolResultMessage["content"]): string {
-    if (!Array.isArray(content)) {
-        return String(content);
-    }
-    const texts = content
-        .filter(
-            (part): part is { type: "text"; text: string } => part?.type === "text" && typeof part.text === "string"
-        )
-        .map((part) => part.text);
-    return texts.length > 0 ? texts.join("\n") : JSON.stringify(content);
 }

@@ -76,7 +76,6 @@ import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./modules/tools/subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./modules/tools/subuserListToolBuild.js";
-import { toolListContextBuild } from "./modules/tools/toolListContextBuild.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
@@ -499,12 +498,8 @@ export class Engine {
                     label: provider.label
                 };
             }),
-            tools: this.listContextTools().map((tool) => tool.name)
+            tools: []
         };
-    }
-
-    private listContextTools() {
-        return toolListContextBuild();
     }
 
     private async handleContextCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {

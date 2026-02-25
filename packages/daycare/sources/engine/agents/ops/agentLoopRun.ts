@@ -20,7 +20,6 @@ import { rlmNoToolsResultMessageBuild } from "../../modules/rlm/rlmNoToolsResult
 import { sayFileExtract } from "../../modules/say/sayFileExtract.js";
 import { sayFileResolve } from "../../modules/say/sayFileResolve.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
-import { toolListContextBuild } from "../../modules/tools/toolListContextBuild.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
@@ -143,7 +142,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 activeSkills = await skills.list();
                 await skills.syncToActive(options.skillsActiveRoot, activeSkills);
                 availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
-                context.tools = toolListContextBuild();
+                context.tools = [];
                 logger.debug(
                     `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
                 );
@@ -412,7 +411,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     at: assistantRecordAt,
                     text: responseText ?? "",
                     files: [],
-                    toolCalls: [],
                     tokens: tokensEntry
                 },
                 appendHistoryRecord

@@ -88,5 +88,4 @@ message `Process was restarted`, so Python can catch `ToolError` or fail normall
 
 Recovery appends:
 
-- synthetic outer `tool_result` for the original `run_python` call
 - synthetic user-side system message with `origin="rlm_restore"`

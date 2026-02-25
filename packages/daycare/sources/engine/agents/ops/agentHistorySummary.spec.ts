@@ -16,7 +16,6 @@ describe("agentHistorySummary", () => {
         expect(summary.counts).toEqual({
             user_message: 0,
             assistant_message: 0,
-            tool_result: 0,
             rlm_start: 0,
             rlm_tool_call: 0,
             rlm_tool_result: 0,
@@ -34,7 +33,6 @@ describe("agentHistorySummary", () => {
                 at: 120,
                 text: "hello",
                 files: [],
-                toolCalls: [],
                 tokens: null
             }),
             buildRecord({
@@ -45,20 +43,12 @@ describe("agentHistorySummary", () => {
                 reason: "run_python_say_after_trim"
             }),
             buildRecord({
-                type: "tool_result",
+                type: "rlm_tool_result",
                 at: 130,
                 toolCallId: "tool-1",
-                output: {
-                    toolMessage: {
-                        role: "toolResult",
-                        toolCallId: "tool-1",
-                        toolName: "send_agent_message",
-                        content: [{ type: "text", text: "sent" }],
-                        isError: false,
-                        timestamp: 130
-                    },
-                    typedResult: { text: "sent" }
-                }
+                toolName: "send_agent_message",
+                toolResult: "sent",
+                toolIsError: false
             }),
             buildRecord({ type: "note", at: 140, text: "done" })
         ];
@@ -71,10 +61,9 @@ describe("agentHistorySummary", () => {
         expect(summary.counts).toEqual({
             user_message: 1,
             assistant_message: 1,
-            tool_result: 1,
             rlm_start: 0,
             rlm_tool_call: 0,
-            rlm_tool_result: 0,
+            rlm_tool_result: 1,
             rlm_complete: 0,
             assistant_rewrite: 1,
             note: 1

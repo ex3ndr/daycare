@@ -77,13 +77,32 @@ export class HistoryRepository {
 
 function historyParse(row: DatabaseSessionHistoryRow): AgentHistoryRecord | null {
     try {
+        if (!historyRecordTypeIs(row.type)) {
+            return null;
+        }
         const data = JSON.parse(row.data) as Record<string, unknown>;
         return {
-            type: row.type as AgentHistoryRecord["type"],
+            type: row.type,
             at: row.at,
             ...data
         } as AgentHistoryRecord;
     } catch {
         return null;
+    }
+}
+
+function historyRecordTypeIs(value: string): value is AgentHistoryRecord["type"] {
+    switch (value) {
+        case "user_message":
+        case "assistant_message":
+        case "rlm_start":
+        case "rlm_tool_call":
+        case "rlm_tool_result":
+        case "rlm_complete":
+        case "assistant_rewrite":
+        case "note":
+            return true;
+        default:
+            return false;
     }
 }
