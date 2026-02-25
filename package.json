@@ -2,9 +2,17 @@
   "name": "daycare",
   "private": true,
   "packageManager": "yarn@1.22.22",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "nohoist": [
+      "**/react",
+      "**/react-dom",
+      "**/react-native",
+      "**/react-native/**"
+    ]
+  },
   "scripts": {
     "app": "yarn workspace daycare-app web",
     "build": "yarn workspace daycare-cli run build",
