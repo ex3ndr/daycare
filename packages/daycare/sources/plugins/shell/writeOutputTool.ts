@@ -6,7 +6,7 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
 import { writeOutputFileNameResolve } from "./writeOutputFileNameResolve.js";
 
-const OUTPUTS_CONTAINER_DIR = "/home/outputs";
+const OUTPUTS_HOME_RELATIVE_DIR = "~/outputs";
 const writeOutputFormatSchema = Type.Union([Type.Literal("markdown"), Type.Literal("json")]);
 
 const writeOutputSchema = Type.Object(
@@ -45,7 +45,7 @@ export function buildWriteOutputTool(): ToolDefinition {
         tool: {
             name: "write_output",
             description:
-                "Write markdown or json output under /home/outputs with collision-safe naming (`name.md`, `name (1).md`, `name.json`, ...).",
+                "Write markdown or json output under ~/outputs with collision-safe naming (`name.md`, `name (1).md`, `name.json`, ...).",
             parameters: writeOutputSchema
         },
         returns: writeOutputReturns,
@@ -62,7 +62,7 @@ export function buildWriteOutputTool(): ToolDefinition {
                 path: targetPath,
                 content: payload.content
             });
-            const outputPath = path.posix.join(OUTPUTS_CONTAINER_DIR, fileName);
+            const outputPath = path.posix.join(OUTPUTS_HOME_RELATIVE_DIR, fileName);
             const summary = `Wrote ${writeResult.bytes} bytes to ${outputPath}.`;
             const toolMessage = buildToolMessage(toolCall, summary, false, {
                 action: "write_output",

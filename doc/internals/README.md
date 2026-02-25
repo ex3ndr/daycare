@@ -57,9 +57,11 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `docker-security-unconfined.md` - docker `SecurityOpt` unconfined mode for sandbox containers
 - `docker-capabilities.md` - docker `CapAdd`/`CapDrop` support for sandbox containers
 - `docker-readonly-rootfs.md` - docker read-only rootfs mode for sandbox containers with writable `/home`
+- `docker-examples-mount-stale-check.md` - stale detection for required `/shared/examples` Docker bind mount
 - `durable-process-manager.md` - durable process lifecycle and restart behavior
 - `logging.md` - logging configuration and output
 - `system-prompt-debug.md` - system prompt snapshot storage for inference
+- `system-prompt-examples-paths.md` - bundled examples paths documented in system prompt for Docker and non-Docker runtimes
 - `tokens.md` - token counting and limits
 - `testing.md` - current test coverage
 - `util.md` - shared utility helpers

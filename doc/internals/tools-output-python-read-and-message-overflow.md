@@ -5,7 +5,7 @@ This change introduces three related behaviors:
 - `write_output` now supports `format: "markdown" | "json"` (default `markdown`).
 - `read` becomes unbounded when called from Python tool execution.
 - `read_json` reads selected file text and parses it as JSON.
-- `send_agent_message` spills oversized bodies (> 8000 chars) to `/home/outputs/*.md` and sends a file reference instead.
+- `send_agent_message` spills oversized bodies (> 8000 chars) to `~/outputs/*.md` and sends a file reference instead.
 
 ## Flow
 
@@ -32,7 +32,7 @@ flowchart TD
   L --> M{text length > 8000?}
   M -- no --> N[send inline text]
   M -- yes --> O[write_output(name=agent-message-*, format=markdown)]
-  O --> P[send reference text with /home/outputs path]
+  O --> P[send reference text with ~/outputs path]
 ```
 
 ## Notes

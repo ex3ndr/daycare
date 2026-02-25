@@ -5,7 +5,7 @@ The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `e
 
 ## Filesystem Helper Tools
 
-- `write_output`: writes markdown or json under `/home/outputs` with collision-safe names (`name.md`, `name (1).md`, `name.json`, ...). Use `format: "markdown" | "json"` (default `markdown`).
+- `write_output`: writes markdown or json under `~/outputs` with collision-safe names (`name.md`, `name (1).md`, `name.json`, ...). Use `format: "markdown" | "json"` (default `markdown`).
 - `grep`: runs `rg --json` and returns `file:line:content` rows with output-size guards.
 - `find`: runs `fd --glob --hidden`, respects ignore rules, and excludes `.git` and `node_modules`.
 - `ls`: runs `ls -1apL`, sorts output alphabetically, and applies entry/size truncation.

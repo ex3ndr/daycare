@@ -8,13 +8,13 @@ The shell plugin now exposes four filesystem-oriented tools in addition to `read
 - `ls`
 
 `grep`, `find`, and `ls` execute system binaries through `sandbox.exec()` and keep output bounded for prompt safety.
-`write_output` writes markdown files into `/home/outputs` with collision-safe naming.
+`write_output` writes markdown files into `~/outputs` with collision-safe naming.
 
 ```mermaid
 flowchart TD
     A[Tool call] --> B{Tool type}
     B -->|write_output| C[Resolve unique name]
-    C --> D[sandbox.write to /home/outputs]
+    C --> D[sandbox.write to ~/outputs]
     B -->|grep/find/ls| E[Build safe shell args]
     E --> F[sandbox.exec]
     F --> G[Format and truncate output]

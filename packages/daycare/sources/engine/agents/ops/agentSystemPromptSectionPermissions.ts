@@ -2,6 +2,7 @@ import Handlebars from "handlebars";
 
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
+import { bundledExamplesDirResolve } from "./bundledExamplesDirResolve.js";
 
 /**
  * Renders permissions details using ~/relative paths for home subdirectories.
@@ -21,8 +22,14 @@ export async function agentSystemPromptSectionPermissions(context: AgentSystemPr
         { name: "memory" },
         { name: "tmp" }
     ];
+    const examplesHostDir = bundledExamplesDirResolve();
+    const examplesDockerDir = "/shared/examples";
 
     const template = await agentPromptBundledRead("SYSTEM_PERMISSIONS.md");
-    const section = Handlebars.compile(template)({ homeDirs });
+    const section = Handlebars.compile(template)({
+        homeDirs,
+        examplesHostDir,
+        examplesDockerDir
+    });
     return section.trim();
 }

@@ -36,7 +36,7 @@ find_results = find(pattern="*.md", path=".", limit=200)
 ls_results = ls(path=".", limit=200)
 payload = {"grep": grep_results, "find": find_results, "ls": ls_results}
 write_output(name="search-results", content=str(payload))  # Python repr format; json module unavailable.
-"Results written to /home/outputs/search-results.md"
+"Results written to ~/outputs/search-results.md"
 ```
 
 ```python
@@ -45,4 +45,7 @@ rows_json = '[{"id":"a1","status":"ok"}]'
 print(write_output(name="rows", format="json", content=rows_json))
 ```
 
-Example scripts for common patterns are available at `/shared/examples` — use `read()` to view them.
+Example scripts for common patterns are available in the bundled examples folder:
+- Docker runtime: `{{examplesDockerDir}}`
+- Non-Docker runtime: `{{examplesHostDir}}`
+Use `read()` to view them.

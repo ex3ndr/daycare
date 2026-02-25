@@ -24,6 +24,13 @@ type DockerContainerInspect = {
     NetworkSettings?: {
         Networks?: Record<string, unknown>;
     };
+    Mounts?: DockerInspectMount[];
+};
+
+type DockerInspectMount = {
+    Source?: string;
+    Destination?: string;
+    RW?: boolean;
 };
 
 const logger = getLogger("sandbox.docker");
@@ -52,6 +59,9 @@ export async function dockerContainerEnsure(
 ): Promise<Docker.Container> {
     const containerName = dockerContainerNameBuild(config.userId);
     const imageRef = `${config.image}:${config.tag}`;
+    const hostHomeDir = path.resolve(config.hostHomeDir);
+    const hostSkillsActiveDir = path.resolve(config.hostSkillsActiveDir);
+    const hostExamplesDir = path.resolve(config.hostExamplesDir);
     const imageId = await dockerImageIdResolve(docker, imageRef);
     const dnsProfile = dockerDnsProfileResolve({
         networkName: config.networkName,
@@ -74,7 +84,10 @@ export async function dockerContainerEnsure(
             config.networkName,
             dnsProfile.profileLabel,
             dnsServersLabel,
-            dnsResolverLabel
+            dnsResolverLabel,
+            hostHomeDir,
+            hostSkillsActiveDir,
+            hostExamplesDir
         );
         if (staleReason) {
             logger.warn(
@@ -95,9 +108,6 @@ export async function dockerContainerEnsure(
         }
     }
 
-    const hostHomeDir = path.resolve(config.hostHomeDir);
-    const hostSkillsActiveDir = path.resolve(config.hostSkillsActiveDir);
-    const hostExamplesDir = path.resolve(config.hostExamplesDir);
     const containerHomeDir = "/home";
     const containerSkillsDir = "/shared/skills";
     const containerExamplesDir = "/shared/examples";
@@ -201,7 +211,10 @@ function containerStaleReasonResolve(
     expectedNetworkName: string,
     expectedDnsProfileLabel: string,
     expectedDnsServersLabel: string,
-    expectedDnsResolverLabel: string
+    expectedDnsResolverLabel: string,
+    expectedHostHomeDir: string,
+    expectedHostSkillsActiveDir: string,
+    expectedHostExamplesDir: string
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -247,6 +260,29 @@ function containerStaleReasonResolve(
     if (networkState !== "correct") {
         return `network-mismatch:${expectedNetworkName}`;
     }
+    const mountReason = dockerMountsStaleReasonResolve(details.Mounts, [
+        {
+            label: "home",
+            source: expectedHostHomeDir,
+            destination: "/home",
+            writable: true
+        },
+        {
+            label: "skills",
+            source: expectedHostSkillsActiveDir,
+            destination: "/shared/skills",
+            writable: false
+        },
+        {
+            label: "examples",
+            source: expectedHostExamplesDir,
+            destination: "/shared/examples",
+            writable: false
+        }
+    ]);
+    if (mountReason) {
+        return mountReason;
+    }
     const expectedSecurityProfile = unconfinedSecurity
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
@@ -272,6 +308,49 @@ function containerStaleReasonResolve(
     }
     if (dnsResolverLabel !== expectedDnsResolverLabel) {
         return `dns-resolver-mismatch:${dnsResolverLabel}->${expectedDnsResolverLabel}`;
+    }
+    return null;
+}
+
+type DockerExpectedMount = {
+    label: string;
+    source: string;
+    destination: string;
+    writable: boolean;
+};
+
+function dockerMountsStaleReasonResolve(
+    mounts: DockerInspectMount[] | undefined,
+    expectedMounts: DockerExpectedMount[]
+): string | null {
+    if (!mounts) {
+        return null;
+    }
+    for (const expectedMount of expectedMounts) {
+        const reason = dockerMountStaleReasonResolve(mounts, expectedMount);
+        if (reason) {
+            return reason;
+        }
+    }
+    return null;
+}
+
+function dockerMountStaleReasonResolve(
+    mounts: DockerInspectMount[],
+    expectedMount: DockerExpectedMount
+): string | null {
+    const actual = mounts.find((mount) => mount.Destination === expectedMount.destination);
+    if (!actual) {
+        return `missing-${expectedMount.label}-mount`;
+    }
+    if (!actual.Source) {
+        return `${expectedMount.label}-mount-source-missing`;
+    }
+    if (path.resolve(actual.Source) !== path.resolve(expectedMount.source)) {
+        return `${expectedMount.label}-mount-source-mismatch`;
+    }
+    if (typeof actual.RW === "boolean" && actual.RW !== expectedMount.writable) {
+        return `${expectedMount.label}-mount-mode-mismatch`;
     }
     return null;
 }

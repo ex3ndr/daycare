@@ -148,6 +148,64 @@ describe("dockerContainerEnsure", () => {
         expect(docker.createContainer).toHaveBeenCalledTimes(1);
     });
 
+    it("recreates container when /shared/examples mount is missing", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default",
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0",
+                        "daycare.network": "daycare-isolated",
+                        "daycare.dns.profile": "public",
+                        "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                        "daycare.dns.resolver": "bind"
+                    }
+                },
+                NetworkSettings: {
+                    Networks: {
+                        "daycare-isolated": {}
+                    }
+                },
+                Mounts: [
+                    {
+                        Source: "/tmp/daycare-home-user-1",
+                        Destination: "/home",
+                        RW: true
+                    },
+                    {
+                        Source: "/tmp/daycare-skills-user-1",
+                        Destination: "/shared/skills",
+                        RW: false
+                    }
+                ]
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, baseConfig);
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
     it("creates and starts container when missing", async () => {
         const existing = {
             inspect: vi.fn().mockRejectedValue({ statusCode: 404 }),

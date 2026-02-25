@@ -1,5 +1,5 @@
 /**
- * Resolves a unique output file name for /home/outputs by appending " (N)" on collisions.
+ * Resolves a unique output file name for ~/outputs by appending " (N)" on collisions.
  * Expects: baseName is a validated non-empty file name and extension is "md" or "json".
  */
 export function writeOutputFileNameResolve(

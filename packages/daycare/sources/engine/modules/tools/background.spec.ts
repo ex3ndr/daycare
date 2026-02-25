@@ -69,7 +69,7 @@ describe("buildSendAgentMessageTool", () => {
         const post = vi.fn(async (_ctx: unknown, _target: unknown, item: unknown) => {
             postedItem = item;
         });
-        const write = vi.fn(async () => ({ bytes: 100, resolvedPath: "/tmp/a", sandboxPath: "/home/outputs/a.md" }));
+        const write = vi.fn(async () => ({ bytes: 100, resolvedPath: "/tmp/a", sandboxPath: "~/outputs/a.md" }));
         const context = contextBuild(
             {
                 post
@@ -98,7 +98,7 @@ describe("buildSendAgentMessageTool", () => {
         expect(payload.type).toBe("system_message");
         expect(payload.origin).toBe("child-agent");
         expect(payload.text).toContain("Message exceeded 8000 characters");
-        expect(payload.text).toContain("/home/outputs/agent-message-");
+        expect(payload.text).toContain("~/outputs/agent-message-");
         expect(payload.text).toContain(".md");
         expect(contentText(result.toolMessage.content)).toContain("Full content saved");
     });
@@ -108,7 +108,7 @@ describe("buildSendAgentMessageTool", () => {
         const steer = vi.fn(async (_ctx: unknown, _agentId: string, item: unknown) => {
             steerItem = item;
         });
-        const write = vi.fn(async () => ({ bytes: 100, resolvedPath: "/tmp/a", sandboxPath: "/home/outputs/a.md" }));
+        const write = vi.fn(async () => ({ bytes: 100, resolvedPath: "/tmp/a", sandboxPath: "~/outputs/a.md" }));
         const context = contextBuild(
             {
                 steer,
@@ -137,7 +137,7 @@ describe("buildSendAgentMessageTool", () => {
         const payload = steerItem as { type: string; text: string; origin: string };
         expect(payload.type).toBe("steering");
         expect(payload.origin).toBe("child-agent");
-        expect(payload.text).toContain("/home/outputs/agent-message-");
+        expect(payload.text).toContain("~/outputs/agent-message-");
     });
 });
 
@@ -174,7 +174,7 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
         (vi.fn(async () => ({
             bytes: 0,
             resolvedPath: "/tmp/unused.md",
-            sandboxPath: "/home/outputs/unused.md"
+            sandboxPath: "~/outputs/unused.md"
         })) as ContextBuildOptions["sandboxWrite"]);
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],

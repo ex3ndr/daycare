@@ -9,7 +9,7 @@ payload = str({"file_count": len(names), "names": names})
 print(write_output(name="inventory", content=payload))
 
 # --- Block 2 (separate execution): read back ---
-saved = read(path="/home/outputs/inventory.md")
+saved = read(path="~/outputs/inventory.md")
 print(saved)
 
 # --- Using JSON format ---
@@ -17,6 +17,6 @@ rows = '[{"id": "a1", "status": "ok"}, {"id": "a2", "status": "fail"}]'
 print(write_output(name="rows", format="json", content=rows))
 
 # Read back as parsed JSON in a later block
-data = read_json(path="/home/outputs/rows.json")
+data = read_json(path="~/outputs/rows.json")
 for row in data:
     print(f"{row['id']}: {row['status']}")

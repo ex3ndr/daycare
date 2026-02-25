@@ -38,7 +38,7 @@ describe("buildWriteOutputTool", () => {
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("/home/outputs/report.md");
+        expect(text).toContain("~/outputs/report.md");
         expect(await fs.readFile(path.join(homeDir, "outputs", "report.md"), "utf8")).toBe("# Summary");
     });
 
@@ -57,7 +57,7 @@ describe("buildWriteOutputTool", () => {
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("/home/outputs/report.json");
+        expect(text).toContain("~/outputs/report.json");
         expect(await fs.readFile(path.join(homeDir, "outputs", "report.json"), "utf8")).toBe('{"ok":true}');
     });
 
@@ -78,7 +78,7 @@ describe("buildWriteOutputTool", () => {
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("/home/outputs/report (1).md");
+        expect(text).toContain("~/outputs/report (1).md");
         expect(await fs.readFile(path.join(outputsDir, "report (1).md"), "utf8")).toBe("# New Summary");
     });
 
@@ -100,7 +100,7 @@ describe("buildWriteOutputTool", () => {
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("/home/outputs/report (1).json");
+        expect(text).toContain("~/outputs/report (1).json");
         expect(await fs.readFile(path.join(outputsDir, "report (1).json"), "utf8")).toBe('{"ok":true}');
     });
 

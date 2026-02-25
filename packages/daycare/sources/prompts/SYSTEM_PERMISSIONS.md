@@ -9,6 +9,8 @@ Permissions are fixed by the system and cannot be changed at runtime. Work withi
 - **Read**: allowlist only:
   - `~/` (home, recursive)
   - `~/skills/active` (installed skills)
+  - `{{examplesDockerDir}}` (bundled examples in Docker runtime)
+  - `{{examplesHostDir}}` (bundled examples on host runtime)
 - **Write**: allowlist only:
   - `~/` (home, recursive)
 {{#each homeDirs}}

@@ -16,7 +16,10 @@ describe("rlmNoToolsPromptBuild", () => {
             { name: "skill", description: "Load skill", parameters: {} }
         ] as unknown as Tool[];
 
-        const prompt = await rlmNoToolsPromptBuild(tools);
+        const prompt = await rlmNoToolsPromptBuild(tools, {
+            examplesDockerDir: "/shared/examples",
+            examplesHostDir: "/tmp/daycare/examples-host"
+        });
 
         expect(prompt).toContain("This mode exposes zero tools to the model.");
         expect(prompt).toContain("<run_python>...</run_python>");
@@ -24,6 +27,8 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("executed sequentially from top to bottom");
         expect(prompt).toContain("all remaining `<run_python>` blocks in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
+        expect(prompt).toContain("- Docker runtime: `/shared/examples`");
+        expect(prompt).toContain("- Non-Docker runtime: `/tmp/daycare/examples-host`");
         expect(prompt).toContain("Any `<say>` block after the first `<run_python>` is trimmed and not delivered");
         expect(prompt).not.toContain("<say> after <run_python> was ignored");
         expect(prompt).toContain("```python");
