@@ -1,4 +1,4 @@
-import path from "node:path";
+import { pathMountMapHostToMapped } from "./pathMountMapHostToMapped.js";
 
 /**
  * Maps a host absolute path to its container mount path.
@@ -11,46 +11,10 @@ export function sandboxPathHostToContainerMap(
     hostSkillsActiveDir?: string,
     hostExamplesDir?: string
 ): string | null {
-    if (!path.isAbsolute(targetPath)) {
-        return null;
-    }
-
-    const resolvedHomeDir = path.resolve(hostHomeDir);
-    const resolvedTargetPath = path.resolve(targetPath);
-
-    if (hostSkillsActiveDir) {
-        const resolvedSkillsDir = path.resolve(hostSkillsActiveDir);
-        const skillsRelativePath = path.relative(resolvedSkillsDir, resolvedTargetPath);
-        if (skillsRelativePath === "") {
-            return "/shared/skills";
-        }
-        if (isWithinPath(skillsRelativePath)) {
-            return path.posix.join("/shared/skills", skillsRelativePath.split(path.sep).join(path.posix.sep));
-        }
-    }
-
-    if (hostExamplesDir) {
-        const resolvedExamplesDir = path.resolve(hostExamplesDir);
-        const examplesRelativePath = path.relative(resolvedExamplesDir, resolvedTargetPath);
-        if (examplesRelativePath === "") {
-            return "/shared/examples";
-        }
-        if (isWithinPath(examplesRelativePath)) {
-            return path.posix.join("/shared/examples", examplesRelativePath.split(path.sep).join(path.posix.sep));
-        }
-    }
-
-    const homeRelativePath = path.relative(resolvedHomeDir, resolvedTargetPath);
-    if (homeRelativePath === "") {
-        return "/home";
-    }
-    if (!isWithinPath(homeRelativePath)) {
-        return null;
-    }
-
-    return path.posix.join("/home", homeRelativePath.split(path.sep).join(path.posix.sep));
-}
-
-function isWithinPath(relativePath: string): boolean {
-    return !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
+    const mountPoints = [
+        { hostPath: hostHomeDir, mappedPath: "/home" },
+        ...(hostSkillsActiveDir ? [{ hostPath: hostSkillsActiveDir, mappedPath: "/shared/skills" }] : []),
+        ...(hostExamplesDir ? [{ hostPath: hostExamplesDir, mappedPath: "/shared/examples" }] : [])
+    ];
+    return pathMountMapHostToMapped({ mountPoints, hostPath: targetPath });
 }

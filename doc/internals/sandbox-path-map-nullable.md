@@ -1,11 +1,24 @@
 # Sandbox Nullable Path Mapping
 
-Added strict docker remap helpers that return `null` when a path is not in a mapped mount root:
+Added generic mount-point path mapping utilities:
+
+- `pathMountMapHostToMapped()`
+- `pathMountMapMappedToHost()`
+
+These take a mount table and map paths in both directions. They return `null` when input is relative or outside all mounts.
+
+Sandbox-specific strict helpers are thin adapters and also return `null` when unmappable:
 
 - `sandboxPathHostToContainerMap()`
 - `sandboxPathContainerToHostMap()`
 
-Implementation files:
+Implementation files (generic):
+
+- `packages/daycare/sources/util/pathMountMapHostToMapped.ts`
+- `packages/daycare/sources/util/pathMountMapMappedToHost.ts`
+- `packages/daycare/sources/util/pathMountTypes.ts`
+
+Implementation files (sandbox adapters):
 
 - `packages/daycare/sources/util/sandboxPathHostToContainerMap.ts`
 - `packages/daycare/sources/util/sandboxPathContainerToHostMap.ts`
@@ -20,11 +33,16 @@ Existing compatibility helpers continue to return the original input when unmapp
 
 ```mermaid
 flowchart TD
-  HostPath[Host absolute path] --> HostInRoot{Inside mapped host root?}
-  HostInRoot -->|yes| ContainerPath[Container absolute path]
+  Mounts[Mount table hostPath <-> mappedPath] --> HostMap[pathMountMapHostToMapped]
+  Mounts --> ReverseMap[pathMountMapMappedToHost]
+
+  HostPath[Host absolute path] --> HostMap
+  HostMap --> HostInRoot{Inside mapped host root?}
+  HostInRoot -->|yes| MappedPath[Mapped absolute path]
   HostInRoot -->|no| HostNull[null]
 
-  ContainerInput[Container absolute path] --> ContainerInRoot{Inside mapped container root?}
-  ContainerInRoot -->|yes| HostMapped[Host absolute path]
-  ContainerInRoot -->|no| ContainerNull[null]
+  MappedInput[Mapped absolute path] --> ReverseMap
+  ReverseMap --> MappedInRoot{Inside mapped path root?}
+  MappedInRoot -->|yes| HostMapped[Host absolute path]
+  MappedInRoot -->|no| MappedNull[null]
 ```
