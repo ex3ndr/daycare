@@ -50,6 +50,14 @@ describe("pathRealResolve", () => {
                 targetPath: "~//downloads/report.pdf"
             })
         ).toBe("/home/alice/downloads/report.pdf");
+
+        expect(
+            pathRealResolve({
+                homeDir,
+                workingDir,
+                targetPath: "~/asdasd/../asdasd"
+            })
+        ).toBe("/home/alice/asdasd");
     });
 
     it("throws for non-absolute homeDir or workingDir", () => {
