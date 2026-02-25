@@ -328,7 +328,9 @@ function createPluginApi(settings: SystemFeedbackSettings): {
 
 async function registerToolAndGetExecute(
     api: ReturnType<typeof createPluginApi>
-): Promise<(args: unknown, context: unknown, toolCall: { id: string; name: string }) => Promise<SystemFeedbackToolResult>> {
+): Promise<
+    (args: unknown, context: unknown, toolCall: { id: string; name: string }) => Promise<SystemFeedbackToolResult>
+> {
     const instance = await plugin.create(api as never);
     await instance.load?.();
 

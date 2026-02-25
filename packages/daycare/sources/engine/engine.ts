@@ -55,6 +55,8 @@ import { friendShareSubuserToolBuild } from "./modules/tools/friendShareSubuserT
 import { friendUnshareSubuserToolBuild } from "./modules/tools/friendUnshareSubuserToolBuild.js";
 import { buildHeartbeatAddTool, buildHeartbeatRemoveTool, buildHeartbeatRunTool } from "./modules/tools/heartbeat.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
+import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
+import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
 import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
 import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
 import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
@@ -387,6 +389,8 @@ export class Engine {
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
         this.modules.tools.register("core", memorySearchToolBuild());
+        this.modules.tools.register("core", inferenceSummaryToolBuild(this.inferenceRouter, this.config));
+        this.modules.tools.register("core", inferenceClassifyToolBuild(this.inferenceRouter, this.config));
         this.modules.tools.register("core", agentModelSetToolBuild(this.inferenceRouter));
         this.modules.tools.register("core", agentResetToolBuild());
         this.modules.tools.register("core", agentCompactToolBuild());
@@ -435,7 +439,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: cron, heartbeat, topology, background, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: cron, heartbeat, topology, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();

@@ -42,6 +42,8 @@ Tools are registered dynamically by plugins and core runtime:
 - `edit` applies sequential find/replace edits to a file in the agent workspace or an allowed write directory (each edit must match at least once; path must be absolute and within the allowed write set).
 - `exec` runs a shell command with the working directory locked to the agent workspace (or a subdirectory within it); cwd must be absolute and resolve inside the workspace. Writes are sandboxed to the allowed write set.
 - `request_permission` asks the user to grant a permission like `@write:/path`, `@read:/path`, or `@network` (paths must be absolute). Background requests are routed through the most recent foreground agent.
+- `inference_summary` runs a focused summarization inference call and returns `{ summary }`. It expects the model response in `<summary>` tags and supports optional model selection (`small`, `normal`, `large`, or explicit model id).
+- `inference_classify` runs a focused classification inference call and returns `{ summary, class }`. It expects `<summary>` and `<class>` tags, validates the class against caller-provided variants, and supports optional model selection.
 
 ```mermaid
 sequenceDiagram
@@ -52,6 +54,22 @@ sequenceDiagram
   Engine->>Tool: execute
   Tool-->>Engine: toolResult (+ files)
   Engine-->>Model: toolResult
+```
+
+## Inference helper tool flow
+Both inference helper tools use the same model resolution path.
+
+```mermaid
+flowchart LR
+  Input[Tool call model param] --> Mode{model provided?}
+  Mode -->|No| DefaultProviders[Active providers from settings]
+  Mode -->|small/normal/large| SizeSelect[Resolve provider model by size]
+  Mode -->|explicit model id| FirstOverride[Override first provider model]
+  DefaultProviders --> Router[InferenceRouter.complete]
+  SizeSelect --> Router
+  FirstOverride --> Router
+  Router --> Parse[Parse tags from assistant text]
+  Parse --> Result[Typed tool result]
 ```
 
 ## Tool result truncation

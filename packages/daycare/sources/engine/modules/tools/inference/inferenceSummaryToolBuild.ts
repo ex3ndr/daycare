@@ -1,0 +1,102 @@
+import type { Context, ToolResultMessage } from "@mariozechner/pi-ai";
+import { createId } from "@paralleldrive/cuid2";
+import { type Static, Type } from "@sinclair/typebox";
+import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { ConfigModule } from "../../../config/configModule.js";
+import { messageExtractText } from "../../../messages/messageExtractText.js";
+import type { InferenceRouter } from "../../inference/router.js";
+import { inferenceResolveProviders } from "./inferenceResolveProviders.js";
+import { inferenceSummaryParse } from "./inferenceSummaryParse.js";
+
+const inferenceSummarySystemPrompt = [
+    "You are a precise summarization engine. Your task is to read the user-provided text and produce a clear, concise summary that captures the key points and essential meaning.",
+    "",
+    "Rules:",
+    "- Write the summary in plain prose, not bullet points.",
+    "- Keep the summary significantly shorter than the original text.",
+    "- Preserve factual accuracy; do not add information that is not in the source text.",
+    "- Wrap your entire summary inside <summary> tags.",
+    "",
+    "Output format (nothing else):",
+    "<summary>Your concise summary here.</summary>"
+].join("\n");
+
+const schema = Type.Object(
+    {
+        text: Type.String({ minLength: 1 }),
+        model: Type.Optional(Type.String({ minLength: 1 }))
+    },
+    { additionalProperties: false }
+);
+
+type InferenceSummaryArgs = Static<typeof schema>;
+
+const inferenceSummaryResultSchema = Type.Object(
+    {
+        summary: Type.String()
+    },
+    { additionalProperties: false }
+);
+
+type InferenceSummaryResult = Static<typeof inferenceSummaryResultSchema>;
+
+const inferenceSummaryReturns: ToolResultContract<InferenceSummaryResult> = {
+    schema: inferenceSummaryResultSchema,
+    toLLMText: (result) => result.summary
+};
+
+/**
+ * Builds a summarization inference tool with optional model selection.
+ * Expects: inferenceRouter is configured with at least one inference provider.
+ */
+export function inferenceSummaryToolBuild(inferenceRouter: InferenceRouter, config: ConfigModule): ToolDefinition {
+    return {
+        tool: {
+            name: "inference_summary",
+            description:
+                "Summarize a piece of text with an LLM. Optionally choose model size (small, normal, large) or an explicit model id.",
+            parameters: schema
+        },
+        returns: inferenceSummaryReturns,
+        execute: async (args, _toolContext, toolCall) => {
+            const payload = args as InferenceSummaryArgs;
+            const text = payload.text.trim();
+            if (!text) {
+                throw new Error("text is required.");
+            }
+
+            const providersOverride = inferenceResolveProviders(config, payload.model);
+            if (providersOverride.length === 0) {
+                throw new Error("No inference provider available.");
+            }
+
+            const inferenceContext: Context = {
+                systemPrompt: inferenceSummarySystemPrompt,
+                messages: [{ role: "user", content: text, timestamp: Date.now() }]
+            };
+
+            const response = await inferenceRouter.complete(inferenceContext, `tool:inference_summary:${createId()}`, {
+                providersOverride
+            });
+            const responseText = messageExtractText(response.message)?.trim();
+            if (!responseText) {
+                throw new Error("Inference returned empty output.");
+            }
+
+            const summary = inferenceSummaryParse(responseText).trim();
+            const toolMessage: ToolResultMessage = {
+                role: "toolResult",
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                content: [{ type: "text", text: summary }],
+                isError: false,
+                timestamp: Date.now()
+            };
+
+            return {
+                toolMessage,
+                typedResult: { summary }
+            };
+        }
+    };
+}
