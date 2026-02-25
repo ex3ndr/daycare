@@ -143,9 +143,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 activeSkills = await skills.list();
                 await skills.syncToActive(options.skillsActiveRoot, activeSkills);
                 availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
-                context.tools = toolListContextBuild({
-                    tools: availableTools
-                });
+                context.tools = toolListContextBuild();
                 logger.debug(
                     `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
                 );

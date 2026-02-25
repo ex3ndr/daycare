@@ -503,12 +503,8 @@ export class Engine {
         };
     }
 
-    private listContextTools(source?: string, options?: { agentKind?: "background" | "foreground" }) {
-        void source;
-        void options;
-        return toolListContextBuild({
-            tools: this.modules.tools.listTools()
-        });
+    private listContextTools() {
+        return toolListContextBuild();
     }
 
     private async handleContextCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {

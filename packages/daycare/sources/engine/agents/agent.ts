@@ -26,7 +26,6 @@ import { rlmRestore } from "../modules/rlm/rlmRestore.js";
 import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
 import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
 import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
-import type { ToolResolverApi } from "../modules/toolResolver.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
@@ -490,9 +489,7 @@ export class Agent {
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
-        const contextTools = await this.listContextTools(toolResolver, source, {
-            agentKind
-        });
+        const contextTools = this.listContextTools();
         const compactionStatus = contextCompactionStatus(
             history,
             this.agentSystem.config.current.settings.agents.emergencyContextLimit,
@@ -1047,7 +1044,6 @@ export class Agent {
             return;
         }
 
-        let completedToolCalls = 0;
         const appendRecord = async (record: AgentHistoryRecord): Promise<void> => {
             await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
             records.push(record);
@@ -1120,25 +1116,22 @@ export class Agent {
             text: messageBuildSystemText(restoreMessage, "rlm_restore"),
             files: []
         });
-        completedToolCalls += 1;
 
-        if (completedToolCalls > 0) {
-            const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
-            const historyMessages = await this.buildHistoryContext(history);
-            this.state.context = {
-                messages: historyMessages
-            };
-            this.state.updatedAt = Date.now();
-            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
-            logger.warn(
-                {
-                    agentId: this.id,
-                    reason,
-                    completedToolCalls
-                },
-                "event: Completed pending tool calls in history"
-            );
-        }
+        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+        const historyMessages = await this.buildHistoryContext(history);
+        this.state.context = {
+            messages: historyMessages
+        };
+        this.state.updatedAt = Date.now();
+        await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
+        logger.warn(
+            {
+                agentId: this.id,
+                reason,
+                toolCallId: toolCall
+            },
+            "event: Completed pending tool call in history"
+        );
     }
 
     private rlmRestoreContextBuild(source: string): ToolExecutionContext {
@@ -1198,20 +1191,8 @@ export class Agent {
         }
     }
 
-    private async listContextTools(
-        toolResolver: ToolResolverApi,
-        _source?: string,
-        _options?: {
-            agentKind?: "background" | "foreground";
-        }
-    ): Promise<InferenceContext["tools"]> {
-        const tools = toolResolver.listToolsForAgent({
-            ctx: this.ctx,
-            descriptor: this.descriptor
-        });
-        return toolListContextBuild({
-            tools
-        });
+    private listContextTools(): InferenceContext["tools"] {
+        return toolListContextBuild();
     }
 
     private resolveAgentKind(): "background" | "foreground" {
