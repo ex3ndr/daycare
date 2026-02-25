@@ -30,10 +30,14 @@ describe("inferenceSummaryToolBuild", () => {
         const inferenceRouter = { complete } as unknown as InferenceRouter;
         const tool = inferenceSummaryToolBuild(inferenceRouter, config);
 
-        const result = await tool.execute({ text: "Long source text", model: "small" }, contextBuild(), {
-            id: "call-1",
-            name: "inference_summary"
-        });
+        const result = await tool.execute(
+            { task: "Summarize customer complaint", text: "Long source text", model: "small" },
+            contextBuild(),
+            {
+                id: "call-1",
+                name: "inference_summary"
+            }
+        );
 
         expect(result.typedResult).toEqual({ summary: "Concise summary text." });
         expect(result.toolMessage.content).toEqual([{ type: "text", text: "Concise summary text." }]);
@@ -41,10 +45,61 @@ describe("inferenceSummaryToolBuild", () => {
         expect(complete).toHaveBeenCalledWith(
             expect.objectContaining({
                 systemPrompt: expect.stringContaining("<summary>"),
-                messages: [expect.objectContaining({ role: "user", content: "Long source text" })]
+                messages: [
+                    expect.objectContaining({
+                        role: "user",
+                        content: "<task>\nSummarize customer complaint\n</task>\n\n<text>\nLong source text\n</text>"
+                    })
+                ]
             }),
             expect.stringMatching(/^tool:inference_summary:/),
             { providersOverride: inferenceResolveProviders(config, "small") }
+        );
+    });
+
+    it("throws when task is missing", async () => {
+        const config = configModuleBuild([{ id: "openai", enabled: true, model: "gpt-4o-mini" }]);
+        const inferenceRouter = { complete: vi.fn() } as unknown as InferenceRouter;
+        const tool = inferenceSummaryToolBuild(inferenceRouter, config);
+
+        await expect(
+            tool.execute({ task: "   ", text: "Long source text" }, contextBuild(), {
+                id: "call-2",
+                name: "inference_summary"
+            })
+        ).rejects.toThrow("task is required.");
+    });
+
+    it("stringifies non-string task and text inputs", async () => {
+        const config = configModuleBuild([{ id: "openai", enabled: true, model: "gpt-4o-mini" }]);
+        const complete = vi.fn(async () => ({
+            message: assistantMessageBuild("<summary>Structured summary.</summary>"),
+            providerId: "openai",
+            modelId: "gpt-4o-mini"
+        }));
+        const inferenceRouter = { complete } as unknown as InferenceRouter;
+        const tool = inferenceSummaryToolBuild(inferenceRouter, config);
+
+        await tool.execute(
+            {
+                task: { target: "incident_report" },
+                text: { id: 42, text: "raw payload" }
+            },
+            contextBuild(),
+            { id: "call-3", name: "inference_summary" }
+        );
+
+        expect(complete).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messages: [
+                    expect.objectContaining({
+                        content:
+                            '<task>\n{"target":"incident_report"}\n</task>\n\n<text>\n{"id":42,"text":"raw payload"}\n</text>'
+                    })
+                ]
+            }),
+            expect.any(String),
+            expect.any(Object)
         );
     });
 });

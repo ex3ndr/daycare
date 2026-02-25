@@ -7,13 +7,16 @@ import { messageExtractText } from "../../../messages/messageExtractText.js";
 import type { InferenceRouter } from "../../inference/router.js";
 import { inferenceResolveProviders } from "./inferenceResolveProviders.js";
 import { inferenceSummaryParse } from "./inferenceSummaryParse.js";
+import { inferenceValueStringify } from "./inferenceValueStringify.js";
 
 const inferenceSummarySystemPrompt = [
-    "You are a precise summarization engine. Your task is to read the user-provided text and produce a clear, concise summary that captures the key points and essential meaning.",
+    "You are a precise summarization engine.",
+    "The user message includes <task> and <text> tags.",
     "",
     "Rules:",
+    "- Follow the requested task using the text content as source material.",
     "- Write the summary in plain prose, not bullet points.",
-    "- Keep the summary significantly shorter than the original text.",
+    "- Keep the summary significantly shorter than the source text.",
     "- Preserve factual accuracy; do not add information that is not in the source text.",
     "- Wrap your entire summary inside <summary> tags.",
     "",
@@ -23,7 +26,8 @@ const inferenceSummarySystemPrompt = [
 
 const schema = Type.Object(
     {
-        text: Type.String({ minLength: 1 }),
+        task: Type.Unknown(),
+        text: Type.Unknown(),
         model: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
@@ -60,10 +64,8 @@ export function inferenceSummaryToolBuild(inferenceRouter: InferenceRouter, conf
         returns: inferenceSummaryReturns,
         execute: async (args, _toolContext, toolCall) => {
             const payload = args as InferenceSummaryArgs;
-            const text = payload.text.trim();
-            if (!text) {
-                throw new Error("text is required.");
-            }
+            const task = inferenceValueStringify(payload.task, "task");
+            const text = inferenceValueStringify(payload.text, "text");
 
             const providersOverride = inferenceResolveProviders(config, payload.model);
             if (providersOverride.length === 0) {
@@ -72,7 +74,9 @@ export function inferenceSummaryToolBuild(inferenceRouter: InferenceRouter, conf
 
             const inferenceContext: Context = {
                 systemPrompt: inferenceSummarySystemPrompt,
-                messages: [{ role: "user", content: text, timestamp: Date.now() }]
+                messages: [
+                    { role: "user", content: inferenceSummaryUserMessageBuild(task, text), timestamp: Date.now() }
+                ]
             };
 
             const response = await inferenceRouter.complete(inferenceContext, `tool:inference_summary:${createId()}`, {
@@ -99,4 +103,8 @@ export function inferenceSummaryToolBuild(inferenceRouter: InferenceRouter, conf
             };
         }
     };
+}
+
+function inferenceSummaryUserMessageBuild(task: string, text: string): string {
+    return ["<task>", task, "</task>", "", "<text>", text, "</text>"].join("\n");
 }

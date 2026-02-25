@@ -34,6 +34,7 @@ describe("inferenceClassifyToolBuild", () => {
 
         const result = await tool.execute(
             {
+                task: "Classify support intent",
                 text: "I was charged twice and need this fixed.",
                 variants: [
                     { class: "sales", description: "Pre-sales and product interest." },
@@ -58,14 +59,71 @@ describe("inferenceClassifyToolBuild", () => {
         expect(complete).toHaveBeenCalledTimes(1);
         expect(complete).toHaveBeenCalledWith(
             expect.objectContaining({
-                systemPrompt: expect.stringContaining("Categories:"),
+                systemPrompt: expect.stringContaining("<class>exact_category_name</class>"),
                 messages: [
-                    expect.objectContaining({ role: "user", content: "I was charged twice and need this fixed." })
+                    expect.objectContaining({
+                        role: "user",
+                        content:
+                            "<task>\nClassify support intent\n</task>\n\n<categories>\n- sales: Pre-sales and product interest.\n- support: Requests for help, troubleshooting, or incidents.\n</categories>\n\n<text>\nI was charged twice and need this fixed.\n</text>"
+                    })
                 ]
             }),
             expect.stringMatching(/^tool:inference_classify:/),
             { providersOverride: inferenceResolveProviders(config, "custom-model-id") }
         );
+    });
+
+    it("stringifies non-string task, text, and variants", async () => {
+        const config = configModuleBuild([{ id: "openai", enabled: true, model: "gpt-4o-mini" }]);
+        const complete = vi.fn(async () => ({
+            message: assistantMessageBuild("<summary>Payload matches class one.</summary><class>1</class>"),
+            providerId: "openai",
+            modelId: "gpt-4o-mini"
+        }));
+        const inferenceRouter = { complete } as unknown as InferenceRouter;
+        const tool = inferenceClassifyToolBuild(inferenceRouter, config);
+
+        const result = await tool.execute(
+            {
+                task: { mode: "classify" },
+                text: { value: 7 },
+                variants: [{ class: 1, description: { label: "first" } }]
+            },
+            contextBuild(),
+            { id: "call-2", name: "inference_classify" }
+        );
+
+        expect(result.typedResult).toEqual({ summary: "Payload matches class one.", class: "1" });
+        expect(complete).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messages: [
+                    expect.objectContaining({
+                        content:
+                            '<task>\n{"mode":"classify"}\n</task>\n\n<categories>\n- 1: {"label":"first"}\n</categories>\n\n<text>\n{"value":7}\n</text>'
+                    })
+                ]
+            }),
+            expect.any(String),
+            expect.any(Object)
+        );
+    });
+
+    it("throws when task is missing", async () => {
+        const config = configModuleBuild([{ id: "openai", enabled: true, model: "gpt-4o-mini" }]);
+        const inferenceRouter = { complete: vi.fn() } as unknown as InferenceRouter;
+        const tool = inferenceClassifyToolBuild(inferenceRouter, config);
+
+        await expect(
+            tool.execute(
+                {
+                    task: "   ",
+                    text: "abc",
+                    variants: [{ class: "sales", description: "desc" }]
+                },
+                contextBuild(),
+                { id: "call-3", name: "inference_classify" }
+            )
+        ).rejects.toThrow("task is required.");
     });
 });
 
