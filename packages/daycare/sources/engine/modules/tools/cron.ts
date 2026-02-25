@@ -97,7 +97,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
                 name: payload.name,
                 description: payload.description,
                 schedule: payload.schedule,
-                prompt: payload.code,
+                code: payload.code,
                 agentId: payload.agentId,
                 enabled: payload.enabled,
                 deleteAfterRun: payload.deleteAfterRun
@@ -141,7 +141,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
     return {
         tool: {
             name: "cron_read_task",
-            description: "Read a cron task's description and prompt.",
+            description: "Read a cron task's description and code.",
             parameters: readCronTaskSchema
         },
         returns: cronReturns,
@@ -156,7 +156,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
                 throw new Error(`Cron task not found: ${taskId}`);
             }
 
-            const summary = [task.description ?? "", task.prompt].filter((line) => line.length > 0).join("\n");
+            const summary = [task.description ?? "", task.code].filter((line) => line.length > 0).join("\n");
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -168,7 +168,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
                     },
                     {
                         type: "text",
-                        text: task.prompt
+                        text: task.code
                     }
                 ],
                 details: {
@@ -179,7 +179,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
                     agentId: task.agentId ?? null,
                     enabled: task.enabled,
                     deleteAfterRun: task.deleteAfterRun,
-                    code: task.prompt
+                    code: task.code
                 },
                 isError: false,
                 timestamp: Date.now()

@@ -17,7 +17,7 @@ heartbeat/
 ## Storage
 
 Heartbeat rows live in `tasks_heartbeat`:
-- `id`, `title`, `prompt` (Python code)
+- `id`, `title`, `code` (Python code)
 - `last_run_at` (unix ms)
 - `created_at`, `updated_at`
 
@@ -25,7 +25,7 @@ The runtime uses `HeartbeatTasksRepository` for CRUD and `recordRun()` updates.
 
 ## Execution Flow
 
-Task code is stored as raw Python. At execution time, `heartbeatPromptBuildBatch` wraps each task's code in `<run_python>` tags so the existing executable-prompt pipeline handles it.
+Task code is stored as raw Python. At execution time, `heartbeatPromptBuildBatch` returns `{ title, text, code[] }` — prefix context and an array of Python code blocks. The message is posted with the `code[]` array; `handleSystemMessage` executes each block directly via `rlmExecute` (30s timeout each).
 
 ```mermaid
 flowchart TD
@@ -34,9 +34,9 @@ flowchart TD
   Heartbeats --> Scheduler[heartbeatScheduler.start]
   Scheduler --> Tick[Interval tick]
   Tick --> Load[repo.findMany]
-  Load --> Batch[Wrap Python in run_python tags]
-  Batch --> AgentSystem[post system_message execute=true]
-  AgentSystem --> RLM[executablePromptExpand + rlmExecute]
+  Load --> Batch["heartbeatPromptBuildBatch: { text, code[] }"]
+  Batch --> AgentSystem["post system_message with code[] array"]
+  AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
   RLM --> Record[repo.recordRun unix ms]
 ```
 

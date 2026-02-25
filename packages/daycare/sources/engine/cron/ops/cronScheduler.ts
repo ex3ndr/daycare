@@ -125,7 +125,7 @@ export class CronScheduler {
             name: definition.name,
             description: definition.description ?? null,
             schedule: definition.schedule,
-            prompt: definition.prompt,
+            code: definition.code,
             agentId: definition.agentId ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
@@ -176,7 +176,7 @@ export class CronScheduler {
             taskId: scheduled.task.id,
             taskUid: scheduled.task.taskUid,
             taskName: scheduled.task.name,
-            prompt: scheduled.task.prompt,
+            code: scheduled.task.code,
             agentId: scheduled.task.agentId,
             userId: scheduled.task.userId
         };
@@ -233,7 +233,7 @@ export class CronScheduler {
             taskId: task.id,
             taskUid: task.taskUid,
             taskName: task.name,
-            prompt: task.prompt,
+            code: task.code,
             agentId: task.agentId,
             userId: task.userId
         };

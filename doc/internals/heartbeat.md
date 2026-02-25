@@ -5,7 +5,7 @@ Heartbeat tasks store Python code in SQLite and execute it in a single batch on 
 ## Storage
 
 Rows live in `tasks_heartbeat`:
-- `id`, `title`, `prompt` (Python code)
+- `id`, `title`, `code` (Python code)
 - `last_run_at` (unix ms)
 - `created_at`, `updated_at`
 
@@ -13,9 +13,9 @@ Rows live in `tasks_heartbeat`:
 
 - `Heartbeats` wires `HeartbeatScheduler` with `HeartbeatTasksRepository`.
 - On each interval (or `heartbeat_run`), scheduler loads tasks.
-- `heartbeatPromptBuildBatch` wraps each task's Python code in `<run_python>` tags.
-- The batch prompt is posted as `system_message` with `execute=true`.
-- `executablePromptExpand` processes the `<run_python>` blocks via `rlmExecute`.
+- `heartbeatPromptBuildBatch` returns `{ title, text, code[] }` with task context and Python code blocks.
+- The message is posted as `system_message` with `code[]` array and `execute=true`.
+- `handleSystemMessage` executes each code block separately via `rlmExecute` (30s timeout each).
 - After run, `recordRun()` updates `last_run_at` for all heartbeat rows.
 
 ```mermaid
@@ -25,9 +25,9 @@ flowchart TD
   Engine --> Heartbeats[heartbeat/heartbeats.ts]
   Heartbeats --> Scheduler[heartbeat/ops/heartbeatScheduler.ts]
   Scheduler --> Load[repo.findMany]
-  Load --> Batch[heartbeatPromptBuildBatch: wrap in run_python]
+  Load --> Batch["heartbeatPromptBuildBatch: { text, code[] }"]
   Batch --> AgentSystem[agents/agentSystem.ts]
-  AgentSystem --> RLM[executablePromptExpand + rlmExecute]
+  AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
   RLM --> Persist[repo.recordRun]
 ```
 

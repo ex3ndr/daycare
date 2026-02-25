@@ -17,14 +17,17 @@ import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { executablePromptExpand } from "../modules/executablePrompts/executablePromptExpand.js";
+import { montyRuntimePreambleBuild } from "../modules/monty/montyRuntimePreambleBuild.js";
 import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
 import { rlmErrorTextBuild } from "../modules/rlm/rlmErrorTextBuild.js";
+import { rlmExecute } from "../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmNoToolsModeIs } from "../modules/rlm/rlmNoToolsModeIs.js";
 import { rlmRestore } from "../modules/rlm/rlmRestore.js";
 import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
 import { rlmToolDescriptionBuild } from "../modules/rlm/rlmToolDescriptionBuild.js";
 import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
+import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
 import { toolListContextBuild } from "../modules/tools/toolListContextBuild.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
@@ -678,7 +681,64 @@ export class Agent {
                     { agentId: this.id, origin: item.origin ?? "system" },
                     "skip: Executable system message skipped because RLM is disabled"
                 );
+            } else if (item.code && item.code.length > 0) {
+                // Execute code blocks directly via rlmExecute
+                const startedAt = Date.now();
+                const context: ToolExecutionContext = {
+                    ...this.rlmRestoreContextBuild(item.origin ?? "system"),
+                    messageContext: item.context ?? {}
+                };
+                const preamble = montyRuntimePreambleBuild(
+                    rlmToolsForContextResolve(this.agentSystem.toolResolver, context)
+                );
+                const outputs: string[] = [];
+                let skipTurn = false;
+                for (const code of item.code) {
+                    try {
+                        const result = await rlmExecute(
+                            code,
+                            preamble,
+                            context,
+                            this.agentSystem.toolResolver,
+                            createId(),
+                            context.appendHistoryRecord
+                        );
+                        if (result.skipTurn) {
+                            skipTurn = true;
+                            break;
+                        }
+                        const output = result.printOutput.length > 0 ? result.printOutput.join("\n") : result.output;
+                        outputs.push(output);
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : String(error);
+                        outputs.push(`<exec_error>${message}</exec_error>`);
+                    }
+                }
+                if (skipTurn) {
+                    logger.info(
+                        {
+                            agentId: this.id,
+                            origin: item.origin ?? "system",
+                            codeBlockCount: item.code.length,
+                            durationMs: Date.now() - startedAt
+                        },
+                        "event: Code execution skipped via skip()"
+                    );
+                    return null;
+                }
+                systemText = [systemText, ...outputs].filter((s) => s.trim().length > 0).join("\n\n");
+                logger.info(
+                    {
+                        agentId: this.id,
+                        origin: item.origin ?? "system",
+                        codeBlockCount: item.code.length,
+                        outputCount: outputs.length,
+                        durationMs: Date.now() - startedAt
+                    },
+                    "event: Code blocks executed"
+                );
             } else {
+                // Fallback: expand <run_python> tags in text
                 const startedAt = Date.now();
                 const runPythonTagCount = tagExtractAll(systemText, "run_python").length;
                 const expandResult = await executablePromptExpand(

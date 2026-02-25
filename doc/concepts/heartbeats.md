@@ -5,7 +5,7 @@ Heartbeat tasks store Python code in SQLite and execute it as a single batch on 
 ## Storage
 
 Heartbeat rows live in `tasks_heartbeat`:
-- `id`, `title`, `prompt` (Python code)
+- `id`, `title`, `code` (Python code)
 - `last_run_at` (unix ms)
 - `created_at`, `updated_at`
 
@@ -29,15 +29,15 @@ All agent tools are available as Python functions. Call `skip()` to abort infere
 ```mermaid
 flowchart TD
   Scheduler[HeartbeatScheduler] -->|list tasks| Tasks[Heartbeat tasks]
-  Tasks --> Wrap[Wrap Python in run_python tags]
-  Wrap -->|single call| Agent[Heartbeat agent]
-  Agent --> RLM[executablePromptExpand + rlmExecute]
+  Tasks --> Build["Build { text, code[] }"]
+  Build -->|single call| Agent[Heartbeat agent]
+  Agent --> RLM["handleSystemMessage: rlmExecute each code block"]
 ```
 
 - All heartbeat tasks run together as a single background agent batch.
 - The batch re-runs at a fixed interval or when invoked manually.
 - A single `system:heartbeat` agent handles all heartbeat runs.
-- Python code is wrapped in `<run_python>` tags internally before execution.
+- Each Python code block is executed separately via `rlmExecute` with a 30s timeout.
 
 ## Tools
 

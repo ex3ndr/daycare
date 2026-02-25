@@ -47,7 +47,8 @@ export class Heartbeats {
                     const batch = heartbeatPromptBuildBatch(userTasks);
                     await this.agentSystem.postAndAwait(contextForUser({ userId }), target, {
                         type: "system_message",
-                        text: batch.prompt,
+                        text: batch.text,
+                        code: batch.code,
                         origin: "heartbeat",
                         execute: true
                     });

@@ -136,7 +136,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
             const result = await toolContext.heartbeats.addTask(toolContext.ctx, {
                 id: payload.id,
                 title: payload.title,
-                prompt: payload.code,
+                code: payload.code,
                 overwrite: payload.overwrite
             });
 

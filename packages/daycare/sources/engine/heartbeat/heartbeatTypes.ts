@@ -20,6 +20,6 @@ export type HeartbeatSchedulerOptions = {
 export type HeartbeatCreateTaskArgs = {
     id?: string;
     title: string;
-    prompt: string;
+    code: string;
     overwrite?: boolean;
 };

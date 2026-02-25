@@ -25,6 +25,7 @@ describe("inboxItemSerialize", () => {
                 origin: "cron",
                 silent: true,
                 execute: true,
+                code: ["print('hello')"],
                 context: { messageId: "m-2" }
             },
             {

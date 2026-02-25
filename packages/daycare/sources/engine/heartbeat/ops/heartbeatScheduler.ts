@@ -66,12 +66,12 @@ export class HeartbeatScheduler {
 
     async createTask(ctx: Context, definition: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition> {
         const title = definition.title.trim();
-        const prompt = definition.prompt.trim();
+        const code = definition.code.trim();
         if (!title) {
             throw new Error("Heartbeat title is required.");
         }
-        if (!prompt) {
-            throw new Error("Heartbeat prompt is required.");
+        if (!code) {
+            throw new Error("Heartbeat code is required.");
         }
 
         const providedId = definition.id?.trim();
@@ -98,7 +98,7 @@ export class HeartbeatScheduler {
                 ...existing,
                 userId,
                 title,
-                prompt,
+                code,
                 updatedAt: now
             };
             await this.repository.update(taskId, updated);
@@ -109,7 +109,7 @@ export class HeartbeatScheduler {
             id: taskId,
             userId,
             title,
-            prompt,
+            code,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now

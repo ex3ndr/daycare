@@ -9,7 +9,7 @@ export type CronTaskDefinition = {
     name: string;
     description?: string;
     schedule: string;
-    prompt: string;
+    code: string;
     agentId?: string;
     userId: string;
     enabled?: boolean;
@@ -26,7 +26,7 @@ export type CronTaskContext = {
     taskId: string;
     taskUid: string;
     taskName: string;
-    prompt: string;
+    code: string;
     agentId: string | null;
     userId: string;
 };

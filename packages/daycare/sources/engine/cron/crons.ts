@@ -19,7 +19,7 @@ export type CronsOptions = {
 
 /**
  * Coordinates cron scheduling for engine runtime.
- * Posts cron task prompts directly to the agent system.
+ * Posts cron task code directly to the agent system.
  */
 export class Crons {
     private readonly eventBus: EngineEventBus;
@@ -42,9 +42,11 @@ export class Crons {
                     `event: CronScheduler.onTask triggered taskUid=${task.taskUid} agentId=${task.agentId ?? "system:cron"}`
                 );
 
+                const built = cronTaskPromptBuild(task);
                 await this.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
                     type: "system_message",
-                    text: cronTaskPromptBuild(task),
+                    text: built.text,
+                    code: built.code,
                     origin: "cron",
                     execute: true,
                     context: messageContext
@@ -91,15 +93,12 @@ export class Crons {
     }
 }
 
-function cronTaskPromptBuild(task: { prompt: string; taskId: string; taskUid: string; taskName: string }): string {
-    return [
-        "[cron]",
-        `taskId: ${task.taskId}`,
-        `taskUid: ${task.taskUid}`,
-        `taskName: ${task.taskName}`,
-        "",
-        "<run_python>",
-        task.prompt,
-        "</run_python>"
-    ].join("\n");
+function cronTaskPromptBuild(task: { code: string; taskId: string; taskUid: string; taskName: string }): {
+    text: string;
+    code: string[];
+} {
+    const text = ["[cron]", `taskId: ${task.taskId}`, `taskUid: ${task.taskUid}`, `taskName: ${task.taskName}`].join(
+        "\n"
+    );
+    return { text, code: [task.code] };
 }

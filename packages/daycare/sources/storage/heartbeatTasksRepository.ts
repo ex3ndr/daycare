@@ -83,7 +83,7 @@ export class HeartbeatTasksRepository {
                     id,
                     user_id,
                     title,
-                    prompt,
+                    code,
                     last_run_at,
                     created_at,
                     updated_at
@@ -91,7 +91,7 @@ export class HeartbeatTasksRepository {
                   ON CONFLICT(id) DO UPDATE SET
                     user_id = excluded.user_id,
                     title = excluded.title,
-                    prompt = excluded.prompt,
+                    code = excluded.code,
                     last_run_at = excluded.last_run_at,
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at
@@ -101,7 +101,7 @@ export class HeartbeatTasksRepository {
                     record.id,
                     record.userId,
                     record.title,
-                    record.prompt,
+                    record.code,
                     record.lastRunAt,
                     record.createdAt,
                     record.updatedAt
@@ -136,14 +136,14 @@ export class HeartbeatTasksRepository {
                   SET
                     user_id = ?,
                     title = ?,
-                    prompt = ?,
+                    code = ?,
                     last_run_at = ?,
                     created_at = ?,
                     updated_at = ?
                   WHERE id = ?
                 `
                 )
-                .run(next.userId, next.title, next.prompt, next.lastRunAt, next.createdAt, next.updatedAt, id);
+                .run(next.userId, next.title, next.code, next.lastRunAt, next.createdAt, next.updatedAt, id);
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);
@@ -200,7 +200,7 @@ export class HeartbeatTasksRepository {
             id: row.id,
             userId: row.user_id,
             title: row.title,
-            prompt: row.prompt,
+            code: row.code,
             lastRunAt: row.last_run_at,
             createdAt: row.created_at,
             updatedAt: row.updated_at

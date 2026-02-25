@@ -6,7 +6,7 @@ Cron tasks store Python code that runs on a repeating schedule. Each task is sto
 
 Rows live in `tasks_cron`:
 - `id` (task slug), `task_uid` (cuid2 descriptor id)
-- `name`, `description`, `schedule`, `prompt` (Python code)
+- `name`, `description`, `schedule`, `code` (Python code)
 - `agent_id`, `user_id`
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
@@ -41,14 +41,14 @@ All agent tools are available as Python functions. Call `skip()` to abort infere
 flowchart TD
   Engine --> Crons
   Crons --> Scheduler[CronScheduler]
-  Scheduler --> Wrap[Wrap Python in run_python tags]
-  Wrap --> AgentSystem
-  AgentSystem --> RLM[executablePromptExpand + rlmExecute]
+  Scheduler --> Build["Build { text, code[] }"]
+  Build --> AgentSystem
+  AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
 ```
 
 - Each task runs in its own agent (the `taskId` cuid2) unless `agentId` routes elsewhere.
-- When a schedule triggers, the Python code is wrapped in `<run_python>` tags and sent as a system message.
-- The executable-prompt pipeline handles execution via Monty/RLM.
+- When a schedule triggers, the Python code is sent as a `code[]` array in the system message.
+- `handleSystemMessage` executes each code block directly via `rlmExecute` with a 30s timeout.
 
 ## Tools
 

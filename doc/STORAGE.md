@@ -1113,7 +1113,7 @@ export type CronTaskDefinition = {
   name: string;
   description?: string;
   schedule: string;
-  prompt: string;
+  code: string;
   agentId?: string;
   userId?: string;
   enabled?: boolean;
@@ -1160,7 +1160,7 @@ Type:
 export type HeartbeatDefinition = {
   id: string;
   title: string;
-  prompt: string;
+  code: string;
   filePath: string;
   lastRunAt?: string;
 };
@@ -1169,7 +1169,7 @@ export type HeartbeatDefinition = {
 Frontmatter keys used:
 
 - `title` (preferred) or `name`
-- markdown body is the prompt
+- markdown body is the code
 
 Example:
 

@@ -16,7 +16,7 @@ describe("CronTasksRepository", () => {
                 name: "Daily Report",
                 description: "Generate daily summary",
                 schedule: "0 9 * * *",
-                prompt: "Summarize yesterday.",
+                code: "Summarize yesterday.",
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
@@ -36,14 +36,14 @@ describe("CronTasksRepository", () => {
 
             await repo.update("daily-report", {
                 enabled: false,
-                prompt: "Summarize today.",
+                code: "Summarize today.",
                 lastRunAt: 20,
                 updatedAt: 20
             });
 
             const updated = await repo.findById("daily-report");
             expect(updated?.enabled).toBe(false);
-            expect(updated?.prompt).toBe("Summarize today.");
+            expect(updated?.code).toBe("Summarize today.");
             expect(updated?.lastRunAt).toBe(20);
 
             const stillEnabled = await repo.findAll();
@@ -72,7 +72,7 @@ describe("CronTasksRepository", () => {
                 name: "Cached",
                 description: null,
                 schedule: "* * * * *",
-                prompt: "Prompt",
+                code: "Prompt",
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,

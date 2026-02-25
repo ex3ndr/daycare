@@ -43,8 +43,8 @@ describe("HeartbeatScheduler", () => {
             onTaskComplete
         });
 
-        const taskA = await scheduler.createTask(contextBuild("user-1"), { title: "Alpha", prompt: "Check alpha." });
-        const taskB = await scheduler.createTask(contextBuild("user-1"), { title: "Beta", prompt: "Check beta." });
+        const taskA = await scheduler.createTask(contextBuild("user-1"), { title: "Alpha", code: "Check alpha." });
+        const taskB = await scheduler.createTask(contextBuild("user-1"), { title: "Beta", code: "Check beta." });
 
         const result = await scheduler.runNow();
 
@@ -74,8 +74,8 @@ describe("HeartbeatScheduler", () => {
             onRun
         });
 
-        const taskA = await scheduler.createTask(contextBuild("user-1"), { title: "Alpha", prompt: "Check alpha." });
-        await scheduler.createTask(contextBuild("user-1"), { title: "Beta", prompt: "Check beta." });
+        const taskA = await scheduler.createTask(contextBuild("user-1"), { title: "Alpha", code: "Check alpha." });
+        await scheduler.createTask(contextBuild("user-1"), { title: "Beta", code: "Check beta." });
 
         const result = await scheduler.runNow([taskA.id]);
 
@@ -100,7 +100,7 @@ describe("HeartbeatScheduler", () => {
 
         const task = await scheduler.createTask(contextBuild("user-1"), {
             title: "Owned task",
-            prompt: "Owned prompt"
+            code: "Owned prompt"
         });
 
         await expect(scheduler.deleteTask(contextBuild("user-2"), task.id)).resolves.toBe(false);
@@ -120,7 +120,7 @@ describe("HeartbeatScheduler", () => {
 
         const task = await scheduler.createTask(contextBuild("user-1"), {
             title: "Trim user id",
-            prompt: "Delete using padded ctx user id"
+            code: "Delete using padded ctx user id"
         });
 
         await expect(scheduler.deleteTask(contextBuild("  user-1  "), task.id)).resolves.toBe(true);

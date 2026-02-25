@@ -22,7 +22,7 @@ cron/
 Tasks are stored in `tasks_cron` with key fields:
 - `id`: human task id (`daily-report`)
 - `task_uid`: cron descriptor id (cuid2)
-- `name`, `schedule`, `prompt` (Python code)
+- `name`, `schedule`, `code` (Python code)
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
 
@@ -30,7 +30,7 @@ The runtime uses `CronTasksRepository` for CRUD and cached reads.
 
 ## Execution Flow
 
-Task code is stored as raw Python. At execution time, `cronTaskPromptBuild` wraps the code in `<run_python>` tags so the existing executable-prompt pipeline handles it.
+Task code is stored as raw Python. At execution time, `cronTaskPromptBuild` returns `{ text, code[] }` — cron metadata and a single Python code block. The message is posted with the `code[]` array; `handleSystemMessage` executes each block directly via `rlmExecute` (30s timeout each).
 
 ```mermaid
 flowchart TD
@@ -39,9 +39,9 @@ flowchart TD
   Crons --> Scheduler[cronScheduler.start]
   Scheduler --> Repo[cronTasksRepository.findMany]
   Scheduler --> Tick[Compute next runs]
-  Tick --> Wrap[Wrap Python in run_python tags]
-  Wrap --> AgentSystem[post system_message execute=true]
-  AgentSystem --> RLM[executablePromptExpand + rlmExecute]
+  Tick --> Build["cronTaskPromptBuild: { text, code[] }"]
+  Build --> AgentSystem["post system_message with code[] array"]
+  AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
   RLM --> Record[repo.update last_run_at]
 ```
 

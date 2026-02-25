@@ -39,7 +39,7 @@ describe("Crons", () => {
             const task = await crons.addTask(ctxA, {
                 name: "Scoped task",
                 schedule: "* * * * *",
-                prompt: "Run scoped task"
+                code: "Run scoped task"
             });
 
             await expect(crons.deleteTask(ctxB, task.id)).resolves.toBe(false);
@@ -76,7 +76,7 @@ describe("Crons", () => {
                                 taskId: string;
                                 taskUid: string;
                                 taskName: string;
-                                prompt: string;
+                                code: string;
                                 agentId?: string;
                                 userId?: string;
                             },
@@ -93,7 +93,7 @@ describe("Crons", () => {
                     taskId: "task-1",
                     taskUid: "uid-1",
                     taskName: "Nightly sync",
-                    prompt: "Run checks",
+                    code: "Run checks",
                     userId: "user-1"
                 },
                 messageContext

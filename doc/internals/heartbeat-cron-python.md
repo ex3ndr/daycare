@@ -1,6 +1,6 @@
 # Heartbeat & Cron: Python-Only Code
 
-Heartbeat and cron tasks store raw Python code instead of natural language prompts. The `code` parameter in `heartbeat_add` and `cron_add` tools accepts Python that has access to all agent tools as functions.
+Heartbeat and cron tasks store raw Python code in the `code` column. The `code` parameter in `heartbeat_add` and `cron_add` tools accepts Python that has access to all agent tools as functions.
 
 ## Why Python-only
 
@@ -10,29 +10,32 @@ Python code is deterministic and can call tools directly without LLM inference o
 
 ```mermaid
 flowchart TD
-  Store[SQLite: raw Python in prompt column] --> Builder[heartbeatPromptBuildBatch / cronTaskPromptBuild]
-  Builder --> Wrap[Wrap code in run_python tags]
-  Wrap --> Post[post system_message execute=true]
+  Store[SQLite: raw Python in code column] --> Builder[heartbeatPromptBuildBatch / cronTaskPromptBuild]
+  Builder --> Post["post system_message with code[] array, execute=true"]
   Post --> Agent[Agent.handleSystemMessage]
-  Agent --> Expand[executablePromptExpand]
-  Expand --> RLM[rlmExecute via Monty]
-  RLM --> Output[Python output replaces tags]
-  Output --> Inference[LLM inference on expanded text]
+  Agent --> Execute["Execute each code block via rlmExecute (30s timeout each)"]
+  Execute --> Output[Collect outputs from all blocks]
+  Output --> Inference[LLM inference on prefix text + outputs]
 ```
 
-## Internal wrapping
+## Direct execution model
 
-The DB column stays `prompt` for backward compatibility. The wrapping happens at the prompt-building layer:
+The agent receives a structured `code: string[]` field on the inbox message alongside prefix `text`. In `handleSystemMessage`:
 
-- **Heartbeat**: `heartbeatPromptBuildBatch()` wraps each task's code in `<run_python>` tags
-- **Cron**: `cronTaskPromptBuild()` wraps the task code in `<run_python>` tags
+1. Each code block is executed separately via `rlmExecute` with its own 30s timeout
+2. If any block returns `skipTurn`, inference is aborted (return null)
+3. Outputs are collected and merged with the prefix text
+4. The combined text is sent to LLM inference
 
-The existing `executablePromptExpand` → `rlmExecute` pipeline processes the tags unchanged.
+## Prompt builders
+
+- **Heartbeat**: `heartbeatPromptBuildBatch()` returns `{ title, text, code[] }` — text has task context, code has Python blocks
+- **Cron**: `cronTaskPromptBuild()` returns `{ text, code[] }` — text has cron metadata, code has a single Python block
 
 ## Tool parameter mapping
 
-| Tool | User-facing parameter | Internal field |
-|------|----------------------|----------------|
-| `heartbeat_add` | `code` | `prompt` |
-| `cron_add` | `code` | `prompt` |
-| `cron_read_task` | returns `code` in details | reads from `prompt` |
+| Tool | User-facing parameter | DB column |
+|------|----------------------|-----------|
+| `heartbeat_add` | `code` | `code` |
+| `cron_add` | `code` | `code` |
+| `cron_read_task` | returns `code` in details | `code` |

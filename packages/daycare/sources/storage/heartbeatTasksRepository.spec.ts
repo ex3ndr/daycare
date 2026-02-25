@@ -12,7 +12,7 @@ describe("HeartbeatTasksRepository", () => {
                 id: "alpha",
                 userId: "user-1",
                 title: "Alpha",
-                prompt: "Check alpha",
+                code: "Check alpha",
                 lastRunAt: null,
                 createdAt: 10,
                 updatedAt: 10
@@ -21,7 +21,7 @@ describe("HeartbeatTasksRepository", () => {
                 id: "beta",
                 userId: "user-1",
                 title: "Beta",
-                prompt: "Check beta",
+                code: "Check beta",
                 lastRunAt: null,
                 createdAt: 11,
                 updatedAt: 11
@@ -38,11 +38,11 @@ describe("HeartbeatTasksRepository", () => {
             expect(many.map((task) => task.id).sort()).toEqual(["alpha", "beta"]);
 
             await repo.update("alpha", {
-                prompt: "Check alpha deeply",
+                code: "Check alpha deeply",
                 updatedAt: 20
             });
             const updated = await repo.findById("alpha");
-            expect(updated?.prompt).toBe("Check alpha deeply");
+            expect(updated?.code).toBe("Check alpha deeply");
 
             await repo.recordRun(30);
             const refreshed = await repo.findAll();
@@ -64,7 +64,7 @@ describe("HeartbeatTasksRepository", () => {
                 id: "cache-heartbeat",
                 userId: "user-1",
                 title: "Cache",
-                prompt: "Prompt",
+                code: "Prompt",
                 lastRunAt: null,
                 createdAt: 1,
                 updatedAt: 1

@@ -35,7 +35,7 @@ describe("Heartbeats", () => {
             });
             const task = await heartbeats.addTask(contextBuild("user-a"), {
                 title: "beat",
-                prompt: "run"
+                code: "run"
             });
 
             await expect(heartbeats.removeTask(contextBuild("user-b"), task.id)).resolves.toBe(false);
@@ -69,7 +69,7 @@ describe("Heartbeats", () => {
                 id: "hb-1",
                 userId: "user-1",
                 title: "beat",
-                prompt: "check",
+                code: "check",
                 lastRunAt: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()

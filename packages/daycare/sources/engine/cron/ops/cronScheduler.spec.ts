@@ -31,7 +31,7 @@ describe("CronScheduler", () => {
             id: "test-task",
             name: "Test Task",
             schedule: "* * * * *",
-            prompt: "Do something"
+            code: "Do something"
         });
 
         const onTask = vi.fn();
@@ -58,7 +58,7 @@ describe("CronScheduler", () => {
             id: "exec-test",
             name: "Exec Test",
             schedule: "* * * * *",
-            prompt: "Execute me"
+            code: "Execute me"
         });
 
         const onTask = vi.fn();
@@ -77,7 +77,7 @@ describe("CronScheduler", () => {
                 taskId: "exec-test",
                 taskUid: created.taskUid,
                 taskName: "Exec Test",
-                prompt: "Execute me"
+                code: "Execute me"
             }),
             expect.any(Object)
         );
@@ -92,7 +92,7 @@ describe("CronScheduler", () => {
             id: "lock-scope-test",
             name: "Lock Scope Test",
             schedule: "* * * * *",
-            prompt: "Run me"
+            code: "Run me"
         });
 
         const config = configModule(tempDir);
@@ -115,7 +115,7 @@ describe("CronScheduler", () => {
             id: "disabled-task",
             name: "Disabled Task",
             schedule: "* * * * *",
-            prompt: "Should not run",
+            code: "Should not run",
             enabled: false
         });
 
@@ -149,7 +149,7 @@ describe("CronScheduler", () => {
             id: "new-task",
             name: "New Task",
             schedule: "* * * * *",
-            prompt: "New prompt"
+            code: "New prompt"
         });
 
         await scheduler.reload();
@@ -163,7 +163,7 @@ describe("CronScheduler", () => {
             id: "context-test",
             name: "Context Test",
             schedule: "0 9 * * *",
-            prompt: "Test prompt",
+            code: "Test prompt",
             userId: "user-1"
         });
 
@@ -181,7 +181,7 @@ describe("CronScheduler", () => {
         expect(context?.taskId).toBe("context-test");
         expect(context?.taskUid).toBe(created.taskUid);
         expect(context?.taskName).toBe("Context Test");
-        expect(context?.prompt).toBe("Test prompt");
+        expect(context?.code).toBe("Test prompt");
         expect(context?.userId).toBe("user-1");
 
         scheduler.stop();
@@ -194,7 +194,7 @@ describe("CronScheduler", () => {
             id: "error-task",
             name: "Error Task",
             schedule: "* * * * *",
-            prompt: "Will fail"
+            code: "Will fail"
         });
 
         const onError = vi.fn();
@@ -222,7 +222,7 @@ async function cronTaskInsert(
         id: string;
         name: string;
         schedule: string;
-        prompt: string;
+        code: string;
         userId?: string;
         enabled?: boolean;
     }
@@ -235,7 +235,7 @@ async function cronTaskInsert(
         name: input.name,
         description: null,
         schedule: input.schedule,
-        prompt: input.prompt,
+        code: input.code,
         agentId: null,
         enabled: input.enabled !== false,
         deleteAfterRun: false,
