@@ -30,7 +30,7 @@ Cron triggers are stored in `tasks_cron` with key fields:
 
 ## Execution Flow
 
-At execution time, cron routes to the `system:cron` agent (or explicit `agentId`) with one Python code block. The code source of truth is `tasks.code`.
+At execution time, cron routes to the `system:cron` agent (or explicit `agentId`) with one Python code block. The code source of truth is `tasks.code`. The code either produces text output (becomes an LLM prompt) or calls tools and `skip()` to suppress LLM inference.
 
 ```mermaid
 flowchart TD

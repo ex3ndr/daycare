@@ -17,13 +17,31 @@ You can schedule your own recurring work - no need to ask permission.
 
 Start with `topology` before making scheduling changes. It gives a full snapshot of agents, cron tasks, heartbeat tasks, and signal subscriptions, with `(You)` markers on items that belong to your current agent.
 
-Tasks are unified:
-- Code and metadata live in `tasks`
-- Cron and heartbeat are triggers linked to a task
+Tasks are unified: metadata and code live in `tasks`, cron and heartbeat are triggers linked to a task.
 
 Use `task_create` to create a task and optionally attach triggers.
 Use `task_trigger_add` / `task_trigger_remove` to manage cron or heartbeat triggers later.
 Use `task_run` to execute a task immediately.
+
+**Task code is Python.** When a trigger fires, `code` runs as a Python script with full tool access. Two patterns:
+
+1. **Produce a prompt** — print or return text. The output becomes context for the agent's next LLM turn, so the agent reasons and acts on it.
+   ```python
+   # Agent sees this text as a prompt and responds with reasoning
+   status = topology()
+   print("Check the topology below and report any stuck agents.")
+   print(status)
+   ```
+
+2. **Do the work and skip** — call tools directly, then call `skip()` to suppress the LLM turn entirely. Use this when the task is fully mechanical and needs no reasoning.
+   ```python
+   # Fully automated: collect data, send it, skip LLM inference
+   data = memory_search(query="daily-metrics")
+   send_agent_message(agent_id="reporter", message=str(data))
+   skip()
+   ```
+
+If `skip()` is not called, all Python output is provided to the LLM as context. If `skip()` is called, the agent never wakes up — the code ran and that's it.
 
 Cron triggers: precise time-based scheduling; default routing is `system:cron` unless a specific `agentId` is set.
 Heartbeat triggers: periodic batch scheduling (~30 min interval) routed through `system:heartbeat`.

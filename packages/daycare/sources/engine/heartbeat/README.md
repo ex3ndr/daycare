@@ -25,7 +25,7 @@ Heartbeat triggers live in `tasks_heartbeat`:
 
 ## Execution Flow
 
-Heartbeat groups triggers by user and posts one batch per user to `system:heartbeat`. Runtime code comes from `tasks.code`.
+Heartbeat groups triggers by user and posts one batch per user to `system:heartbeat`. Runtime code comes from `tasks.code`. The code either produces text output (becomes an LLM prompt) or calls tools and `skip()` to suppress LLM inference.
 
 ```mermaid
 flowchart TD

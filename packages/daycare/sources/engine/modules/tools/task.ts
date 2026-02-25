@@ -9,11 +9,22 @@ import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 const taskCreateSchema = Type.Object(
     {
         title: Type.String({ minLength: 1 }),
-        code: Type.String({ minLength: 1 }),
+        code: Type.String({
+            minLength: 1,
+            description:
+                "Python code executed when the task triggers. Can call tools directly. " +
+                "To produce a prompt for the agent: print/return text (the output becomes LLM context). " +
+                "To do work without LLM inference: call tools then call skip()."
+        }),
         description: Type.Optional(Type.String()),
-        cron: Type.Optional(Type.String({ minLength: 1 })),
-        heartbeat: Type.Optional(Type.Boolean()),
-        agentId: Type.Optional(Type.String({ minLength: 1 }))
+        cron: Type.Optional(Type.String({ minLength: 1, description: "Cron expression (e.g. '0 * * * *')." })),
+        heartbeat: Type.Optional(Type.Boolean({ description: "Attach a heartbeat trigger (~30 min interval)." })),
+        agentId: Type.Optional(
+            Type.String({
+                minLength: 1,
+                description: "Route to a specific agent instead of the default system agent."
+            })
+        )
     },
     { additionalProperties: false }
 );
@@ -29,7 +40,12 @@ const taskUpdateSchema = Type.Object(
     {
         taskId: Type.String({ minLength: 1 }),
         title: Type.Optional(Type.String({ minLength: 1 })),
-        code: Type.Optional(Type.String({ minLength: 1 })),
+        code: Type.Optional(
+            Type.String({
+                minLength: 1,
+                description: "Python code. Print/return text to produce an LLM prompt, or call tools and skip()."
+            })
+        ),
         description: Type.Optional(Type.String())
     },
     { additionalProperties: false }
@@ -99,7 +115,10 @@ export function buildTaskCreateTool(): ToolDefinition {
     return {
         tool: {
             name: "task_create",
-            description: "Create a reusable task and optionally attach cron and/or heartbeat triggers.",
+            description:
+                "Create a reusable task with Python code and optionally attach cron/heartbeat triggers. " +
+                "Code runs as Python with full tool access. Print/return text to produce an LLM prompt, " +
+                "or call tools and skip() to do work without LLM inference.",
             parameters: taskCreateSchema
         },
         returns: taskReturns,
@@ -236,7 +255,7 @@ export function buildTaskUpdateTool(): ToolDefinition {
     return {
         tool: {
             name: "task_update",
-            description: "Update task title/code/description stored in the unified tasks table.",
+            description: "Update task title, Python code, or description.",
             parameters: taskUpdateSchema
         },
         returns: taskReturns,
@@ -309,7 +328,7 @@ export function buildTaskRunTool(): ToolDefinition {
     return {
         tool: {
             name: "task_run",
-            description: "Run a task immediately via the system task agent or a specific agentId.",
+            description: "Execute a task's Python code immediately via the system task agent or a specific agentId.",
             parameters: taskRunSchema
         },
         returns: taskReturns,

@@ -15,6 +15,26 @@ A single task can be:
 - scheduled with a heartbeat trigger
 - scheduled by both cron and heartbeat at the same time
 
+## Code execution model
+
+Task `code` is Python that runs via RLM with full tool access. Two patterns:
+
+1. **Produce a prompt** — print or return text. The output becomes context for the agent's next LLM turn, so the agent reasons and acts on it.
+   ```python
+   status = topology()
+   print("Check the topology below and report any stuck agents.")
+   print(status)
+   ```
+
+2. **Do the work and skip** — call tools directly, then call `skip()` to suppress the LLM turn. Use this when the task is fully mechanical and needs no reasoning.
+   ```python
+   data = memory_search(query="daily-metrics")
+   send_agent_message(agent_id="reporter", message=str(data))
+   skip()
+   ```
+
+If `skip()` is not called, all Python output is provided to the LLM as context. If `skip()` is called, the agent never wakes — the code ran and that's it.
+
 ```mermaid
 flowchart TD
   Task[Task in tasks table] --> CronTrigger[tasks_cron trigger]
