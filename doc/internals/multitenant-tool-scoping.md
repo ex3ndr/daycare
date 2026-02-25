@@ -75,8 +75,10 @@ flowchart TD
 
 Outcome:
 - `read`/`read_json` metadata now avoids leaking host home mount paths in common user-home reads.
+- `read` now supports a home fallback for plain relative paths (`knowledge/USER.md`) when the target is not found in `workingDir`.
 - Regression coverage added for:
   - `../knowledge/USER.md` returning `~/knowledge/USER.md`
+  - `knowledge/USER.md` resolving via home fallback to `~/knowledge/USER.md`
   - Docker reads returning `~/...` display paths instead of host tmp paths
 
 ## Validation

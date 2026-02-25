@@ -98,6 +98,26 @@ describe("read tool allowed paths", () => {
         }
     });
 
+    it("reads home-relative fallback path without ../ prefix", async () => {
+        const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "read-tool-home-fallback-"));
+        const workspaceDir = path.join(homeDir, "desktop");
+        const knowledgePath = path.join(homeDir, "knowledge", "USER.md");
+        await fs.mkdir(workspaceDir, { recursive: true });
+        await fs.mkdir(path.dirname(knowledgePath), { recursive: true });
+        await fs.writeFile(knowledgePath, "name: steve", "utf8");
+        const tool = buildWorkspaceReadTool();
+        const context = createContext(workspaceDir, [homeDir], false, undefined, homeDir);
+
+        try {
+            const result = await tool.execute({ path: "knowledge/USER.md" }, context, readToolCall);
+            expect(result.toolMessage.isError).toBe(false);
+            expect(result.typedResult.path).toBe("~/knowledge/USER.md");
+            expect(toolMessageText(result.toolMessage.content)).toContain("name: steve");
+        } finally {
+            await fs.rm(homeDir, { recursive: true, force: true });
+        }
+    });
+
     it("returns actionable message when first line exceeds byte limit", async () => {
         const tool = buildWorkspaceReadTool();
         const context = createContext(workingDir);

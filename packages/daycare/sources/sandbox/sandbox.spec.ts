@@ -94,6 +94,20 @@ describe("Sandbox", () => {
         expect(read.displayPath).not.toContain("/home/");
     });
 
+    it("falls back to home-relative paths when workspace-relative target does not exist", async () => {
+        const knowledgePath = path.join(homeDir, "knowledge", "USER.md");
+        await fs.mkdir(path.dirname(knowledgePath), { recursive: true });
+        await fs.writeFile(knowledgePath, "name: steve", "utf8");
+
+        const read = await sandbox.read({ path: "knowledge/USER.md", raw: true });
+        expect(read.type).toBe("text");
+        if (read.type !== "text") {
+            return;
+        }
+        expect(read.content).toBe("name: steve");
+        expect(read.displayPath).toBe("~/knowledge/USER.md");
+    });
+
     it("reads image files as binary image payloads", async () => {
         const imagePath = path.join(workingDir, "image.png");
         const oneByOnePngBase64 =

@@ -318,6 +318,10 @@ export class Sandbox {
         if (await pathExists(resolved)) {
             return resolved;
         }
+        const homeFallback = await this.readInputHomeFallbackResolve(rewritten);
+        if (homeFallback) {
+            return homeFallback;
+        }
         const amPmVariant = sandboxReadPathMacOSVariant(resolved);
         if (amPmVariant !== resolved && (await pathExists(amPmVariant))) {
             return amPmVariant;
@@ -335,6 +339,20 @@ export class Sandbox {
             return nfdCurlyVariant;
         }
         return resolved;
+    }
+
+    private async readInputHomeFallbackResolve(rewrittenPath: string): Promise<string | null> {
+        if (path.isAbsolute(rewrittenPath)) {
+            return null;
+        }
+        if (rewrittenPath.startsWith(".")) {
+            return null;
+        }
+        const fromHome = path.resolve(this.homeDir, rewrittenPath);
+        if (!isWithinSecure(this.homeDir, fromHome)) {
+            return null;
+        }
+        return (await pathExists(fromHome)) ? fromHome : null;
     }
 
     /**
