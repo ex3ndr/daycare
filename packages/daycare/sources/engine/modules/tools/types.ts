@@ -39,6 +39,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     pythonExecution?: boolean;
     allowedToolNames?: ReadonlySet<string>;
+    abortSignal?: AbortSignal;
 };
 
 export type ToolResultPrimitive = string | number | boolean | null;

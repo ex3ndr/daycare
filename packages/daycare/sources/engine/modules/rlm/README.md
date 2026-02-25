@@ -42,12 +42,12 @@ dispatch aligned with the active sandboxed tool view.
 
 ## Execution Flow
 
-`rlmExecute()` uses Monty's iterative `start()`/`resume()` loop:
+`rlmExecute()` is now a convenience wrapper over step primitives used by the flat agent loop:
 
-1. Start Monty with `runtime_preamble + user code`
-2. On `MontySnapshot`, dispatch `functionName` through `ToolResolver.execute()`
-3. Resume with `returnValue` or a `ToolError` exception
-4. Return final output, captured prints, and tool-call count
+1. `rlmStepStart()` starts VM execution and returns `MontySnapshot | MontyComplete`
+2. `rlmStepToolCall()` executes one paused tool call and builds resume options
+3. `rlmStepResume()` reloads snapshot + resumes VM
+4. `rlmExecute()` loops over those primitives for non-agent-loop callers
 
 ## Print Handling
 
@@ -82,10 +82,7 @@ RLM now persists execution checkpoints into agent history:
 - `rlm_tool_result`: inner tool result after each call
 - `rlm_complete`: terminal execution record (success or error)
 
-On process restart, incomplete RLM runs are detected and resumed from the latest
-`rlm_tool_call.snapshot`. The first resumed frame receives a runtime exception with
-message `Process was restarted`, so Python can catch `ToolError` or fail normally.
-
-Recovery appends:
-
-- synthetic user-side system message with `origin="rlm_restore"`
+On process restart, agent restore resolves a pending loop phase:
+- `vm_start`: assistant message was persisted but VM never started
+- `tool_call`: VM snapshot was persisted and resumes with `RuntimeError("Process was restarted")`
+- `error`: start record exists but no snapshot, so recovery appends failed `rlm_complete`

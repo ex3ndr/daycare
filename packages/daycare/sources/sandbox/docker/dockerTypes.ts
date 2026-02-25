@@ -28,6 +28,7 @@ export type DockerContainerExecArgs = {
     env?: NodeJS.ProcessEnv;
     timeoutMs?: number;
     maxBufferBytes?: number;
+    signal?: AbortSignal;
 };
 
 export type DockerContainerExecResult = {

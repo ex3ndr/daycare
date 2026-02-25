@@ -195,7 +195,7 @@ export class Sandbox {
 
     /**
      * Execute a shell command inside sandbox-runtime.
-     * Expects: args.command is non-empty and network allowlist is explicit.
+     * Expects: args.command is non-empty and network allowlist is wildcard-free.
      */
     async exec(args: SandboxExecArgs): Promise<SandboxExecResult> {
         const permissions = this.permissionsEffectiveResolve();
@@ -230,7 +230,8 @@ export class Sandbox {
                 env,
                 home: this.homeDir,
                 timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
-                maxBufferBytes: MAX_EXEC_BUFFER
+                maxBufferBytes: MAX_EXEC_BUFFER,
+                signal: args.signal
             };
             const result = useDocker
                 ? await dockerRunInSandbox(args.command, runtimeConfig, {
@@ -262,6 +263,9 @@ export class Sandbox {
                 cwd
             };
         } catch (error) {
+            if (abortErrorIs(error, args.signal)) {
+                throw error;
+            }
             const execError = error as ExecException & {
                 stdout?: string | Buffer;
                 stderr?: string | Buffer;
@@ -535,6 +539,22 @@ function detectSupportedImageMimeTypeFromHeader(header: Buffer): string | null {
         return "image/webp";
     }
     return null;
+}
+
+function abortErrorIs(error: unknown, signal?: AbortSignal): boolean {
+    if (signal?.aborted) {
+        return true;
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+        return true;
+    }
+    if (typeof error === "object" && error !== null) {
+        const name = (error as { name?: unknown }).name;
+        if (typeof name === "string" && name === "AbortError") {
+            return true;
+        }
+    }
+    return false;
 }
 
 function sandboxSizeFormat(bytes: number): string {

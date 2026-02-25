@@ -58,7 +58,8 @@ export function buildGrepTool(): ToolDefinition {
 
             const execResult = await toolContext.sandbox.exec({
                 command,
-                allowedDomains: LOCALHOST_ALLOWED_DOMAINS
+                allowedDomains: LOCALHOST_ALLOWED_DOMAINS,
+                signal: toolContext.abortSignal
             });
 
             if (execResult.failed && execResult.exitCode !== 1) {

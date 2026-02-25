@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
 const itIfSandbox = process.env.CI ? it.skip : it;
@@ -136,13 +136,49 @@ describe("exec tool allowedDomains", () => {
         await fs.rm(workingDir, { recursive: true, force: true });
     });
 
-    it("requires explicit allowedDomains", async () => {
+    it("defaults missing allowedDomains to an empty list", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
+        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => ({
+            stdout: "ok",
+            stderr: "",
+            failed: false,
+            exitCode: 0,
+            signal: null,
+            cwd: workingDir
+        }));
+        context.sandbox.exec = exec;
 
-        await expect(tool.execute({ command: "echo ok" }, context, execToolCall)).rejects.toThrow(
-            "allowedDomains must include at least one explicit domain"
+        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
+        expect(result.toolMessage.isError).toBe(false);
+        expect(exec).toHaveBeenCalledOnce();
+        const firstCall = exec.mock.calls[0]?.[0];
+        expect(firstCall?.allowedDomains).toEqual([]);
+    });
+
+    it("forwards abort signal to sandbox exec", async () => {
+        const tool = buildExecTool();
+        const abortController = new AbortController();
+        const context = createContext(workingDir, [], false, abortController.signal);
+        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[]; signal?: AbortSignal }) => ({
+            stdout: "ok",
+            stderr: "",
+            failed: false,
+            exitCode: 0,
+            signal: null,
+            cwd: workingDir
+        }));
+        context.sandbox.exec = exec;
+
+        const result = await tool.execute(
+            { command: "echo ok", allowedDomains: ["example.com"] },
+            context,
+            execToolCall
         );
+        expect(result.toolMessage.isError).toBe(false);
+        expect(exec).toHaveBeenCalledOnce();
+        const firstCall = exec.mock.calls[0]?.[0];
+        expect(firstCall?.signal).toBe(abortController.signal);
     });
 
     it("rejects wildcard allowedDomains", async () => {
@@ -338,7 +374,12 @@ describe("formatExecOutput", () => {
     });
 });
 
-function createContext(workingDir: string, writeDirs: string[] = [], pythonExecution = false): ToolExecutionContext {
+function createContext(
+    workingDir: string,
+    writeDirs: string[] = [],
+    pythonExecution = false,
+    abortSignal?: AbortSignal
+): ToolExecutionContext {
     const agentId = createId();
     const messageContext = {};
     const descriptor = {
@@ -381,6 +422,7 @@ function createContext(workingDir: string, writeDirs: string[] = [], pythonExecu
         source: "test",
         messageContext,
         pythonExecution,
+        abortSignal,
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };

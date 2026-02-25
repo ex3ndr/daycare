@@ -37,7 +37,9 @@ import { agentDescriptorCacheKey } from "./ops/agentDescriptorCacheKey.js";
 import { agentDescriptorMatchesStrategy } from "./ops/agentDescriptorMatchesStrategy.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
+import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { AgentInbox } from "./ops/agentInbox.js";
+import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentTimestampGet } from "./ops/agentTimestampGet.js";
@@ -713,7 +715,26 @@ export class AgentSystem {
 
     private async replayPersistedInboxItems(entry: AgentEntry): Promise<void> {
         await entry.lock.inLock(async () => {
-            const rows = await this.storage.inbox.findByAgentId(entry.ctx.agentId);
+            let rows = await this.storage.inbox.findByAgentId(entry.ctx.agentId);
+            if (rows.length > 0) {
+                const history = await agentHistoryLoad(this.storage, entry.ctx);
+                const pendingPhase = agentLoopPendingPhaseResolve(history);
+                if (pendingPhase) {
+                    const staleInFlight = rows[0];
+                    if (staleInFlight) {
+                        await this.storage.inbox.delete(staleInFlight.id);
+                        rows = rows.slice(1);
+                        logger.warn(
+                            {
+                                agentId: entry.ctx.agentId,
+                                droppedInboxItemId: staleInFlight.id,
+                                pendingPhase: pendingPhase.type
+                            },
+                            "restore: Dropped stale in-flight inbox row after pending phase recovery"
+                        );
+                    }
+                }
+            }
             for (const row of rows) {
                 try {
                     const item = inboxItemDeserialize(row.data);

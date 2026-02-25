@@ -7,7 +7,7 @@ const RLM_RESULT_TEXT_MAX_CHARS = 16_000;
 
 /**
  * Formats a successful run_python execution summary for tool-result delivery.
- * Expects: result is returned from rlmExecute or rlmRestore.
+ * Expects: result is returned from rlmExecute.
  */
 export function rlmResultTextBuild(result: RlmExecuteResult): string {
     const printOutputText =

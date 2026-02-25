@@ -18,6 +18,28 @@ flowchart TD
   Loop --> Connector[connectors/*]
 ```
 
+## Flat Loop Phases
+
+`agentLoopRun` now executes as a single flat state machine. Each loop iteration performs one atomic phase:
+- inference call
+- VM start/resume step
+- single tool-call step
+- block completion step
+
+```mermaid
+stateDiagram-v2
+  [*] --> INFERENCE
+  INFERENCE --> VM_START: assistant has <run_python>
+  INFERENCE --> DONE: no <run_python>
+  VM_START --> TOOL_CALL: monty paused
+  VM_START --> BLOCK_COMPLETE: monty completed
+  TOOL_CALL --> TOOL_CALL: resumed to next paused call
+  TOOL_CALL --> BLOCK_COMPLETE: resumed to completion
+  BLOCK_COMPLETE --> VM_START: next run_python block
+  BLOCK_COMPLETE --> INFERENCE: all blocks done
+  DONE --> [*]
+```
+
 ## Agent Creation
 
 Agent creation is deterministic and does not depend on inbound message context.

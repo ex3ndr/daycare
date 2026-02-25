@@ -69,6 +69,25 @@ describe("Sandbox docker integration", () => {
         expect(dockerRunInSandbox).not.toHaveBeenCalled();
     });
 
+    it("rethrows AbortError from runtime execution", async () => {
+        const abortError = new Error("Operation aborted.");
+        abortError.name = "AbortError";
+        vi.mocked(runInSandbox).mockRejectedValueOnce(abortError);
+
+        const sandbox = new Sandbox({
+            homeDir,
+            permissions
+        });
+
+        await expect(
+            sandbox.exec({
+                command: "echo host",
+                allowedDomains: [],
+                signal: new AbortController().signal
+            })
+        ).rejects.toMatchObject({ name: "AbortError" });
+    });
+
     it("uses docker runtime when docker is enabled", async () => {
         vi.mocked(dockerRunInSandbox).mockResolvedValue({
             stdout: "docker",

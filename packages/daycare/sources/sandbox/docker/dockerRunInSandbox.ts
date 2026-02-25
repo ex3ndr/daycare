@@ -21,6 +21,7 @@ export type DockerRunInSandboxOptions = {
     home: string;
     timeoutMs?: number;
     maxBufferBytes?: number;
+    signal?: AbortSignal;
     docker: Omit<DockerContainerConfig, "hostHomeDir" | "hostSkillsActiveDir" | "hostExamplesDir"> & {
         hostSkillsActiveDir: string;
         hostExamplesDir: string;
@@ -101,7 +102,8 @@ export async function dockerRunInSandbox(
             cwd: containerCwd,
             env: containerEnv,
             timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-            maxBufferBytes: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES
+            maxBufferBytes: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES,
+            signal: options.signal
         });
 
         logger.debug(`exec: completed exitCode=${result.exitCode}`);

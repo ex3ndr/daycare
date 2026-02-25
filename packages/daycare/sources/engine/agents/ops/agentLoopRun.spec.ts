@@ -1,5 +1,6 @@
 import type { AssistantMessage, Context, Tool } from "@mariozechner/pi-ai";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Type } from "@sinclair/typebox";
+import { describe, expect, it, vi } from "vitest";
 import type { AgentDescriptor, Connector, ToolExecutionResult } from "@/types";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
@@ -7,19 +8,7 @@ import { contextForAgent } from "../context.js";
 import { agentLoopRun } from "./agentLoopRun.js";
 import type { AgentMessage } from "./agentTypes.js";
 
-const { rlmExecuteMock } = vi.hoisted(() => ({
-    rlmExecuteMock: vi.fn()
-}));
-
-vi.mock("../../modules/rlm/rlmExecute.js", () => ({
-    rlmExecute: rlmExecuteMock
-}));
-
 describe("agentLoopRun", () => {
-    beforeEach(() => {
-        rlmExecuteMock.mockReset();
-    });
-
     it("always requests inference with the run_python stop sequence", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
@@ -29,11 +18,6 @@ describe("agentLoopRun", () => {
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
-        rlmExecuteMock.mockResolvedValue({
-            output: "ok",
-            printOutput: [],
-            toolCallCount: 0
-        });
 
         await agentLoopRun(
             optionsBuild({
@@ -65,11 +49,6 @@ describe("agentLoopRun", () => {
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
-        rlmExecuteMock.mockResolvedValue({
-            output: "ok",
-            printOutput: [],
-            toolCallCount: 0
-        });
 
         await agentLoopRun(
             optionsBuild({
@@ -79,7 +58,6 @@ describe("agentLoopRun", () => {
             })
         );
 
-        expect(rlmExecuteMock).toHaveBeenCalledTimes(1);
         expect(connectorSend).toHaveBeenCalledTimes(2);
         expect(connectorSend).toHaveBeenNthCalledWith(1, "channel-1", expect.objectContaining({ text: "Starting" }));
         expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", expect.objectContaining({ text: "Finished" }));
@@ -89,7 +67,6 @@ describe("agentLoopRun", () => {
         const responses = [assistantMessageBuild("No execution"), assistantMessageBuild("Still no execution")];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
-        rlmExecuteMock.mockReset();
 
         await agentLoopRun(
             optionsBuild({
@@ -107,27 +84,12 @@ describe("agentLoopRun", () => {
     });
 
     it("tracks send_agent_message during inline python execution for child agents", async () => {
-        const responses = [assistantMessageBuild("<run_python>deliver()</run_python>"), assistantMessageBuild("Done")];
+        const responses = [
+            assistantMessageBuild("<run_python>send_agent_message(text='payload for parent')</run_python>"),
+            assistantMessageBuild("Done")
+        ];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "sent"));
-        rlmExecuteMock.mockImplementation(
-            async (_code: string, _preamble: string, context: unknown, runtimeToolResolver: ToolResolverApi) => {
-                await runtimeToolResolver.execute(
-                    {
-                        type: "toolCall",
-                        id: "tool-call-send",
-                        name: "send_agent_message",
-                        arguments: { text: "payload for parent" }
-                    },
-                    context as Parameters<ToolResolverApi["execute"]>[1]
-                );
-                return {
-                    output: "ok",
-                    printOutput: [],
-                    toolCallCount: 1
-                };
-            }
-        );
 
         const result = await agentLoopRun(
             optionsBuild({
@@ -140,6 +102,26 @@ describe("agentLoopRun", () => {
         );
 
         expect(result.responseText).toBe("payload for parent");
+    });
+
+    it("stops immediately when run_python tool execution aborts", async () => {
+        const responses = [assistantMessageBuild("<run_python>echo('x')</run_python>")];
+        const inferenceRouter = inferenceRouterBuild(responses);
+        const toolResolver = toolResolverBuild(async () => {
+            throw abortErrorBuild();
+        });
+        const options = optionsBuild({
+            inferenceRouter,
+            toolResolver
+        });
+        const notifySubagentFailure = vi.fn(async () => undefined);
+        options.notifySubagentFailure = notifySubagentFailure;
+
+        const result = await agentLoopRun(options);
+
+        expect(inferenceRouter.complete).toHaveBeenCalledTimes(1);
+        expect(notifySubagentFailure).not.toHaveBeenCalled();
+        expect(result.responseText).toBeNull();
     });
 });
 
@@ -245,8 +227,22 @@ function toolResolverBuild(
     execute?: (toolCall: { id: string; name: string }) => Promise<ToolExecutionResult>
 ): ToolResolverApi {
     const tools = [
-        { name: "send_agent_message", description: "Send message to parent", parameters: {} },
-        { name: "echo", description: "Echo", parameters: {} }
+        {
+            name: "send_agent_message",
+            description: "Send message to parent",
+            parameters: Type.Object(
+                {
+                    agentId: Type.Optional(Type.String()),
+                    text: Type.Optional(Type.String())
+                },
+                { additionalProperties: false }
+            )
+        },
+        {
+            name: "echo",
+            description: "Echo",
+            parameters: Type.Object({ text: Type.String() }, { additionalProperties: false })
+        }
     ] as unknown as Tool[];
 
     return {
@@ -299,4 +295,10 @@ function assistantMessageBuild(text: string): AssistantMessage {
         stopReason: "stop",
         timestamp: Date.now()
     };
+}
+
+function abortErrorBuild(): Error {
+    const error = new Error("Operation aborted.");
+    error.name = "AbortError";
+    return error;
 }

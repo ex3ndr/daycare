@@ -1,7 +1,8 @@
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
+import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
 import type { Logger } from "pino";
-import type { AgentSkill, Connector } from "@/types";
+import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { tagExtractAll } from "../../../util/tagExtract.js";
@@ -13,10 +14,23 @@ import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { montyRuntimePreambleBuild } from "../../modules/monty/montyRuntimePreambleBuild.js";
-import { rlmExecute } from "../../modules/rlm/rlmExecute.js";
+import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
+import { RLM_LIMITS } from "../../modules/rlm/rlmLimits.js";
 import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
 import { rlmNoToolsResultMessageBuild } from "../../modules/rlm/rlmNoToolsResultMessageBuild.js";
+import { rlmPreambleNormalize } from "../../modules/rlm/rlmPreambleNormalize.js";
+import {
+    rlmPrintCaptureAppend,
+    rlmPrintCaptureCreate,
+    rlmPrintCaptureFlushTrailing
+} from "../../modules/rlm/rlmPrintCapture.js";
+import { rlmSnapshotEncode } from "../../modules/rlm/rlmSnapshotEncode.js";
+import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
+import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
+import { rlmStepToolCall } from "../../modules/rlm/rlmStepToolCall.js";
+import { rlmToolsForContextResolve } from "../../modules/rlm/rlmToolsForContextResolve.js";
+import { rlmValueFormat } from "../../modules/rlm/rlmValueFormat.js";
 import { sayFileExtract } from "../../modules/say/sayFileExtract.js";
 import { sayFileResolve } from "../../modules/say/sayFileResolve.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
@@ -25,6 +39,8 @@ import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
+import type { AgentLoopPendingPhase } from "./agentLoopPendingPhaseResolve.js";
+import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
 import { agentMessageRunPythonSayAfterTrim } from "./agentMessageRunPythonSayAfterTrim.js";
 import { agentMessageRunPythonTerminalTrim } from "./agentMessageRunPythonTerminalTrim.js";
@@ -59,6 +75,8 @@ type AgentLoopRunOptions = {
     abortSignal?: AbortSignal;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     notifySubagentFailure: (reason: string, error?: unknown) => Promise<void>;
+    initialPhase?: AgentLoopPendingPhase;
+    stopAfterPendingPhase?: boolean;
 };
 
 type AgentLoopResult = {
@@ -78,6 +96,8 @@ type AgentLoopResult = {
         };
     }>;
 };
+
+type AgentLoopBlockState = Extract<AgentLoopPhase, { type: "vm_start" }>["blockState"];
 
 /**
  * Runs the agent inference loop and handles tool execution + response delivery.
@@ -104,11 +124,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         logger,
         abortSignal,
         appendHistoryRecord,
-        notifySubagentFailure
+        notifySubagentFailure,
+        initialPhase,
+        stopAfterPendingPhase
     } = options;
 
     let response: Awaited<ReturnType<InferenceRouter["complete"]>> | null = null;
-    let skipTurnDetected = false;
     let toolLoopExceeded = false;
     let lastResponseTextSent = false;
     let finalResponseText: string | null = null;
@@ -131,450 +152,827 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         descriptor: agent.descriptor
     };
     const allowedToolNames = agentToolExecutionAllowlistResolve(agent.descriptor);
+    const restoreOnly = Boolean(initialPhase && stopAfterPendingPhase);
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
     const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
 
+    const blockStateBuild = (params: {
+        iteration: number;
+        blocks: string[];
+        blockIndex: number;
+        preamble: string;
+        toolCallId: string;
+        assistantRecordAt: number;
+        historyResponseText: string;
+    }): AgentLoopBlockState => {
+        const executionContext: ToolExecutionContext = {
+            connectorRegistry,
+            sandbox: agent.sandbox,
+            auth: authStore,
+            logger,
+            assistant,
+            agent,
+            ctx: agent.ctx,
+            source,
+            messageContext: entry.context,
+            agentSystem,
+            heartbeats,
+            memory,
+            toolResolver,
+            skills: activeSkills,
+            skillsActiveRoot: options.skillsActiveRoot,
+            skillsPersonalRoot: options.skillsPersonalRoot,
+            appendHistoryRecord,
+            allowedToolNames,
+            abortSignal
+        };
+        const trackingToolResolver: ToolResolverApi = {
+            listTools: () => toolResolver.listTools(),
+            listToolsForAgent: (resolverContext) => toolResolver.listToolsForAgent(resolverContext),
+            execute: async (toolCall, toolContext) => {
+                if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
+                    const args = toolCall.arguments as { agentId?: string; text?: string };
+                    const parentId =
+                        "parentAgentId" in agent.descriptor
+                            ? (agent.descriptor as { parentAgentId?: string }).parentAgentId
+                            : undefined;
+                    if (!args.agentId || args.agentId === parentId) {
+                        childAgentMessageSent = true;
+                        if (args.text) {
+                            finalResponseText = args.text;
+                        }
+                        logger.debug("event: Child agent sent message to parent via send_agent_message");
+                    }
+                }
+                return toolResolver.execute(toolCall, toolContext);
+            }
+        };
+        return {
+            ...params,
+            executionContext,
+            trackingToolResolver,
+            checkSteering: () => {
+                const steering = agent.inbox.consumeSteering();
+                if (steering) {
+                    return { text: steering.text, origin: steering.origin };
+                }
+                return null;
+            }
+        };
+    };
+
+    const runPythonFailureHandle = async (
+        blockState: AgentLoopBlockState,
+        error: unknown,
+        options?: { printOutput?: string[]; toolCallCount?: number }
+    ): Promise<void> => {
+        const message = error instanceof Error ? error.message : String(error);
+        await appendHistoryRecord?.(
+            rlmHistoryCompleteErrorRecordBuild(
+                blockState.toolCallId,
+                message,
+                options?.printOutput ?? [],
+                options?.toolCallCount ?? 0
+            )
+        );
+        context.messages.push(rlmNoToolsResultMessageBuild({ error }));
+        const truncated = agentMessageRunPythonFailureTrim(blockState.historyResponseText, blockState.blockIndex);
+        if (truncated !== null && response?.message) {
+            messageAssistantTextRewrite(response.message, truncated);
+            await historyRecordAppend(
+                historyRecords,
+                {
+                    type: "assistant_rewrite",
+                    at: Date.now(),
+                    assistantAt: blockState.assistantRecordAt,
+                    text: truncated,
+                    reason: "run_python_failure_trim"
+                },
+                appendHistoryRecord
+            );
+            logger.debug("event: Rewrote assistant message in context history after failed <run_python> block");
+        }
+    };
+
     try {
         logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
-        for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
-            let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+        let phase: AgentLoopPhase = { type: "inference", iteration: 0 };
+        if (initialPhase) {
             try {
                 activeSkills = await skills.list();
                 await skills.syncToActive(options.skillsActiveRoot, activeSkills);
-                availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
                 context.tools = [];
-                logger.debug(
-                    `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
-                );
             } catch (error) {
                 logger.warn(
                     { agentId: agent.id, error },
-                    "error: Failed to read skills before inference call; continuing with previous snapshot"
+                    "error: Failed to read skills before pending-phase recovery; continuing with previous snapshot"
                 );
             }
-            logger.debug(
-                `event: Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
-            );
-            const inferenceSessionId = agent.state.inferenceSessionId ?? agent.id;
-            try {
-                await agentInferencePromptWrite(agentSystem.config.current, agent.ctx, {
-                    context,
-                    sessionId: inferenceSessionId,
-                    providersOverride: providersForAgent,
-                    iteration
+
+            if (initialPhase.type === "vm_start") {
+                const availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                phase = {
+                    type: "vm_start",
+                    blockState: blockStateBuild({
+                        iteration: 0,
+                        blocks: initialPhase.blocks,
+                        blockIndex: initialPhase.blockIndex,
+                        preamble: montyRuntimePreambleBuild(availableTools),
+                        toolCallId: createId(),
+                        assistantRecordAt: initialPhase.assistantAt,
+                        historyResponseText: initialPhase.historyResponseText
+                    })
+                };
+            } else if (initialPhase.type === "tool_call") {
+                const blockState = blockStateBuild({
+                    iteration: 0,
+                    blocks: initialPhase.blocks,
+                    blockIndex: initialPhase.blockIndex,
+                    preamble: initialPhase.start.preamble,
+                    toolCallId: initialPhase.start.toolCallId,
+                    assistantRecordAt: initialPhase.assistantAt,
+                    historyResponseText: initialPhase.historyResponseText
                 });
-            } catch (error) {
-                logger.warn({ agentId: agent.id, error }, "error: Failed to write inference prompt snapshot");
-            }
-            response = await inferenceRouter.complete(context, inferenceSessionId, {
-                providersOverride: providersForAgent,
-                providerOptions: {
-                    stop: ["</run_python>"]
-                },
-                signal: abortSignal,
-                onAttempt: (providerId, modelId) => {
-                    logger.debug(
-                        `start: Inference attempt starting providerId=${providerId} modelId=${modelId} agentId=${agent.id}`
-                    );
-                    logger.info(
-                        { agentId: agent.id, messageId: entry.id, provider: providerId, model: modelId },
-                        "start: Inference started"
-                    );
-                },
-                onFallback: (providerId, error) => {
-                    logger.debug(
-                        `event: Inference falling back to next provider providerId=${providerId} error=${String(error)}`
-                    );
-                    logger.warn(
-                        { agentId: agent.id, messageId: entry.id, provider: providerId, error },
-                        "event: Inference fallback"
-                    );
-                },
-                onSuccess: (providerId, modelId, message) => {
-                    logger.debug(
-                        `event: Inference succeeded providerId=${providerId} modelId=${modelId} stopReason=${message.stopReason} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
-                    );
-                    logger.info(
+                const printOutput = [...initialPhase.snapshot.printOutput];
+                const printCapture = rlmPrintCaptureCreate(printOutput);
+                const printCallback = (...values: unknown[]): void => {
+                    rlmPrintCaptureAppend(printCapture, values);
+                };
+                try {
+                    const snapshotDump = Buffer.from(initialPhase.snapshot.snapshot, "base64");
+                    const resumed = rlmStepResume(
+                        snapshotDump,
                         {
-                            agentId: agent.id,
-                            messageId: entry.id,
-                            provider: providerId,
-                            model: modelId,
-                            stopReason: message.stopReason,
-                            usage: message.usage
+                            exception: {
+                                type: "RuntimeError",
+                                message: "Process was restarted"
+                            }
                         },
-                        "event: Inference completed"
+                        printCallback
                     );
-                },
-                onFailure: (providerId, error) => {
-                    logger.debug(`error: Inference failed completely providerId=${providerId} error=${String(error)}`);
-                    logger.warn(
-                        { agentId: agent.id, messageId: entry.id, provider: providerId, error },
-                        "error: Inference failed"
-                    );
-                }
-            });
-
-            const tokenUsage = tokensResolve(context, response.message);
-            const tokensEntry =
-                tokenUsage.size.input === 0 &&
-                tokenUsage.size.output === 0 &&
-                tokenUsage.size.cacheRead === 0 &&
-                tokenUsage.size.cacheWrite === 0 &&
-                tokenUsage.source === "estimate"
-                    ? null
-                    : {
-                          provider: response.providerId,
-                          model: response.modelId,
-                          size: tokenUsage.size
-                      };
-            if (tokenUsage.source === "usage" && tokensEntry) {
-                tokenStatsUpdates.push({
-                    provider: tokensEntry.provider,
-                    model: tokensEntry.model,
-                    size: {
-                        input: tokensEntry.size.input,
-                        output: tokensEntry.size.output,
-                        cacheRead: tokensEntry.size.cacheRead,
-                        cacheWrite: tokensEntry.size.cacheWrite,
-                        total: tokensEntry.size.total
+                    if (resumed instanceof MontySnapshot) {
+                        phase = {
+                            type: "tool_call",
+                            blockState,
+                            snapshot: resumed,
+                            printOutput,
+                            printCapture,
+                            printCallback,
+                            toolCallCount: initialPhase.snapshot.toolCallCount
+                        };
+                    } else {
+                        rlmPrintCaptureFlushTrailing(printCapture);
+                        const complete = resumed as MontyComplete;
+                        phase = {
+                            type: "block_complete",
+                            blockState,
+                            result: {
+                                output: rlmValueFormat(complete.output),
+                                printOutput,
+                                toolCallCount: initialPhase.snapshot.toolCallCount
+                            }
+                        };
                     }
-                });
-            }
-
-            logger.debug(
-                `receive: Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`
-            );
-            context.messages.push(response.message);
-
-            let responseText = messageExtractText(response.message);
-            if (responseText) {
-                const terminalTrimmed = agentMessageRunPythonTerminalTrim(responseText);
-                if (terminalTrimmed !== null) {
-                    responseText = terminalTrimmed;
-                    messageAssistantTextRewrite(response.message, terminalTrimmed);
-                    logger.debug("event: Trimmed inline RLM assistant text at first </run_python>");
-                }
-            }
-            let historyResponseText = responseText ?? "";
-            const pendingHistoryRewrites: Array<{
-                text: string;
-                reason: "run_python_say_after_trim" | "run_python_failure_trim";
-            }> = [];
-            const runPythonCodes = rlmNoToolsExtract(responseText ?? "");
-            const hasRunPythonTag = runPythonCodes.length > 0;
-            const suppressUserOutput = messageNoMessageIs(responseText);
-            if (suppressUserOutput) {
-                stripNoMessageTextBlocks(response.message);
-                logger.debug("event: NO_MESSAGE detected; suppressing user output for this response");
-            }
-            lastResponseNoMessage = suppressUserOutput;
-            const sayEnabled = agentKind === "foreground";
-            let effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
-            const runPythonSplit =
-                hasRunPythonTag && effectiveResponseText ? runPythonResponseSplit(effectiveResponseText) : null;
-            if (hasRunPythonTag && responseText) {
-                const stripped = agentMessageRunPythonSayAfterTrim(responseText);
-                if (stripped !== null) {
-                    historyResponseText = stripped;
-                    pendingHistoryRewrites.push({
-                        text: stripped,
-                        reason: "run_python_say_after_trim"
+                } catch (error) {
+                    rlmPrintCaptureFlushTrailing(printCapture);
+                    await runPythonFailureHandle(blockState, error, {
+                        printOutput,
+                        toolCallCount: initialPhase.snapshot.toolCallCount
                     });
-                    messageAssistantTextRewrite(response.message, stripped);
-                    logger.debug("event: Rewrote assistant message in context history after <run_python>");
+                    phase = restoreOnly ? { type: "done", reason: "complete" } : { type: "inference", iteration: 1 };
                 }
+            } else {
+                phase = { type: "done", reason: "complete" };
             }
+        }
 
-            // <say> tag mode: only send text inside <say> blocks, suppress the rest
-            if (sayEnabled && effectiveResponseText) {
-                let immediateSayText = effectiveResponseText;
-                if (hasRunPythonTag && runPythonSplit) {
-                    immediateSayText = runPythonSplit.beforeRunPython;
-                }
+        while (phase.type !== "done") {
+            if (abortSignal?.aborted) {
+                throw abortErrorBuild();
+            }
+            switch (phase.type) {
+                case "inference": {
+                    const iteration = phase.iteration;
+                    if (iteration >= MAX_TOOL_ITERATIONS) {
+                        logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
+                        toolLoopExceeded = true;
+                        phase = { type: "done", reason: "tool_loop_limit" };
+                        break;
+                    }
 
-                const sayBlocks = tagExtractAll(immediateSayText, "say");
-                const sayFiles = sayFileExtract(immediateSayText);
-                const resolvedSayFiles =
-                    sayFiles.length > 0
-                        ? await sayFileResolve({
-                              files: sayFiles,
-                              sandbox: agent.sandbox,
-                              logger
-                          })
-                        : [];
+                    let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                    try {
+                        activeSkills = await skills.list();
+                        await skills.syncToActive(options.skillsActiveRoot, activeSkills);
+                        availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                        context.tools = [];
+                        logger.debug(
+                            `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
+                        );
+                    } catch (error) {
+                        logger.warn(
+                            { agentId: agent.id, error },
+                            "error: Failed to read skills before inference call; continuing with previous snapshot"
+                        );
+                    }
+                    logger.debug(
+                        `event: Inference loop iteration=${iteration} agentId=${agent.id} messageCount=${context.messages.length}`
+                    );
+                    const inferenceSessionId = agent.state.inferenceSessionId ?? agent.id;
+                    try {
+                        await agentInferencePromptWrite(agentSystem.config.current, agent.ctx, {
+                            context,
+                            sessionId: inferenceSessionId,
+                            providersOverride: providersForAgent,
+                            iteration
+                        });
+                    } catch (error) {
+                        logger.warn({ agentId: agent.id, error }, "error: Failed to write inference prompt snapshot");
+                    }
+                    response = await inferenceRouter.complete(context, inferenceSessionId, {
+                        providersOverride: providersForAgent,
+                        providerOptions: {
+                            stop: ["</run_python>"]
+                        },
+                        signal: abortSignal,
+                        onAttempt: (providerId, modelId) => {
+                            logger.debug(
+                                `start: Inference attempt starting providerId=${providerId} modelId=${modelId} agentId=${agent.id}`
+                            );
+                            logger.info(
+                                { agentId: agent.id, messageId: entry.id, provider: providerId, model: modelId },
+                                "start: Inference started"
+                            );
+                        },
+                        onFallback: (providerId, error) => {
+                            logger.debug(
+                                `event: Inference falling back to next provider providerId=${providerId} error=${String(error)}`
+                            );
+                            logger.warn(
+                                { agentId: agent.id, messageId: entry.id, provider: providerId, error },
+                                "event: Inference fallback"
+                            );
+                        },
+                        onSuccess: (providerId, modelId, message) => {
+                            logger.debug(
+                                `event: Inference succeeded providerId=${providerId} modelId=${modelId} stopReason=${message.stopReason} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
+                            );
+                            logger.info(
+                                {
+                                    agentId: agent.id,
+                                    messageId: entry.id,
+                                    provider: providerId,
+                                    model: modelId,
+                                    stopReason: message.stopReason,
+                                    usage: message.usage
+                                },
+                                "event: Inference completed"
+                            );
+                        },
+                        onFailure: (providerId, error) => {
+                            logger.debug(
+                                `error: Inference failed completely providerId=${providerId} error=${String(error)}`
+                            );
+                            logger.warn(
+                                { agentId: agent.id, messageId: entry.id, provider: providerId, error },
+                                "error: Inference failed"
+                            );
+                        }
+                    });
 
-                if (sayBlocks.length > 0) {
-                    effectiveResponseText = null; // suppress full text
-                    finalResponseText = sayBlocks[sayBlocks.length - 1]!;
-                    // Never fall back to raw assistant text when <say> blocks exist.
-                    lastResponseTextSent = true;
-                    if (connector && targetId) {
-                        try {
-                            for (let index = 0; index < sayBlocks.length; index += 1) {
-                                const block = sayBlocks[index]!;
-                                const filesForMessage =
-                                    index === sayBlocks.length - 1 && resolvedSayFiles.length > 0
-                                        ? resolvedSayFiles
-                                        : undefined;
+                    const tokenUsage = tokensResolve(context, response.message);
+                    const tokensEntry =
+                        tokenUsage.size.input === 0 &&
+                        tokenUsage.size.output === 0 &&
+                        tokenUsage.size.cacheRead === 0 &&
+                        tokenUsage.size.cacheWrite === 0 &&
+                        tokenUsage.source === "estimate"
+                            ? null
+                            : {
+                                  provider: response.providerId,
+                                  model: response.modelId,
+                                  size: tokenUsage.size
+                              };
+                    if (tokenUsage.source === "usage" && tokensEntry) {
+                        tokenStatsUpdates.push({
+                            provider: tokensEntry.provider,
+                            model: tokensEntry.model,
+                            size: {
+                                input: tokensEntry.size.input,
+                                output: tokensEntry.size.output,
+                                cacheRead: tokensEntry.size.cacheRead,
+                                cacheWrite: tokensEntry.size.cacheWrite,
+                                total: tokensEntry.size.total
+                            }
+                        });
+                    }
+
+                    logger.debug(
+                        `receive: Inference response received providerId=${response.providerId} modelId=${response.modelId} stopReason=${response.message.stopReason}`
+                    );
+                    context.messages.push(response.message);
+
+                    let responseText = messageExtractText(response.message);
+                    if (responseText) {
+                        const terminalTrimmed = agentMessageRunPythonTerminalTrim(responseText);
+                        if (terminalTrimmed !== null) {
+                            responseText = terminalTrimmed;
+                            messageAssistantTextRewrite(response.message, terminalTrimmed);
+                            logger.debug("event: Trimmed inline RLM assistant text at first </run_python>");
+                        }
+                    }
+                    let historyResponseText = responseText ?? "";
+                    const pendingHistoryRewrites: Array<{
+                        text: string;
+                        reason: "run_python_say_after_trim" | "run_python_failure_trim";
+                    }> = [];
+                    const runPythonCodes = rlmNoToolsExtract(responseText ?? "");
+                    const hasRunPythonTag = runPythonCodes.length > 0;
+                    const suppressUserOutput = messageNoMessageIs(responseText);
+                    if (suppressUserOutput) {
+                        stripNoMessageTextBlocks(response.message);
+                        logger.debug("event: NO_MESSAGE detected; suppressing user output for this response");
+                    }
+                    lastResponseNoMessage = suppressUserOutput;
+                    const sayEnabled = agentKind === "foreground";
+                    let effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
+                    const runPythonSplit =
+                        hasRunPythonTag && effectiveResponseText ? runPythonResponseSplit(effectiveResponseText) : null;
+                    if (hasRunPythonTag && responseText) {
+                        const stripped = agentMessageRunPythonSayAfterTrim(responseText);
+                        if (stripped !== null) {
+                            historyResponseText = stripped;
+                            pendingHistoryRewrites.push({
+                                text: stripped,
+                                reason: "run_python_say_after_trim"
+                            });
+                            messageAssistantTextRewrite(response.message, stripped);
+                            logger.debug("event: Rewrote assistant message in context history after <run_python>");
+                        }
+                    }
+
+                    if (sayEnabled && effectiveResponseText) {
+                        let immediateSayText = effectiveResponseText;
+                        if (hasRunPythonTag && runPythonSplit) {
+                            immediateSayText = runPythonSplit.beforeRunPython;
+                        }
+
+                        const sayBlocks = tagExtractAll(immediateSayText, "say");
+                        const sayFiles = sayFileExtract(immediateSayText);
+                        const resolvedSayFiles =
+                            sayFiles.length > 0
+                                ? await sayFileResolve({
+                                      files: sayFiles,
+                                      sandbox: agent.sandbox,
+                                      logger
+                                  })
+                                : [];
+
+                        if (sayBlocks.length > 0) {
+                            effectiveResponseText = null;
+                            finalResponseText = sayBlocks[sayBlocks.length - 1]!;
+                            lastResponseTextSent = true;
+                            if (connector && targetId) {
+                                try {
+                                    for (let index = 0; index < sayBlocks.length; index += 1) {
+                                        const block = sayBlocks[index]!;
+                                        const filesForMessage =
+                                            index === sayBlocks.length - 1 && resolvedSayFiles.length > 0
+                                                ? resolvedSayFiles
+                                                : undefined;
+                                        await connector.sendMessage(targetId, {
+                                            text: block,
+                                            files: filesForMessage,
+                                            replyToMessageId: entry.context.messageId
+                                        });
+                                        eventBus.emit("agent.outgoing", {
+                                            agentId: agent.id,
+                                            source,
+                                            message: {
+                                                text: block,
+                                                files: filesForMessage
+                                            },
+                                            context: entry.context
+                                        });
+                                    }
+                                } catch (error) {
+                                    logger.warn(
+                                        { connector: source, error },
+                                        "error: Failed to send <say> response text"
+                                    );
+                                }
+                            }
+                        } else if (resolvedSayFiles.length > 0) {
+                            effectiveResponseText = null;
+                            finalResponseText = null;
+                            lastResponseTextSent = true;
+                            if (connector && targetId) {
+                                try {
+                                    await connector.sendMessage(targetId, {
+                                        text: null,
+                                        files: resolvedSayFiles,
+                                        replyToMessageId: entry.context.messageId
+                                    });
+                                    eventBus.emit("agent.outgoing", {
+                                        agentId: agent.id,
+                                        source,
+                                        message: {
+                                            text: null,
+                                            files: resolvedSayFiles
+                                        },
+                                        context: entry.context
+                                    });
+                                } catch (error) {
+                                    logger.warn(
+                                        { connector: source, error },
+                                        "error: Failed to send <file> response files"
+                                    );
+                                }
+                            }
+                        } else {
+                            effectiveResponseText = null;
+                            finalResponseText = null;
+                            lastResponseTextSent = true;
+                            logger.debug("event: <say> feature enabled but no <say> tags found; suppressing output");
+                        }
+                    } else {
+                        const trimmedText = effectiveResponseText?.trim() ?? "";
+                        const hasResponseText = trimmedText.length > 0;
+                        if (hasRunPythonTag) {
+                            if (!childAgentMessageSent) {
+                                finalResponseText = null;
+                            }
+                            lastResponseTextSent = true;
+                            logger.debug("event: run_python tag detected; suppressing raw response text");
+                        } else {
+                            if (!childAgentMessageSent) {
+                                finalResponseText = hasResponseText ? effectiveResponseText : null;
+                            }
+                            lastResponseTextSent = false;
+                        }
+                        if (hasResponseText && !hasRunPythonTag && connector && targetId) {
+                            try {
                                 await connector.sendMessage(targetId, {
-                                    text: block,
-                                    files: filesForMessage,
+                                    text: effectiveResponseText,
                                     replyToMessageId: entry.context.messageId
                                 });
                                 eventBus.emit("agent.outgoing", {
                                     agentId: agent.id,
                                     source,
-                                    message: {
-                                        text: block,
-                                        files: filesForMessage
-                                    },
+                                    message: { text: effectiveResponseText },
                                     context: entry.context
                                 });
-                            }
-                        } catch (error) {
-                            logger.warn({ connector: source, error }, "error: Failed to send <say> response text");
-                        }
-                    }
-                } else if (resolvedSayFiles.length > 0) {
-                    effectiveResponseText = null;
-                    finalResponseText = null;
-                    lastResponseTextSent = true; // prevent post-loop fallback send
-                    if (connector && targetId) {
-                        try {
-                            await connector.sendMessage(targetId, {
-                                text: null,
-                                files: resolvedSayFiles,
-                                replyToMessageId: entry.context.messageId
-                            });
-                            eventBus.emit("agent.outgoing", {
-                                agentId: agent.id,
-                                source,
-                                message: {
-                                    text: null,
-                                    files: resolvedSayFiles
-                                },
-                                context: entry.context
-                            });
-                        } catch (error) {
-                            logger.warn({ connector: source, error }, "error: Failed to send <file> response files");
-                        }
-                    }
-                } else {
-                    // No <say> blocks: suppress entire output
-                    effectiveResponseText = null;
-                    finalResponseText = null;
-                    lastResponseTextSent = true; // prevent post-loop fallback send
-                    logger.debug("event: <say> feature enabled but no <say> tags found; suppressing output");
-                }
-            } else {
-                const trimmedText = effectiveResponseText?.trim() ?? "";
-                const hasResponseText = trimmedText.length > 0;
-                if (hasRunPythonTag) {
-                    // Hide raw <run_python> payloads from end users; execution result is injected next turn.
-                    if (!childAgentMessageSent) {
-                        finalResponseText = null;
-                    }
-                    lastResponseTextSent = true;
-                    logger.debug("event: run_python tag detected; suppressing raw response text");
-                } else {
-                    // Don't overwrite finalResponseText if child agent already sent via send_agent_message
-                    if (!childAgentMessageSent) {
-                        finalResponseText = hasResponseText ? effectiveResponseText : null;
-                    }
-                    lastResponseTextSent = false;
-                }
-                if (hasResponseText && !hasRunPythonTag && connector && targetId) {
-                    try {
-                        await connector.sendMessage(targetId, {
-                            text: effectiveResponseText,
-                            replyToMessageId: entry.context.messageId
-                        });
-                        eventBus.emit("agent.outgoing", {
-                            agentId: agent.id,
-                            source,
-                            message: { text: effectiveResponseText },
-                            context: entry.context
-                        });
-                        lastResponseTextSent = true;
-                    } catch (error) {
-                        logger.warn({ connector: source, error }, "error: Failed to send response text");
-                    }
-                }
-            }
-
-            const assistantRecordAt = Date.now();
-            await historyRecordAppend(
-                historyRecords,
-                {
-                    type: "assistant_message",
-                    at: assistantRecordAt,
-                    text: responseText ?? "",
-                    files: [],
-                    tokens: tokensEntry
-                },
-                appendHistoryRecord
-            );
-            for (const rewrite of pendingHistoryRewrites) {
-                await historyRecordAppend(
-                    historyRecords,
-                    {
-                        type: "assistant_rewrite",
-                        at: Date.now(),
-                        assistantAt: assistantRecordAt,
-                        text: rewrite.text,
-                        reason: rewrite.reason
-                    },
-                    appendHistoryRecord
-                );
-            }
-
-            if (hasRunPythonTag) {
-                const preamble = montyRuntimePreambleBuild(availableTools);
-                const executionContext = {
-                    connectorRegistry,
-                    sandbox: agent.sandbox,
-                    auth: authStore,
-                    logger,
-                    assistant,
-                    agent,
-                    ctx: agent.ctx,
-                    source,
-                    messageContext: entry.context,
-                    agentSystem,
-                    heartbeats,
-                    memory,
-                    toolResolver,
-                    skills: activeSkills,
-                    skillsActiveRoot: options.skillsActiveRoot,
-                    skillsPersonalRoot: options.skillsPersonalRoot,
-                    appendHistoryRecord,
-                    allowedToolNames
-                };
-
-                const trackingToolResolver: ToolResolverApi = {
-                    listTools: () => toolResolver.listTools(),
-                    listToolsForAgent: (context) => toolResolver.listToolsForAgent(context),
-                    execute: async (toolCall, toolContext) => {
-                        if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
-                            const args = toolCall.arguments as { agentId?: string; text?: string };
-                            const parentId =
-                                "parentAgentId" in agent.descriptor
-                                    ? (agent.descriptor as { parentAgentId?: string }).parentAgentId
-                                    : undefined;
-                            if (!args.agentId || args.agentId === parentId) {
-                                childAgentMessageSent = true;
-                                if (args.text) {
-                                    finalResponseText = args.text;
-                                }
-                                logger.debug("event: Child agent sent message to parent via send_agent_message");
+                                lastResponseTextSent = true;
+                            } catch (error) {
+                                logger.warn({ connector: source, error }, "error: Failed to send response text");
                             }
                         }
-                        return toolResolver.execute(toolCall, toolContext);
                     }
-                };
 
-                for (let index = 0; index < runPythonCodes.length; index += 1) {
-                    const runPythonCode = runPythonCodes[index]!;
-                    const toolCallId = createId();
-
-                    try {
-                        // Create steering check callback that consumes steering if present
-                        const checkSteering = () => {
-                            const steering = agent.inbox.consumeSteering();
-                            if (steering) {
-                                return { text: steering.text, origin: steering.origin };
-                            }
-                            return null;
-                        };
-                        const result = await rlmExecute(
-                            runPythonCode,
-                            preamble,
-                            executionContext,
-                            trackingToolResolver,
-                            toolCallId,
-                            appendHistoryRecord,
-                            checkSteering
+                    const assistantRecordAt = Date.now();
+                    await historyRecordAppend(
+                        historyRecords,
+                        {
+                            type: "assistant_message",
+                            at: assistantRecordAt,
+                            text: responseText ?? "",
+                            files: [],
+                            tokens: tokensEntry
+                        },
+                        appendHistoryRecord
+                    );
+                    for (const rewrite of pendingHistoryRewrites) {
+                        await historyRecordAppend(
+                            historyRecords,
+                            {
+                                type: "assistant_rewrite",
+                                at: Date.now(),
+                                assistantAt: assistantRecordAt,
+                                text: rewrite.text,
+                                reason: rewrite.reason
+                            },
+                            appendHistoryRecord
                         );
-                        context.messages.push(rlmNoToolsResultMessageBuild({ result }));
+                    }
 
-                        // If steering interrupted, break out of the code loop
-                        if (result.steeringInterrupt) {
-                            break;
-                        }
-
-                        // If skip() was called, break out of the code loop
-                        if (result.skipTurn) {
-                            skipTurnDetected = true;
-                            break;
-                        }
-                    } catch (error) {
-                        const message = error instanceof Error ? error.message : String(error);
-                        await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
-                        context.messages.push(rlmNoToolsResultMessageBuild({ error }));
-                        const truncated = agentMessageRunPythonFailureTrim(historyResponseText, index);
-                        if (truncated !== null) {
-                            historyResponseText = truncated;
-                            messageAssistantTextRewrite(response.message, truncated);
-                            await historyRecordAppend(
-                                historyRecords,
-                                {
-                                    type: "assistant_rewrite",
-                                    at: Date.now(),
-                                    assistantAt: assistantRecordAt,
-                                    text: truncated,
-                                    reason: "run_python_failure_trim"
-                                },
-                                appendHistoryRecord
-                            );
-                            logger.debug(
-                                "event: Rewrote assistant message in context history after failed <run_python> block"
-                            );
-                        }
+                    if (hasRunPythonTag) {
+                        phase = {
+                            type: "vm_start",
+                            blockState: blockStateBuild({
+                                iteration,
+                                blocks: runPythonCodes,
+                                blockIndex: 0,
+                                preamble: montyRuntimePreambleBuild(availableTools),
+                                toolCallId: createId(),
+                                assistantRecordAt,
+                                historyResponseText
+                            })
+                        };
                         break;
                     }
-                }
 
-                if (skipTurnDetected) {
-                    context.messages.push({
-                        role: "user",
-                        content: [{ type: "text", text: "Turn skipped" }],
-                        timestamp: Date.now()
-                    });
-                    logger.debug("event: Skip detected, appended 'Turn skipped' and breaking inference loop");
+                    if (isChildAgent && !childAgentMessageSent) {
+                        if (!childAgentNudged) {
+                            childAgentNudged = true;
+                            context.messages.push({
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: "You haven't sent your results to your parent agent yet. Use the send_agent_message tool to deliver your results. No agentId is needed — it defaults to your parent."
+                                    }
+                                ],
+                                timestamp: Date.now()
+                            });
+                            logger.debug("event: Child agent nudged to call send_agent_message");
+                            phase = { type: "inference", iteration: iteration + 1 };
+                            break;
+                        }
+                        logger.debug("event: Child agent did not send after nudge, accepting");
+                    }
+
+                    logger.debug(`event: No run_python blocks, breaking inference loop iteration=${iteration}`);
+                    phase = { type: "done", reason: "complete" };
                     break;
                 }
+                case "vm_start": {
+                    const blockState = phase.blockState;
+                    const runPythonCode = blockState.blocks[blockState.blockIndex];
+                    if (!runPythonCode) {
+                        phase = restoreOnly
+                            ? { type: "done", reason: "complete" }
+                            : { type: "inference", iteration: blockState.iteration + 1 };
+                        break;
+                    }
 
-                if (iteration === MAX_TOOL_ITERATIONS - 1) {
-                    logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
-                    toolLoopExceeded = true;
-                }
-                continue;
-            }
+                    const printOutput: string[] = [];
+                    const printCapture = rlmPrintCaptureCreate(printOutput);
+                    const printCallback = (...values: unknown[]): void => {
+                        rlmPrintCaptureAppend(printCapture, values);
+                    };
 
-            // Child-agent: soft nudge if send_agent_message was never called targeting parent
-            if (isChildAgent && !childAgentMessageSent) {
-                if (!childAgentNudged) {
-                    childAgentNudged = true;
-                    context.messages.push({
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: "You haven't sent your results to your parent agent yet. Use the send_agent_message tool to deliver your results. No agentId is needed — it defaults to your parent."
+                    try {
+                        await appendHistoryRecord?.({
+                            type: "rlm_start",
+                            at: Date.now(),
+                            toolCallId: blockState.toolCallId,
+                            code: runPythonCode,
+                            preamble: blockState.preamble
+                        });
+
+                        const runtimeTools = rlmToolsForContextResolve(
+                            blockState.trackingToolResolver,
+                            blockState.executionContext
+                        ).filter((tool) => tool.name !== RLM_TOOL_NAME);
+                        const externalFunctions = runtimeTools.map((tool) => tool.name);
+                        if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
+                            externalFunctions.push(SKIP_TOOL_NAME);
+                        }
+
+                        const progress = rlmStepStart({
+                            code: runPythonCode,
+                            preamble: rlmPreambleNormalize(blockState.preamble),
+                            externalFunctions,
+                            limits: RLM_LIMITS,
+                            printCallback
+                        }).progress;
+
+                        if (progress instanceof MontySnapshot) {
+                            phase = {
+                                type: "tool_call",
+                                blockState,
+                                snapshot: progress,
+                                printOutput,
+                                printCapture,
+                                printCallback,
+                                toolCallCount: 0
+                            };
+                            break;
+                        }
+
+                        rlmPrintCaptureFlushTrailing(printCapture);
+                        const complete = progress as MontyComplete;
+                        phase = {
+                            type: "block_complete",
+                            blockState,
+                            result: {
+                                output: rlmValueFormat(complete.output),
+                                printOutput,
+                                toolCallCount: 0
                             }
-                        ],
-                        timestamp: Date.now()
-                    });
-                    logger.debug("event: Child agent nudged to call send_agent_message");
-                    continue;
+                        };
+                    } catch (error) {
+                        await runPythonFailureHandle(blockState, error);
+                        phase = restoreOnly
+                            ? { type: "done", reason: "complete" }
+                            : { type: "inference", iteration: blockState.iteration + 1 };
+                    }
+                    break;
                 }
-                // Agent chose not to send after nudge — accept and break
-                logger.debug("event: Child agent did not send after nudge, accepting");
-            }
+                case "tool_call": {
+                    const blockState = phase.blockState;
+                    try {
+                        if (phase.snapshot.functionName === SKIP_TOOL_NAME) {
+                            rlmPrintCaptureFlushTrailing(phase.printCapture);
+                            phase = {
+                                type: "block_complete",
+                                blockState,
+                                result: {
+                                    output: "Turn skipped",
+                                    printOutput: phase.printOutput,
+                                    toolCallCount: phase.toolCallCount,
+                                    skipTurn: true
+                                }
+                            };
+                            break;
+                        }
 
-            logger.debug(`event: No run_python blocks, breaking inference loop iteration=${iteration}`);
-            break;
+                        const runtimeTools = rlmToolsForContextResolve(
+                            blockState.trackingToolResolver,
+                            blockState.executionContext
+                        ).filter((tool) => tool.name !== RLM_TOOL_NAME);
+                        const toolByName = new Map(runtimeTools.map((tool) => [tool.name, tool]));
+
+                        if (!toolByName.has(phase.snapshot.functionName)) {
+                            const resumed = phase.snapshot.resume({
+                                exception: {
+                                    type: "RuntimeError",
+                                    message: `ToolError: Unknown tool: ${phase.snapshot.functionName}`
+                                }
+                            });
+                            if (resumed instanceof MontySnapshot) {
+                                phase = { ...phase, snapshot: resumed };
+                                break;
+                            }
+                            rlmPrintCaptureFlushTrailing(phase.printCapture);
+                            const complete = resumed as MontyComplete;
+                            phase = {
+                                type: "block_complete",
+                                blockState,
+                                result: {
+                                    output: rlmValueFormat(complete.output),
+                                    printOutput: phase.printOutput,
+                                    toolCallCount: phase.toolCallCount
+                                }
+                            };
+                            break;
+                        }
+
+                        rlmPrintCaptureFlushTrailing(phase.printCapture);
+                        const at = Date.now();
+                        const currentPrintOutput = [...phase.printOutput];
+                        const currentToolCallCount = phase.toolCallCount;
+                        const stepResult = await rlmStepToolCall({
+                            snapshot: phase.snapshot,
+                            toolByName,
+                            toolResolver: blockState.trackingToolResolver,
+                            context: blockState.executionContext,
+                            beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
+                                await appendHistoryRecord?.({
+                                    type: "rlm_tool_call",
+                                    at,
+                                    toolCallId: blockState.toolCallId,
+                                    snapshot: rlmSnapshotEncode(snapshotDump),
+                                    printOutput: currentPrintOutput,
+                                    toolCallCount: currentToolCallCount,
+                                    toolName,
+                                    toolArgs
+                                });
+                            }
+                        });
+                        const nextToolCallCount = phase.toolCallCount + 1;
+                        await appendHistoryRecord?.({
+                            type: "rlm_tool_result",
+                            at: Date.now(),
+                            toolCallId: blockState.toolCallId,
+                            toolName: stepResult.toolName,
+                            toolResult: stepResult.toolResult,
+                            toolIsError: stepResult.toolIsError
+                        });
+
+                        const steering = blockState.checkSteering();
+                        if (steering) {
+                            rlmPrintCaptureFlushTrailing(phase.printCapture);
+                            const printOutputSoFar =
+                                phase.printOutput.length > 0
+                                    ? `Print output so far:\n${phase.printOutput.join("\n")}\n\n`
+                                    : "";
+                            const steeringOutput = `<python_result>
+Python execution interrupted by steering.
+
+${printOutputSoFar}<steering_interrupt>
+Message from ${steering.origin ?? "system"}: ${steering.text}
+</steering_interrupt>
+</python_result>`;
+
+                            phase = {
+                                type: "block_complete",
+                                blockState,
+                                result: {
+                                    output: steeringOutput,
+                                    printOutput: phase.printOutput,
+                                    toolCallCount: nextToolCallCount,
+                                    steeringInterrupt: {
+                                        text: steering.text,
+                                        origin: steering.origin
+                                    }
+                                }
+                            };
+                            break;
+                        }
+
+                        const resumed = rlmStepResume(
+                            stepResult.snapshotDump,
+                            stepResult.resumeOptions,
+                            phase.printCallback
+                        );
+                        if (resumed instanceof MontySnapshot) {
+                            phase = {
+                                ...phase,
+                                snapshot: resumed,
+                                toolCallCount: nextToolCallCount
+                            };
+                            break;
+                        }
+
+                        rlmPrintCaptureFlushTrailing(phase.printCapture);
+                        const complete = resumed as MontyComplete;
+                        phase = {
+                            type: "block_complete",
+                            blockState,
+                            result: {
+                                output: rlmValueFormat(complete.output),
+                                printOutput: phase.printOutput,
+                                toolCallCount: nextToolCallCount
+                            }
+                        };
+                    } catch (error) {
+                        if (isInferenceAbortError(error, abortSignal)) {
+                            throw error;
+                        }
+                        await runPythonFailureHandle(blockState, error);
+                        phase = restoreOnly
+                            ? { type: "done", reason: "complete" }
+                            : { type: "inference", iteration: blockState.iteration + 1 };
+                    }
+                    break;
+                }
+                case "block_complete": {
+                    const { blockState, result } = phase;
+                    await appendHistoryRecord?.({
+                        type: "rlm_complete",
+                        at: Date.now(),
+                        toolCallId: blockState.toolCallId,
+                        output: result.output,
+                        printOutput: [...result.printOutput],
+                        toolCallCount: result.toolCallCount,
+                        isError: false
+                    });
+                    context.messages.push(rlmNoToolsResultMessageBuild({ result }));
+
+                    if (result.skipTurn) {
+                        context.messages.push({
+                            role: "user",
+                            content: [{ type: "text", text: "Turn skipped" }],
+                            timestamp: Date.now()
+                        });
+                        logger.debug("event: Skip detected, appended 'Turn skipped' and breaking inference loop");
+                        phase = { type: "done", reason: "skip_turn" };
+                        break;
+                    }
+
+                    if (result.steeringInterrupt) {
+                        phase = restoreOnly
+                            ? { type: "done", reason: "complete" }
+                            : { type: "inference", iteration: blockState.iteration + 1 };
+                        break;
+                    }
+
+                    if (blockState.blockIndex + 1 < blockState.blocks.length) {
+                        phase = {
+                            type: "vm_start",
+                            blockState: {
+                                ...blockState,
+                                blockIndex: blockState.blockIndex + 1,
+                                toolCallId: createId()
+                            }
+                        };
+                        break;
+                    }
+
+                    if (blockState.iteration === MAX_TOOL_ITERATIONS - 1) {
+                        logger.debug(`event: Tool loop limit reached iteration=${blockState.iteration}`);
+                        toolLoopExceeded = true;
+                        phase = { type: "done", reason: "tool_loop_limit" };
+                        break;
+                    }
+
+                    phase = restoreOnly
+                        ? { type: "done", reason: "complete" }
+                        : { type: "inference", iteration: blockState.iteration + 1 };
+                    break;
+                }
+            }
         }
         logger.debug("event: Inference loop completed");
     } catch (error) {
@@ -780,6 +1178,12 @@ function messageAssistantTextRewrite(message: InferenceContext["messages"][numbe
         return;
     }
     message.content = nextContent;
+}
+
+function abortErrorBuild(): Error {
+    const error = new Error("Operation aborted.");
+    error.name = "AbortError";
+    return error;
 }
 
 function isInferenceAbortError(error: unknown, signal?: AbortSignal): boolean {

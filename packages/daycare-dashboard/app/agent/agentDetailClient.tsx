@@ -18,6 +18,7 @@ import {
   type AgentHistoryRecord,
   type AgentSummary,
   type EngineEvent,
+  type FileReference,
   type SessionSummary,
   type SignalSubscription
 } from "@/lib/engine-client";
@@ -149,15 +150,15 @@ export default function AgentDetailPage() {
     records.forEach((record) => {
       if (record.type === "user_message") {
         userMessages += 1;
-        files += record.files.length;
+        files += historyFilesResolve(record.files).length;
       }
       if (record.type === "assistant_message") {
         assistantMessages += 1;
-        files += record.files.length;
+        files += historyFilesResolve(record.files).length;
       }
       if (record.type === "tool_result") {
         toolResults += 1;
-        files += record.output.files.length;
+        files += historyToolResultOutputResolve(record.output).files.length;
       }
       if (
         record.type === "rlm_start" ||
@@ -500,17 +501,19 @@ function formatRecordSummary(record: AgentHistoryRecord) {
     case "reset":
       return record.message ? truncateText(record.message, 140) : "Agent reset";
     case "user_message":
+      const userFiles = historyFilesResolve(record.files);
       return record.text
         ? truncateText(record.text, 140)
-        : record.files.length
-          ? `${record.files.length} file(s)`
+        : userFiles.length
+          ? `${userFiles.length} file(s)`
           : "User message";
     case "assistant_message":
+      const toolCalls = historyToolCallsResolve(record);
       if (record.text) {
         return truncateText(record.text, 140);
       }
-      if (record.toolCalls.length) {
-        return `${record.toolCalls.length} tool call${record.toolCalls.length === 1 ? "" : "s"}`;
+      if (toolCalls.length) {
+        return `${toolCalls.length} tool call${toolCalls.length === 1 ? "" : "s"}`;
       }
       return "Assistant message";
     case "tool_result":
@@ -553,6 +556,7 @@ function renderRecordDetails(record: AgentHistoryRecord) {
         </>
       );
     case "user_message":
+      const userFiles = historyFilesResolve(record.files);
       return (
         <>
           <RecordSection title="Message">
@@ -562,10 +566,12 @@ function renderRecordDetails(record: AgentHistoryRecord) {
               <p className="text-sm text-muted-foreground">No text provided.</p>
             )}
           </RecordSection>
-          {renderFilesSection(record.files)}
+          {renderFilesSection(userFiles)}
         </>
       );
     case "assistant_message":
+      const toolCalls = historyToolCallsResolve(record);
+      const assistantFiles = historyFilesResolve(record.files);
       return (
         <>
           <RecordSection title="Response">
@@ -575,11 +581,12 @@ function renderRecordDetails(record: AgentHistoryRecord) {
               <p className="text-sm text-muted-foreground">No assistant text captured.</p>
             )}
           </RecordSection>
-          {renderToolCallsSection(record.toolCalls)}
-          {renderFilesSection(record.files)}
+          {renderToolCallsSection(toolCalls)}
+          {renderFilesSection(assistantFiles)}
         </>
       );
     case "tool_result":
+      const output = historyToolResultOutputResolve(record.output);
       return (
         <>
           <RecordSection title="Tool result">
@@ -589,9 +596,9 @@ function renderRecordDetails(record: AgentHistoryRecord) {
             />
           </RecordSection>
           <RecordSection title="Tool output">
-            <JsonBlock value={record.output.toolMessage} />
+            <JsonBlock value={output.toolMessage} />
           </RecordSection>
-          {renderFilesSection(record.output.files)}
+          {renderFilesSection(output.files)}
         </>
       );
     case "rlm_start":
@@ -626,7 +633,7 @@ function renderRecordDetails(record: AgentHistoryRecord) {
           <RecordSection title="Arguments">
             <JsonBlock value={record.toolArgs} />
           </RecordSection>
-          {renderPrintOutputSection(record.printOutput)}
+          {renderPrintOutputSection(historyPrintOutputResolve(record.printOutput))}
         </>
       );
     case "rlm_tool_result":
@@ -672,7 +679,7 @@ function renderRecordDetails(record: AgentHistoryRecord) {
               <p className="text-sm text-muted-foreground">No output captured.</p>
             )}
           </RecordSection>
-          {renderPrintOutputSection(record.printOutput)}
+          {renderPrintOutputSection(historyPrintOutputResolve(record.printOutput))}
         </>
       );
     case "assistant_rewrite":
@@ -766,7 +773,8 @@ function renderPrintOutputSection(printOutput: string[]) {
 }
 
 function buildToolResultMeta(record: Extract<AgentHistoryRecord, { type: "tool_result" }>) {
-  const toolMessageMeta = parseToolMessage(record.output.toolMessage);
+  const output = historyToolResultOutputResolve(record.output);
+  const toolMessageMeta = parseToolMessage(output.toolMessage);
   const items = [
     { label: "Tool call id", value: record.toolCallId },
     ...(toolMessageMeta.name ? [{ label: "Tool name", value: toolMessageMeta.name }] : []),
@@ -775,6 +783,37 @@ function buildToolResultMeta(record: Extract<AgentHistoryRecord, { type: "tool_r
     ...(toolMessageMeta.type ? [{ label: "Type", value: toolMessageMeta.type }] : [])
   ];
   return items;
+}
+
+function historyFilesResolve(value: unknown): FileReference[] {
+  return Array.isArray(value) ? (value as FileReference[]) : [];
+}
+
+function historyToolCallsResolve(
+  record: Extract<AgentHistoryRecord, { type: "assistant_message" }>
+): Record<string, unknown>[] {
+  const candidate = (record as { toolCalls?: unknown }).toolCalls;
+  return Array.isArray(candidate) ? (candidate as Record<string, unknown>[]) : [];
+}
+
+function historyToolResultOutputResolve(value: unknown): { toolMessage: Record<string, unknown>; files: FileReference[] } {
+  if (typeof value !== "object" || value === null) {
+    return { toolMessage: {}, files: [] };
+  }
+  const output = value as { toolMessage?: unknown; files?: unknown };
+  const toolMessage =
+    typeof output.toolMessage === "object" && output.toolMessage !== null
+      ? (output.toolMessage as Record<string, unknown>)
+      : {};
+  const files = historyFilesResolve(output.files);
+  return { toolMessage, files };
+}
+
+function historyPrintOutputResolve(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is string => typeof entry === "string");
 }
 
 function parseToolCall(toolCall: Record<string, unknown>) {

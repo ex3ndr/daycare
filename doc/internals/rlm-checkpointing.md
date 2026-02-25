@@ -43,31 +43,31 @@ sequenceDiagram
     RLM-->>LLM: tool_result (run_python)
 ```
 
-## Restore Flow
+## Restore Flow (Flat Agent Loop)
 
 ```mermaid
 sequenceDiagram
     participant Agent
     participant History
-    participant VM as Restored VM
+    participant Loop as agentLoopRun
+    participant VM as Monty VM
     participant Tool as Inner Tool
 
     Note over Agent: Process restarted
-    Agent->>History: resolve pending rlm_start
-    History-->>Agent: start + latest rlm_tool_call
-    Agent->>VM: MontySnapshot.load(snapshot)
-    Agent->>VM: resume(exception: "Process was restarted")
-    VM->>Agent: next snapshot or complete
-    alt next snapshot
-        Agent->>History: rlm_tool_call
-        Agent->>Tool: execute()
-        Tool-->>Agent: result
-        Agent->>History: rlm_tool_result
-        Agent->>VM: resume(result)
+    Agent->>History: resolve pending phase
+    alt assistant_message has run_python with no rlm_start
+        History-->>Agent: vm_start phase
+        Agent->>Loop: resume at VM_START
+        Loop->>History: rlm_start
+    else rlm_start + latest rlm_tool_call
+        History-->>Agent: tool_call phase
+        Agent->>VM: load snapshot + resume(exception: "Process was restarted")
+        VM-->>Loop: next snapshot or complete
+    else rlm_start with no snapshot
+        History-->>Agent: error phase
+        Agent->>History: rlm_complete(isError=true)
     end
-    Agent->>History: rlm_complete
-    Agent->>History: tool_result (synthetic run_python completion)
-    Agent->>History: user_message (<system_message origin="rlm_restore">...)
+    Loop->>History: rlm_tool_call / rlm_tool_result / rlm_complete
 ```
 
 ## Record Reference
@@ -83,9 +83,7 @@ sequenceDiagram
 
 ## Startup Recovery Behavior
 
-- Startup scans history for an `rlm_start` without a matching `rlm_complete`.
-- If a snapshot exists, execution resumes from that snapshot and injects a runtime error (`Process was restarted`) into the pending Python tool call.
-- If no snapshot exists, recovery marks the run as failed (`rlm_complete` with error).
-- In both paths, history is completed with:
-  - synthetic outer `tool_result` for `run_python`
-  - synthetic system-origin user message with `origin="rlm_restore"`
+- Startup resolves one pending flat-loop phase via `agentLoopPendingPhaseResolve`.
+- `vm_start` phase: re-parse `<run_python>` blocks from the latest `assistant_message` and continue from VM start.
+- `tool_call` phase: load the latest `rlm_tool_call.snapshot`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
+- `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).

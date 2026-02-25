@@ -18,11 +18,8 @@ import { messageExtractText } from "../messages/messageExtractText.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { executablePromptExpand } from "../modules/executablePrompts/executablePromptExpand.js";
 import { montyRuntimePreambleBuild } from "../modules/monty/montyRuntimePreambleBuild.js";
-import { rlmErrorTextBuild } from "../modules/rlm/rlmErrorTextBuild.js";
 import { rlmExecute } from "../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
-import { rlmRestore } from "../modules/rlm/rlmRestore.js";
-import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
 import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
@@ -37,8 +34,8 @@ import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
-import { agentHistoryPendingRlmResolve } from "./ops/agentHistoryPendingRlmResolve.js";
 import type { AgentInbox } from "./ops/agentInbox.js";
+import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
 import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
@@ -1036,8 +1033,8 @@ export class Agent {
      */
     private async completePendingToolCalls(reason: "session_crashed" | "user_aborted"): Promise<void> {
         const records = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
-        const pendingRlm = reason === "session_crashed" ? agentHistoryPendingRlmResolve(records) : null;
-        if (!pendingRlm) {
+        const pendingPhase = reason === "session_crashed" ? agentLoopPendingPhaseResolve(records) : null;
+        if (!pendingPhase) {
             return;
         }
 
@@ -1045,64 +1042,82 @@ export class Agent {
             await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
             records.push(record);
         };
-        const toolCall = pendingRlm.start.toolCallId;
-        let toolResultText = "";
-        let restoreMessage = "RLM execution completed after restart. Output: (empty)";
-
-        if (!pendingRlm.lastSnapshot) {
-            const message = "Process was restarted before any tool call";
-            await appendRecord(rlmHistoryCompleteErrorRecordBuild(toolCall, message));
-            toolResultText = rlmErrorTextBuild(new Error(message));
-            restoreMessage = `RLM execution failed after restart. ${message}`;
-        } else {
-            const source =
-                this.descriptor.type === "user"
-                    ? this.descriptor.connector
-                    : this.descriptor.type === "system"
-                      ? this.descriptor.tag
-                      : this.descriptor.type;
-            try {
-                // Create steering check callback that consumes steering if present
-                const checkSteering = () => {
-                    const steering = this.inbox.consumeSteering();
-                    if (steering) {
-                        return { text: steering.text, origin: steering.origin };
-                    }
-                    return null;
-                };
-                const restored = await rlmRestore(
-                    pendingRlm.lastSnapshot,
-                    pendingRlm.start,
-                    this.agentSystem.toolResolver,
-                    this.rlmRestoreContextBuild(source),
-                    appendRecord,
-                    checkSteering
-                );
-                toolResultText = rlmResultTextBuild(restored);
-                restoreMessage = `RLM execution completed after restart. Output: ${
-                    restored.output.length > 0 ? restored.output : "(empty)"
-                }`;
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                await appendRecord(
-                    rlmHistoryCompleteErrorRecordBuild(
-                        toolCall,
-                        message,
-                        pendingRlm.lastSnapshot.printOutput,
-                        pendingRlm.lastSnapshot.toolCallCount
-                    )
-                );
-                toolResultText = rlmErrorTextBuild(error);
-                restoreMessage = `RLM execution failed after restart. ${message}`;
-            }
+        if (pendingPhase.type === "error") {
+            const completionMessage = pendingPhase.message;
+            await appendRecord(
+                rlmHistoryCompleteErrorRecordBuild(pendingPhase.start.toolCallId, completionMessage, [], 0)
+            );
+            const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+            const historyMessages = await this.buildHistoryContext(history);
+            this.state.context = {
+                messages: historyMessages
+            };
+            this.state.updatedAt = Date.now();
+            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
+            logger.warn(
+                {
+                    agentId: this.id,
+                    reason,
+                    toolCallId: pendingPhase.start.toolCallId,
+                    phase: pendingPhase.type
+                },
+                "event: Completed pending loop phase in history"
+            );
+            return;
         }
 
-        const restoreText = [restoreMessage, toolResultText].filter((part) => part.trim().length > 0).join("\n\n");
-        await appendRecord({
-            type: "user_message",
-            at: Date.now(),
-            text: messageBuildSystemText(restoreText, "rlm_restore"),
-            files: []
+        const source =
+            this.descriptor.type === "user"
+                ? this.descriptor.connector
+                : this.descriptor.type === "system"
+                  ? this.descriptor.tag
+                  : this.descriptor.type;
+        const pluginManager = this.agentSystem.pluginManager;
+        const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
+        const skills = new Skills({
+            configRoot: configSkillsRoot,
+            pluginManager,
+            userPersonalRoot: this.userHome.skillsPersonal,
+            userActiveRoot: this.userHome.skillsActive,
+            agentsRoot: path.join(os.homedir(), ".agents", "skills")
+        });
+        const pendingContext: InferenceContext = {
+            messages: await this.buildHistoryContext(records)
+        };
+        const entry: AgentMessage = {
+            id: createId(),
+            receivedAt: Date.now(),
+            context: {},
+            message: {
+                text: "",
+                rawText: "",
+                files: []
+            }
+        };
+        await agentLoopRun({
+            entry,
+            agent: this,
+            source,
+            context: pendingContext,
+            connector: null,
+            connectorRegistry: this.agentSystem.connectorRegistry,
+            inferenceRouter: this.agentSystem.inferenceRouter,
+            toolResolver: this.agentSystem.toolResolver,
+            authStore: this.agentSystem.authStore,
+            eventBus: this.agentSystem.eventBus,
+            assistant: this.agentSystem.config.current.settings.assistant ?? null,
+            agentSystem: this.agentSystem,
+            heartbeats: this.agentSystem.heartbeats,
+            memory: this.agentSystem.memory,
+            skills,
+            skillsActiveRoot: this.userHome.skillsActive,
+            skillsPersonalRoot: this.userHome.skillsPersonal,
+            providersForAgent: [],
+            logger,
+            appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
+            notifySubagentFailure: (failureReason, error) => this.notifySubagentFailure(failureReason, error),
+            initialPhase: pendingPhase,
+            stopAfterPendingPhase: false
         });
 
         const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
@@ -1116,9 +1131,9 @@ export class Agent {
             {
                 agentId: this.id,
                 reason,
-                toolCallId: toolCall
+                phase: pendingPhase.type
             },
-            "event: Completed pending tool call in history"
+            "event: Completed pending loop phase in history"
         );
     }
 

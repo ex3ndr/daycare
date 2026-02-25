@@ -2,7 +2,7 @@ import { MontyRuntimeError, MontySyntaxError, MontyTypingError } from "@pydantic
 
 /**
  * Formats an RLM execution error into the user-facing run_python tool text.
- * Expects: error is thrown by rlmExecute/rlmRestore or a delegated tool.
+ * Expects: error is thrown by rlmExecute or a delegated tool.
  */
 export function rlmErrorTextBuild(error: unknown): string {
     if (error instanceof MontySyntaxError) {

@@ -327,7 +327,8 @@ export function buildExecTool(): ToolDefinition {
                 timeoutMs: payload.timeoutMs,
                 env: payload.env,
                 packageManagers: payload.packageManagers,
-                allowedDomains: payload.allowedDomains
+                allowedDomains: payload.allowedDomains ?? [],
+                signal: toolContext.abortSignal
             });
             const text = formatExecOutput(result.stdout, result.stderr, result.failed);
             const toolMessage = buildToolMessage(toolCall, text, result.failed, {

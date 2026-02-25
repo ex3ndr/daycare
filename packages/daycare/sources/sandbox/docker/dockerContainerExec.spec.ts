@@ -85,4 +85,29 @@ describe("dockerContainerExec", () => {
             })
         ).rejects.toThrow("maxBufferBytes");
     });
+
+    it("aborts when signal is cancelled", async () => {
+        const stream = new PassThrough();
+        const execHandle = {
+            start: vi.fn().mockResolvedValue(stream),
+            inspect: vi.fn().mockResolvedValue({ ExitCode: 0 })
+        };
+        const container = {
+            exec: vi.fn().mockResolvedValue(execHandle)
+        } as unknown as Docker.Container;
+        const docker = {
+            modem: {
+                demuxStream: vi.fn()
+            }
+        } as unknown as Docker;
+        const abortController = new AbortController();
+
+        const execution = dockerContainerExec(docker, container, {
+            command: ["echo", "ok"],
+            signal: abortController.signal
+        });
+        abortController.abort();
+
+        await expect(execution).rejects.toMatchObject({ name: "AbortError" });
+    });
 });

@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext, ToolExecutionResult, ToolVisibilityContext } from "@/types";
 import { contextForAgent } from "../agents/context.js";
@@ -378,6 +378,61 @@ describe("ToolResolver", () => {
 
         expect(result.toolMessage.isError).toBe(true);
         expect(messageText(result)).toContain("does not match its return schema");
+    });
+
+    it("throws AbortError when execution signal is already aborted", async () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: async () => okResult("read_file", "ok")
+        });
+        const abortController = new AbortController();
+        abortController.abort();
+
+        await expect(
+            resolver.execute(
+                {
+                    type: "toolCall",
+                    id: "call-3",
+                    name: "read_file",
+                    arguments: { path: "/tmp/a.txt" }
+                },
+                toolExecutionContextCreate({ abortSignal: abortController.signal })
+            )
+        ).rejects.toMatchObject({ name: "AbortError" });
+    });
+
+    it("throws AbortError when execution signal aborts during tool execution", async () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: vi.fn(async () => {
+                return await new Promise<ToolExecutionResult>(() => undefined);
+            })
+        });
+        const abortController = new AbortController();
+        const execution = resolver.execute(
+            {
+                type: "toolCall",
+                id: "call-4",
+                name: "read_file",
+                arguments: { path: "/tmp/a.txt" }
+            },
+            toolExecutionContextCreate({ abortSignal: abortController.signal })
+        );
+        abortController.abort();
+
+        await expect(execution).rejects.toMatchObject({ name: "AbortError" });
     });
 });
 

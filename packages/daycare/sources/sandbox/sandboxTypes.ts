@@ -59,6 +59,7 @@ export type SandboxExecArgs = {
     env?: Record<string, string | number | boolean>;
     packageManagers?: SandboxPackageManager[];
     allowedDomains?: string[];
+    signal?: AbortSignal;
 };
 
 export type SandboxExecResult = {

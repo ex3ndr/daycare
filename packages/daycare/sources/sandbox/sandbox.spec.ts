@@ -167,14 +167,6 @@ describe("Sandbox", () => {
         expect(read.content.equals(Buffer.from([0, 1, 2, 3]))).toBe(true);
     });
 
-    it("validates domain allowlist before execution", async () => {
-        await expect(
-            sandbox.exec({
-                command: "echo ok"
-            })
-        ).rejects.toThrow("allowedDomains must include at least one explicit domain");
-    });
-
     it("rejects wildcard domains", async () => {
         await expect(
             sandbox.exec({

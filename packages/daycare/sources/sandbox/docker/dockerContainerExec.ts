@@ -61,7 +61,7 @@ export async function dockerContainerExec(
         outputStream.resume();
     }
 
-    await streamWait(outputStream, args.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    await streamWait(outputStream, args.timeoutMs ?? DEFAULT_TIMEOUT_MS, args.signal);
 
     stdoutStream.end();
     stderrStream.end();
@@ -98,13 +98,22 @@ function totalBytes(chunks: Buffer[]): number {
     return chunks.reduce((acc, chunk) => acc + chunk.length, 0);
 }
 
-async function streamWait(stream: Readable, timeoutMs: number): Promise<void> {
+async function streamWait(stream: Readable, timeoutMs: number, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) {
+        stream.destroy();
+        throw abortErrorBuild();
+    }
+
     await new Promise<void>((resolve, reject) => {
         let settled = false;
         const timer = setTimeout(() => {
             const timeoutError = new Error(`docker exec timed out after ${timeoutMs}ms`);
             stream.destroy(timeoutError);
         }, timeoutMs);
+        const onAbort = () => {
+            stream.destroy(abortErrorBuild());
+        };
+        signal?.addEventListener("abort", onAbort, { once: true });
 
         const cleanup = () => {
             if (settled) {
@@ -112,6 +121,7 @@ async function streamWait(stream: Readable, timeoutMs: number): Promise<void> {
             }
             settled = true;
             clearTimeout(timer);
+            signal?.removeEventListener("abort", onAbort);
             stream.removeListener("end", onDone);
             stream.removeListener("close", onDone);
             stream.removeListener("finish", onDone);
@@ -133,4 +143,10 @@ async function streamWait(stream: Readable, timeoutMs: number): Promise<void> {
         stream.on("finish", onDone);
         stream.on("error", onError);
     });
+}
+
+function abortErrorBuild(): Error {
+    const error = new Error("Operation aborted.");
+    error.name = "AbortError";
+    return error;
 }

@@ -11,9 +11,7 @@ describe("sandboxAllowedDomainsValidate", () => {
         expect(sandboxAllowedDomainsValidate(["example.com"])).toEqual([]);
     });
 
-    it("requires at least one explicit domain", () => {
-        expect(sandboxAllowedDomainsValidate([])).toEqual([
-            "allowedDomains must include at least one explicit domain."
-        ]);
+    it("allows empty domain lists to keep networking disabled", () => {
+        expect(sandboxAllowedDomainsValidate([])).toEqual([]);
     });
 });

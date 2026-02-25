@@ -30,6 +30,7 @@ export async function runInSandbox(
         home?: string;
         timeoutMs?: number;
         maxBufferBytes?: number;
+        signal?: AbortSignal;
     } = {}
 ): Promise<{ stdout: string; stderr: string }> {
     const defaultEnableWeakerNestedSandbox = await sandboxDockerEnvironmentIs();
@@ -56,7 +57,8 @@ export async function runInSandbox(
             env,
             timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
             maxBuffer: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES,
-            encoding: "utf8"
+            encoding: "utf8",
+            signal: options.signal
         });
         return {
             stdout: result.stdout,

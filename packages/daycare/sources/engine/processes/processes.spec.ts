@@ -127,21 +127,24 @@ describe("Processes", () => {
     );
 
     it(
-        "rejects process creation when allowedDomains are omitted",
+        "defaults process allowedDomains to an empty allowlist when omitted",
         async () => {
             const manager = await createManager(baseDir);
+            const created = await manager.create(
+                {
+                    command: `node -e "console.log('network-without-domains')"`,
+                    keepAlive: false,
+                    cwd: workspaceDir,
+                    userId: "user-1"
+                },
+                permissions
+            );
 
-            await expect(
-                manager.create(
-                    {
-                        command: `node -e "console.log('network-without-domains')"`,
-                        keepAlive: false,
-                        cwd: workspaceDir,
-                        userId: "user-1"
-                    },
-                    permissions
-                )
-            ).rejects.toThrow("allowedDomains must include at least one explicit domain.");
+            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
+            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
+                network?: { allowedDomains?: string[] };
+            };
+            expect(config.network?.allowedDomains).toEqual([]);
         },
         TEST_TIMEOUT_MS
     );

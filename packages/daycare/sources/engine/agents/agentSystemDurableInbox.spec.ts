@@ -3,7 +3,14 @@ import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
-import type { AgentDescriptor, AgentInboxItem, AgentInboxResult, AgentPostTarget, Context } from "@/types";
+import type {
+    AgentDescriptor,
+    AgentHistoryRecord,
+    AgentInboxItem,
+    AgentInboxResult,
+    AgentPostTarget,
+    Context
+} from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { Storage } from "../../storage/storage.js";
@@ -21,7 +28,9 @@ import type { PluginManager } from "../plugins/manager.js";
 import { Signals } from "../signals/signals.js";
 import { AgentSystem } from "./agentSystem.js";
 import { contextForUser } from "./context.js";
+import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
+import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { inboxItemDeserialize } from "./ops/inboxItemDeserialize.js";
 
 describe("AgentSystem durable inboxes", () => {
@@ -100,6 +109,97 @@ describe("AgentSystem durable inboxes", () => {
                 const afterReplay = await second.storage.inbox.findByAgentId(agentId);
                 expect(afterReplay).toEqual([]);
             });
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("drops stale in-flight durable row when pending rlm phase is recovered", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
+        try {
+            const first = await harnessCreate(dir, {
+                inferenceRouter: {
+                    complete: vi.fn(async () => inferenceResponse("unexpected-replay"))
+                } as unknown as InferenceRouter
+            });
+            await first.agentSystem.load();
+            await first.agentSystem.start();
+            const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-pending-recovery" };
+            await postAndAwait(first.agentSystem, { descriptor }, { type: "reset", message: "seed" });
+            const agentId = await agentIdForTarget(first.agentSystem, { descriptor });
+            const startedAt = Date.now();
+            await first.storage.appendHistory(agentId, {
+                type: "user_message",
+                at: startedAt - 2,
+                text: "wait for one minute",
+                files: []
+            });
+            await first.storage.appendHistory(agentId, {
+                type: "assistant_message",
+                at: startedAt - 1,
+                text: "<run_python>wait(60)</run_python>",
+                files: [],
+                tokens: null
+            });
+            await first.storage.appendHistory(agentId, {
+                type: "rlm_start",
+                at: startedAt,
+                toolCallId: "run-1",
+                code: "wait(60)",
+                preamble: "preamble"
+            });
+            await first.storage.inbox.insert(
+                "inflight-row",
+                agentId,
+                startedAt + 1,
+                "message",
+                JSON.stringify({
+                    type: "message",
+                    message: { text: "wait for one minute" },
+                    context: { messageId: "m-wait" }
+                })
+            );
+            const firstCtx = await contextForAgentIdRequire(first.agentSystem, agentId);
+            const firstState = await agentStateRead(first.storage, firstCtx);
+            if (!firstState) {
+                throw new Error("Expected persisted state for pending recovery test");
+            }
+            await agentStateWrite(first.storage, firstCtx, {
+                ...firstState,
+                state: "active",
+                updatedAt: Date.now()
+            });
+
+            const complete = vi.fn(async () => inferenceResponse("unexpected-replay"));
+            const second = await harnessCreate(dir, {
+                inferenceRouter: {
+                    complete
+                } as unknown as InferenceRouter
+            });
+            await second.agentSystem.load();
+            await second.agentSystem.start();
+
+            await vi.waitFor(async () => {
+                const rows = await second.storage.inbox.findByAgentId(agentId);
+                expect(rows).toEqual([]);
+            });
+            const ctx = await contextForAgentIdRequire(second.agentSystem, agentId);
+            await vi.waitFor(async () => {
+                const history = await agentHistoryLoad(second.config, ctx);
+                expect(
+                    history.some(
+                        (record) => record.type === "rlm_complete" && record.toolCallId === "run-1" && record.isError
+                    )
+                ).toBe(true);
+            });
+
+            const history = await agentHistoryLoad(second.config, ctx);
+            const userMessages = history.filter(
+                (record): record is Extract<AgentHistoryRecord, { type: "user_message" }> =>
+                    record.type === "user_message"
+            );
+            expect(userMessages.filter((record) => record.text === "wait for one minute")).toHaveLength(1);
+            expect(complete).not.toHaveBeenCalled();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

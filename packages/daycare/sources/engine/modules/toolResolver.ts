@@ -54,6 +54,9 @@ export class ToolResolver {
         logger.debug(
             `execute: execute() called toolName=${toolCall.name} toolCallId=${toolCall.id} argsPreview=${argsPreview}`
         );
+        if (context.abortSignal?.aborted) {
+            throw abortErrorBuild();
+        }
         const entry = this.tools.get(toolCall.name);
         if (!entry) {
             const availableTools = Array.from(this.tools.keys()).join(",");
@@ -70,7 +73,7 @@ export class ToolResolver {
             const args = validateToolCall([entry.tool], toolCall);
             logger.debug(`execute: Arguments validated, executing tool toolName=${toolCall.name}`);
             const startTime = Date.now();
-            const result = await entry.execute(args, context, toolCall);
+            const result = await promiseAbortRace(entry.execute(args, context, toolCall), context.abortSignal);
             const duration = Date.now() - startTime;
             if (!Value.Check(entry.returns.schema, result.typedResult)) {
                 throw new Error(`Tool "${toolCall.name}" returned data that does not match its return schema.`);
@@ -95,6 +98,10 @@ export class ToolResolver {
             }
             return toolResultTruncate(result);
         } catch (error) {
+            if (abortErrorIs(error, context.abortSignal)) {
+                logger.info({ tool: toolCall.name }, "event: Tool execution aborted");
+                throw error;
+            }
             const message = error instanceof Error ? error.message : "Tool execution failed.";
             logger.debug(`error: Tool execution threw error toolName=${toolCall.name} error=${String(error)}`);
             logger.warn({ tool: toolCall.name, error }, "error: Tool execution failed");
@@ -258,4 +265,46 @@ function toolMessageHasText(message: ToolResultMessage): boolean {
 
 function toolMessageContentNormalize(message: ToolResultMessage): ToolResultMessage["content"] {
     return Array.isArray(message.content) ? message.content : [];
+}
+
+function promiseAbortRace<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+    if (!signal) {
+        return promise;
+    }
+    if (signal.aborted) {
+        return Promise.reject(abortErrorBuild());
+    }
+
+    return new Promise<T>((resolve, reject) => {
+        const onAbort = () => {
+            reject(abortErrorBuild());
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+
+        promise.then(resolve, reject).finally(() => {
+            signal.removeEventListener("abort", onAbort);
+        });
+    });
+}
+
+function abortErrorIs(error: unknown, signal?: AbortSignal): boolean {
+    if (signal?.aborted) {
+        return true;
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+        return true;
+    }
+    if (typeof error === "object" && error !== null) {
+        const name = (error as { name?: unknown }).name;
+        if (typeof name === "string" && name === "AbortError") {
+            return true;
+        }
+    }
+    return false;
+}
+
+function abortErrorBuild(): Error {
+    const error = new Error("Operation aborted.");
+    error.name = "AbortError";
+    return error;
 }

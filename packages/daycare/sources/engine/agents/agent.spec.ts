@@ -1,10 +1,13 @@
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { Tool } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
+import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 import type {
     AgentDescriptor,
+    AgentHistoryRecord,
     AgentInboxItem,
     AgentInboxResult,
     AgentPostTarget,
@@ -18,11 +21,17 @@ import { configResolve } from "../../config/configResolve.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
+import type { Heartbeats } from "../heartbeat/heartbeats.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
+import { montyRuntimePreambleBuild } from "../modules/monty/montyRuntimePreambleBuild.js";
+import { RLM_LIMITS } from "../modules/rlm/rlmLimits.js";
+import { rlmPreambleNormalize } from "../modules/rlm/rlmPreambleNormalize.js";
+import { rlmSnapshotEncode } from "../modules/rlm/rlmSnapshotEncode.js";
+import { rlmStepStart } from "../modules/rlm/rlmStepStart.js";
 import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
@@ -927,6 +936,137 @@ describe("Agent", () => {
         }
     });
 
+    it("resumes pending rlm tool_call on restore and continues inference from python_result", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const complete = vi.fn(async (..._args: unknown[]) => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant",
+                    content: [{ type: "text", text: "continued after restart" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "slack",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "reset",
+                    message: "seed session"
+                }
+            );
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
+            const ctx = await contextForAgentIdRequire(agentSystem, agentId);
+
+            const startedAt = Date.now();
+            const snapshot = pendingToolCallSnapshotBuild();
+            const preamble = rlmPreambleNormalize(montyRuntimePreambleBuild([waitToolBuild()]));
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "assistant_message",
+                at: startedAt - 1,
+                text: "<run_python>wait(300)</run_python>",
+                files: [],
+                tokens: null
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_start",
+                at: startedAt,
+                toolCallId: "tool-call-1",
+                code: "wait(300)",
+                preamble
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_tool_call",
+                at: startedAt + 1,
+                toolCallId: "tool-call-1",
+                snapshot,
+                printOutput: ["waiting..."],
+                toolCallCount: 2,
+                toolName: "wait",
+                toolArgs: { seconds: 300 }
+            });
+
+            const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
+            expect(restoreResult).toEqual({ type: "restore", ok: true });
+
+            const history = await agentHistoryLoad(config, ctx);
+            const completed = [...history]
+                .reverse()
+                .find(
+                    (record): record is Extract<AgentHistoryRecord, { type: "rlm_complete" }> =>
+                        record.type === "rlm_complete" && record.toolCallId === "tool-call-1"
+                );
+            expect(completed).toBeTruthy();
+            expect(completed?.isError).toBe(true);
+            expect(completed?.error).toContain("Process was restarted");
+            expect(completed?.toolCallCount).toBe(2);
+            expect(completed?.printOutput).toEqual(["waiting..."]);
+            expect(complete).toHaveBeenCalledTimes(1);
+            const recoveryContext = complete.mock.calls[0]?.[0] as { messages?: unknown[] } | undefined;
+            const hasPythonResult = recoveryContext?.messages?.some((message) => {
+                if (typeof message !== "object" || message === null) {
+                    return false;
+                }
+                const role = (message as { role?: unknown }).role;
+                const content = (message as { content?: unknown }).content;
+                if (role !== "user" || !Array.isArray(content)) {
+                    return false;
+                }
+                return content.some(
+                    (part) =>
+                        typeof part === "object" &&
+                        part !== null &&
+                        "type" in part &&
+                        "text" in part &&
+                        (part as { type?: string; text?: string }).type === "text" &&
+                        (part as { text?: string }).text?.includes("<python_result>") &&
+                        (part as { text?: string }).text?.includes("Process was restarted")
+                );
+            });
+            expect(hasPythonResult).toBe(true);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("uses permanent agent workspaceDir as workingDir on restore", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
@@ -1065,6 +1205,34 @@ function historyHasSignalText(records: Array<{ type: string; text?: string }>): 
         (record) =>
             record.type === "user_message" && typeof record.text === "string" && record.text.includes("[signal]")
     );
+}
+
+function pendingToolCallSnapshotBuild(): string {
+    const preamble = rlmPreambleNormalize(montyRuntimePreambleBuild([waitToolBuild()]));
+    const started = rlmStepStart({
+        code: "wait(300)",
+        preamble,
+        externalFunctions: ["wait"],
+        limits: RLM_LIMITS,
+        printCallback: () => undefined
+    });
+    if (!("functionName" in started.progress)) {
+        throw new Error("Expected Monty to pause at wait() tool call");
+    }
+    return rlmSnapshotEncode(started.progress.dump());
+}
+
+function waitToolBuild(): Tool {
+    return {
+        name: "wait",
+        description: "wait tool",
+        parameters: Type.Object(
+            {
+                seconds: Type.Number()
+            },
+            { additionalProperties: false }
+        )
+    };
 }
 
 function inferenceRouterStubBuild(): InferenceRouter {
