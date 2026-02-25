@@ -1,4 +1,4 @@
-import { sandboxPathContainerToHostMap } from "../util/sandboxPathContainerToHostMap.js";
+import { sandboxPathContainerToHostMap } from "./sandboxPathContainerToHostMap.js";
 
 /**
  * Rewrites a container /home/<userId> path into its host mounted home directory path.

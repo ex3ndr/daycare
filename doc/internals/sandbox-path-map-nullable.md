@@ -20,8 +20,8 @@ Implementation files (generic):
 
 Implementation files (sandbox adapters):
 
-- `packages/daycare/sources/util/sandboxPathHostToContainerMap.ts`
-- `packages/daycare/sources/util/sandboxPathContainerToHostMap.ts`
+- `packages/daycare/sources/sandbox/sandboxPathHostToContainerMap.ts`
+- `packages/daycare/sources/sandbox/sandboxPathContainerToHostMap.ts`
 
 These helpers map only known mount prefixes:
 

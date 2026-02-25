@@ -1,4 +1,4 @@
-import { pathMountMapHostToMapped } from "./pathMountMapHostToMapped.js";
+import { pathMountMapHostToMapped } from "../util/pathMountMapHostToMapped.js";
 
 /**
  * Maps a host absolute path to its container mount path.
