@@ -49,6 +49,60 @@ result = write_output(name="rows", format="json", content=rows_json)
 print(result["path"])  # e.g. ~/outputs/20250615103045-rows.json
 ```
 
+## Context Management
+
+Avoid emitting large amounts of text from Python back into your own context window. When gathering information from multiple sources, **write intermediate results to files** and combine them in Python — only the final value is returned to you.
+
+**Pattern: gather → combine → return.**
+When researching a topic across multiple sources (web searches, pages, memory), persist each result to a file, then read them back and assemble a combined answer in Python. This keeps intermediate payloads out of your context.
+```python
+# Step 1: run multiple searches, persist each result
+r1 = web_search(query="Python 3.13 new features")
+p1 = write_output(name="search-1", content=str(r1))
+print(p1["path"])
+
+r2 = web_search(query="Python 3.13 performance improvements")
+p2 = write_output(name="search-2", content=str(r2))
+print(p2["path"])
+
+r3 = web_fetch(url="https://docs.python.org/3.13/whatsnew/3.13.html")
+p3 = write_output(name="whatsnew-page", content=str(r3))
+print(p3["path"])
+```
+
+```python
+# Step 2 (next block): read persisted files, combine into a single report
+s1 = read(path="/home/outputs/20250615103045-search-1.md")
+s2 = read(path="/home/outputs/20250615103046-search-2.md")
+page = read(path="/home/outputs/20250615103047-whatsnew-page.md")
+
+f"# Python 3.13 Research\n\n## Search: features\n{s1}\n\n## Search: performance\n{s2}\n\n## Official changelog\n{page}"
+```
+
+Key rules:
+- Do **not** echo raw search/fetch results into your response and then re-process them — that wastes context on duplicate text.
+- Use `read()` to pull file content back into Python. Use `read_json()` when you need parsed objects/lists.
+- If you only need a subset, filter in Python before returning the final expression.
+
+**Compressing large text:** When a fetched page or search result is too long to include verbatim, call `inference_summary(task=..., text=...)` to compress it. The summary model has a very large context window and can handle virtually unlimited input — do not hesitate to pass entire pages, long search results, or concatenated multi-file content to it.
+```python
+page = read(path="/home/outputs/20250615103047-whatsnew-page.md")
+result = inference_summary(task="List the 5 most important new features with one-line descriptions", text=page)
+result["summary"]
+```
+
+This delegates summarization to a secondary model so you receive a compact result instead of the full source. Use it liberally whenever raw data would bloat your context.
+
+**Bypassing your own context:** You do not need to read results yourself before responding. When your task is to gather data and report back to a parent agent or user, pipe persisted files directly through `inference_summary` and return the summary as your final expression — the raw data never enters your context at all:
+```python
+# Summarize a previously written file and return directly — you never read the raw content
+raw = read(path="/home/outputs/20250615103047-whatsnew-page.md")
+result = inference_summary(task="Produce a concise research brief covering key findings", text=raw)
+result["summary"]
+```
+
+This avoids context rot: instead of reading large results, reasoning over them, and paraphrasing, you let the summary model distill the data and forward a clean result straight to the caller. If you need to reason about the content yourself, you can of course read it — or read the summary instead of the raw data to keep your context lean.
+
 Example scripts for common patterns are available in the bundled examples folder:
 - Docker runtime: `{{examplesDockerDir}}`
 - Non-Docker runtime: `{{examplesHostDir}}`
