@@ -37,7 +37,6 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
         authPath,
         socketPath,
         docker: frozenSettings.docker,
-        features: frozenSettings.features,
         settings: frozenSettings,
         verbose
     });
@@ -56,11 +55,6 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
         security: {
             ...settings.security,
             appReviewerEnabled
-        },
-        features: {
-            say: settings.features?.say ?? false,
-            rlm: settings.features?.rlm ?? false,
-            noTools: settings.features?.noTools ?? false
         },
         docker
     };

@@ -1,7 +1,6 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import Handlebars from "handlebars";
 
-import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 import { rlmNoToolsPromptBuild } from "../../modules/rlm/rlmNoToolsPromptBuild.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
@@ -12,14 +11,10 @@ import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlis
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionToolCalling(context: AgentSystemPromptContext): Promise<string> {
-    const config = context.agentSystem?.config?.current;
     const availableTools = toolListVisibleResolve(context);
     const filteredTools = toolListAllowlistApply(availableTools, context);
     const isForeground = context.descriptor?.type === "user";
-    const noToolsPrompt =
-        config?.features.noTools && filteredTools.length > 0
-            ? await rlmNoToolsPromptBuild(filteredTools, { isForeground })
-            : "";
+    const noToolsPrompt = filteredTools.length > 0 ? await rlmNoToolsPromptBuild(filteredTools, { isForeground }) : "";
     const template = await agentPromptBundledRead("SYSTEM_TOOLS.md");
     const section = Handlebars.compile(template)({}).trim();
     return [section, noToolsPrompt.trim()]
@@ -51,13 +46,9 @@ function toolListAllowlistApply(tools: Tool[], context: AgentSystemPromptContext
     if (!context.descriptor) {
         return tools;
     }
-    const rlmEnabled = context.agentSystem?.config?.current?.features?.rlm === true;
-    const allowlist = agentToolExecutionAllowlistResolve(context.descriptor, { rlmEnabled });
+    const allowlist = agentToolExecutionAllowlistResolve(context.descriptor);
     if (!allowlist) {
         return tools;
     }
-    // Filter to only allowed tools, excluding RLM-internal tools (run_python/skip) from visibility
-    return tools.filter(
-        (tool) => allowlist.has(tool.name) && tool.name !== RLM_TOOL_NAME && tool.name !== SKIP_TOOL_NAME
-    );
+    return tools.filter((tool) => allowlist.has(tool.name));
 }

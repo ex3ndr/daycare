@@ -6,7 +6,6 @@ import type { AgentSkill } from "@/types";
 import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.js";
 import { skillPromptFormat } from "../../skills/skillPromptFormat.js";
 import { rlmNoToolsPromptBuild } from "./rlmNoToolsPromptBuild.js";
-import { rlmToolDescriptionBuild } from "./rlmToolDescriptionBuild.js";
 
 type RenderSystemPromptOptions = {
     toolsText: string;
@@ -39,15 +38,6 @@ describe("system prompt skills rendering", () => {
     it("includes the skill list once in classic mode", async () => {
         const prompt = await renderSystemPrompt({
             toolsText: "Tool notes",
-            skillsPrompt: skillPromptFormat(skills)
-        });
-
-        expect(occurrences(prompt, "<name>scheduling</name>")).toBe(1);
-    });
-
-    it("includes the skill list once in rlm mode", async () => {
-        const prompt = await renderSystemPrompt({
-            toolsText: await rlmToolDescriptionBuild(tools),
             skillsPrompt: skillPromptFormat(skills)
         });
 

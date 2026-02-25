@@ -112,8 +112,7 @@ that are expanded before the prompt reaches the LLM. This lets you embed dynamic
 4. Expansion is **single-pass** — if the output itself contains `<run_python>` tags,
    they are not re-executed.
 
-Executable prompts require the `features.rlm` flag to be enabled. When RLM is disabled,
-prompts are forwarded as-is without expansion.
+Executable prompts run when `execute: true` is set on the scheduled message.
 
 ### Cron Example with Executable Prompt
 

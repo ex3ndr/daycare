@@ -185,70 +185,13 @@ describe("Agent", () => {
         }
     });
 
-    it("passes executable system messages through unchanged when rlm is disabled", async () => {
+    it("expands executable system messages", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {
             const config = configResolve(
                 {
                     engine: { dataDir: dir },
                     providers: [{ id: "openai", model: "gpt-4.1" }]
-                },
-                path.join(dir, "settings.json")
-            );
-            const agentSystem = new AgentSystem({
-                config: new ConfigModule(config),
-                eventBus: new EngineEventBus(),
-                connectorRegistry: new ConnectorRegistry({
-                    onMessage: async () => undefined
-                }),
-                imageRegistry: new ImageGenerationRegistry(),
-                mediaRegistry: new MediaAnalysisRegistry(),
-                toolResolver: new ToolResolver(),
-                pluginManager: pluginManagerStubBuild(),
-                inferenceRouter: inferenceRouterStubBuild(),
-                authStore: new AuthStore(config)
-            });
-            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
-            agentSystem.setHeartbeats({} as Parameters<AgentSystem["setHeartbeats"]>[0]);
-            await agentSystem.load();
-            await agentSystem.start();
-
-            const descriptor: AgentDescriptor = {
-                type: "cron",
-                id: createId(),
-                name: "Executable prompt cron"
-            };
-            await postAndAwait(
-                agentSystem,
-                { descriptor },
-                {
-                    type: "system_message",
-                    text: "Check: <run_python>1 + 1</run_python>",
-                    origin: "cron",
-                    execute: true
-                }
-            );
-
-            const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
-            const userRecord = history.find((record) => record.type === "user_message");
-            if (!userRecord || userRecord.type !== "user_message") {
-                throw new Error("Expected user_message history record");
-            }
-            expect(userRecord.text).toContain("<run_python>1 + 1</run_python>");
-        } finally {
-            await rm(dir, { recursive: true, force: true });
-        }
-    });
-
-    it("expands executable system messages when rlm is enabled", async () => {
-        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
-        try {
-            const config = configResolve(
-                {
-                    engine: { dataDir: dir },
-                    providers: [{ id: "openai", model: "gpt-4.1" }],
-                    features: { rlm: true }
                 },
                 path.join(dir, "settings.json")
             );
@@ -305,8 +248,7 @@ describe("Agent", () => {
             const config = configResolve(
                 {
                     engine: { dataDir: dir },
-                    providers: [{ id: "openai", model: "gpt-4.1" }],
-                    features: { rlm: true }
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
                 },
                 path.join(dir, "settings.json")
             );

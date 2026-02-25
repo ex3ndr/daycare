@@ -21,11 +21,6 @@ function buildContext(overrides: Partial<AgentSystemPromptContext> = {}): AgentS
     return {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         agentSystem: {
-            config: {
-                current: {
-                    features: { noTools: true, rlm: true, say: false }
-                }
-            },
             toolResolver: {
                 listTools: () => tools,
                 listToolsForAgent: () => tools

@@ -13,8 +13,8 @@ This module expands `<run_python>...</run_python>` blocks inside system prompt t
 
 ## RLM Dependency
 
-Expansion is only used when caller enables it and `features.rlm` is on.
-When RLM is disabled, callers should pass prompt text through unchanged.
+Expansion runs whenever the caller enables executable prompt handling.
+Inline-RLM is the only execution mode.
 
 ## Example
 

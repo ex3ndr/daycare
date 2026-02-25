@@ -33,8 +33,6 @@ import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
-import { rlmNoToolsModeIs } from "./modules/rlm/rlmNoToolsModeIs.js";
-import { rlmToolBuild } from "./modules/rlm/rlmTool.js";
 import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
 import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
 import { agentResetToolBuild } from "./modules/tools/agentResetTool.js";
@@ -75,7 +73,6 @@ import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToo
 import { skillAddToolBuild } from "./modules/tools/skillAddToolBuild.js";
 import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
-import { skipToolBuild } from "./modules/tools/skipTool.js";
 import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./modules/tools/subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./modules/tools/subuserListToolBuild.js";
@@ -395,7 +392,6 @@ export class Engine {
         this.modules.tools.register("core", agentResetToolBuild());
         this.modules.tools.register("core", agentCompactToolBuild());
         this.modules.tools.register("core", sendUserMessageToolBuild());
-        this.modules.tools.register("core", skipToolBuild());
         this.modules.tools.register("core", skillToolBuild());
         this.modules.tools.register("core", skillAddToolBuild());
         this.modules.tools.register("core", skillRemoveToolBuild());
@@ -433,9 +429,6 @@ export class Engine {
         this.modules.tools.register("core", exposeListToolBuild(this.exposes));
         this.modules.tools.register("core", memoryNodeReadToolBuild());
         this.modules.tools.register("core", memoryNodeWriteToolBuild());
-        if (this.config.current.features.rlm) {
-            this.modules.tools.register("core", rlmToolBuild(this.modules.tools));
-        }
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
@@ -511,15 +504,10 @@ export class Engine {
     }
 
     private listContextTools(source?: string, options?: { agentKind?: "background" | "foreground" }) {
+        void source;
+        void options;
         return toolListContextBuild({
-            tools: this.modules.tools.listTools(),
-            source,
-            agentKind: options?.agentKind,
-            noTools: rlmNoToolsModeIs(this.config.current.features),
-            rlm: this.config.current.features.rlm,
-            connectorRegistry: this.modules.connectors,
-            imageRegistry: this.modules.images,
-            mediaRegistry: this.modules.mediaAnalysis
+            tools: this.modules.tools.listTools()
         });
     }
 

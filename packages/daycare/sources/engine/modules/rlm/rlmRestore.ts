@@ -95,7 +95,7 @@ export async function rlmRestore(
                     name: tool.name,
                     arguments: parsedArgs as Record<string, unknown>
                 },
-                { ...context, rlmToolOnly: false, pythonExecution: true }
+                { ...context, pythonExecution: true }
             );
             const value = rlmResultConvert(toolResult);
             toolResultText = valueFormat(value);

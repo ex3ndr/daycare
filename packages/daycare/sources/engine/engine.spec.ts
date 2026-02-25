@@ -140,19 +140,16 @@ describe("Engine reset command", () => {
     });
 });
 
-describe("Engine RLM mode", () => {
-    it("exposes only run_python in context tool list when enabled", async () => {
+describe("Engine context tool list", () => {
+    it("exposes no classical tools in model context", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
-            const config = configResolve(
-                { features: { rlm: true }, engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.start();
 
             const status = engine.getStatus();
-            expect(status.tools).toEqual(["run_python", "skip"]);
+            expect(status.tools).toEqual([]);
 
             await engine.shutdown();
         } finally {
@@ -283,10 +280,10 @@ describe("Engine tool registration", () => {
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.start();
 
-            const status = engine.getStatus();
-            expect(status.tools).toContain("skill");
-            expect(status.tools).toContain("agent_reset");
-            expect(status.tools).toContain("agent_compact");
+            const toolNames = engine.modules.tools.listTools().map((tool) => tool.name);
+            expect(toolNames).toContain("skill");
+            expect(toolNames).toContain("agent_reset");
+            expect(toolNames).toContain("agent_compact");
 
             await engine.shutdown();
         } finally {
@@ -336,10 +333,10 @@ describe("Engine app registration", () => {
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.start();
 
-            const status = engine.getStatus();
-            expect(status.tools).toContain("install_app");
-            expect(status.tools).toContain("app_rules");
-            expect(status.tools).toContain("app_github_reviewer");
+            const toolNames = engine.modules.tools.listTools().map((tool) => tool.name);
+            expect(toolNames).toContain("install_app");
+            expect(toolNames).toContain("app_rules");
+            expect(toolNames).toContain("app_github_reviewer");
 
             await engine.shutdown();
         } finally {

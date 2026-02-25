@@ -22,10 +22,8 @@ import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
 import { rlmErrorTextBuild } from "../modules/rlm/rlmErrorTextBuild.js";
 import { rlmExecute } from "../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
-import { rlmNoToolsModeIs } from "../modules/rlm/rlmNoToolsModeIs.js";
 import { rlmRestore } from "../modules/rlm/rlmRestore.js";
 import { rlmResultTextBuild } from "../modules/rlm/rlmResultTextBuild.js";
-import { rlmToolDescriptionBuild } from "../modules/rlm/rlmToolDescriptionBuild.js";
 import { rlmToolResultBuild } from "../modules/rlm/rlmToolResultBuild.js";
 import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
@@ -44,7 +42,6 @@ import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryPendingRlmResolve } from "./ops/agentHistoryPendingRlmResolve.js";
-import { agentHistoryPendingToolResults } from "./ops/agentHistoryPendingToolResults.js";
 import type { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
@@ -444,15 +441,6 @@ export class Agent {
 
         const toolResolver = this.agentSystem.toolResolver;
         const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
-        const visibleTools = toolResolver.listToolsForAgent({
-            ctx: this.ctx,
-            descriptor: this.descriptor
-        });
-        const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);
-        const rlmToolDescription =
-            this.agentSystem.config.current.features.rlm && !noToolsModeEnabled
-                ? await rlmToolDescriptionBuild(visibleTools)
-                : undefined;
 
         const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const isFirstMessage = history.length === 0;
@@ -503,8 +491,7 @@ export class Agent {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
         const contextTools = await this.listContextTools(toolResolver, source, {
-            agentKind,
-            rlmToolDescription
+            agentKind
         });
         const compactionStatus = contextCompactionStatus(
             history,
@@ -622,7 +609,6 @@ export class Agent {
                     skillsActiveRoot: this.userHome.skillsActive,
                     skillsPersonalRoot: this.userHome.skillsPersonal,
                     providersForAgent,
-                    verbose: this.agentSystem.config.current.verbose,
                     logger,
                     abortSignal: inferenceAbortController.signal,
                     appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
@@ -680,12 +666,7 @@ export class Agent {
     private async handleSystemMessage(item: AgentInboxSystemMessage): Promise<string | null> {
         let systemText = item.text;
         if (item.execute) {
-            if (!this.agentSystem.config.current.features.rlm) {
-                logger.debug(
-                    { agentId: this.id, origin: item.origin ?? "system" },
-                    "skip: Executable system message skipped because RLM is disabled"
-                );
-            } else if (item.code && item.code.length > 0) {
+            if (item.code && item.code.length > 0) {
                 // Execute code blocks directly via rlmExecute
                 const startedAt = Date.now();
                 const context: ToolExecutionContext = {
@@ -1062,93 +1043,84 @@ export class Agent {
     private async completePendingToolCalls(reason: "session_crashed" | "user_aborted"): Promise<void> {
         const records = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const pendingRlm = reason === "session_crashed" ? agentHistoryPendingRlmResolve(records) : null;
-        const pendingRlmToolCallId = pendingRlm?.start.toolCallId ?? null;
-        const completionRecords = agentHistoryPendingToolResults(records, reason, Date.now()).filter(
-            (record) =>
-                !(pendingRlmToolCallId && record.type === "tool_result" && record.toolCallId === pendingRlmToolCallId)
-        );
+        if (!pendingRlm) {
+            return;
+        }
+
         let completedToolCalls = 0;
-        for (const record of completionRecords) {
+        const appendRecord = async (record: AgentHistoryRecord): Promise<void> => {
             await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
             records.push(record);
-            completedToolCalls += 1;
-        }
+        };
+        const toolCall = pendingRlm.start.toolCallId;
+        let toolResultText = "";
+        let toolResultIsError = false;
+        let restoreMessage = "RLM execution completed after restart. Output: (empty)";
 
-        if (pendingRlm) {
-            const appendRecord = async (record: AgentHistoryRecord): Promise<void> => {
-                await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
-                records.push(record);
-            };
-            const toolCall = pendingRlm.start.toolCallId;
-            let toolResultText = "";
-            let toolResultIsError = false;
-            let restoreMessage = "RLM execution completed after restart. Output: (empty)";
-
-            if (!pendingRlm.lastSnapshot) {
-                const message = "Process was restarted before any tool call";
-                await appendRecord(rlmHistoryCompleteErrorRecordBuild(toolCall, message));
-                toolResultText = rlmErrorTextBuild(new Error(message));
+        if (!pendingRlm.lastSnapshot) {
+            const message = "Process was restarted before any tool call";
+            await appendRecord(rlmHistoryCompleteErrorRecordBuild(toolCall, message));
+            toolResultText = rlmErrorTextBuild(new Error(message));
+            toolResultIsError = true;
+            restoreMessage = `RLM execution failed after restart. ${message}`;
+        } else {
+            const source =
+                this.descriptor.type === "user"
+                    ? this.descriptor.connector
+                    : this.descriptor.type === "system"
+                      ? this.descriptor.tag
+                      : this.descriptor.type;
+            try {
+                // Create steering check callback that consumes steering if present
+                const checkSteering = () => {
+                    const steering = this.inbox.consumeSteering();
+                    if (steering) {
+                        return { text: steering.text, origin: steering.origin };
+                    }
+                    return null;
+                };
+                const restored = await rlmRestore(
+                    pendingRlm.lastSnapshot,
+                    pendingRlm.start,
+                    this.agentSystem.toolResolver,
+                    this.rlmRestoreContextBuild(source),
+                    appendRecord,
+                    checkSteering
+                );
+                toolResultText = rlmResultTextBuild(restored);
+                restoreMessage = `RLM execution completed after restart. Output: ${
+                    restored.output.length > 0 ? restored.output : "(empty)"
+                }`;
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                await appendRecord(
+                    rlmHistoryCompleteErrorRecordBuild(
+                        toolCall,
+                        message,
+                        pendingRlm.lastSnapshot.printOutput,
+                        pendingRlm.lastSnapshot.toolCallCount
+                    )
+                );
+                toolResultText = rlmErrorTextBuild(error);
                 toolResultIsError = true;
                 restoreMessage = `RLM execution failed after restart. ${message}`;
-            } else {
-                const source =
-                    this.descriptor.type === "user"
-                        ? this.descriptor.connector
-                        : this.descriptor.type === "system"
-                          ? this.descriptor.tag
-                          : this.descriptor.type;
-                try {
-                    // Create steering check callback that consumes steering if present
-                    const checkSteering = () => {
-                        const steering = this.inbox.consumeSteering();
-                        if (steering) {
-                            return { text: steering.text, origin: steering.origin };
-                        }
-                        return null;
-                    };
-                    const restored = await rlmRestore(
-                        pendingRlm.lastSnapshot,
-                        pendingRlm.start,
-                        this.agentSystem.toolResolver,
-                        this.rlmRestoreContextBuild(source),
-                        appendRecord,
-                        checkSteering
-                    );
-                    toolResultText = rlmResultTextBuild(restored);
-                    restoreMessage = `RLM execution completed after restart. Output: ${
-                        restored.output.length > 0 ? restored.output : "(empty)"
-                    }`;
-                } catch (error) {
-                    const message = error instanceof Error ? error.message : String(error);
-                    await appendRecord(
-                        rlmHistoryCompleteErrorRecordBuild(
-                            toolCall,
-                            message,
-                            pendingRlm.lastSnapshot.printOutput,
-                            pendingRlm.lastSnapshot.toolCallCount
-                        )
-                    );
-                    toolResultText = rlmErrorTextBuild(error);
-                    toolResultIsError = true;
-                    restoreMessage = `RLM execution failed after restart. ${message}`;
-                }
             }
-
-            const result = rlmToolResultBuild({ id: toolCall, name: RLM_TOOL_NAME }, toolResultText, toolResultIsError);
-            await appendRecord({
-                type: "tool_result",
-                at: Date.now(),
-                toolCallId: toolCall,
-                output: result
-            });
-            await appendRecord({
-                type: "user_message",
-                at: Date.now(),
-                text: messageBuildSystemText(restoreMessage, "rlm_restore"),
-                files: []
-            });
-            completedToolCalls += 1;
         }
+
+        const result = rlmToolResultBuild({ id: toolCall, name: RLM_TOOL_NAME }, toolResultText, toolResultIsError);
+        await appendRecord({
+            type: "tool_result",
+            at: Date.now(),
+            toolCallId: toolCall,
+            output: result
+        });
+        await appendRecord({
+            type: "user_message",
+            at: Date.now(),
+            text: messageBuildSystemText(restoreMessage, "rlm_restore"),
+            files: []
+        });
+        completedToolCalls += 1;
 
         if (completedToolCalls > 0) {
             const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
@@ -1170,9 +1142,7 @@ export class Agent {
     }
 
     private rlmRestoreContextBuild(source: string): ToolExecutionContext {
-        const allowedToolNames = agentToolExecutionAllowlistResolve(this.descriptor, {
-            rlmEnabled: this.agentSystem.config.current.features.rlm
-        });
+        const allowedToolNames = agentToolExecutionAllowlistResolve(this.descriptor);
 
         return {
             connectorRegistry: this.agentSystem.connectorRegistry,
@@ -1230,32 +1200,17 @@ export class Agent {
 
     private async listContextTools(
         toolResolver: ToolResolverApi,
-        source?: string,
-        options?: {
+        _source?: string,
+        _options?: {
             agentKind?: "background" | "foreground";
-            rlmToolDescription?: string;
         }
     ): Promise<InferenceContext["tools"]> {
         const tools = toolResolver.listToolsForAgent({
             ctx: this.ctx,
             descriptor: this.descriptor
         });
-        const noToolsModeEnabled = rlmNoToolsModeIs(this.agentSystem.config.current.features);
-        let rlmToolDescription = options?.rlmToolDescription;
-        if (!rlmToolDescription && this.agentSystem.config.current.features.rlm && !noToolsModeEnabled) {
-            rlmToolDescription = await rlmToolDescriptionBuild(tools);
-        }
-
         return toolListContextBuild({
-            tools,
-            source,
-            agentKind: options?.agentKind,
-            noTools: noToolsModeEnabled,
-            rlm: this.agentSystem.config.current.features.rlm,
-            rlmToolDescription,
-            connectorRegistry: this.agentSystem.connectorRegistry,
-            imageRegistry: this.agentSystem.imageRegistry,
-            mediaRegistry: this.agentSystem.mediaRegistry
+            tools
         });
     }
 

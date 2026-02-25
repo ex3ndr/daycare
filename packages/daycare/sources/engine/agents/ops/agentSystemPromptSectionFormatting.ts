@@ -14,7 +14,7 @@ export async function agentSystemPromptSectionFormatting(context: AgentSystemPro
     const messageFormatPrompt = connector
         ? (context.agentSystem?.connectorRegistry?.get(connector)?.capabilities.messageFormatPrompt ?? "")
         : "";
-    const featuresSay = isForeground && (context.agentSystem?.config?.current.features.say ?? false);
+    const featuresSay = isForeground;
     const template = await agentPromptBundledRead("SYSTEM_FORMATTING.md");
     const section = Handlebars.compile(template)({
         isForeground,

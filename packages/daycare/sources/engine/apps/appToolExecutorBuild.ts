@@ -5,7 +5,6 @@ import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { getLogger } from "../../log.js";
 import type { ProviderSettings } from "../../settings.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
-import { RLM_TOOL_NAME } from "../modules/rlm/rlmConstants.js";
 import type { ToolResolverApi } from "../modules/toolResolver.js";
 import { toolExecutionResultOutcome } from "../modules/tools/toolReturnOutcome.js";
 import { appToolReview } from "./appToolReview.js";
@@ -16,7 +15,6 @@ type AppToolExecutorBuildInput = {
     appName: string;
     appSystemPrompt: string;
     reviewerEnabled: boolean;
-    rlmEnabled: boolean;
     sourceIntent: string;
     rules: AppRuleSet;
     inferenceRouter: InferenceRouter;
@@ -31,7 +29,7 @@ type AppToolExecutor = {
     execute: (toolCall: ToolCall, context: ToolExecutionContext) => Promise<ToolExecutionResult>;
 };
 
-const DEFAULT_ALLOWED_TOOLS = ["read", "write", "edit", "exec", RLM_TOOL_NAME];
+const DEFAULT_ALLOWED_TOOLS = ["read", "write", "edit", "exec", "run_python"];
 
 /**
  * Wraps a tool resolver with app-review middleware for each tool call.
@@ -75,7 +73,6 @@ export function appToolExecutorBuild(input: AppToolExecutorBuildInput): AppToolE
                 appId: input.appId,
                 appName: input.appName,
                 appSystemPrompt: input.appSystemPrompt,
-                rlmEnabled: input.rlmEnabled,
                 sourceIntent: input.sourceIntent,
                 toolCall,
                 rules: input.rules,

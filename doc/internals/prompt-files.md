@@ -45,5 +45,4 @@ Bundled defaults live in `sources/prompts/`:
 - `AGENTS.md` — workspace playbook template for routines and memory hygiene
 - `TOOLS.md` — empty tool knowledge tables
 - `MEMORY.md` — persistent working-memory template
-- `SYSTEM_TOOLS_RLM.md` — `run_python` tool-call template with injected Python preamble
 - `SYSTEM_TOOLS_RLM_INLINE.md` — no-tools `<run_python>` instructions with injected Python preamble

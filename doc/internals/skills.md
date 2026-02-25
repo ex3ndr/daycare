@@ -129,19 +129,17 @@ flowchart TD
   Forked --> Result[Subagent result returned]
 ```
 
-## RLM mode skill exposure
+## Inline RLM skill exposure
 
-When `rlm: true` is enabled, only `run_python` is exposed directly. The runtime
-embeds the current skill catalog in the `run_python` description so Python code
-can still discover and call the `skill(...)` function stub.
+Inline RLM exposes zero classical tools to inference. Skill metadata remains in
+the system prompt and Python can call the `skill(...)` function stub at runtime.
 
 ```mermaid
 flowchart LR
   Agent[Agent.handleMessage] --> SkillsFacade[Skills facade]
-  SkillsFacade --> ToolList[toolListContextBuild rlm]
-  ToolList --> Desc[rlmToolDescriptionBuild]
-  Desc --> Python[run_python description]
+  SkillsFacade --> ToolList[toolListContextBuild empty]
+  SkillsFacade --> Prompt[rlmNoToolsPromptBuild]
+  Prompt --> Python[run_python inline instructions]
   Python --> Loop[agentLoopRun iteration]
   Loop --> SkillsFacade
-  SkillsFacade --> ToolList
 ```

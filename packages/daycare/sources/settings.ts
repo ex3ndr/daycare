@@ -83,23 +83,13 @@ export type ResolvedDockerSettings = {
     localDnsServers: string[];
 };
 
-export type FeaturesConfig = {
-    say?: boolean;
-    rlm?: boolean;
-    noTools?: boolean;
-};
-
-export type ResolvedFeaturesConfig = Required<FeaturesConfig>;
-
-export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security" | "features" | "docker"> & {
+export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security" | "docker"> & {
     agents: Required<AgentSettings>;
     security: Required<SecuritySettings>;
-    features: ResolvedFeaturesConfig;
     docker: ResolvedDockerSettings;
 };
 
 export type SettingsConfig = {
-    features?: FeaturesConfig;
     docker?: DockerSettings;
     engine?: {
         socketPath?: string;

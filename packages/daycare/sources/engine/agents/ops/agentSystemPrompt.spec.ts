@@ -80,8 +80,7 @@ describe("agentSystemPrompt", () => {
                 agentSystem: {
                     config: {
                         current: {
-                            configDir: dir,
-                            features: { noTools: false, rlm: false, say: false }
+                            configDir: dir
                         }
                     },
                     toolResolver: { listTools: () => [], listToolsForAgent: () => [] }
@@ -117,11 +116,6 @@ describe("agentSystemPrompt", () => {
                         usersDir: path.join(dir, "users"),
                         configDir: path.join(dir, ".daycare"),
                         agentsDir: path.join(dir, "agents"),
-                        features: {
-                            noTools: false,
-                            rlm: false,
-                            say: false
-                        },
                         settings: {
                             providers: [{ id: "openai", enabled: true }]
                         }
@@ -193,11 +187,6 @@ describe("agentSystemPrompt", () => {
                         usersDir: path.join(dir, "users"),
                         configDir,
                         agentsDir,
-                        features: {
-                            noTools: true,
-                            rlm: true,
-                            say: true
-                        },
                         settings: {
                             providers: [{ id: "openai", enabled: true }]
                         }

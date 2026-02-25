@@ -6,7 +6,6 @@ import type { AppRuleSet } from "./appTypes.js";
 type AppReviewPromptBuildInput = {
     appName: string;
     appSystemPrompt: string;
-    rlmEnabled: boolean;
     sourceIntent: string;
     toolName: string;
     args: unknown;
@@ -35,7 +34,6 @@ export async function appReviewPromptBuild(input: AppReviewPromptBuildInput): Pr
         argsText: argsSerialize(input.args),
         availableToolsText: toolsSerialize(input.availableTools),
         appSystemPrompt: systemPromptSerialize(input.appSystemPrompt),
-        rlmEnabled: input.rlmEnabled,
         sourceIntent: systemPromptSerialize(input.sourceIntent),
         allowRules,
         denyRules
@@ -80,7 +78,6 @@ type ReviewerTemplateContext = {
     argsText: string;
     availableToolsText: string;
     appSystemPrompt: string;
-    rlmEnabled: boolean;
     sourceIntent: string;
     allowRules: string;
     denyRules: string;

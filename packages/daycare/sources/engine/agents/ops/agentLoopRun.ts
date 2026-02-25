@@ -1,4 +1,4 @@
-import type { Context as InferenceContext, ToolResultMessage } from "@mariozechner/pi-ai";
+import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 import type { AgentSkill, Connector } from "@/types";
@@ -9,30 +9,22 @@ import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
-import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { montyRuntimePreambleBuild } from "../../modules/monty/montyRuntimePreambleBuild.js";
-import { SKIP_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 import { rlmExecute } from "../../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
-import { rlmNoToolsModeIs } from "../../modules/rlm/rlmNoToolsModeIs.js";
 import { rlmNoToolsResultMessageBuild } from "../../modules/rlm/rlmNoToolsResultMessageBuild.js";
-import { rlmToolDescriptionBuild } from "../../modules/rlm/rlmToolDescriptionBuild.js";
 import { sayFileExtract } from "../../modules/say/sayFileExtract.js";
 import { sayFileResolve } from "../../modules/say/sayFileResolve.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
-import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import { toolListContextBuild } from "../../modules/tools/toolListContextBuild.js";
-import { toolResultFormatVerbose } from "../../modules/tools/toolResultFormatVerbose.js";
-import { toolExecutionResultOutcome } from "../../modules/tools/toolReturnOutcome.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
-import { agentHistoryPendingToolResults } from "./agentHistoryPendingToolResults.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
 import { agentMessageRunPythonSayAfterTrim } from "./agentMessageRunPythonSayAfterTrim.js";
@@ -64,7 +56,6 @@ type AgentLoopRunOptions = {
     skillsActiveRoot?: string;
     skillsPersonalRoot?: string;
     providersForAgent: ProviderSettings[];
-    verbose: boolean;
     logger: Logger;
     abortSignal?: AbortSignal;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
@@ -111,7 +102,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         memory,
         skills,
         providersForAgent,
-        verbose,
         logger,
         abortSignal,
         appendHistoryRecord,
@@ -121,7 +111,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     let response: Awaited<ReturnType<InferenceRouter["complete"]>> | null = null;
     let skipTurnDetected = false;
     let toolLoopExceeded = false;
-    let lastResponseHadToolCalls = false;
     let lastResponseTextSent = false;
     let finalResponseText: string | null = null;
     let lastResponseNoMessage = false;
@@ -142,35 +131,20 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         ctx: agent.ctx,
         descriptor: agent.descriptor
     };
-    const allowedToolNames = agentToolExecutionAllowlistResolve(agent.descriptor, {
-        rlmEnabled: agentSystem.config.current.features.rlm
-    });
+    const allowedToolNames = agentToolExecutionAllowlistResolve(agent.descriptor);
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
     const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
 
     try {
         logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
         for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
-            const noToolsModeEnabled = rlmNoToolsModeIs(agentSystem.config.current.features);
             let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
             try {
                 activeSkills = await skills.list();
                 await skills.syncToActive(options.skillsActiveRoot, activeSkills);
                 availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
-                const rlmToolDescription =
-                    agentSystem.config.current.features.rlm && !noToolsModeEnabled
-                        ? await rlmToolDescriptionBuild(availableTools)
-                        : undefined;
                 context.tools = toolListContextBuild({
-                    tools: availableTools,
-                    source,
-                    agentKind,
-                    noTools: noToolsModeEnabled,
-                    rlm: agentSystem.config.current.features.rlm,
-                    rlmToolDescription,
-                    connectorRegistry,
-                    imageRegistry: agentSystem.imageRegistry,
-                    mediaRegistry: agentSystem.mediaRegistry
+                    tools: availableTools
                 });
                 logger.debug(
                     `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
@@ -197,11 +171,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             }
             response = await inferenceRouter.complete(context, inferenceSessionId, {
                 providersOverride: providersForAgent,
-                providerOptions: noToolsModeEnabled
-                    ? {
-                          stop: ["</run_python>"]
-                      }
-                    : undefined,
+                providerOptions: {
+                    stop: ["</run_python>"]
+                },
                 signal: abortSignal,
                 onAttempt: (providerId, modelId) => {
                     logger.debug(
@@ -279,7 +251,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             context.messages.push(response.message);
 
             let responseText = messageExtractText(response.message);
-            if (noToolsModeEnabled && responseText) {
+            if (responseText) {
                 const terminalTrimmed = agentMessageRunPythonTerminalTrim(responseText);
                 if (terminalTrimmed !== null) {
                     responseText = terminalTrimmed;
@@ -292,21 +264,19 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 text: string;
                 reason: "run_python_say_after_trim" | "run_python_failure_trim";
             }> = [];
-            const toolCalls = messageExtractToolCalls(response.message);
-            const runPythonCodes = noToolsModeEnabled ? rlmNoToolsExtract(responseText ?? "") : [];
+            const runPythonCodes = rlmNoToolsExtract(responseText ?? "");
             const hasRunPythonTag = runPythonCodes.length > 0;
-            lastResponseHadToolCalls = toolCalls.length > 0;
             const suppressUserOutput = messageNoMessageIs(responseText);
             if (suppressUserOutput) {
                 stripNoMessageTextBlocks(response.message);
                 logger.debug("event: NO_MESSAGE detected; suppressing user output for this response");
             }
             lastResponseNoMessage = suppressUserOutput;
-            const sayEnabled = agentSystem.config.current.features.say && agentKind === "foreground";
+            const sayEnabled = agentKind === "foreground";
             let effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
             const runPythonSplit =
                 hasRunPythonTag && effectiveResponseText ? runPythonResponseSplit(effectiveResponseText) : null;
-            if (noToolsModeEnabled && hasRunPythonTag && responseText) {
+            if (hasRunPythonTag && responseText) {
                 const stripped = agentMessageRunPythonSayAfterTrim(responseText);
                 if (stripped !== null) {
                     historyResponseText = stripped;
@@ -322,7 +292,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             // <say> tag mode: only send text inside <say> blocks, suppress the rest
             if (sayEnabled && effectiveResponseText) {
                 let immediateSayText = effectiveResponseText;
-                if (noToolsModeEnabled && hasRunPythonTag && runPythonSplit) {
+                if (hasRunPythonTag && runPythonSplit) {
                     immediateSayText = runPythonSplit.beforeRunPython;
                 }
 
@@ -409,7 +379,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         finalResponseText = null;
                     }
                     lastResponseTextSent = true;
-                    logger.debug("event: noTools run_python tag detected; suppressing raw response text");
+                    logger.debug("event: run_python tag detected; suppressing raw response text");
                 } else {
                     // Don't overwrite finalResponseText if child agent already sent via send_agent_message
                     if (!childAgentMessageSent) {
@@ -436,7 +406,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 }
             }
 
-            logger.debug(`event: Extracted tool calls from response toolCallCount=${toolCalls.length}`);
             const assistantRecordAt = Date.now();
             await historyRecordAppend(
                 historyRecords,
@@ -445,7 +414,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     at: assistantRecordAt,
                     text: responseText ?? "",
                     files: [],
-                    toolCalls,
+                    toolCalls: [],
                     tokens: tokensEntry
                 },
                 appendHistoryRecord
@@ -464,147 +433,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 );
             }
 
-            // Child-agent: track send_agent_message calls targeting the parent
-            // (handled below in the tool execution loop)
-
-            if (noToolsModeEnabled) {
-                if (hasRunPythonTag) {
-                    const preamble = montyRuntimePreambleBuild(availableTools);
-                    const executionContext = {
-                        connectorRegistry,
-                        sandbox: agent.sandbox,
-                        auth: authStore,
-                        logger,
-                        assistant,
-                        agent,
-                        ctx: agent.ctx,
-                        source,
-                        messageContext: entry.context,
-                        agentSystem,
-                        heartbeats,
-                        memory,
-                        toolResolver,
-                        skills: activeSkills,
-                        skillsActiveRoot: options.skillsActiveRoot,
-                        skillsPersonalRoot: options.skillsPersonalRoot,
-                        appendHistoryRecord,
-                        rlmToolOnly: false,
-                        allowedToolNames
-                    };
-
-                    for (let index = 0; index < runPythonCodes.length; index += 1) {
-                        const runPythonCode = runPythonCodes[index]!;
-                        const toolCallId = createId();
-
-                        try {
-                            // Create steering check callback that consumes steering if present
-                            const checkSteering = () => {
-                                const steering = agent.inbox.consumeSteering();
-                                if (steering) {
-                                    return { text: steering.text, origin: steering.origin };
-                                }
-                                return null;
-                            };
-                            const result = await rlmExecute(
-                                runPythonCode,
-                                preamble,
-                                executionContext,
-                                toolResolver,
-                                toolCallId,
-                                appendHistoryRecord,
-                                checkSteering
-                            );
-                            context.messages.push(rlmNoToolsResultMessageBuild({ result }));
-
-                            // If steering interrupted, break out of the code loop
-                            if (result.steeringInterrupt) {
-                                break;
-                            }
-
-                            // If skip() was called, break out of the code loop
-                            if (result.skipTurn) {
-                                skipTurnDetected = true;
-                                break;
-                            }
-                        } catch (error) {
-                            const message = error instanceof Error ? error.message : String(error);
-                            await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
-                            context.messages.push(rlmNoToolsResultMessageBuild({ error }));
-                            const truncated = agentMessageRunPythonFailureTrim(historyResponseText, index);
-                            if (truncated !== null) {
-                                historyResponseText = truncated;
-                                messageAssistantTextRewrite(response.message, truncated);
-                                await historyRecordAppend(
-                                    historyRecords,
-                                    {
-                                        type: "assistant_rewrite",
-                                        at: Date.now(),
-                                        assistantAt: assistantRecordAt,
-                                        text: truncated,
-                                        reason: "run_python_failure_trim"
-                                    },
-                                    appendHistoryRecord
-                                );
-                                logger.debug(
-                                    "event: Rewrote assistant message in context history after failed <run_python> block"
-                                );
-                            }
-                            break;
-                        }
-                    }
-
-                    if (skipTurnDetected) {
-                        break;
-                    }
-
-                    if (iteration === MAX_TOOL_ITERATIONS - 1) {
-                        logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
-                        toolLoopExceeded = true;
-                    }
-                    continue;
-                }
-            }
-
-            if (toolCalls.length === 0) {
-                // Child-agent: soft nudge if send_agent_message was never called targeting parent
-                if (isChildAgent && !childAgentMessageSent) {
-                    if (!childAgentNudged) {
-                        childAgentNudged = true;
-                        context.messages.push({
-                            role: "user",
-                            content: [
-                                {
-                                    type: "text",
-                                    text: "You haven't sent your results to your parent agent yet. Use the send_agent_message tool to deliver your results. No agentId is needed — it defaults to your parent."
-                                }
-                            ],
-                            timestamp: Date.now()
-                        });
-                        logger.debug("event: Child agent nudged to call send_agent_message");
-                        continue;
-                    }
-                    // Agent chose not to send after nudge — accept and break
-                    logger.debug("event: Child agent did not send after nudge, accepting");
-                }
-                logger.debug(`event: No tool calls, breaking inference loop iteration=${iteration}`);
-                break;
-            }
-
-            for (let toolIndex = 0; toolIndex < toolCalls.length; toolIndex++) {
-                const toolCall = toolCalls[toolIndex]!;
-                const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 200);
-                logger.debug(
-                    `execute: Executing tool call toolName=${toolCall.name} toolCallId=${toolCall.id} args=${argsPreview}`
-                );
-
-                if (verbose && !suppressUserOutput && connector && targetId) {
-                    const argsFormatted = toolArgsFormatVerbose(toolCall.arguments);
-                    await connector.sendMessage(targetId, {
-                        text: `[tool] ${toolCall.name}(${argsFormatted})`
-                    });
-                }
-
-                const toolResult = await toolResolver.execute(toolCall, {
+            if (hasRunPythonTag) {
+                const preamble = montyRuntimePreambleBuild(availableTools);
+                const executionContext = {
                     connectorRegistry,
                     sandbox: agent.sandbox,
                     auth: authStore,
@@ -622,162 +453,140 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     skillsActiveRoot: options.skillsActiveRoot,
                     skillsPersonalRoot: options.skillsPersonalRoot,
                     appendHistoryRecord,
-                    rlmToolOnly: agentSystem.config.current.features.rlm,
                     allowedToolNames
-                });
-                logger.debug(
-                    `event: Tool execution completed toolName=${toolCall.name} isError=${toolResult.toolMessage.isError}`
-                );
+                };
 
-                if (verbose && !suppressUserOutput && connector && targetId) {
-                    const resultText = toolResultFormatVerbose(toolResult);
-                    await connector.sendMessage(targetId, {
-                        text: resultText
-                    });
-                }
-
-                context.messages.push(toolResult.toolMessage);
-                await historyRecordAppend(
-                    historyRecords,
-                    {
-                        type: "tool_result",
-                        at: Date.now(),
-                        toolCallId: toolCall.id,
-                        output: toolResult
-                    },
-                    appendHistoryRecord
-                );
-
-                // Track send_agent_message calls targeting the parent for child agents
-                if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
-                    const args = toolCall.arguments as { agentId?: string; text?: string };
-                    const parentId =
-                        "parentAgentId" in agent.descriptor
-                            ? (agent.descriptor as { parentAgentId?: string }).parentAgentId
-                            : undefined;
-                    if (!args.agentId || args.agentId === parentId) {
-                        childAgentMessageSent = true;
-                        if (args.text) {
-                            finalResponseText = args.text;
+                const trackingToolResolver: ToolResolverApi = {
+                    listTools: () => toolResolver.listTools(),
+                    listToolsForAgent: (context) => toolResolver.listToolsForAgent(context),
+                    execute: async (toolCall, toolContext) => {
+                        if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
+                            const args = toolCall.arguments as { agentId?: string; text?: string };
+                            const parentId =
+                                "parentAgentId" in agent.descriptor
+                                    ? (agent.descriptor as { parentAgentId?: string }).parentAgentId
+                                    : undefined;
+                            if (!args.agentId || args.agentId === parentId) {
+                                childAgentMessageSent = true;
+                                if (args.text) {
+                                    finalResponseText = args.text;
+                                }
+                                logger.debug("event: Child agent sent message to parent via send_agent_message");
+                            }
                         }
-                        logger.debug("event: Child agent sent message to parent via send_agent_message");
+                        return toolResolver.execute(toolCall, toolContext);
                     }
-                }
+                };
 
-                // Check for skip: direct skip tool call or run_python that internally called skip()
-                if (toolCall.name === SKIP_TOOL_NAME || toolResult.skipTurn) {
-                    logger.debug("event: Skip tool detected, aborting inference loop");
-                    skipTurnDetected = true;
+                for (let index = 0; index < runPythonCodes.length; index += 1) {
+                    const runPythonCode = runPythonCodes[index]!;
+                    const toolCallId = createId();
 
-                    // Cancel remaining tool calls
-                    for (let cancelIndex = toolIndex + 1; cancelIndex < toolCalls.length; cancelIndex++) {
-                        const cancelledCall = toolCalls[cancelIndex]!;
-                        const cancelledMessage: ToolResultMessage = {
-                            role: "toolResult",
-                            toolCallId: cancelledCall.id,
-                            toolName: cancelledCall.name,
-                            content: [{ type: "text", text: "Turn skipped" }],
-                            isError: true,
-                            timestamp: Date.now()
+                    try {
+                        // Create steering check callback that consumes steering if present
+                        const checkSteering = () => {
+                            const steering = agent.inbox.consumeSteering();
+                            if (steering) {
+                                return { text: steering.text, origin: steering.origin };
+                            }
+                            return null;
                         };
-                        const cancelledResult = toolExecutionResultOutcome(cancelledMessage);
-                        context.messages.push(cancelledMessage);
-                        await historyRecordAppend(
-                            historyRecords,
-                            {
-                                type: "tool_result",
-                                at: Date.now(),
-                                toolCallId: cancelledCall.id,
-                                output: cancelledResult
-                            },
-                            appendHistoryRecord
+                        const result = await rlmExecute(
+                            runPythonCode,
+                            preamble,
+                            executionContext,
+                            trackingToolResolver,
+                            toolCallId,
+                            appendHistoryRecord,
+                            checkSteering
                         );
-                    }
-                    break;
-                }
+                        context.messages.push(rlmNoToolsResultMessageBuild({ result }));
 
-                // Check for steering after each tool call
-                if (agent.inbox.hasSteering()) {
-                    const steering = agent.inbox.consumeSteering();
-                    if (steering) {
-                        logger.debug(
-                            `event: Steering received, cancelling remaining tool calls steeringOrigin=${steering.origin ?? "unknown"}`
-                        );
+                        // If steering interrupted, break out of the code loop
+                        if (result.steeringInterrupt) {
+                            break;
+                        }
 
-                        // Cancel remaining tool calls with steering reason
-                        const cancelReason = steering.cancelReason ?? "Task redirected by steering message";
-                        for (let cancelIndex = toolIndex + 1; cancelIndex < toolCalls.length; cancelIndex++) {
-                            const cancelledCall = toolCalls[cancelIndex]!;
-                            const cancelledMessage: ToolResultMessage = {
-                                role: "toolResult",
-                                toolCallId: cancelledCall.id,
-                                toolName: cancelledCall.name,
-                                content: [{ type: "text", text: cancelReason }],
-                                isError: true,
-                                timestamp: Date.now()
-                            };
-                            const cancelledResult = toolExecutionResultOutcome(cancelledMessage);
-
-                            context.messages.push(cancelledMessage);
+                        // If skip() was called, break out of the code loop
+                        if (result.skipTurn) {
+                            skipTurnDetected = true;
+                            break;
+                        }
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : String(error);
+                        await appendHistoryRecord?.(rlmHistoryCompleteErrorRecordBuild(toolCallId, message));
+                        context.messages.push(rlmNoToolsResultMessageBuild({ error }));
+                        const truncated = agentMessageRunPythonFailureTrim(historyResponseText, index);
+                        if (truncated !== null) {
+                            historyResponseText = truncated;
+                            messageAssistantTextRewrite(response.message, truncated);
                             await historyRecordAppend(
                                 historyRecords,
                                 {
-                                    type: "tool_result",
+                                    type: "assistant_rewrite",
                                     at: Date.now(),
-                                    toolCallId: cancelledCall.id,
-                                    output: cancelledResult
+                                    assistantAt: assistantRecordAt,
+                                    text: truncated,
+                                    reason: "run_python_failure_trim"
                                 },
                                 appendHistoryRecord
                             );
-
                             logger.debug(
-                                `event: Tool call cancelled by steering toolName=${cancelledCall.name} toolCallId=${cancelledCall.id}`
+                                "event: Rewrote assistant message in context history after failed <run_python> block"
                             );
                         }
-
-                        // Inject steering message into context as a system message
-                        // The steering message will be processed by the agent's runLoop on next iteration
-                        context.messages.push({
-                            role: "user",
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `<system_message origin="${steering.origin ?? "steering"}">\n${steering.text}\n</system_message>`
-                                }
-                            ],
-                            timestamp: Date.now()
-                        });
-
-                        // Break out of tool loop - steering message will drive next inference
                         break;
                     }
                 }
+
+                if (skipTurnDetected) {
+                    context.messages.push({
+                        role: "user",
+                        content: [{ type: "text", text: "Turn skipped" }],
+                        timestamp: Date.now()
+                    });
+                    logger.debug("event: Skip detected, appended 'Turn skipped' and breaking inference loop");
+                    break;
+                }
+
+                if (iteration === MAX_TOOL_ITERATIONS - 1) {
+                    logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
+                    toolLoopExceeded = true;
+                }
+                continue;
             }
 
-            if (skipTurnDetected) {
-                context.messages.push({
-                    role: "user",
-                    content: [{ type: "text", text: "Turn skipped" }],
-                    timestamp: Date.now()
-                });
-                logger.debug("event: Skip detected, appended 'Turn skipped' and breaking inference loop");
-                break;
+            // Child-agent: soft nudge if send_agent_message was never called targeting parent
+            if (isChildAgent && !childAgentMessageSent) {
+                if (!childAgentNudged) {
+                    childAgentNudged = true;
+                    context.messages.push({
+                        role: "user",
+                        content: [
+                            {
+                                type: "text",
+                                text: "You haven't sent your results to your parent agent yet. Use the send_agent_message tool to deliver your results. No agentId is needed — it defaults to your parent."
+                            }
+                        ],
+                        timestamp: Date.now()
+                    });
+                    logger.debug("event: Child agent nudged to call send_agent_message");
+                    continue;
+                }
+                // Agent chose not to send after nudge — accept and break
+                logger.debug("event: Child agent did not send after nudge, accepting");
             }
 
-            if (iteration === MAX_TOOL_ITERATIONS - 1) {
-                logger.debug(`event: Tool loop limit reached iteration=${iteration}`);
-                toolLoopExceeded = true;
-            }
+            logger.debug(`event: No run_python blocks, breaking inference loop iteration=${iteration}`);
+            break;
         }
         logger.debug("event: Inference loop completed");
     } catch (error) {
         logger.debug(`error: Inference loop caught error error=${String(error)}`);
         if (isInferenceAbortError(error, abortSignal)) {
-            await historyPendingToolCallsComplete(historyRecords, "user_aborted", appendHistoryRecord);
             logger.info({ agentId: agent.id }, "event: Inference aborted");
             return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
         }
-        await historyPendingToolCallsComplete(historyRecords, "session_crashed", appendHistoryRecord);
         logger.warn({ connector: source, error }, "error: Inference failed");
         const message =
             error instanceof Error && error.message === "No inference provider available"
@@ -804,7 +613,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     }
 
     if (response.message.stopReason === "aborted") {
-        await historyPendingToolCallsComplete(historyRecords, "user_aborted", appendHistoryRecord);
         logger.info({ agentId: agent.id }, "event: Inference aborted by provider");
         return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
     }
@@ -864,7 +672,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     logger.debug(`event: Extracted assistant text hasText=${hasResponseText} textLength=${responseText?.length ?? 0}`);
 
     if (!hasResponseText) {
-        if (toolLoopExceeded && lastResponseHadToolCalls) {
+        if (toolLoopExceeded) {
             const message = "Tool execution limit reached.";
             logger.debug("error: Tool loop exceeded, sending error message");
             await notifySubagentFailure(message);
@@ -916,17 +724,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     }
     logger.debug("event: handleMessage completed successfully");
     return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
-}
-
-async function historyPendingToolCallsComplete(
-    historyRecords: AgentHistoryRecord[],
-    reason: "session_crashed" | "user_aborted",
-    appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>
-): Promise<void> {
-    const completionRecords = agentHistoryPendingToolResults(historyRecords, reason, Date.now());
-    for (const record of completionRecords) {
-        await historyRecordAppend(historyRecords, record, appendHistoryRecord);
-    }
 }
 
 async function historyRecordAppend(

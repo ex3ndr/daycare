@@ -10,7 +10,7 @@ flowchart TD
   Heartbeat[Heartbeat batch] --> PostHeartbeat["post system_message<br/>execute=true origin=heartbeat"]
   PostCron --> Agent[Agent.handleSystemMessage]
   PostHeartbeat --> Agent
-  Agent --> Gate{features.rlm && execute}
+  Agent --> Gate{execute}
   Gate -- no --> Raw[Forward raw prompt text]
   Gate -- yes --> Expand[executablePromptExpand]
   Expand --> Run["run each <run_python> via rlmExecute"]

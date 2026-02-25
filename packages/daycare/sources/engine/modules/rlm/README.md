@@ -1,52 +1,15 @@
 # RLM (run_python)
 
-Daycare supports two RLM modes:
+Daycare uses inline RLM only:
 
-- tool-call mode (`features.rlm`) exposes a single `run_python` tool
-- tag mode (`features.noTools && features.rlm && features.say`) exposes zero tools and uses `<run_python>` tags in assistant text
+- inference sees zero classical tools
+- Python is authored in `<run_python>...</run_python>` blocks in assistant text
+- execution results are injected as `<python_result>...</python_result>` user messages
+- regular Daycare tools stay registered internally and are callable by Python code
 
-Both modes execute Monty-compatible Python and dispatch normal Daycare tools through generated
-sync stubs.
-
-## Enable
-
-Set feature flags under `features` in `settings.json`.
-
-Tool-call mode:
-
-```json
-{
-  "features": {
-    "rlm": true
-  }
-}
-```
-
-- only `run_python` is exposed to inference contexts
-- all regular tools stay registered internally and are callable by Python code
-
-Tag mode:
-
-```json
-{
-  "features": {
-    "noTools": true,
-    "rlm": true,
-    "say": true
-  }
-}
-```
-
-- no tools are exposed to inference contexts
-- system prompt includes Python stubs and `<run_python>` usage instructions
-- model execution results are injected back as user messages wrapped in `<python_result>`
-- multiple `<run_python>` blocks in one assistant message execute sequentially
-- first failed `<run_python>` block stops execution of remaining blocks in that same message
-- any `<say>` tags after the first `<run_python>` are ignored
-
-Tag mode is active only when all three are enabled: `noTools`, `rlm`, and `say`.
-
-In both modes, regular tools stay registered internally and are callable by Python code.
+Multiple `<run_python>` blocks in one assistant message execute sequentially.
+The first failed block stops execution of remaining blocks in that same message.
+Any `<say>` tags after the first `<run_python>` are trimmed.
 
 ## Tool Stub Generation
 
@@ -60,13 +23,11 @@ def tool_name(arg1: type, arg2: type) -> ToolResponse:
     raise NotImplementedError(...)
 ```
 
-The preamble is regenerated from the current tool set when context tools are built:
-
-- tool-call mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM.md` into the `run_python` description
-- tag mode: rendered through `sources/prompts/SYSTEM_TOOLS_RLM_INLINE.md` into the no-tools system section
+The preamble is regenerated from the current tool set and rendered through
+`sources/prompts/SYSTEM_TOOLS_RLM_INLINE.md`.
 
 Shared Python execution instructions (calling conventions, error handling, print usage) live in
-`sources/prompts/TOOLS_PYTHON.md` and are injected into both templates via `{{{pythonTools}}}`.
+`sources/prompts/TOOLS_PYTHON.md` and are injected via `{{{pythonTools}}}`.
 
 Execution uses a separate runtime preamble from `montyRuntimePreambleBuild()` that excludes
 prompt comments and includes compact `TYPE_CHECKING`-guarded function stubs so runtime preamble

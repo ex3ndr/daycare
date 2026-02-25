@@ -37,7 +37,6 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     skillsActiveRoot?: string;
     skillsPersonalRoot?: string;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
-    rlmToolOnly?: boolean;
     pythonExecution?: boolean;
     allowedToolNames?: ReadonlySet<string>;
 };

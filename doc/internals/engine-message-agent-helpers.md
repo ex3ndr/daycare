@@ -7,7 +7,6 @@ flowchart TD
   Engine[engine.ts] --> MsgBuild[messageBuildUser.ts]
   Engine --> MsgFormat[messageFormatIncoming.ts]
   Engine --> MsgExtractText[messageExtractText.ts]
-  Engine --> MsgExtractTools[messageExtractToolCalls.ts]
   Engine --> MsgNoMessage[messageNoMessageIs.ts]
   Engine --> MsgSystem[messageBuildSystemText.ts]
   Engine --> MsgSystemSilent[messageBuildSystemSilentText.ts]

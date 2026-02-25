@@ -57,10 +57,7 @@ describe("rlmNoToolsPromptBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-no-tools-prompt-"));
         let engine: Engine | null = null;
         try {
-            const config = configResolve(
-                { features: { rlm: true, noTools: true }, engine: { dataDir: dir } },
-                path.join(dir, "settings.json")
-            );
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.start();
 
