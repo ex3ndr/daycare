@@ -58,6 +58,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `docker-capabilities.md` - docker `CapAdd`/`CapDrop` support for sandbox containers
 - `docker-readonly-rootfs.md` - docker read-only rootfs mode for sandbox containers with writable `/home`
 - `docker-examples-mount-stale-check.md` - stale detection for required `/shared/examples` Docker bind mount
+- `docker-path-remap-idempotence.md` - docker-aware `~` expansion for `read`/`read_json` path normalization
 - `exa-numresults-unbounded.md` - `exa_search` schema now allows any `numResults >= 1`
 - `durable-process-manager.md` - durable process lifecycle and restart behavior
 - `logging.md` - logging configuration and output

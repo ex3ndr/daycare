@@ -15,6 +15,7 @@ import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
 import { sandboxPathContainerToHost } from "./sandboxPathContainerToHost.js";
+import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
     SandboxConfig,
     SandboxDockerConfig,
@@ -31,7 +32,6 @@ const READ_MAX_LINES = 2000;
 const READ_MAX_BYTES = 50 * 1024;
 const DEFAULT_EXEC_TIMEOUT = 30_000;
 const MAX_EXEC_BUFFER = 1_000_000;
-const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 const NARROW_NO_BREAK_SPACE = "\u202F";
 
 type TruncationResult = {
@@ -304,7 +304,7 @@ export class Sandbox {
     }
 
     private async readInputPathResolve(rawPath: string): Promise<string> {
-        const normalized = sandboxReadPathNormalize(rawPath, this.homeDir);
+        const normalized = sandboxReadPathNormalize(rawPath, this.homeDir, this.docker?.enabled === true);
         const rewritten = this.resolveVirtualPath(normalized);
         const resolved = path.isAbsolute(rewritten) ? rewritten : path.resolve(this.workingDir, rewritten);
         if (await pathExists(resolved)) {
@@ -349,18 +349,6 @@ export class Sandbox {
             this.docker.examplesDir
         );
     }
-}
-
-function sandboxReadPathNormalize(rawPath: string, homeDir: string): string {
-    const withoutAtPrefix = rawPath.startsWith("@") ? rawPath.slice(1) : rawPath;
-    const normalized = withoutAtPrefix.replace(UNICODE_SPACES, " ");
-    if (normalized === "~") {
-        return homeDir;
-    }
-    if (normalized.startsWith("~/")) {
-        return homeDir + normalized.slice(1);
-    }
-    return normalized;
 }
 
 function sandboxReadPathMacOSVariant(target: string): string {
