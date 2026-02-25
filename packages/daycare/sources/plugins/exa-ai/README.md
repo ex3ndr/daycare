@@ -11,7 +11,7 @@ Web search tool powered by Exa AI's neural, fast, and deep search modes.
 | Parameter     | Type    | Required | Description                                  |
 |---------------|---------|----------|----------------------------------------------|
 | query         | string  | yes      | The search query                             |
-| numResults    | number  | no       | Number of results (1-10, default 5)          |
+| numResults    | number  | no       | Number of results (minimum 1, default 5)     |
 | type          | string  | no       | Search type: auto, fast, deep, or neural     |
 | useAutoprompt | boolean | no       | Use Exa autoprompt to improve query          |
 

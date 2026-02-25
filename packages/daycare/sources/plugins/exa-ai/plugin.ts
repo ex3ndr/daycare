@@ -13,7 +13,7 @@ const settingsSchema = z
 const searchSchema = Type.Object(
     {
         query: Type.String({ minLength: 1, description: "The search query" }),
-        numResults: Type.Optional(Type.Number({ minimum: 1, maximum: 10, description: "Number of results to return" })),
+        numResults: Type.Optional(Type.Number({ minimum: 1, description: "Number of results to return" })),
         type: Type.Optional(
             Type.Union([Type.Literal("auto"), Type.Literal("fast"), Type.Literal("deep"), Type.Literal("neural")], {
                 description: "Search type: auto, fast, deep, or neural"
