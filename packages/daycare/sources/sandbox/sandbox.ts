@@ -162,7 +162,8 @@ export class Sandbox {
      */
     async write(args: SandboxWriteArgs): Promise<SandboxWriteResult> {
         const permissions = this.permissionsEffectiveResolve();
-        const targetPath = this.resolveVirtualPath(args.path);
+        const normalized = sandboxReadPathNormalize(args.path, this.homeDir, this.docker?.enabled === true);
+        const targetPath = this.resolveVirtualPath(normalized);
         sandboxPathAbsoluteEnsure(targetPath);
         await pathRejectIfSymlink(targetPath, "Cannot write to symbolic link.");
         const resolvedPath = await sandboxCanWrite(permissions, targetPath);

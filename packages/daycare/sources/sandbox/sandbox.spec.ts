@@ -124,6 +124,18 @@ describe("Sandbox", () => {
         await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("hello");
     });
 
+    it("writes using ~/ path expansion", async () => {
+        const outputPath = path.join(writeDir, "tilde.txt");
+
+        const writeResult = await sandbox.write({
+            path: "~/documents/tilde.txt",
+            content: "hello-tilde"
+        });
+        expect(writeResult.resolvedPath).toBe(await fs.realpath(outputPath));
+        expect(writeResult.sandboxPath).toBe("~/documents/tilde.txt");
+        await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("hello-tilde");
+    });
+
     it("appends to files when append is true", async () => {
         const outputPath = path.join(writeDir, "append.txt");
         await fs.writeFile(outputPath, "start", "utf8");

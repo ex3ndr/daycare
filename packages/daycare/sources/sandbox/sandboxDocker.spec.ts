@@ -233,4 +233,33 @@ describe("Sandbox docker integration", () => {
         expect(result.resolvedPath).toBe(await fs.realpath(outputPath));
         await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("docker-write");
     });
+
+    it("expands ~/ write paths to container home before host rewrite", async () => {
+        const sandbox = new Sandbox({
+            homeDir,
+            permissions,
+            docker: {
+                enabled: true,
+                image: "daycare-sandbox",
+                tag: "latest",
+                enableWeakerNestedSandbox: false,
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "u123",
+                skillsActiveDir,
+                examplesDir: skillsActiveDir
+            }
+        });
+
+        const result = await sandbox.write({
+            path: "~/documents/tilde-output.txt",
+            content: "docker-tilde-write"
+        });
+
+        const outputPath = path.join(homeDir, "documents", "tilde-output.txt");
+        expect(result.resolvedPath).toBe(await fs.realpath(outputPath));
+        await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("docker-tilde-write");
+    });
 });

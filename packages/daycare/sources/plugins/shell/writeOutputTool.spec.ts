@@ -123,11 +123,17 @@ describe("buildWriteOutputTool", () => {
 
 function createContext(homeDir: string): ToolExecutionContext {
     const write = vi.fn(async ({ path: targetPath, content }: { path: string; content: string | Buffer }) => {
-        await fs.mkdir(path.dirname(targetPath), { recursive: true });
-        await fs.writeFile(targetPath, content);
+        const resolvedPath =
+            targetPath === "~"
+                ? homeDir
+                : targetPath.startsWith("~/")
+                  ? path.join(homeDir, targetPath.slice(2))
+                  : targetPath;
+        await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
+        await fs.writeFile(resolvedPath, content);
         return {
             bytes: Buffer.isBuffer(content) ? content.byteLength : Buffer.byteLength(content, "utf8"),
-            resolvedPath: targetPath,
+            resolvedPath,
             sandboxPath: targetPath
         };
     });

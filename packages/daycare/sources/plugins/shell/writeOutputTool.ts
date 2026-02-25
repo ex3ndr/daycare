@@ -57,7 +57,7 @@ export function buildWriteOutputTool(): ToolDefinition {
             const outputsHostDir = path.join(toolContext.sandbox.homeDir, "outputs");
             const existingFileNames = await outputFileNamesList(outputsHostDir);
             const fileName = writeOutputFileNameResolve(normalizedName, existingFileNames, extension);
-            const targetPath = path.join(outputsHostDir, fileName);
+            const targetPath = path.posix.join(OUTPUTS_HOME_RELATIVE_DIR, fileName);
             const writeResult = await toolContext.sandbox.write({
                 path: targetPath,
                 content: payload.content
