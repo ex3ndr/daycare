@@ -22,19 +22,19 @@ describe("sandboxPathHostToContainer", () => {
     it("keeps paths outside host home unchanged", () => {
         const outsidePath = "/data/users/u123/apps/app.md";
         const rewritten = sandboxPathHostToContainer(hostHomeDir, userId, outsidePath);
-        expect(rewritten).toBe(outsidePath);
+        expect(rewritten).toBeNull();
     });
 
     it("does not rewrite lookalike prefixes", () => {
         const lookalikePath = "/data/users/u123/homework/notes.txt";
         const rewritten = sandboxPathHostToContainer(hostHomeDir, userId, lookalikePath);
-        expect(rewritten).toBe(lookalikePath);
+        expect(rewritten).toBeNull();
     });
 
     it("keeps relative paths unchanged", () => {
         const relativePath = "desktop/project/file.ts";
         const rewritten = sandboxPathHostToContainer(hostHomeDir, userId, relativePath);
-        expect(rewritten).toBe(relativePath);
+        expect(rewritten).toBeNull();
     });
 
     it("rewrites active skills root to /shared/skills", () => {

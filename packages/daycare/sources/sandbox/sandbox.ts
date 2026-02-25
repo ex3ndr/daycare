@@ -14,8 +14,8 @@ import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.j
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
-import { sandboxPathHostToContainer } from "./sandboxPathHostToContainer.js";
 import { sandboxPathContainerToHost } from "./sandboxPathContainerToHost.js";
+import { sandboxPathHostToContainer } from "./sandboxPathHostToContainer.js";
 import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
     SandboxConfig,
@@ -362,18 +362,29 @@ export class Sandbox {
     resolveVirtualPath(targetPath: string): string {
         // Translate /shared/examples paths regardless of Docker mode
         if (this.examplesDir && targetPath.startsWith("/shared/examples")) {
-            return sandboxPathContainerToHost(this.homeDir, "", targetPath, undefined, this.examplesDir);
+            const rewritten = sandboxPathContainerToHost(this.homeDir, "", targetPath, undefined, this.examplesDir);
+            if (!rewritten) {
+                throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
+            }
+            return rewritten;
         }
         if (!this.docker?.enabled) {
             return targetPath;
         }
-        return sandboxPathContainerToHost(
+        if (!path.isAbsolute(targetPath)) {
+            return targetPath;
+        }
+        const rewritten = sandboxPathContainerToHost(
             this.homeDir,
             this.docker.userId,
             targetPath,
             this.docker.skillsActiveDir,
             this.docker.examplesDir
         );
+        if (!rewritten) {
+            throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
+        }
+        return rewritten;
     }
 }
 
@@ -455,7 +466,7 @@ function sandboxDisplayPath(input: {
         input.docker.skillsActiveDir,
         input.docker.examplesDir ?? input.examplesDir
     );
-    if (containerPath === input.target) {
+    if (!containerPath) {
         return input.target;
     }
     if (containerPath === "/home") {

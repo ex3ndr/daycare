@@ -2,6 +2,7 @@ import { sandboxPathContainerToHostMap } from "./sandboxPathContainerToHostMap.j
 
 /**
  * Rewrites a container /home/<userId> path into its host mounted home directory path.
+ * Returns null when targetPath is not mappable to a configured mount.
  * Expects: targetPath uses POSIX separators when provided as a container path.
  */
 export function sandboxPathContainerToHost(
@@ -10,6 +11,6 @@ export function sandboxPathContainerToHost(
     targetPath: string,
     hostSkillsActiveDir?: string,
     hostExamplesDir?: string
-): string {
-    return sandboxPathContainerToHostMap(hostHomeDir, targetPath, hostSkillsActiveDir, hostExamplesDir) ?? targetPath;
+): string | null {
+    return sandboxPathContainerToHostMap(hostHomeDir, targetPath, hostSkillsActiveDir, hostExamplesDir);
 }

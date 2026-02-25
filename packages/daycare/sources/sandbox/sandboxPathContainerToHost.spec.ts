@@ -20,13 +20,13 @@ describe("sandboxPathContainerToHost", () => {
     it("keeps non-mapped container paths unchanged", () => {
         const outsidePath = "/tmp/other/file.txt";
         const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, outsidePath);
-        expect(rewritten).toBe(outsidePath);
+        expect(rewritten).toBeNull();
     });
 
     it("keeps relative paths unchanged", () => {
         const relativePath = "home/desktop/file.ts";
         const rewritten = sandboxPathContainerToHost(hostHomeDir, userId, relativePath);
-        expect(rewritten).toBe(relativePath);
+        expect(rewritten).toBeNull();
     });
 
     it("rewrites /shared/skills path to host active skills root", () => {

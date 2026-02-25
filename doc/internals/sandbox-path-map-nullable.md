@@ -29,7 +29,7 @@ These helpers map only known mount prefixes:
 - host skills `<hostSkillsActiveDir>` <-> container `/shared/skills`
 - host examples `<hostExamplesDir>` <-> container `/shared/examples`
 
-Existing compatibility helpers continue to return the original input when unmappable and now delegate to the new strict mappers.
+Sandbox wrappers are now strict and return `null` when unmappable; call sites decide whether to fail or provide explicit fallback behavior.
 
 ```mermaid
 flowchart TD

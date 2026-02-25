@@ -69,10 +69,10 @@ export async function dockerRunInSandbox(
         dockerConfig.hostExamplesDir
     );
     const containerCwd = options.cwd
-        ? sandboxPathHostToContainer(
+        ? containerPathRewriteStrict(
+              options.cwd,
               hostHomeDir,
               options.docker.userId,
-              options.cwd,
               dockerConfig.hostSkillsActiveDir,
               dockerConfig.hostExamplesDir
           )
@@ -84,6 +84,9 @@ export async function dockerRunInSandbox(
         dockerConfig.hostSkillsActiveDir,
         dockerConfig.hostExamplesDir
     );
+    if (!settingsContainerPath) {
+        throw new Error(`Path is not mappable to container mounts: ${settingsHostPath}`);
+    }
 
     await fs.mkdir(path.dirname(settingsHostPath), { recursive: true });
     await fs.writeFile(settingsHostPath, JSON.stringify(runtimeConfig), "utf8");
@@ -140,13 +143,13 @@ function runtimeConfigPathRewrite(
         filesystem: {
             ...config.filesystem,
             allowWrite: config.filesystem.allowWrite.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir, hostExamplesDir)
+                containerPathRewrite(entry, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir)
             ),
             denyRead: config.filesystem.denyRead.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir, hostExamplesDir)
+                containerPathRewrite(entry, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir)
             ),
             denyWrite: config.filesystem.denyWrite.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir, hostExamplesDir)
+                containerPathRewrite(entry, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir)
             )
         }
     };
@@ -165,10 +168,34 @@ function envPathRewrite(
         if (value === undefined) {
             continue;
         }
-        rewritten[key] = sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir, hostExamplesDir);
+        rewritten[key] = containerPathRewrite(value, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir);
     }
 
     return rewritten;
+}
+
+function containerPathRewrite(
+    value: string,
+    hostHomeDir: string,
+    userId: string,
+    hostSkillsActiveDir: string,
+    hostExamplesDir: string
+): string {
+    return sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir, hostExamplesDir) ?? value;
+}
+
+function containerPathRewriteStrict(
+    value: string,
+    hostHomeDir: string,
+    userId: string,
+    hostSkillsActiveDir: string,
+    hostExamplesDir: string
+): string {
+    const mapped = sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir, hostExamplesDir);
+    if (!mapped) {
+        throw new Error(`Path is not mappable to container mounts: ${value}`);
+    }
+    return mapped;
 }
 
 function dockerExecErrorBuild(result: DockerContainerExecResult): Error & {

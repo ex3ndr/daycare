@@ -48,6 +48,9 @@ describe("dockerRunInSandbox", () => {
             capturedLocalDnsServers = dockerConfig.localDnsServers;
             capturedCommand = bashCmd;
             capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
+            if (!capturedSettingsHostPath) {
+                throw new Error(`Expected settings path to map to host: ${settingsContainerPath}`);
+            }
             const rawConfig = await fs.readFile(capturedSettingsHostPath, "utf8");
             capturedRuntimeConfig = JSON.parse(rawConfig) as Record<string, unknown>;
             capturedEnv = args.env;
