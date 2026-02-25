@@ -5,11 +5,8 @@ import type { CronTaskDbRecord } from "../../storage/databaseTypes.js";
  */
 export type CronTaskDefinition = {
     id: string;
-    taskUid?: string;
-    name: string;
-    description?: string;
+    taskId: string;
     schedule: string;
-    code: string;
     agentId?: string;
     userId: string;
     enabled?: boolean;
@@ -23,8 +20,8 @@ export type CronTaskDefinition = {
  * Context passed to task handlers when a cron task executes.
  */
 export type CronTaskContext = {
+    triggerId: string;
     taskId: string;
-    taskUid: string;
     taskName: string;
     code: string;
     agentId: string | null;

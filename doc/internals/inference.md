@@ -26,11 +26,11 @@ flowchart LR
 
 ## Tools
 Tools are registered dynamically by plugins and core runtime:
-- `cron_add` creates a cron task stored in `<config>/cron/`.
-- `cron_read_task` reads a cron task description and prompt.
-- `cron_read_memory` reads memory for the current cron task.
-- `cron_write_memory` updates memory for the current cron task.
-- `cron_delete_task` deletes a cron task.
+- `task_create` creates a unified task (and optional cron/heartbeat trigger).
+- `task_read` reads a task and linked trigger metadata.
+- `task_update` updates task `title`, `description`, and/or `code`.
+- `task_delete` removes linked triggers and soft-deletes the task.
+- `task_trigger_add`/`task_trigger_remove` manage task triggers.
 - `memory_create_entity` creates a memory entity (requires name + description).
 - `memory_upsert_record` adds or updates a memory record.
 - `memory_list_entities` lists entity names + descriptions.

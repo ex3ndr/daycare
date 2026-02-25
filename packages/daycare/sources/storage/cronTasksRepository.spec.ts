@@ -9,9 +9,18 @@ describe("CronTasksRepository", () => {
         const storage = Storage.open(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-daily-report",
+                userId: "user-1",
+                title: "Daily Report",
+                description: "Generate daily summary",
+                code: "Summarize yesterday.",
+                createdAt: 10,
+                updatedAt: 10
+            });
             const record: CronTaskDbRecord = {
                 id: "daily-report",
-                taskUid: "clx9rk1p20000x5p3j7q1x8z1",
+                taskId: "task-daily-report",
                 userId: "user-1",
                 name: "Daily Report",
                 description: "Generate daily summary",
@@ -65,9 +74,18 @@ describe("CronTasksRepository", () => {
         const storage = Storage.open(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-cached-task",
+                userId: "user-1",
+                title: "Cached",
+                description: null,
+                code: "Prompt",
+                createdAt: 1,
+                updatedAt: 1
+            });
             await repo.create({
                 id: "cached-task",
-                taskUid: "clx9rk1p20000x5p3j7q1x8z2",
+                taskId: "task-cached-task",
                 userId: "user-1",
                 name: "Cached",
                 description: null,

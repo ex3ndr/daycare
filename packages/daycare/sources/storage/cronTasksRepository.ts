@@ -92,14 +92,25 @@ export class CronTasksRepository {
         return parsed.map((task) => cronTaskClone(task));
     }
 
+    async findManyByTaskId(taskId: string): Promise<CronTaskDbRecord[]> {
+        const rows = this.db
+            .prepare("SELECT * FROM tasks_cron WHERE task_id = ? ORDER BY updated_at ASC")
+            .all(taskId) as DatabaseCronTaskRow[];
+        return rows.map((row) => cronTaskClone(this.taskParse(row)));
+    }
+
     async create(record: CronTaskDbRecord): Promise<void> {
+        const taskId = record.taskId.trim();
+        if (!taskId) {
+            throw new Error("Cron trigger taskId is required.");
+        }
         await this.createLock.inLock(async () => {
             this.db
                 .prepare(
                     `
                   INSERT INTO tasks_cron (
                     id,
-                    task_uid,
+                    task_id,
                     user_id,
                     name,
                     description,
@@ -113,7 +124,7 @@ export class CronTasksRepository {
                     updated_at
                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
-                    task_uid = excluded.task_uid,
+                    task_id = excluded.task_id,
                     user_id = excluded.user_id,
                     name = excluded.name,
                     description = excluded.description,
@@ -129,7 +140,7 @@ export class CronTasksRepository {
                 )
                 .run(
                     record.id,
-                    record.taskUid,
+                    taskId,
                     record.userId,
                     record.name,
                     record.description,
@@ -161,19 +172,22 @@ export class CronTasksRepository {
                 ...current,
                 ...data,
                 id: current.id,
-                taskUid: data.taskUid ?? current.taskUid,
+                taskId: data.taskId ?? current.taskId,
                 userId: data.userId === undefined ? current.userId : data.userId,
                 description: data.description === undefined ? current.description : data.description,
                 agentId: data.agentId === undefined ? current.agentId : data.agentId,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
+            if (!next.taskId.trim()) {
+                throw new Error("Cron trigger taskId is required.");
+            }
 
             this.db
                 .prepare(
                     `
                   UPDATE tasks_cron
                   SET
-                    task_uid = ?,
+                    task_id = ?,
                     user_id = ?,
                     name = ?,
                     description = ?,
@@ -189,7 +203,7 @@ export class CronTasksRepository {
                 `
                 )
                 .run(
-                    next.taskUid,
+                    next.taskId.trim(),
                     next.userId,
                     next.name,
                     next.description,
@@ -240,9 +254,13 @@ export class CronTasksRepository {
     }
 
     private taskParse(row: DatabaseCronTaskRow): CronTaskDbRecord {
+        const taskId = row.task_id?.trim();
+        if (!taskId) {
+            throw new Error(`Cron trigger ${row.id} is missing required task_id.`);
+        }
         return {
             id: row.id,
-            taskUid: row.task_uid,
+            taskId,
             userId: row.user_id,
             name: row.name,
             description: row.description,

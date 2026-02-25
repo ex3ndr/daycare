@@ -39,12 +39,37 @@ describe("HeartbeatScheduler", () => {
         const scheduler = new HeartbeatScheduler({
             config: configModule(dir),
             repository: storage.heartbeatTasks,
+            tasksRepository: storage.tasks,
             onRun,
             onTaskComplete
         });
 
-        const taskA = await scheduler.createTask(contextBuild("user-1"), { title: "Alpha", code: "Check alpha." });
-        const taskB = await scheduler.createTask(contextBuild("user-1"), { title: "Beta", code: "Check beta." });
+        const now = Date.now();
+        await storage.tasks.create({
+            id: "task-alpha",
+            userId: "user-1",
+            title: "Alpha",
+            description: null,
+            code: "Check alpha.",
+            createdAt: now,
+            updatedAt: now
+        });
+        await storage.tasks.create({
+            id: "task-beta",
+            userId: "user-1",
+            title: "Beta",
+            description: null,
+            code: "Check beta.",
+            createdAt: now,
+            updatedAt: now
+        });
+
+        const taskA = await scheduler.createTask(contextBuild("user-1"), {
+            taskId: "task-alpha"
+        });
+        const taskB = await scheduler.createTask(contextBuild("user-1"), {
+            taskId: "task-beta"
+        });
 
         const result = await scheduler.runNow();
 
@@ -71,11 +96,36 @@ describe("HeartbeatScheduler", () => {
         const scheduler = new HeartbeatScheduler({
             config: configModule(dir),
             repository: storage.heartbeatTasks,
+            tasksRepository: storage.tasks,
             onRun
         });
 
-        const taskA = await scheduler.createTask(contextBuild("user-1"), { title: "Alpha", code: "Check alpha." });
-        await scheduler.createTask(contextBuild("user-1"), { title: "Beta", code: "Check beta." });
+        const now = Date.now();
+        await storage.tasks.create({
+            id: "task-alpha",
+            userId: "user-1",
+            title: "Alpha",
+            description: null,
+            code: "Check alpha.",
+            createdAt: now,
+            updatedAt: now
+        });
+        await storage.tasks.create({
+            id: "task-beta",
+            userId: "user-1",
+            title: "Beta",
+            description: null,
+            code: "Check beta.",
+            createdAt: now,
+            updatedAt: now
+        });
+
+        const taskA = await scheduler.createTask(contextBuild("user-1"), {
+            taskId: "task-alpha"
+        });
+        await scheduler.createTask(contextBuild("user-1"), {
+            taskId: "task-beta"
+        });
 
         const result = await scheduler.runNow([taskA.id]);
 
@@ -95,12 +145,21 @@ describe("HeartbeatScheduler", () => {
         const scheduler = new HeartbeatScheduler({
             config: configModule(dir),
             repository: storage.heartbeatTasks,
+            tasksRepository: storage.tasks,
             onRun: vi.fn()
+        });
+        await storage.tasks.create({
+            id: "task-owned",
+            userId: "user-1",
+            title: "Owned task",
+            description: null,
+            code: "Owned prompt",
+            createdAt: Date.now(),
+            updatedAt: Date.now()
         });
 
         const task = await scheduler.createTask(contextBuild("user-1"), {
-            title: "Owned task",
-            code: "Owned prompt"
+            taskId: "task-owned"
         });
 
         await expect(scheduler.deleteTask(contextBuild("user-2"), task.id)).resolves.toBe(false);
@@ -115,12 +174,21 @@ describe("HeartbeatScheduler", () => {
         const scheduler = new HeartbeatScheduler({
             config: configModule(dir),
             repository: storage.heartbeatTasks,
+            tasksRepository: storage.tasks,
             onRun: vi.fn()
+        });
+        await storage.tasks.create({
+            id: "task-trim",
+            userId: "user-1",
+            title: "Trim user id",
+            description: null,
+            code: "Delete using padded ctx user id",
+            createdAt: Date.now(),
+            updatedAt: Date.now()
         });
 
         const task = await scheduler.createTask(contextBuild("user-1"), {
-            title: "Trim user id",
-            code: "Delete using padded ctx user id"
+            taskId: "task-trim"
         });
 
         await expect(scheduler.deleteTask(contextBuild("  user-1  "), task.id)).resolves.toBe(true);

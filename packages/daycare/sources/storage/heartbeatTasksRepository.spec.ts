@@ -8,8 +8,27 @@ describe("HeartbeatTasksRepository", () => {
         const storage = Storage.open(":memory:");
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-alpha",
+                userId: "user-1",
+                title: "Alpha",
+                description: null,
+                code: "Check alpha",
+                createdAt: 10,
+                updatedAt: 10
+            });
+            await storage.tasks.create({
+                id: "task-beta",
+                userId: "user-1",
+                title: "Beta",
+                description: null,
+                code: "Check beta",
+                createdAt: 11,
+                updatedAt: 11
+            });
             const first: HeartbeatTaskDbRecord = {
                 id: "alpha",
+                taskId: "task-alpha",
                 userId: "user-1",
                 title: "Alpha",
                 code: "Check alpha",
@@ -19,6 +38,7 @@ describe("HeartbeatTasksRepository", () => {
             };
             const second: HeartbeatTaskDbRecord = {
                 id: "beta",
+                taskId: "task-beta",
                 userId: "user-1",
                 title: "Beta",
                 code: "Check beta",
@@ -60,8 +80,18 @@ describe("HeartbeatTasksRepository", () => {
         const storage = Storage.open(":memory:");
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-cache-heartbeat",
+                userId: "user-1",
+                title: "Cache",
+                description: null,
+                code: "Prompt",
+                createdAt: 1,
+                updatedAt: 1
+            });
             await repo.create({
                 id: "cache-heartbeat",
+                taskId: "task-cache-heartbeat",
                 userId: "user-1",
                 title: "Cache",
                 code: "Prompt",

@@ -4,6 +4,7 @@ import { heartbeatPromptBuildBatch } from "./heartbeatPromptBuildBatch.js";
 
 const buildTask = (id: string, title: string, code: string) => ({
     id,
+    taskId: `task-${id}`,
     userId: "user-1",
     title,
     code,

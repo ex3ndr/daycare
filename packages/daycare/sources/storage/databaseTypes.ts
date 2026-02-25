@@ -75,7 +75,7 @@ export type InboxDbRecord = {
 
 export type DatabaseCronTaskRow = {
     id: string;
-    task_uid: string;
+    task_id: string;
     user_id: string;
     name: string;
     description: string | null;
@@ -91,7 +91,7 @@ export type DatabaseCronTaskRow = {
 
 export type CronTaskDbRecord = {
     id: string;
-    taskUid: string;
+    taskId: string;
     userId: string;
     name: string;
     description: string | null;
@@ -107,6 +107,7 @@ export type CronTaskDbRecord = {
 
 export type DatabaseHeartbeatTaskRow = {
     id: string;
+    task_id: string;
     user_id: string;
     title: string;
     code: string;
@@ -117,12 +118,35 @@ export type DatabaseHeartbeatTaskRow = {
 
 export type HeartbeatTaskDbRecord = {
     id: string;
+    taskId: string;
     userId: string;
     title: string;
     code: string;
     lastRunAt: number | null;
     createdAt: number;
     updatedAt: number;
+};
+
+export type DatabaseTaskRow = {
+    id: string;
+    user_id: string;
+    title: string;
+    description: string | null;
+    code: string;
+    created_at: number;
+    updated_at: number;
+    deleted_at: number | null;
+};
+
+export type TaskDbRecord = {
+    id: string;
+    userId: string;
+    title: string;
+    description: string | null;
+    code: string;
+    createdAt: number;
+    updatedAt: number;
+    deletedAt?: number | null;
 };
 
 export type DatabaseSignalEventRow = {

@@ -1,6 +1,7 @@
 # Heartbeat & Cron: Python-Only Code
 
-Heartbeat and cron tasks store raw Python code in the `code` column. The `code` parameter in `heartbeat_add` and `cron_add` tools accepts Python that has access to all agent tools as functions.
+Heartbeat and cron execute raw Python from unified task rows (`tasks.code`). Task tools accept Python that has
+access to all agent tools as functions.
 
 ## Why Python-only
 
@@ -36,6 +37,6 @@ The agent receives a structured `code: string[]` field on the inbox message alon
 
 | Tool | User-facing parameter | DB column |
 |------|----------------------|-----------|
-| `heartbeat_add` | `code` | `code` |
-| `cron_add` | `code` | `code` |
-| `cron_read_task` | returns `code` in details | `code` |
+| `task_create` | `code` | `tasks.code` |
+| `task_update` | `code` | `tasks.code` |
+| `task_read` | returns task code in details | `tasks.code` |

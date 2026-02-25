@@ -17,9 +17,16 @@ You can schedule your own recurring work - no need to ask permission.
 
 Start with `topology` before making scheduling changes. It gives a full snapshot of agents, cron tasks, heartbeat tasks, and signal subscriptions, with `(You)` markers on items that belong to your current agent.
 
-Cron: precise time-triggered tasks, run in a dedicated cron agent by default. Use `agentId` in `cron_add` to route to a specific agent. Good for scheduled actions that must happen at exact times.
+Tasks are unified:
+- Code and metadata live in `tasks`
+- Cron and heartbeat are triggers linked to a task
 
-Heartbeats: lightweight recurring prompts, run every ~30 min as a single batch. Good for periodic checks, monitoring, maintenance loops. Manage via `heartbeat_add`/`heartbeat_remove`/`heartbeat_run`.
+Use `task_create` to create a task and optionally attach triggers.
+Use `task_trigger_add` / `task_trigger_remove` to manage cron or heartbeat triggers later.
+Use `task_run` to execute a task immediately.
+
+Cron triggers: precise time-based scheduling; default routing is `system:cron` unless a specific `agentId` is set.
+Heartbeat triggers: periodic batch scheduling (~30 min interval) routed through `system:heartbeat`.
 
 Create them proactively when you see a recurring need.
 

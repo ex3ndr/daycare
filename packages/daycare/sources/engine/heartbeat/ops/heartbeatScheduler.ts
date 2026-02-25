@@ -1,6 +1,7 @@
+import { createId } from "@paralleldrive/cuid2";
 import type { Context } from "@/types";
 import { getLogger } from "../../../log.js";
-import { stringSlugify } from "../../../utils/stringSlugify.js";
+import type { HeartbeatTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { HeartbeatCreateTaskArgs, HeartbeatDefinition, HeartbeatSchedulerOptions } from "../heartbeatTypes.js";
 
@@ -14,6 +15,7 @@ const logger = getLogger("heartbeat.scheduler");
 export class HeartbeatScheduler {
     private config: HeartbeatSchedulerOptions["config"];
     private repository: HeartbeatSchedulerOptions["repository"];
+    private tasksRepository: HeartbeatSchedulerOptions["tasksRepository"];
     private intervalMs: number;
     private onRun: HeartbeatSchedulerOptions["onRun"];
     private onError?: HeartbeatSchedulerOptions["onError"];
@@ -27,6 +29,7 @@ export class HeartbeatScheduler {
     constructor(options: HeartbeatSchedulerOptions) {
         this.config = options.config;
         this.repository = options.repository;
+        this.tasksRepository = options.tasksRepository;
         this.intervalMs = options.intervalMs ?? 30 * 60 * 1000;
         this.onRun = options.onRun;
         this.onError = options.onError;
@@ -65,48 +68,51 @@ export class HeartbeatScheduler {
     }
 
     async createTask(ctx: Context, definition: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition> {
-        const title = definition.title.trim();
-        const code = definition.code.trim();
-        if (!title) {
-            throw new Error("Heartbeat title is required.");
-        }
-        if (!code) {
-            throw new Error("Heartbeat code is required.");
-        }
-
         const providedId = definition.id?.trim();
         if (providedId && !taskIdIsSafe(providedId)) {
             throw new Error("Heartbeat id contains invalid characters.");
         }
 
-        const taskId = providedId ?? (await this.generateTaskIdFromTitle(title));
-        const existing = await this.repository.findById(taskId);
+        const triggerId = providedId ?? createId();
+        const existing = await this.repository.findById(triggerId);
         const userId = ctx.userId.trim();
         if (!userId) {
             throw new Error("Heartbeat userId is required.");
         }
         if (existing && existing.userId !== userId) {
-            throw new Error(`Heartbeat belongs to another user: ${taskId}`);
+            throw new Error(`Heartbeat belongs to another user: ${triggerId}`);
         }
         if (existing && !definition.overwrite) {
-            throw new Error(`Heartbeat already exists: ${taskId}`);
+            throw new Error(`Heartbeat already exists: ${triggerId}`);
         }
+
+        const linkedTask = await this.tasksRepository.findById(definition.taskId);
+        if (!linkedTask) {
+            throw new Error(`Task not found: ${definition.taskId}`);
+        }
+        if (linkedTask.userId !== userId) {
+            throw new Error(`Task belongs to another user: ${definition.taskId}`);
+        }
+        const title = linkedTask.title;
+        const code = linkedTask.code;
 
         const now = Date.now();
         if (existing) {
             const updated: HeartbeatDefinition = {
                 ...existing,
+                taskId: definition.taskId,
                 userId,
                 title,
                 code,
                 updatedAt: now
             };
-            await this.repository.update(taskId, updated);
+            await this.repository.update(triggerId, updated);
             return heartbeatTaskClone(updated);
         }
 
         const created: HeartbeatDefinition = {
-            id: taskId,
+            id: triggerId,
+            taskId: definition.taskId,
             userId,
             title,
             code,
@@ -140,21 +146,6 @@ export class HeartbeatScheduler {
     getNextRunAt(): Date | null {
         return this.nextRunAt;
     }
-
-    private async generateTaskIdFromTitle(title: string): Promise<string> {
-        const base = stringSlugify(title) || "heartbeat";
-        const tasks = await this.repository.findAll();
-        const existing = new Set(tasks.map((task) => task.id));
-
-        let candidate = base;
-        let suffix = 2;
-        while (existing.has(candidate)) {
-            candidate = `${base}-${suffix}`;
-            suffix += 1;
-        }
-        return candidate;
-    }
-
     private scheduleNext(): void {
         if (this.stopped) {
             return;
@@ -196,18 +187,19 @@ export class HeartbeatScheduler {
             if (filtered.length === 0) {
                 return { ran: 0, taskIds: [] };
             }
+            const runTasks = await this.runTasksResolve(filtered);
             const runAt = new Date();
             const runAtMs = runAt.getTime();
-            const ids = filtered.map((task) => task.id);
+            const ids = runTasks.map((task) => task.id);
             logger.info(
                 {
-                    taskCount: filtered.length,
+                    taskCount: runTasks.length,
                     taskIds: ids
                 },
                 "start: Heartbeat run started"
             );
             try {
-                await this.onRun(filtered, runAt);
+                await this.onRun(runTasks, runAt);
             } catch (error) {
                 logger.warn({ taskIds: ids, error }, "error: Heartbeat run failed");
                 await this.onError?.(error, ids);
@@ -216,17 +208,18 @@ export class HeartbeatScheduler {
                 for (const task of filtered) {
                     task.lastRunAt = runAtMs;
                     task.updatedAt = runAtMs;
-                    await this.onTaskComplete?.(heartbeatTaskClone(task), runAt);
+                    const completedTask = runTasks.find((candidate) => candidate.id === task.id) ?? task;
+                    await this.onTaskComplete?.(heartbeatTaskClone(completedTask), runAt);
                 }
             }
             logger.info(
                 {
-                    taskCount: filtered.length,
+                    taskCount: runTasks.length,
                     taskIds: ids
                 },
                 "event: Heartbeat run completed"
             );
-            return { ran: filtered.length, taskIds: ids };
+            return { ran: runTasks.length, taskIds: ids };
         } catch (error) {
             logger.warn({ error }, "error: Heartbeat run failed");
             await this.onError?.(error, undefined);
@@ -234,6 +227,23 @@ export class HeartbeatScheduler {
         } finally {
             this.running = false;
         }
+    }
+
+    private async runTasksResolve(tasks: HeartbeatTaskDbRecord[]): Promise<HeartbeatTaskDbRecord[]> {
+        const resolved: HeartbeatTaskDbRecord[] = [];
+        for (const trigger of tasks) {
+            const linked = await this.tasksRepository.findById(trigger.taskId);
+            if (!linked) {
+                throw new Error(`Heartbeat trigger ${trigger.id} references missing task: ${trigger.taskId}`);
+            }
+            resolved.push({
+                ...trigger,
+                taskId: linked.id,
+                title: linked.title,
+                code: linked.code
+            });
+        }
+        return resolved;
     }
 }
 

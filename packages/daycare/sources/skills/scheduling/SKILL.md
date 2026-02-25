@@ -5,45 +5,43 @@ description: Schedule recurring or time-based tasks. Use for alarms, reminders, 
 
 # Scheduling
 
-Daycare supports two scheduling mechanisms: **cron** for precise timing and **heartbeats** for periodic check-ins.
+Daycare uses unified **tasks** with optional **cron** and **heartbeat** triggers.
 
 ## When to Use Cron
 
-Use cron when:
+Use cron triggers when:
 - Exact timing matters (e.g., "every day at 9am")
-- Tasks need their own isolated agent and memory
+- Tasks need precise schedule control
 - One-off scheduled tasks (with `deleteAfterRun`)
 - Tasks that produce artifacts in a dedicated workspace
 
-**Cron tools:** `cron_add`, `cron_read_task`, `cron_read_memory`, `cron_write_memory`, `cron_delete_task`
+**Task/Cron tools:** `task_create`, `task_read`, `task_update`, `task_delete`, `task_trigger_add`, `task_trigger_remove`, `task_run`
 
 ### Cron Routing
 
-Cron tasks run in their own dedicated cron agent by default. If you want the cron
-notification to land in an existing agent (e.g. a user chat), include `agentId`
-in `cron_add` to route the prompt to that agent instead.
+Cron triggers run through `system:cron` by default. You can set `agentId` during
+`task_create` when adding an initial cron schedule.
 
 ## When to Use Heartbeats
 
-Use heartbeats when:
+Use heartbeat triggers when:
 - Approximate timing is acceptable (~30 minute intervals)
-- Tasks need ongoing context from the main agent
+- Tasks need periodic checks with approximate timing
 - Prompts evolve over time and need periodic review
 - Lightweight status checks or reminders
 
-**Heartbeat tools:** `heartbeat_add`, `heartbeat_run`, `heartbeat_remove` (use `topology` to inspect tasks)
+**Heartbeat tools:** use `task_trigger_add`/`task_trigger_remove` with `type: "heartbeat"` and inspect with `task_read`/`topology`
 
 ## Examples
 
-**Cron with routing (`TASK.md` frontmatter):**
+**Task with cron trigger:**
 
 ```yaml
----
-name: API health
-schedule: "*/10 * * * *"
+title: API health
+cron: "*/10 * * * *"
 agentId: cu3ql2p5q0000x5p3g7q1l8a9
----
-If the API is down, notify me with a short summary.
+code: |
+  print("check API health")
 ```
 
 ## Selection Examples
@@ -85,16 +83,16 @@ If the API is down, notify me with a short summary.
 
 ## Workflow
 
-**For cron tasks:**
+**For cron triggers:**
 1. Determine the schedule (cron expression: `minute hour day month weekday`)
-2. Use `cron_add` with name, schedule, and prompt (optional `agentId`)
-3. Each task gets isolated agent, memory file, and workspace
+2. Use `task_create` with `cron` (or `task_trigger_add` on an existing task)
+3. Use `task_read` or `topology` to verify triggers
 
-**For heartbeats:**
-1. Run `topology` to see existing heartbeat tasks and ownership
-2. Use `heartbeat_add` with title and prompt
-3. Use `heartbeat_run` to trigger immediately
-4. Use `heartbeat_remove` for cleanup
+**For heartbeat triggers:**
+1. Run `topology` or `task_read` to inspect existing triggers
+2. Use `task_trigger_add` with `type: "heartbeat"`
+3. Use `task_run` to trigger immediately
+4. Use `task_trigger_remove` for cleanup
 
 ## Executable Prompts
 

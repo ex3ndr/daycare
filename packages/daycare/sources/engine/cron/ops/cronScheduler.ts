@@ -3,8 +3,8 @@ import type { Context, MessageContext } from "@/types";
 import { getLogger } from "../../../log.js";
 import type { CronTasksRepository } from "../../../storage/cronTasksRepository.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
-import { cuid2Is } from "../../../utils/cuid2Is.js";
-import { stringSlugify } from "../../../utils/stringSlugify.js";
+import type { TasksRepository } from "../../../storage/tasksRepository.js";
+import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
 import type { CronTaskContext, CronTaskDefinition, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
@@ -14,6 +14,7 @@ const logger = getLogger("cron.scheduler");
 export type CronSchedulerOptions = {
     config: ConfigModule;
     repository: CronTasksRepository;
+    tasksRepository: TasksRepository;
     onTask: (context: CronTaskContext, messageContext: MessageContext) => void | Promise<void>;
     onError?: (error: unknown, taskId: string) => void | Promise<void>;
     onTaskComplete?: (task: CronTaskDbRecord, runAt: Date) => void | Promise<void>;
@@ -25,6 +26,7 @@ export type CronSchedulerOptions = {
 export class CronScheduler {
     private config: ConfigModule;
     private repository: CronTasksRepository;
+    private tasksRepository: TasksRepository;
     private tasks = new Map<string, ScheduledTask>();
     private started = false;
     private stopped = false;
@@ -37,6 +39,7 @@ export class CronScheduler {
     constructor(options: CronSchedulerOptions) {
         this.config = options.config;
         this.repository = options.repository;
+        this.tasksRepository = options.tasksRepository;
         this.onTask = options.onTask;
         this.onError = options.onError;
         this.onTaskComplete = options.onTaskComplete;
@@ -112,20 +115,32 @@ export class CronScheduler {
         if (!userId) {
             throw new Error("Cron userId is required.");
         }
-        const taskId = definition.id ?? (await this.generateTaskIdFromName(definition.name));
-        const existing = await this.repository.findById(taskId);
+        const providedId = definition.id?.trim();
+        if (providedId && !taskIdIsSafe(providedId)) {
+            throw new Error("Cron trigger id contains invalid characters.");
+        }
+
+        const triggerId = providedId ?? createId();
+        const existing = await this.repository.findById(triggerId);
         if (existing && existing.userId !== userId) {
-            throw new Error(`Cron task belongs to another user: ${taskId}`);
+            throw new Error(`Cron task belongs to another user: ${triggerId}`);
+        }
+        const linkedTask = await this.tasksRepository.findById(definition.taskId);
+        if (!linkedTask) {
+            throw new Error(`Task not found: ${definition.taskId}`);
+        }
+        if (linkedTask.userId !== userId) {
+            throw new Error(`Task belongs to another user: ${definition.taskId}`);
         }
         const now = Date.now();
         const task: CronTaskDbRecord = {
-            id: taskId,
-            taskUid: definition.taskUid && cuid2Is(definition.taskUid) ? definition.taskUid : createId(),
+            id: triggerId,
+            taskId: definition.taskId,
             userId,
-            name: definition.name,
-            description: definition.description ?? null,
+            name: linkedTask.title,
+            description: linkedTask.description,
             schedule: definition.schedule,
-            code: definition.code,
+            code: linkedTask.code,
             agentId: definition.agentId ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
@@ -173,27 +188,13 @@ export class CronScheduler {
         }
 
         return {
-            taskId: scheduled.task.id,
-            taskUid: scheduled.task.taskUid,
+            triggerId: scheduled.task.id,
+            taskId: scheduled.task.taskId,
             taskName: scheduled.task.name,
             code: scheduled.task.code,
             agentId: scheduled.task.agentId,
             userId: scheduled.task.userId
         };
-    }
-
-    private async generateTaskIdFromName(name: string): Promise<string> {
-        const base = stringSlugify(name) || "cron-task";
-        const tasks = await this.repository.findAll({ includeDisabled: true });
-        const existing = new Set(tasks.map((task) => task.id));
-
-        let candidate = base;
-        let suffix = 2;
-        while (existing.has(candidate)) {
-            candidate = `${base}-${suffix}`;
-            suffix += 1;
-        }
-        return candidate;
     }
 
     private scheduleTask(task: CronTaskDbRecord): void {
@@ -228,12 +229,13 @@ export class CronScheduler {
 
         const runAt = new Date();
         const runAtMs = runAt.getTime();
+        const runtimeTask = await this.taskRuntimeResolve(task);
 
         const taskContext: CronTaskContext = {
-            taskId: task.id,
-            taskUid: task.taskUid,
-            taskName: task.name,
-            code: task.code,
+            triggerId: task.id,
+            taskId: runtimeTask.taskId,
+            taskName: runtimeTask.taskTitle,
+            code: runtimeTask.code,
             agentId: task.agentId,
             userId: task.userId
         };
@@ -263,6 +265,16 @@ export class CronScheduler {
             return;
         }
         await this.onError(error, taskId);
+    }
+
+    private async taskRuntimeResolve(
+        task: CronTaskDbRecord
+    ): Promise<{ taskId: string; taskTitle: string; code: string }> {
+        const linkedTask = await this.tasksRepository.findById(task.taskId);
+        if (!linkedTask) {
+            throw new Error(`Cron trigger ${task.id} references missing task: ${task.taskId}`);
+        }
+        return { taskId: linkedTask.id, taskTitle: linkedTask.title, code: linkedTask.code };
     }
 
     private runTick(): void {

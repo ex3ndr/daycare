@@ -19,6 +19,7 @@ import { SessionsRepository } from "./sessionsRepository.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
 import { SystemPromptsRepository } from "./systemPromptsRepository.js";
+import { TasksRepository } from "./tasksRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 
 /**
@@ -33,6 +34,7 @@ export class Storage {
     readonly inbox: InboxRepository;
     readonly cronTasks: CronTasksRepository;
     readonly heartbeatTasks: HeartbeatTasksRepository;
+    readonly tasks: TasksRepository;
     readonly signalEvents: SignalEventsRepository;
     readonly signalSubscriptions: SignalSubscriptionsRepository;
     readonly delayedSignals: DelayedSignalsRepository;
@@ -55,6 +57,7 @@ export class Storage {
         this.inbox = new InboxRepository(connection);
         this.cronTasks = new CronTasksRepository(connection);
         this.heartbeatTasks = new HeartbeatTasksRepository(connection);
+        this.tasks = new TasksRepository(connection);
         this.signalEvents = new SignalEventsRepository(connection);
         this.signalSubscriptions = new SignalSubscriptionsRepository(connection);
         this.delayedSignals = new DelayedSignalsRepository(connection);

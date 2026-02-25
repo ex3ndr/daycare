@@ -1,12 +1,12 @@
 # Cron
 
-Cron tasks store Python code that runs on a repeating schedule. Each task is stored in SQLite and has its own agent.
+Cron uses trigger rows (`tasks_cron`) that run linked unified tasks (`tasks`) on a repeating schedule.
 
 ## Task storage
 
 Rows live in `tasks_cron`:
-- `id` (task slug), `task_uid` (cuid2 descriptor id)
-- `name`, `description`, `schedule`, `code` (Python code)
+- `id` (trigger id; `cuid2` by default), `task_id` (required reference to `tasks.id`)
+- `name`, `description`, `schedule`, `code` (legacy copy for compatibility)
 - `agent_id`, `user_id`
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
@@ -23,15 +23,12 @@ print(result)
 
 All agent tools are available as Python functions. Call `skip()` to abort inference.
 
-### Fields
+### Trigger fields
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | yes | Human-readable task name |
 | `schedule` | yes | 5-field cron expression (`minute hour day month weekday`) |
-| `code` | yes | Python code to execute |
 | `enabled` | no | Set to `false` to disable |
-| `description` | no | Short description |
 | `deleteAfterRun` | no | When `true`, delete the task after it runs once |
 | `agentId` | no | Route to an existing agent id (defaults to the cron agent) |
 
@@ -46,7 +43,7 @@ flowchart TD
   AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
 ```
 
-- Each task runs in its own agent (the `taskId` cuid2) unless `agentId` routes elsewhere.
+- Each trigger executes linked task code from `tasks.code` via the cron system agent unless `agentId` routes elsewhere.
 - When a schedule triggers, the Python code is sent as a `code[]` array in the system message.
 - `handleSystemMessage` executes each code block directly via `rlmExecute` with a 30s timeout.
 
@@ -54,6 +51,8 @@ flowchart TD
 
 | Tool | Description |
 |------|-------------|
-| `cron_add` | Create a new task with Python code |
-| `cron_read_task` | Read a task's description and code |
-| `cron_delete_task` | Delete a task from disk and scheduler |
+| `task_create` | Create a task and optional cron trigger |
+| `task_read` | Read a task and linked triggers |
+| `task_delete` | Delete task and all linked triggers |
+| `task_trigger_add` | Attach a cron trigger to an existing task |
+| `task_trigger_remove` | Remove a cron trigger |

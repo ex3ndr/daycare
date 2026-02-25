@@ -191,6 +191,7 @@ describe("topologyTool", () => {
                     heartbeatTasks: [
                         {
                             id: "check-health",
+                            taskId: "task-check-health",
                             userId: "user-1",
                             title: "Health Check",
                             code: "Check status",
@@ -580,6 +581,7 @@ describe("topologyTool", () => {
                     heartbeatTasks: [
                         {
                             id: "check-health",
+                            taskId: "task-check-health",
                             userId: "user-1",
                             title: "Health Check",
                             code: "Check status",
@@ -664,7 +666,7 @@ function cronTaskBuild(input: {
 }): CronTaskDbRecord {
     return {
         id: input.id,
-        taskUid: `${input.id}-uid`,
+        taskId: `${input.id}-task`,
         userId: "user-1",
         name: input.name,
         description: null,

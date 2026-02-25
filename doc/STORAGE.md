@@ -11,7 +11,7 @@ Daycare persists data using five mechanisms:
 | SQLite | relational tables | `config.dbPath` (default: `<dataDir>/daycare.db`) |
 | JSON files | structured objects | `configDir`, `dataDir`, `workspaceDir`, and plugin `dataDir` |
 | JSONL append files | one JSON object per line | legacy migration inputs only (`configDir/channels/*/history.jsonl`, `configDir/signals/events.jsonl`) |
-| Markdown (+ frontmatter for some files) | markdown bodies and YAML-like metadata | cron/heartbeat/app/memory/skills files |
+| Markdown (+ frontmatter for some files) | markdown bodies and YAML-like metadata | app/memory/skills files |
 | PGlite | embedded Postgres directory | `<plugin dataDir>/db.pglite` |
 
 ## Config Path Wiring
@@ -194,6 +194,25 @@ erDiagram
   users ||--o{ processes : owns
 ```
 
+### Unified Task Tables Added in 20260224+
+
+Task and scheduler persistence is SQLite-first:
+
+- `tasks` (source of truth for task `title`, `description`, and `code`)
+- `tasks_cron` (cron triggers referencing `tasks.id` through required `task_id`)
+- `tasks_heartbeat` (heartbeat triggers referencing `tasks.id` through `task_id`)
+
+Follow-up migrations enforce trigger linkage and soft-delete semantics:
+
+- `tasks_cron.task_uid` removed; `tasks_cron.task_id` is required
+- `tasks.deleted_at` marks task removal while reserving historical task ids
+
+```mermaid
+erDiagram
+  tasks ||--o{ tasks_cron : referenced_by
+  tasks ||--o{ tasks_heartbeat : referenced_by
+```
+
 ### SQL Schemas
 
 ```sql
@@ -314,6 +333,44 @@ export type DatabaseInboxRow = {
   data: string; // JSON serialized AgentInboxItem
 };
 
+export type DatabaseTaskRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  code: string;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number | null;
+};
+
+export type DatabaseCronTaskRow = {
+  id: string;
+  task_id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  schedule: string;
+  code: string;
+  agent_id: string | null;
+  enabled: number;
+  delete_after_run: number;
+  last_run_at: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type DatabaseHeartbeatTaskRow = {
+  id: string;
+  task_id: string;
+  user_id: string;
+  title: string;
+  code: string;
+  last_run_at: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
 export type DatabaseUserRow = {
   id: string;
   is_owner: number; // 0 | 1
@@ -351,6 +408,44 @@ export type SessionDbRecord = {
   inferenceSessionId: string | null;
   createdAt: number;
   resetMessage: string | null;
+};
+
+export type TaskDbRecord = {
+  id: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  code: string;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt?: number | null;
+};
+
+export type CronTaskDbRecord = {
+  id: string;
+  taskId: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  schedule: string;
+  code: string;
+  agentId: string | null;
+  enabled: boolean;
+  deleteAfterRun: boolean;
+  lastRunAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type HeartbeatTaskDbRecord = {
+  id: string;
+  taskId: string;
+  userId: string;
+  title: string;
+  code: string;
+  lastRunAt: number | null;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type UserDbRecord = {
@@ -910,31 +1005,19 @@ type ProcessRecord = {
 };
 ```
 
-## Cron and Heartbeat State
+## Legacy Task State Import Inputs
 
-Paths:
+Legacy file-based cron/heartbeat state files are read only during migration import and are not
+runtime sources of truth anymore:
 
-- cron task state: `configDir/cron/<task-id>/STATE.json`
-- heartbeat state: `configDir/heartbeat/.heartbeat-state.json`
+- `configDir/cron/<task-id>/STATE.json`
+- `configDir/heartbeat/.heartbeat-state.json`
 
-Source:
+Current runtime task and trigger state is persisted in SQLite tables:
 
-- `packages/daycare/sources/engine/cron/cronTypes.ts`
-- `packages/daycare/sources/engine/cron/ops/cronStore.ts`
-- `packages/daycare/sources/engine/heartbeat/heartbeatTypes.ts`
-- `packages/daycare/sources/engine/heartbeat/ops/heartbeatStore.ts`
-
-Types:
-
-```ts
-export type CronTaskState = {
-  lastRunAt?: string; // ISO timestamp
-};
-
-export type HeartbeatState = {
-  lastRunAt?: string; // ISO timestamp
-};
-```
+- `tasks`
+- `tasks_cron`
+- `tasks_heartbeat`
 
 ## App Permission State
 
@@ -1006,8 +1089,6 @@ flowchart TD
   PATHS --> DELAY[signals/delayed.json<br/>DelayedSignalStore]
   PATHS --> EXPOSE[expose/endpoints/*.json<br/>ExposeEndpoint]
   PATHS --> PROC[dataDir/processes/*/record.json<br/>ProcessRecord]
-  PATHS --> CRONSTATE[cron/*/STATE.json<br/>CronTaskState]
-  PATHS --> HBSTATE[heartbeat/.heartbeat-state.json<br/>HeartbeatState]
   PATHS --> APPSTATE[workspace/apps/*/state.json<br/>AppPermissionState]
   PATHS --> UPGRADE[plugins/*/restart-pending.json<br/>UpgradeRestartPending]
 ```
@@ -1089,96 +1170,16 @@ Example line:
 
 ## Markdown Storage (with and without frontmatter)
 
-## Cron Task Files
+## Legacy Cron/Heartbeat Markdown Inputs
 
-Paths:
+These paths are legacy migration inputs only (used by task import migrations) and are not runtime
+task storage anymore:
 
 - `configDir/cron/<task-id>/TASK.md`
 - `configDir/cron/<task-id>/MEMORY.md`
-- `configDir/cron/<task-id>/files/` (task workspace)
-
-Source:
-
-- `packages/daycare/sources/engine/cron/cronTypes.ts`
-- `packages/daycare/sources/engine/cron/ops/cronStore.ts`
-- `packages/daycare/sources/engine/cron/ops/cronFrontmatterParse.ts`
-- `packages/daycare/sources/engine/cron/ops/cronFrontmatterSerialize.ts`
-
-`TASK.md` frontmatter maps to `CronTaskDefinition`:
-
-```ts
-export type CronTaskDefinition = {
-  id: string;
-  taskUid?: string;
-  name: string;
-  description?: string;
-  schedule: string;
-  code: string;
-  agentId?: string;
-  userId?: string;
-  enabled?: boolean;
-  deleteAfterRun?: boolean;
-};
-```
-
-Frontmatter keys used:
-
-- required: `name`, `schedule`, `taskId`
-- optional: `description`, `enabled`, `agentId`/`agent_id`, `userId`/`user_id`, `deleteAfterRun`
-- accepted legacy aliases: `cron`, `delete_after_run`, `oneOff`, `one_off`, `once`
-
-Example `TASK.md`:
-
-```md
----
-name: Daily cleanup
-schedule: "0 2 * * *"
-enabled: true
-taskId: abc123
-agentId: agent_1
-deleteAfterRun: false
----
-Check temporary files and summarize deletions.
-```
-
-## Heartbeat Task Files
-
-Paths:
-
 - `configDir/heartbeat/<task-id>.md`
-- `configDir/heartbeat/.heartbeat-state.json` (state JSON, documented above)
 
-Source:
-
-- `packages/daycare/sources/engine/heartbeat/heartbeatTypes.ts`
-- `packages/daycare/sources/engine/heartbeat/ops/heartbeatStore.ts`
-- `packages/daycare/sources/engine/heartbeat/ops/heartbeatParse.ts`
-
-Type:
-
-```ts
-export type HeartbeatDefinition = {
-  id: string;
-  title: string;
-  code: string;
-  filePath: string;
-  lastRunAt?: string;
-};
-```
-
-Frontmatter keys used:
-
-- `title` (preferred) or `name`
-- markdown body is the code
-
-Example:
-
-```md
----
-title: Morning status
----
-Summarize open incidents and blocked tasks.
-```
+Current runtime storage for tasks and triggers is SQLite (`tasks`, `tasks_cron`, `tasks_heartbeat`).
 
 ## App Manifest and Permissions
 
@@ -1402,15 +1403,17 @@ Example `db.md` sections:
 | `DelayedSignalStore` / `DelayedSignal` | JSON | object | `configDir/signals/delayed.json` | `engine/signals/delayedSignals.ts`, `engine/signals/signalTypes.ts` |
 | `ExposeEndpoint` | JSON | object | `configDir/expose/endpoints/<id>.json` | `engine/expose/exposeTypes.ts`, `engine/expose/exposes.ts` |
 | `ProcessRecord` | JSON | object | `dataDir/processes/<id>/record.json` | `engine/processes/processes.ts` |
-| `CronTaskState` | JSON | object | `configDir/cron/<task>/STATE.json` | `engine/cron/cronTypes.ts`, `engine/cron/ops/cronStore.ts` |
-| `HeartbeatState` | JSON | object | `configDir/heartbeat/.heartbeat-state.json` | `engine/heartbeat/heartbeatTypes.ts`, `engine/heartbeat/ops/heartbeatStore.ts` |
+| `DatabaseTaskRow` | SQLite | table row | `dbPath: tasks` | `storage/databaseTypes.ts` |
+| `TaskDbRecord` | SQLite | row mapping | `dbPath: tasks` | `storage/databaseTypes.ts` |
+| `DatabaseCronTaskRow` | SQLite | table row | `dbPath: tasks_cron` | `storage/databaseTypes.ts` |
+| `CronTaskDbRecord` | SQLite | row mapping | `dbPath: tasks_cron` | `storage/databaseTypes.ts` |
+| `DatabaseHeartbeatTaskRow` | SQLite | table row | `dbPath: tasks_heartbeat` | `storage/databaseTypes.ts` |
+| `HeartbeatTaskDbRecord` | SQLite | row mapping | `dbPath: tasks_heartbeat` | `storage/databaseTypes.ts` |
 | app permission state | JSON | object | `workspaceDir/apps/<app>/state.json` | `engine/apps/appPermissionStateRead.ts`, `engine/apps/appPermissionStateWrite.ts` |
 | `UpgradeRestartPending` | JSON | object | `<plugin dataDir>/restart-pending.json` | `plugins/upgrade/upgradeRestartPendingTypes.ts` |
 | `ChannelMessage` | JSONL | append line | `configDir/channels/<name>/history.jsonl` | `engine/channels/channelTypes.ts`, `engine/channels/channelStore.ts` |
 | `Signal` | JSONL | append line | `configDir/signals/events.jsonl` | `engine/signals/signalTypes.ts`, `engine/signals/signals.ts` |
-| cron task doc | Markdown + frontmatter | file | `configDir/cron/<task>/TASK.md` | `engine/cron/ops/cronStore.ts` |
-| cron memory | Markdown | file | `configDir/cron/<task>/MEMORY.md` | `engine/cron/ops/cronStore.ts` |
-| heartbeat task doc | Markdown + frontmatter | file | `configDir/heartbeat/<task>.md` | `engine/heartbeat/ops/heartbeatStore.ts` |
+| legacy cron/heartbeat task docs | Markdown (+ frontmatter) | migration input only | `configDir/cron/*`, `configDir/heartbeat/*` | `storage/migrations/20260220_import_tasks.ts` |
 | `AppManifest` | Markdown + frontmatter | file | `workspaceDir/apps/<app>/APP.md` | `engine/apps/appManifestParse.ts`, `engine/apps/appTypes.ts` |
 | `AppPermissions` / `AppRuleSet` / `AppRule` | Markdown sections | file | `workspaceDir/apps/<app>/PERMISSIONS.md` | `engine/apps/appPermissionsParse.ts`, `engine/apps/appTypes.ts` |
 | memory entity | Markdown (+ frontmatter) | file | `<plugin dataDir>/<entity>.md` | `plugins/memory/store.ts` |
@@ -1425,14 +1428,14 @@ Example `db.md` sections:
 
 ```mermaid
 flowchart LR
-  CFG[Config + Paths] --> SQL[SQLite<br/>agents/sessions/session_history/users]
+  CFG[Config + Paths] --> SQL[SQLite<br/>agents/sessions/session_history/users/tasks/tasks_cron/tasks_heartbeat]
   CFG --> JSON[JSON files<br/>auth/settings/files/channels/signals/expose/processes/state]
   CFG --> JSONL[JSONL append<br/>channel history + signals events]
-  CFG --> MD[Markdown docs/state<br/>cron/heartbeat/apps/memory/skills]
+  CFG --> MD[Markdown docs/state<br/>apps/memory/skills]
   CFG --> PGL[PGlite plugin DB<br/>db.pglite + db.md]
 
-  SQL --> AGT[Agent/session persistence]
+  SQL --> AGT[Agent/session/task persistence]
   JSONL --> EVT[Event timelines]
-  MD --> TASKS[Task and skill definitions]
+  MD --> TASKS[App/memory/skill definitions]
   PGL --> CUSTOM[Plugin-managed relational data]
 ```

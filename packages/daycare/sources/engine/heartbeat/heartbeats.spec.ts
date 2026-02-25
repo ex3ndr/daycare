@@ -33,9 +33,17 @@ describe("Heartbeats", () => {
                 eventBus: { emit: vi.fn() } as unknown as HeartbeatsOptions["eventBus"],
                 agentSystem
             });
-            const task = await heartbeats.addTask(contextBuild("user-a"), {
+            await storage.tasks.create({
+                id: "task-beat",
+                userId: "user-a",
                 title: "beat",
-                code: "run"
+                description: null,
+                code: "run",
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            const task = await heartbeats.addTask(contextBuild("user-a"), {
+                taskId: "task-beat"
             });
 
             await expect(heartbeats.removeTask(contextBuild("user-b"), task.id)).resolves.toBe(false);
@@ -64,9 +72,19 @@ describe("Heartbeats", () => {
                 agentSystem,
                 intervalMs: 60_000
             });
+            await storage.tasks.create({
+                id: "task-hb-1",
+                userId: "user-1",
+                title: "beat",
+                description: null,
+                code: "check",
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
 
             await storage.heartbeatTasks.create({
                 id: "hb-1",
+                taskId: "task-hb-1",
                 userId: "user-1",
                 title: "beat",
                 code: "check",

@@ -39,7 +39,7 @@ type AgentDescriptor =
 
 Notes:
 - `user` is a foreground connector conversation.
-- `cron` maps to a scheduled task uid.
+- `cron` maps to a scheduled cron trigger id.
 - `system` maps to built-in tag-addressable agents (for example `heartbeat`, `architect`).
 - `subagent` is a generic background worker and always includes a parent + name.
 - `app` is a dedicated app runtime agent and always includes parent + username-style name + app id.

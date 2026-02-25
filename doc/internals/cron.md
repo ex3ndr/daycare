@@ -5,8 +5,8 @@ Cron tasks store Python code in SQLite and are loaded at startup.
 ## Task storage
 
 Rows live in `tasks_cron`:
-- `id` (task slug)
-- `task_uid` (cuid2 descriptor id)
+- `id` (trigger id; `cuid2` by default)
+- `task_id` (required FK to `tasks.id`)
 - `name`, `description`, `schedule`, `code` (Python code)
 - `agent_id`, `user_id`
 - `enabled`, `delete_after_run`
@@ -16,6 +16,7 @@ Rows live in `tasks_cron`:
 
 - `Crons` wires `CronScheduler` with `CronTasksRepository`.
 - `CronScheduler` loads enabled rows and schedules next runs.
+- Runtime code/title are resolved from `tasks` through `task_id`.
 - For each due task, `cronTaskPromptBuild` returns `{ text, code[] }` with cron metadata and Python code.
 - The message is posted as `system_message` with `code[]` array and `execute=true`.
 - `handleSystemMessage` executes each code block directly via `rlmExecute`.
@@ -27,7 +28,7 @@ flowchart TD
   Storage --> Repo[CronTasksRepository]
   Engine --> Crons[cron/crons.ts]
   Crons --> Scheduler[cron/ops/cronScheduler.ts]
-  Scheduler --> RepoLoad[repo.findMany enabled]
+  Scheduler --> RepoLoad[repo.findAll enabled]
   Scheduler --> Build["cronTaskPromptBuild: { text, code[] }"]
   Build --> AgentSystem[agents/agentSystem.ts]
   AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
@@ -36,6 +37,7 @@ flowchart TD
 
 ## Tools
 
-- `cron_add` creates/updates a task with Python code
-- `cron_read_task` reads task details and code
-- `cron_delete_task` removes task row + in-memory schedule
+- `task_create` creates task rows and optional cron triggers
+- `task_read` reads task details and trigger links
+- `task_trigger_add` adds cron triggers to existing tasks
+- `task_trigger_remove` removes cron triggers

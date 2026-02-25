@@ -41,7 +41,6 @@ import { channelCreateToolBuild } from "./modules/tools/channelCreateTool.js";
 import { channelHistoryToolBuild } from "./modules/tools/channelHistoryTool.js";
 import { channelAddMemberToolBuild, channelRemoveMemberToolBuild } from "./modules/tools/channelMemberTool.js";
 import { channelSendToolBuild } from "./modules/tools/channelSendTool.js";
-import { buildCronDeleteTaskTool, buildCronReadTaskTool, buildCronTool } from "./modules/tools/cron.js";
 import { exposeCreateToolBuild } from "./modules/tools/exposeCreateToolBuild.js";
 import { exposeListToolBuild } from "./modules/tools/exposeListToolBuild.js";
 import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js";
@@ -51,7 +50,6 @@ import { friendRemoveToolBuild } from "./modules/tools/friendRemoveToolBuild.js"
 import { friendSendToolBuild } from "./modules/tools/friendSendToolBuild.js";
 import { friendShareSubuserToolBuild } from "./modules/tools/friendShareSubuserToolBuild.js";
 import { friendUnshareSubuserToolBuild } from "./modules/tools/friendUnshareSubuserToolBuild.js";
-import { buildHeartbeatAddTool, buildHeartbeatRemoveTool, buildHeartbeatRunTool } from "./modules/tools/heartbeat.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
 import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
@@ -76,6 +74,15 @@ import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./modules/tools/subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./modules/tools/subuserListToolBuild.js";
+import {
+    buildTaskCreateTool,
+    buildTaskDeleteTool,
+    buildTaskReadTool,
+    buildTaskRunTool,
+    buildTaskTriggerAddTool,
+    buildTaskTriggerRemoveTool,
+    buildTaskUpdateTool
+} from "./modules/tools/task.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
@@ -376,12 +383,13 @@ export class Engine {
         await this.exposes.start();
 
         logger.debug("register: Registering core tools");
-        this.modules.tools.register("core", buildCronTool(this.crons));
-        this.modules.tools.register("core", buildCronReadTaskTool(this.crons));
-        this.modules.tools.register("core", buildCronDeleteTaskTool(this.crons));
-        this.modules.tools.register("core", buildHeartbeatRunTool());
-        this.modules.tools.register("core", buildHeartbeatAddTool());
-        this.modules.tools.register("core", buildHeartbeatRemoveTool());
+        this.modules.tools.register("core", buildTaskCreateTool());
+        this.modules.tools.register("core", buildTaskReadTool());
+        this.modules.tools.register("core", buildTaskUpdateTool());
+        this.modules.tools.register("core", buildTaskDeleteTool());
+        this.modules.tools.register("core", buildTaskRunTool());
+        this.modules.tools.register("core", buildTaskTriggerAddTool());
+        this.modules.tools.register("core", buildTaskTriggerRemoveTool());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
         this.modules.tools.register("core", memorySearchToolBuild());
@@ -431,7 +439,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: cron, heartbeat, topology, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: tasks, topology, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();

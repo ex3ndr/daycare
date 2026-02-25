@@ -74,21 +74,34 @@ export class HeartbeatTasksRepository {
         return parsed.map((task) => heartbeatTaskClone(task));
     }
 
+    async findManyByTaskId(taskId: string): Promise<HeartbeatTaskDbRecord[]> {
+        const rows = this.db
+            .prepare("SELECT * FROM tasks_heartbeat WHERE task_id = ? ORDER BY updated_at ASC")
+            .all(taskId) as DatabaseHeartbeatTaskRow[];
+        return rows.map((row) => heartbeatTaskClone(this.taskParse(row)));
+    }
+
     async create(record: HeartbeatTaskDbRecord): Promise<void> {
+        const taskId = record.taskId.trim();
+        if (!taskId) {
+            throw new Error("Heartbeat trigger taskId is required.");
+        }
         await this.createLock.inLock(async () => {
             this.db
                 .prepare(
                     `
                   INSERT INTO tasks_heartbeat (
                     id,
+                    task_id,
                     user_id,
                     title,
                     code,
                     last_run_at,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
+                    task_id = excluded.task_id,
                     user_id = excluded.user_id,
                     title = excluded.title,
                     code = excluded.code,
@@ -99,6 +112,7 @@ export class HeartbeatTasksRepository {
                 )
                 .run(
                     record.id,
+                    taskId,
                     record.userId,
                     record.title,
                     record.code,
@@ -125,15 +139,20 @@ export class HeartbeatTasksRepository {
                 ...current,
                 ...data,
                 id: current.id,
+                taskId: data.taskId ?? current.taskId,
                 userId: data.userId ?? current.userId,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
+            if (!next.taskId.trim()) {
+                throw new Error("Heartbeat trigger taskId is required.");
+            }
 
             this.db
                 .prepare(
                     `
                   UPDATE tasks_heartbeat
                   SET
+                    task_id = ?,
                     user_id = ?,
                     title = ?,
                     code = ?,
@@ -143,7 +162,16 @@ export class HeartbeatTasksRepository {
                   WHERE id = ?
                 `
                 )
-                .run(next.userId, next.title, next.code, next.lastRunAt, next.createdAt, next.updatedAt, id);
+                .run(
+                    next.taskId.trim(),
+                    next.userId,
+                    next.title,
+                    next.code,
+                    next.lastRunAt,
+                    next.createdAt,
+                    next.updatedAt,
+                    id
+                );
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);
@@ -196,8 +224,13 @@ export class HeartbeatTasksRepository {
     }
 
     private taskParse(row: DatabaseHeartbeatTaskRow): HeartbeatTaskDbRecord {
+        const taskId = row.task_id?.trim();
+        if (!taskId) {
+            throw new Error(`Heartbeat trigger ${row.id} is missing required task_id.`);
+        }
         return {
             id: row.id,
+            taskId,
             userId: row.user_id,
             title: row.title,
             code: row.code,

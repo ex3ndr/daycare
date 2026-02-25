@@ -36,10 +36,18 @@ describe("Crons", () => {
             });
             const ctxA = contextBuild("user-a");
             const ctxB = contextBuild("user-b");
+            await storage.tasks.create({
+                id: "task-scoped",
+                userId: "user-a",
+                title: "Scoped task",
+                description: null,
+                code: "Run scoped task",
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
             const task = await crons.addTask(ctxA, {
-                name: "Scoped task",
-                schedule: "* * * * *",
-                code: "Run scoped task"
+                taskId: "task-scoped",
+                schedule: "* * * * *"
             });
 
             await expect(crons.deleteTask(ctxB, task.id)).resolves.toBe(false);
@@ -73,8 +81,8 @@ describe("Crons", () => {
                     scheduler: {
                         onTask?: (
                             task: {
+                                triggerId: string;
                                 taskId: string;
-                                taskUid: string;
                                 taskName: string;
                                 code: string;
                                 agentId?: string;
@@ -90,8 +98,8 @@ describe("Crons", () => {
             const messageContext = { messageId: "msg-1" };
             await callback?.(
                 {
+                    triggerId: "trigger-1",
                     taskId: "task-1",
-                    taskUid: "uid-1",
                     taskName: "Nightly sync",
                     code: "Run checks",
                     userId: "user-1"

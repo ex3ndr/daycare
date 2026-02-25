@@ -27,13 +27,16 @@ export class Heartbeats {
     private readonly eventBus: EngineEventBus;
     private readonly agentSystem: AgentSystem;
     private readonly scheduler: HeartbeatScheduler;
+    private readonly storage: Storage;
 
     constructor(options: HeartbeatsOptions) {
         this.eventBus = options.eventBus;
         this.agentSystem = options.agentSystem;
+        this.storage = options.storage;
         this.scheduler = new HeartbeatScheduler({
             config: options.config,
             repository: options.storage.heartbeatTasks,
+            tasksRepository: options.storage.tasks,
             intervalMs: options.intervalMs,
             onRun: async (tasks) => {
                 const tasksByUser = new Map<string, typeof tasks>();
@@ -110,10 +113,78 @@ export class Heartbeats {
     }
 
     async addTask(ctx: Context, args: HeartbeatCreateTaskArgs): Promise<HeartbeatDefinition> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            throw new Error("Heartbeat userId is required.");
+        }
+
+        const existingTrigger = args.id ? await this.storage.heartbeatTasks.findById(args.id) : null;
+        if (existingTrigger && existingTrigger.userId !== userId) {
+            throw new Error(`Heartbeat belongs to another user: ${existingTrigger.id}`);
+        }
+
+        const taskId = args.taskId;
+        const taskRecord = await this.storage.tasks.findById(taskId);
+        if (!taskRecord) {
+            throw new Error(`Task not found: ${taskId}`);
+        }
+        if (taskRecord.userId !== userId) {
+            throw new Error(`Task belongs to another user: ${taskId}`);
+        }
+
         return this.scheduler.createTask(ctx, args);
     }
 
     async removeTask(ctx: Context, taskId: string): Promise<boolean> {
-        return this.scheduler.deleteTask(ctx, taskId);
+        const existing = await this.storage.heartbeatTasks.findById(taskId);
+        if (!existing || existing.userId !== ctx.userId.trim()) {
+            return false;
+        }
+
+        const deleted = await this.scheduler.deleteTask(ctx, taskId);
+        if (deleted && existing.taskId) {
+            await this.taskDeleteIfOrphan(existing.taskId);
+        }
+        return deleted;
+    }
+
+    async addTrigger(ctx: Context, input: { taskId: string; id?: string }) {
+        const task = await this.storage.tasks.findById(input.taskId);
+        if (!task) {
+            throw new Error(`Task not found: ${input.taskId}`);
+        }
+        if (task.userId !== ctx.userId.trim()) {
+            throw new Error(`Task belongs to another user: ${input.taskId}`);
+        }
+        return this.addTask(ctx, {
+            id: input.id,
+            taskId: input.taskId
+        });
+    }
+
+    async listTriggersForTask(taskId: string) {
+        return this.storage.heartbeatTasks.findManyByTaskId(taskId);
+    }
+
+    async deleteTriggersForTask(ctx: Context, taskId: string): Promise<number> {
+        const triggers = await this.storage.heartbeatTasks.findManyByTaskId(taskId);
+        let removed = 0;
+        for (const trigger of triggers) {
+            if (await this.removeTask(ctx, trigger.id)) {
+                removed += 1;
+            }
+        }
+        return removed;
+    }
+
+    private async taskDeleteIfOrphan(taskId: string): Promise<void> {
+        const [cronTriggers, heartbeatTriggers] = await Promise.all([
+            this.storage.cronTasks.findManyByTaskId(taskId),
+            this.storage.heartbeatTasks.findManyByTaskId(taskId)
+        ]);
+        if (cronTriggers.length > 0 || heartbeatTriggers.length > 0) {
+            return;
+        }
+        await this.storage.tasks.delete(taskId);
     }
 }

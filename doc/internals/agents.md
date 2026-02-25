@@ -29,7 +29,7 @@ flowchart LR
 ```
 
 ## Agent identity rules
-- Agent ids are cuid2 values mapped to user descriptors (`connector + channelId + userId`), cron task uid, or system-agent tags (for example `heartbeat`).
+- Agent ids are cuid2 values mapped to user descriptors (`connector + channelId + userId`), cron trigger id, or system-agent tags (for example `heartbeat`).
 - Connectors provide user descriptors for mapping; `MessageContext` only carries message-level metadata.
 - Messages (and files) are queued and processed in order via `AgentInbox`.
 

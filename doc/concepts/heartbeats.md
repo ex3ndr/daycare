@@ -5,7 +5,9 @@ Heartbeat tasks store Python code in SQLite and execute it as a single batch on 
 ## Storage
 
 Heartbeat rows live in `tasks_heartbeat`:
-- `id`, `title`, `code` (Python code)
+- `id` (trigger id; `cuid2` by default)
+- `task_id` (required reference to `tasks.id`)
+- `user_id`, `title`, `code` (runtime code resolves from linked task)
 - `last_run_at` (unix ms)
 - `created_at`, `updated_at`
 
@@ -43,7 +45,8 @@ flowchart TD
 
 | Tool | Description |
 |------|-------------|
-| `heartbeat_add` | Create or update a heartbeat task with Python code |
-| `heartbeat_run` | Run the batch immediately |
-| `heartbeat_remove` | Delete a heartbeat task |
+| `task_create` | Create a task and optionally attach a heartbeat trigger (`heartbeat: true`) |
+| `task_trigger_add` | Add a heartbeat trigger to an existing task |
+| `task_trigger_remove` | Remove heartbeat trigger(s) from a task |
+| `task_delete` | Delete a task and all linked triggers |
 | `topology` | View heartbeat tasks with agents, cron tasks, and signal subscriptions |

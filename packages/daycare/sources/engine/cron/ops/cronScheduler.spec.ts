@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createId } from "@paralleldrive/cuid2";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configResolve } from "../../../config/configResolve.js";
 import { Storage } from "../../../storage/storage.js";
@@ -38,6 +37,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask
         });
 
@@ -65,6 +65,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask
         });
 
@@ -74,8 +75,8 @@ describe("CronScheduler", () => {
         expect(onTask).toHaveBeenCalledTimes(1);
         expect(onTask).toHaveBeenCalledWith(
             expect.objectContaining({
-                taskId: "exec-test",
-                taskUid: created.taskUid,
+                triggerId: "exec-test",
+                taskId: created.taskId,
                 taskName: "Exec Test",
                 code: "Execute me"
             }),
@@ -100,6 +101,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config,
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask: vi.fn()
         });
 
@@ -123,6 +125,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask
         });
 
@@ -139,6 +142,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask
         });
 
@@ -171,6 +175,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask
         });
 
@@ -178,8 +183,8 @@ describe("CronScheduler", () => {
 
         const context = scheduler.getTaskContext("context-test");
         expect(context).not.toBeNull();
-        expect(context?.taskId).toBe("context-test");
-        expect(context?.taskUid).toBe(created.taskUid);
+        expect(context?.triggerId).toBe("context-test");
+        expect(context?.taskId).toBe(created.taskId);
         expect(context?.taskName).toBe("Context Test");
         expect(context?.code).toBe("Test prompt");
         expect(context?.userId).toBe("user-1");
@@ -201,6 +206,7 @@ describe("CronScheduler", () => {
         const scheduler = new CronScheduler({
             config: configModule(tempDir),
             repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
             onTask: () => {
                 throw new Error("Task failed");
             },
@@ -220,6 +226,7 @@ async function cronTaskInsert(
     storage: Storage,
     input: {
         id: string;
+        taskId?: string;
         name: string;
         schedule: string;
         code: string;
@@ -228,9 +235,19 @@ async function cronTaskInsert(
     }
 ) {
     const now = Date.now();
+    const taskId = input.taskId ?? `task-${input.id}`;
+    await storage.tasks.create({
+        id: taskId,
+        userId: input.userId ?? "user-1",
+        title: input.name,
+        description: null,
+        code: input.code,
+        createdAt: now,
+        updatedAt: now
+    });
     const task = {
         id: input.id,
-        taskUid: createId(),
+        taskId,
         userId: input.userId ?? "user-1",
         name: input.name,
         description: null,

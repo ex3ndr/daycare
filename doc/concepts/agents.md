@@ -17,7 +17,7 @@ Agents provide per-channel sequencing of messages. Each agent processes one mess
 
 Agent ids are cuid2 values mapped to:
 - User descriptors (`connector + channelId + userId`) for foreground agents
-- Cron task uid for scheduled tasks
+- Cron trigger id for scheduled tasks
 - System tags (e.g. `heartbeat`) for system agents
 
 ## Message flow
