@@ -17,7 +17,8 @@ const baseConfig: DockerContainerResolvedConfig = {
     userId: "user-1",
     networkName: "daycare-isolated",
     hostHomeDir: "/tmp/daycare-home-user-1",
-    hostSkillsActiveDir: "/tmp/daycare-skills-user-1"
+    hostSkillsActiveDir: "/tmp/daycare-skills-user-1",
+    hostExamplesDir: "/tmp/daycare-examples"
 };
 const IMAGE_REF = "daycare-sandbox:latest";
 const CURRENT_IMAGE_ID = "sha256:image-current";
@@ -190,6 +191,7 @@ describe("dockerContainerEnsure", () => {
                 Binds: [
                     "/tmp/daycare-home-user-1:/home",
                     "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-examples:/shared/examples:ro",
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
@@ -247,7 +249,11 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.resolver": "docker"
             },
             HostConfig: {
-                Binds: ["/tmp/daycare-home-user-1:/home", "/tmp/daycare-skills-user-1:/shared/skills:ro"],
+                Binds: [
+                    "/tmp/daycare-home-user-1:/home",
+                    "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-examples:/shared/examples:ro"
+                ],
                 NetworkMode: "daycare-local",
                 Runtime: "runsc"
             },
@@ -305,6 +311,7 @@ describe("dockerContainerEnsure", () => {
                 Binds: [
                     "/tmp/daycare-home-user-1:/home",
                     "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-examples:/shared/examples:ro",
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-local",
@@ -438,6 +445,7 @@ describe("dockerContainerEnsure", () => {
                 Binds: [
                     "/tmp/daycare-home-user-1:/home",
                     "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-examples:/shared/examples:ro",
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
@@ -538,6 +546,7 @@ describe("dockerContainerEnsure", () => {
                 Binds: [
                     "/tmp/daycare-home-user-1:/home",
                     "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-examples:/shared/examples:ro",
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
@@ -599,6 +608,7 @@ describe("dockerContainerEnsure", () => {
                 Binds: [
                     "/tmp/daycare-home-user-1:/home",
                     "/tmp/daycare-skills-user-1:/shared/skills:ro",
+                    "/tmp/daycare-examples:/shared/examples:ro",
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",

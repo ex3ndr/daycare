@@ -21,7 +21,10 @@ export type DockerRunInSandboxOptions = {
     home: string;
     timeoutMs?: number;
     maxBufferBytes?: number;
-    docker: Omit<DockerContainerConfig, "hostHomeDir" | "hostSkillsActiveDir"> & { hostSkillsActiveDir: string };
+    docker: Omit<DockerContainerConfig, "hostHomeDir" | "hostSkillsActiveDir" | "hostExamplesDir"> & {
+        hostSkillsActiveDir: string;
+        hostExamplesDir: string;
+    };
 };
 
 /**
@@ -37,14 +40,16 @@ export async function dockerRunInSandbox(
     const dockerConfig: DockerContainerConfig = {
         ...options.docker,
         hostHomeDir,
-        hostSkillsActiveDir: path.resolve(options.docker.hostSkillsActiveDir)
+        hostSkillsActiveDir: path.resolve(options.docker.hostSkillsActiveDir),
+        hostExamplesDir: path.resolve(options.docker.hostExamplesDir)
     };
 
     const runtimeConfig = runtimeConfigPathRewrite(
         config,
         hostHomeDir,
         options.docker.userId,
-        dockerConfig.hostSkillsActiveDir
+        dockerConfig.hostSkillsActiveDir,
+        dockerConfig.hostExamplesDir
     );
     const settingsHostPath = path.join(
         hostHomeDir,
@@ -55,15 +60,28 @@ export async function dockerRunInSandbox(
         env: options.env ?? process.env,
         home: hostHomeDir
     });
-    const containerEnv = envPathRewrite(env, hostHomeDir, options.docker.userId, dockerConfig.hostSkillsActiveDir);
+    const containerEnv = envPathRewrite(
+        env,
+        hostHomeDir,
+        options.docker.userId,
+        dockerConfig.hostSkillsActiveDir,
+        dockerConfig.hostExamplesDir
+    );
     const containerCwd = options.cwd
-        ? sandboxPathHostToContainer(hostHomeDir, options.docker.userId, options.cwd, dockerConfig.hostSkillsActiveDir)
+        ? sandboxPathHostToContainer(
+              hostHomeDir,
+              options.docker.userId,
+              options.cwd,
+              dockerConfig.hostSkillsActiveDir,
+              dockerConfig.hostExamplesDir
+          )
         : undefined;
     const settingsContainerPath = sandboxPathHostToContainer(
         hostHomeDir,
         options.docker.userId,
         settingsHostPath,
-        dockerConfig.hostSkillsActiveDir
+        dockerConfig.hostSkillsActiveDir,
+        dockerConfig.hostExamplesDir
     );
 
     await fs.mkdir(path.dirname(settingsHostPath), { recursive: true });
@@ -108,7 +126,8 @@ function runtimeConfigPathRewrite(
     config: SandboxRuntimeConfig,
     hostHomeDir: string,
     userId: string,
-    hostSkillsActiveDir: string
+    hostSkillsActiveDir: string,
+    hostExamplesDir: string
 ): SandboxRuntimeConfig {
     if (!config.filesystem) {
         return config;
@@ -119,13 +138,13 @@ function runtimeConfigPathRewrite(
         filesystem: {
             ...config.filesystem,
             allowWrite: config.filesystem.allowWrite.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir)
+                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir, hostExamplesDir)
             ),
             denyRead: config.filesystem.denyRead.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir)
+                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir, hostExamplesDir)
             ),
             denyWrite: config.filesystem.denyWrite.map((entry) =>
-                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir)
+                sandboxPathHostToContainer(hostHomeDir, userId, entry, hostSkillsActiveDir, hostExamplesDir)
             )
         }
     };
@@ -135,7 +154,8 @@ function envPathRewrite(
     env: NodeJS.ProcessEnv,
     hostHomeDir: string,
     userId: string,
-    hostSkillsActiveDir: string
+    hostSkillsActiveDir: string,
+    hostExamplesDir: string
 ): NodeJS.ProcessEnv {
     const rewritten: NodeJS.ProcessEnv = {};
 
@@ -143,7 +163,7 @@ function envPathRewrite(
         if (value === undefined) {
             continue;
         }
-        rewritten[key] = sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir);
+        rewritten[key] = sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir, hostExamplesDir);
     }
 
     return rewritten;

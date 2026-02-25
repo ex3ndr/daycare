@@ -50,7 +50,8 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
             capDrop: [],
             userId,
             hostHomeDir: homeDir,
-            hostSkillsActiveDir: skillsActiveDir
+            hostSkillsActiveDir: skillsActiveDir,
+            hostExamplesDir: skillsActiveDir
         };
     });
 

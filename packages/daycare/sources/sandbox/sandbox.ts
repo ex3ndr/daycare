@@ -48,12 +48,14 @@ export class Sandbox {
     readonly workingDir: string;
     readonly permissions: SessionPermissions;
     readonly docker: SandboxDockerConfig | undefined;
+    readonly examplesDir: string | undefined;
 
     constructor(config: SandboxConfig) {
         this.homeDir = path.resolve(config.homeDir);
         this.workingDir = path.resolve(config.permissions.workingDir);
         this.permissions = config.permissions;
         this.docker = config.docker;
+        this.examplesDir = config.examplesDir ? path.resolve(config.examplesDir) : undefined;
     }
 
     /**
@@ -160,7 +162,7 @@ export class Sandbox {
      */
     async write(args: SandboxWriteArgs): Promise<SandboxWriteResult> {
         const permissions = this.permissionsEffectiveResolve();
-        const targetPath = this.pathContainerToHost(args.path);
+        const targetPath = this.resolveVirtualPath(args.path);
         sandboxPathAbsoluteEnsure(targetPath);
         await pathRejectIfSymlink(targetPath, "Cannot write to symbolic link.");
         const resolvedPath = await sandboxCanWrite(permissions, targetPath);
@@ -246,7 +248,8 @@ export class Sandbox {
                           isolatedDnsServers: this.docker!.isolatedDnsServers,
                           localDnsServers: this.docker!.localDnsServers,
                           userId: this.docker!.userId,
-                          hostSkillsActiveDir: this.docker!.skillsActiveDir
+                          hostSkillsActiveDir: this.docker!.skillsActiveDir,
+                          hostExamplesDir: this.docker!.examplesDir
                       }
                   })
                 : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
@@ -283,21 +286,22 @@ export class Sandbox {
     }
 
     private permissionsEffectiveResolve(): SessionPermissions {
-        const readDirs = this.permissions.readDirs
-            ? this.permissions.readDirs.map((entry) => path.resolve(entry))
-            : undefined;
+        const readDirs = [
+            ...(this.permissions.readDirs ?? []).map((entry) => path.resolve(entry)),
+            ...(this.examplesDir ? [this.examplesDir] : [])
+        ];
         return {
             workingDir: this.workingDir,
             writeDirs: Array.from(
                 new Set([...this.permissions.writeDirs.map((entry) => path.resolve(entry)), this.homeDir])
             ),
-            ...(readDirs ? { readDirs } : {})
+            ...(readDirs.length > 0 ? { readDirs } : {})
         };
     }
 
     private async readInputPathResolve(rawPath: string): Promise<string> {
         const normalized = sandboxReadPathNormalize(rawPath, this.homeDir);
-        const rewritten = this.pathContainerToHost(normalized);
+        const rewritten = this.resolveVirtualPath(normalized);
         const resolved = path.isAbsolute(rewritten) ? rewritten : path.resolve(this.workingDir, rewritten);
         if (await pathExists(resolved)) {
             return resolved;
@@ -321,11 +325,25 @@ export class Sandbox {
         return resolved;
     }
 
-    private pathContainerToHost(targetPath: string): string {
+    /**
+     * Translates a virtual container path (e.g. /shared/examples) to a host path.
+     * In Docker mode, also translates /home and /shared/skills paths.
+     */
+    resolveVirtualPath(targetPath: string): string {
+        // Translate /shared/examples paths regardless of Docker mode
+        if (this.examplesDir && targetPath.startsWith("/shared/examples")) {
+            return sandboxPathContainerToHost(this.homeDir, "", targetPath, undefined, this.examplesDir);
+        }
         if (!this.docker?.enabled) {
             return targetPath;
         }
-        return sandboxPathContainerToHost(this.homeDir, this.docker.userId, targetPath, this.docker.skillsActiveDir);
+        return sandboxPathContainerToHost(
+            this.homeDir,
+            this.docker.userId,
+            targetPath,
+            this.docker.skillsActiveDir,
+            this.docker.examplesDir
+        );
     }
 }
 

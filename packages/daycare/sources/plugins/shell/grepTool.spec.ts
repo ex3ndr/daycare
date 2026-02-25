@@ -97,7 +97,8 @@ function createContext(execResult: {
     const context = {
         sandbox: {
             workingDir: "/workspace",
-            exec
+            exec,
+            resolveVirtualPath: (p: string) => p
         }
     } as unknown as ToolExecutionContext;
     return { context, exec };

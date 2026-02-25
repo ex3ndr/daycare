@@ -15,6 +15,7 @@ export type DockerContainerConfig = {
     userId: string;
     hostHomeDir: string;
     hostSkillsActiveDir: string;
+    hostExamplesDir: string;
 };
 
 export type DockerContainerResolvedConfig = DockerContainerConfig & {

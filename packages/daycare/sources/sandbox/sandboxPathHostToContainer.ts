@@ -8,7 +8,8 @@ export function sandboxPathHostToContainer(
     hostHomeDir: string,
     _userId: string,
     targetPath: string,
-    hostSkillsActiveDir?: string
+    hostSkillsActiveDir?: string,
+    hostExamplesDir?: string
 ): string {
     if (!path.isAbsolute(targetPath)) {
         return targetPath;
@@ -25,6 +26,17 @@ export function sandboxPathHostToContainer(
         }
         if (skillsRelativePath === "") {
             return "/shared/skills";
+        }
+    }
+
+    if (hostExamplesDir) {
+        const resolvedExamplesDir = path.resolve(hostExamplesDir);
+        const examplesRelativePath = path.relative(resolvedExamplesDir, resolvedTargetPath);
+        if (!(examplesRelativePath.startsWith("..") || examplesRelativePath === "")) {
+            return path.posix.join("/shared/examples", examplesRelativePath.split(path.sep).join(path.posix.sep));
+        }
+        if (examplesRelativePath === "") {
+            return "/shared/examples";
         }
     }
 

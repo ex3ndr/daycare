@@ -8,7 +8,8 @@ export function sandboxPathContainerToHost(
     hostHomeDir: string,
     _userId: string,
     targetPath: string,
-    hostSkillsActiveDir?: string
+    hostSkillsActiveDir?: string,
+    hostExamplesDir?: string
 ): string {
     if (!path.posix.isAbsolute(targetPath)) {
         return targetPath;
@@ -16,6 +17,7 @@ export function sandboxPathContainerToHost(
 
     const containerHomeDir = "/home";
     const containerSkillsDir = "/shared/skills";
+    const containerExamplesDir = "/shared/examples";
     const normalizedTarget = path.posix.normalize(targetPath);
 
     if (hostSkillsActiveDir) {
@@ -25,6 +27,16 @@ export function sandboxPathContainerToHost(
         if (normalizedTarget.startsWith(`${containerSkillsDir}/`)) {
             const relativePath = normalizedTarget.slice(containerSkillsDir.length + 1);
             return path.resolve(hostSkillsActiveDir, ...relativePath.split("/"));
+        }
+    }
+
+    if (hostExamplesDir) {
+        if (normalizedTarget === containerExamplesDir) {
+            return path.resolve(hostExamplesDir);
+        }
+        if (normalizedTarget.startsWith(`${containerExamplesDir}/`)) {
+            const relativePath = normalizedTarget.slice(containerExamplesDir.length + 1);
+            return path.resolve(hostExamplesDir, ...relativePath.split("/"));
         }
     }
 

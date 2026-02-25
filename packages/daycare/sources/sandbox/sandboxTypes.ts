@@ -86,10 +86,12 @@ export type SandboxDockerConfig = {
     localDnsServers?: string[];
     userId: string;
     skillsActiveDir: string;
+    examplesDir: string;
 };
 
 export type SandboxConfig = {
     homeDir: string;
     permissions: SessionPermissions;
+    examplesDir?: string;
     docker?: SandboxDockerConfig;
 };

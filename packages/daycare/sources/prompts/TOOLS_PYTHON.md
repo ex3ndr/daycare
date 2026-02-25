@@ -2,6 +2,7 @@ This is a minimal Python runtime with strict typing. No standard library modules
 Call tool functions directly (no `await`). Use `try/except ToolError` for tool failures.
 Many tools return typed dicts (see `TypedDict` signatures above). Access fields directly: `result["field"]`. Some tools return plain strings when no schema is defined.
 Use `print()` for debug output. The value of the final expression is returned.
+Call `skip()` to skip the current turn without producing output for the LLM. For cron and heartbeat tasks, this skips the scheduled invocation entirely. If `skip()` is not called, all Python outputs are provided to the LLM as context for the next turn.
 Every single Python block runs in a SEPARATE throw away instance. In-memory variables do not persist across blocks. If you need results later, persist them to disk with `print(write_output(...))`, then read them back in a later block.
 When `read(...)` is called from Python execution, text is unbounded for the selected `offset`/`limit` range (no 50KB/2000-line truncation).
 Use `read_json(...)` when you need parsed JSON objects/lists directly instead of raw text.
@@ -43,3 +44,5 @@ write_output(name="search-results", content=str(payload))  # Python repr format;
 rows_json = '[{"id":"a1","status":"ok"}]'
 print(write_output(name="rows", format="json", content=rows_json))
 ```
+
+Example scripts for common patterns are available at `/shared/examples` — use `read()` to view them.

@@ -50,7 +50,7 @@ export function buildFindTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FindArgs;
             const limit = payload.limit ?? FIND_DEFAULT_LIMIT;
-            const searchPath = payload.path?.trim() || ".";
+            const searchPath = toolContext.sandbox.resolveVirtualPath(payload.path?.trim() || ".");
             const command = findCommandBuild(payload.pattern, searchPath, limit);
 
             const execResult = await toolContext.sandbox.exec({

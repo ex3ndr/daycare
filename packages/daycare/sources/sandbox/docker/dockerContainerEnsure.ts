@@ -97,8 +97,10 @@ export async function dockerContainerEnsure(
 
     const hostHomeDir = path.resolve(config.hostHomeDir);
     const hostSkillsActiveDir = path.resolve(config.hostSkillsActiveDir);
+    const hostExamplesDir = path.resolve(config.hostExamplesDir);
     const containerHomeDir = "/home";
     const containerSkillsDir = "/shared/skills";
+    const containerExamplesDir = "/shared/examples";
     const securityProfile = config.unconfinedSecurity
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
@@ -106,7 +108,11 @@ export async function dockerContainerEnsure(
     const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
     const readOnlyLabel = config.readOnly ? "1" : "0";
     const dnsResolvBind = await dockerDnsResolvBindResolve(hostHomeDir, dnsProfile.dnsServers);
-    const binds = [`${hostHomeDir}:${containerHomeDir}`, `${hostSkillsActiveDir}:${containerSkillsDir}:ro`];
+    const binds = [
+        `${hostHomeDir}:${containerHomeDir}`,
+        `${hostSkillsActiveDir}:${containerSkillsDir}:ro`,
+        `${hostExamplesDir}:${containerExamplesDir}:ro`
+    ];
     if (dnsResolvBind) {
         binds.push(dnsResolvBind);
     }

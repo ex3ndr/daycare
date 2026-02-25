@@ -53,7 +53,7 @@ export function buildGrepTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as GrepArgs;
             const limit = payload.limit ?? GREP_DEFAULT_LIMIT;
-            const searchPath = payload.path?.trim() || ".";
+            const searchPath = toolContext.sandbox.resolveVirtualPath(payload.path?.trim() || ".");
             const command = grepCommandBuild(payload, searchPath, limit);
 
             const execResult = await toolContext.sandbox.exec({

@@ -67,6 +67,7 @@ import type {
     AgentMessage,
     AgentState
 } from "./ops/agentTypes.js";
+import { bundledExamplesDirResolve } from "./ops/bundledExamplesDirResolve.js";
 import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatus } from "./ops/contextCompactionStatus.js";
 import { contextEstimateTokens } from "./ops/contextEstimateTokens.js";
@@ -107,9 +108,11 @@ export class Agent {
         this.agentSystem = agentSystem;
         this.userHome = userHome;
         const dockerSettings = this.agentSystem.config?.current?.settings?.docker;
+        const examplesDir = bundledExamplesDirResolve();
         this.sandbox = new Sandbox({
             homeDir: this.userHome.home,
             permissions: this.state.permissions,
+            examplesDir,
             docker: dockerSettings?.enabled
                 ? {
                       enabled: true,
@@ -126,7 +129,8 @@ export class Agent {
                       isolatedDnsServers: dockerSettings.isolatedDnsServers,
                       localDnsServers: dockerSettings.localDnsServers,
                       userId: this.ctx.userId,
-                      skillsActiveDir: this.userHome.skillsActive
+                      skillsActiveDir: this.userHome.skillsActive,
+                      examplesDir
                   }
                 : undefined
         });

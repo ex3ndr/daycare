@@ -91,7 +91,8 @@ describe("Sandbox docker integration", () => {
                 isolatedDnsServers: ["9.9.9.9"],
                 localDnsServers: ["192.168.1.1"],
                 userId: "u123",
-                skillsActiveDir
+                skillsActiveDir,
+                examplesDir: skillsActiveDir
             }
         });
 
@@ -135,7 +136,8 @@ describe("Sandbox docker integration", () => {
                 capAdd: [],
                 capDrop: [],
                 userId: "u123",
-                skillsActiveDir
+                skillsActiveDir,
+                examplesDir: skillsActiveDir
             }
         });
 
@@ -166,7 +168,8 @@ describe("Sandbox docker integration", () => {
                 capAdd: [],
                 capDrop: [],
                 userId: "u123",
-                skillsActiveDir
+                skillsActiveDir,
+                examplesDir: skillsActiveDir
             }
         });
 
@@ -197,7 +200,8 @@ describe("Sandbox docker integration", () => {
                 capAdd: [],
                 capDrop: [],
                 userId: "u123",
-                skillsActiveDir
+                skillsActiveDir,
+                examplesDir: skillsActiveDir
             }
         });
 

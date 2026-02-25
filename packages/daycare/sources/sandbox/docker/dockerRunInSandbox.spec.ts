@@ -87,7 +87,8 @@ describe("dockerRunInSandbox", () => {
                     isolatedDnsServers: ["9.9.9.9"],
                     localDnsServers: ["192.168.1.1"],
                     userId,
-                    hostSkillsActiveDir: skillsActiveDir
+                    hostSkillsActiveDir: skillsActiveDir,
+                    hostExamplesDir: skillsActiveDir
                 }
             }
         );
@@ -161,7 +162,8 @@ describe("dockerRunInSandbox", () => {
                         capAdd: [],
                         capDrop: [],
                         userId: "u123",
-                        hostSkillsActiveDir: skillsActiveDir
+                        hostSkillsActiveDir: skillsActiveDir,
+                        hostExamplesDir: skillsActiveDir
                     }
                 }
             )
