@@ -5,6 +5,7 @@ import { toolListContextBuild } from "./toolListContextBuild.js";
 
 const baseTools = [
     { name: "run_python", description: "", parameters: {} },
+    { name: "read_json", description: "", parameters: {} },
     { name: "cron_add", description: "", parameters: {} },
     { name: "send_file", description: "", parameters: {} },
     { name: "set_reaction", description: "", parameters: {} },
@@ -17,6 +18,22 @@ const baseTools = [
 ] as unknown as Tool[];
 
 describe("toolListContextBuild", () => {
+    it("hides read_json outside rlm mode", () => {
+        const result = toolListContextBuild({
+            tools: baseTools,
+            source: "slack",
+            connectorRegistry: {
+                get: () => null,
+                list: () => []
+            },
+            imageRegistry: { list: () => [] },
+            mediaRegistry: { list: () => [] }
+        });
+
+        const names = result.map((tool) => tool.name);
+        expect(names).not.toContain("read_json");
+    });
+
     it("does not filter cron tools by source", () => {
         const result = toolListContextBuild({
             tools: baseTools,

@@ -20,6 +20,7 @@ type ToolListOptions = {
 const BACKGROUND_TOOL_DENYLIST = new Set(["set_reaction", "send_file", "agent_reset", "agent_compact"]);
 
 const FOREGROUND_TOOL_DENYLIST = new Set(["send_user_message"]);
+const RLM_ONLY_TOOL_NAMES = new Set(["read_json"]);
 
 /**
  * Builds the tool list for an agent context based on connector capabilities.
@@ -36,6 +37,7 @@ export function toolListContextBuild(options: ToolListOptions): Tool[] {
 
     const source = options.source;
     let tools = options.tools;
+    tools = tools.filter((tool) => !RLM_ONLY_TOOL_NAMES.has(tool.name));
     if (options.agentKind === "background") {
         tools = tools.filter((tool) => !BACKGROUND_TOOL_DENYLIST.has(tool.name));
     }

@@ -299,14 +299,11 @@ describe("read_json tool", () => {
         await expect(tool.execute({ path: invalidPath }, context, readJsonToolCall)).rejects.toThrow("Invalid JSON");
     });
 
-    it("applies offset/limit before parsing", async () => {
+    it("reads the full file content before parsing", async () => {
         const tool = buildWorkspaceReadJsonTool();
         const context = createContext(workingDir);
-        const slicedPath = path.join(workingDir, "sliced.json");
-        await fs.writeFile(slicedPath, 'skip\n{"ok":true}\nskip-2', "utf8");
-
-        const result = await tool.execute({ path: slicedPath, offset: 2, limit: 1 }, context, readJsonToolCall);
-        expect((result.typedResult.value as { ok: boolean }).ok).toBe(true);
+        const result = await tool.execute({ path: jsonPath }, context, readJsonToolCall);
+        expect((result.typedResult.value as { rows: Array<{ id: string }> }).rows).toHaveLength(2);
     });
 });
 

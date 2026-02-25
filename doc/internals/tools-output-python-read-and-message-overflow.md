@@ -20,7 +20,7 @@ flowchart TD
 
   C -- read_json --> Q[read_json tool]
   Q --> R[sandbox.read raw=true]
-  R --> S[JSON.parse selected text]
+  R --> S[JSON.parse full file text]
   S --> T[return parsed object/list]
 
   C -- write_output --> H[write_output tool]

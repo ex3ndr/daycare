@@ -29,6 +29,12 @@ const readSchema = Type.Object(
     },
     { additionalProperties: false }
 );
+const readJsonSchema = Type.Object(
+    {
+        path: Type.String({ minLength: 1 })
+    },
+    { additionalProperties: false }
+);
 
 const writeSchema = Type.Object(
     {
@@ -48,6 +54,7 @@ const editSchema = Type.Object(
 );
 
 type ReadArgs = Static<typeof readSchema>;
+type ReadJsonArgs = Static<typeof readJsonSchema>;
 type WriteArgs = Static<typeof writeSchema>;
 type EditArgs = Static<typeof editSchema>;
 type EditSpec = Static<typeof editItemSchema>;
@@ -187,17 +194,14 @@ export function buildWorkspaceReadJsonTool(): ToolDefinition {
     return {
         tool: {
             name: "read_json",
-            description:
-                "Read and parse JSON from a file. Supports relative and absolute paths plus offset/limit pagination before parsing.",
-            parameters: readSchema
+            description: "Read and parse JSON from a file path (relative or absolute).",
+            parameters: readJsonSchema
         },
         returns: readJsonReturns,
         execute: async (args, toolContext, toolCall) => {
-            const payload = args as ReadArgs;
+            const payload = args as ReadJsonArgs;
             const readResult = await toolContext.sandbox.read({
                 path: payload.path,
-                offset: payload.offset,
-                limit: payload.limit,
                 raw: true
             });
             if (readResult.type !== "text") {
