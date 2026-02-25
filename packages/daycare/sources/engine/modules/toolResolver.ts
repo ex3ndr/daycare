@@ -178,6 +178,9 @@ function toolResultPropertySchemaIs(schema: unknown): boolean {
     if (!schemaObjectIs(schema)) {
         return false;
     }
+    if (schemaUnionIs(schema)) {
+        return true;
+    }
     if (schemaAnyIs(schema)) {
         return true;
     }
@@ -214,6 +217,20 @@ function schemaAnyIs(schema: Record<string, unknown>): boolean {
     }
     const symbolSchema = schema as Record<PropertyKey, unknown>;
     return Object.getOwnPropertySymbols(schema).some((symbol) => symbolSchema[symbol] === "Any");
+}
+
+function schemaUnionIs(schema: Record<string, unknown>): boolean {
+    for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+        if (!(key in schema)) {
+            continue;
+        }
+        const variants = schema[key];
+        if (!Array.isArray(variants) || variants.length === 0) {
+            return false;
+        }
+        return variants.every((variant) => toolResultPropertySchemaIs(variant));
+    }
+    return false;
 }
 
 function schemaPrimitiveIs(schema: { type?: unknown }): boolean {

@@ -103,6 +103,57 @@ describe("ToolResolver", () => {
         );
     });
 
+    it("accepts primitive union return properties", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "union_ok",
+                    description: "Union schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            format: Type.Union([Type.Literal("markdown"), Type.Literal("json")])
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("union_ok", "ok")
+            })
+        ).not.toThrow();
+    });
+
+    it("rejects union return properties with non-shallow object variants", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "union_bad",
+                    description: "Invalid union schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            payload: Type.Union([
+                                Type.Literal("ok"),
+                                Type.Object({ nested: Type.Number() }, { additionalProperties: false })
+                            ])
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("union_bad", "ok")
+            })
+        ).toThrow('Tool "union_bad" return schema supports primitive values, any, and arrays of shallow objects only.');
+    });
+
     it("lists tools as visible by default when callback is not defined", () => {
         const resolver = new ToolResolver();
         resolver.register("test", {
