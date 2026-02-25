@@ -1,6 +1,6 @@
 # Cron Module
 
-Cron tasks are persisted in SQLite (`tasks_cron`) and scheduled in-memory by `CronScheduler`.
+Cron tasks store Python code in SQLite (`tasks_cron`) and are scheduled in-memory by `CronScheduler`.
 
 ## Structure
 
@@ -22,13 +22,15 @@ cron/
 Tasks are stored in `tasks_cron` with key fields:
 - `id`: human task id (`daily-report`)
 - `task_uid`: cron descriptor id (cuid2)
-- `name`, `schedule`, `prompt`
+- `name`, `schedule`, `prompt` (Python code)
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
 
 The runtime uses `CronTasksRepository` for CRUD and cached reads.
 
 ## Execution Flow
+
+Task code is stored as raw Python. At execution time, `cronTaskPromptBuild` wraps the code in `<run_python>` tags so the existing executable-prompt pipeline handles it.
 
 ```mermaid
 flowchart TD
@@ -37,12 +39,14 @@ flowchart TD
   Crons --> Scheduler[cronScheduler.start]
   Scheduler --> Repo[cronTasksRepository.findMany]
   Scheduler --> Tick[Compute next runs]
-  Tick --> AgentSystem[post system_message execute=true]
-  AgentSystem --> Record[repo.update last_run_at]
+  Tick --> Wrap[Wrap Python in run_python tags]
+  Wrap --> AgentSystem[post system_message execute=true]
+  AgentSystem --> RLM[executablePromptExpand + rlmExecute]
+  RLM --> Record[repo.update last_run_at]
 ```
 
 ## Tools
 
-- `cron_add` creates/updates a cron task in SQLite
-- `cron_read_task` reads task definition and prompt
+- `cron_add` creates/updates a cron task with Python code
+- `cron_read_task` reads task definition and code
 - `cron_delete_task` removes a task from scheduler + SQLite

@@ -1,41 +1,37 @@
 # Cron
 
-Cron tasks are scheduled prompts that run on a repeating schedule. Each task is stored as a Markdown file on disk, has its own agent, memory, and workspace.
+Cron tasks store Python code that runs on a repeating schedule. Each task is stored in SQLite and has its own agent.
 
 ## Task storage
 
-Tasks live under `<config>/cron/<task-id>/`:
-
-| File | Purpose |
-|------|---------|
-| `TASK.md` | YAML frontmatter + prompt body |
-| `MEMORY.md` | Persistent task memory (initialized to `No memory`) |
-| `files/` | Workspace directory for file operations |
-
-Task directory names should be human-friendly slugs (e.g. `create-image-in-morning`).
+Rows live in `tasks_cron`:
+- `id` (task slug), `task_uid` (cuid2 descriptor id)
+- `name`, `description`, `schedule`, `prompt` (Python code)
+- `agent_id`, `user_id`
+- `enabled`, `delete_after_run`
+- `last_run_at` (unix ms)
 
 ## Task format
 
-```markdown
----
-taskId: clx9rk1p20000x5p3j7q1x8z1
-name: Daily Report
-schedule: "0 9 * * *"
-enabled: true
----
+Cron tasks store Python code that runs when the schedule fires:
 
-Generate the daily status report and summarize any blockers.
+```python
+# Generate daily report
+result = daily_report_generate()
+print(result)
 ```
 
-### Frontmatter fields
+All agent tools are available as Python functions. Call `skip()` to abort inference.
+
+### Fields
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `taskId` | yes | cuid2 identifier; tasks without a valid taskId are ignored |
 | `name` | yes | Human-readable task name |
 | `schedule` | yes | 5-field cron expression (`minute hour day month weekday`) |
+| `code` | yes | Python code to execute |
 | `enabled` | no | Set to `false` to disable |
-| `description` | no | Short description used by `cron_read_task` |
+| `description` | no | Short description |
 | `deleteAfterRun` | no | When `true`, delete the task after it runs once |
 | `agentId` | no | Route to an existing agent id (defaults to the cron agent) |
 
@@ -44,21 +40,20 @@ Generate the daily status report and summarize any blockers.
 ```mermaid
 flowchart TD
   Engine --> Crons
-  Crons --> Store[CronStore]
   Crons --> Scheduler[CronScheduler]
-  Scheduler --> AgentSystem
+  Scheduler --> Wrap[Wrap Python in run_python tags]
+  Wrap --> AgentSystem
+  AgentSystem --> RLM[executablePromptExpand + rlmExecute]
 ```
 
 - Each task runs in its own agent (the `taskId` cuid2) unless `agentId` routes elsewhere.
-- When a schedule triggers, the task prompt is sent as a message to that agent.
-- The system prompt includes the cron task metadata and the memory file location.
+- When a schedule triggers, the Python code is wrapped in `<run_python>` tags and sent as a system message.
+- The executable-prompt pipeline handles execution via Monty/RLM.
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `cron_add` | Create a new task on disk |
-| `cron_read_task` | Read a task's description and prompt |
-| `cron_read_memory` | Read a task's `MEMORY.md` |
-| `cron_write_memory` | Overwrite or append to a task's `MEMORY.md` |
+| `cron_add` | Create a new task with Python code |
+| `cron_read_task` | Read a task's description and code |
 | `cron_delete_task` | Delete a task from disk and scheduler |

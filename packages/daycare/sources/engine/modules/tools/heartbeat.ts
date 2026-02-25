@@ -13,7 +13,11 @@ const addSchema = Type.Object(
     {
         id: Type.Optional(Type.String({ minLength: 1 })),
         title: Type.String({ minLength: 1 }),
-        prompt: Type.String({ minLength: 1 }),
+        code: Type.String({
+            minLength: 1,
+            description:
+                "Python code to execute on each heartbeat tick. Has access to all agent tools as Python functions."
+        }),
         overwrite: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
@@ -122,7 +126,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
     return {
         tool: {
             name: "heartbeat_add",
-            description: "Create or update a heartbeat prompt stored in SQLite.",
+            description: "Create or update a heartbeat task with Python code stored in SQLite.",
             parameters: addSchema
         },
         returns: heartbeatAddReturns,
@@ -132,7 +136,7 @@ export function buildHeartbeatAddTool(): ToolDefinition {
             const result = await toolContext.heartbeats.addTask(toolContext.ctx, {
                 id: payload.id,
                 title: payload.title,
-                prompt: payload.prompt,
+                prompt: payload.code,
                 overwrite: payload.overwrite
             });
 

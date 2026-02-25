@@ -14,14 +14,14 @@ export function heartbeatPromptBuildBatch(tasks: HeartbeatDefinition[]): { title
     if (sorted.length === 1) {
         return {
             title: `Heartbeat: ${sorted[0]!.title}`,
-            prompt: sorted[0]!.prompt
+            prompt: `<run_python>\n${sorted[0]!.prompt}\n</run_python>`
         };
     }
     const title = `Heartbeat batch (${sorted.length})`;
     const sections = sorted.map((task, index) => {
         const heading = `## ${index + 1}. ${task.title}`;
         const idLine = `id: ${task.id}`;
-        const body = task.prompt.trim();
+        const body = `<run_python>\n${task.prompt.trim()}\n</run_python>`;
         return [heading, idLine, "", body].filter(Boolean).join("\n");
     });
     const prompt = [

@@ -98,6 +98,8 @@ function cronTaskPromptBuild(task: { prompt: string; taskId: string; taskUid: st
         `taskUid: ${task.taskUid}`,
         `taskName: ${task.taskName}`,
         "",
-        task.prompt
+        "<run_python>",
+        task.prompt,
+        "</run_python>"
     ].join("\n");
 }

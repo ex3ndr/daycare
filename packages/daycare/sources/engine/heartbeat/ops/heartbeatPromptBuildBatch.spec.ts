@@ -13,18 +13,18 @@ const buildTask = (id: string, title: string, prompt: string) => ({
 });
 
 describe("heartbeatPromptBuildBatch", () => {
-    it("returns a single-task prompt without batching", () => {
-        const task = buildTask("one", "Check mail", "Review the inbox.");
+    it("wraps single-task code in run_python tags", () => {
+        const task = buildTask("one", "Check mail", "print('hello')");
         const result = heartbeatPromptBuildBatch([task]);
 
         expect(result.title).toBe("Heartbeat: Check mail");
-        expect(result.prompt).toBe("Review the inbox.");
+        expect(result.prompt).toBe("<run_python>\nprint('hello')\n</run_python>");
     });
 
-    it("builds a sorted batch prompt", () => {
-        const first = buildTask("b", "Alpha", "Do alpha.");
-        const second = buildTask("a", "Alpha", "Do alpha second.");
-        const third = buildTask("c", "Bravo", "Do bravo.");
+    it("builds a sorted batch with run_python-wrapped code", () => {
+        const first = buildTask("b", "Alpha", "do_alpha()");
+        const second = buildTask("a", "Alpha", "do_alpha_second()");
+        const third = buildTask("c", "Bravo", "do_bravo()");
 
         const result = heartbeatPromptBuildBatch([third, second, first]);
 
@@ -32,9 +32,11 @@ describe("heartbeatPromptBuildBatch", () => {
         expect(result.prompt).toContain("# Heartbeat run");
         expect(result.prompt).toContain("## 1. Alpha");
         expect(result.prompt).toContain("id: a");
-        expect(result.prompt).toContain("Do alpha second.");
+        expect(result.prompt).toContain("<run_python>\ndo_alpha_second()\n</run_python>");
         expect(result.prompt).toContain("## 2. Alpha");
         expect(result.prompt).toContain("id: b");
+        expect(result.prompt).toContain("<run_python>\ndo_alpha()\n</run_python>");
         expect(result.prompt).toContain("## 3. Bravo");
+        expect(result.prompt).toContain("<run_python>\ndo_bravo()\n</run_python>");
     });
 });

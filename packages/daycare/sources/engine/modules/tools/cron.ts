@@ -18,7 +18,11 @@ const addCronSchema = Type.Object(
             minLength: 1,
             description: "5-field cron expression (minute hour day month weekday)."
         }),
-        prompt: Type.String({ minLength: 1, description: "The prompt text to execute when the task fires." }),
+        code: Type.String({
+            minLength: 1,
+            description:
+                "Python code to execute when the cron fires. Has access to all agent tools as Python functions."
+        }),
         agentId: Type.Optional(
             Type.String({ minLength: 1, description: "Target agent id. Omit to use the system cron agent." })
         ),
@@ -73,7 +77,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
         tool: {
             name: "cron_add",
             description:
-                "Create a scheduled cron task. Set deleteAfterRun=true for one-shot tasks that self-remove after execution.",
+                "Create a scheduled cron task with Python code. Set deleteAfterRun=true for one-shot tasks that self-remove after execution.",
             parameters: addCronSchema
         },
         returns: cronReturns,
@@ -93,7 +97,7 @@ export function buildCronTool(crons: Crons): ToolDefinition {
                 name: payload.name,
                 description: payload.description,
                 schedule: payload.schedule,
-                prompt: payload.prompt,
+                prompt: payload.code,
                 agentId: payload.agentId,
                 enabled: payload.enabled,
                 deleteAfterRun: payload.deleteAfterRun
@@ -175,7 +179,7 @@ export function buildCronReadTaskTool(crons: Crons): ToolDefinition {
                     agentId: task.agentId ?? null,
                     enabled: task.enabled,
                     deleteAfterRun: task.deleteAfterRun,
-                    prompt: task.prompt
+                    code: task.prompt
                 },
                 isError: false,
                 timestamp: Date.now()
