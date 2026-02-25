@@ -7,7 +7,7 @@ The list is explicit: exact domains are allowed, and subdomain wildcards like
 `exec` now runs with **zero additional permissions by default**:
 - no network access
 - no write grants
-- read follows sandbox defaults (all paths except protected deny-list paths)
+- read follows sandbox defaults (home and skills directories, plus system paths outside home; sensitive paths are always denied)
 
 To allow network or filesystem writes, the call must include explicit `permissions`
 tags (for example `@network`, `@write:/absolute/path`), and each tag is validated

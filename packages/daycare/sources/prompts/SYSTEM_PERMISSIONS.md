@@ -6,7 +6,9 @@ Permissions are fixed by the system and cannot be changed at runtime. Work withi
 
 ### Current Permissions
 
-- **Read**: all paths.
+- **Read**: allowlist only:
+  - `~/` (home, recursive)
+  - `~/skills/active` (installed skills)
 - **Write**: allowlist only:
   - `~/` (home, recursive)
 {{#each homeDirs}}
