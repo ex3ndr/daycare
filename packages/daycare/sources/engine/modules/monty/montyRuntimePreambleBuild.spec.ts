@@ -24,7 +24,10 @@ describe("montyRuntimePreambleBuild", () => {
             "",
             "if TYPE_CHECKING:",
             "    def echo(text: str) -> Any:",
-            '        raise NotImplementedError("echo is provided by runtime.")'
+            '        raise NotImplementedError("echo is provided by runtime.")',
+            "",
+            "    def skip() -> Any:",
+            '        raise NotImplementedError("skip is provided by runtime.")'
         ].join("\n");
         expect(result).toBe(expected);
         expect(result).not.toContain("if False:");
@@ -45,7 +48,8 @@ describe("montyRuntimePreambleBuild", () => {
             "ToolError = RuntimeError",
             "",
             "if TYPE_CHECKING:",
-            "    pass"
+            "    def skip() -> Any:",
+            '        raise NotImplementedError("skip is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);

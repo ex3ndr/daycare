@@ -43,9 +43,15 @@ describe("montyPreambleBuild", () => {
             "# Typed tool stubs for code assistance only.",
             'ReadFileResponse = TypedDict("ReadFileResponse", { "summary": str, "size": int })',
             "",
+            'SkipResponse = TypedDict("SkipResponse", {})',
+            "",
             "def read_file(path: str, retries: int | None = None, verbose: bool | None = None) -> ReadFileResponse:",
             '    """Read a file from disk."""',
-            '    raise NotImplementedError("read_file is provided by runtime.")'
+            '    raise NotImplementedError("read_file is provided by runtime.")',
+            "",
+            "def skip() -> SkipResponse:",
+            '    """Skip this turn. Call when you have nothing useful to do right now."""',
+            '    raise NotImplementedError("skip is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);
@@ -112,9 +118,15 @@ describe("montyPreambleBuild", () => {
             "",
             'SearchV2Response = TypedDict("SearchV2Response", { "rows": list[SearchV2ResponseRowsItem] })',
             "",
+            'SkipResponse = TypedDict("SkipResponse", {})',
+            "",
             "def search_v2(query: str) -> SearchV2Response:",
             '    """valid python name"""',
-            '    raise NotImplementedError("search_v2 is provided by runtime.")'
+            '    raise NotImplementedError("search_v2 is provided by runtime.")',
+            "",
+            "def skip() -> SkipResponse:",
+            '    """Skip this turn. Call when you have nothing useful to do right now."""',
+            '    raise NotImplementedError("skip is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);
@@ -141,7 +153,12 @@ describe("montyPreambleBuild", () => {
             "",
             "ToolError = RuntimeError",
             "",
-            "# Typed tool stubs for code assistance only."
+            "# Typed tool stubs for code assistance only.",
+            'SkipResponse = TypedDict("SkipResponse", {})',
+            "",
+            "def skip() -> SkipResponse:",
+            '    """Skip this turn. Call when you have nothing useful to do right now."""',
+            '    raise NotImplementedError("skip is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);

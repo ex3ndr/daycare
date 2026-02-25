@@ -2,6 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 
 import { RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
+import { rlmSkipTool } from "../rlm/rlmSkipTool.js";
 import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
 import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
@@ -14,7 +15,11 @@ import { montyResponseTypeNameFromFunction } from "./montyResponseTypeNameFromFu
  * Expects: tool names are unique and come from ToolResolver.listTools().
  */
 export function montyPreambleBuild(tools: Tool[]): string {
-    const callableTools = tools.filter((tool) => tool.name !== RLM_TOOL_NAME && montyPythonIdentifierIs(tool.name));
+    const skipTool = rlmSkipTool();
+    const toolsWithSkip = tools.some((tool) => tool.name === skipTool.name) ? tools : [...tools, skipTool];
+    const callableTools = toolsWithSkip.filter(
+        (tool) => tool.name !== RLM_TOOL_NAME && montyPythonIdentifierIs(tool.name)
+    );
     const responseTypeNameByTool = responseTypeNameByToolBuild(callableTools);
 
     const lines: string[] = [

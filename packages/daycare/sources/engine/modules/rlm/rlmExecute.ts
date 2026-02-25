@@ -57,6 +57,9 @@ export async function rlmExecute(
     );
     const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
     const externalFunctions = [...toolByName.keys()];
+    if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
+        externalFunctions.push(SKIP_TOOL_NAME);
+    }
     const runtimePreamble = preambleRuntimeNormalize(preamble);
     const script = [runtimePreamble, code].filter((chunk) => chunk.length > 0).join("\n\n");
     await historyCallback?.({

@@ -24,6 +24,7 @@ const baseTools = [
         parameters: Type.Object({}, { additionalProperties: false })
     }
 ];
+const toolsWithoutSkip = baseTools.filter((tool) => tool.name !== "skip");
 
 describe("rlmExecute", () => {
     it("executes a tool call and returns final output", async () => {
@@ -170,6 +171,26 @@ describe("rlmExecute", () => {
         expect(resolver.execute).not.toHaveBeenCalled();
         // Should emit rlm_start and rlm_complete only (no tool_call/tool_result)
         expect(records).toEqual(["rlm_start", "rlm_complete"]);
+    });
+
+    it("supports skip() even when resolver does not advertise skip in tool listings", async () => {
+        const resolver: ToolResolverApi = {
+            listTools: () => toolsWithoutSkip,
+            listToolsForAgent: () => toolsWithoutSkip,
+            execute: vi.fn(async (toolCall) => okResult(toolCall.name, "unexpected"))
+        };
+
+        const result = await rlmExecute(
+            "skip()\n'after'",
+            montyRuntimePreambleBuild(toolsWithoutSkip),
+            createContext(),
+            resolver,
+            "tool-call-skip-missing"
+        );
+
+        expect(result.skipTurn).toBe(true);
+        expect(result.output).toBe("Turn skipped");
+        expect(resolver.execute).not.toHaveBeenCalled();
     });
 
     it("fails fast when Monty type checking finds invalid tool argument types", async () => {

@@ -1,6 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 
 import { RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
+import { rlmSkipTool } from "../rlm/rlmSkipTool.js";
 import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
 
@@ -9,7 +10,11 @@ import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
  * Expects: runtime preamble stays compact and omits prompt guidance text.
  */
 export function montyRuntimePreambleBuild(tools: Tool[]): string {
-    const callableTools = tools.filter((tool) => tool.name !== RLM_TOOL_NAME && montyPythonIdentifierIs(tool.name));
+    const skipTool = rlmSkipTool();
+    const toolsWithSkip = tools.some((tool) => tool.name === skipTool.name) ? tools : [...tools, skipTool];
+    const callableTools = toolsWithSkip.filter(
+        (tool) => tool.name !== RLM_TOOL_NAME && montyPythonIdentifierIs(tool.name)
+    );
     const lines: string[] = [
         "from typing import Any, TYPE_CHECKING",
         "",

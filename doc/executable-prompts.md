@@ -25,3 +25,4 @@ flowchart TD
 ## Skip during expansion
 
 Calling `skip()` inside a `<run_python>` block during prompt expansion aborts the entire system message. No inference runs and `handleSystemMessage` returns `null`. Remaining `<run_python>` blocks are not executed.
+`skip()` is exposed as an inline-RLM control function (synthetic runtime function), not as a separately registered classical tool.

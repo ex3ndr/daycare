@@ -29,6 +29,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("```python");
         expect(prompt).toContain('EchoResponse = TypedDict("EchoResponse", {})');
         expect(prompt).toContain("def echo() -> EchoResponse:");
+        expect(prompt).toContain("def skip() -> SkipResponse:");
         expect(prompt).not.toContain("Available skills");
         expect(prompt).toContain("<python_result>...</python_result>");
         expect(prompt).toContain("do not use `print()` for the final return value");
@@ -63,6 +64,7 @@ describe("rlmNoToolsPromptBuild", () => {
 
             const tools = engine.modules.tools.listTools();
             const prompt = await rlmNoToolsPromptBuild(tools);
+            expect(prompt).toContain("def skip() -> SkipResponse:");
 
             for (const tool of tools) {
                 const signaturePrefix = `def ${tool.name}(`;
