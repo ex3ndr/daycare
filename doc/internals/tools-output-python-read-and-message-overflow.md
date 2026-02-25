@@ -4,6 +4,7 @@ This change introduces three related behaviors:
 
 - `write_output` now supports `format: "markdown" | "json"` (default `markdown`).
 - `read` becomes unbounded when called from Python tool execution.
+- `read_json` reads selected file text and parses it as JSON.
 - `send_agent_message` spills oversized bodies (> 8000 chars) to `/home/outputs/*.md` and sends a file reference instead.
 
 ## Flow
@@ -16,6 +17,11 @@ flowchart TD
   D --> E{pythonExecution?}
   E -- yes --> F[sandbox.read raw=true\nno 50KB/2000-line truncation]
   E -- no --> G[sandbox.read raw=false\ndefault truncation]
+
+  C -- read_json --> Q[read_json tool]
+  Q --> R[sandbox.read raw=true]
+  R --> S[JSON.parse selected text]
+  S --> T[return parsed object/list]
 
   C -- write_output --> H[write_output tool]
   H --> I{format}
@@ -32,4 +38,4 @@ flowchart TD
 ## Notes
 
 - The overflow path reuses `write_output` implementation to keep output behavior consistent.
-- Python isolation and persistence guidance in `TOOLS_PYTHON.md` now includes format usage and Python-mode `read` behavior.
+- Python isolation and persistence guidance in `TOOLS_PYTHON.md` now includes format usage, Python-mode `read` behavior, and `read_json`.

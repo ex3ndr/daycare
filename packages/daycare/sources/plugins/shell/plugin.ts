@@ -11,7 +11,13 @@ import {
     buildProcessStopAllTool,
     buildProcessStopTool
 } from "./processTools.js";
-import { buildExecTool, buildWorkspaceEditTool, buildWorkspaceReadTool, buildWorkspaceWriteTool } from "./tool.js";
+import {
+    buildExecTool,
+    buildWorkspaceEditTool,
+    buildWorkspaceReadJsonTool,
+    buildWorkspaceReadTool,
+    buildWorkspaceWriteTool
+} from "./tool.js";
 import { buildWriteOutputTool } from "./writeOutputTool.js";
 
 const settingsSchema = z.object({}).passthrough();
@@ -23,6 +29,7 @@ export const plugin = definePlugin({
         return {
             load: async () => {
                 api.registrar.registerTool(buildWorkspaceReadTool());
+                api.registrar.registerTool(buildWorkspaceReadJsonTool());
                 api.registrar.registerTool(buildWorkspaceWriteTool());
                 api.registrar.registerTool(buildWorkspaceEditTool());
                 api.registrar.registerTool(buildWriteOutputTool());
@@ -38,6 +45,7 @@ export const plugin = definePlugin({
             },
             unload: async () => {
                 api.registrar.unregisterTool("read");
+                api.registrar.unregisterTool("read_json");
                 api.registrar.unregisterTool("write");
                 api.registrar.unregisterTool("edit");
                 api.registrar.unregisterTool("write_output");

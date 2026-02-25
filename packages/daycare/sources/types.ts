@@ -91,6 +91,7 @@ export type {
     ToolResultPrimitive,
     ToolResultRow,
     ToolResultShallowObject,
+    ToolResultValue,
     ToolVisibilityContext
 } from "./engine/modules/tools/types.js";
 // Permissions

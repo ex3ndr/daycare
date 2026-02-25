@@ -13,10 +13,11 @@ import { contextForAgent } from "../../engine/agents/context.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import { Sandbox } from "../../sandbox/sandbox.js";
-import { buildExecTool, buildWorkspaceReadTool, formatExecOutput } from "./tool.js";
+import { buildExecTool, buildWorkspaceReadJsonTool, buildWorkspaceReadTool, formatExecOutput } from "./tool.js";
 
 const execToolCall = { id: "tool-call-1", name: "exec" };
 const readToolCall = { id: "tool-call-2", name: "read" };
+const readJsonToolCall = { id: "tool-call-3", name: "read_json" };
 const READ_LIMIT_TEST_BYTES = 51 * 1024;
 
 describe("read tool allowed paths", () => {
@@ -249,6 +250,63 @@ describe("exec tool allowedDomains", () => {
         );
         expect(result.toolMessage.isError).toBe(false);
         expect(context.sandbox.permissions).toEqual(original);
+    });
+});
+
+describe("read_json tool", () => {
+    let workingDir: string;
+    let jsonPath: string;
+
+    beforeEach(async () => {
+        workingDir = await fs.mkdtemp(path.join(os.tmpdir(), "read-json-tool-workspace-"));
+        jsonPath = path.join(workingDir, "data.json");
+        await fs.writeFile(
+            jsonPath,
+            JSON.stringify(
+                {
+                    ok: true,
+                    nested: { count: 3 },
+                    rows: [{ id: "a" }, { id: "b" }]
+                },
+                null,
+                2
+            ),
+            "utf8"
+        );
+    });
+
+    afterEach(async () => {
+        await fs.rm(workingDir, { recursive: true, force: true });
+    });
+
+    it("parses JSON and returns typed value", async () => {
+        const tool = buildWorkspaceReadJsonTool();
+        const context = createContext(workingDir);
+
+        const result = await tool.execute({ path: jsonPath }, context, readJsonToolCall);
+        expect(result.toolMessage.isError).toBe(false);
+        expect(result.typedResult.action).toBe("read_json");
+        expect(result.typedResult.path).toContain("data.json");
+        expect((result.typedResult.value as { nested: { count: number } }).nested.count).toBe(3);
+    });
+
+    it("fails with clear error when JSON is invalid", async () => {
+        const tool = buildWorkspaceReadJsonTool();
+        const context = createContext(workingDir);
+        const invalidPath = path.join(workingDir, "invalid.json");
+        await fs.writeFile(invalidPath, "{ invalid", "utf8");
+
+        await expect(tool.execute({ path: invalidPath }, context, readJsonToolCall)).rejects.toThrow("Invalid JSON");
+    });
+
+    it("applies offset/limit before parsing", async () => {
+        const tool = buildWorkspaceReadJsonTool();
+        const context = createContext(workingDir);
+        const slicedPath = path.join(workingDir, "sliced.json");
+        await fs.writeFile(slicedPath, 'skip\n{"ok":true}\nskip-2', "utf8");
+
+        const result = await tool.execute({ path: slicedPath, offset: 2, limit: 1 }, context, readJsonToolCall);
+        expect((result.typedResult.value as { ok: boolean }).ok).toBe(true);
     });
 });
 

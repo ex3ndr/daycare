@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolResultContract, ToolResultValue } from "@/types";
 import {
     toolExecutionResultOutcomeWithTyped,
     toolMessageTextExtract
@@ -104,9 +104,32 @@ const shellResultSchema = Type.Object(
 );
 
 type ShellResult = Static<typeof shellResultSchema>;
+const readJsonResultSchema = Type.Object(
+    {
+        summary: Type.String(),
+        action: Type.String(),
+        isError: Type.Boolean(),
+        path: Type.String(),
+        bytes: Type.Number(),
+        value: Type.Any()
+    },
+    { additionalProperties: false }
+);
+type ReadJsonResult = {
+    summary: string;
+    action: string;
+    isError: boolean;
+    path: string;
+    bytes: number;
+    value: ToolResultValue;
+};
 
 const shellReturns: ToolResultContract<ShellResult> = {
     schema: shellResultSchema,
+    toLLMText: (result) => result.summary
+};
+const readJsonReturns: ToolResultContract<ReadJsonResult> = {
+    schema: readJsonResultSchema,
     toLLMText: (result) => result.summary
 };
 
@@ -156,6 +179,56 @@ export function buildWorkspaceReadTool(): ToolDefinition {
                 limit: payload.limit ?? null
             });
             return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "read"));
+        }
+    };
+}
+
+export function buildWorkspaceReadJsonTool(): ToolDefinition {
+    return {
+        tool: {
+            name: "read_json",
+            description:
+                "Read and parse JSON from a file. Supports relative and absolute paths plus offset/limit pagination before parsing.",
+            parameters: readSchema
+        },
+        returns: readJsonReturns,
+        execute: async (args, toolContext, toolCall) => {
+            const payload = args as ReadArgs;
+            const readResult = await toolContext.sandbox.read({
+                path: payload.path,
+                offset: payload.offset,
+                limit: payload.limit,
+                raw: true
+            });
+            if (readResult.type !== "text") {
+                throw new Error("Path is not a text file.");
+            }
+
+            let value: unknown;
+            try {
+                value = JSON.parse(readResult.content);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                throw new Error(`Invalid JSON in ${readResult.displayPath}: ${message}`);
+            }
+            if (!jsonValueIs(value)) {
+                throw new Error(`Invalid JSON in ${readResult.displayPath}: parsed value is unsupported.`);
+            }
+
+            const summary = `Read JSON from ${readResult.displayPath}.`;
+            const toolMessage = buildToolMessage(toolCall, summary, false, {
+                action: "read_json",
+                path: readResult.displayPath,
+                bytes: readResult.bytes
+            });
+            return toolExecutionResultOutcomeWithTyped(toolMessage, {
+                summary,
+                action: "read_json",
+                isError: false,
+                path: readResult.displayPath,
+                bytes: readResult.bytes,
+                value
+            });
         }
     };
 }
@@ -341,6 +414,22 @@ function detailStringGet(details: Record<string, unknown>, key: string): string 
 function detailNumberGet(details: Record<string, unknown>, key: string): number | undefined {
     const value = details[key];
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function jsonValueIs(value: unknown): value is ToolResultValue {
+    if (value === null) {
+        return true;
+    }
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return true;
+    }
+    if (Array.isArray(value)) {
+        return value.every((entry) => jsonValueIs(entry));
+    }
+    if (typeof value === "object") {
+        return Object.values(value as Record<string, unknown>).every((entry) => jsonValueIs(entry));
+    }
+    return false;
 }
 
 export function formatExecOutput(stdout: string, stderr: string, failed: boolean): string {

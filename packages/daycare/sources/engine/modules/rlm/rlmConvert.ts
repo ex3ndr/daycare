@@ -1,7 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import type { JsMontyObject } from "@pydantic/monty";
 
-import type { ToolExecutionResult, ToolResultPrimitive, ToolResultRow, ToolResultShallowObject } from "@/types";
+import type { ToolExecutionResult, ToolResultPrimitive, ToolResultShallowObject, ToolResultValue } from "@/types";
 import { montyParameterEntriesBuild } from "../monty/montyParameterEntriesBuild.js";
 
 /**
@@ -40,10 +40,10 @@ export function rlmArgsConvert(
  * Expects: tool result content follows the ToolResultMessage text block convention.
  */
 export function rlmResultConvert(toolResult: ToolExecutionResult<ToolResultShallowObject>): JsMontyObject {
-    if (toolResultShallowObjectIs(toolResult.typedResult)) {
+    if (toolResultObjectIs(toolResult.typedResult)) {
         return toolResult.typedResult;
     }
-    if (toolResultShallowObjectIs(toolResult.toolMessage.details)) {
+    if (toolResultObjectIs(toolResult.toolMessage.details)) {
         return toolResult.toolMessage.details;
     }
     const text = toolResult.toolMessage.content
@@ -98,28 +98,24 @@ function recordIs(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function toolResultShallowObjectIs(value: unknown): value is ToolResultShallowObject {
+function toolResultObjectIs(value: unknown): value is ToolResultShallowObject {
     if (!recordIs(value)) {
         return false;
     }
     return Object.values(value).every((entry) => toolResultValueIs(entry));
 }
 
-function toolResultValueIs(value: unknown): value is ToolResultPrimitive | ToolResultRow[] {
+function toolResultValueIs(value: unknown): value is ToolResultValue {
     if (toolResultPrimitiveIs(value)) {
         return true;
     }
-    if (!Array.isArray(value)) {
-        return false;
+    if (Array.isArray(value)) {
+        return value.every((entry) => toolResultValueIs(entry));
     }
-    return value.every((row) => toolResultRowIs(row));
-}
-
-function toolResultRowIs(value: unknown): value is ToolResultRow {
     if (!recordIs(value)) {
         return false;
     }
-    return Object.values(value).every((entry) => toolResultPrimitiveIs(entry));
+    return Object.values(value).every((entry) => toolResultValueIs(entry));
 }
 
 function toolResultPrimitiveIs(value: unknown): value is ToolResultPrimitive {

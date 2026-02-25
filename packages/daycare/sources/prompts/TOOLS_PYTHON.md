@@ -4,6 +4,7 @@ Many tools return typed dicts (see `TypedDict` signatures above). Access fields 
 Use `print()` for debug output. The value of the final expression is returned.
 Every single Python block runs in a SEPARATE throw away instance. In-memory variables do not persist across blocks. If you need results later, persist them to disk with `print(write_output(...))`, then read them back in a later block.
 When `read(...)` is called from Python execution, text is unbounded for the selected `offset`/`limit` range (no 50KB/2000-line truncation).
+Use `read_json(...)` when you need parsed JSON objects/lists directly instead of raw text.
 
 Prefer one script with multiple tool calls over separate invocations. Store results in variables and pass them between tools — do not manually construct or parse strings when a variable already holds the value. Independent tool calls can run sequentially in the same script; this is faster than multiple round-trips.
 ```python

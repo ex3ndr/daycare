@@ -44,9 +44,11 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
 
 export type ToolResultPrimitive = string | number | boolean | null;
 
-export type ToolResultRow = Record<string, ToolResultPrimitive>;
+export type ToolResultValue = ToolResultPrimitive | ToolResultValue[] | { [key: string]: ToolResultValue };
 
-export type ToolResultShallowObject = Record<string, ToolResultPrimitive | ToolResultRow[]>;
+export type ToolResultRow = Record<string, ToolResultValue>;
+
+export type ToolResultShallowObject = Record<string, ToolResultValue>;
 
 export type ToolResultOutcomeObject = {
     toolCallId: string;

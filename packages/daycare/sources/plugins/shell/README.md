@@ -1,6 +1,6 @@
 # Shell Plugin
 
-The shell plugin provides workspace file tools (`read`, `write`, `edit`, `write_output`), search/list helpers
+The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `edit`, `write_output`), search/list helpers
 (`grep`, `find`, `ls`), one-shot command execution (`exec`), and durable process management tools.
 
 ## Filesystem Helper Tools
@@ -13,6 +13,7 @@ The shell plugin provides workspace file tools (`read`, `write`, `edit`, `write_
 ## Read Tool Notes
 
 - `read` accepts relative and absolute paths.
+- `read_json` accepts the same arguments as `read` and parses the selected text as JSON.
 - Text output supports `offset` (1-indexed line start) and `limit` (line count) for pagination.
 - Text output is truncated to `2000` lines or `50KB` (whichever is hit first), with continuation hints.
 - When `read` is invoked from `run_python`, text is returned unbounded for the selected `offset`/`limit` range.

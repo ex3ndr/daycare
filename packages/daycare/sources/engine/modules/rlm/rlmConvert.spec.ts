@@ -130,4 +130,32 @@ describe("rlmResultConvert", () => {
 
         expect(rlmResultConvert(result)).toEqual({ text: "" });
     });
+
+    it("keeps nested typed JSON structures", () => {
+        const result: ToolExecutionResult<{
+            value: { meta: { ids: string[]; enabled: boolean }; rows: Array<{ id: string; tags: string[] }> };
+        }> = {
+            toolMessage: {
+                role: "toolResult",
+                toolCallId: "1",
+                toolName: "read_json",
+                content: [{ type: "text", text: "ok" }],
+                isError: false,
+                timestamp: Date.now()
+            },
+            typedResult: {
+                value: {
+                    meta: { ids: ["a", "b"], enabled: true },
+                    rows: [{ id: "1", tags: ["x", "y"] }]
+                }
+            }
+        };
+
+        expect(rlmResultConvert(result)).toEqual({
+            value: {
+                meta: { ids: ["a", "b"], enabled: true },
+                rows: [{ id: "1", tags: ["x", "y"] }]
+            }
+        });
+    });
 });
