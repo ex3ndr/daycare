@@ -25,3 +25,14 @@ flowchart TD
   InHome -->|yes, nested| TildeChild[return "~/..."]
   InHome -->|no| KeepAbs[return absolute path]
 ```
+
+## Case behavior
+- Path matching is case-sensitive because POSIX path operations are string-based.
+- Exact-case home paths map to `~`; case-mismatched variants remain absolute.
+
+```mermaid
+flowchart TD
+  Target[targetPath] --> CaseMatch{same-case prefix as homeDir?}
+  CaseMatch -->|yes| HomeRel[render "~" or "~/..."]
+  CaseMatch -->|no| Absolute[keep absolute path]
+```

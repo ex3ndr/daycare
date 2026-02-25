@@ -31,6 +31,22 @@ describe("pathRealDisplay", () => {
         ).toBe("/var/tmp/output.log");
     });
 
+    it("treats capitalization differences as distinct paths", () => {
+        expect(
+            pathRealDisplay({
+                homeDir: "/Users/Alice",
+                targetPath: "/Users/Alice/Documents/note.md"
+            })
+        ).toBe("~/Documents/note.md");
+
+        expect(
+            pathRealDisplay({
+                homeDir: "/Users/Alice",
+                targetPath: "/users/alice/Documents/note.md"
+            })
+        ).toBe("/users/alice/Documents/note.md");
+    });
+
     it("round-trips with pathRealResolve across different working directories", () => {
         const workingDirs = ["/home/alice/workspace/project-a", "/tmp/other-project"];
         const targets = [

@@ -77,4 +77,14 @@ describe("pathRealResolve", () => {
             })
         ).toThrow("workingDir must be an absolute POSIX path.");
     });
+
+    it("preserves capitalization in resolved output", () => {
+        expect(
+            pathRealResolve({
+                homeDir: "/Users/Alice",
+                workingDir: "/Workspace/Project",
+                targetPath: "~/Downloads/Report.TXT"
+            })
+        ).toBe("/Users/Alice/Downloads/Report.TXT");
+    });
 });
