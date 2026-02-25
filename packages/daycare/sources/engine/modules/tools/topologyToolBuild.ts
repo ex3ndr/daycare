@@ -48,7 +48,7 @@ const topologyReturns: ToolResultContract<TopologyResult> = {
 export function topologyTool(
     crons: Crons,
     signals: Signals,
-    channels: Pick<Channels, "list">,
+    channels: Pick<Channels, "listForUserIds">,
     _exposes: Pick<Exposes, "list">
 ): ToolDefinition {
     return {
@@ -80,7 +80,7 @@ export function topologyTool(
                 toolContext.heartbeats.listTasks(),
                 signals.listSubscriptions()
             ]);
-            const channelEntries = channels.list();
+            const channelEntries = channels.listForUserIds(visibleUserIds);
 
             const visibleAgentRecords = allAgentRecords.filter((record) => visibleUserIdSet.has(record.userId));
 
@@ -94,8 +94,6 @@ export function topologyTool(
                     lifecycle: record.lifecycle,
                     isYou: record.id === callerAgentId
                 }));
-
-            const visibleAgentIdSet = new Set(visibleAgentRecords.map((record) => record.id));
 
             const cronsSummary = cronTasks
                 .filter((task) => visibleUserIdSet.has(task.userId))
@@ -142,13 +140,7 @@ export function topologyTool(
                     isYou: subscription.ctx.agentId === callerAgentId
                 }));
 
-            const visibleChannelEntries = channelEntries.filter(
-                (channel) =>
-                    visibleAgentIdSet.has(channel.leader) ||
-                    channel.members.some((member) => visibleAgentIdSet.has(member.agentId))
-            );
-
-            const channelsSummary = visibleChannelEntries
+            const channelsSummary = channelEntries
                 .slice()
                 .sort((left, right) => left.name.localeCompare(right.name))
                 .map((channel) => ({

@@ -18,7 +18,7 @@ describe("channelCreateToolBuild", () => {
         const tool = channelCreateToolBuild({ create } as never);
         const result = await tool.execute({ name: "dev", leaderAgentId: "agent-leader" }, contextBuild(), toolCall);
 
-        expect(create).toHaveBeenCalledWith("dev", "agent-leader");
+        expect(create).toHaveBeenCalledWith({ agentId: "agent-caller", userId: "user-1" }, "dev", "agent-leader");
         expect(result.toolMessage.isError).toBe(false);
     });
 });
@@ -31,7 +31,7 @@ function contextBuild(): ToolExecutionContext {
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: "agent-caller" } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: { agentId: "agent-caller", userId: "user-1" } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

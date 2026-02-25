@@ -404,4 +404,63 @@ describe("upgrade plugin commands", () => {
             { text: "Upgrade complete: Daycare 0.0.30 -> 0.0.31." }
         );
     });
+
+    it("rejects self_upgrade when descriptor user and ctx user do not match", async () => {
+        const registrar = {
+            registerCommand: vi.fn(),
+            unregisterCommand: vi.fn(),
+            registerTool: vi.fn(),
+            unregisterTool: vi.fn(),
+            sendMessage: vi.fn(async () => undefined)
+        };
+        const api = {
+            instance: { instanceId: "upgrade", pluginId: "upgrade" },
+            settings: {
+                strategy: "pm2",
+                processName: "daycare",
+                selfUpgrade: { enabled: true }
+            },
+            engineSettings: {},
+            logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
+            auth: {},
+            dataDir: "/tmp/daycare",
+            registrar,
+            exposes: {
+                registerProvider: async () => undefined,
+                unregisterProvider: async () => undefined,
+                listProviders: () => []
+            },
+            fileStore: {},
+            inference: { complete: async () => undefined },
+            processes: {},
+            mode: "runtime"
+        };
+        const instance = await plugin.create(api as never);
+        await instance.load?.();
+
+        const tools = registrar.registerTool.mock.calls.map(
+            (call) => call[0] as { tool: { name: string }; execute: (...args: unknown[]) => Promise<unknown> }
+        );
+        const selfUpgradeTool = tools.find((entry) => entry.tool.name === "self_upgrade");
+        if (!selfUpgradeTool) {
+            throw new Error("Expected self_upgrade tool to be registered");
+        }
+
+        const result = (await selfUpgradeTool.execute(
+            {},
+            {
+                agent: { descriptor: { type: "user", userId: "user-a" } },
+                ctx: { userId: "user-b" },
+                messageContext: {}
+            },
+            { id: "tool-1", name: "self_upgrade" }
+        )) as {
+            toolMessage: { isError: boolean };
+            typedResult: { success: boolean; message: string };
+        };
+
+        expect(result.toolMessage.isError).toBe(true);
+        expect(result.typedResult.success).toBe(false);
+        expect(result.typedResult.message).toContain("direct ownership");
+    });
 });

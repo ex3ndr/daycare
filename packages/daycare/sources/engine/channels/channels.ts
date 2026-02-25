@@ -110,6 +110,18 @@ export class Channels {
             .sort((left, right) => left.name.localeCompare(right.name));
     }
 
+    listForUserIds(userIds: string[]): Channel[] {
+        const allowedUserIds = new Set(
+            userIds
+                .map((userId) => userId.trim())
+                .filter((userId) => userId.length > 0)
+        );
+        return Array.from(this.items.values())
+            .filter((channel) => allowedUserIds.has(channel.userId))
+            .map((channel) => cloneChannel(channel))
+            .sort((left, right) => left.name.localeCompare(right.name));
+    }
+
     get(name: string): Channel | null {
         const channel = this.items.get(channelNameNormalize(name));
         if (!channel) {
@@ -118,7 +130,11 @@ export class Channels {
         return cloneChannel(channel);
     }
 
-    async create(name: string, leaderAgentId: string): Promise<Channel> {
+    async create(ctx: Context, name: string, leaderAgentId: string): Promise<Channel> {
+        const callerUserId = ctx.userId.trim();
+        if (!callerUserId) {
+            throw new Error("Channel caller user id is required.");
+        }
         const channelName = channelNameNormalize(name);
         const leader = leaderAgentId.trim();
         if (!leader) {
@@ -136,13 +152,16 @@ export class Channels {
         if (!leaderContext) {
             throw new Error(`Leader agent not found: ${leader}`);
         }
+        if (leaderContext.userId !== callerUserId) {
+            throw new Error(`Channel leader user scope mismatch: ${leader}`);
+        }
 
         const now = Date.now();
         const channel: ChannelRuntimeRecord = {
             id: createId(),
             name: channelName,
             leader,
-            userId: leaderContext.userId,
+            userId: callerUserId,
             members: [],
             createdAt: now,
             updatedAt: now
@@ -269,12 +288,20 @@ export class Channels {
     }
 
     async send(
+        ctx: Context,
         channelName: string,
         senderUsername: string,
         text: string,
         mentions: string[]
     ): Promise<{ message: ChannelMessage; deliveredAgentIds: string[] }> {
         const channel = this.channelRequire(channelName);
+        const callerUserId = ctx.userId.trim();
+        if (!callerUserId) {
+            throw new Error("Channel sender user id is required.");
+        }
+        if (callerUserId !== channel.userId) {
+            throw new Error(`Channel user scope mismatch for #${channel.name}.`);
+        }
         const sender = usernameNormalize(senderUsername);
         const body = text.trim();
         if (!body) {
@@ -309,7 +336,7 @@ export class Channels {
             .filter((member) => normalizedMentions.includes(member.username))
             .map((member) => member.agentId);
         const deliveredAgentIds = Array.from(new Set([channel.leader, ...mentionTargets]));
-        const history = await this.getHistory(channel.name, HISTORY_CONTEXT_LIMIT);
+        const history = await this.getHistory(ctx, channel.name, HISTORY_CONTEXT_LIMIT);
         const signalType = channelSignalTypeBuild(channel.name);
         const senderMember = channel.members.find((member) => member.username === sender) ?? null;
         const signal: Signal = {
@@ -352,8 +379,15 @@ export class Channels {
         };
     }
 
-    async getHistory(channelName: string, limit?: number): Promise<ChannelMessage[]> {
+    async getHistory(ctx: Context, channelName: string, limit?: number): Promise<ChannelMessage[]> {
         const channel = this.channelRequire(channelName);
+        const callerUserId = ctx.userId.trim();
+        if (!callerUserId) {
+            throw new Error("Channel history user id is required.");
+        }
+        if (callerUserId !== channel.userId) {
+            throw new Error(`Channel user scope mismatch for #${channel.name}.`);
+        }
         const rows = await this.channelMessages.findRecent(contextForUserId(channel.userId), channel.id, limit);
         return rows.map((row) => ({
             id: row.id,

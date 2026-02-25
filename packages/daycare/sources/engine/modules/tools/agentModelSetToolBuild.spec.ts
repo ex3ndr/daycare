@@ -54,4 +54,40 @@ describe("agentModelSetToolBuild", () => {
             })
         ).toBe(false);
     });
+
+    it("updates model override for agents in caller user scope", async () => {
+        const result = await tool.execute(
+            { agentId: "agent-2", model: "small" },
+            {
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
+                agentSystem: {
+                    contextForAgentId: async () => contextForAgent({ userId: "user-1", agentId: "agent-2" }),
+                    updateAgentModelOverride: async () => true
+                },
+                agent: { descriptor: { type: "user" } },
+                messageContext: {}
+            } as never,
+            { id: "tool-1", name: "set_agent_model" }
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+    });
+
+    it("rejects model override across users", async () => {
+        await expect(
+            tool.execute(
+                { agentId: "agent-2", model: "small" },
+                {
+                    ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
+                    agentSystem: {
+                        contextForAgentId: async () => contextForAgent({ userId: "user-2", agentId: "agent-2" }),
+                        updateAgentModelOverride: async () => true
+                    },
+                    agent: { descriptor: { type: "user" } },
+                    messageContext: {}
+                } as never,
+                { id: "tool-2", name: "set_agent_model" }
+            )
+        ).rejects.toThrow("Cannot change model for agent from another user: agent-2");
+    });
 });

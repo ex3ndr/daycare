@@ -39,9 +39,9 @@ export function channelCreateToolBuild(channels: Channels): ToolDefinition {
             parameters: schema
         },
         returns: channelCreateReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelCreateArgs;
-            const channel = await channels.create(payload.name, payload.leaderAgentId);
+            const channel = await channels.create(toolContext.ctx, payload.name, payload.leaderAgentId);
             const summary = `Channel created: #${channel.name} (leader=${channel.leader}).`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",

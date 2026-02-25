@@ -8,7 +8,7 @@ const toolCall = { id: "tool-1", name: "signal_events_csv" };
 describe("signalEventsCsvToolBuild", () => {
     it("renders filtered event rows as CSV", async () => {
         const tool = signalEventsCsvToolBuild({
-            listAll: async () => signalEventsFixture()
+            listRecentForContext: async () => signalEventsFixture()
         } as never);
         const result = await tool.execute(
             {
@@ -33,7 +33,7 @@ describe("signalEventsCsvToolBuild", () => {
 
     it("returns only CSV header when no records match", async () => {
         const tool = signalEventsCsvToolBuild({
-            listAll: async () => signalEventsFixture()
+            listRecentForContext: async () => signalEventsFixture()
         } as never);
         const result = await tool.execute(
             {
@@ -49,7 +49,7 @@ describe("signalEventsCsvToolBuild", () => {
 
     it("rejects invalid time ranges", async () => {
         const tool = signalEventsCsvToolBuild({
-            listAll: async () => signalEventsFixture()
+            listRecentForContext: async () => signalEventsFixture()
         } as never);
 
         await expect(
@@ -99,7 +99,7 @@ function contextBuild(): ToolExecutionContext {
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: "agent-caller" } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: { agentId: "agent-caller", userId: "user-1" } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

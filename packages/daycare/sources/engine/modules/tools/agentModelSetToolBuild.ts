@@ -45,7 +45,7 @@ export function agentModelSetToolBuild(inferenceRouter: InferenceRouter): ToolDe
         tool: {
             name: "set_agent_model",
             description:
-                'Set the inference model for an agent. Use a selector ("small", "normal", "big") or a direct model name. Direct model names are validated before applying.',
+                'Set the inference model for an agent in the same user scope. Use a selector ("small", "normal", "big") or a direct model name. Direct model names are validated before applying.',
             parameters: schema
         },
         returns,
@@ -57,6 +57,13 @@ export function agentModelSetToolBuild(inferenceRouter: InferenceRouter): ToolDe
 
             if (!model) {
                 throw new Error("Model value is required");
+            }
+            const targetCtx = await toolContext.agentSystem.contextForAgentId(targetAgentId);
+            if (!targetCtx) {
+                throw new Error(`Agent not found or not loaded: ${targetAgentId}`);
+            }
+            if (targetCtx.userId !== toolContext.ctx.userId) {
+                throw new Error(`Cannot change model for agent from another user: ${targetAgentId}`);
             }
 
             let override: AgentModelOverride;

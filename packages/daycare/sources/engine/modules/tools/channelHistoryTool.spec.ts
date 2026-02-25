@@ -27,7 +27,7 @@ describe("channelHistoryToolBuild", () => {
             toolCall
         );
 
-        expect(getHistory).toHaveBeenCalledWith("dev", 5);
+        expect(getHistory).toHaveBeenCalledWith({ agentId: "agent-caller", userId: "user-1" }, "dev", 5);
         expect(result.toolMessage.isError).toBe(false);
         const text = contentText(result.toolMessage.content);
         expect(text).toContain("@alice: hello");
@@ -42,7 +42,7 @@ function contextBuild(): ToolExecutionContext {
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: "agent-caller" } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: { agentId: "agent-caller", userId: "user-1" } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

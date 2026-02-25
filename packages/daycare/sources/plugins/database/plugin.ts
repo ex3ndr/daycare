@@ -62,45 +62,72 @@ const CHANGES_END = "<!-- changes:end -->";
 export const plugin = definePlugin({
     settingsSchema,
     create: (api) => {
-        const dbPath = path.join(api.dataDir, "db.pglite");
-        const docPath = path.join(api.dataDir, "db.md");
-        let db: PGlite | null = null;
-
-        const openDb = async () => {
-            if (!db) {
-                await fs.mkdir(dbPath, { recursive: true });
-                db = new PGlite(dbPath);
-                await db.waitReady;
-            }
-            return db;
+        type UserDatabaseRuntime = {
+            dbPath: string;
+            docPath: string;
+            db: PGlite | null;
         };
 
-        const ensureDocs = async () => {
-            await fs.mkdir(api.dataDir, { recursive: true });
+        const runtimeByUserId = new Map<string, UserDatabaseRuntime>();
+
+        const runtimeForUser = (userId: string): UserDatabaseRuntime => {
+            const normalizedUserId = userId.trim();
+            if (!normalizedUserId) {
+                throw new Error("db_sql requires a user-scoped context.");
+            }
+            const existing = runtimeByUserId.get(normalizedUserId);
+            if (existing) {
+                return existing;
+            }
+            // Use a filesystem-safe folder while preserving one database per logical user.
+            const userDir = path.join(api.dataDir, "users", encodeURIComponent(normalizedUserId));
+            const runtime: UserDatabaseRuntime = {
+                dbPath: path.join(userDir, "db.pglite"),
+                docPath: path.join(userDir, "db.md"),
+                db: null
+            };
+            runtimeByUserId.set(normalizedUserId, runtime);
+            return runtime;
+        };
+
+        const openDb = async (userId: string) => {
+            const runtime = runtimeForUser(userId);
+            if (!runtime.db) {
+                await fs.mkdir(runtime.dbPath, { recursive: true });
+                runtime.db = new PGlite(runtime.dbPath);
+                await runtime.db.waitReady;
+            }
+            return runtime.db;
+        };
+
+        const ensureDocs = async (userId: string) => {
+            const runtime = runtimeForUser(userId);
+            await fs.mkdir(path.dirname(runtime.dbPath), { recursive: true });
             try {
-                await fs.access(dbPath);
+                await fs.access(runtime.dbPath);
             } catch (error) {
                 const code = (error as NodeJS.ErrnoException).code;
                 if (code !== "ENOENT") {
                     throw error;
                 }
-                await openDb();
+                await openDb(userId);
             }
 
             try {
-                await fs.access(docPath);
+                await fs.access(runtime.docPath);
             } catch (error) {
                 const code = (error as NodeJS.ErrnoException).code;
                 if (code !== "ENOENT") {
                     throw error;
                 }
-                await fs.writeFile(docPath, DB_TEMPLATE, "utf8");
+                await fs.writeFile(runtime.docPath, DB_TEMPLATE, "utf8");
             }
         };
 
-        const loadDoc = async () => {
+        const loadDoc = async (userId: string) => {
+            const runtime = runtimeForUser(userId);
             try {
-                const content = await fs.readFile(docPath, "utf8");
+                const content = await fs.readFile(runtime.docPath, "utf8");
                 return content.trim().length > 0 ? content : DB_TEMPLATE;
             } catch (error) {
                 const code = (error as NodeJS.ErrnoException).code;
@@ -111,9 +138,10 @@ export const plugin = definePlugin({
             }
         };
 
-        const updateDoc = async (description?: string) => {
-            const current = await loadDoc();
-            const schema = await renderSchema(await openDb());
+        const updateDoc = async (userId: string, description?: string) => {
+            const runtime = runtimeForUser(userId);
+            const current = await loadDoc(userId);
+            const schema = await renderSchema(await openDb(userId));
             let next = replaceSection(current, SCHEMA_START, SCHEMA_END, schema);
             if (description) {
                 const summary = formatChangeSummary(description);
@@ -126,12 +154,11 @@ export const plugin = definePlugin({
                     ensureChangeBody(readSection(next, CHANGES_START, CHANGES_END))
                 );
             }
-            await fs.writeFile(docPath, next, "utf8");
+            await fs.writeFile(runtime.docPath, next, "utf8");
         };
 
         return {
             load: async () => {
-                await ensureDocs();
                 api.registrar.registerTool({
                     tool: {
                         name: "db_sql",
@@ -140,9 +167,11 @@ export const plugin = definePlugin({
                         parameters: querySchema
                     },
                     returns: queryReturns,
-                    execute: async (args, _context, toolCall) => {
+                    execute: async (args, context, toolCall) => {
                         const payload = args as QueryArgs;
-                        const dbInstance = await openDb();
+                        const userId = context.ctx.userId;
+                        await ensureDocs(userId);
+                        const dbInstance = await openDb(userId);
                         const params = payload.params ?? [];
                         let text = "";
                         let details: Record<string, unknown> = {};
@@ -160,7 +189,7 @@ export const plugin = definePlugin({
                         } else {
                             const result = await dbInstance.query(payload.sql, params);
                             affectedRows = result.affectedRows ?? 0;
-                            await updateDoc(payload.description ?? summarizeSql(payload.sql));
+                            await updateDoc(userId, payload.description ?? summarizeSql(payload.sql));
                             text = `OK. affectedRows=${affectedRows}`;
                             details = {
                                 affectedRows
@@ -192,18 +221,23 @@ export const plugin = definePlugin({
             },
             unload: async () => {
                 api.registrar.unregisterTool("db_sql");
-                try {
-                    await db?.close();
-                } catch {
-                    // ignore close errors
+                for (const runtime of runtimeByUserId.values()) {
+                    try {
+                        await runtime.db?.close();
+                    } catch {
+                        // ignore close errors
+                    }
+                    runtime.db = null;
                 }
-                db = null;
+                runtimeByUserId.clear();
             },
-            systemPrompt: async () => {
-                const doc = await loadDoc();
+            systemPrompt: async (context) => {
+                await ensureDocs(context.ctx.userId);
+                const runtime = runtimeForUser(context.ctx.userId);
+                const doc = await loadDoc(context.ctx.userId);
                 return [
                     "Database plugin is active.",
-                    `PGlite data directory: ${dbPath}`,
+                    `PGlite data directory: ${runtime.dbPath}`,
                     "The db.md file is a living description of the database.",
                     "When you create or modify schema, update db.md with a detailed explanation of tables, fields, types, and expectations.",
                     "",

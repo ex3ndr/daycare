@@ -20,7 +20,7 @@ import type {
 const logger = getLogger("signal.facade");
 
 type SignalsRepositoryOptions = {
-    signalEvents: Pick<SignalEventsRepository, "create" | "findAll" | "findRecentAll">;
+    signalEvents: Pick<SignalEventsRepository, "create" | "findAll" | "findRecent" | "findRecentAll">;
     signalSubscriptions: Pick<
         SignalSubscriptionsRepository,
         "create" | "delete" | "findByUserAndAgent" | "findMany" | "findMatching"
@@ -38,7 +38,7 @@ export type SignalsOptions = {
 
 export class Signals {
     private readonly eventBus: EngineEventBus;
-    private readonly signalEvents: Pick<SignalEventsRepository, "create" | "findAll" | "findRecentAll">;
+    private readonly signalEvents: Pick<SignalEventsRepository, "create" | "findAll" | "findRecent" | "findRecentAll">;
     private readonly signalSubscriptions: Pick<
         SignalSubscriptionsRepository,
         "create" | "delete" | "findByUserAndAgent" | "findMany" | "findMatching"
@@ -167,6 +167,11 @@ export class Signals {
      */
     async listAll(): Promise<Signal[]> {
         const events = await this.signalEvents.findAll();
+        return events.map((event) => signalBuild(event));
+    }
+
+    async listRecentForContext(ctx: Context, limit = 200): Promise<Signal[]> {
+        const events = await this.signalEvents.findRecent(ctx, signalLimitNormalize(limit));
         return events.map((event) => signalBuild(event));
     }
 

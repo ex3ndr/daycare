@@ -48,9 +48,9 @@ export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
             parameters: schema
         },
         returns: channelHistoryReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelHistoryArgs;
-            const history = await channels.getHistory(payload.channelName, payload.limit);
+            const history = await channels.getHistory(toolContext.ctx, payload.channelName, payload.limit);
             const lines = history.map(
                 (message) => `[${message.createdAt}] @${message.senderUsername}: ${message.text}`
             );

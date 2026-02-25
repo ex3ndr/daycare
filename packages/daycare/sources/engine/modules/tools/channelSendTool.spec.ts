@@ -29,7 +29,9 @@ describe("channelSendToolBuild", () => {
             toolCall
         );
 
-        expect(send).toHaveBeenCalledWith("dev", "opsbot", "hello", ["alice"]);
+        expect(send).toHaveBeenCalledWith({ agentId: "agent-caller", userId: "user-1" }, "dev", "opsbot", "hello", [
+            "alice"
+        ]);
         expect(result.toolMessage.isError).toBe(false);
     });
 });
@@ -52,7 +54,7 @@ function contextBuild(): ToolExecutionContext {
                 systemPrompt: "prompt"
             }
         } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: { agentId: "agent-caller", userId: "user-1" } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

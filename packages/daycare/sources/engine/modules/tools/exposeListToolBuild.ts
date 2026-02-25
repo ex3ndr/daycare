@@ -38,9 +38,9 @@ export function exposeListToolBuild(exposes: Pick<Exposes, "list" | "listProvide
             parameters: schema
         },
         returns: exposeListReturns,
-        execute: async (_args, _toolContext, toolCall) => {
+        execute: async (_args, toolContext, toolCall) => {
             const [endpoints, providers] = await Promise.all([
-                exposes.list(),
+                toolContext.agentSystem.storage.exposeEndpoints.findMany(toolContext.ctx),
                 Promise.resolve(exposes.listProviders())
             ]);
 

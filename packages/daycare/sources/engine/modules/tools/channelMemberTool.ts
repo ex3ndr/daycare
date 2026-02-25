@@ -53,7 +53,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelAddMemberArgs;
             const ctx = await toolContext.agentSystem.contextForAgentId(payload.agentId);
-            if (!ctx) {
+            if (!ctx || ctx.userId !== toolContext.ctx.userId) {
                 throw new Error(`Agent not found: ${payload.agentId}`);
             }
             const channel = await channels.addMember(payload.channelName, ctx, payload.username);
@@ -96,7 +96,7 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelRemoveMemberArgs;
             const ctx = await toolContext.agentSystem.contextForAgentId(payload.agentId);
-            if (!ctx) {
+            if (!ctx || ctx.userId !== toolContext.ctx.userId) {
                 throw new Error(`Agent not found: ${payload.agentId}`);
             }
             const removed = await channels.removeMember(payload.channelName, ctx);

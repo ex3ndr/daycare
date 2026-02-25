@@ -46,9 +46,24 @@ describe("channelMemberToolBuild", () => {
         expect(removeMember).toHaveBeenCalledWith("dev", { agentId: "agent-a", userId: "user-a" });
         expect(result.toolMessage.isError).toBe(false);
     });
+
+    it("rejects cross-user member mutations", async () => {
+        const addTool = channelAddMemberToolBuild({ addMember: vi.fn() } as never);
+        await expect(
+            addTool.execute(
+                {
+                    channelName: "dev",
+                    agentId: "agent-a",
+                    username: "alice"
+                },
+                contextBuild("user-source", "user-target"),
+                addToolCall
+            )
+        ).rejects.toThrow("Agent not found: agent-a");
+    });
 });
 
-function contextBuild(): ToolExecutionContext {
+function contextBuild(callerUserId = "user-a", targetUserId = "user-a"): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -56,11 +71,11 @@ function contextBuild(): ToolExecutionContext {
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: "agent-caller" } as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: { agentId: "agent-caller", userId: callerUserId } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: {
-            contextForAgentId: async (agentId: string) => ({ agentId, userId: "user-a" })
+            contextForAgentId: async (agentId: string) => ({ agentId, userId: targetUserId })
         } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };

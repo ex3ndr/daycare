@@ -17,14 +17,14 @@ describe("buildSignalUnsubscribeTool", () => {
         try {
             const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
             await signals.subscribe({
-                ctx: { userId: "user-target", agentId: "agent-target" },
+                ctx: { userId: "user-source", agentId: "agent-target" },
                 pattern: "build:*:done",
                 silent: true
             });
             const tool = buildSignalUnsubscribeTool(signals);
             const result = await tool.execute(
                 { pattern: "build:*:done", agentId: "agent-target" },
-                contextBuild("agent-source", true),
+                contextBuild("agent-source", true, "user-source"),
                 toolCall
             );
 
@@ -53,7 +53,7 @@ describe("buildSignalUnsubscribeTool", () => {
             await expect(
                 tool.execute(
                     { pattern: "build:*:done", agentId: "missing-agent" },
-                    contextBuild("agent-source", false),
+                    contextBuild("agent-source", false, "user-source"),
                     toolCall
                 )
             ).rejects.toThrow("Agent not found: missing-agent");
@@ -69,7 +69,7 @@ describe("buildSignalUnsubscribeTool", () => {
             const tool = buildSignalUnsubscribeTool(signals);
             const result = await tool.execute(
                 { pattern: "build:*:done", agentId: "agent-target" },
-                contextBuild("agent-source", true),
+                contextBuild("agent-source", true, "user-source"),
                 toolCall
             );
             const details = result.toolMessage.details as { removed?: boolean } | undefined;
@@ -78,9 +78,27 @@ describe("buildSignalUnsubscribeTool", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("throws when target agent belongs to another user", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-unsubscribe-tool-"));
+        try {
+            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const tool = buildSignalUnsubscribeTool(signals);
+
+            await expect(
+                tool.execute(
+                    { pattern: "build:*:done", agentId: "agent-target" },
+                    contextBuild("agent-source", true, "user-target"),
+                    toolCall
+                )
+            ).rejects.toThrow("Cannot unsubscribe agent from another user: agent-target");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
-function contextBuild(agentId: string, exists: boolean): ToolExecutionContext {
+function contextBuild(agentId: string, exists: boolean, targetUserId: string): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -99,7 +117,7 @@ function contextBuild(agentId: string, exists: boolean): ToolExecutionContext {
                 exists
                     ? ({
                           agentId: targetAgentId,
-                          userId: "user-target"
+                          userId: targetUserId
                       } as unknown as ToolExecutionContext["ctx"])
                     : null
         } as unknown as ToolExecutionContext["agentSystem"],

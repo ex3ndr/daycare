@@ -241,6 +241,24 @@ export const plugin = definePlugin({
                         }
                     };
                 }
+                if (descriptor.userId !== toolContext.ctx.userId) {
+                    const message = "Self-upgrade requires direct ownership of the current user context.";
+                    const toolMessage: ToolResultMessage = {
+                        role: "toolResult",
+                        toolCallId: toolCall.id,
+                        toolName: toolCall.name,
+                        content: [{ type: "text", text: message }],
+                        isError: true,
+                        timestamp: Date.now()
+                    };
+                    return {
+                        toolMessage,
+                        typedResult: {
+                            success: false,
+                            message
+                        }
+                    };
+                }
 
                 const previousVersion = await upgradeVersionRead();
                 const versionToInstall = payload.version ?? "latest";

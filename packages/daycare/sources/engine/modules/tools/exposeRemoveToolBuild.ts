@@ -40,11 +40,15 @@ export function exposeRemoveToolBuild(exposes: Pick<Exposes, "remove">): ToolDef
             parameters: schema
         },
         returns: exposeRemoveReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ExposeRemoveArgs;
             const endpointId = payload.endpointId.trim();
             if (!endpointId) {
                 throw new Error("endpointId is required.");
+            }
+            const existing = await toolContext.agentSystem.storage.exposeEndpoints.findById(endpointId);
+            if (!existing || existing.userId !== toolContext.ctx.userId) {
+                throw new Error(`Expose endpoint not found: ${endpointId}`);
             }
 
             await exposes.remove(endpointId);

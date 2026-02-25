@@ -37,7 +37,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
         tool: {
             name: "signal_subscribe",
             description:
-                "Subscribe to signals matching a pattern. Pattern uses colon-separated segments with `*` as a single-segment wildcard (e.g. `build:*:done` matches `build:alpha:done` but not `build:alpha:beta:done`). Defaults to silent delivery (won't wake a sleeping agent); set `silent=false` to wake on signal. Pass `agentId` to subscribe another agent.",
+                "Subscribe to signals matching a pattern. Pattern uses colon-separated segments with `*` as a single-segment wildcard (e.g. `build:*:done` matches `build:alpha:done` but not `build:alpha:beta:done`). Defaults to silent delivery (won't wake a sleeping agent); set `silent=false` to wake on signal. Pass `agentId` to subscribe another agent in the same user scope.",
             parameters: schema
         },
         returns: signalSubscribeReturns,
@@ -47,6 +47,9 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
             const ctx = await toolContext.agentSystem.contextForAgentId(targetAgentId);
             if (!ctx) {
                 throw new Error(`Agent not found: ${targetAgentId}`);
+            }
+            if (ctx.userId !== toolContext.ctx.userId) {
+                throw new Error(`Cannot subscribe agent from another user: ${targetAgentId}`);
             }
 
             const subscription = await signals.subscribe({

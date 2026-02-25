@@ -19,7 +19,7 @@ describe("buildSignalSubscribeTool", () => {
             const tool = buildSignalSubscribeTool(signals);
             const result = await tool.execute(
                 { pattern: "build:*:done", silent: false, agentId: "agent-target" },
-                contextForAgent("agent-source", true),
+                contextForAgent("agent-source", true, "user-source"),
                 toolCall
             );
 
@@ -36,7 +36,7 @@ describe("buildSignalSubscribeTool", () => {
                   }
                 | undefined;
             expect(details?.subscription?.ctx.agentId).toBe("agent-target");
-            expect(details?.subscription?.ctx.userId).toBe("user-target");
+            expect(details?.subscription?.ctx.userId).toBe("user-source");
             expect(details?.subscription?.pattern).toBe("build:*:done");
             expect(details?.subscription?.silent).toBe(false);
             expect(details?.subscription?.createdAt).toBeTypeOf("number");
@@ -55,7 +55,7 @@ describe("buildSignalSubscribeTool", () => {
             await expect(
                 tool.execute(
                     { pattern: "build:*:done", agentId: "missing-agent" },
-                    contextForAgent("agent-source", false),
+                    contextForAgent("agent-source", false, "user-source"),
                     toolCall
                 )
             ).rejects.toThrow("Agent not found: missing-agent");
@@ -63,9 +63,27 @@ describe("buildSignalSubscribeTool", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("throws when target agent belongs to another user", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
+        try {
+            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const tool = buildSignalSubscribeTool(signals);
+
+            await expect(
+                tool.execute(
+                    { pattern: "build:*:done", agentId: "agent-target" },
+                    contextForAgent("agent-source", true, "user-target"),
+                    toolCall
+                )
+            ).rejects.toThrow("Cannot subscribe agent from another user: agent-target");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
-function contextForAgent(agentId: string, exists: boolean): ToolExecutionContext {
+function contextForAgent(agentId: string, exists: boolean, targetUserId: string): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -84,7 +102,7 @@ function contextForAgent(agentId: string, exists: boolean): ToolExecutionContext
                 exists
                     ? ({
                           agentId: targetAgentId,
-                          userId: "user-target"
+                          userId: targetUserId
                       } as unknown as ToolExecutionContext["ctx"])
                     : null
         } as unknown as ToolExecutionContext["agentSystem"],

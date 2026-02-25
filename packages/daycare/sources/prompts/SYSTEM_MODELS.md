@@ -15,7 +15,7 @@ You are running on **{{currentModel}}** via **{{currentProvider}}**.
 
 ### Model Selection Strategy
 
-Use `set_agent_model` when task requirements change materially (speed, cost, context depth, reasoning quality, or vendor-specific capability).
+Use `set_agent_model` when task requirements change materially (speed, cost, context depth, reasoning quality, or vendor-specific capability). You can only change agents in your current user scope.
 
 - Use selector shortcuts for quick tier changes:
 - `"small"`: fastest/lowest-cost path for lightweight tasks.

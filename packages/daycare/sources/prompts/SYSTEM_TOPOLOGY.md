@@ -54,11 +54,11 @@ Signals are broadcast events for decoupled, multi-agent coordination. Unlike `se
 
 **Emitting:** `generate_signal` - specify a `type` string (colon-separated segments, e.g. `build:project-x:done`) and optional `data` payload. Source defaults to you.
 
-**Subscribing:** `signal_subscribe` - specify a `pattern` with `*` wildcards for individual segments (e.g. `build:*:done` matches `build:project-x:done`). Matching signals arrive as system messages. Set `silent=true` (default) to receive them without waking a sleeping agent; `silent=false` to wake on delivery. You can subscribe other agents by passing their `agentId`.
+**Subscribing:** `signal_subscribe` - specify a `pattern` with `*` wildcards for individual segments (e.g. `build:*:done` matches `build:project-x:done`). Matching signals arrive as system messages. Set `silent=true` (default) to receive them without waking a sleeping agent; `silent=false` to wake on delivery. You can subscribe another agent by `agentId` only when that agent belongs to the same user scope.
 
 Signals with `source.type=agent` are **not** delivered back to the same `source.id` agent to avoid feedback loops.
 
-**Unsubscribing:** `signal_unsubscribe` - pass the exact pattern to remove.
+**Unsubscribing:** `signal_unsubscribe` - pass the exact pattern to remove. `agentId` can only target agents in the same user scope.
 
 **Lifecycle signals:** The system automatically emits `agent:<agentId>:wake`, `agent:<agentId>:sleep`, and `agent:<agentId>:idle` (after 1 minute asleep) when agents change state. These lifecycle signals use `source={ type: "agent", id: <agentId> }`. Subagents can also transition to a terminal `dead` state after extended inactivity (via an internal poison-pill signal). Subscribe to lifecycle signals to coordinate handoffs or monitor agent activity.
 

@@ -43,7 +43,13 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelSendArgs;
             const senderUsername = senderUsernameResolve(toolContext.agent.descriptor);
-            const sent = await channels.send(payload.channelName, senderUsername, payload.text, payload.mentions ?? []);
+            const sent = await channels.send(
+                toolContext.ctx,
+                payload.channelName,
+                senderUsername,
+                payload.text,
+                payload.mentions ?? []
+            );
 
             const summary =
                 `Sent message to #${sent.message.channelName} as @${senderUsername}. ` +

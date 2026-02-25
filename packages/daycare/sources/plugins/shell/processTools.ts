@@ -131,8 +131,8 @@ export function buildProcessListTool(processes: Processes): ToolDefinition {
             parameters: Type.Object({}, { additionalProperties: false })
         },
         returns: processToolReturns,
-        execute: async (_args, _toolContext, toolCall) => {
-            const items = await processes.list();
+        execute: async (_args, toolContext, toolCall) => {
+            const items = await processes.listForContext(toolContext.ctx);
             const text =
                 items.length === 0
                     ? "No managed processes."
@@ -164,9 +164,9 @@ export function buildProcessGetTool(processes: Processes): ToolDefinition {
             parameters: processGetSchema
         },
         returns: processToolReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ProcessGetArgs;
-            const item = await processes.get(payload.processId);
+            const item = await processes.getForContext(toolContext.ctx, payload.processId);
             const text = JSON.stringify(
                 {
                     id: item.id,
@@ -200,10 +200,10 @@ export function buildProcessStopTool(processes: Processes): ToolDefinition {
             parameters: processStopSchema
         },
         returns: processToolReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ProcessStopArgs;
             const signal = payload.signal ?? "SIGTERM";
-            const processInfo = await processes.stop(payload.processId, signal);
+            const processInfo = await processes.stopForContext(toolContext.ctx, payload.processId, signal);
             const text = [
                 `Process stopped: ${processInfo.id}`,
                 `name: ${processInfo.name}`,
@@ -228,10 +228,10 @@ export function buildProcessStopAllTool(processes: Processes): ToolDefinition {
             parameters: processStopAllSchema
         },
         returns: processToolReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as ProcessStopAllArgs;
             const signal = payload.signal ?? "SIGTERM";
-            const stopped = await processes.stopAll(signal);
+            const stopped = await processes.stopAllForContext(toolContext.ctx, signal);
             const text = `Stopped ${stopped.length} process${stopped.length === 1 ? "" : "es"} with ${signal}.`;
             const toolMessage = buildToolMessage(toolCall, text, false, {
                 count: stopped.length,

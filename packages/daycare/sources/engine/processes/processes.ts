@@ -6,7 +6,7 @@ import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
-import type { SandboxPackageManager, SessionPermissions } from "@/types";
+import type { Context, SandboxPackageManager, SessionPermissions } from "@/types";
 import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
 import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
@@ -288,6 +288,17 @@ export class Processes {
         });
     }
 
+    async listForContext(ctx: Context): Promise<ProcessInfo[]> {
+        return this.lock.inLock(async () => {
+            const userId = contextUserIdNormalize(ctx);
+            await this.refreshRecordStatusLocked();
+            return Array.from(this.records.values())
+                .filter((record) => record.userId === userId)
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .map((record) => toProcessInfo(record));
+        });
+    }
+
     async get(processId: string): Promise<ProcessInfo> {
         return this.lock.inLock(async () => {
             await this.refreshRecordStatusLocked();
@@ -299,12 +310,30 @@ export class Processes {
         });
     }
 
+    async getForContext(ctx: Context, processId: string): Promise<ProcessInfo> {
+        return this.lock.inLock(async () => {
+            await this.refreshRecordStatusLocked();
+            const record = recordForContextGet(this.records, ctx, processId);
+            return toProcessInfo(record);
+        });
+    }
+
     async stop(processId: string, signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo> {
         return this.lock.inLock(async () => {
             const record = this.records.get(processId);
             if (!record) {
                 throw new Error(`Unknown process id: ${processId}`);
             }
+            record.desiredState = "stopped";
+            await this.stopRecordLocked(record, signal);
+            await this.writeRecordLocked(record);
+            return toProcessInfo(record);
+        });
+    }
+
+    async stopForContext(ctx: Context, processId: string, signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo> {
+        return this.lock.inLock(async () => {
+            const record = recordForContextGet(this.records, ctx, processId);
             record.desiredState = "stopped";
             await this.stopRecordLocked(record, signal);
             await this.writeRecordLocked(record);
@@ -339,6 +368,23 @@ export class Processes {
         return this.lock.inLock(async () => {
             const results: ProcessInfo[] = [];
             for (const record of this.records.values()) {
+                record.desiredState = "stopped";
+                await this.stopRecordLocked(record, signal);
+                await this.writeRecordLocked(record);
+                results.push(toProcessInfo(record));
+            }
+            return results;
+        });
+    }
+
+    async stopAllForContext(ctx: Context, signal: ProcessSignal = "SIGTERM"): Promise<ProcessInfo[]> {
+        return this.lock.inLock(async () => {
+            const userId = contextUserIdNormalize(ctx);
+            const results: ProcessInfo[] = [];
+            for (const record of this.records.values()) {
+                if (record.userId !== userId) {
+                    continue;
+                }
                 record.desiredState = "stopped";
                 await this.stopRecordLocked(record, signal);
                 await this.writeRecordLocked(record);
@@ -702,6 +748,19 @@ function normalizeRequiredUserId(userId: string): string {
         throw new Error("Process userId is required.");
     }
     return normalized;
+}
+
+function contextUserIdNormalize(ctx: Context): string {
+    return normalizeRequiredUserId(ctx.userId);
+}
+
+function recordForContextGet(records: Map<string, ProcessRecord>, ctx: Context, processId: string): ProcessRecord {
+    const record = records.get(processId);
+    const userId = contextUserIdNormalize(ctx);
+    if (!record || record.userId !== userId) {
+        throw new Error(`Unknown process id: ${processId}`);
+    }
+    return record;
 }
 
 function processRecordFromDb(record: ProcessDbRecord): ProcessRecord {

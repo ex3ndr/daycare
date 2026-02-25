@@ -75,13 +75,18 @@ const engineEventSchema = z.object({
     payload: z.unknown().optional()
 });
 const channelCreateSchema = z.object({
+    userId: z.string().min(1),
     name: z.string().min(1),
     leaderAgentId: z.string().min(1)
 });
 const channelSendSchema = z.object({
+    userId: z.string().min(1),
     senderUsername: z.string().min(1),
     text: z.string().min(1),
     mentions: z.array(z.string().min(1)).optional()
+});
+const channelListQuerySchema = z.object({
+    userId: z.string().min(1)
 });
 const channelMemberAddSchema = z.object({
     agentId: z.string().min(1),
@@ -208,9 +213,13 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         return reply.send({ ok: true, subscriptions });
     });
 
-    app.get("/v1/engine/channels", async (_request, reply) => {
+    app.get("/v1/engine/channels", async (request, reply) => {
         logger.debug("event: GET /v1/engine/channels");
-        const channels = options.runtime.channels.list();
+        const parsed = channelListQuerySchema.safeParse(request.query);
+        if (!parsed.success) {
+            return reply.status(400).send({ ok: false, error: "Invalid query" });
+        }
+        const channels = options.runtime.channels.listForUserIds([parsed.data.userId]);
         return reply.send({ ok: true, channels });
     });
 
@@ -221,7 +230,11 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             return;
         }
         try {
-            const channel = await options.runtime.channels.create(payload.name, payload.leaderAgentId);
+            const channel = await options.runtime.channels.create(
+                contextForUser({ userId: payload.userId }),
+                payload.name,
+                payload.leaderAgentId
+            );
             return reply.send({ ok: true, channel });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Channel create failed";
@@ -238,6 +251,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         }
         try {
             const result = await options.runtime.channels.send(
+                contextForUser({ userId: payload.userId }),
                 channelName,
                 payload.senderUsername,
                 payload.text,

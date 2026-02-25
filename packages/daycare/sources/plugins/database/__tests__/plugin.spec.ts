@@ -47,7 +47,7 @@ describe("database plugin", () => {
             parentAgentId: "system",
             name: "system"
         } as const;
-        const ctx = contextForAgent({ userId: "user-1", agentId });
+        const ctxUser1 = contextForAgent({ userId: "user-1", agentId });
         const state: AgentState = {
             context: { messages: [] },
             permissions,
@@ -58,7 +58,7 @@ describe("database plugin", () => {
             state: "active"
         };
         const agent = Agent.restore(
-            ctx,
+            ctxUser1,
             descriptor,
             state,
             new AgentInbox(agentId),
@@ -95,10 +95,8 @@ describe("database plugin", () => {
         const instance = await plugin.create(api);
         await instance.load?.();
 
-        const dbPath = path.join(baseDir, "db.pglite");
-        const docPath = path.join(baseDir, "db.md");
-        await expect(fs.stat(dbPath)).resolves.toBeTruthy();
-        await expect(fs.stat(docPath)).resolves.toBeTruthy();
+        const dbPath = path.join(baseDir, "users", "user-1", "db.pglite");
+        const docPath = path.join(baseDir, "users", "user-1", "db.md");
 
         const toolCall: ToolCall = {
             type: "toolCall",
@@ -120,7 +118,7 @@ describe("database plugin", () => {
             logger: getLogger("test.database.tool"),
             assistant: null,
             agent,
-            ctx,
+            ctx: ctxUser1,
             source: "test",
             messageContext,
             agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],
@@ -128,6 +126,8 @@ describe("database plugin", () => {
         });
 
         expect(result.toolMessage.isError).toBe(false);
+        await expect(fs.stat(dbPath)).resolves.toBeTruthy();
+        await expect(fs.stat(docPath)).resolves.toBeTruthy();
 
         const doc = await fs.readFile(docPath, "utf8");
         expect(doc).toContain("### users");
@@ -137,10 +137,51 @@ describe("database plugin", () => {
 
         const prompt =
             typeof instance.systemPrompt === "function"
-                ? await instance.systemPrompt({ ctx })
+                ? await instance.systemPrompt({ ctx: ctxUser1 })
                 : (instance.systemPrompt ?? "");
         expect(prompt).toContain("Database plugin is active.");
         expect(prompt).toContain(doc.trim());
+
+        const user2AgentId = createId();
+        const ctxUser2 = contextForAgent({ userId: "user-2", agentId: user2AgentId });
+        const user2Agent = Agent.restore(
+            ctxUser2,
+            descriptor,
+            state,
+            new AgentInbox(user2AgentId),
+            {} as unknown as Parameters<typeof Agent.restore>[4],
+            new UserHome(path.join(baseDir, "users"), "user-2")
+        );
+        const selectToolCall: ToolCall = {
+            type: "toolCall",
+            id: "tool-2",
+            name: "db_sql",
+            arguments: {
+                sql: "SELECT * FROM users"
+            }
+        };
+        const user2Result = await modules.tools.execute(selectToolCall, {
+            connectorRegistry: modules.connectors,
+            sandbox: {
+                permissions,
+                workingDir: permissions.workingDir
+            } as unknown as Parameters<typeof modules.tools.execute>[1]["sandbox"],
+            auth,
+            logger: getLogger("test.database.tool.user2"),
+            assistant: null,
+            agent: user2Agent,
+            ctx: ctxUser2,
+            source: "test",
+            messageContext,
+            agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],
+            heartbeats: null as unknown as Parameters<typeof modules.tools.execute>[1]["heartbeats"]
+        });
+        expect(user2Result.toolMessage.isError).toBe(true);
+        expect(user2Result.toolMessage.content).toEqual([
+            expect.objectContaining({
+                text: expect.stringContaining('relation "users" does not exist')
+            })
+        ]);
 
         await instance.unload?.();
     });

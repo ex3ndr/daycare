@@ -49,11 +49,11 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
             parameters: schema
         },
         returns: signalEventsCsvReturns,
-        execute: async (args, _toolContext, toolCall) => {
+        execute: async (args, toolContext, toolCall) => {
             const payload = args as SignalEventsCsvArgs;
             const timeRange = signalEventsCsvTimeRangeNormalize(payload.fromAt, payload.toAt);
             const types = signalTypesNormalize(payload.types);
-            const records = signalEventsFilter(await signals.listAll(), timeRange, types);
+            const records = signalEventsFilter(await signals.listRecentForContext(toolContext.ctx, 1000), timeRange, types);
             const text = signalEventsCsvBuild(records);
 
             const summary = text;

@@ -36,7 +36,7 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
         tool: {
             name: "signal_unsubscribe",
             description:
-                "Remove a signal subscription. The pattern must exactly match the one used in `signal_subscribe`. Pass `agentId` to unsubscribe another agent.",
+                "Remove a signal subscription. The pattern must exactly match the one used in `signal_subscribe`. Pass `agentId` to unsubscribe another agent in the same user scope.",
             parameters: schema
         },
         returns: signalUnsubscribeReturns,
@@ -46,6 +46,9 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
             const ctx = await toolContext.agentSystem.contextForAgentId(targetAgentId);
             if (!ctx) {
                 throw new Error(`Agent not found: ${targetAgentId}`);
+            }
+            if (ctx.userId !== toolContext.ctx.userId) {
+                throw new Error(`Cannot unsubscribe agent from another user: ${targetAgentId}`);
             }
 
             const removed = await signals.unsubscribe({

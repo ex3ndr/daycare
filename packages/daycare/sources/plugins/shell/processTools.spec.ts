@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import type { ProcessCreateInput, Processes, ProcessInfo } from "../../engine/processes/processes.js";
-import { buildProcessStartTool } from "./processTools.js";
+import {
+    buildProcessGetTool,
+    buildProcessListTool,
+    buildProcessStartTool,
+    buildProcessStopAllTool,
+    buildProcessStopTool
+} from "./processTools.js";
 
 describe("process_start permissions", () => {
     it("uses /tmp write scope for process sandboxing", async () => {
@@ -76,6 +82,63 @@ describe("process_start permissions", () => {
             workingDir: "/workspace",
             writeDirs: ["/tmp"]
         });
+    });
+});
+
+describe("process management user scope", () => {
+    it("process_list uses caller context", async () => {
+        const listForContext = vi.fn(async () => []);
+        const tool = buildProcessListTool({ listForContext } as unknown as Processes);
+
+        await tool.execute({}, createContext({ workingDir: "/workspace", writeDirs: ["/tmp"] }), {
+            id: "call-list",
+            name: "process_list"
+        });
+
+        expect(listForContext).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1" }));
+    });
+
+    it("process_get uses caller context", async () => {
+        const getForContext = vi.fn(async () => buildProcessInfo());
+        const tool = buildProcessGetTool({ getForContext } as unknown as Processes);
+
+        await tool.execute(
+            { processId: "process-id" },
+            createContext({ workingDir: "/workspace", writeDirs: ["/tmp"] }),
+            { id: "call-get", name: "process_get" }
+        );
+
+        expect(getForContext).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1" }), "process-id");
+    });
+
+    it("process_stop uses caller context", async () => {
+        const stopForContext = vi.fn(async () => ({ ...buildProcessInfo(), status: "stopped" as const }));
+        const tool = buildProcessStopTool({ stopForContext } as unknown as Processes);
+
+        await tool.execute(
+            { processId: "process-id", signal: "SIGINT" },
+            createContext({ workingDir: "/workspace", writeDirs: ["/tmp"] }),
+            { id: "call-stop", name: "process_stop" }
+        );
+
+        expect(stopForContext).toHaveBeenCalledWith(
+            expect.objectContaining({ userId: "user-1" }),
+            "process-id",
+            "SIGINT"
+        );
+    });
+
+    it("process_stop_all uses caller context", async () => {
+        const stopAllForContext = vi.fn(async () => []);
+        const tool = buildProcessStopAllTool({ stopAllForContext } as unknown as Processes);
+
+        await tool.execute(
+            { signal: "SIGTERM" },
+            createContext({ workingDir: "/workspace", writeDirs: ["/tmp"] }),
+            { id: "call-stop-all", name: "process_stop_all" }
+        );
+
+        expect(stopAllForContext).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1" }), "SIGTERM");
     });
 });
 

@@ -35,7 +35,7 @@ describe("topologyTool", () => {
             const tool = topologyTool(
                 { listTasks: async () => [] } as unknown as Crons,
                 { listSubscriptions: async () => [] } as unknown as Signals,
-                { list: () => [] } as never,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
                 { list: async () => [] } as never
             );
             const result = await tool.execute(
@@ -167,7 +167,7 @@ describe("topologyTool", () => {
                     ]
                 } as unknown as Signals,
                 {
-                    list: () => [
+                    listForUserIds: (_userIds: string[]) => [
                         {
                             id: "channel-dev",
                             name: "dev",
@@ -295,7 +295,7 @@ describe("topologyTool", () => {
                     ]
                 } as unknown as Crons,
                 { listSubscriptions: async () => [] } as unknown as Signals,
-                { list: () => [] } as never,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
                 { list: async () => [] } as never
             );
 
@@ -378,7 +378,7 @@ describe("topologyTool", () => {
             const tool = topologyTool(
                 { listTasks: async () => [] } as unknown as Crons,
                 { listSubscriptions: async () => [] } as unknown as Signals,
-                { list: () => [] } as never,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
                 { list: async () => [] } as never
             );
 
@@ -504,24 +504,30 @@ describe("topologyTool", () => {
                     ]
                 } as unknown as Signals,
                 {
-                    list: () => [
-                        {
-                            id: "channel-owner",
-                            name: "owner",
-                            leader: "owner-main",
-                            members: [{ agentId: "owner-main", username: "owner", joinedAt: 1 }],
-                            createdAt: 1,
-                            updatedAt: 1
-                        },
-                        {
-                            id: "channel-other",
-                            name: "other",
-                            leader: "other-main",
-                            members: [{ agentId: "other-main", username: "other", joinedAt: 1 }],
-                            createdAt: 2,
-                            updatedAt: 2
+                    listForUserIds: (userIds: string[]) => {
+                        const channels = [];
+                        if (userIds.includes(ownerUserId)) {
+                            channels.push({
+                                id: "channel-owner",
+                                name: "owner",
+                                leader: "owner-main",
+                                members: [{ agentId: "owner-main", username: "owner", joinedAt: 1 }],
+                                createdAt: 1,
+                                updatedAt: 1
+                            });
                         }
-                    ]
+                        if (userIds.includes("other-user")) {
+                            channels.push({
+                                id: "channel-other",
+                                name: "other",
+                                leader: "other-main",
+                                members: [{ agentId: "other-main", username: "other", joinedAt: 1 }],
+                                createdAt: 2,
+                                updatedAt: 2
+                            });
+                        }
+                        return channels;
+                    }
                 } as never,
                 {
                     list: async () => [
@@ -671,7 +677,7 @@ describe("topologyTool", () => {
             const tool = topologyTool(
                 { listTasks: async () => [] } as unknown as Crons,
                 { listSubscriptions: async () => [] } as unknown as Signals,
-                { list: () => [] } as never,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
                 { list: async () => [] } as never
             );
 
@@ -752,7 +758,7 @@ describe("topologyTool", () => {
                     ]
                 } as unknown as Signals,
                 {
-                    list: () => []
+                    listForUserIds: (_userIds: string[]) => []
                 } as never,
                 { list: async () => [] } as never
             );
