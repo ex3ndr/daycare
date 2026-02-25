@@ -27,8 +27,12 @@ describe("jwtVerify", () => {
 
     it("throws for tampered token", async () => {
         const token = await jwtSign({ userId: "user-1" }, "test-secret", 3600);
-        const suffix = token.at(-1) === "a" ? "b" : "a";
-        const tampered = `${token.slice(0, -1)}${suffix}`;
+        const [header, payload, signature] = token.split(".");
+        if (!header || !payload || !signature) {
+            throw new Error("Expected token to contain three segments.");
+        }
+        const replacement = signature[0] === "A" ? "B" : "A";
+        const tampered = [header, payload, `${replacement}${signature.slice(1)}`].join(".");
 
         await expect(jwtVerify(tampered, "test-secret")).rejects.toThrow();
     });

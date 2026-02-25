@@ -51,6 +51,13 @@ export const plugin = definePlugin({
         };
 
         const handleRequest = async (request: http.IncomingMessage, response: http.ServerResponse): Promise<void> => {
+            appCorsApply(response);
+            if (request.method === "OPTIONS") {
+                response.writeHead(204);
+                response.end();
+                return;
+            }
+
             const requestUrl = new URL(request.url ?? "/", `http://${settings.host}`);
 
             if (requestUrl.pathname === "/auth/validate" && request.method === "POST") {
@@ -264,6 +271,7 @@ async function appProxyRequest(
                 headers
             },
             (upstreamResponse) => {
+                appCorsApply(response);
                 response.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers);
                 void pipeline(upstreamResponse, response)
                     .then(() => resolve())
@@ -372,6 +380,7 @@ async function appFileExists(filePath: string): Promise<boolean> {
 }
 
 async function appServeFile(response: http.ServerResponse, filePath: string): Promise<void> {
+    appCorsApply(response);
     response.writeHead(200, {
         "content-type": appContentTypeResolve(filePath),
         "cache-control": appCacheControlResolve(filePath)
@@ -417,11 +426,18 @@ function appCacheControlResolve(filePath: string): string {
 }
 
 function appSendJson(response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>): void {
+    appCorsApply(response);
     response.writeHead(statusCode, {
         "content-type": "application/json; charset=utf-8",
         "cache-control": "no-store"
     });
     response.end(`${JSON.stringify(payload)}\n`);
+}
+
+function appCorsApply(response: http.ServerResponse): void {
+    response.setHeader("access-control-allow-origin", "*");
+    response.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    response.setHeader("access-control-allow-headers", "content-type,authorization");
 }
 
 function appServerListen(server: http.Server, host: string, port: number): Promise<void> {
