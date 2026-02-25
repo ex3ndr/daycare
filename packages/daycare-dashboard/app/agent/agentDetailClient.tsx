@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, Bell, BellOff, Cable, Clock, MessageSquare, Moon, RefreshCw, Skull } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Cable, Clock, Download, MessageSquare, Moon, RefreshCw, Skull } from "lucide-react";
 
+import { agentHistoryExportJsonl } from "@/lib/agentHistoryExportJsonl";
+import { agentHistoryExportMarkdown } from "@/lib/agentHistoryExportMarkdown";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -139,6 +141,10 @@ export default function AgentDetailPage() {
     return [...records].sort((a, b) => recordTimestamp(b) - recordTimestamp(a));
   }, [records]);
 
+  const chronologicalRecords = useMemo(() => {
+    return [...records].sort((a, b) => recordTimestamp(a) - recordTimestamp(b));
+  }, [records]);
+
   const recordStats = useMemo(() => {
     let userMessages = 0;
     let assistantMessages = 0;
@@ -194,6 +200,35 @@ export default function AgentDetailPage() {
     }
     return buildAgentType(summary);
   }, [summary]);
+
+  const selectedSession = useMemo(() => {
+    if (!selectedSessionId) {
+      return null;
+    }
+    return sessions.find((session) => session.id === selectedSessionId) ?? null;
+  }, [selectedSessionId, sessions]);
+
+  const downloadJsonl = useCallback(() => {
+    if (!agentId || !chronologicalRecords.length) {
+      return;
+    }
+    const content = agentHistoryExportJsonl(chronologicalRecords);
+    const fileName = historyExportFileNameBuild(agentId, selectedSessionId, "jsonl");
+    downloadTextFile(fileName, content, "application/x-ndjson;charset=utf-8");
+  }, [agentId, chronologicalRecords, selectedSessionId]);
+
+  const downloadMarkdown = useCallback(() => {
+    if (!agentId || !chronologicalRecords.length) {
+      return;
+    }
+    const content = agentHistoryExportMarkdown({
+      agentId,
+      session: selectedSession,
+      records: chronologicalRecords
+    });
+    const fileName = historyExportFileNameBuild(agentId, selectedSessionId, "md");
+    downloadTextFile(fileName, content, "text/markdown;charset=utf-8");
+  }, [agentId, chronologicalRecords, selectedSession, selectedSessionId]);
 
   return (
     <DashboardShell
@@ -398,28 +433,52 @@ export default function AgentDetailPage() {
                 <CardTitle>Agent history</CardTitle>
                 <CardDescription>Inbound, outbound, and tool activity tracked for this agent.</CardDescription>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.userMessages} user
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.assistantMessages} assistant
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.toolResults} tools
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.rlmEvents} rlm
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.rewriteEvents} rewrites
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.notes} notes
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {recordStats.files} files
-                </Badge>
+              <div className="flex flex-col items-start gap-2 sm:items-end">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.userMessages} user
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.assistantMessages} assistant
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.toolResults} tools
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.rlmEvents} rlm
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.rewriteEvents} rewrites
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.notes} notes
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {recordStats.files} files
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={downloadJsonl}
+                    disabled={!orderedRecords.length}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download JSONL
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={downloadMarkdown}
+                    disabled={!orderedRecords.length}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Markdown
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -992,4 +1051,31 @@ function formatDateTime(timestamp: number) {
     return "Unknown";
   }
   return new Date(timestamp).toLocaleString();
+}
+
+function historyExportFileNameBuild(agentId: string, sessionId: string | null, extension: "jsonl" | "md") {
+  const agentToken = filenameTokenNormalize(agentId);
+  const sessionToken = sessionId ? filenameTokenNormalize(sessionId) : "latest";
+  const exportTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `daycare-session-log-${agentToken}-${sessionToken}-${exportTimestamp}.${extension}`;
+}
+
+function filenameTokenNormalize(value: string) {
+  const token = value
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return token.length > 0 ? token : "unknown";
+}
+
+function downloadTextFile(fileName: string, content: string, contentType: string) {
+  const blob = new Blob([content], { type: contentType });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(href);
 }
