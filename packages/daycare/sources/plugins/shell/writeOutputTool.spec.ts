@@ -42,6 +42,25 @@ describe("buildWriteOutputTool", () => {
         expect(await fs.readFile(path.join(homeDir, "outputs", "report.md"), "utf8")).toBe("# Summary");
     });
 
+    it("writes json output when format=json", async () => {
+        const tool = buildWriteOutputTool();
+        const context = createContext(homeDir);
+
+        const result = await tool.execute(
+            {
+                name: "report",
+                format: "json",
+                content: '{"ok":true}'
+            },
+            context,
+            toolCall
+        );
+
+        const text = toolMessageText(result.toolMessage);
+        expect(text).toContain("/home/outputs/report.json");
+        expect(await fs.readFile(path.join(homeDir, "outputs", "report.json"), "utf8")).toBe('{"ok":true}');
+    });
+
     it("uses dedup suffix when target already exists", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
@@ -63,7 +82,29 @@ describe("buildWriteOutputTool", () => {
         expect(await fs.readFile(path.join(outputsDir, "report (1).md"), "utf8")).toBe("# New Summary");
     });
 
-    it("rejects names that already include .md extension", async () => {
+    it("uses dedup suffix for json targets", async () => {
+        const tool = buildWriteOutputTool();
+        const context = createContext(homeDir);
+        const outputsDir = path.join(homeDir, "outputs");
+        await fs.mkdir(outputsDir, { recursive: true });
+        await fs.writeFile(path.join(outputsDir, "report.json"), '{"old":true}', "utf8");
+
+        const result = await tool.execute(
+            {
+                name: "report",
+                format: "json",
+                content: '{"ok":true}'
+            },
+            context,
+            toolCall
+        );
+
+        const text = toolMessageText(result.toolMessage);
+        expect(text).toContain("/home/outputs/report (1).json");
+        expect(await fs.readFile(path.join(outputsDir, "report (1).json"), "utf8")).toBe('{"ok":true}');
+    });
+
+    it("rejects names that already include an extension", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
 
@@ -76,7 +117,7 @@ describe("buildWriteOutputTool", () => {
                 context,
                 toolCall
             )
-        ).rejects.toThrow("name must not include the .md extension");
+        ).rejects.toThrow("name must not include a file extension");
     });
 });
 

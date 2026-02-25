@@ -2,7 +2,10 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import { buildWriteOutputTool } from "../../../plugins/shell/writeOutputTool.js";
+
+const AGENT_MESSAGE_INLINE_CHAR_LIMIT = 8_000;
 
 const startSchema = Type.Object(
     {
@@ -107,6 +110,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         returns: backgroundReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SendAgentMessageArgs;
+            const outbound = await agentMessageOverflowHandle(payload.text, toolContext);
             const descriptor = toolContext.agent.descriptor;
             const origin = toolContext.agent.id;
             const targetAgentId =
@@ -129,12 +133,14 @@ export function buildSendAgentMessageTool(): ToolDefinition {
 
                 await toolContext.agentSystem.steer(toolContext.ctx, resolvedTarget, {
                     type: "steering",
-                    text: payload.text,
+                    text: outbound.text,
                     origin,
                     cancelReason: payload.cancelReason
                 });
 
-                const summary = "Steering message delivered.";
+                const summary = outbound.outputPath
+                    ? `Steering message delivered. Full content saved to ${outbound.outputPath}.`
+                    : "Steering message delivered.";
                 const toolMessage: ToolResultMessage = {
                     role: "toolResult",
                     toolCallId: toolCall.id,
@@ -163,10 +169,12 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             await toolContext.agentSystem.post(
                 toolContext.ctx,
                 { agentId: resolvedTarget },
-                { type: "system_message", text: payload.text, origin }
+                { type: "system_message", text: outbound.text, origin }
             );
 
-            const summary = "System message sent.";
+            const summary = outbound.outputPath
+                ? `System message sent. Full content saved to ${outbound.outputPath}.`
+                : "System message sent.";
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -191,4 +199,51 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             };
         }
     };
+}
+
+type AgentMessageOverflowResult = {
+    text: string;
+    outputPath: string | null;
+};
+
+async function agentMessageOverflowHandle(
+    text: string,
+    toolContext: ToolExecutionContext
+): Promise<AgentMessageOverflowResult> {
+    if (text.length <= AGENT_MESSAGE_INLINE_CHAR_LIMIT) {
+        return { text, outputPath: null };
+    }
+
+    const writeOutput = buildWriteOutputTool();
+    const writeResult = await writeOutput.execute(
+        {
+            name: `agent-message-${createId()}`,
+            format: "markdown",
+            content: text
+        },
+        toolContext,
+        { id: createId(), name: "write_output" }
+    );
+    const outputPath = writeOutputPathResolve(writeResult.typedResult);
+    const referenceText = [
+        `Message exceeded ${AGENT_MESSAGE_INLINE_CHAR_LIMIT} characters (${text.length} chars).`,
+        `Full content was written to ${outputPath}.`,
+        `Read that file to access the complete message.`
+    ].join(" ");
+
+    return {
+        text: referenceText,
+        outputPath
+    };
+}
+
+function writeOutputPathResolve(value: unknown): string {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        throw new Error("write_output returned invalid result.");
+    }
+    const path = (value as { path?: unknown }).path;
+    if (typeof path !== "string" || path.length === 0) {
+        throw new Error("write_output result path is missing.");
+    }
+    return path;
 }

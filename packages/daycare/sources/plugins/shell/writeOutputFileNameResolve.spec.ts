@@ -25,6 +25,19 @@ describe("writeOutputFileNameResolve", () => {
         for (let index = 0; index <= 2; index += 1) {
             collisions.add(index === 0 ? "notes.md" : `notes (${index}).md`);
         }
-        expect(() => writeOutputFileNameResolve("notes", collisions, 2)).toThrow("Could not resolve unique output");
+        expect(() => writeOutputFileNameResolve("notes", collisions, "md", 2)).toThrow(
+            "Could not resolve unique output"
+        );
+    });
+
+    it("resolves json extension candidates", () => {
+        const result = writeOutputFileNameResolve("notes", new Set<string>(), "json");
+        expect(result).toBe("notes.json");
+    });
+
+    it("throws for unsupported extension", () => {
+        expect(() => writeOutputFileNameResolve("notes", new Set<string>(), "txt")).toThrow(
+            "Unsupported output extension"
+        );
     });
 });

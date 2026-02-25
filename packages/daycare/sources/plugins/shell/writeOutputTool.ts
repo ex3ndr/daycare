@@ -7,16 +7,19 @@ import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/
 import { writeOutputFileNameResolve } from "./writeOutputFileNameResolve.js";
 
 const OUTPUTS_CONTAINER_DIR = "/home/outputs";
+const writeOutputFormatSchema = Type.Union([Type.Literal("markdown"), Type.Literal("json")]);
 
 const writeOutputSchema = Type.Object(
     {
-        name: Type.String({ minLength: 1, description: "File name without .md extension" }),
-        content: Type.String({ description: "Markdown content to write" })
+        name: Type.String({ minLength: 1, description: "File name without extension" }),
+        content: Type.String({ description: "File content to write" }),
+        format: Type.Optional(writeOutputFormatSchema)
     },
     { additionalProperties: false }
 );
 
 type WriteOutputArgs = Static<typeof writeOutputSchema>;
+type WriteOutputFormat = Static<typeof writeOutputFormatSchema>;
 
 const writeOutputResultSchema = Type.Object(
     {
@@ -24,7 +27,8 @@ const writeOutputResultSchema = Type.Object(
         action: Type.String(),
         isError: Type.Boolean(),
         path: Type.String(),
-        bytes: Type.Number()
+        bytes: Type.Number(),
+        format: writeOutputFormatSchema
     },
     { additionalProperties: false }
 );
@@ -41,16 +45,18 @@ export function buildWriteOutputTool(): ToolDefinition {
         tool: {
             name: "write_output",
             description:
-                "Write markdown output under /home/outputs with automatic collision-safe naming (`name.md`, `name (1).md`, ...).",
+                "Write markdown or json output under /home/outputs with collision-safe naming (`name.md`, `name (1).md`, `name.json`, ...).",
             parameters: writeOutputSchema
         },
         returns: writeOutputReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as WriteOutputArgs;
+            const format = payload.format ?? "markdown";
+            const extension = outputExtensionResolve(format);
             const normalizedName = outputNameNormalize(payload.name);
             const outputsHostDir = path.join(toolContext.sandbox.homeDir, "outputs");
             const existingFileNames = await outputFileNamesList(outputsHostDir);
-            const fileName = writeOutputFileNameResolve(normalizedName, existingFileNames);
+            const fileName = writeOutputFileNameResolve(normalizedName, existingFileNames, extension);
             const targetPath = path.join(outputsHostDir, fileName);
             const writeResult = await toolContext.sandbox.write({
                 path: targetPath,
@@ -61,14 +67,16 @@ export function buildWriteOutputTool(): ToolDefinition {
             const toolMessage = buildToolMessage(toolCall, summary, false, {
                 action: "write_output",
                 path: outputPath,
-                bytes: writeResult.bytes
+                bytes: writeResult.bytes,
+                format
             });
             return toolExecutionResultOutcomeWithTyped(toolMessage, {
                 summary,
                 action: "write_output",
                 isError: false,
                 path: outputPath,
-                bytes: writeResult.bytes
+                bytes: writeResult.bytes,
+                format
             });
         }
     };
@@ -82,13 +90,17 @@ function outputNameNormalize(value: string): string {
     if (trimmed === "." || trimmed === "..") {
         throw new Error("name must not be '.' or '..'.");
     }
-    if (trimmed.toLowerCase().endsWith(".md")) {
-        throw new Error("name must not include the .md extension.");
+    if (trimmed.toLowerCase().endsWith(".md") || trimmed.toLowerCase().endsWith(".json")) {
+        throw new Error("name must not include a file extension.");
     }
     if (trimmed.includes("/") || trimmed.includes("\\")) {
         throw new Error("name must be a file name, not a path.");
     }
     return trimmed;
+}
+
+function outputExtensionResolve(format: WriteOutputFormat): "md" | "json" {
+    return format === "json" ? "json" : "md";
 }
 
 async function outputFileNamesList(outputsHostDir: string): Promise<Set<string>> {

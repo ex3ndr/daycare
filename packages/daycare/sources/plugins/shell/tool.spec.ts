@@ -91,6 +91,22 @@ describe("read tool allowed paths", () => {
         expect(text).toContain("Use bash: sed -n '1p'");
     });
 
+    it("returns unbounded text in python execution mode", async () => {
+        const tool = buildWorkspaceReadTool();
+        const context = createContext(workingDir, [], true);
+        const largeLinePath = path.join(workingDir, "large-line.txt");
+        const largeLine = "x".repeat(READ_LIMIT_TEST_BYTES);
+        await fs.writeFile(largeLinePath, `${largeLine}\nline-2`, "utf8");
+
+        const result = await tool.execute({ path: largeLinePath }, context, readToolCall);
+        const text = toolMessageText(result.toolMessage.content);
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(text).toContain("line-2");
+        expect(text).toContain(largeLine.slice(0, 256));
+        expect(text).not.toContain("exceeds 50.0KB limit");
+    });
+
     it("returns image content for supported image files", async () => {
         const tool = buildWorkspaceReadTool();
         const context = createContext(workingDir);
@@ -267,7 +283,7 @@ describe("formatExecOutput", () => {
     });
 });
 
-function createContext(workingDir: string, writeDirs: string[] = []): ToolExecutionContext {
+function createContext(workingDir: string, writeDirs: string[] = [], pythonExecution = false): ToolExecutionContext {
     const agentId = createId();
     const messageContext = {};
     const descriptor = {
@@ -309,6 +325,7 @@ function createContext(workingDir: string, writeDirs: string[] = []): ToolExecut
         ctx,
         source: "test",
         messageContext,
+        pythonExecution,
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };

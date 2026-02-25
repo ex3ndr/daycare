@@ -5,7 +5,7 @@ The shell plugin provides workspace file tools (`read`, `write`, `edit`, `write_
 
 ## Filesystem Helper Tools
 
-- `write_output`: writes markdown under `/home/outputs` with collision-safe names (`name.md`, `name (1).md`, ...).
+- `write_output`: writes markdown or json under `/home/outputs` with collision-safe names (`name.md`, `name (1).md`, `name.json`, ...). Use `format: "markdown" | "json"` (default `markdown`).
 - `grep`: runs `rg --json` and returns `file:line:content` rows with output-size guards.
 - `find`: runs `fd --glob --hidden`, respects ignore rules, and excludes `.git` and `node_modules`.
 - `ls`: runs `ls -1apL`, sorts output alphabetically, and applies entry/size truncation.
@@ -15,6 +15,7 @@ The shell plugin provides workspace file tools (`read`, `write`, `edit`, `write_
 - `read` accepts relative and absolute paths.
 - Text output supports `offset` (1-indexed line start) and `limit` (line count) for pagination.
 - Text output is truncated to `2000` lines or `50KB` (whichever is hit first), with continuation hints.
+- When `read` is invoked from `run_python`, text is returned unbounded for the selected `offset`/`limit` range.
 - Supported image files (`jpg`, `png`, `gif`, `webp`) are returned as image content blocks.
 
 ## Exec Output Size Notes

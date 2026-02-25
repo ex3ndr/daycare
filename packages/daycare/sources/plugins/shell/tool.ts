@@ -114,16 +114,18 @@ export function buildWorkspaceReadTool(): ToolDefinition {
     return {
         tool: {
             name: "read",
-            description: `Read file contents (text or images). Supports relative and absolute paths, offset/limit pagination, and truncates text output at ${READ_MAX_LINES} lines or ${Math.floor(READ_MAX_BYTES / 1024)}KB (whichever comes first).`,
+            description: `Read file contents (text or images). Supports relative and absolute paths and offset/limit pagination. Normal mode truncates text output at ${READ_MAX_LINES} lines or ${Math.floor(READ_MAX_BYTES / 1024)}KB (whichever comes first). Python execution mode returns unbounded text for the selected range.`,
             parameters: readSchema
         },
         returns: shellReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ReadArgs;
+            const isPythonExecution = toolContext.pythonExecution === true;
             const readResult = await toolContext.sandbox.read({
                 path: payload.path,
                 offset: payload.offset,
-                limit: payload.limit
+                limit: payload.limit,
+                raw: isPythonExecution
             });
 
             if (readResult.type === "image") {
