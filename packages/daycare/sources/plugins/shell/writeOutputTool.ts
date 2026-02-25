@@ -37,7 +37,7 @@ type WriteOutputResult = Static<typeof writeOutputResultSchema>;
 
 const writeOutputReturns: ToolResultContract<WriteOutputResult> = {
     schema: writeOutputResultSchema,
-    toLLMText: (result) => result.summary
+    toLLMText: (result) => `${result.summary} Use this path to read the file back.`
 };
 
 export function buildWriteOutputTool(): ToolDefinition {
@@ -45,7 +45,7 @@ export function buildWriteOutputTool(): ToolDefinition {
         tool: {
             name: "write_output",
             description:
-                "Write markdown or json output under ~/outputs with collision-safe naming (`name.md`, `name (1).md`, `name.json`, ...).",
+                "Write markdown or json output under ~/outputs with date-prefixed collision-safe naming (`YYYYMMDDHHMMSS-name.md`, `YYYYMMDDHHMMSS-name-1.md`, ...). Returns the unique path where the file was written — always print it, since the path includes a timestamp and is not predictable.",
             parameters: writeOutputSchema
         },
         returns: writeOutputReturns,

@@ -24,7 +24,7 @@ describe("buildWriteOutputTool", () => {
         expect(tool.tool.parameters.required).toEqual(["name", "content"]);
     });
 
-    it("writes markdown output with base name when no collision exists", async () => {
+    it("writes markdown output with date-prefixed name when no collision exists", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
 
@@ -38,8 +38,13 @@ describe("buildWriteOutputTool", () => {
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("~/outputs/report.md");
-        expect(await fs.readFile(path.join(homeDir, "outputs", "report.md"), "utf8")).toBe("# Summary");
+        // Path should contain date prefix: ~/outputs/YYYYMMDDHHMMSS-report.md
+        expect(text).toMatch(/~\/outputs\/\d{14}-report\.md/);
+        const files = await fs.readdir(path.join(homeDir, "outputs"));
+        const reportFile = files.find((f) => f.endsWith("-report.md"));
+        expect(reportFile).toBeDefined();
+        expect(reportFile).toMatch(/^\d{14}-report\.md$/);
+        expect(await fs.readFile(path.join(homeDir, "outputs", reportFile!), "utf8")).toBe("# Summary");
     });
 
     it("writes json output when format=json", async () => {
@@ -57,51 +62,52 @@ describe("buildWriteOutputTool", () => {
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("~/outputs/report.json");
-        expect(await fs.readFile(path.join(homeDir, "outputs", "report.json"), "utf8")).toBe('{"ok":true}');
+        expect(text).toMatch(/~\/outputs\/\d{14}-report\.json/);
+        const files = await fs.readdir(path.join(homeDir, "outputs"));
+        const reportFile = files.find((f) => f.endsWith("-report.json"));
+        expect(reportFile).toBeDefined();
+        expect(await fs.readFile(path.join(homeDir, "outputs", reportFile!), "utf8")).toBe('{"ok":true}');
     });
 
     it("uses dedup suffix when target already exists", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
-        const outputsDir = path.join(homeDir, "outputs");
-        await fs.mkdir(outputsDir, { recursive: true });
-        await fs.writeFile(path.join(outputsDir, "report.md"), "old", "utf8");
 
-        const result = await tool.execute(
-            {
-                name: "report",
-                content: "# New Summary"
-            },
-            context,
-            toolCall
-        );
+        // Write first file to create collision
+        await tool.execute({ name: "report", content: "old" }, context, toolCall);
+
+        // Write second file with same name
+        const result = await tool.execute({ name: "report", content: "# New Summary" }, context, toolCall);
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("~/outputs/report (1).md");
-        expect(await fs.readFile(path.join(outputsDir, "report (1).md"), "utf8")).toBe("# New Summary");
+        // Should have -1 suffix for collision
+        expect(text).toMatch(/~\/outputs\/\d{14}-report-1\.md/);
+        const files = await fs.readdir(path.join(homeDir, "outputs"));
+        const dedupFile = files.find((f) => /-report-1\.md$/.test(f));
+        expect(dedupFile).toBeDefined();
+        expect(await fs.readFile(path.join(homeDir, "outputs", dedupFile!), "utf8")).toBe("# New Summary");
     });
 
     it("uses dedup suffix for json targets", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
-        const outputsDir = path.join(homeDir, "outputs");
-        await fs.mkdir(outputsDir, { recursive: true });
-        await fs.writeFile(path.join(outputsDir, "report.json"), '{"old":true}', "utf8");
 
+        // Write first file to create collision
+        await tool.execute({ name: "report", format: "json", content: '{"old":true}' }, context, toolCall);
+
+        // Write second file with same name
         const result = await tool.execute(
-            {
-                name: "report",
-                format: "json",
-                content: '{"ok":true}'
-            },
+            { name: "report", format: "json", content: '{"ok":true}' },
             context,
             toolCall
         );
 
         const text = toolMessageText(result.toolMessage);
-        expect(text).toContain("~/outputs/report (1).json");
-        expect(await fs.readFile(path.join(outputsDir, "report (1).json"), "utf8")).toBe('{"ok":true}');
+        expect(text).toMatch(/~\/outputs\/\d{14}-report-1\.json/);
+        const files = await fs.readdir(path.join(homeDir, "outputs"));
+        const dedupFile = files.find((f) => /-report-1\.json$/.test(f));
+        expect(dedupFile).toBeDefined();
+        expect(await fs.readFile(path.join(homeDir, "outputs", dedupFile!), "utf8")).toBe('{"ok":true}');
     });
 
     it("rejects names that already include an extension", async () => {

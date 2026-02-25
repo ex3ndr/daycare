@@ -25,8 +25,8 @@ flowchart TD
 
   C -- write_output --> H[write_output tool]
   H --> I{format}
-  I -- markdown --> J[name.md collision-safe]
-  I -- json --> K[name.json collision-safe]
+  I -- markdown --> J[YYYYMMDDHHMMSS-name.md collision-safe]
+  I -- json --> K[YYYYMMDDHHMMSS-name.json collision-safe]
 
   C -- send_agent_message --> L[send_agent_message tool]
   L --> M{text length > 8000?}

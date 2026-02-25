@@ -14,9 +14,7 @@ describe("sandboxReadPathNormalize", () => {
 
     it("expands ~ to container home when docker mode is enabled", () => {
         expect(sandboxReadPathNormalize("~", hostHomeDir, true)).toBe("/home");
-        expect(sandboxReadPathNormalize("~/outputs/result.json", hostHomeDir, true)).toBe(
-            "/home/outputs/result.json"
-        );
+        expect(sandboxReadPathNormalize("~/outputs/result.json", hostHomeDir, true)).toBe("/home/outputs/result.json");
     });
 
     it("normalizes @ prefix and unicode spaces", () => {

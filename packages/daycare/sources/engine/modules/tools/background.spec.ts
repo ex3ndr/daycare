@@ -98,7 +98,7 @@ describe("buildSendAgentMessageTool", () => {
         expect(payload.type).toBe("system_message");
         expect(payload.origin).toBe("child-agent");
         expect(payload.text).toContain("Message exceeded 8000 characters");
-        expect(payload.text).toContain("~/outputs/agent-message-");
+        expect(payload.text).toMatch(/~\/outputs\/\d{14}-agent-message-/);
         expect(payload.text).toContain(".md");
         expect(contentText(result.toolMessage.content)).toContain("Full content saved");
     });
@@ -137,7 +137,7 @@ describe("buildSendAgentMessageTool", () => {
         const payload = steerItem as { type: string; text: string; origin: string };
         expect(payload.type).toBe("steering");
         expect(payload.origin).toBe("child-agent");
-        expect(payload.text).toContain("~/outputs/agent-message-");
+        expect(payload.text).toMatch(/~\/outputs\/\d{14}-agent-message-/);
     });
 });
 
