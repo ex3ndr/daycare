@@ -101,7 +101,7 @@ sequenceDiagram
 
 Key differences from regular subagents:
 - System prompt is fully replaced with `MEMORY_SEARCH.md` (read-only graph navigation).
-- Tool allowlist: only `memory_node_read` (no write access).
+- Tool allowlist: `memory_node_read` plus `send_agent_message` to report results to parent (no write access).
 - Sessions are excluded from memory extraction (same as memory-agents).
 - Poison-pill scheduling applies (same as subagents).
 

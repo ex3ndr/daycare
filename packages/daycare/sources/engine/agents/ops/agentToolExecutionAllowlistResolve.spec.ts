@@ -20,7 +20,7 @@ describe("agentToolExecutionAllowlistResolve", () => {
         expect(allowlist ? [...allowlist] : []).toEqual(["memory_node_read", "memory_node_write"]);
     });
 
-    it("returns read-only tools for memory-search descriptors", () => {
+    it("returns read+report tools for memory-search descriptors", () => {
         const allowlist = agentToolExecutionAllowlistResolve({
             type: "memory-search",
             id: "ms-1",
@@ -28,6 +28,6 @@ describe("agentToolExecutionAllowlistResolve", () => {
             name: "query"
         });
 
-        expect(allowlist ? [...allowlist] : []).toEqual(["memory_node_read"]);
+        expect(allowlist ? [...allowlist] : []).toEqual(["memory_node_read", "send_agent_message"]);
     });
 });

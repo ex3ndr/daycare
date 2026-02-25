@@ -50,6 +50,27 @@ flowchart TD
   - `signal_unsubscribe`
   - `set_agent_model`
 
+## Memory-Search Messaging Scope (2026-02-26)
+
+Issue:
+- `memory-search` agents were prompted to answer via `send_agent_message`, but execution allowlist only included `memory_node_read`.
+
+Fix:
+- Added `send_agent_message` to the `memory-search` execution allowlist.
+- Kept graph write access blocked (`memory_node_write` remains disallowed).
+- Message routing remains context-scoped (`ctx.userId`) with parent/foreground target resolution, preserving tenant isolation.
+
+```mermaid
+flowchart TD
+    A[memory-search agent] --> B[memory_node_read]
+    A --> C[send_agent_message]
+    C --> D{target in caller user scope?}
+    D -->|yes| E[deliver message]
+    D -->|no| F[reject]
+    A -.-> G[memory_node_write]
+    G --> H[blocked by allowlist]
+```
+
 ## File Path Display Hardening (2026-02-26)
 
 Issue:

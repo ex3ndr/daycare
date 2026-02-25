@@ -27,6 +27,11 @@ For `memory-agent`, runtime allowlist is:
 - always: `memory_node_read`, `memory_node_write`
 - when RLM is enabled: `run_python`, `skip`
 
+For `memory-search`, runtime allowlist is:
+
+- always: `memory_node_read`, `send_agent_message`
+- never: `memory_node_write`
+
 ## Flow
 
 ```mermaid

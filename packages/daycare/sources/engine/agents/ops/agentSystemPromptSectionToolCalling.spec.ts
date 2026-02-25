@@ -10,6 +10,7 @@ function buildMockTools(): Tool[] {
     return [
         { name: "memory_node_read", description: "Read memory node", parameters: {} },
         { name: "memory_node_write", description: "Write memory node", parameters: {} },
+        { name: "send_agent_message", description: "Send message to agent", parameters: {} },
         { name: "cron_add", description: "Add cron task", parameters: {} },
         { name: "send_user_message", description: "Send message", parameters: {} },
         { name: "run_python", description: "Execute Python", parameters: {} }
@@ -39,6 +40,7 @@ describe("agentSystemPromptSectionToolCalling", () => {
         const section = await agentSystemPromptSectionToolCalling(context);
 
         expect(section).toContain("memory_node_read");
+        expect(section).toContain("send_agent_message");
         expect(section).not.toContain("cron_add");
         expect(section).not.toContain("send_user_message");
         expect(section).not.toContain("memory_node_write");
@@ -54,6 +56,7 @@ describe("agentSystemPromptSectionToolCalling", () => {
         expect(section).toContain("memory_node_read");
         expect(section).toContain("memory_node_write");
         expect(section).not.toContain("cron_add");
+        expect(section).not.toContain("send_agent_message");
         expect(section).not.toContain("send_user_message");
     });
 
@@ -65,6 +68,7 @@ describe("agentSystemPromptSectionToolCalling", () => {
         const section = await agentSystemPromptSectionToolCalling(context);
 
         expect(section).toContain("memory_node_read");
+        expect(section).toContain("send_agent_message");
         expect(section).toContain("cron_add");
         expect(section).toContain("send_user_message");
     });
