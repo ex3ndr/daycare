@@ -12,6 +12,97 @@ const textReturns = {
 };
 
 describe("ToolResolver", () => {
+    it("accepts read_json-style return schemas with Type.Any payloads", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "read_json",
+                    description: "Read JSON.",
+                    parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            summary: Type.String(),
+                            value: Type.Any()
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => ({
+                    toolMessage: {
+                        role: "toolResult",
+                        toolCallId: "tool-call-1",
+                        toolName: "read_json",
+                        content: [{ type: "text", text: "ok" }],
+                        isError: false,
+                        timestamp: Date.now()
+                    },
+                    typedResult: {
+                        summary: "ok",
+                        value: {
+                            nested: { count: 1 },
+                            rows: [{ id: "x" }]
+                        }
+                    }
+                })
+            })
+        ).not.toThrow();
+    });
+
+    it("rejects unrestricted additionalProperties in return schemas", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "bad_schema",
+                    description: "Bad schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object({}, { additionalProperties: true }),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("bad_schema", "ok")
+            })
+        ).toThrow('Tool "bad_schema" return schema cannot use unrestricted additionalProperties.');
+    });
+
+    it("keeps non-any return properties shallow", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "not_shallow",
+                    description: "Non-shallow schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            nested: Type.Object(
+                                {
+                                    count: Type.Number()
+                                },
+                                { additionalProperties: false }
+                            )
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("not_shallow", "ok")
+            })
+        ).toThrow(
+            'Tool "not_shallow" return schema supports primitive values, any, and arrays of shallow objects only.'
+        );
+    });
+
     it("lists tools as visible by default when callback is not defined", () => {
         const resolver = new ToolResolver();
         resolver.register("test", {

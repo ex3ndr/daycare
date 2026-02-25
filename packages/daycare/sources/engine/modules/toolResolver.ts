@@ -154,7 +154,7 @@ function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
     for (const propertySchema of Object.values(properties)) {
         if (!toolResultPropertySchemaIs(propertySchema)) {
             throw new Error(
-                `Tool "${toolName}" return schema supports primitive values and arrays of shallow objects only.`
+                `Tool "${toolName}" return schema supports primitive values, any, and arrays of shallow objects only.`
             );
         }
     }
@@ -168,7 +168,7 @@ function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
         }
         if (!toolResultPropertySchemaIs(additionalProperties)) {
             throw new Error(
-                `Tool "${toolName}" return schema additionalProperties must be primitive or arrays of shallow objects.`
+                `Tool "${toolName}" return schema additionalProperties must be primitive, any, or arrays of shallow objects.`
             );
         }
     }
@@ -177,6 +177,9 @@ function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
 function toolResultPropertySchemaIs(schema: unknown): boolean {
     if (!schemaObjectIs(schema)) {
         return false;
+    }
+    if (schemaAnyIs(schema)) {
+        return true;
     }
     if (schemaPrimitiveIs(schema)) {
         return true;
@@ -203,6 +206,14 @@ function toolResultPropertySchemaIs(schema: unknown): boolean {
 
 function toolResultPropertyPrimitiveSchemaIs(schema: unknown): boolean {
     return schemaObjectIs(schema) && schemaPrimitiveIs(schema);
+}
+
+function schemaAnyIs(schema: Record<string, unknown>): boolean {
+    if (schema.type === "any") {
+        return true;
+    }
+    const symbolSchema = schema as Record<PropertyKey, unknown>;
+    return Object.getOwnPropertySymbols(schema).some((symbol) => symbolSchema[symbol] === "Any");
 }
 
 function schemaPrimitiveIs(schema: { type?: unknown }): boolean {
