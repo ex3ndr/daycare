@@ -30,6 +30,7 @@ These helpers map only known mount prefixes:
 - host examples `<hostExamplesDir>` <-> container `/shared/examples`
 
 Sandbox wrappers are now strict and return `null` when unmappable; call sites decide whether to fail or provide explicit fallback behavior.
+`sandboxPathContainerToHost()` accepts an object argument (`{ hostHomeDir, targetPath, ... }`) to avoid unused placeholder parameters.
 
 ```mermaid
 flowchart TD

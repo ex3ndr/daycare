@@ -47,7 +47,10 @@ describe("dockerRunInSandbox", () => {
             capturedIsolatedDnsServers = dockerConfig.isolatedDnsServers;
             capturedLocalDnsServers = dockerConfig.localDnsServers;
             capturedCommand = bashCmd;
-            capturedSettingsHostPath = sandboxPathContainerToHost(homeDir, userId, settingsContainerPath);
+            capturedSettingsHostPath = sandboxPathContainerToHost({
+                hostHomeDir: homeDir,
+                targetPath: settingsContainerPath
+            });
             if (!capturedSettingsHostPath) {
                 throw new Error(`Expected settings path to map to host: ${settingsContainerPath}`);
             }

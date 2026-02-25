@@ -362,7 +362,11 @@ export class Sandbox {
     resolveVirtualPath(targetPath: string): string {
         // Translate /shared/examples paths regardless of Docker mode
         if (this.examplesDir && targetPath.startsWith("/shared/examples")) {
-            const rewritten = sandboxPathContainerToHost(this.homeDir, "", targetPath, undefined, this.examplesDir);
+            const rewritten = sandboxPathContainerToHost({
+                hostHomeDir: this.homeDir,
+                targetPath,
+                hostExamplesDir: this.examplesDir
+            });
             if (!rewritten) {
                 throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
             }
@@ -374,13 +378,12 @@ export class Sandbox {
         if (!path.isAbsolute(targetPath)) {
             return targetPath;
         }
-        const rewritten = sandboxPathContainerToHost(
-            this.homeDir,
-            this.docker.userId,
+        const rewritten = sandboxPathContainerToHost({
+            hostHomeDir: this.homeDir,
             targetPath,
-            this.docker.skillsActiveDir,
-            this.docker.examplesDir
-        );
+            hostSkillsActiveDir: this.docker.skillsActiveDir,
+            hostExamplesDir: this.docker.examplesDir
+        });
         if (!rewritten) {
             throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
         }
