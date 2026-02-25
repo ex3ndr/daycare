@@ -17,6 +17,10 @@
 - Install deps: `yarn install`
 - Run `yarn install` before tests.
 - Run CLI in dev: `yarn dev`.
+- Run named end-to-end env: `yarn env <name>` (uses `portless`, stores state in `.data/<name>`).
+- Generate auth link for an env: `yarn env:link <name> [userId]`.
+- Env helper scripts: `yarn env:proxy:start` and `yarn env:proxy:stop`.
+- Merged env logs are written to `.data/<name>/env.log` with `[env|proxy|api|app]` prefixes.
 - Node remains supported for running built output (`dist/*`) and production installs.
 - Lint/style check: `yarn lint` (Biome)
 - Lint/style fix: `yarn lint:fix` (Biome `--write`)
@@ -58,6 +62,7 @@
 - Never edit `node_modules` (global/Homebrew/npm/git installs too). Updates overwrite. Skill notes go in `tools.md` or `AGENTS.md`.
 - When working on a GitHub Issue or PR, print the full URL at the end of the task.
 - When answering questions, respond with high-confidence answers only: verify in code; do not guess.
+- Local test user `sy45wijd1hmr03ef2wu7busv` is the owner user for local auth/link testing.
 - Patching dependencies (pnpm patches, overrides, or vendored changes) requires explicit approval; do not do this by default.
 - If shared guardrails are available locally, review them; otherwise follow this repo's guidance.
 - **Restart apps:** "restart iOS/Android apps" means rebuild (recompile/install) and relaunch, not just kill/launch.

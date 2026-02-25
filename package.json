@@ -6,9 +6,14 @@
     "packages/*"
   ],
   "scripts": {
+    "app": "yarn workspace daycare-app web",
     "build": "yarn workspace daycare-cli run build",
     "dashboard": "yarn workspace daycare-dashboard dev",
     "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare-cli run dev",
+    "env": "node ./scripts/envRun.mjs",
+    "env:link": "node ./scripts/envLink.mjs",
+    "env:proxy:start": "portless proxy start",
+    "env:proxy:stop": "portless proxy stop",
     "factory:build": "node ./scripts/daycareFactoryBuildPrompt.mjs",
     "lint": "biome check",
     "lint:fix": "biome check --write",

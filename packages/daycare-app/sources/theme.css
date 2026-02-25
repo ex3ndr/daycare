@@ -1,0 +1,59 @@
+/* Theme-aware scrollbar styles using Unistyles CSS variables */
+
+/* Prevent layout shift from scrollbars */
+html {
+    scrollbar-gutter: auto;
+}
+
+/* Webkit Scrollbars (Chrome, Safari, Edge) - Overlay Style */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+}
+
+/* Show scrollbar on hover */
+*:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--colors-outline) 60%, transparent);
+    border-radius: 4px;
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--colors-on-surface-variant) 80%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Firefox - Overlay Style */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--colors-outline) transparent;
+}
+
+/* Ensure scrollbars are thin on all orientations */
+::-webkit-scrollbar:horizontal {
+    height: 8px;
+}
+
+::-webkit-scrollbar:vertical {
+    width: 8px;
+}
+
+/* Remove default focus outlines from inputs */
+input, textarea {
+    outline: none !important;
+}
+
+input:focus, textarea:focus {
+    outline: none !important;
+}

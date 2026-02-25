@@ -67,3 +67,28 @@ sequenceDiagram
     Prompt-->>Agent: prompt text + systemPromptImages
     Agent->>LLM: Context { systemPrompt, systemPromptImages }
 ```
+
+## Daycare App Server Plugin
+
+The `daycare-app-server` plugin exposes app authentication and static app hosting directly from the runtime.
+
+- Registers `app_auth_link` tool for user-scoped magic links.
+- Registers `/app` slash command to send a direct launch URL.
+- Verifies JWTs through `POST /auth/validate`.
+- Proxies `/api/*` requests to the engine unix socket.
+- Serves static SPA assets from `packages/daycare-app/dist` (or `web-build`) with path traversal guards.
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Agent as Agent
+    participant Plugin as daycare-app-server
+    participant App as Daycare App
+
+    User->>Agent: /app
+    Agent->>Plugin: registerCommand handler
+    Plugin-->>User: http://host:port/auth?token=...
+    User->>App: Open link
+    App->>Plugin: POST /auth/validate
+    Plugin-->>App: { ok, userId }
+```

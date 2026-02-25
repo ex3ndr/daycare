@@ -1,0 +1,6 @@
+{
+    "id": "daycare-app-server",
+    "name": "Daycare App Server",
+    "description": "Serves the Daycare app shell, validates magic link tokens, and proxies engine APIs.",
+    "entry": "./plugin.js"
+}

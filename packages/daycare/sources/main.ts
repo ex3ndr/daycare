@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { addCommand } from "./commands/add.js";
+import { appLinkCommand } from "./commands/appLink.js";
 import { setAuthCommand } from "./commands/auth.js";
 import { channelAddMemberCommand } from "./commands/channelAddMember.js";
 import { channelCreateCommand } from "./commands/channelCreate.js";
@@ -36,6 +37,18 @@ program
     .action(startCommand);
 
 program.command("status").description("Show bot status").action(statusCommand);
+
+program
+    .command("app-link")
+    .description("Generate a Daycare app auth link URL for a user")
+    .argument("<userId>", "User id to embed in the token")
+    .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
+    .option("--instance <instanceId>", "daycare-app-server plugin instance id")
+    .option("--host <host>", "Override host in the generated URL")
+    .option("--port <port>", "Override port in the generated URL")
+    .option("--expires-in-seconds <seconds>", "Token expiration in seconds")
+    .option("--json", "Print full json payload instead of plain URL")
+    .action(appLinkCommand);
 
 program
     .command("add")
