@@ -4,7 +4,6 @@ import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
-import { rlmPreambleNormalize } from "./rlmPreambleNormalize.js";
 import { rlmPrintCaptureAppend, rlmPrintCaptureCreate, rlmPrintCaptureFlushTrailing } from "./rlmPrintCapture.js";
 import { rlmSnapshotEncode } from "./rlmSnapshotEncode.js";
 import { rlmStepResume } from "./rlmStepResume.js";
@@ -54,7 +53,6 @@ export async function rlmExecute(
     if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
         externalFunctions.push(SKIP_TOOL_NAME);
     }
-    const runtimePreamble = rlmPreambleNormalize(preamble);
     await historyCallback?.({
         type: "rlm_start",
         at: Date.now(),
@@ -71,7 +69,7 @@ export async function rlmExecute(
     let toolCallCount = 0;
     let progress = rlmStepStart({
         code,
-        preamble: runtimePreamble,
+        preamble,
         externalFunctions,
         limits: RLM_LIMITS,
         printCallback

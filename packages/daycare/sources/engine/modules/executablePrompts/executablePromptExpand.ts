@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import type { ToolExecutionContext } from "@/types";
 import { tagExtractAll } from "../../../util/tagExtract.js";
-import { montyRuntimePreambleBuild } from "../monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import { rlmExecute } from "../rlm/rlmExecute.js";
 import { rlmToolsForContextResolve } from "../rlm/rlmToolsForContextResolve.js";
 import type { ToolResolverApi } from "../toolResolver.js";
@@ -32,7 +32,7 @@ export async function executablePromptExpand(
         return { expanded: prompt, skipTurn: false };
     }
 
-    const preamble = montyRuntimePreambleBuild(rlmToolsForContextResolve(toolResolver, context));
+    const preamble = montyPreambleBuild(rlmToolsForContextResolve(toolResolver, context));
     const replacements: string[] = [];
     let skipTurn = false;
     for (let index = 0; index < codeBlocks.length; index += 1) {

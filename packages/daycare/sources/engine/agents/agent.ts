@@ -17,7 +17,7 @@ import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
 import { executablePromptExpand } from "../modules/executablePrompts/executablePromptExpand.js";
-import { montyRuntimePreambleBuild } from "../modules/monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../modules/monty/montyPreambleBuild.js";
 import { rlmExecute } from "../modules/rlm/rlmExecute.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
@@ -664,9 +664,7 @@ export class Agent {
                     ...this.rlmRestoreContextBuild(item.origin ?? "system"),
                     messageContext: item.context ?? {}
                 };
-                const preamble = montyRuntimePreambleBuild(
-                    rlmToolsForContextResolve(this.agentSystem.toolResolver, context)
-                );
+                const preamble = montyPreambleBuild(rlmToolsForContextResolve(this.agentSystem.toolResolver, context));
                 const outputs: string[] = [];
                 let skipTurn = false;
                 for (const code of item.code) {

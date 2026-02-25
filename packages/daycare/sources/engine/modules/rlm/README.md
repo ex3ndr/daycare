@@ -29,9 +29,9 @@ The preamble is regenerated from the current tool set and rendered through
 Shared Python execution instructions (calling conventions, error handling, print usage) live in
 `sources/prompts/TOOLS_PYTHON.md` and are injected via `{{{pythonTools}}}`.
 
-Execution uses a separate runtime preamble from `montyRuntimePreambleBuild()` that excludes
-prompt comments and includes compact `TYPE_CHECKING`-guarded function stubs so runtime preamble
-still carries callable tool names/signatures.
+Execution uses `montyPreambleBuild()` output as Monty `typeCheckPrefixCode`.
+Tool stubs and `TypedDict` types are used for type checking only; runtime executes
+only user code (plus minimal runtime aliases like `ToolError`).
 
 RLM prompt builders no longer embed skill lists. Skills are injected once via
 `skillPromptFormat()` into the dedicated skills section during system-prompt section rendering.

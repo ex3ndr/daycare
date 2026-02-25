@@ -3,10 +3,9 @@ import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
-import { montyRuntimePreambleBuild } from "../monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
-import { rlmPreambleNormalize } from "./rlmPreambleNormalize.js";
 import { rlmStepStart } from "./rlmStepStart.js";
 import { rlmStepToolCall } from "./rlmStepToolCall.js";
 
@@ -81,7 +80,7 @@ describe("rlmStepToolCall", () => {
 function startSnapshotBuild(code: string) {
     const started = rlmStepStart({
         code,
-        preamble: rlmPreambleNormalize(montyRuntimePreambleBuild(tools)),
+        preamble: montyPreambleBuild(tools),
         externalFunctions: ["echo"],
         limits: RLM_LIMITS,
         printCallback: () => undefined

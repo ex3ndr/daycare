@@ -3,23 +3,23 @@ import type { ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { executablePromptExpand } from "./executablePromptExpand.js";
 
-const { rlmExecuteMock, montyRuntimePreambleBuildMock } = vi.hoisted(() => ({
+const { rlmExecuteMock, montyPreambleBuildMock } = vi.hoisted(() => ({
     rlmExecuteMock: vi.fn(),
-    montyRuntimePreambleBuildMock: vi.fn(() => "# preamble")
+    montyPreambleBuildMock: vi.fn(() => "# preamble")
 }));
 
 vi.mock("../rlm/rlmExecute.js", () => ({
     rlmExecute: rlmExecuteMock
 }));
 
-vi.mock("../monty/montyRuntimePreambleBuild.js", () => ({
-    montyRuntimePreambleBuild: montyRuntimePreambleBuildMock
+vi.mock("../monty/montyPreambleBuild.js", () => ({
+    montyPreambleBuild: montyPreambleBuildMock
 }));
 
 describe("executablePromptExpand", () => {
     beforeEach(() => {
         rlmExecuteMock.mockReset();
-        montyRuntimePreambleBuildMock.mockClear();
+        montyPreambleBuildMock.mockClear();
     });
 
     it("returns prompt unchanged when no run_python tags exist", async () => {
@@ -31,7 +31,7 @@ describe("executablePromptExpand", () => {
 
         expect(result).toEqual({ expanded: prompt, skipTurn: false });
         expect(rlmExecuteMock).not.toHaveBeenCalled();
-        expect(montyRuntimePreambleBuildMock).not.toHaveBeenCalled();
+        expect(montyPreambleBuildMock).not.toHaveBeenCalled();
     });
 
     it("expands a single run_python block", async () => {

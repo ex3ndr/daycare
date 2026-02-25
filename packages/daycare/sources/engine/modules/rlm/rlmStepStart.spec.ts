@@ -1,8 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
-import { montyRuntimePreambleBuild } from "../monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
-import { rlmPreambleNormalize } from "./rlmPreambleNormalize.js";
 import { rlmStepStart } from "./rlmStepStart.js";
 
 describe("rlmStepStart", () => {
@@ -20,6 +19,20 @@ describe("rlmStepStart", () => {
         expect("output" in result.progress).toBe(true);
     });
 
+    it("uses preamble as type-check prefix only and does not execute it", () => {
+        const printCallback = vi.fn();
+        const result = rlmStepStart({
+            code: "'done'",
+            preamble: "print('prefix-ran')",
+            externalFunctions: [],
+            limits: RLM_LIMITS,
+            printCallback
+        });
+
+        expect("output" in result.progress).toBe(true);
+        expect(printCallback).not.toHaveBeenCalled();
+    });
+
     it("returns a paused snapshot when the code calls an external function", () => {
         const printCallback = vi.fn();
         const tools = [
@@ -29,7 +42,7 @@ describe("rlmStepStart", () => {
                 parameters: Type.Object({ text: Type.String() }, { additionalProperties: false })
             }
         ];
-        const preamble = rlmPreambleNormalize(montyRuntimePreambleBuild(tools));
+        const preamble = montyPreambleBuild(tools);
 
         const result = rlmStepStart({
             code: "echo('hello')",

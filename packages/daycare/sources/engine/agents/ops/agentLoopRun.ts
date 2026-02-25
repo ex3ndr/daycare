@@ -13,13 +13,12 @@ import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
-import { montyRuntimePreambleBuild } from "../../modules/monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../../modules/monty/montyPreambleBuild.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { RLM_LIMITS } from "../../modules/rlm/rlmLimits.js";
 import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
 import { rlmNoToolsResultMessageBuild } from "../../modules/rlm/rlmNoToolsResultMessageBuild.js";
-import { rlmPreambleNormalize } from "../../modules/rlm/rlmPreambleNormalize.js";
 import {
     rlmPrintCaptureAppend,
     rlmPrintCaptureCreate,
@@ -277,7 +276,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         iteration: 0,
                         blocks: initialPhase.blocks,
                         blockIndex: initialPhase.blockIndex,
-                        preamble: montyRuntimePreambleBuild(availableTools),
+                        preamble: montyPreambleBuild(availableTools),
                         toolCallId: createId(),
                         assistantRecordAt: initialPhase.assistantAt,
                         historyResponseText: initialPhase.historyResponseText
@@ -662,7 +661,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 iteration,
                                 blocks: runPythonCodes,
                                 blockIndex: 0,
-                                preamble: montyRuntimePreambleBuild(availableTools),
+                                preamble: montyPreambleBuild(availableTools),
                                 toolCallId: createId(),
                                 assistantRecordAt,
                                 historyResponseText
@@ -731,7 +730,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
                         const progress = rlmStepStart({
                             code: runPythonCode,
-                            preamble: rlmPreambleNormalize(blockState.preamble),
+                            preamble: blockState.preamble,
                             externalFunctions,
                             limits: RLM_LIMITS,
                             printCallback

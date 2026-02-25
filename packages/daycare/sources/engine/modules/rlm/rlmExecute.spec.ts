@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
-import { montyRuntimePreambleBuild } from "../monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
 
@@ -38,7 +38,7 @@ describe("rlmExecute", () => {
 
         const result = await rlmExecute(
             "value = echo('hello')\nvalue",
-            montyRuntimePreambleBuild(baseTools),
+            montyPreambleBuild(baseTools),
             createContext(),
             resolver,
             "tool-call-1"
@@ -71,13 +71,7 @@ describe("rlmExecute", () => {
             "second"
         ].join("\n");
 
-        const result = await rlmExecute(
-            code,
-            montyRuntimePreambleBuild(baseTools),
-            createContext(),
-            resolver,
-            "tool-call-1"
-        );
+        const result = await rlmExecute(code, montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-1");
 
         expect(result.output).toBe('{"text":"echo:[object Object]"}');
         expect(result.toolCallCount).toBe(3);
@@ -90,7 +84,7 @@ describe("rlmExecute", () => {
 
         const result = await rlmExecute(
             "print('hello', 'world')\n'done'",
-            montyRuntimePreambleBuild(baseTools),
+            montyPreambleBuild(baseTools),
             createContext(),
             resolver,
             "tool-call-1"
@@ -113,7 +107,7 @@ describe("rlmExecute", () => {
 
         await rlmExecute(
             "value = echo('hello')\nvalue",
-            montyRuntimePreambleBuild(baseTools),
+            montyPreambleBuild(baseTools),
             createContext(),
             resolver,
             "tool-call-1"
@@ -135,7 +129,7 @@ describe("rlmExecute", () => {
 
         await rlmExecute(
             "value = echo('hello')\nvalue",
-            montyRuntimePreambleBuild(baseTools),
+            montyPreambleBuild(baseTools),
             createContext(),
             resolver,
             "outer-run-python",
@@ -155,7 +149,7 @@ describe("rlmExecute", () => {
 
         const result = await rlmExecute(
             "skip()\necho('should not run')",
-            montyRuntimePreambleBuild(baseTools),
+            montyPreambleBuild(baseTools),
             createContext(),
             resolver,
             "tool-call-skip",
@@ -182,7 +176,7 @@ describe("rlmExecute", () => {
 
         const result = await rlmExecute(
             "skip()\n'after'",
-            montyRuntimePreambleBuild(toolsWithoutSkip),
+            montyPreambleBuild(toolsWithoutSkip),
             createContext(),
             resolver,
             "tool-call-skip-missing"
@@ -199,7 +193,7 @@ describe("rlmExecute", () => {
         });
 
         await expect(
-            rlmExecute("echo(1)", montyRuntimePreambleBuild(baseTools), createContext(), resolver, "tool-call-typing")
+            rlmExecute("echo(1)", montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-typing")
         ).rejects.toThrow("TypeError");
     });
 });

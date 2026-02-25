@@ -22,14 +22,16 @@ export type RlmStepStartResult = {
 
 /**
  * Starts a fresh Monty execution and returns the first progress value.
- * Expects: `preamble` is already runtime-normalized.
+ * Expects: `preamble` contains type-check prefix stubs for Monty.
  */
 export function rlmStepStart(options: RlmStepStartOptions): RlmStepStartResult {
-    const script = [options.preamble, options.code].filter((chunk) => chunk.length > 0).join("\n\n");
+    const runtimePrelude = "ToolError = RuntimeError";
+    const script = `${runtimePrelude}\n\n${options.code}`;
     const monty = new Monty(script, {
         scriptName: "run_python.py",
         externalFunctions: options.externalFunctions,
-        typeCheck: true
+        typeCheck: true,
+        typeCheckPrefixCode: options.preamble.length > 0 ? options.preamble : undefined
     });
     const progress = monty.start({
         limits: options.limits,

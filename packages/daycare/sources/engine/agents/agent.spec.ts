@@ -27,9 +27,8 @@ import { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
-import { montyRuntimePreambleBuild } from "../modules/monty/montyRuntimePreambleBuild.js";
+import { montyPreambleBuild } from "../modules/monty/montyPreambleBuild.js";
 import { RLM_LIMITS } from "../modules/rlm/rlmLimits.js";
-import { rlmPreambleNormalize } from "../modules/rlm/rlmPreambleNormalize.js";
 import { rlmSnapshotEncode } from "../modules/rlm/rlmSnapshotEncode.js";
 import { rlmStepStart } from "../modules/rlm/rlmStepStart.js";
 import { ToolResolver } from "../modules/toolResolver.js";
@@ -998,7 +997,7 @@ describe("Agent", () => {
 
             const startedAt = Date.now();
             const snapshot = pendingToolCallSnapshotBuild();
-            const preamble = rlmPreambleNormalize(montyRuntimePreambleBuild([waitToolBuild()]));
+            const preamble = montyPreambleBuild([waitToolBuild()]);
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
@@ -1208,7 +1207,7 @@ function historyHasSignalText(records: Array<{ type: string; text?: string }>): 
 }
 
 function pendingToolCallSnapshotBuild(): string {
-    const preamble = rlmPreambleNormalize(montyRuntimePreambleBuild([waitToolBuild()]));
+    const preamble = montyPreambleBuild([waitToolBuild()]);
     const started = rlmStepStart({
         code: "wait(300)",
         preamble,
