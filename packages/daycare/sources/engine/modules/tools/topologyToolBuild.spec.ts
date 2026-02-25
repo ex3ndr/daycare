@@ -119,6 +119,17 @@ describe("topologyTool", () => {
                 permissions
             );
             await agentStateWrite(config, otherCtx, stateBuild(permissions, 10));
+            await storageResolve(config).exposeEndpoints.create({
+                id: "expose-1",
+                userId: "user-1",
+                target: { type: "port", port: 8080 },
+                provider: "provider-a",
+                domain: "app.example.com",
+                mode: "public",
+                auth: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
 
             const tool = topologyTool(
                 {
@@ -168,18 +179,7 @@ describe("topologyTool", () => {
                     ]
                 } as never,
                 {
-                    list: async () => [
-                        {
-                            id: "expose-1",
-                            target: { type: "port", port: 8080 },
-                            provider: "provider-a",
-                            domain: "app.example.com",
-                            mode: "public",
-                            auth: null,
-                            createdAt: 1,
-                            updatedAt: 1
-                        }
-                    ]
+                    list: async () => []
                 } as never
             );
 
@@ -401,6 +401,190 @@ describe("topologyTool", () => {
             expect(text).toContain('sub-a name="app-a" gatewayAgent=gateway-a');
             expect(text).toContain('sub-b name="app-b" gatewayAgent=gateway-b');
             expect(text).toContain("## Friends (0)");
+        } finally {
+            storage.close();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("filters topology sections to caller user scope", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-user-scope-"));
+        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const storage = storageResolve(config);
+        try {
+            const owner = await storage.users.findOwner();
+            const ownerUserId = owner!.id;
+            await storage.users.create({ id: "other-user", nametag: "other-user-tag" });
+
+            const ownerPerms = permissionBuildUser(new UserHome(config.usersDir, ownerUserId));
+            const otherPerms = permissionBuildUser(new UserHome(config.usersDir, "other-user"));
+
+            const ownerCtx = contextForAgent({ userId: ownerUserId, agentId: "owner-main" });
+            const otherCtx = contextForAgent({ userId: "other-user", agentId: "other-main" });
+
+            await agentDescriptorWrite(
+                storage,
+                ownerCtx,
+                { type: "user", connector: "telegram", userId: "owner-telegram", channelId: "owner-channel" },
+                ownerPerms
+            );
+            await agentDescriptorWrite(
+                storage,
+                otherCtx,
+                { type: "user", connector: "telegram", userId: "other-telegram", channelId: "other-channel" },
+                otherPerms
+            );
+            await agentStateWrite(config, ownerCtx, stateBuild(ownerPerms, 100));
+            await agentStateWrite(config, otherCtx, stateBuild(otherPerms, 200));
+
+            await storage.exposeEndpoints.create({
+                id: "owner-expose",
+                userId: ownerUserId,
+                target: { type: "port", port: 3001 },
+                provider: "provider-a",
+                domain: "owner.example.com",
+                mode: "public",
+                auth: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.exposeEndpoints.create({
+                id: "other-expose",
+                userId: "other-user",
+                target: { type: "port", port: 3002 },
+                provider: "provider-a",
+                domain: "other.example.com",
+                mode: "public",
+                auth: null,
+                createdAt: 2,
+                updatedAt: 2
+            });
+
+            const tool = topologyTool(
+                {
+                    listTasks: async () => [
+                        {
+                            ...cronTaskBuild({
+                                id: "owner-cron",
+                                name: "Owner Cron",
+                                schedule: "0 6 * * *",
+                                enabled: true,
+                                agentId: "owner-main"
+                            }),
+                            taskId: "owner-cron-task",
+                            userId: ownerUserId
+                        },
+                        {
+                            ...cronTaskBuild({
+                                id: "other-cron",
+                                name: "Other Cron",
+                                schedule: "0 7 * * *",
+                                enabled: true,
+                                agentId: "other-main"
+                            }),
+                            taskId: "other-cron-task",
+                            userId: "other-user"
+                        }
+                    ]
+                } as unknown as Crons,
+                {
+                    listSubscriptions: async () => [
+                        signalSubscriptionBuild({
+                            userId: ownerUserId,
+                            agentId: "owner-main",
+                            pattern: "owner:*",
+                            silent: false
+                        }),
+                        signalSubscriptionBuild({
+                            userId: "other-user",
+                            agentId: "other-main",
+                            pattern: "other:*",
+                            silent: false
+                        })
+                    ]
+                } as unknown as Signals,
+                {
+                    list: () => [
+                        {
+                            id: "channel-owner",
+                            name: "owner",
+                            leader: "owner-main",
+                            members: [{ agentId: "owner-main", username: "owner", joinedAt: 1 }],
+                            createdAt: 1,
+                            updatedAt: 1
+                        },
+                        {
+                            id: "channel-other",
+                            name: "other",
+                            leader: "other-main",
+                            members: [{ agentId: "other-main", username: "other", joinedAt: 1 }],
+                            createdAt: 2,
+                            updatedAt: 2
+                        }
+                    ]
+                } as never,
+                {
+                    list: async () => [
+                        {
+                            id: "expose-other-legacy",
+                            target: { type: "port", port: 9999 },
+                            provider: "provider-a",
+                            domain: "legacy-other.example.com",
+                            mode: "public",
+                            auth: null,
+                            createdAt: 1,
+                            updatedAt: 1
+                        }
+                    ]
+                } as never
+            );
+
+            const result = await tool.execute(
+                {},
+                contextBuild(config, {
+                    callerAgentId: "owner-main",
+                    callerUserId: ownerUserId,
+                    heartbeatTasks: [
+                        {
+                            id: "owner-heartbeat",
+                            taskId: "owner-heartbeat-task",
+                            userId: ownerUserId,
+                            title: "Owner Heartbeat",
+                            code: "owner",
+                            lastRunAt: null,
+                            createdAt: 1,
+                            updatedAt: 1
+                        },
+                        {
+                            id: "other-heartbeat",
+                            taskId: "other-heartbeat-task",
+                            userId: "other-user",
+                            title: "Other Heartbeat",
+                            code: "other",
+                            lastRunAt: null,
+                            createdAt: 2,
+                            updatedAt: 2
+                        }
+                    ]
+                }),
+                toolCall
+            );
+
+            const text = contentText(result.toolMessage.content);
+            expect(text).toContain("owner-main");
+            expect(text).toContain("owner-cron");
+            expect(text).toContain("owner-heartbeat");
+            expect(text).toContain("pattern=owner:*");
+            expect(text).toContain("#owner");
+            expect(text).toContain("owner-expose domain=owner.example.com");
+
+            expect(text).not.toContain("other-main");
+            expect(text).not.toContain("other-cron");
+            expect(text).not.toContain("other-heartbeat");
+            expect(text).not.toContain("pattern=other:*");
+            expect(text).not.toContain("#other");
+            expect(text).not.toContain("other-expose domain=other.example.com");
+            expect(text).not.toContain("legacy-other.example.com");
         } finally {
             storage.close();
             await rm(dir, { recursive: true, force: true });

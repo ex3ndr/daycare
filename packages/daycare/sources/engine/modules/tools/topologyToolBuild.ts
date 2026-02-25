@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { contextForAgent } from "../../agents/context.js";
+import { contextForUser } from "../../agents/context.js";
 import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
@@ -49,7 +49,7 @@ export function topologyTool(
     crons: Crons,
     signals: Signals,
     channels: Pick<Channels, "list">,
-    exposes: Pick<Exposes, "list">
+    _exposes: Pick<Exposes, "list">
 ): ToolDefinition {
     return {
         tool: {
@@ -68,20 +68,21 @@ export function topologyTool(
             // Determine if caller is a subuser (has parent)
             const callerUser = await storage.users.findById(callerUserId);
             const isSubuser = callerUser?.parentUserId != null;
+            const ownerSubusers = isSubuser ? [] : await storage.users.findByParentUserId(callerUserId);
 
-            const [allAgentRecords, cronTasks, heartbeatTasks, exposeEndpoints] = await Promise.all([
+            // Owners can see their own user scope plus owned subusers. Subusers only see their own scope.
+            const visibleUserIds = isSubuser ? [callerUserId] : [callerUserId, ...ownerSubusers.map((subuser) => subuser.id)];
+            const visibleUserIdSet = new Set(visibleUserIds);
+
+            const [allAgentRecords, cronTasks, heartbeatTasks, signalSubscriptions] = await Promise.all([
                 storage.agents.findMany(),
                 crons.listTasks(),
                 toolContext.heartbeats.listTasks(),
-                exposes.list()
+                signals.listSubscriptions()
             ]);
-            const signalSubscriptions = await signals.listSubscriptions();
             const channelEntries = channels.list();
 
-            // Filter agents by userId for subusers
-            const visibleAgentRecords = isSubuser
-                ? allAgentRecords.filter((record) => record.userId === callerUserId)
-                : allAgentRecords;
+            const visibleAgentRecords = allAgentRecords.filter((record) => visibleUserIdSet.has(record.userId));
 
             const agents = visibleAgentRecords
                 .slice()
@@ -94,10 +95,10 @@ export function topologyTool(
                     isYou: record.id === callerAgentId
                 }));
 
-            // Build visible agent ID set for subuser filtering of channels
-            const visibleAgentIdSet = isSubuser ? new Set(visibleAgentRecords.map((record) => record.id)) : null;
+            const visibleAgentIdSet = new Set(visibleAgentRecords.map((record) => record.id));
 
-            const cronsSummary = (isSubuser ? cronTasks.filter((t) => t.userId === callerUserId) : cronTasks)
+            const cronsSummary = cronTasks
+                .filter((task) => visibleUserIdSet.has(task.userId))
                 .slice()
                 .sort((left, right) => left.id.localeCompare(right.id))
                 .map((task) => ({
@@ -109,7 +110,8 @@ export function topologyTool(
                     isYou: task.agentId === callerAgentId
                 }));
 
-            const heartbeats = (isSubuser ? heartbeatTasks.filter((t) => t.userId === callerUserId) : heartbeatTasks)
+            const heartbeats = heartbeatTasks
+                .filter((task) => visibleUserIdSet.has(task.userId))
                 .slice()
                 .sort((left, right) => left.id.localeCompare(right.id))
                 .map((task) => ({
@@ -119,7 +121,7 @@ export function topologyTool(
                 }));
 
             const signalSubscriptionsSummary = signalSubscriptions
-                .filter((subscription) => subscription.ctx.userId === callerUserId)
+                .filter((subscription) => visibleUserIdSet.has(subscription.ctx.userId))
                 .slice()
                 .sort((left, right) => {
                     const byUser = left.ctx.userId.localeCompare(right.ctx.userId);
@@ -140,11 +142,11 @@ export function topologyTool(
                     isYou: subscription.ctx.agentId === callerAgentId
                 }));
 
-            // Filter channels by agent membership for subusers
-            const visibleChannelEntries =
-                isSubuser && visibleAgentIdSet
-                    ? channelEntries.filter((ch) => ch.members.some((m) => visibleAgentIdSet.has(m.agentId)))
-                    : channelEntries;
+            const visibleChannelEntries = channelEntries.filter(
+                (channel) =>
+                    visibleAgentIdSet.has(channel.leader) ||
+                    channel.members.some((member) => visibleAgentIdSet.has(member.agentId))
+            );
 
             const channelsSummary = visibleChannelEntries
                 .slice()
@@ -162,12 +164,10 @@ export function topologyTool(
                         }))
                 }));
 
-            // For subusers, filter exposes by userId via storage (public type lacks userId)
-            const visibleExposeEndpoints = isSubuser
-                ? await storage.exposeEndpoints.findMany(
-                      contextForAgent({ userId: callerUserId, agentId: callerAgentId })
-                  )
-                : exposeEndpoints;
+            const visibleExposeEndpointChunks = await Promise.all(
+                visibleUserIds.map((userId) => storage.exposeEndpoints.findMany(contextForUser({ userId })))
+            );
+            const visibleExposeEndpoints = visibleExposeEndpointChunks.flat();
 
             const exposeSummary = visibleExposeEndpoints
                 .slice()
@@ -206,9 +206,8 @@ export function topologyTool(
 
             // Add subusers section for owner users
             if (!isSubuser) {
-                const subusers = await storage.users.findByParentUserId(callerUserId);
-                if (subusers.length > 0) {
-                    const subuserLines = subusers.map((subuser) => {
+                if (ownerSubusers.length > 0) {
+                    const subuserLines = ownerSubusers.map((subuser) => {
                         const gateway = allAgentRecords.find(
                             (a) => a.descriptor.type === "subuser" && a.descriptor.id === subuser.id
                         );
@@ -218,7 +217,7 @@ export function topologyTool(
                             `lifecycle=${gateway?.lifecycle ?? "unknown"}`
                         );
                     });
-                    sections.push("", `## Subusers (${subusers.length})`, ...subuserLines);
+                    sections.push("", `## Subusers (${ownerSubusers.length})`, ...subuserLines);
                 }
 
                 const friendsSection = await listFriendLinesBuild(callerUserId, storage, allAgentRecords);
