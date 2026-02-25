@@ -78,6 +78,26 @@ describe("read tool allowed paths", () => {
         expect(secondText).not.toContain("line-1");
     });
 
+    it("returns home-relative path metadata outside workspace", async () => {
+        const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "read-tool-home-"));
+        const workspaceDir = path.join(homeDir, "desktop");
+        const knowledgePath = path.join(homeDir, "knowledge", "USER.md");
+        await fs.mkdir(workspaceDir, { recursive: true });
+        await fs.mkdir(path.dirname(knowledgePath), { recursive: true });
+        await fs.writeFile(knowledgePath, "name: steve", "utf8");
+        const tool = buildWorkspaceReadTool();
+        const context = createContext(workspaceDir, [homeDir], false, undefined, homeDir);
+
+        try {
+            const result = await tool.execute({ path: "../knowledge/USER.md" }, context, readToolCall);
+            expect(result.toolMessage.isError).toBe(false);
+            expect(result.typedResult.path).toBe("~/knowledge/USER.md");
+            expect(result.typedResult.path).not.toContain(homeDir);
+        } finally {
+            await fs.rm(homeDir, { recursive: true, force: true });
+        }
+    });
+
     it("returns actionable message when first line exceeds byte limit", async () => {
         const tool = buildWorkspaceReadTool();
         const context = createContext(workingDir);
@@ -378,7 +398,8 @@ function createContext(
     workingDir: string,
     writeDirs: string[] = [],
     pythonExecution = false,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    homeDir = workingDir
 ): ToolExecutionContext {
     const agentId = createId();
     const messageContext = {};
@@ -408,7 +429,7 @@ function createContext(
         new UserHome(path.join(workingDir, "users"), "user-1")
     );
     const sandbox = new Sandbox({
-        homeDir: workingDir,
+        homeDir,
         permissions: state.permissions
     });
     return {

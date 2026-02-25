@@ -79,6 +79,21 @@ describe("Sandbox", () => {
         expect(secondRead.content).toContain("line-3");
     });
 
+    it("reports home-relative display path outside workingDir", async () => {
+        const knowledgePath = path.join(homeDir, "knowledge", "USER.md");
+        await fs.mkdir(path.dirname(knowledgePath), { recursive: true });
+        await fs.writeFile(knowledgePath, "name: steve", "utf8");
+
+        const read = await sandbox.read({ path: "../knowledge/USER.md", raw: true });
+        expect(read.type).toBe("text");
+        if (read.type !== "text") {
+            return;
+        }
+        expect(read.content).toBe("name: steve");
+        expect(read.displayPath).toBe("~/knowledge/USER.md");
+        expect(read.displayPath).not.toContain("/home/");
+    });
+
     it("reads image files as binary image payloads", async () => {
         const imagePath = path.join(workingDir, "image.png");
         const oneByOnePngBase64 =

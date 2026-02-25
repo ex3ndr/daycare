@@ -203,6 +203,8 @@ describe("Sandbox docker integration", () => {
         }
         expect(read.content).toBe("hello");
         expect(read.resolvedPath).toBe(await fs.realpath(targetPath));
+        expect(read.displayPath).toBe("~/documents/notes.txt");
+        expect(read.displayPath).not.toContain(rootDir);
     });
 
     it("rewrites container write paths back to host paths", async () => {

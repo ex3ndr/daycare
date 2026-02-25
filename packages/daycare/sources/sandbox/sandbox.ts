@@ -14,6 +14,7 @@ import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.j
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
+import { sandboxPathHostToContainer } from "./sandboxPathHostToContainer.js";
 import { sandboxPathContainerToHost } from "./sandboxPathContainerToHost.js";
 import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
@@ -76,7 +77,13 @@ export class Sandbox {
             throw new Error("Path is not a file.");
         }
 
-        const displayPath = sandboxDisplayPath(this.workingDir, resolvedPath);
+        const displayPath = sandboxDisplayPath({
+            workingDir: this.workingDir,
+            homeDir: this.homeDir,
+            target: resolvedPath,
+            docker: this.docker,
+            examplesDir: this.examplesDir
+        });
         if (args.binary === true) {
             const binaryContent = await readBinaryFileSecure(resolvedPath);
             return {
@@ -406,11 +413,40 @@ async function pathRejectIfSymlink(target: string, message: string): Promise<voi
     }
 }
 
-function sandboxDisplayPath(workingDir: string, target: string): string {
-    if (isWithinSecure(workingDir, target)) {
-        return path.relative(workingDir, target) || ".";
+function sandboxDisplayPath(input: {
+    workingDir: string;
+    homeDir: string;
+    target: string;
+    docker?: SandboxDockerConfig;
+    examplesDir?: string;
+}): string {
+    if (isWithinSecure(input.workingDir, input.target)) {
+        return path.relative(input.workingDir, input.target) || ".";
     }
-    return target;
+    const homeDisplayPath = sandboxHomePath(input.homeDir, input.target);
+    if (homeDisplayPath !== input.target) {
+        return homeDisplayPath;
+    }
+    if (!input.docker?.enabled) {
+        return input.target;
+    }
+    const containerPath = sandboxPathHostToContainer(
+        input.homeDir,
+        input.docker.userId,
+        input.target,
+        input.docker.skillsActiveDir,
+        input.docker.examplesDir ?? input.examplesDir
+    );
+    if (containerPath === input.target) {
+        return input.target;
+    }
+    if (containerPath === "/home") {
+        return "~";
+    }
+    if (containerPath.startsWith("/home/")) {
+        return `~/${containerPath.slice("/home/".length)}`;
+    }
+    return containerPath;
 }
 
 function sandboxHomePath(homeDir: string, target: string): string {

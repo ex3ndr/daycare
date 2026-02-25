@@ -50,6 +50,35 @@ flowchart TD
   - `signal_unsubscribe`
   - `set_agent_model`
 
+## File Path Display Hardening (2026-02-26)
+
+Issue:
+- `read` tool metadata could surface host absolute paths for files outside `workingDir` (for example files under user home sibling directories such as `../knowledge/...`).
+
+Fix:
+- `Sandbox.read()` now computes `displayPath` with sandbox-safe precedence:
+  1. Workspace-relative path when file is within `workingDir`
+  2. `~`-relative path when file is within user `homeDir`
+  3. Docker virtual path mapping (`/shared/*` or `/home/*`) when Docker translation applies
+  4. Absolute fallback only when no safe rewrite is possible
+
+```mermaid
+flowchart TD
+    A[Resolved host path] --> B{Within workingDir?}
+    B -->|Yes| C[Return relative path]
+    B -->|No| D{Within homeDir?}
+    D -->|Yes| E[Return ~/...]
+    D -->|No| F{Docker mapping available?}
+    F -->|Yes| G[Return container-safe path]
+    F -->|No| H[Return absolute fallback]
+```
+
+Outcome:
+- `read`/`read_json` metadata now avoids leaking host home mount paths in common user-home reads.
+- Regression coverage added for:
+  - `../knowledge/USER.md` returning `~/knowledge/USER.md`
+  - Docker reads returning `~/...` display paths instead of host tmp paths
+
 ## Validation
 
 - `yarn workspace daycare-cli typecheck`
