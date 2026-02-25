@@ -23,8 +23,8 @@ describe("profileRender", () => {
         expect(rendered.text).toContain("Bio: Math pioneer");
         expect(rendered.text).toContain("Phone: +1-555-0100");
         expect(rendered.text).toContain("Profile photos:");
-        expect(rendered.text).toContain("- /tmp/downloads/profile-telegram-123-avatar-a.jpg");
-        expect(rendered.text).toContain("- /tmp/downloads/profile-telegram-123-avatar-b.jpg");
+        expect(rendered.text).toContain("- ~/downloads/profile-telegram-123-avatar-a.jpg");
+        expect(rendered.text).toContain("- ~/downloads/profile-telegram-123-avatar-b.jpg");
         expect(rendered.images).toEqual([
             "/tmp/downloads/profile-telegram-123-avatar-a.jpg",
             "/tmp/downloads/profile-telegram-123-avatar-b.jpg"

@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { PluginSystemPromptResult } from "@/types";
 import type { TelegramProfile } from "./profileTypes.js";
 
@@ -20,7 +21,8 @@ export function profileRender(profile: TelegramProfile, userAvatarPaths: string[
     if (userAvatarPaths.length > 0) {
         lines.push("Profile photos:");
         for (const avatarPath of userAvatarPaths) {
-            lines.push(`- ${avatarPath}`);
+            // Text shows sandbox-relative path so the model can read() it
+            lines.push(`- ~/downloads/${path.basename(avatarPath)}`);
         }
     }
 
