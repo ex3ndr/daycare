@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260220AddTasks } from "./20260220_add_tasks.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
@@ -10,7 +10,7 @@ import { migration20260221BackfillCronUsers } from "./20260221_backfill_cron_use
 
 describe("migration20260221BackfillCronUsers", () => {
     it("fills missing cron user_id with owner user id", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);

@@ -6,7 +6,7 @@ import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings } from "../../settings.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForUser } from "../agents/context.js";
 import { ConfigModule } from "../config/configModule.js";
 import { FileFolder } from "../files/fileFolder.js";
@@ -65,7 +65,7 @@ function createManager(
             }
         ]
     ]);
-    const storage = storageOpen(path.join(rootDir, "daycare.db"));
+    const storage = storageOpenTest(path.join(rootDir, "daycare.db"));
     const processesRuntime =
         processes ??
         new Processes(rootDir, getLogger("test.processes"), {

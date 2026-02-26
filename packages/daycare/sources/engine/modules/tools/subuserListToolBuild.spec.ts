@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./subuserListToolBuild.js";
@@ -20,7 +20,7 @@ describe("subuserListToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const context = contextBuild(ownerUserId, {
@@ -51,7 +51,7 @@ describe("subuserListToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-empty-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const context = contextBuild(ownerUserId, {

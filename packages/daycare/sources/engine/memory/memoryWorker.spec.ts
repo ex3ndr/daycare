@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import type { Storage } from "../../storage/storage.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { MemoryWorker, type MemoryWorkerPostFn } from "./memoryWorker.js";
 
@@ -18,7 +18,7 @@ function mockConfig(): ConfigModule {
 }
 
 async function createTestStorage() {
-    const storage = storageOpen(":memory:");
+    const storage = storageOpenTest(":memory:");
     const owner = (await storage.users.findMany())[0];
     if (!owner) {
         throw new Error("Owner user missing");

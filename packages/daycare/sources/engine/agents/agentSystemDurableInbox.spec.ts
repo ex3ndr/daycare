@@ -14,7 +14,7 @@ import type {
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import type { Storage } from "../../storage/storage.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
@@ -301,7 +301,7 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
-    const storage = storageOpen(config.dbPath);
+    const storage = storageOpenTest(config.dbPath);
     const eventBus = new EngineEventBus();
     const signals = new Signals({
         eventBus,

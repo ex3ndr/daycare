@@ -4,7 +4,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260220AddTasks } from "./20260220_add_tasks.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
@@ -72,7 +72,7 @@ describe("migration20260220ImportTasks", () => {
                 "utf8"
             );
 
-            const db = databaseOpen(dbPath);
+            const db = databaseOpenTest(dbPath);
             try {
                 migration20260219Initial.up(db);
                 migration20260220AddUsers.up(db);

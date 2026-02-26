@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Signal, SignalGenerateInput } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { ConfigModule } from "../config/configModule.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { DelayedSignals } from "./delayedSignals.js";
@@ -16,7 +16,7 @@ describe("DelayedSignals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-delayed-signals-"));
         try {
             const config = configModuleBuild(dir);
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const eventBus = new EngineEventBus();
             const signals = {
                 generate: async (input: SignalGenerateInput): Promise<Signal> => ({
@@ -67,7 +67,7 @@ describe("DelayedSignals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-delayed-signals-"));
         try {
             const config = configModuleBuild(dir);
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             let attempts = 0;
             const delayed = new DelayedSignals({
                 config,
@@ -103,7 +103,7 @@ describe("DelayedSignals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-delayed-signals-"));
         try {
             const config = configModuleBuild(dir);
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const delivered: SignalGenerateInput[] = [];
             const delayed = new DelayedSignals({
                 config,
@@ -145,7 +145,7 @@ describe("DelayedSignals", () => {
     it("throws a validation error when scheduled source userId is missing at runtime", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-delayed-signals-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const delayed = new DelayedSignals({
                 config: configModuleBuild(dir),
                 eventBus: new EngineEventBus(),

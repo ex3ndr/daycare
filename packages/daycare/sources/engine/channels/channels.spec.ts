@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Channels } from "./channels.js";
 
 describe("Channels", () => {
@@ -12,7 +12,7 @@ describe("Channels", () => {
         try {
             const subscribe = vi.fn();
             const unsubscribe = vi.fn();
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const channels = new Channels({
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,
@@ -56,7 +56,7 @@ describe("Channels", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-channels-"));
         try {
             const post = vi.fn(async () => undefined);
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const channels = new Channels({
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,
@@ -128,7 +128,7 @@ describe("Channels", () => {
     it("restores channels from disk and replays member subscriptions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-channels-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const first = new Channels({
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,
@@ -150,7 +150,7 @@ describe("Channels", () => {
             await first.addMember("ops", { agentId: "agent-a", userId: "user-1" }, "alice");
 
             const subscribe = vi.fn();
-            const reloadedStorage = storageOpen(path.join(dir, "daycare.db"));
+            const reloadedStorage = storageOpenTest(path.join(dir, "daycare.db"));
             const second = new Channels({
                 channels: reloadedStorage.channels,
                 channelMessages: reloadedStorage.channelMessages,

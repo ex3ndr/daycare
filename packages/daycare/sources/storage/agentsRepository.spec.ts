@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SessionPermissions } from "@/types";
 import { AgentsRepository } from "./agentsRepository.js";
 import type { AgentDbRecord } from "./databaseTypes.js";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
@@ -12,7 +12,7 @@ const permissions: SessionPermissions = {
 
 describe("AgentsRepository", () => {
     it("supports create, find and update", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const users = await storage.users.findMany();
             const ownerUser = users[0];
@@ -55,7 +55,7 @@ describe("AgentsRepository", () => {
     });
 
     it("returns cached agent on repeated read", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const ownerUser = (await storage.users.findMany())[0];
             if (!ownerUser) {
@@ -88,7 +88,7 @@ describe("AgentsRepository", () => {
     });
 
     it("loads from db on cache miss", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const ownerUser = (await storage.users.findMany())[0];
             if (!ownerUser) {
@@ -136,7 +136,7 @@ describe("AgentsRepository", () => {
     });
 
     it("finds agents by user id", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const users = await storage.users.findMany();
             const ownerUser = users[0];

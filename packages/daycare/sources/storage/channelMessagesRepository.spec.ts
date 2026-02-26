@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("ChannelMessagesRepository", () => {
     it("creates messages and returns recent entries", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new ChannelMessagesRepository(db);
@@ -32,7 +32,7 @@ describe("ChannelMessagesRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE channel_messages (
             id TEXT PRIMARY KEY,

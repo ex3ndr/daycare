@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260221AddInbox } from "./20260221_add_inbox.js";
 
 describe("migration20260221AddInbox", () => {
     it("creates inbox table and agent ordering index", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260221AddInbox.up(db);
 

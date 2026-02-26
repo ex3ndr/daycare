@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@/types";
 
 import { configResolve } from "../../config/configResolve.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Heartbeats, type HeartbeatsOptions } from "./heartbeats.js";
 
@@ -25,7 +25,7 @@ describe("Heartbeats", () => {
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
             postAndAwait: vi.fn(async () => ({ status: "completed" }))
         } as unknown as HeartbeatsOptions["agentSystem"];
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const heartbeats = new Heartbeats({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
@@ -63,7 +63,7 @@ describe("Heartbeats", () => {
             postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
         };
         const agentSystem = agentSystemMock as unknown as HeartbeatsOptions["agentSystem"];
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const heartbeats = new Heartbeats({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),

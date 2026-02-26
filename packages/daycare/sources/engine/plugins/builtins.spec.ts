@@ -8,7 +8,7 @@ import { configResolve } from "../../config/configResolve.js";
 import { getLogger } from "../../log.js";
 import { plugin as braveSearch } from "../../plugins/brave-search/plugin.js";
 import { plugin as telegram } from "../../plugins/telegram/plugin.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { FileFolder } from "../files/fileFolder.js";
 import { Processes } from "../processes/processes.js";
 import type { PluginRegistrar } from "./registry.js";
@@ -46,7 +46,7 @@ async function createApi<TSettings>(
     const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
     const auth = new AuthStore(config);
     const fileStore = new FileFolder(path.join(config.dataDir, "files"));
-    const storage = storageOpen(path.join(dir, "daycare.db"));
+    const storage = storageOpenTest(path.join(dir, "daycare.db"));
     const inference = {
         complete: async () => {
             throw new Error("Inference not available in tests");

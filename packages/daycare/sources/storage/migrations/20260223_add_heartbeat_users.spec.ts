@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260220AddTasks } from "./20260220_add_tasks.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
@@ -9,7 +9,7 @@ import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_use
 
 describe("migration20260223AddHeartbeatUsers", () => {
     it("adds user_id to tasks_heartbeat and backfills owner user", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);
@@ -51,7 +51,7 @@ describe("migration20260223AddHeartbeatUsers", () => {
     });
 
     it("fails when heartbeat rows need backfill but no owner user exists", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260302CleanupRlmSnapshotPayloads } from "./20260302_cleanup_rlm_snapshot_payloads.js";
 
 describe("migration20260302CleanupRlmSnapshotPayloads", () => {
     it("removes only legacy inline snapshot payloads while keeping rows", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE session_history (
@@ -63,7 +63,7 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE session_history (
@@ -95,7 +95,7 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
     });
 
     it("processes large history in batches", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE session_history (

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@/types";
 
 import { configResolve } from "../../config/configResolve.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForAgent } from "../agents/context.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Crons, type CronsOptions } from "./crons.js";
@@ -26,7 +26,7 @@ describe("Crons", () => {
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
             postAndAwait: vi.fn(async () => ({ status: "completed" }))
         } as unknown as CronsOptions["agentSystem"];
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const crons = new Crons({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
@@ -67,7 +67,7 @@ describe("Crons", () => {
             postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
         };
         const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const crons = new Crons({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),

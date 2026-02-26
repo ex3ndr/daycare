@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { databaseMigrate } from "./databaseMigrate.js";
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("databaseMigrate", () => {
     it("applies pending migrations", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             const applied = databaseMigrate(db);
             expect(applied.length).toBeGreaterThan(0);

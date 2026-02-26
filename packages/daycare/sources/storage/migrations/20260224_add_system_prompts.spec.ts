@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260224AddSystemPrompts } from "./20260224_add_system_prompts.js";
 
 describe("migration20260224AddSystemPrompts", () => {
     it("creates system_prompts table with expected columns", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260224AddSystemPrompts.up(db);
@@ -28,7 +28,7 @@ describe("migration20260224AddSystemPrompts", () => {
     });
 
     it("creates indexes on scope and user_id", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260224AddSystemPrompts.up(db);
@@ -43,7 +43,7 @@ describe("migration20260224AddSystemPrompts", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260224AddSystemPrompts.up(db);

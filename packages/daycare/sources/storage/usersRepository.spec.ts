@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 import { UsersRepository } from "./usersRepository.js";
 
 describe("UsersRepository", () => {
     it("supports CRUD and connector key operations", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const users = new UsersRepository(storage.db);
             const created = await users.create({
@@ -49,7 +49,7 @@ describe("UsersRepository", () => {
     });
 
     it("returns cached user on repeated read", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const users = new UsersRepository(storage.db);
             const created = await users.create({ createdAt: 1, updatedAt: 1 });
@@ -66,7 +66,7 @@ describe("UsersRepository", () => {
     });
 
     it("loads from db on cache miss and invalidates after delete", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const users = new UsersRepository(storage.db);
             storage.db

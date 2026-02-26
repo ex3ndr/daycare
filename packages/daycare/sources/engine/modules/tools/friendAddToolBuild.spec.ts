@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { friendAddToolBuild } from "./friendAddToolBuild.js";
 
@@ -10,7 +10,7 @@ const toolCall = { id: "tool-1", name: "friend_add" };
 
 describe("friendAddToolBuild", () => {
     it("sends a request and confirms when the other side adds back", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -59,7 +59,7 @@ describe("friendAddToolBuild", () => {
     });
 
     it("accepts a pending subuser share and notifies the owner", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -99,7 +99,7 @@ describe("friendAddToolBuild", () => {
     });
 
     it("rejects subuser accept when no pending offer exists", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -130,7 +130,7 @@ describe("friendAddToolBuild", () => {
     });
 
     it("rejects subuser accept when caller is not friends with owner", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -160,7 +160,7 @@ describe("friendAddToolBuild", () => {
     });
 
     it("enforces cooldown after a rejected request", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });

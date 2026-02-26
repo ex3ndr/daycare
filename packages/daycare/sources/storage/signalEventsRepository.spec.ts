@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
 
 describe("SignalEventsRepository", () => {
     it("creates records and filters by user/type", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new SignalEventsRepository(db);
@@ -52,7 +52,7 @@ describe("SignalEventsRepository", () => {
     });
 
     it("returns recent records with limit normalization", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new SignalEventsRepository(db);
@@ -79,7 +79,7 @@ describe("SignalEventsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE signals_events (
             id TEXT PRIMARY KEY,

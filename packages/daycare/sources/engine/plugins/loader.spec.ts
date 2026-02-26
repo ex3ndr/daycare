@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { getLogger } from "../../log.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Processes } from "../processes/processes.js";
 import { PluginModuleLoader } from "./loader.js";
 
@@ -54,7 +54,7 @@ export const plugin = {
         const loader = new PluginModuleLoader("test-plugin");
         const { module } = await loader.load(pluginPath);
         const settings = module.settingsSchema.parse({ name: "demo" });
-        const storage = storageOpen(path.join(dir, "daycare.db"));
+        const storage = storageOpenTest(path.join(dir, "daycare.db"));
         const instance = await module.create({
             instance: { instanceId: "demo", pluginId: "demo" },
             settings,

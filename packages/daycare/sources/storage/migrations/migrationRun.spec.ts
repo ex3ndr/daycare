@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migrations } from "./_migrations.js";
 import { migrationRun } from "./migrationRun.js";
 
@@ -13,7 +13,7 @@ describe("migrationRun", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-run-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpen(dbPath);
+            const db = databaseOpenTest(dbPath);
             const firstApplied = migrationRun(db);
             const secondApplied = migrationRun(db);
 
@@ -44,7 +44,7 @@ describe("migrationRun", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-run-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpen(dbPath);
+            const db = databaseOpenTest(dbPath);
             migrationRun(db);
             db.exec("PRAGMA foreign_keys = OFF");
             db.prepare(

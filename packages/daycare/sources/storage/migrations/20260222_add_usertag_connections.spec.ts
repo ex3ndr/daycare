@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 import { migration20260222AddUsertagConnections } from "./20260222_add_usertag_connections.js";
 
 describe("migration20260222AddUsertagConnections", () => {
     it("adds usertag column and connections table", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -29,7 +29,7 @@ describe("migration20260222AddUsertagConnections", () => {
     });
 
     it("creates expected indexes", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -45,7 +45,7 @@ describe("migration20260222AddUsertagConnections", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);

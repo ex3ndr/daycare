@@ -5,13 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { HeartbeatScheduler } from "./heartbeatScheduler.js";
 
 async function createTempScheduler() {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-heartbeat-"));
-    const storage = storageOpen(":memory:");
+    const storage = storageOpenTest(":memory:");
     return { dir, storage };
 }
 

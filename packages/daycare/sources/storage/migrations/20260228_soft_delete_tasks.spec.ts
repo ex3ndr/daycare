@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260224AddTasksTable } from "./20260224_add_tasks_table.js";
 import { migration20260228SoftDeleteTasks } from "./20260228_soft_delete_tasks.js";
 
 describe("migration20260228SoftDeleteTasks", () => {
     it("adds deleted_at to tasks when missing", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks (
@@ -30,7 +30,7 @@ describe("migration20260228SoftDeleteTasks", () => {
     });
 
     it("is idempotent when deleted_at already exists", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks_cron (

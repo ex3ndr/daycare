@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { databaseClose } from "./databaseClose.js";
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("databaseClose", () => {
     it("closes an open database", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         databaseClose(db);
         expect(() => db.prepare("SELECT 1").get()).toThrow();
     });

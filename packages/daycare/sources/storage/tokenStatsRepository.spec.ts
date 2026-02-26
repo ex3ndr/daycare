@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 
 describe("TokenStatsRepository", () => {
     it("increments hourly rows and merges by hour/user/agent/model", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new TokenStatsRepository(db);
@@ -51,7 +51,7 @@ describe("TokenStatsRepository", () => {
     });
 
     it("filters rows by range and identity", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new TokenStatsRepository(db);
@@ -107,7 +107,7 @@ describe("TokenStatsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE token_stats_hourly (
             hour_start INTEGER NOT NULL,

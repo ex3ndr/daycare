@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260220AddTasks } from "./20260220_add_tasks.js";
 import { migration20260224AddTasksTable } from "./20260224_add_tasks_table.js";
@@ -9,7 +9,7 @@ import { migration20260227RequireCronTaskId } from "./20260227_require_cron_task
 
 describe("migration20260227RequireCronTaskId", () => {
     it("drops task_uid and enforces NOT NULL task_id", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260220AddTasks.up(db);
@@ -68,7 +68,7 @@ describe("migration20260227RequireCronTaskId", () => {
     });
 
     it("fails when a trigger has no task_id", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260220AddTasks.up(db);

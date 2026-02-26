@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 import { migration20260222AddProcesses } from "./20260222_add_processes.js";
 import { migration20260222ImportProcesses } from "./20260222_import_processes.js";
@@ -59,7 +59,7 @@ describe("migration20260222ImportProcesses", () => {
                 "utf8"
             );
 
-            const db = databaseOpen(dbPath);
+            const db = databaseOpenTest(dbPath);
             try {
                 migration20260220AddUsers.up(db);
                 db.prepare("INSERT INTO users (id, is_owner, created_at, updated_at) VALUES (?, ?, ?, ?)").run(

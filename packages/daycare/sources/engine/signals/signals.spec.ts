@@ -5,8 +5,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { Signal } from "@/types";
-import { databaseOpen } from "../../storage/databaseOpen.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { databaseOpenTest } from "../../storage/databaseOpenTest.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { Signals } from "./signals.js";
 
@@ -15,7 +15,7 @@ describe("Signals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
             const eventBus = new EngineEventBus();
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const signals = new Signals({
                 eventBus,
                 signalEvents: storage.signalEvents,
@@ -52,7 +52,7 @@ describe("Signals", () => {
             expect(all).toHaveLength(1);
             expect(all[0]?.id).toBe(signal.id);
 
-            const db = databaseOpen(path.join(dir, "daycare.db"));
+            const db = databaseOpenTest(path.join(dir, "daycare.db"));
             try {
                 const rows = db.prepare("SELECT type FROM signals_events").all() as Array<{ type: string }>;
                 expect(rows.map((row) => row.type)).toEqual(["build.completed"]);
@@ -67,7 +67,7 @@ describe("Signals", () => {
     it("returns all persisted events without recent-limit truncation", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,
@@ -91,7 +91,7 @@ describe("Signals", () => {
     it("throws a validation error when source userId is missing at runtime", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,
@@ -111,7 +111,7 @@ describe("Signals", () => {
     it("delivers only matching subscriptions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const delivered: Array<{
                 signalType: string;
                 subscriptions: Array<{ userId: string; agentId: string; pattern: string; silent: boolean }>;
@@ -164,7 +164,7 @@ describe("Signals", () => {
     it("stops delivering after unsubscribe", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const delivered: string[] = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
@@ -203,7 +203,7 @@ describe("Signals", () => {
     it("filters matched subscriptions by signal source userId when present", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest(path.join(dir, "daycare.db"));
             const delivered: Array<{ userId: string; agentId: string }> = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),

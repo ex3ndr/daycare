@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
@@ -19,7 +19,7 @@ describe("subuserCreateToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
 
             // Bootstrap migration creates an owner; find it
             const owner = await storage.users.findOwner();
@@ -65,7 +65,7 @@ describe("subuserCreateToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-reject-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
 
             // Bootstrap creates owner; create a regular user
             await storage.users.create({ id: "regular-user" });

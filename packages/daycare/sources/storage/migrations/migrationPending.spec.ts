@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migrations } from "./_migrations.js";
 import { migrationPending } from "./migrationPending.js";
 
@@ -13,7 +13,7 @@ describe("migrationPending", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpen(dbPath);
+            const db = databaseOpenTest(dbPath);
             const pending = migrationPending(db, migrations);
             db.close();
 
@@ -27,7 +27,7 @@ describe("migrationPending", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpen(dbPath);
+            const db = databaseOpenTest(dbPath);
             db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)");
             const firstMigration = migrations[0];
             if (!firstMigration) {

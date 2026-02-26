@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
@@ -26,7 +26,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
             const context = contextBuild({
@@ -74,7 +74,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = contextBuild({
                 config: { current: config },
@@ -112,7 +112,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = {
                 ...contextBuild({

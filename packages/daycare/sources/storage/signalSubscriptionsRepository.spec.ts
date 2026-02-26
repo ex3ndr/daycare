@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
 
 describe("SignalSubscriptionsRepository", () => {
     it("creates, updates, deletes, and reads subscriptions", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new SignalSubscriptionsRepository(db);
@@ -46,7 +46,7 @@ describe("SignalSubscriptionsRepository", () => {
     });
 
     it("matches patterns and user scope", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new SignalSubscriptionsRepository(db);
@@ -93,7 +93,7 @@ describe("SignalSubscriptionsRepository", () => {
     });
 
     it("normalizes ctx userId for keyed and matching lookups", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new SignalSubscriptionsRepository(db);
@@ -119,7 +119,7 @@ describe("SignalSubscriptionsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE signals_subscriptions (
             id TEXT PRIMARY KEY,

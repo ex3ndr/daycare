@@ -19,7 +19,7 @@ import type {
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
@@ -1622,7 +1622,7 @@ function signalsBuild(
     eventBus: EngineEventBus,
     onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void>
 ): Signals {
-    const storage = storageOpen(config.dbPath);
+    const storage = storageOpenTest(config.dbPath);
     return new Signals({
         eventBus,
         signalEvents: storage.signalEvents,
@@ -1632,7 +1632,7 @@ function signalsBuild(
 }
 
 function delayedSignalsBuild(config: ConfigModule, eventBus: EngineEventBus, signals: Signals): DelayedSignals {
-    const storage = storageOpen(config.current.dbPath);
+    const storage = storageOpenTest(config.current.dbPath);
     return new DelayedSignals({
         config,
         eventBus,

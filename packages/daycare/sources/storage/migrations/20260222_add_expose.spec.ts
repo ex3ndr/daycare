@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260222AddExpose } from "./20260222_add_expose.js";
 
 describe("migration20260222AddExpose", () => {
     it("creates expose_endpoints table", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260222AddExpose.up(db);
             const columns = db.prepare("PRAGMA table_info(expose_endpoints)").all() as Array<{ name: string }>;

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { InboxRepository } from "./inboxRepository.js";
 
 describe("InboxRepository", () => {
     it("supports insert, ordered lookup, and delete operations", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new InboxRepository(db);
@@ -31,7 +31,7 @@ describe("InboxRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE inbox (
             id TEXT PRIMARY KEY,

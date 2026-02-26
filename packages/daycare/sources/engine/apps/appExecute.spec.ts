@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForAgent } from "../agents/context.js";
 import { agentStateRead } from "../agents/ops/agentStateRead.js";
 import { appExecute } from "./appExecute.js";
@@ -28,7 +28,7 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
         );
-        const storage = storageOpen(config.dbPath);
+        const storage = storageOpenTest(config.dbPath);
         const agentId = "agent-app-1";
         const now = Date.now();
         await storage.agents.create({
@@ -183,7 +183,7 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
         );
-        const storage = storageOpen(config.dbPath);
+        const storage = storageOpenTest(config.dbPath);
         const agentId = "agent-app-2";
         const now = Date.now();
         await storage.agents.create({

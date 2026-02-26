@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 
 describe("ExposeEndpointsRepository", () => {
     it("supports CRUD and user scoping", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new ExposeEndpointsRepository(db);
@@ -59,7 +59,7 @@ describe("ExposeEndpointsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE expose_endpoints (
             id TEXT PRIMARY KEY,

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 import { migration20260222AddUserParent } from "./20260222_add_user_parent.js";
 
 describe("migration20260222AddUserParent", () => {
     it("adds parent_user_id and name columns to users", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUserParent.up(db);
@@ -21,7 +21,7 @@ describe("migration20260222AddUserParent", () => {
     });
 
     it("creates partial index on parent_user_id", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUserParent.up(db);
@@ -34,7 +34,7 @@ describe("migration20260222AddUserParent", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUserParent.up(db);

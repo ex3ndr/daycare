@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { SystemPromptDbRecord } from "../../../storage/databaseTypes.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { systemPromptResolve } from "./systemPromptResolve.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function createStorage(): Storage {
-    return storageOpen(":memory:");
+    return storageOpenTest(":memory:");
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {

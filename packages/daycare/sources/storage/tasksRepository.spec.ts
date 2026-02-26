@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { contextForAgent } from "../engine/agents/context.js";
 import type { TaskDbRecord } from "./databaseTypes.js";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 import { TasksRepository } from "./tasksRepository.js";
 
 describe("TasksRepository", () => {
     it("supports create, find, update, and delete", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new TasksRepository(storage.db);
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -54,7 +54,7 @@ describe("TasksRepository", () => {
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new TasksRepository(storage.db);
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -81,7 +81,7 @@ describe("TasksRepository", () => {
     });
 
     it("scopes ids by user", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new TasksRepository(storage.db);
             const ctxA = contextForAgent({ userId: "user-1", agentId: "agent-1" });

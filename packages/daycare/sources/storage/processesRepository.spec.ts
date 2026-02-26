@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { ProcessesRepository } from "./processesRepository.js";
 
 describe("ProcessesRepository", () => {
     it("supports CRUD and filtering by user and owner", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new ProcessesRepository(db);
@@ -47,7 +47,7 @@ describe("ProcessesRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE processes (
             id TEXT PRIMARY KEY,

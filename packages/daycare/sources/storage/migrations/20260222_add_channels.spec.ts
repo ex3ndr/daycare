@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260222AddChannels } from "./20260222_add_channels.js";
 
 describe("migration20260222AddChannels", () => {
     it("creates channels tables with expected columns", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260222AddChannels.up(db);
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260224AddMemoryColumns } from "./20260224_add_memory_columns.js";
 
 describe("migration20260224AddMemoryColumns", () => {
     it("adds invalidated_at and processed_until columns to sessions", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260224AddMemoryColumns.up(db);
@@ -21,7 +21,7 @@ describe("migration20260224AddMemoryColumns", () => {
     });
 
     it("creates index on invalidated_at", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260224AddMemoryColumns.up(db);
@@ -34,7 +34,7 @@ describe("migration20260224AddMemoryColumns", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260224AddMemoryColumns.up(db);

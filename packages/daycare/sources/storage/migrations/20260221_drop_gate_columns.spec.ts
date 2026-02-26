@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260221DropGateColumns } from "./20260221_drop_gate_columns.js";
 
 describe("migration20260221DropGateColumns", () => {
     it("drops gate columns when present", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks_cron (
@@ -32,7 +32,7 @@ describe("migration20260221DropGateColumns", () => {
     });
 
     it("is a no-op when gate columns are already absent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks_cron (

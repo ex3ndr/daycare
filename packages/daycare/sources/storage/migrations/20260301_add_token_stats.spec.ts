@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260301AddTokenStats } from "./20260301_add_token_stats.js";
 
 describe("migration20260301AddTokenStats", () => {
     it("creates token_stats_hourly table and indexes", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260301AddTokenStats.up(db);
 
@@ -34,7 +34,7 @@ describe("migration20260301AddTokenStats", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             expect(() => migration20260301AddTokenStats.up(db)).not.toThrow();
             expect(() => migration20260301AddTokenStats.up(db)).not.toThrow();

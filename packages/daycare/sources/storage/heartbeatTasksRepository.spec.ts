@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { HeartbeatTaskDbRecord } from "./databaseTypes.js";
 import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("HeartbeatTasksRepository", () => {
     it("supports create, find, update, delete, and recordRun", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
             await storage.tasks.create({
@@ -75,7 +75,7 @@ describe("HeartbeatTasksRepository", () => {
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
             await storage.tasks.create({

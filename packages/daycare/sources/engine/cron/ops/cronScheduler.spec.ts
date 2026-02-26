@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { CronScheduler } from "./cronScheduler.js";
 
@@ -17,7 +17,7 @@ describe("CronScheduler", () => {
     beforeEach(async () => {
         vi.useFakeTimers();
         tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "cron-scheduler-test-"));
-        storage = storageOpen(":memory:");
+        storage = storageOpenTest(":memory:");
     });
 
     afterEach(async () => {

@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserConfigureToolBuild } from "./subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
@@ -20,7 +20,7 @@ describe("subuserConfigureToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const updateAgentDescriptor = vi.fn();
@@ -73,7 +73,7 @@ describe("subuserConfigureToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-reject-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             await storage.users.create({ id: "regular-user" });
 
             const tool = subuserConfigureToolBuild();

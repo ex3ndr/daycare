@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 import { migration20260222AddUsertagConnections } from "./20260222_add_usertag_connections.js";
 import { migration20260225RequireUsertag } from "./20260225_require_usertag.js";
 
 describe("migration20260225RequireUsertag", () => {
     it("backfills empty usertags and enforces required usertags in DB", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -66,7 +66,7 @@ describe("migration20260225RequireUsertag", () => {
     });
 
     it("assigns generated usertags for legacy users", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -99,7 +99,7 @@ describe("migration20260225RequireUsertag", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);

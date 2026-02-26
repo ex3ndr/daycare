@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260222AddProcesses } from "./20260222_add_processes.js";
 
 describe("migration20260222AddProcesses", () => {
     it("creates processes table with expected columns", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260222AddProcesses.up(db);
 

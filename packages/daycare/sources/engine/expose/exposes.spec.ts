@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { configResolve } from "../../config/configResolve.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { ConfigModule } from "../config/configModule.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { Exposes } from "./exposes.js";
@@ -365,7 +365,7 @@ function createExposes(rootDir: string): Exposes {
         },
         path.join(rootDir, "settings.json")
     );
-    const storage = storageOpen(config.dbPath);
+    const storage = storageOpenTest(config.dbPath);
     return new Exposes({
         config: new ConfigModule(config),
         eventBus: new EngineEventBus(),
@@ -405,7 +405,7 @@ function exposeEndpointRowRead(
         },
         path.join(rootDir, "settings.json")
     );
-    const storage = storageOpen(config.dbPath);
+    const storage = storageOpenTest(config.dbPath);
     try {
         const row = storage.db
             .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")

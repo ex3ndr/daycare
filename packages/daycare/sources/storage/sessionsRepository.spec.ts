@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { SessionsRepository } from "./sessionsRepository.js";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
@@ -10,7 +10,7 @@ const permissions: SessionPermissions = {
 };
 
 async function createTestStorage() {
-    const storage = storageOpen(":memory:");
+    const storage = storageOpenTest(":memory:");
     const owner = (await storage.users.findMany())[0];
     if (!owner) {
         throw new Error("Owner user missing");

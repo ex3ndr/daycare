@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "./storage/databaseOpen.js";
+import { databaseOpenTest } from "./storage/databaseOpenTest.js";
 import { migrationRun } from "./storage/migrations/migrationRun.js";
 
 describe("schema", () => {
     it("keeps critical table and index invariants after migrations", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migrationRun(db);
 

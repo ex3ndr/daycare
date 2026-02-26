@@ -2,14 +2,14 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 import type { AgentDescriptor } from "@/types";
 import type { StorageDatabase } from "../databaseOpen.js";
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 import { migration20260220UsersBootstrap } from "./20260220_users_bootstrap.js";
 
 describe("migration20260220UsersBootstrap", () => {
     it("creates one owner user when agents table is empty", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);
@@ -31,7 +31,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 
     it("deduplicates connector identities and assigns shared user_id", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             agentInsert(db, {
@@ -77,7 +77,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 
     it("creates one user per connector identity and marks earliest as owner", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             agentInsert(db, {
@@ -125,7 +125,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 
     it("assigns owner user_id to non-user agents", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260219Initial.up(db);
             agentInsert(db, {

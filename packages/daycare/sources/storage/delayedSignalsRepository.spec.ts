@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 
 describe("DelayedSignalsRepository", () => {
     it("creates, reads due records, deletes, and cancels by repeat key", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new DelayedSignalsRepository(db);
@@ -68,7 +68,7 @@ describe("DelayedSignalsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         CREATE TABLE signals_delayed (
             id TEXT PRIMARY KEY,

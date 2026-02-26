@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260303DropTriggerCode } from "./20260303_drop_trigger_code.js";
 
 describe("migration20260303DropTriggerCode", () => {
     it("removes code columns from trigger tables while keeping trigger metadata", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks (

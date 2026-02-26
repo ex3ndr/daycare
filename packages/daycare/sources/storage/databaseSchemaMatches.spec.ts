@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { databaseMigrate } from "./databaseMigrate.js";
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 import { databaseSchemaMatches } from "./databaseSchemaMatches.js";
 
 describe("databaseSchemaMatches", () => {
     it("returns match for a migrated database", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             databaseMigrate(db);
 
@@ -21,7 +21,7 @@ describe("databaseSchemaMatches", () => {
     });
 
     it("reports mismatch details when schema deviates", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             databaseMigrate(db);
             db.exec("DROP INDEX idx_users_nametag");

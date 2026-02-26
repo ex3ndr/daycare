@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260304ScopeTaskIdsPerUser } from "./20260304_scope_task_ids_per_user.js";
 
 describe("migration20260304ScopeTaskIdsPerUser", () => {
     it("scopes task and trigger ids by user", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks (
@@ -109,7 +109,7 @@ describe("migration20260304ScopeTaskIdsPerUser", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             db.exec(`
                 CREATE TABLE tasks (

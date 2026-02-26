@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpen } from "../databaseOpen.js";
+import { databaseOpenTest } from "../databaseOpenTest.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
 
 describe("migration20260220AddUsers", () => {
     it("creates users and user_connector_keys tables with expected columns", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
 
@@ -22,7 +22,7 @@ describe("migration20260220AddUsers", () => {
     });
 
     it("enforces connector_key uniqueness", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             db.prepare("INSERT INTO users (id, is_owner, created_at, updated_at) VALUES (?, ?, ?, ?)").run(
@@ -55,7 +55,7 @@ describe("migration20260220AddUsers", () => {
     });
 
     it("allows only one owner user", () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             migration20260220AddUsers.up(db);
             db.prepare("INSERT INTO users (id, is_owner, created_at, updated_at) VALUES (?, ?, ?, ?)").run(

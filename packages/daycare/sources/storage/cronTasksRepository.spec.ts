@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { CronTasksRepository } from "./cronTasksRepository.js";
 import type { CronTaskDbRecord } from "./databaseTypes.js";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("CronTasksRepository", () => {
     it("supports create, find, update, and delete", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
             await storage.tasks.create({
@@ -68,7 +68,7 @@ describe("CronTasksRepository", () => {
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = storageOpen(":memory:");
+        const storage = storageOpenTest(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
             await storage.tasks.create({

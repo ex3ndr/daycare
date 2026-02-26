@@ -6,7 +6,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
-import { storageOpen } from "../../../storage/storageOpen.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
@@ -18,7 +18,7 @@ describe("rlmSnapshotSave", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-snapshot-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpen(config.dbPath);
+            const storage = storageOpenTest(config.dbPath);
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();

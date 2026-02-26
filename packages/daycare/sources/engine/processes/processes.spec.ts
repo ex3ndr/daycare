@@ -13,7 +13,7 @@ vi.mock("../../sandbox/sandboxDockerEnvironmentIs.js", () => ({
 import type { SessionPermissions } from "@/types";
 import { getLogger } from "../../log.js";
 import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironmentIs.js";
-import { storageOpen } from "../../storage/storageOpen.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Processes } from "./processes.js";
 
 const TEST_TIMEOUT_MS = 30_000;
@@ -286,7 +286,7 @@ describe("Processes", () => {
             const processDir = path.join(baseDir, "processes", processId);
             const now = Date.now();
             await fs.mkdir(processDir, { recursive: true });
-            const storage = storageOpen(path.join(baseDir, "daycare.db"));
+            const storage = storageOpenTest(path.join(baseDir, "daycare.db"));
             try {
                 await storage.processes.create({
                     id: processId,
@@ -328,7 +328,7 @@ describe("Processes", () => {
             expect(item?.pid).toBeNull();
             expect(item?.status).toBe("exited");
 
-            const persistedStorage = storageOpen(path.join(baseDir, "daycare.db"));
+            const persistedStorage = storageOpenTest(path.join(baseDir, "daycare.db"));
             try {
                 const persisted = await persistedStorage.processes.findById(processId);
                 expect(persisted?.pid).toBeNull();
@@ -395,7 +395,7 @@ describe("Processes", () => {
     );
 
     async function createManager(dir: string, options: { bootTimeMs?: number | null } = {}): Promise<Processes> {
-        const storage = storageOpen(path.join(dir, "daycare.db"));
+        const storage = storageOpenTest(path.join(dir, "daycare.db"));
         const manager = new Processes(dir, getLogger("test.processes"), {
             repository: storage.processes,
             bootTimeProvider: options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null

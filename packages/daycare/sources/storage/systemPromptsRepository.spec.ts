@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { SystemPromptDbRecord } from "./databaseTypes.js";
 import type { Storage } from "./storage.js";
-import { storageOpen } from "./storageOpen.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 function createStorage(): Storage {
-    return storageOpen(":memory:");
+    return storageOpenTest(":memory:");
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {

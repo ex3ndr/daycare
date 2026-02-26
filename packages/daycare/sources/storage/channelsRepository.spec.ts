@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 import { ChannelsRepository } from "./channelsRepository.js";
-import { databaseOpen } from "./databaseOpen.js";
+import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("ChannelsRepository", () => {
     it("supports channel CRUD with user filters", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new ChannelsRepository(db);
@@ -46,7 +46,7 @@ describe("ChannelsRepository", () => {
     });
 
     it("supports member operations", async () => {
-        const db = databaseOpen(":memory:");
+        const db = databaseOpenTest(":memory:");
         try {
             schemaCreate(db);
             const repository = new ChannelsRepository(db);
@@ -87,7 +87,7 @@ describe("ChannelsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpen>): void {
+function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
     db.exec(`
         PRAGMA foreign_keys = ON;
 
