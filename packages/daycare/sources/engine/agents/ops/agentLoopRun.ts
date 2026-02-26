@@ -4,7 +4,6 @@ import type { Logger } from "pino";
 import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
-import { tagExtractAll } from "../../../util/tagExtract.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
@@ -31,8 +30,6 @@ import { rlmToolsForContextResolve } from "../../modules/rlm/rlmToolsForContextR
 import { rlmValueFormat } from "../../modules/rlm/rlmValueFormat.js";
 import { rlmVmSnapshotIs } from "../../modules/rlm/rlmVmProgress.js";
 import { rlmWorkerKeyResolve } from "../../modules/rlm/rlmWorkerKeyResolve.js";
-import { sayFileExtract } from "../../modules/say/sayFileExtract.js";
-import { sayFileResolve } from "../../modules/say/sayFileResolve.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Agent } from "../agent.js";
@@ -42,7 +39,6 @@ import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import type { AgentLoopPendingPhase } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
-import { agentMessageRunPythonSayAfterTrim } from "./agentMessageRunPythonSayAfterTrim.js";
 import { agentMessageRunPythonTerminalTrim } from "./agentMessageRunPythonTerminalTrim.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
@@ -145,8 +141,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         agent.descriptor.type === "memory-search";
     let childAgentNudged = false;
     let childAgentMessageSent = false;
-    const agentKind =
-        agent.descriptor.type === "user" || agent.descriptor.type === "subuser" ? "foreground" : "background";
     const target = agentDescriptorTargetResolve(agent.descriptor);
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {
@@ -485,10 +479,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             logger.debug("event: Trimmed inline RLM assistant text at first </run_python>");
                         }
                     }
-                    let historyResponseText = responseText ?? "";
+                    const historyResponseText = responseText ?? "";
                     const pendingHistoryRewrites: Array<{
                         text: string;
-                        reason: "run_python_say_after_trim" | "run_python_failure_trim";
+                        reason: "run_python_failure_trim";
                     }> = [];
                     const runPythonCodes = rlmNoToolsExtract(responseText ?? "");
                     const hasRunPythonTag = runPythonCodes.length > 0;
@@ -498,138 +492,36 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         logger.debug("event: NO_MESSAGE detected; suppressing user output for this response");
                     }
                     lastResponseNoMessage = suppressUserOutput;
-                    const sayEnabled = agentKind === "foreground";
-                    let effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
-                    const runPythonSplit =
-                        hasRunPythonTag && effectiveResponseText ? runPythonResponseSplit(effectiveResponseText) : null;
-                    if (hasRunPythonTag && responseText) {
-                        const stripped = agentMessageRunPythonSayAfterTrim(responseText);
-                        if (stripped !== null) {
-                            historyResponseText = stripped;
-                            pendingHistoryRewrites.push({
-                                text: stripped,
-                                reason: "run_python_say_after_trim"
-                            });
-                            messageAssistantTextRewrite(response.message, stripped);
-                            logger.debug("event: Rewrote assistant message in context history after <run_python>");
-                        }
-                    }
-
-                    if (sayEnabled && effectiveResponseText) {
-                        let immediateSayText = effectiveResponseText;
-                        if (hasRunPythonTag && runPythonSplit) {
-                            immediateSayText = runPythonSplit.beforeRunPython;
-                        }
-
-                        const sayBlocks = tagExtractAll(immediateSayText, "say");
-                        const sayFiles = sayFileExtract(immediateSayText);
-                        const resolvedSayFiles =
-                            sayFiles.length > 0
-                                ? await sayFileResolve({
-                                      files: sayFiles,
-                                      sandbox: agent.sandbox,
-                                      logger
-                                  })
-                                : [];
-
-                        if (sayBlocks.length > 0) {
-                            effectiveResponseText = null;
-                            finalResponseText = sayBlocks[sayBlocks.length - 1]!;
-                            lastResponseTextSent = true;
-                            if (connector && targetId) {
-                                try {
-                                    for (let index = 0; index < sayBlocks.length; index += 1) {
-                                        const block = sayBlocks[index]!;
-                                        const filesForMessage =
-                                            index === sayBlocks.length - 1 && resolvedSayFiles.length > 0
-                                                ? resolvedSayFiles
-                                                : undefined;
-                                        await connector.sendMessage(targetId, {
-                                            text: block,
-                                            files: filesForMessage,
-                                            replyToMessageId: entry.context.messageId
-                                        });
-                                        eventBus.emit("agent.outgoing", {
-                                            agentId: agent.id,
-                                            source,
-                                            message: {
-                                                text: block,
-                                                files: filesForMessage
-                                            },
-                                            context: entry.context
-                                        });
-                                    }
-                                } catch (error) {
-                                    logger.warn(
-                                        { connector: source, error },
-                                        "error: Failed to send <say> response text"
-                                    );
-                                }
-                            }
-                        } else if (resolvedSayFiles.length > 0) {
-                            effectiveResponseText = null;
+                    const effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
+                    const trimmedText = effectiveResponseText?.trim() ?? "";
+                    const hasResponseText = trimmedText.length > 0;
+                    if (hasRunPythonTag) {
+                        if (!childAgentMessageSent) {
                             finalResponseText = null;
-                            lastResponseTextSent = true;
-                            if (connector && targetId) {
-                                try {
-                                    await connector.sendMessage(targetId, {
-                                        text: null,
-                                        files: resolvedSayFiles,
-                                        replyToMessageId: entry.context.messageId
-                                    });
-                                    eventBus.emit("agent.outgoing", {
-                                        agentId: agent.id,
-                                        source,
-                                        message: {
-                                            text: null,
-                                            files: resolvedSayFiles
-                                        },
-                                        context: entry.context
-                                    });
-                                } catch (error) {
-                                    logger.warn(
-                                        { connector: source, error },
-                                        "error: Failed to send <file> response files"
-                                    );
-                                }
-                            }
-                        } else {
-                            effectiveResponseText = null;
-                            finalResponseText = null;
-                            lastResponseTextSent = true;
-                            logger.debug("event: <say> feature enabled but no <say> tags found; suppressing output");
                         }
+                        lastResponseTextSent = true;
+                        logger.debug("event: run_python tag detected; suppressing raw response text");
                     } else {
-                        const trimmedText = effectiveResponseText?.trim() ?? "";
-                        const hasResponseText = trimmedText.length > 0;
-                        if (hasRunPythonTag) {
-                            if (!childAgentMessageSent) {
-                                finalResponseText = null;
-                            }
-                            lastResponseTextSent = true;
-                            logger.debug("event: run_python tag detected; suppressing raw response text");
-                        } else {
-                            if (!childAgentMessageSent) {
-                                finalResponseText = hasResponseText ? effectiveResponseText : null;
-                            }
-                            lastResponseTextSent = false;
+                        if (!childAgentMessageSent) {
+                            finalResponseText = hasResponseText ? effectiveResponseText : null;
                         }
-                        if (hasResponseText && !hasRunPythonTag && connector && targetId) {
-                            try {
-                                await connector.sendMessage(targetId, {
-                                    text: effectiveResponseText,
-                                    replyToMessageId: entry.context.messageId
-                                });
-                                eventBus.emit("agent.outgoing", {
-                                    agentId: agent.id,
-                                    source,
-                                    message: { text: effectiveResponseText },
-                                    context: entry.context
-                                });
-                                lastResponseTextSent = true;
-                            } catch (error) {
-                                logger.warn({ connector: source, error }, "error: Failed to send response text");
-                            }
+                        lastResponseTextSent = false;
+                    }
+                    if (hasResponseText && !hasRunPythonTag && connector && targetId) {
+                        try {
+                            await connector.sendMessage(targetId, {
+                                text: effectiveResponseText,
+                                replyToMessageId: entry.context.messageId
+                            });
+                            eventBus.emit("agent.outgoing", {
+                                agentId: agent.id,
+                                source,
+                                message: { text: effectiveResponseText },
+                                context: entry.context
+                            });
+                            lastResponseTextSent = true;
+                        } catch (error) {
+                            logger.warn({ connector: source, error }, "error: Failed to send response text");
                         }
                     }
 
@@ -1149,23 +1041,6 @@ function stripNoMessageTextBlocks(message: InferenceContext["messages"][number])
     if (nextContent.length !== message.content.length) {
         message.content = nextContent;
     }
-}
-
-type RunPythonResponseSplit = {
-    beforeRunPython: string;
-    afterRunPython: string;
-};
-
-function runPythonResponseSplit(text: string): RunPythonResponseSplit | null {
-    const openTagPattern = /<run_python(\s[^>]*)?>/i;
-    const match = openTagPattern.exec(text);
-    if (!match || match.index === undefined) {
-        return null;
-    }
-    return {
-        beforeRunPython: text.slice(0, match.index),
-        afterRunPython: text.slice(match.index)
-    };
 }
 
 function messageAssistantTextRewrite(message: InferenceContext["messages"][number], text: string): void {

@@ -12,10 +12,7 @@ describe("agentLoopRun", () => {
     it("always requests inference with the run_python stop sequence", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
-        const responses = [
-            assistantMessageBuild("<run_python>echo('x')</run_python>"),
-            assistantMessageBuild("<say>Done</say>")
-        ];
+        const responses = [assistantMessageBuild("<run_python>echo('x')</run_python>"), assistantMessageBuild("Done")];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
 
@@ -40,12 +37,12 @@ describe("agentLoopRun", () => {
         );
     });
 
-    it("delivers say blocks and executes run_python blocks inline", async () => {
+    it("forwards plain assistant text and executes run_python blocks inline", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
         const responses = [
-            assistantMessageBuild("<say>Starting</say><run_python>echo('x')</run_python>"),
-            assistantMessageBuild("<say>Finished</say>")
+            assistantMessageBuild("<run_python>echo('x')</run_python>"),
+            assistantMessageBuild("Finished")
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
@@ -58,9 +55,8 @@ describe("agentLoopRun", () => {
             })
         );
 
-        expect(connectorSend).toHaveBeenCalledTimes(2);
-        expect(connectorSend).toHaveBeenNthCalledWith(1, "channel-1", expect.objectContaining({ text: "Starting" }));
-        expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", expect.objectContaining({ text: "Finished" }));
+        expect(connectorSend).toHaveBeenCalledTimes(1);
+        expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
     });
 
     it("nudges child agents when no send_agent_message call was made", async () => {
@@ -131,7 +127,7 @@ describe("agentLoopRun", () => {
             assistantMessageBuild(
                 "<run_python>try:\n    transient_tool()\nexcept ToolError as e:\n    print(e)\n'done'</run_python>"
             ),
-            assistantMessageBuild("<say>Finished</say>")
+            assistantMessageBuild("Finished")
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
         const baseTools = toolResolverBuild().listToolsForAgent({
@@ -239,7 +235,7 @@ function optionsBuild(params?: {
         userId: "user-1"
     };
     const connector = params?.connector ?? connectorBuild(vi.fn(async () => undefined));
-    const inferenceRouter = params?.inferenceRouter ?? inferenceRouterBuild([assistantMessageBuild("<say>ok</say>")]);
+    const inferenceRouter = params?.inferenceRouter ?? inferenceRouterBuild([assistantMessageBuild("ok")]);
     const toolResolver =
         params?.toolResolver ??
         toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "ok"));

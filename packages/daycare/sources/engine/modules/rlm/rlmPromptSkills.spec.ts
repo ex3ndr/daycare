@@ -12,7 +12,6 @@ type RenderSystemPromptOptions = {
     skillsPrompt: string;
     noToolsPrompt?: string;
     isForeground?: boolean;
-    featuresSay?: boolean;
 };
 
 const SECTION_SEPARATOR = "\n\n---\n\n";
@@ -48,8 +47,7 @@ describe("system prompt skills rendering", () => {
         const prompt = await renderSystemPrompt({
             toolsText: "Tool notes",
             skillsPrompt: skillPromptFormat(skills),
-            noToolsPrompt: await rlmNoToolsPromptBuild(tools),
-            featuresSay: true
+            noToolsPrompt: await rlmNoToolsPromptBuild(tools)
         });
 
         expect(occurrences(prompt, "<name>scheduling</name>")).toBe(1);
@@ -67,19 +65,16 @@ describe("system prompt skills rendering", () => {
         expect(prompt).not.toContain("For local skill authoring:");
     });
 
-    it("does not include say-tag instructions in no-tools mode for background agents", async () => {
+    it("does not include foreground-only follow-up instructions in no-tools mode for background agents", async () => {
         const prompt = await renderSystemPrompt({
             toolsText: "Tool notes",
             skillsPrompt: "",
             noToolsPrompt: await rlmNoToolsPromptBuild(tools, { isForeground: false }),
-            isForeground: false,
-            featuresSay: true
+            isForeground: false
         });
 
         expect(prompt).toContain("## Python Execution");
-        expect(prompt).not.toContain("If you include `<say>` in the same response");
-        expect(prompt).not.toContain("prefer it for user-visible output");
-        expect(prompt).not.toContain("you MUST emit `<say>` with your response");
+        expect(prompt).not.toContain("respond to the user with plain text");
     });
 });
 

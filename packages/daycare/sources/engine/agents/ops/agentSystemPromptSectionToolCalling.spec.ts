@@ -13,7 +13,6 @@ function buildMockTools(): Tool[] {
         { name: "send_agent_message", description: "Send message to agent", parameters: {} },
         { name: "cron_add", description: "Add cron task", parameters: {} },
         { name: "send_user_message", description: "Send message", parameters: {} },
-        { name: "say", description: "Send immediate message", parameters: {} },
         { name: "run_python", description: "Execute Python", parameters: {} }
     ] as Tool[];
 }
@@ -72,6 +71,5 @@ describe("agentSystemPromptSectionToolCalling", () => {
         expect(section).toContain("send_agent_message");
         expect(section).toContain("cron_add");
         expect(section).toContain("send_user_message");
-        expect(section).toContain("prefer the `say` tool");
     });
 });

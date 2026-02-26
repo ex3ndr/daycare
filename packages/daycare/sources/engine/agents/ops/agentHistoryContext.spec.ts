@@ -62,7 +62,7 @@ describe("agentHistoryContext", () => {
             {
                 type: "assistant_message",
                 at: 2,
-                text: "<say>before</say><run_python>echo()</run_python><say>after</say>",
+                text: "before<run_python>echo()</run_python>",
                 files: [],
                 tokens: null
             },
@@ -70,8 +70,8 @@ describe("agentHistoryContext", () => {
                 type: "assistant_rewrite",
                 at: 3,
                 assistantAt: 2,
-                text: "<say>before</say><run_python>echo()</run_python>",
-                reason: "run_python_say_after_trim"
+                text: "before<run_python>echo()</run_python>",
+                reason: "run_python_failure_trim"
             }
         ];
 
@@ -84,9 +84,7 @@ describe("agentHistoryContext", () => {
             throw new Error("Expected assistant message.");
         }
         const textPart = assistant.content.find((part) => part.type === "text");
-        expect(textPart && "text" in textPart ? textPart.text : "").toBe(
-            "<say>before</say><run_python>echo()</run_python>"
-        );
+        expect(textPart && "text" in textPart ? textPart.text : "").toBe("before<run_python>echo()</run_python>");
     });
 
     it("applies assistant_rewrite to the assistantAt target when newer assistant messages exist", async () => {

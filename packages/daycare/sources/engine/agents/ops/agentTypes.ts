@@ -91,7 +91,7 @@ export type AgentHistoryAssistantRewriteRecord = {
     at: number;
     assistantAt: number;
     text: string;
-    reason: "run_python_say_after_trim" | "run_python_failure_trim";
+    reason: "run_python_failure_trim";
 };
 
 export type AgentHistoryRecord =

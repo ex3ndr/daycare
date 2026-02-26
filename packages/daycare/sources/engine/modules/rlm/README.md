@@ -9,7 +9,6 @@ Daycare uses inline RLM only:
 
 Multiple `<run_python>` blocks in one assistant message execute sequentially.
 The first failed block stops execution of remaining blocks in that same message.
-Any `<say>` tags after the first `<run_python>` are trimmed.
 
 ## Tool Stub Generation
 

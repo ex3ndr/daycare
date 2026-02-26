@@ -40,7 +40,7 @@ describe("agentHistorySummary", () => {
                 at: 125,
                 assistantAt: 120,
                 text: "hello revised",
-                reason: "run_python_say_after_trim"
+                reason: "run_python_failure_trim"
             }),
             buildRecord({
                 type: "rlm_tool_result",

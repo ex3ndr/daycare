@@ -7,10 +7,6 @@ Incoming: `<time>...</time><message_id>...</message_id><message>...</message>`.{
 Connector attachments and image-generation files are provided as file paths under `~/downloads`; never expect inline/base64 bytes in message content.
 
 {{#if isForeground}}
-{{#if featuresSay}}
-IMPORTANT: Prefer the `say` tool for user-facing text when available.
-Fallback: if you are not using the `say` tool, wrap ALL user-facing text in `<say>...</say>` tags. Text outside `<say>` tags is NEVER delivered to the user — they will see nothing.
-{{/if}}
 {{#if messageFormatPrompt}}
 {{{messageFormatPrompt}}}
 {{else}}
