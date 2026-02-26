@@ -14,6 +14,7 @@ describe("rlmNoToolsPromptBuild", () => {
         const tools = [
             { name: "run_python", description: "", parameters: {} },
             { name: "echo", description: "Echo text", parameters: {} },
+            { name: "say", description: "Say text", parameters: {} },
             { name: "skill", description: "Load skill", parameters: {} }
         ] as unknown as Tool[];
 
@@ -26,6 +27,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("all remaining `<run_python>` blocks in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
         expect(prompt).toContain(bundledExamplesDirResolve());
+        expect(prompt).toContain("prefer it for user-visible output");
         expect(prompt).toContain("Any `<say>` block after the first `<run_python>` is trimmed and not delivered");
         expect(prompt).not.toContain("<say> after <run_python> was ignored");
         expect(prompt).toContain("```python");
@@ -35,6 +37,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).not.toContain("Available skills");
         expect(prompt).toContain("<python_result>...</python_result>");
         expect(prompt).toContain("do not use `print()` for the final return value");
+        expect(prompt).toContain("prefer using `say(...)` for the user-visible reply");
         expect(prompt).toContain("you MUST emit `<say>` with your response");
         expect(prompt.indexOf("Call tool functions directly (no `await`).")).toBeLessThan(
             prompt.indexOf("Available functions:")
@@ -51,6 +54,7 @@ describe("rlmNoToolsPromptBuild", () => {
         const prompt = await rlmNoToolsPromptBuild(tools, { isForeground: false });
 
         expect(prompt).not.toContain("If you include `<say>` in the same response");
+        expect(prompt).not.toContain("prefer it for user-visible output");
         expect(prompt).not.toContain("you MUST emit `<say>` with your response");
         expect(prompt).not.toContain("<say>Starting checks</say>");
         expect(prompt).toContain("<run_python>...</run_python>");

@@ -8,7 +8,8 @@ Connector attachments and image-generation files are provided as file paths unde
 
 {{#if isForeground}}
 {{#if featuresSay}}
-IMPORTANT: You MUST wrap ALL user-facing text in `<say>...</say>` tags. Text outside `<say>` tags is NEVER delivered to the user — they will see nothing. Every response that should be visible to the user MUST contain at least one `<say>` block.
+IMPORTANT: Prefer the `say` tool for user-facing text when available.
+Fallback: if you are not using the `say` tool, wrap ALL user-facing text in `<say>...</say>` tags. Text outside `<say>` tags is NEVER delivered to the user — they will see nothing.
 {{/if}}
 {{#if messageFormatPrompt}}
 {{{messageFormatPrompt}}}
