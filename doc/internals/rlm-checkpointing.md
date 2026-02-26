@@ -57,6 +57,7 @@ sequenceDiagram
     participant Loop as agentLoopRun
     participant VM as Monty VM
     participant Tool as Inner Tool
+    participant Snap as Snapshot Files
 
     Note over Agent: Process restarted
     Agent->>History: resolve pending phase
