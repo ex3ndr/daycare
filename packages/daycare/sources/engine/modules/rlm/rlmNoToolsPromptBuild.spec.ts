@@ -14,6 +14,7 @@ describe("rlmNoToolsPromptBuild", () => {
         const tools = [
             { name: "run_python", description: "", parameters: {} },
             { name: "echo", description: "Echo text", parameters: {} },
+            { name: "say", description: "Say text", parameters: {} },
             { name: "skill", description: "Load skill", parameters: {} }
         ] as unknown as Tool[];
 
@@ -26,6 +27,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("all remaining `<run_python>` blocks in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
         expect(prompt).toContain(bundledExamplesDirResolve());
+        expect(prompt).toContain("prefer it for user-visible replies");
         expect(prompt).toContain("respond to the user with plain text");
         expect(prompt).toContain("```python");
         expect(prompt).toContain('EchoResponse = TypedDict("EchoResponse", {})');
@@ -34,7 +36,6 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).not.toContain("Available skills");
         expect(prompt).toContain("<python_result>...</python_result>");
         expect(prompt).toContain("do not use `print()` for the final return value");
-        expect(prompt).not.toContain("<say>");
         expect(prompt.indexOf("Call tool functions directly (no `await`).")).toBeLessThan(
             prompt.indexOf("Available functions:")
         );
@@ -49,6 +50,7 @@ describe("rlmNoToolsPromptBuild", () => {
 
         const prompt = await rlmNoToolsPromptBuild(tools, { isForeground: false });
 
+        expect(prompt).not.toContain("prefer it for user-visible replies");
         expect(prompt).not.toContain("respond to the user with plain text");
         expect(prompt).toContain("<run_python>...</run_python>");
     });

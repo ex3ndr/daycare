@@ -65,7 +65,7 @@ describe("system prompt skills rendering", () => {
         expect(prompt).not.toContain("For local skill authoring:");
     });
 
-    it("does not include foreground-only follow-up instructions in no-tools mode for background agents", async () => {
+    it("does not include foreground-only say/plain-text follow-up instructions in no-tools mode for background agents", async () => {
         const prompt = await renderSystemPrompt({
             toolsText: "Tool notes",
             skillsPrompt: "",
@@ -74,6 +74,7 @@ describe("system prompt skills rendering", () => {
         });
 
         expect(prompt).toContain("## Python Execution");
+        expect(prompt).not.toContain("prefer it for user-visible replies");
         expect(prompt).not.toContain("respond to the user with plain text");
     });
 });

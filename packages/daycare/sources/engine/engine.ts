@@ -61,6 +61,7 @@ import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
 import { buildReactionTool } from "./modules/tools/reaction.js";
+import { sayTool } from "./modules/tools/sayTool.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
 import { sessionHistoryToolBuild } from "./modules/tools/sessionHistoryToolBuild.js";
@@ -422,6 +423,7 @@ export class Engine {
         this.modules.tools.register("core", buildMediaAnalysisTool(this.modules.mediaAnalysis));
         this.modules.tools.register("core", buildMermaidPngTool());
         this.modules.tools.register("core", buildReactionTool());
+        this.modules.tools.register("core", sayTool());
         this.modules.tools.register("core", buildSendFileTool());
         this.modules.tools.register("core", pdfProcessTool());
         this.modules.tools.register("core", buildSignalGenerateTool(this.signals));
@@ -439,7 +441,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: tasks, topology, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: tasks, topology, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();

@@ -8,6 +8,7 @@ Blocks are executed sequentially from top to bottom.
 If one block fails, all remaining `<run_python>` blocks in that response are skipped.
 Prefer one multi-line script when possible.
 {{#if isForeground}}
+When `say(...)` is available in the function list, prefer it for user-visible replies.
 After receiving `<python_result>`, respond to the user with plain text.
 {{/if}}
 No escaping is needed.
