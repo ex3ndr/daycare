@@ -63,16 +63,15 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
     } catch (error) {
         argsError = error;
     }
-    await options.beforeExecute?.({
-        snapshotDump,
-        toolName: tool.name,
-        toolArgs
-    });
-
     let resumeOptions: RlmStepResumeOptions;
     let toolResultText = "";
     let toolIsError = false;
     try {
+        await options.beforeExecute?.({
+            snapshotDump,
+            toolName: tool.name,
+            toolArgs
+        });
         if (argsError) {
             throw argsError;
         }

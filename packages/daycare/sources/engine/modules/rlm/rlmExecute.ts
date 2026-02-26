@@ -143,16 +143,7 @@ export async function rlmExecute(
                         snapshotDump: Buffer.from(snapshotDump).toString("base64")
                     });
                 } catch (error) {
-                    const message = `Python VM crashed: failed to persist checkpoint: ${errorMessageResolve(error)}`;
-                    await historyCallback({
-                        type: "rlm_tool_result",
-                        at: Date.now(),
-                        toolCallId,
-                        toolName,
-                        toolResult: `ToolError: ${message}`,
-                        toolIsError: true
-                    });
-                    throw new Error(message);
+                    throw new Error(`Python VM crashed: failed to persist checkpoint: ${errorMessageResolve(error)}`);
                 }
                 await historyCallback({
                     type: "rlm_tool_call",

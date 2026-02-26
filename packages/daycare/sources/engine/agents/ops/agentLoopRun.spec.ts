@@ -132,7 +132,10 @@ describe("agentLoopRun", () => {
     });
 
     it("fails run_python when checkpoint save fails and records tool_result error", async () => {
-        const responses = [assistantMessageBuild("<run_python>echo('x')</run_python>"), assistantMessageBuild("<say>done</say>")];
+        const responses = [
+            assistantToolCallMessageBuild("tool-1", "run_python", { code: "echo(text='x')" }),
+            assistantMessageBuild("done")
+        ];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "ok"));
         const historyRecords: Array<{

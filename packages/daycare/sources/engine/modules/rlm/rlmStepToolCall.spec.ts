@@ -59,6 +59,30 @@ describe("rlmStepToolCall", () => {
         }
     });
 
+    it("converts beforeExecute failures into tool errors", async () => {
+        const execute = vi.fn(async (name: string, args: unknown) => okResult(name, JSON.stringify(args)));
+        const resolver = resolverBuild(execute);
+        const step = await startSnapshotBuild("echo('hello')");
+
+        const result = await rlmStepToolCall({
+            snapshot: step,
+            toolByName: new Map(tools.map((tool) => [tool.name, tool])),
+            toolResolver: resolver,
+            context: contextBuild(),
+            beforeExecute: async () => {
+                throw new Error("checkpoint write failed");
+            }
+        });
+
+        expect(execute).not.toHaveBeenCalled();
+        expect(result.toolIsError).toBe(true);
+        expect(result.toolResult).toContain("checkpoint write failed");
+        expect("exception" in result.resumeOptions).toBe(true);
+        if ("exception" in result.resumeOptions) {
+            expect(result.resumeOptions.exception.message).toContain("checkpoint write failed");
+        }
+    });
+
     it("rethrows AbortError instead of converting it into tool error output", async () => {
         const abortController = new AbortController();
         const resolver = resolverBuild(async () => {

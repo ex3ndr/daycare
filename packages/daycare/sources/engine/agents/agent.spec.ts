@@ -1188,7 +1188,7 @@ describe("Agent", () => {
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
 
             const startedAt = Date.now();
-            const snapshot = await pendingToolCallSnapshotBuild();
+            const snapshotDump = await pendingToolCallSnapshotBuild();
             const preamble = montyPreambleBuild([waitToolBuild()]);
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
@@ -1207,11 +1207,21 @@ describe("Agent", () => {
                 code: "wait(300)",
                 preamble
             });
+            const sessionId = (await agentSystem.storage.agents.findById(agentId))?.activeSessionId ?? null;
+            if (!sessionId) {
+                throw new Error("Expected active session before snapshot persist.");
+            }
+            const snapshotId = await rlmSnapshotSave({
+                config,
+                agentId,
+                sessionId,
+                snapshotDump
+            });
             await agentSystem.storage.appendHistory(agentId, {
                 type: "rlm_tool_call",
                 at: startedAt + 1,
                 toolCallId: "tool-call-1",
-                snapshot,
+                snapshotId,
                 printOutput: ["waiting..."],
                 toolCallCount: 2,
                 toolName: "wait",
