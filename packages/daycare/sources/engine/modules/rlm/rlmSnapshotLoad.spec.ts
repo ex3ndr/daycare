@@ -36,17 +36,17 @@ describe("rlmSnapshotLoad", () => {
                 });
 
                 const invalid = await rlmSnapshotLoad({
-                    storage,
                     config,
                     agentId,
+                    sessionId: createId(),
                     snapshotId: "not-cuid2"
                 });
                 expect(invalid).toBeNull();
 
                 const missing = await rlmSnapshotLoad({
-                    storage,
                     config,
                     agentId,
+                    sessionId: createId(),
                     snapshotId: createId()
                 });
                 expect(missing).toBeNull();

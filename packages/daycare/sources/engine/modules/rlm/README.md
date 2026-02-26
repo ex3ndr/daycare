@@ -92,5 +92,5 @@ RLM now persists execution checkpoints into agent history:
 
 On process restart, agent restore resolves a pending loop phase:
 - `vm_start`: assistant message was persisted but VM never started
-- `tool_call`: VM snapshot was persisted and resumes with `RuntimeError("Daycare server was restarted during executing this command")`
+- `tool_call`: VM snapshot file is loaded by explicit session id + snapshot id and resumes with `RuntimeError("Process was restarted")`
 - `error`: start record exists but no snapshot, so recovery appends failed `rlm_complete`

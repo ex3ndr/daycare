@@ -48,9 +48,9 @@ describe("rlmSnapshotCreate", () => {
 
                 expect(cuid2Is(snapshotId)).toBe(true);
                 const loaded = await rlmSnapshotLoad({
-                    storage,
                     config,
                     agentId,
+                    sessionId: (await storage.agents.findById(agentId))?.activeSessionId ?? "",
                     snapshotId
                 });
                 expect(loaded).toEqual(Buffer.from([1, 2, 3]));

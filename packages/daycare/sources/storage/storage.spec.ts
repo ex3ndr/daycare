@@ -184,9 +184,9 @@ describe("Storage", () => {
                 }
                 expect(cuid2Is(record.snapshotId)).toBe(true);
                 const loaded = await rlmSnapshotLoad({
-                    storage,
                     config,
                     agentId,
+                    sessionId,
                     snapshotId: record.snapshotId
                 });
                 expect(loaded).toEqual(snapshotDump);

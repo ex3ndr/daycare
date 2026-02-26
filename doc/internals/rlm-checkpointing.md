@@ -20,7 +20,7 @@ RLM checkpoint records are internal and are skipped when rebuilding model contex
 
 Checkpoint file I/O lives in `engine/modules/rlm/`:
 - `rlmSnapshotCreate(...)` writes dump + returns cuid2 `snapshotId`
-- `rlmSnapshotLoad(...)` reads dump by `snapshotId` and returns `Uint8Array | null`
+- `rlmSnapshotLoad(...)` reads dump by explicit `sessionId` + `snapshotId` and returns `Uint8Array | null`
 
 ## Normal Flow
 

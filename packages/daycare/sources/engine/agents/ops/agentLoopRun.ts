@@ -320,6 +320,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     const snapshotDump = await rlmSnapshotDumpLoad(
                         agentSystem,
                         agent.ctx,
+                        agent.state.activeSessionId ?? null,
                         initialPhase.snapshot.snapshotId
                     );
                     const resumed = await rlmStepResume(
@@ -1168,10 +1169,14 @@ function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPa
 async function rlmSnapshotDumpLoad(
     agentSystem: AgentSystem,
     ctx: { agentId: string },
+    sessionId: string | null,
     snapshotId: string
 ): Promise<Uint8Array> {
     if (!cuid2Is(snapshotId)) {
         throw new Error("Python VM crashed: checkpoint id is invalid.");
+    }
+    if (!sessionId) {
+        throw new Error("Python VM crashed: active session is missing.");
     }
     const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
     const storage = (agentSystem as { storage?: unknown }).storage;
@@ -1179,9 +1184,9 @@ async function rlmSnapshotDumpLoad(
         throw new Error("Python VM crashed: snapshot storage is unavailable.");
     }
     const snapshotDump = await rlmSnapshotLoad({
-        storage: storage as AgentSystem["storage"],
         config: config as AgentSystem["config"]["current"],
         agentId: ctx.agentId,
+        sessionId,
         snapshotId
     });
     if (!snapshotDump) {
