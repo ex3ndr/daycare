@@ -4,6 +4,9 @@
 
 - OS: {{os}}
 - Architecture: {{arch}}
+{{#if docker}}
+- Sandbox: Docker
+{{/if}}
 - Model: {{model}}
 - Provider: {{provider}}
 

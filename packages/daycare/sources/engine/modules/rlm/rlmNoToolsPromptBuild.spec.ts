@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 import { configResolve } from "../../../config/configResolve.js";
+import { bundledExamplesDirResolve } from "../../agents/ops/bundledExamplesDirResolve.js";
 import { Engine } from "../../engine.js";
 import { EngineEventBus } from "../../ipc/events.js";
 import { rlmNoToolsPromptBuild } from "./rlmNoToolsPromptBuild.js";
@@ -16,10 +17,7 @@ describe("rlmNoToolsPromptBuild", () => {
             { name: "skill", description: "Load skill", parameters: {} }
         ] as unknown as Tool[];
 
-        const prompt = await rlmNoToolsPromptBuild(tools, {
-            examplesDockerDir: "/shared/examples",
-            examplesHostDir: "/tmp/daycare/examples-host"
-        });
+        const prompt = await rlmNoToolsPromptBuild(tools);
 
         expect(prompt).toContain("This mode exposes zero tools to the model.");
         expect(prompt).toContain("<run_python>...</run_python>");
@@ -27,8 +25,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("executed sequentially from top to bottom");
         expect(prompt).toContain("all remaining `<run_python>` blocks in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
-        expect(prompt).toContain("- Docker runtime: `/shared/examples`");
-        expect(prompt).toContain("- Non-Docker runtime: `/tmp/daycare/examples-host`");
+        expect(prompt).toContain(bundledExamplesDirResolve());
         expect(prompt).toContain("Any `<say>` block after the first `<run_python>` is trimmed and not delivered");
         expect(prompt).not.toContain("<say> after <run_python> was ignored");
         expect(prompt).toContain("```python");

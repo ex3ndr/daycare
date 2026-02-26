@@ -138,8 +138,8 @@ Bump `DOCKER_IMAGE_VERSION` manually when sandbox image behavior changes in an i
 
 ## Path Translation
 
-- Host to container: `sandboxPathHostToContainer()`
-- Container to host: `sandboxPathContainerToHost()`
+- Host to container: `pathMountMapHostToMapped()`
+- Container to host: `pathMountMapMappedToHost()`
 
 Examples:
 

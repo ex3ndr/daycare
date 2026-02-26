@@ -32,7 +32,7 @@ describe("buildMermaidPngTool", () => {
         expect(write).toHaveBeenCalledTimes(1);
         expect(mocks.renderToPng).toHaveBeenCalledTimes(1);
         expect(write.mock.calls[0]?.[0]).toMatchObject({
-            path: "/tmp/home/downloads/pipeline.png"
+            path: "~/downloads/pipeline.png"
         });
         expect(result.toolMessage.isError).toBe(false);
         expect(result.toolMessage.content).toEqual([

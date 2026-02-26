@@ -179,7 +179,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             memory,
             toolResolver,
             skills: activeSkills,
-            skillsActiveRoot: options.skillsActiveRoot,
             skillsPersonalRoot: options.skillsPersonalRoot,
             appendHistoryRecord,
             allowedToolNames,

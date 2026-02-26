@@ -14,10 +14,12 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
     const isForeground = descriptor?.type === "user";
     const nametag = await nametagResolve(context);
     const template = await agentPromptBundledRead("SYSTEM_ENVIRONMENT.md");
+    const dockerEnabled = context.agentSystem?.config?.current?.docker?.enabled ?? false;
     const section = Handlebars.compile(template)({
         isForeground,
         os: `${os.type()} ${os.release()}`,
         arch: os.arch(),
+        docker: dockerEnabled,
         model: context.model ?? "unknown",
         provider: context.provider ?? "unknown",
         connector: isForeground ? descriptor.connector : "unknown",

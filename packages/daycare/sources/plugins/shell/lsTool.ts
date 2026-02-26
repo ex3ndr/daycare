@@ -48,7 +48,7 @@ export function buildLsTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as LsArgs;
             const limit = payload.limit ?? LS_DEFAULT_LIMIT;
-            const targetPath = toolContext.sandbox.resolveVirtualPath(payload.path?.trim() || ".");
+            const targetPath = payload.path?.trim() || ".";
             const command = lsCommandBuild(targetPath);
 
             const execResult = await toolContext.sandbox.exec({

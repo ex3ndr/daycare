@@ -96,9 +96,8 @@ function createContext(execResult: {
     const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => execResult);
     const context = {
         sandbox: {
-            workingDir: "/workspace",
-            exec,
-            resolveVirtualPath: (p: string) => p
+            execWorkingDir: "/workspace",
+            exec
         }
     } as unknown as ToolExecutionContext;
     return { context, exec };

@@ -1,4 +1,5 @@
 import type Docker from "dockerode";
+import type { PathMountPoint } from "../../util/pathMountTypes.js";
 
 export type DockerContainerConfig = {
     image: string;
@@ -14,8 +15,8 @@ export type DockerContainerConfig = {
     localDnsServers?: string[];
     userId: string;
     hostHomeDir: string;
-    hostSkillsActiveDir: string;
-    hostExamplesDir: string;
+    /** All mount points including home. Extra mounts are read-only. */
+    mounts: PathMountPoint[];
 };
 
 export type DockerContainerResolvedConfig = DockerContainerConfig & {

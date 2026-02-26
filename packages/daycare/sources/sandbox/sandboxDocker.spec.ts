@@ -97,6 +97,10 @@ describe("Sandbox docker integration", () => {
         const sandbox = new Sandbox({
             homeDir,
             permissions,
+            mounts: [
+                { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+            ],
             docker: {
                 enabled: true,
                 image: "daycare-sandbox",
@@ -109,9 +113,7 @@ describe("Sandbox docker integration", () => {
                 allowLocalNetworkingForUsers: ["u123"],
                 isolatedDnsServers: ["9.9.9.9"],
                 localDnsServers: ["192.168.1.1"],
-                userId: "u123",
-                skillsActiveDir,
-                examplesDir: skillsActiveDir
+                userId: "u123"
             }
         });
 
@@ -145,6 +147,10 @@ describe("Sandbox docker integration", () => {
         const sandbox = new Sandbox({
             homeDir,
             permissions,
+            mounts: [
+                { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+            ],
             docker: {
                 enabled: true,
                 image: "daycare-sandbox",
@@ -154,9 +160,7 @@ describe("Sandbox docker integration", () => {
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
-                userId: "u123",
-                skillsActiveDir,
-                examplesDir: skillsActiveDir
+                userId: "u123"
             }
         });
 
@@ -186,9 +190,7 @@ describe("Sandbox docker integration", () => {
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
-                userId: "u123",
-                skillsActiveDir,
-                examplesDir: skillsActiveDir
+                userId: "u123"
             }
         });
 
@@ -220,9 +222,7 @@ describe("Sandbox docker integration", () => {
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
-                userId: "u123",
-                skillsActiveDir,
-                examplesDir: skillsActiveDir
+                userId: "u123"
             }
         });
 
@@ -249,9 +249,7 @@ describe("Sandbox docker integration", () => {
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
-                userId: "u123",
-                skillsActiveDir,
-                examplesDir: skillsActiveDir
+                userId: "u123"
             }
         });
 
@@ -263,5 +261,41 @@ describe("Sandbox docker integration", () => {
         const outputPath = path.join(homeDir, "documents", "tilde-output.txt");
         expect(result.resolvedPath).toBe(await fs.realpath(outputPath));
         await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("docker-tilde-write");
+    });
+
+    it("resolves symlinked homeDir and produces correct displayPath", async () => {
+        // homeDir is a symlink; constructor should resolve it so display paths are stable.
+        const realHome = path.join(rootDir, "real-home");
+        await fs.mkdir(path.join(realHome, "desktop"), { recursive: true });
+        await fs.mkdir(path.join(realHome, "documents"), { recursive: true });
+        const symlinkHome = path.join(rootDir, "sym-home");
+        await fs.symlink(realHome, symlinkHome);
+
+        const targetPath = path.join(realHome, "documents", "notes.txt");
+        await fs.writeFile(targetPath, "hello", "utf8");
+
+        const sandbox = new Sandbox({
+            homeDir: symlinkHome,
+            permissions: {
+                workingDir: path.join(symlinkHome, "desktop"),
+                writeDirs: [symlinkHome]
+            },
+            docker: {
+                enabled: true,
+                image: "daycare-sandbox",
+                tag: "latest",
+                enableWeakerNestedSandbox: false,
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "u123"
+            }
+        });
+
+        const read = await sandbox.read({ path: "/home/documents/notes.txt", raw: true });
+        expect(read.type).toBe("text");
+        expect(read.displayPath).toBe("~/documents/notes.txt");
+        expect(read.displayPath).not.toContain(rootDir);
     });
 });

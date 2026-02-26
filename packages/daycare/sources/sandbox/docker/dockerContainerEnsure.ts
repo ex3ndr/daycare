@@ -60,8 +60,7 @@ export async function dockerContainerEnsure(
     const containerName = dockerContainerNameBuild(config.userId);
     const imageRef = `${config.image}:${config.tag}`;
     const hostHomeDir = path.resolve(config.hostHomeDir);
-    const hostSkillsActiveDir = path.resolve(config.hostSkillsActiveDir);
-    const hostExamplesDir = path.resolve(config.hostExamplesDir);
+    const extraMounts = config.mounts.filter((m) => m.mappedPath !== "/home");
     const imageId = await dockerImageIdResolve(docker, imageRef);
     const dnsProfile = dockerDnsProfileResolve({
         networkName: config.networkName,
@@ -86,8 +85,7 @@ export async function dockerContainerEnsure(
             dnsServersLabel,
             dnsResolverLabel,
             hostHomeDir,
-            hostSkillsActiveDir,
-            hostExamplesDir
+            extraMounts
         );
         if (staleReason) {
             logger.warn(
@@ -108,9 +106,6 @@ export async function dockerContainerEnsure(
         }
     }
 
-    const containerHomeDir = "/home";
-    const containerSkillsDir = "/shared/skills";
-    const containerExamplesDir = "/shared/examples";
     const securityProfile = config.unconfinedSecurity
         ? DOCKER_SECURITY_PROFILE_UNCONFINED
         : DOCKER_SECURITY_PROFILE_DEFAULT;
@@ -119,9 +114,8 @@ export async function dockerContainerEnsure(
     const readOnlyLabel = config.readOnly ? "1" : "0";
     const dnsResolvBind = await dockerDnsResolvBindResolve(hostHomeDir, dnsProfile.dnsServers);
     const binds = [
-        `${hostHomeDir}:${containerHomeDir}`,
-        `${hostSkillsActiveDir}:${containerSkillsDir}:ro`,
-        `${hostExamplesDir}:${containerExamplesDir}:ro`
+        `${hostHomeDir}:/home`,
+        ...extraMounts.map((m) => `${path.resolve(m.hostPath)}:${m.mappedPath}:ro`)
     ];
     if (dnsResolvBind) {
         binds.push(dnsResolvBind);
@@ -131,7 +125,7 @@ export async function dockerContainerEnsure(
         const created = await docker.createContainer({
             name: containerName,
             Image: imageRef,
-            WorkingDir: containerHomeDir,
+            WorkingDir: "/home",
             Labels: {
                 [DOCKER_IMAGE_VERSION_LABEL]: DOCKER_IMAGE_VERSION,
                 [DOCKER_IMAGE_ID_LABEL]: imageId,
@@ -213,8 +207,7 @@ function containerStaleReasonResolve(
     expectedDnsServersLabel: string,
     expectedDnsResolverLabel: string,
     expectedHostHomeDir: string,
-    expectedHostSkillsActiveDir: string,
-    expectedHostExamplesDir: string
+    expectedExtraMounts: Array<{ hostPath: string; mappedPath: string }>
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -260,26 +253,16 @@ function containerStaleReasonResolve(
     if (networkState !== "correct") {
         return `network-mismatch:${expectedNetworkName}`;
     }
-    const mountReason = dockerMountsStaleReasonResolve(details.Mounts, [
-        {
-            label: "home",
-            source: expectedHostHomeDir,
-            destination: "/home",
-            writable: true
-        },
-        {
-            label: "skills",
-            source: expectedHostSkillsActiveDir,
-            destination: "/shared/skills",
+    const expectedMounts: DockerExpectedMount[] = [
+        { label: "home", source: expectedHostHomeDir, destination: "/home", writable: true },
+        ...expectedExtraMounts.map((m) => ({
+            label: m.mappedPath.replace(/^\//, "").replace(/\//g, "-"),
+            source: path.resolve(m.hostPath),
+            destination: m.mappedPath,
             writable: false
-        },
-        {
-            label: "examples",
-            source: expectedHostExamplesDir,
-            destination: "/shared/examples",
-            writable: false
-        }
-    ]);
+        }))
+    ];
+    const mountReason = dockerMountsStaleReasonResolve(details.Mounts, expectedMounts);
     if (mountReason) {
         return mountReason;
     }

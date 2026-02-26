@@ -11,9 +11,11 @@ describe("sayFileResolve", () => {
     it("copies tagged files into downloads when resolving", async () => {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-say-file-resolve-"));
         try {
-            const sourcePath = path.join(tempDir, "report.txt");
+            const workingDir = path.join(tempDir, "workspace");
+            await fs.mkdir(workingDir, { recursive: true });
+            const sourcePath = path.join(workingDir, "report.txt");
             await fs.writeFile(sourcePath, Buffer.from("hello"));
-            const sandbox = sandboxBuild(tempDir, tempDir);
+            const sandbox = sandboxBuild(tempDir, workingDir);
 
             const result = await sayFileResolve({
                 files: [{ path: sourcePath, mode: "document" }],

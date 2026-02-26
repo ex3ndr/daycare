@@ -40,17 +40,19 @@ describe("buildImageGenerationTool", () => {
             });
 
             const downloads = result.toolMessage.details?.downloads as
-                | { dir: string; files: Array<{ path: string; resolvedPath: string }> }
+                | { dir: string; files: Array<{ path: string; name: string }> }
                 | undefined;
             expect(downloads?.dir).toBe("~/downloads");
             expect(downloads?.files).toHaveLength(1);
             const generatedPath = downloads?.files[0]?.path;
-            const generatedResolvedPath = downloads?.files[0]?.resolvedPath;
+            const generatedName = downloads?.files[0]?.name;
             expect(generatedPath).toBeTruthy();
-            if (!generatedPath || !generatedResolvedPath) {
+            if (!generatedPath || !generatedName) {
                 throw new Error("Missing generated file path");
             }
-            const generatedData = await fs.readFile(generatedResolvedPath, "utf8");
+            // Verify file was actually written to host filesystem
+            const hostFilePath = path.join(tempDir, "downloads", generatedName);
+            const generatedData = await fs.readFile(hostFilePath, "utf8");
             expect(generatedData).toBe("png-bytes");
             expect(result.typedResult.generated).toEqual([
                 expect.objectContaining({

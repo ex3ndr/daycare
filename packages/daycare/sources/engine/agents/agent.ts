@@ -102,7 +102,10 @@ export class Agent {
         this.sandbox = new Sandbox({
             homeDir: this.userHome.home,
             permissions: this.state.permissions,
-            examplesDir,
+            mounts: [
+                { hostPath: this.userHome.skillsActive, mappedPath: "/shared/skills" },
+                ...(examplesDir ? [{ hostPath: examplesDir, mappedPath: "/shared/examples" }] : [])
+            ],
             docker: dockerSettings?.enabled
                 ? {
                       enabled: true,
@@ -118,9 +121,7 @@ export class Agent {
                       allowLocalNetworkingForUsers: dockerSettings.allowLocalNetworkingForUsers,
                       isolatedDnsServers: dockerSettings.isolatedDnsServers,
                       localDnsServers: dockerSettings.localDnsServers,
-                      userId: this.ctx.userId,
-                      skillsActiveDir: this.userHome.skillsActive,
-                      examplesDir
+                      userId: this.ctx.userId
                   }
                 : undefined
         });

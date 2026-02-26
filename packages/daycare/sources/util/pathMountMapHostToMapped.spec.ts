@@ -24,6 +24,13 @@ describe("pathMountMapHostToMapped", () => {
         expect(pathMountMapHostToMapped({ mountPoints, hostPath: "host/home/file.txt" })).toBeNull();
     });
 
+    it("does not match lookalike prefixes", () => {
+        const mounts = [{ hostPath: "/data/users/u123/home", mappedPath: "/home" }];
+        expect(
+            pathMountMapHostToMapped({ mountPoints: mounts, hostPath: "/data/users/u123/homework/notes.txt" })
+        ).toBeNull();
+    });
+
     it("prefers the most specific overlapping mount point", () => {
         const overlapping = [
             { hostPath: "/host", mappedPath: "/base" },

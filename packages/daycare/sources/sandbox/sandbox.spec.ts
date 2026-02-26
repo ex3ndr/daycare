@@ -42,13 +42,13 @@ describe("Sandbox", () => {
         await fs.rm(rootDir, { recursive: true, force: true });
     });
 
-    it("stores homeDir and resolves workingDir from permissions", () => {
-        expect(sandbox.homeDir).toBe(path.resolve(homeDir));
-        expect(sandbox.workingDir).toBe(path.resolve(workingDir));
+    it("stores homeDir and resolves workingDir from permissions", async () => {
+        expect(sandbox.homeDir).toBe(await fs.realpath(homeDir));
+        expect(sandbox.workingDir).toBe(await fs.realpath(workingDir));
         expect(sandbox.permissions).toBe(permissions);
     });
 
-    it("uses workingDir from permissions only", () => {
+    it("uses workingDir from permissions only", async () => {
         const fromPermissions = new Sandbox({
             homeDir,
             permissions: {
@@ -56,7 +56,7 @@ describe("Sandbox", () => {
                 workingDir: writeDir
             }
         });
-        expect(fromPermissions.workingDir).toBe(path.resolve(writeDir));
+        expect(fromPermissions.workingDir).toBe(await fs.realpath(writeDir));
     });
 
     it("reads text with pagination", async () => {
@@ -229,7 +229,7 @@ describe("Sandbox", () => {
     });
 
     itIfSandbox("supports cwd override", async () => {
-        const cwd = path.join(workingDir, "cwd");
+        const cwd = path.join(sandbox.workingDir, "cwd");
         await fs.mkdir(cwd, { recursive: true });
 
         const result = await sandbox.exec({

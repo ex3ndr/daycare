@@ -50,8 +50,11 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
             capDrop: [],
             userId,
             hostHomeDir: homeDir,
-            hostSkillsActiveDir: skillsActiveDir,
-            hostExamplesDir: skillsActiveDir
+            mounts: [
+                { hostPath: homeDir, mappedPath: "/home" },
+                { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+            ]
         };
     });
 

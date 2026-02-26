@@ -71,6 +71,11 @@ export type SandboxExecResult = {
     cwd: string;
 };
 
+export type SandboxMount = {
+    hostPath: string;
+    mappedPath: string;
+};
+
 export type SandboxDockerConfig = {
     enabled: boolean;
     image: string;
@@ -86,13 +91,11 @@ export type SandboxDockerConfig = {
     isolatedDnsServers?: string[];
     localDnsServers?: string[];
     userId: string;
-    skillsActiveDir: string;
-    examplesDir: string;
 };
 
 export type SandboxConfig = {
     homeDir: string;
     permissions: SessionPermissions;
-    examplesDir?: string;
+    mounts?: SandboxMount[];
     docker?: SandboxDockerConfig;
 };

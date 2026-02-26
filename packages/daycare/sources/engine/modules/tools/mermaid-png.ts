@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { renderMermaid, THEMES } from "beautiful-mermaid";
@@ -82,7 +81,7 @@ export function buildMermaidPngTool(): ToolDefinition<typeof schema> {
                 width: payload.width ?? 1600
             });
             const fileName = sanitizeFilename(mermaidPngNameResolve(payload.name));
-            const targetPath = path.join(context.sandbox.homeDir, "downloads", fileName);
+            const targetPath = `~/downloads/${fileName}`;
             const stored = await context.sandbox.write({
                 path: targetPath,
                 content: png

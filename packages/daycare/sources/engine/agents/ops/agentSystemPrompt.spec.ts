@@ -153,7 +153,6 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("## Model Awareness");
             expect(rendered).toContain("**OpenAI**:");
             expect(rendered).toContain("set_agent_model");
-            expect(rendered).toContain("/shared/examples");
             expect(rendered).toContain(bundledExamplesDirResolve());
         } finally {
             await rm(dir, { recursive: true, force: true });

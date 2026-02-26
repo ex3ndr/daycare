@@ -4,9 +4,10 @@ import path from "node:path";
 import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 
 import { getLogger } from "../../log.js";
+import { pathMountMapHostToMapped } from "../../util/pathMountMapHostToMapped.js";
+import type { PathMountPoint } from "../../util/pathMountTypes.js";
 import { shellQuote } from "../../util/shellQuote.js";
 import { sandboxHomeRedefine } from "../sandboxHomeRedefine.js";
-import { sandboxPathHostToContainer } from "../sandboxPathHostToContainer.js";
 import { dockerContainersShared } from "./dockerContainersShared.js";
 import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerTypes.js";
 
@@ -22,15 +23,14 @@ export type DockerRunInSandboxOptions = {
     timeoutMs?: number;
     maxBufferBytes?: number;
     signal?: AbortSignal;
-    docker: Omit<DockerContainerConfig, "hostHomeDir" | "hostSkillsActiveDir" | "hostExamplesDir"> & {
-        hostSkillsActiveDir: string;
-        hostExamplesDir: string;
+    docker: Omit<DockerContainerConfig, "hostHomeDir"> & {
+        mounts: PathMountPoint[];
     };
 };
 
 /**
  * Runs sandbox-runtime inside a per-user Docker container.
- * Expects: docker image is local and options.home is mounted to /home/<userId>.
+ * Expects: docker image is local and options.home is mounted to /home.
  */
 export async function dockerRunInSandbox(
     command: string,
@@ -38,20 +38,14 @@ export async function dockerRunInSandbox(
     options: DockerRunInSandboxOptions
 ): Promise<{ stdout: string; stderr: string }> {
     const hostHomeDir = path.resolve(options.home);
+    const mounts = options.docker.mounts;
     const dockerConfig: DockerContainerConfig = {
         ...options.docker,
         hostHomeDir,
-        hostSkillsActiveDir: path.resolve(options.docker.hostSkillsActiveDir),
-        hostExamplesDir: path.resolve(options.docker.hostExamplesDir)
+        mounts
     };
 
-    const runtimeConfig = runtimeConfigPathRewrite(
-        config,
-        hostHomeDir,
-        options.docker.userId,
-        dockerConfig.hostSkillsActiveDir,
-        dockerConfig.hostExamplesDir
-    );
+    const runtimeConfig = runtimeConfigPathRewrite(config, mounts);
     const settingsHostPath = path.join(
         hostHomeDir,
         ".tmp",
@@ -61,29 +55,9 @@ export async function dockerRunInSandbox(
         env: options.env ?? process.env,
         home: hostHomeDir
     });
-    const containerEnv = envPathRewrite(
-        env,
-        hostHomeDir,
-        options.docker.userId,
-        dockerConfig.hostSkillsActiveDir,
-        dockerConfig.hostExamplesDir
-    );
-    const containerCwd = options.cwd
-        ? containerPathRewriteStrict(
-              options.cwd,
-              hostHomeDir,
-              options.docker.userId,
-              dockerConfig.hostSkillsActiveDir,
-              dockerConfig.hostExamplesDir
-          )
-        : undefined;
-    const settingsContainerPath = sandboxPathHostToContainer(
-        hostHomeDir,
-        options.docker.userId,
-        settingsHostPath,
-        dockerConfig.hostSkillsActiveDir,
-        dockerConfig.hostExamplesDir
-    );
+    const containerEnv = envPathRewrite(env, mounts);
+    const containerCwd = options.cwd ? containerPathRewriteStrict(options.cwd, mounts) : undefined;
+    const settingsContainerPath = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: settingsHostPath });
     if (!settingsContainerPath) {
         throw new Error(`Path is not mappable to container mounts: ${settingsHostPath}`);
     }
@@ -127,13 +101,7 @@ export async function dockerRunInSandbox(
     }
 }
 
-function runtimeConfigPathRewrite(
-    config: SandboxRuntimeConfig,
-    hostHomeDir: string,
-    userId: string,
-    hostSkillsActiveDir: string,
-    hostExamplesDir: string
-): SandboxRuntimeConfig {
+function runtimeConfigPathRewrite(config: SandboxRuntimeConfig, mounts: PathMountPoint[]): SandboxRuntimeConfig {
     if (!config.filesystem) {
         return config;
     }
@@ -142,56 +110,32 @@ function runtimeConfigPathRewrite(
         ...config,
         filesystem: {
             ...config.filesystem,
-            allowWrite: config.filesystem.allowWrite.map((entry) =>
-                containerPathRewrite(entry, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir)
-            ),
-            denyRead: config.filesystem.denyRead.map((entry) =>
-                containerPathRewrite(entry, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir)
-            ),
-            denyWrite: config.filesystem.denyWrite.map((entry) =>
-                containerPathRewrite(entry, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir)
-            )
+            allowWrite: config.filesystem.allowWrite.map((entry) => containerPathRewrite(entry, mounts)),
+            denyRead: config.filesystem.denyRead.map((entry) => containerPathRewrite(entry, mounts)),
+            denyWrite: config.filesystem.denyWrite.map((entry) => containerPathRewrite(entry, mounts))
         }
     };
 }
 
-function envPathRewrite(
-    env: NodeJS.ProcessEnv,
-    hostHomeDir: string,
-    userId: string,
-    hostSkillsActiveDir: string,
-    hostExamplesDir: string
-): NodeJS.ProcessEnv {
+function envPathRewrite(env: NodeJS.ProcessEnv, mounts: PathMountPoint[]): NodeJS.ProcessEnv {
     const rewritten: NodeJS.ProcessEnv = {};
 
     for (const [key, value] of Object.entries(env)) {
         if (value === undefined) {
             continue;
         }
-        rewritten[key] = containerPathRewrite(value, hostHomeDir, userId, hostSkillsActiveDir, hostExamplesDir);
+        rewritten[key] = containerPathRewrite(value, mounts);
     }
 
     return rewritten;
 }
 
-function containerPathRewrite(
-    value: string,
-    hostHomeDir: string,
-    userId: string,
-    hostSkillsActiveDir: string,
-    hostExamplesDir: string
-): string {
-    return sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir, hostExamplesDir) ?? value;
+function containerPathRewrite(value: string, mounts: PathMountPoint[]): string {
+    return pathMountMapHostToMapped({ mountPoints: mounts, hostPath: value }) ?? value;
 }
 
-function containerPathRewriteStrict(
-    value: string,
-    hostHomeDir: string,
-    userId: string,
-    hostSkillsActiveDir: string,
-    hostExamplesDir: string
-): string {
-    const mapped = sandboxPathHostToContainer(hostHomeDir, userId, value, hostSkillsActiveDir, hostExamplesDir);
+function containerPathRewriteStrict(value: string, mounts: PathMountPoint[]): string {
+    const mapped = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: value });
     if (!mapped) {
         throw new Error(`Path is not mappable to container mounts: ${value}`);
     }

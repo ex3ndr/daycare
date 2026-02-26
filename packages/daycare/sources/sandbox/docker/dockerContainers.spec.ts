@@ -45,8 +45,11 @@ describe("DockerContainers", () => {
             capDrop: [],
             userId: "user-1",
             hostHomeDir: "/tmp/home",
-            hostSkillsActiveDir: "/tmp/skills",
-            hostExamplesDir: "/tmp/examples",
+            mounts: [
+                { hostPath: "/tmp/home", mappedPath: "/home" },
+                { hostPath: "/tmp/skills", mappedPath: "/shared/skills" },
+                { hostPath: "/tmp/examples", mappedPath: "/shared/examples" }
+            ],
             allowLocalNetworkingForUsers: ["user-2"],
             isolatedDnsServers: ["9.9.9.9"],
             localDnsServers: ["192.168.1.1"]
@@ -92,8 +95,11 @@ describe("DockerContainers", () => {
                 capDrop: [],
                 userId: "user-1",
                 hostHomeDir: "/tmp/home",
-                hostSkillsActiveDir: "/tmp/skills",
-                hostExamplesDir: "/tmp/examples"
+                mounts: [
+                    { hostPath: "/tmp/home", mappedPath: "/home" },
+                    { hostPath: "/tmp/skills", mappedPath: "/shared/skills" },
+                    { hostPath: "/tmp/examples", mappedPath: "/shared/examples" }
+                ]
             },
             {
                 command: ["echo", "ok"]

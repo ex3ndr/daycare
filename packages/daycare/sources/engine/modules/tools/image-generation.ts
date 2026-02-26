@@ -132,16 +132,13 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                 }
             );
 
-            const outputDir = path.join(toolContext.sandbox.homeDir, "downloads");
             const createdAt = new Date();
             const timestamp = createdAt.toISOString().replace(/[:.]/g, "-");
-            const outputDirSandboxPath = `~/${path.relative(toolContext.sandbox.homeDir, outputDir)}`;
             const content: Array<{ type: "text"; text: string }> = [];
             const savedFiles: Array<{
                 id: string;
                 name: string;
                 path: string;
-                resolvedPath: string;
                 mimeType: string;
                 size: number;
             }> = [];
@@ -152,17 +149,15 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                 const suffix = result.files.length > 1 ? `-${index + 1}` : "";
                 const extension = imageExtensionResolve(file.mimeType);
                 const fileName = sanitizeFilename(`${timestamp}${suffix}${extension}`);
-                const targetPath = path.join(outputDir, fileName);
                 const sourceContent = await fs.readFile(file.path);
                 const saved = await toolContext.sandbox.write({
-                    path: targetPath,
+                    path: `~/downloads/${fileName}`,
                     content: sourceContent
                 });
                 savedFiles.push({
                     id: saved.sandboxPath,
                     name: fileName,
                     path: saved.sandboxPath,
-                    resolvedPath: saved.resolvedPath,
                     mimeType: file.mimeType,
                     size: saved.bytes
                 });
@@ -173,7 +168,7 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
             }
             const summary =
                 savedFiles.length > 0
-                    ? `Generated ${savedFiles.length} image(s) with ${providerId}. Saved to ${outputDirSandboxPath}: ${savedFiles.map((file) => file.path).join(", ")}.`
+                    ? `Generated ${savedFiles.length} image(s) with ${providerId}. Saved to ~/downloads: ${savedFiles.map((file) => file.path).join(", ")}.`
                     : `Generated 0 image files with ${providerId}.`;
             content.unshift({
                 type: "text",
@@ -194,12 +189,11 @@ export function buildImageGenerationTool(imageRegistry: ImageGenerationRegistry)
                         size: file.size
                     })),
                     downloads: {
-                        dir: outputDirSandboxPath,
+                        dir: "~/downloads",
                         files: savedFiles.map((file) => ({
                             id: file.id,
                             name: file.name,
                             path: file.path,
-                            resolvedPath: file.resolvedPath,
                             mimeType: file.mimeType,
                             size: file.size
                         }))

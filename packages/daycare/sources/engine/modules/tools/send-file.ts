@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
@@ -10,7 +9,6 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
-import { openSecure, pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import { sanitizeFilename } from "../../../util/filename.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 
@@ -149,55 +147,27 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
 }
 
 async function resolveFile(payload: SendFileArgs, context: ToolExecutionContext): Promise<FileReference> {
-    const hasPath = typeof payload.path === "string" && payload.path.length > 0;
-    if (!hasPath) {
+    if (!payload.path || payload.path.length === 0) {
         throw new Error("path is required");
     }
-
-    // Securely resolve path, following symlinks and verifying containment
-    const allowedDirs = [context.sandbox.permissions.workingDir, ...context.sandbox.permissions.writeDirs];
-    const { realPath: resolved } = await pathResolveSecure(allowedDirs, payload.path!);
-
-    // Use lstat to check for symlinks, then open securely to prevent TOCTOU
-    const stats = await fs.lstat(resolved);
-    if (stats.isSymbolicLink()) {
-        throw new Error("Cannot send symbolic link");
-    }
-    if (!stats.isFile()) {
-        throw new Error("Path is not a file");
-    }
-
-    // Verify file is still accessible via secure open
-    const handle = await openSecure(resolved, "r");
-    const handleStats = await handle.stat();
-    await handle.close();
-
-    if (!handleStats.isFile()) {
-        throw new Error("Path is not a file");
-    }
-
-    const mimeType = payload.mimeType;
-    if (!mimeType) {
+    if (!payload.mimeType) {
         throw new Error("mimeType is required when sending a path");
     }
-    const handleForRead = await openSecure(resolved, "r");
-    let data: Buffer;
-    try {
-        data = await handleForRead.readFile();
-    } finally {
-        await handleForRead.close();
+
+    const readResult = await context.sandbox.read({ path: payload.path, binary: true });
+    if (readResult.type !== "binary") {
+        throw new Error("Path is not a file");
     }
 
-    const name = sanitizeFilename(payload.name ?? path.basename(resolved));
-    const targetPath = path.join(context.sandbox.homeDir, "downloads", name);
+    const name = sanitizeFilename(payload.name ?? path.basename(readResult.displayPath));
     const stored = await context.sandbox.write({
-        path: targetPath,
-        content: data
+        path: `~/downloads/${name}`,
+        content: readResult.content
     });
     return {
         id: stored.sandboxPath,
         name,
-        mimeType,
+        mimeType: payload.mimeType,
         size: stored.bytes,
         path: stored.resolvedPath
     };

@@ -2,12 +2,11 @@ import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
-import type { SessionPermissions, ToolDefinition, ToolResultContract } from "@/types";
-import { sandboxCanRead } from "../../../sandbox/sandboxCanRead.js";
+import matter from "gray-matter";
+import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { SandboxReadResult } from "../../../sandbox/sandboxTypes.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
-import { skillContentLoad } from "../../skills/skillContentLoad.js";
-import { skillResolve } from "../../skills/skillResolve.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import { toolMessageTextExtract } from "./toolReturnOutcome.js";
 import type { ToolExecutionContext } from "./types.js";
@@ -37,6 +36,8 @@ type SkillResult = Static<typeof skillResultSchema>;
 type SkillTarget = {
     skill: AgentSkill;
     requestedByPath: boolean;
+    /** Pre-loaded body (frontmatter stripped) for path-based skills to avoid double-read. */
+    preloadedBody?: string;
 };
 
 const skillReturns: ToolResultContract<SkillResult> = {
@@ -44,6 +45,11 @@ const skillReturns: ToolResultContract<SkillResult> = {
     toLLMText: (result) => result.summary
 };
 
+/**
+ * Builds the "skill" tool that loads and runs skills by name or SKILL.md path.
+ * Named skills are always loaded via the /shared/skills sandbox mount.
+ * Path-based skills are loaded via sandbox.read on the requested path.
+ */
 export function skillToolBuild(): ToolDefinition {
     return {
         tool: {
@@ -58,20 +64,11 @@ export function skillToolBuild(): ToolDefinition {
             if (!requested) {
                 throw new Error("Skill name is required.");
             }
-            const workingDir = toolContext.sandbox.workingDir;
-            if (!workingDir) {
-                throw new Error("Workspace is not configured.");
-            }
 
-            const target = await skillTargetResolve(
-                requested,
-                toolContext.skills ?? [],
-                toolContext.sandbox.permissions,
-                workingDir
-            );
+            const target = await skillTargetResolve(requested, toolContext.skills ?? [], toolContext);
             if (!target) {
                 throw skillInputLooksLikePath(requested)
-                    ? new Error(`Skill not found at path: ${path.resolve(workingDir, requested)}.`)
+                    ? new Error(`Skill not found at path: ${requested}.`)
                     : new Error(`Unknown skill: ${requested}.`);
             }
             const { skill } = target;
@@ -79,14 +76,8 @@ export function skillToolBuild(): ToolDefinition {
             // Notify connector about skill activation (fire-and-forget for user agents)
             void skillNotifyConnector(skill.name, toolContext);
 
-            const skillFilePath = await skillPathForLoadResolve(skill, target.requestedByPath, toolContext);
-            const resolvedSkillPath = await skillPathResolveReadable(toolContext.sandbox.permissions, skillFilePath);
-            const skillBody = await skillContentLoad(resolvedSkillPath);
-            const skillBodyDecorated = skillBodyDecorate(
-                skillBody,
-                skill.name,
-                skillBaseDirectoryBuild(skill, target.requestedByPath, toolContext, resolvedSkillPath)
-            );
+            const loaded = await skillContentRead(target, toolContext);
+            const skillBodyDecorated = skillBodyDecorate(loaded.body, skill.name, loaded.baseDir);
             if (skill.sandbox === true) {
                 const skillSource = skillSourceBuild(skill.name);
                 const prompt = payload.prompt?.trim() ?? "";
@@ -113,12 +104,12 @@ export function skillToolBuild(): ToolDefinition {
                     }
                 );
                 const responseText = "responseText" in result ? result.responseText : null;
-                const body =
+                const responseBody =
                     responseText && responseText.trim().length > 0 ? responseText.trim() : "No response text returned.";
                 const toolMessage = toolMessageBuild(
                     toolCall.id,
                     toolCall.name,
-                    `Skill executed in sandbox. Result:\n\n---\n\n${body}`
+                    `Skill executed in sandbox. Result:\n\n---\n\n${responseBody}`
                 );
                 return {
                     toolMessage,
@@ -131,11 +122,11 @@ export function skillToolBuild(): ToolDefinition {
                 };
             }
 
-            const body = skillBodyDecorated.length > 0 ? skillBodyDecorated : "(Skill body is empty.)";
+            const displayBody = skillBodyDecorated.length > 0 ? skillBodyDecorated : "(Skill body is empty.)";
             const toolMessage = toolMessageBuild(
                 toolCall.id,
                 toolCall.name,
-                `Skill loaded (embedded). Follow the instructions below:\n\n---\n\n${body}`
+                `Skill loaded (embedded). Follow the instructions below:\n\n---\n\n${displayBody}`
             );
             return {
                 toolMessage,
@@ -153,23 +144,77 @@ export function skillToolBuild(): ToolDefinition {
 async function skillTargetResolve(
     requested: string,
     skills: AgentSkill[],
-    permissions: SessionPermissions,
-    workingDir: string
+    toolContext: ToolExecutionContext
 ): Promise<SkillTarget | null> {
     if (skillInputLooksLikePath(requested)) {
-        const requestedPath = path.resolve(workingDir, requested);
-        const readablePath = await skillPathResolveReadable(permissions, requestedPath);
-        const skill = await skillResolve(readablePath, { source: "config" });
-        return skill ? { skill, requestedByPath: true } : null;
+        return skillTargetFromPathResolve(requested, toolContext);
     }
 
     const skill = skillByNameResolve(requested, skills);
     return skill ? { skill, requestedByPath: false } : null;
 }
 
-async function skillPathResolveReadable(permissions: SessionPermissions, target: string): Promise<string> {
-    const resolvedPath = path.resolve(target);
-    return sandboxCanRead(permissions, resolvedPath);
+/**
+ * Reads a SKILL.md via sandbox.read, parses frontmatter, and returns a SkillTarget.
+ * Permission errors from sandbox.read propagate; file-not-found returns null.
+ */
+async function skillTargetFromPathResolve(
+    requested: string,
+    toolContext: ToolExecutionContext
+): Promise<SkillTarget | null> {
+    let result: SandboxReadResult;
+    try {
+        result = await toolContext.sandbox.read({ path: requested });
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === "ENOENT" || code === "ENOTDIR") {
+            return null;
+        }
+        throw error;
+    }
+    if (result.type !== "text") {
+        return null;
+    }
+    const parsed = skillFrontmatterParse(result.content);
+    if (!parsed.name) {
+        return null;
+    }
+    const skill: AgentSkill = {
+        id: `path:${requested}`,
+        name: parsed.name,
+        description: parsed.description,
+        sandbox: parsed.sandbox,
+        permissions: parsed.permissions,
+        sourcePath: requested,
+        source: "config"
+    };
+    return { skill, requestedByPath: true, preloadedBody: parsed.body };
+}
+
+/**
+ * Reads skill body via sandbox paths. Named skills load from /shared/skills mount.
+ * Path-based skills use pre-loaded content from skillTargetFromPathResolve.
+ */
+async function skillContentRead(
+    target: SkillTarget,
+    toolContext: ToolExecutionContext
+): Promise<{ body: string; baseDir: string }> {
+    if (target.requestedByPath && target.preloadedBody !== undefined) {
+        return {
+            body: target.preloadedBody,
+            baseDir: path.posix.dirname(target.skill.sourcePath)
+        };
+    }
+    const activationKey = skillActivationKeyBuild(target.skill.id);
+    const sandboxPath = `/shared/skills/${activationKey}/SKILL.md`;
+    const result = await toolContext.sandbox.read({ path: sandboxPath });
+    if (result.type !== "text") {
+        throw new Error("Skill file must be a text file.");
+    }
+    return {
+        body: skillFrontmatterStrip(result.content),
+        baseDir: `/shared/skills/${activationKey}`
+    };
 }
 
 function skillInputLooksLikePath(value: string): boolean {
@@ -199,32 +244,54 @@ function skillByNameResolve(requested: string, skills: AgentSkill[]): AgentSkill
     return null;
 }
 
-async function skillPathForLoadResolve(
-    skill: AgentSkill,
-    requestedByPath: boolean,
-    toolContext: ToolExecutionContext
-): Promise<string> {
-    if (requestedByPath || !toolContext.skillsActiveRoot) {
-        return skill.sourcePath;
+function skillFrontmatterParse(content: string): {
+    name: string | null;
+    description: string | null;
+    sandbox?: boolean;
+    permissions?: string[];
+    body: string;
+} {
+    try {
+        const parsed = matter(content);
+        const data = parsed.data as Record<string, unknown>;
+        const name = typeof data.name === "string" && data.name.trim().length > 0 ? data.name.trim() : null;
+        const description =
+            typeof data.description === "string" && data.description.trim().length > 0 ? data.description.trim() : null;
+        let sandbox: boolean | undefined;
+        if (data.sandbox === true) {
+            sandbox = true;
+        } else if (typeof data.sandbox === "string" && data.sandbox.trim().toLowerCase() === "true") {
+            sandbox = true;
+        } else if (
+            data.sandbox === false ||
+            (typeof data.sandbox === "string" && data.sandbox.trim().toLowerCase() === "false")
+        ) {
+            sandbox = false;
+        }
+        let permissions: string[] | undefined;
+        if (Array.isArray(data.permissions)) {
+            const filtered = data.permissions
+                .filter((v): v is string => typeof v === "string")
+                .map((v) => v.trim())
+                .filter((v) => v.length > 0);
+            if (filtered.length > 0) {
+                permissions = Array.from(new Set(filtered));
+            }
+        } else if (typeof data.permissions === "string" && data.permissions.trim().length > 0) {
+            permissions = [data.permissions.trim()];
+        }
+        return { name, description, sandbox, permissions, body: parsed.content.trim() };
+    } catch {
+        return { name: null, description: null, body: content.trim() };
     }
-    const activationKey = skillActivationKeyBuild(skill.id);
-    return path.resolve(toolContext.skillsActiveRoot, activationKey, "SKILL.md");
 }
 
-function skillBaseDirectoryBuild(
-    skill: AgentSkill,
-    requestedByPath: boolean,
-    toolContext: ToolExecutionContext,
-    resolvedSkillPath: string
-): string {
-    if (requestedByPath || !toolContext.skillsActiveRoot) {
-        return path.dirname(resolvedSkillPath);
+function skillFrontmatterStrip(content: string): string {
+    try {
+        return matter(content).content.trim();
+    } catch {
+        return content.trim();
     }
-    const activationKey = skillActivationKeyBuild(skill.id);
-    if (toolContext.sandbox.docker?.enabled) {
-        return path.posix.join("/shared/skills", activationKey);
-    }
-    return path.resolve(toolContext.skillsActiveRoot, activationKey);
 }
 
 function skillBodyDecorate(skillBody: string, skillName: string, baseDirectory: string): string {

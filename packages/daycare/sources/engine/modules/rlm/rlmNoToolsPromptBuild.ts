@@ -10,34 +10,29 @@ type RlmNoToolsPromptTemplateContext = {
     isForeground: boolean;
 };
 
-type RlmNoToolsPythonPromptTemplateContext = {
-    examplesDockerDir: string;
-    examplesHostDir: string;
-};
-
 export type RlmNoToolsPromptBuildOptions = {
     isForeground?: boolean;
-    examplesDockerDir?: string;
-    examplesHostDir?: string;
+    examplesDir?: string;
 };
 
 let rlmNoToolsPromptTemplatePromise: Promise<HandlebarsTemplateDelegate<RlmNoToolsPromptTemplateContext>> | null = null;
 
-let pythonToolsTemplatePromise: Promise<HandlebarsTemplateDelegate<RlmNoToolsPythonPromptTemplateContext>> | null =
-    null;
+type PythonToolsTemplateContext = {
+    examplesDir: string;
+};
+
+let pythonToolsTemplatePromise: Promise<HandlebarsTemplateDelegate<PythonToolsTemplateContext>> | null = null;
 
 /** Reads and caches the shared TOOLS_PYTHON.md Python execution instructions. */
-async function toolsPythonRead(context: RlmNoToolsPythonPromptTemplateContext): Promise<string> {
+async function toolsPythonRead(examplesDir: string): Promise<string> {
     const template = await toolsPythonTemplateCompile();
-    return template(context).trim();
+    return template({ examplesDir }).trim();
 }
 
-async function toolsPythonTemplateCompile(): Promise<
-    HandlebarsTemplateDelegate<RlmNoToolsPythonPromptTemplateContext>
-> {
+async function toolsPythonTemplateCompile(): Promise<HandlebarsTemplateDelegate<PythonToolsTemplateContext>> {
     if (!pythonToolsTemplatePromise) {
         pythonToolsTemplatePromise = agentPromptBundledRead("TOOLS_PYTHON.md").then((source) =>
-            Handlebars.compile<RlmNoToolsPythonPromptTemplateContext>(source)
+            Handlebars.compile<PythonToolsTemplateContext>(source)
         );
     }
     return pythonToolsTemplatePromise;
@@ -52,13 +47,9 @@ export async function rlmNoToolsPromptBuild(
     options: RlmNoToolsPromptBuildOptions = {}
 ): Promise<string> {
     const isForeground = options.isForeground ?? true;
-    const examplesDockerDir = options.examplesDockerDir ?? "/shared/examples";
-    const examplesHostDir = options.examplesHostDir ?? bundledExamplesDirResolve();
+    const examplesDir = options.examplesDir ?? bundledExamplesDirResolve();
     const preamble = montyPreambleBuild(tools);
-    const pythonTools = await toolsPythonRead({
-        examplesDockerDir,
-        examplesHostDir
-    });
+    const pythonTools = await toolsPythonRead(examplesDir);
     const template = await rlmNoToolsPromptTemplateCompile();
     return template({ preamble, pythonTools, isForeground }).trim();
 }

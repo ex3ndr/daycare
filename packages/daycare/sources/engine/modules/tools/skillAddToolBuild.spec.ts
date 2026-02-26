@@ -3,16 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
+import { Sandbox } from "../../../sandbox/sandbox.js";
 import { skillAddToolBuild } from "./skillAddToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "skill_add" };
 
 describe("skillAddToolBuild", () => {
     it("installs a skill to the personal directory", async () => {
-        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+        const dirs = await testDirsCreate();
         try {
-            const sourceDir = path.join(tmpDir, "source-skill");
-            const personalRoot = path.join(tmpDir, "personal");
+            const sourceDir = path.join(dirs.homeDir, "source-skill");
             await fs.mkdir(sourceDir, { recursive: true });
             await fs.writeFile(
                 path.join(sourceDir, "skill.md"),
@@ -21,126 +21,165 @@ describe("skillAddToolBuild", () => {
             await fs.writeFile(path.join(sourceDir, "helper.txt"), "extra file");
 
             const tool = skillAddToolBuild();
-            const context = contextBuild({ skillsPersonalRoot: personalRoot });
-            const result = await tool.execute({ path: sourceDir }, context, toolCall);
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            const result = await tool.execute({ path: "source-skill" }, context, toolCall);
 
             expect(result.typedResult.status).toBe("installed");
             expect(result.typedResult.skillName).toBe("test-skill");
 
             // Verify files were copied
-            const targetSkill = await fs.readFile(path.join(personalRoot, "test-skill", "skill.md"), "utf8");
+            const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "skill.md"), "utf8");
             expect(targetSkill).toContain("name: test-skill");
-            const targetHelper = await fs.readFile(path.join(personalRoot, "test-skill", "helper.txt"), "utf8");
+            const targetHelper = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "helper.txt"), "utf8");
             expect(targetHelper).toBe("extra file");
         } finally {
-            await fs.rm(tmpDir, { recursive: true, force: true });
+            await dirs.cleanup();
         }
     });
 
     it("replaces an existing skill with the same name", async () => {
-        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+        const dirs = await testDirsCreate();
         try {
-            const sourceDir = path.join(tmpDir, "source-skill");
-            const personalRoot = path.join(tmpDir, "personal");
+            const sourceDir = path.join(dirs.homeDir, "source-skill");
             await fs.mkdir(sourceDir, { recursive: true });
             await fs.writeFile(path.join(sourceDir, "skill.md"), "---\nname: test-skill\n---\nUpdated body");
 
             // Pre-create existing skill
-            const existingDir = path.join(personalRoot, "test-skill");
+            const existingDir = path.join(dirs.personalRoot, "test-skill");
             await fs.mkdir(existingDir, { recursive: true });
             await fs.writeFile(path.join(existingDir, "skill.md"), "---\nname: test-skill\n---\nOld body");
 
             const tool = skillAddToolBuild();
-            const context = contextBuild({ skillsPersonalRoot: personalRoot });
-            const result = await tool.execute({ path: sourceDir }, context, toolCall);
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            const result = await tool.execute({ path: "source-skill" }, context, toolCall);
 
             expect(result.typedResult.status).toBe("replaced");
             expect(result.typedResult.skillName).toBe("test-skill");
 
-            const content = await fs.readFile(path.join(personalRoot, "test-skill", "skill.md"), "utf8");
+            const content = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "skill.md"), "utf8");
             expect(content).toContain("Updated body");
         } finally {
-            await fs.rm(tmpDir, { recursive: true, force: true });
+            await dirs.cleanup();
         }
     });
 
     it("throws when source path is not a directory", async () => {
-        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+        const dirs = await testDirsCreate();
         try {
             const tool = skillAddToolBuild();
-            const context = contextBuild({ skillsPersonalRoot: path.join(tmpDir, "personal") });
-            await expect(tool.execute({ path: path.join(tmpDir, "nonexistent") }, context, toolCall)).rejects.toThrow(
-                "not a directory"
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
+                "not a valid skill directory"
             );
         } finally {
-            await fs.rm(tmpDir, { recursive: true, force: true });
+            await dirs.cleanup();
         }
     });
 
     it("throws when skill.md is missing", async () => {
-        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+        const dirs = await testDirsCreate();
         try {
-            const sourceDir = path.join(tmpDir, "empty-skill");
+            const sourceDir = path.join(dirs.homeDir, "empty-skill");
             await fs.mkdir(sourceDir, { recursive: true });
 
             const tool = skillAddToolBuild();
-            const context = contextBuild({ skillsPersonalRoot: path.join(tmpDir, "personal") });
-            await expect(tool.execute({ path: sourceDir }, context, toolCall)).rejects.toThrow(
-                'No valid skill.md with "name" frontmatter'
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            await expect(tool.execute({ path: "empty-skill" }, context, toolCall)).rejects.toThrow(
+                "not a valid skill directory"
             );
         } finally {
-            await fs.rm(tmpDir, { recursive: true, force: true });
+            await dirs.cleanup();
         }
     });
 
     it("throws when skill.md has no name in frontmatter", async () => {
-        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+        const dirs = await testDirsCreate();
         try {
-            const sourceDir = path.join(tmpDir, "bad-skill");
+            const sourceDir = path.join(dirs.homeDir, "bad-skill");
             await fs.mkdir(sourceDir, { recursive: true });
             await fs.writeFile(path.join(sourceDir, "skill.md"), "---\ndescription: no name\n---\nBody");
 
             const tool = skillAddToolBuild();
-            const context = contextBuild({ skillsPersonalRoot: path.join(tmpDir, "personal") });
-            await expect(tool.execute({ path: sourceDir }, context, toolCall)).rejects.toThrow(
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            await expect(tool.execute({ path: "bad-skill" }, context, toolCall)).rejects.toThrow(
                 'No valid skill.md with "name" frontmatter'
             );
         } finally {
-            await fs.rm(tmpDir, { recursive: true, force: true });
+            await dirs.cleanup();
         }
     });
 
     it("throws when skill name contains path traversal characters", async () => {
-        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+        const dirs = await testDirsCreate();
         try {
-            const sourceDir = path.join(tmpDir, "evil-skill");
+            const sourceDir = path.join(dirs.homeDir, "evil-skill");
             await fs.mkdir(sourceDir, { recursive: true });
             await fs.writeFile(path.join(sourceDir, "skill.md"), "---\nname: ../../../etc\n---\nBody");
 
             const tool = skillAddToolBuild();
-            const context = contextBuild({ skillsPersonalRoot: path.join(tmpDir, "personal") });
-            await expect(tool.execute({ path: sourceDir }, context, toolCall)).rejects.toThrow("invalid characters");
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            await expect(tool.execute({ path: "evil-skill" }, context, toolCall)).rejects.toThrow("invalid characters");
         } finally {
-            await fs.rm(tmpDir, { recursive: true, force: true });
+            await dirs.cleanup();
         }
     });
 
     it("throws when personal skills root is not configured", async () => {
-        const tool = skillAddToolBuild();
-        const context = contextBuild({});
-        await expect(tool.execute({ path: "/some/path" }, context, toolCall)).rejects.toThrow(
-            "Personal skills directory is not configured"
-        );
+        const dirs = await testDirsCreate();
+        try {
+            const tool = skillAddToolBuild();
+            const context = contextBuild({ homeDir: dirs.homeDir });
+            await expect(tool.execute({ path: "/some/path" }, context, toolCall)).rejects.toThrow(
+                "Personal skills directory is not configured"
+            );
+        } finally {
+            await dirs.cleanup();
+        }
     });
 });
 
-function contextBuild(input?: { skillsPersonalRoot?: string }): ToolExecutionContext {
+async function testDirsCreate(): Promise<{
+    homeDir: string;
+    personalRoot: string;
+    cleanup: () => Promise<void>;
+}> {
+    const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
+    const homeDir = path.join(baseDir, "home");
+    const personalRoot = path.join(baseDir, "personal");
+    await fs.mkdir(homeDir, { recursive: true });
+    return {
+        homeDir,
+        personalRoot,
+        cleanup: () => fs.rm(baseDir, { recursive: true, force: true })
+    };
+}
+
+function contextBuild(input: { skillsPersonalRoot?: string; homeDir: string }): ToolExecutionContext {
+    const sandbox = new Sandbox({
+        homeDir: input.homeDir,
+        permissions: { workingDir: input.homeDir, writeDirs: [input.homeDir] }
+    });
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
-        sandbox: {
-            permissions: { workingDir: "/workspace", writeDirs: ["/workspace"] },
-            workingDir: "/workspace"
-        } as unknown as ToolExecutionContext["sandbox"],
+        sandbox,
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,

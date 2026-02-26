@@ -5,6 +5,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { SKILL_FILENAME } from "../../skills/skillConstants.js";
+import type { ToolExecutionContext } from "./types.js";
 
 const schema = Type.Object(
     {
@@ -34,6 +35,7 @@ const returns: ToolResultContract<SkillAddResult> = {
 /**
  * Installs a skill from a local folder path into the user's personal skills directory.
  * Replaces any existing personal skill with the same name.
+ * Uses sandbox.read to resolve and validate the source path.
  *
  * Expects: path points to a folder containing a valid skill.md with a name in frontmatter.
  */
@@ -54,19 +56,14 @@ export function skillAddToolBuild(): ToolDefinition {
                 throw new Error("Personal skills directory is not configured.");
             }
 
-            const sourceDir = path.resolve(payload.path.trim());
-            const skillFilePath = path.join(sourceDir, SKILL_FILENAME);
+            const sourcePath = payload.path.trim();
+            const skillFileSandboxPath = path.posix.join(sourcePath, SKILL_FILENAME);
 
-            // Validate source folder exists
-            const sourceStat = await statSafe(sourceDir);
-            if (!sourceStat?.isDirectory()) {
-                throw new Error(`Source path is not a directory: ${sourceDir}`);
-            }
-
-            // Validate skill.md exists and has valid name
-            const skillName = await skillNameRead(skillFilePath);
+            // Read skill.md through sandbox to resolve path and validate permissions
+            const readResult = await skillFileRead(skillFileSandboxPath, sourcePath, toolContext);
+            const skillName = skillNameParse(readResult.content);
             if (!skillName) {
-                throw new Error(`No valid ${SKILL_FILENAME} with "name" frontmatter found in: ${sourceDir}`);
+                throw new Error(`No valid ${SKILL_FILENAME} with "name" frontmatter found in: ${sourcePath}`);
             }
 
             // Prevent path traversal via crafted skill names
@@ -74,12 +71,13 @@ export function skillAddToolBuild(): ToolDefinition {
                 throw new Error(`Skill name contains invalid characters: "${skillName}".`);
             }
 
-            // Copy to personal skills directory
+            // Copy source directory to personal skills using host paths
+            const sourceHostDir = path.dirname(readResult.resolvedPath);
             const targetDir = path.join(personalRoot, skillName);
             const existed = (await statSafe(targetDir))?.isDirectory() ?? false;
             await fs.rm(targetDir, { recursive: true, force: true });
             await fs.mkdir(personalRoot, { recursive: true });
-            await fs.cp(sourceDir, targetDir, { recursive: true });
+            await fs.cp(sourceHostDir, targetDir, { recursive: true });
 
             const status = existed ? "replaced" : "installed";
             const summary =
@@ -103,13 +101,33 @@ export function skillAddToolBuild(): ToolDefinition {
     };
 }
 
-async function skillNameRead(skillFilePath: string): Promise<string | null> {
-    let content = "";
+/** Reads a skill file through sandbox.read. Wraps errors with model-facing paths. */
+async function skillFileRead(
+    skillFileSandboxPath: string,
+    sourcePath: string,
+    toolContext: ToolExecutionContext
+): Promise<{ content: string; resolvedPath: string }> {
     try {
-        content = await fs.readFile(skillFilePath, "utf8");
-    } catch {
-        return null;
+        const result = await toolContext.sandbox.read({ path: skillFileSandboxPath });
+        if (result.type !== "text") {
+            throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
+        }
+        return { content: result.content, resolvedPath: result.resolvedPath };
+    } catch (error) {
+        if (error instanceof Error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (code === "ENOENT" || code === "ENOTDIR") {
+                throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
+            }
+            if (error.message === "Path is not a file.") {
+                throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
+            }
+        }
+        throw error;
     }
+}
+
+function skillNameParse(content: string): string | null {
     try {
         const parsed = matter(content);
         const name = parsed.data.name;

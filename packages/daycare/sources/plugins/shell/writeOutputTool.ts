@@ -6,7 +6,6 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
 import { writeOutputFileNameResolve } from "./writeOutputFileNameResolve.js";
 
-const OUTPUTS_HOME_RELATIVE_DIR = "~/outputs";
 const writeOutputFormatSchema = Type.Union([Type.Literal("markdown"), Type.Literal("json")]);
 
 const writeOutputSchema = Type.Object(
@@ -54,15 +53,15 @@ export function buildWriteOutputTool(): ToolDefinition {
             const format = payload.format ?? "markdown";
             const extension = outputExtensionResolve(format);
             const normalizedName = outputNameNormalize(payload.name);
+            // Host path for listing existing files — no sandbox.readDir API available
             const outputsHostDir = path.join(toolContext.sandbox.homeDir, "outputs");
             const existingFileNames = await outputFileNamesList(outputsHostDir);
             const fileName = writeOutputFileNameResolve(normalizedName, existingFileNames, extension);
-            const targetPath = path.posix.join(OUTPUTS_HOME_RELATIVE_DIR, fileName);
+            const outputPath = `~/outputs/${fileName}`;
             const writeResult = await toolContext.sandbox.write({
-                path: targetPath,
+                path: outputPath,
                 content: payload.content
             });
-            const outputPath = path.posix.join(OUTPUTS_HOME_RELATIVE_DIR, fileName);
             const summary = `Wrote ${writeResult.bytes} bytes to ${outputPath}.`;
             const toolMessage = buildToolMessage(toolCall, summary, false, {
                 action: "write_output",

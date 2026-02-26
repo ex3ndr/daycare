@@ -1,11 +1,14 @@
 import type { ExecException } from "node:child_process";
-import { promises as fs } from "node:fs";
+import { promises as fs, realpathSync } from "node:fs";
 import path from "node:path";
 
 import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../engine/permissions.js";
 import { getLogger } from "../log.js";
 import { envNormalize } from "../util/envNormalize.js";
+import { pathMountMapHostToMapped } from "../util/pathMountMapHostToMapped.js";
+import { pathMountMapMappedToHost } from "../util/pathMountMapMappedToHost.js";
+import type { PathMountPoint } from "../util/pathMountTypes.js";
 import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { runInSandbox } from "./runtime.js";
@@ -14,8 +17,6 @@ import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.j
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
 import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
-import { sandboxPathContainerToHost } from "./sandboxPathContainerToHost.js";
-import { sandboxPathHostToContainer } from "./sandboxPathHostToContainer.js";
 import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
     SandboxConfig,
@@ -49,14 +50,15 @@ export class Sandbox {
     readonly workingDir: string;
     readonly permissions: SessionPermissions;
     readonly docker: SandboxDockerConfig | undefined;
-    readonly examplesDir: string | undefined;
+    /** All mount points including home. Used for host↔sandbox path mapping. */
+    readonly mounts: PathMountPoint[];
 
     constructor(config: SandboxConfig) {
-        this.homeDir = path.resolve(config.homeDir);
-        this.workingDir = path.resolve(config.permissions.workingDir);
+        this.homeDir = realpathSyncSafe(config.homeDir);
+        this.workingDir = realpathSyncSafe(config.permissions.workingDir);
         this.permissions = config.permissions;
         this.docker = config.docker;
-        this.examplesDir = config.examplesDir ? path.resolve(config.examplesDir) : undefined;
+        this.mounts = sandboxMountsBuild(this.homeDir, config.mounts);
     }
 
     /**
@@ -77,13 +79,7 @@ export class Sandbox {
             throw new Error("Path is not a file.");
         }
 
-        const displayPath = sandboxDisplayPath({
-            workingDir: this.workingDir,
-            homeDir: this.homeDir,
-            target: resolvedPath,
-            docker: this.docker,
-            examplesDir: this.examplesDir
-        });
+        const displayPath = sandboxDisplayPath(this.workingDir, this.homeDir, resolvedPath, this.mounts);
         if (args.binary === true) {
             const binaryContent = await readBinaryFileSecure(resolvedPath);
             return {
@@ -197,7 +193,7 @@ export class Sandbox {
         return {
             bytes: Buffer.isBuffer(args.content) ? args.content.byteLength : Buffer.byteLength(args.content, "utf8"),
             resolvedPath,
-            sandboxPath: sandboxHomePath(this.homeDir, resolvedPath)
+            sandboxPath: sandboxDisplayPath(this.workingDir, this.homeDir, resolvedPath, this.mounts)
         };
     }
 
@@ -257,8 +253,7 @@ export class Sandbox {
                           isolatedDnsServers: this.docker!.isolatedDnsServers,
                           localDnsServers: this.docker!.localDnsServers,
                           userId: this.docker!.userId,
-                          hostSkillsActiveDir: this.docker!.skillsActiveDir,
-                          hostExamplesDir: this.docker!.examplesDir
+                          mounts: this.mounts
                       }
                   })
                 : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
@@ -298,10 +293,9 @@ export class Sandbox {
     }
 
     private permissionsEffectiveResolve(): SessionPermissions {
-        const readDirs = [
-            ...(this.permissions.readDirs ?? []).map((entry) => path.resolve(entry)),
-            ...(this.examplesDir ? [this.examplesDir] : [])
-        ];
+        // Extra mounts (non-home) are readable
+        const extraReadDirs = this.mounts.filter((m) => m.mappedPath !== "/home").map((m) => m.hostPath);
+        const readDirs = [...(this.permissions.readDirs ?? []).map((entry) => path.resolve(entry)), ...extraReadDirs];
         return {
             workingDir: this.workingDir,
             writeDirs: Array.from(
@@ -356,38 +350,37 @@ export class Sandbox {
     }
 
     /**
-     * Translates a virtual container path (e.g. /shared/examples) to a host path.
-     * In Docker mode, also translates /home and /shared/skills paths.
+     * The working directory as seen inside exec commands.
+     * In Docker mode this is the container-side path; in non-Docker mode the host path.
      */
-    resolveVirtualPath(targetPath: string): string {
-        // Translate /shared/examples paths regardless of Docker mode
-        if (this.examplesDir && targetPath.startsWith("/shared/examples")) {
-            const rewritten = sandboxPathContainerToHost({
-                hostHomeDir: this.homeDir,
-                targetPath,
-                hostExamplesDir: this.examplesDir
-            });
-            if (!rewritten) {
-                throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
-            }
-            return rewritten;
-        }
+    get execWorkingDir(): string {
         if (!this.docker?.enabled) {
-            return targetPath;
+            return this.workingDir;
         }
+        const containerPath = pathMountMapHostToMapped({ mountPoints: this.mounts, hostPath: this.workingDir });
+        if (!containerPath) {
+            throw new Error("Working directory is not mappable to container mounts");
+        }
+        return containerPath;
+    }
+
+    /**
+     * Translates a sandbox virtual path to a host path for filesystem I/O.
+     * Maps /shared/* and /home paths to their host equivalents via the mount list.
+     */
+    private resolveVirtualPath(targetPath: string): string {
         if (!path.isAbsolute(targetPath)) {
             return targetPath;
         }
-        const rewritten = sandboxPathContainerToHost({
-            hostHomeDir: this.homeDir,
-            targetPath,
-            hostSkillsActiveDir: this.docker.skillsActiveDir,
-            hostExamplesDir: this.docker.examplesDir
-        });
-        if (!rewritten) {
+        const hostPath = pathMountMapMappedToHost({ mountPoints: this.mounts, mappedPath: targetPath });
+        if (hostPath) {
+            return hostPath;
+        }
+        // Not a virtual mount path — in Docker mode this is an error
+        if (this.docker?.enabled) {
             throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
         }
-        return rewritten;
+        return targetPath;
     }
 }
 
@@ -445,32 +438,23 @@ async function pathRejectIfSymlink(target: string, message: string): Promise<voi
     }
 }
 
-function sandboxDisplayPath(input: {
-    workingDir: string;
-    homeDir: string;
-    target: string;
-    docker?: SandboxDockerConfig;
-    examplesDir?: string;
-}): string {
-    if (isWithinSecure(input.workingDir, input.target)) {
-        return path.relative(input.workingDir, input.target) || ".";
+/**
+ * Converts a host path to a sandbox-facing display path using the mount list.
+ * Paths under workingDir are shown as relative, paths under home as ~/...,
+ * and other mounted paths use their mapped names (e.g. /shared/skills/...).
+ */
+function sandboxDisplayPath(workingDir: string, homeDir: string, target: string, mounts: PathMountPoint[]): string {
+    if (isWithinSecure(workingDir, target)) {
+        return path.relative(workingDir, target) || ".";
     }
-    const homeDisplayPath = sandboxHomePath(input.homeDir, input.target);
-    if (homeDisplayPath !== input.target) {
-        return homeDisplayPath;
+    if (isWithinSecure(homeDir, target)) {
+        const relative = path.relative(homeDir, target);
+        return relative.length === 0 ? "~" : `~/${relative}`;
     }
-    if (!input.docker?.enabled) {
-        return input.target;
-    }
-    const containerPath = sandboxPathHostToContainer(
-        input.homeDir,
-        input.docker.userId,
-        input.target,
-        input.docker.skillsActiveDir,
-        input.docker.examplesDir ?? input.examplesDir
-    );
+    const containerPath = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: target });
     if (!containerPath) {
-        return input.target;
+        // Path is outside all mounts — return basename to avoid leaking host paths
+        return path.basename(target);
     }
     if (containerPath === "/home") {
         return "~";
@@ -481,32 +465,6 @@ function sandboxDisplayPath(input: {
     return containerPath;
 }
 
-function sandboxHomePath(homeDir: string, target: string): string {
-    const homeVariants = sandboxMacPathVariants(homeDir);
-    const targetVariants = sandboxMacPathVariants(target);
-    for (const homeVariant of homeVariants) {
-        for (const targetVariant of targetVariants) {
-            if (!isWithinSecure(homeVariant, targetVariant)) {
-                continue;
-            }
-            const relative = path.relative(homeVariant, targetVariant);
-            if (relative.length === 0) {
-                return "~";
-            }
-            return `~/${relative}`;
-        }
-    }
-    return target;
-}
-
-function sandboxMacPathVariants(target: string): string[] {
-    const resolved = path.resolve(target);
-    if (resolved.startsWith("/private/")) {
-        return [resolved, resolved.slice("/private".length)];
-    }
-    return [resolved, path.join("/private", resolved)];
-}
-
 function sandboxExecCwdResolve(workingDir: string, requestedCwd?: string): string {
     if (!requestedCwd) {
         return workingDir;
@@ -515,6 +473,34 @@ function sandboxExecCwdResolve(workingDir: string, requestedCwd?: string): strin
         ? path.resolve(requestedCwd)
         : path.resolve(workingDir, requestedCwd);
     return resolveWorkspacePath(workingDir, candidate);
+}
+
+function realpathSyncSafe(target: string): string {
+    try {
+        return realpathSync(target);
+    } catch {
+        return path.resolve(target);
+    }
+}
+
+/**
+ * Builds the full mount list from homeDir and user-provided extra mounts.
+ * Home is always the first mount at /home. Extra mounts get realpath'd.
+ */
+function sandboxMountsBuild(
+    homeDir: string,
+    extraMounts?: Array<{ hostPath: string; mappedPath: string }>
+): PathMountPoint[] {
+    const mounts: PathMountPoint[] = [{ hostPath: homeDir, mappedPath: "/home" }];
+    if (extraMounts) {
+        for (const mount of extraMounts) {
+            mounts.push({
+                hostPath: realpathSyncSafe(mount.hostPath),
+                mappedPath: mount.mappedPath
+            });
+        }
+    }
+    return mounts;
 }
 
 function sandboxText(value: string | Buffer | undefined): string {

@@ -103,7 +103,4 @@ result["summary"]
 
 This avoids context rot: instead of reading large results, reasoning over them, and paraphrasing, you let the summary model distill the data and forward a clean result straight to the caller. If you need to reason about the content yourself, you can of course read it — or read the summary instead of the raw data to keep your context lean.
 
-Example scripts for common patterns are available in the bundled examples folder:
-- Docker runtime: `{{examplesDockerDir}}`
-- Non-Docker runtime: `{{examplesHostDir}}`
-Use `read()` to view them.
+Example scripts for common patterns are available in the bundled examples folder at `{{examplesDir}}`. Use `read()` to view them.

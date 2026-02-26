@@ -19,6 +19,10 @@ import { Sandbox } from "@/types";
 const sandbox = new Sandbox({
     homeDir: userHome.home,
     permissions: state.permissions,
+    mounts: [
+        { hostPath: userHome.skillsActive, mappedPath: "/shared/skills" },
+        { hostPath: examplesDir, mappedPath: "/shared/examples" }
+    ],
     docker: {
         enabled: true,
         image: "daycare-sandbox",
@@ -31,8 +35,7 @@ const sandbox = new Sandbox({
         capAdd: [],
         capDrop: [],
         allowLocalNetworkingForUsers: [],
-        userId: ctx.userId,
-        skillsActiveDir: userHome.skillsActive
+        userId: ctx.userId
     }
 });
 ```
@@ -41,6 +44,7 @@ Inputs:
 - `homeDir`: sandbox HOME and default write root
 - `workingDir`: derived from `permissions.workingDir` and cannot be overridden at construction
 - `permissions`: session permissions used by read/write checks
+- `mounts` (optional): extra mount points for virtual paths (e.g. `/shared/skills`). Home is always mounted at `/home` automatically.
 - `docker` (optional): enable Docker-wrapped `exec` with per-user container config
 
 ## API
@@ -109,9 +113,9 @@ Enable Docker runtime in `settings.json`:
 }
 ```
 
-Path mapping when Docker is enabled:
-- host: `/data/users/<userId>/home/...`
-- container: `/home/...`
+Path mapping uses the generic mount list. Home is always `/home`, extra mounts use their `mappedPath`:
+- host: `/data/users/<userId>/home/...` → container: `/home/...`
+- host: `/data/users/<userId>/skills/active/...` → container: `/shared/skills/...`
 
 ## Tool Context
 

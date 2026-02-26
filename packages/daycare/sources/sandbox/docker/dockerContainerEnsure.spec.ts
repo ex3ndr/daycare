@@ -17,8 +17,11 @@ const baseConfig: DockerContainerResolvedConfig = {
     userId: "user-1",
     networkName: "daycare-isolated",
     hostHomeDir: "/tmp/daycare-home-user-1",
-    hostSkillsActiveDir: "/tmp/daycare-skills-user-1",
-    hostExamplesDir: "/tmp/daycare-examples"
+    mounts: [
+        { hostPath: "/tmp/daycare-home-user-1", mappedPath: "/home" },
+        { hostPath: "/tmp/daycare-skills-user-1", mappedPath: "/shared/skills" },
+        { hostPath: "/tmp/daycare-examples", mappedPath: "/shared/examples" }
+    ]
 };
 const IMAGE_REF = "daycare-sandbox:latest";
 const CURRENT_IMAGE_ID = "sha256:image-current";

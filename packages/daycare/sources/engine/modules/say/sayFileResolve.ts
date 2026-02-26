@@ -1,10 +1,8 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { Logger } from "pino";
 
 import type { ConnectorFile, ConnectorFileDisposition, FileReference } from "@/types";
-import { openSecure, pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import type { Sandbox } from "../../../sandbox/sandbox.js";
 import { sanitizeFilename } from "../../../util/filename.js";
 
@@ -37,53 +35,24 @@ export async function sayFileResolve(input: SayFileResolveInput): Promise<Connec
 }
 
 async function sayFileReferenceResolve(filePath: string, sandbox: Sandbox): Promise<FileReference | null> {
-    const normalizedInputPath = pathNormalize(filePath, sandbox.workingDir);
-    const allowedDirs = [sandbox.permissions.workingDir, ...sandbox.permissions.writeDirs];
-    const { realPath } = await pathResolveSecure(allowedDirs, normalizedInputPath);
-
-    const stats = await fs.lstat(realPath);
-    if (stats.isSymbolicLink()) {
-        throw new Error("Cannot send symbolic link");
-    }
-    if (!stats.isFile()) {
+    const readResult = await sandbox.read({ path: filePath, binary: true });
+    if (readResult.type !== "binary") {
         throw new Error("Path is not a file");
     }
 
-    const handle = await openSecure(realPath, "r");
-    const handleStats = await handle.stat();
-    await handle.close();
-    if (!handleStats.isFile()) {
-        throw new Error("Path is not a file");
-    }
-
-    const name = sanitizeFilename(path.basename(realPath));
-    const downloadPath = path.join(sandbox.homeDir, "downloads", name);
-    const secureHandle = await openSecure(realPath, "r");
-    let content: Buffer;
-    try {
-        content = await secureHandle.readFile();
-    } finally {
-        await secureHandle.close();
-    }
+    const name = sanitizeFilename(path.basename(readResult.displayPath));
     const saved = await sandbox.write({
-        path: downloadPath,
-        content
+        path: `~/downloads/${name}`,
+        content: readResult.content
     });
 
     return {
         id: saved.sandboxPath,
         name,
-        mimeType: mimeTypeResolve(realPath),
+        mimeType: mimeTypeResolve(readResult.displayPath),
         size: saved.bytes,
         path: saved.resolvedPath
     };
-}
-
-function pathNormalize(filePath: string, workingDir: string): string {
-    if (path.isAbsolute(filePath)) {
-        return path.resolve(filePath);
-    }
-    return path.resolve(workingDir, filePath);
 }
 
 function mimeTypeResolve(filePath: string): string {

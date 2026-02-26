@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { sandboxPathContainerToHost } from "../sandboxPathContainerToHost.js";
+import { pathMountMapMappedToHost } from "../../util/pathMountMapMappedToHost.js";
 import { dockerContainersShared } from "./dockerContainersShared.js";
 import { dockerRunInSandbox } from "./dockerRunInSandbox.js";
 
@@ -47,9 +47,13 @@ describe("dockerRunInSandbox", () => {
             capturedIsolatedDnsServers = dockerConfig.isolatedDnsServers;
             capturedLocalDnsServers = dockerConfig.localDnsServers;
             capturedCommand = bashCmd;
-            capturedSettingsHostPath = sandboxPathContainerToHost({
-                hostHomeDir: homeDir,
-                targetPath: settingsContainerPath
+            capturedSettingsHostPath = pathMountMapMappedToHost({
+                mountPoints: [
+                    { hostPath: homeDir, mappedPath: "/home" },
+                    { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                    { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+                ],
+                mappedPath: settingsContainerPath
             });
             if (!capturedSettingsHostPath) {
                 throw new Error(`Expected settings path to map to host: ${settingsContainerPath}`);
@@ -93,8 +97,11 @@ describe("dockerRunInSandbox", () => {
                     isolatedDnsServers: ["9.9.9.9"],
                     localDnsServers: ["192.168.1.1"],
                     userId,
-                    hostSkillsActiveDir: skillsActiveDir,
-                    hostExamplesDir: skillsActiveDir
+                    mounts: [
+                        { hostPath: homeDir, mappedPath: "/home" },
+                        { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                        { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+                    ]
                 }
             }
         );
@@ -168,8 +175,11 @@ describe("dockerRunInSandbox", () => {
                         capAdd: [],
                         capDrop: [],
                         userId: "u123",
-                        hostSkillsActiveDir: skillsActiveDir,
-                        hostExamplesDir: skillsActiveDir
+                        mounts: [
+                            { hostPath: homeDir, mappedPath: "/home" },
+                            { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                            { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+                        ]
                     }
                 }
             )

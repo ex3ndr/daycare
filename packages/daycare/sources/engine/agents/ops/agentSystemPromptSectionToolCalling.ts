@@ -5,6 +5,7 @@ import { rlmNoToolsPromptBuild } from "../../modules/rlm/rlmNoToolsPromptBuild.j
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
+import { bundledExamplesDirResolve } from "./bundledExamplesDirResolve.js";
 
 /**
  * Renders tool-calling guidance and concatenates optional no-tools enforcement text.
@@ -14,7 +15,10 @@ export async function agentSystemPromptSectionToolCalling(context: AgentSystemPr
     const availableTools = toolListVisibleResolve(context);
     const filteredTools = toolListAllowlistApply(availableTools, context);
     const isForeground = context.descriptor?.type === "user";
-    const noToolsPrompt = filteredTools.length > 0 ? await rlmNoToolsPromptBuild(filteredTools, { isForeground }) : "";
+    const dockerEnabled = context.agentSystem?.config?.current?.docker?.enabled ?? false;
+    const examplesDir = dockerEnabled ? "/shared/examples" : bundledExamplesDirResolve();
+    const noToolsPrompt =
+        filteredTools.length > 0 ? await rlmNoToolsPromptBuild(filteredTools, { isForeground, examplesDir }) : "";
     const template = await agentPromptBundledRead("SYSTEM_TOOLS.md");
     const section = Handlebars.compile(template)({}).trim();
     return [section, noToolsPrompt.trim()]
