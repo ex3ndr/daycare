@@ -213,10 +213,18 @@ function createContext(): ToolExecutionContext {
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: null as unknown as ToolExecutionContext["agent"],
-        ctx: { userId: "user-1", agentId: "agent-1" } as unknown as ToolExecutionContext["ctx"],
+        ctx: { userId: "user-1", agentId: "agent-1" } as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
+        agentSystem: {
+            config: {
+                current: {
+                    agentsDir: "/tmp/daycare-test",
+                    dbPath: ":memory:"
+                }
+            },
+            storage: {}
+        } as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };
 }

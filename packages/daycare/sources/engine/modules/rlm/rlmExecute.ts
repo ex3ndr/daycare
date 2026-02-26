@@ -217,12 +217,9 @@ async function rlmSnapshotIdResolve(
     at: number,
     snapshotDump: Uint8Array
 ): Promise<string | null> {
-    const config = context.agentSystem?.config?.current;
-    const storage = context.agentSystem?.storage;
-    const agentId = context.ctx?.agentId;
-    if (!config || !storage || typeof agentId !== "string" || agentId.length === 0) {
-        return null;
-    }
+    const config = context.agentSystem.config.current;
+    const storage = context.agentSystem.storage;
+    const agentId = context.ctx.agentId;
     try {
         return await rlmSnapshotCreate({
             storage,
