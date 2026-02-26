@@ -114,7 +114,7 @@ describe("AgentSystem durable inboxes", () => {
         }
     });
 
-    it("drops stale in-flight durable row when pending rlm phase is recovered", async () => {
+    it("drops stale in-flight durable row and continues inference after pending rlm recovery", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
         try {
             const first = await harnessCreate(dir, {
@@ -137,9 +137,10 @@ describe("AgentSystem durable inboxes", () => {
             await first.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "<run_python>wait(60)</run_python>",
+                text: "",
                 files: [],
-                tokens: null
+                tokens: null,
+                toolCalls: [{ type: "toolCall", id: "run-1", name: "run_python", arguments: { code: "wait(60)" } }]
             });
             await first.storage.appendHistory(agentId, {
                 type: "rlm_start",
@@ -199,7 +200,9 @@ describe("AgentSystem durable inboxes", () => {
                     record.type === "user_message"
             );
             expect(userMessages.filter((record) => record.text === "wait for one minute")).toHaveLength(1);
-            expect(complete).not.toHaveBeenCalled();
+            await vi.waitFor(async () => {
+                expect(complete).toHaveBeenCalledTimes(1);
+            });
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

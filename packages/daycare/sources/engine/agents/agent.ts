@@ -1051,28 +1051,12 @@ export class Agent {
             await agentHistoryAppend(this.agentSystem.storage, this.ctx, record);
             records.push(record);
         };
+        const initialPhase = pendingPhase.type === "error" ? undefined : pendingPhase;
         if (pendingPhase.type === "error") {
             const completionMessage = pendingPhase.message;
             await appendRecord(
                 rlmHistoryCompleteErrorRecordBuild(pendingPhase.start.toolCallId, completionMessage, [], 0)
             );
-            const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
-            const historyMessages = await this.buildHistoryContext(history);
-            this.state.context = {
-                messages: historyMessages
-            };
-            this.state.updatedAt = Date.now();
-            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
-            logger.warn(
-                {
-                    agentId: this.id,
-                    reason,
-                    toolCallId: pendingPhase.start.toolCallId,
-                    phase: pendingPhase.type
-                },
-                "event: Completed pending loop phase in history"
-            );
-            return;
         }
 
         const source =
@@ -1125,7 +1109,7 @@ export class Agent {
             logger,
             appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
             notifySubagentFailure: (failureReason, error) => this.notifySubagentFailure(failureReason, error),
-            initialPhase: pendingPhase,
+            initialPhase,
             stopAfterPendingPhase: false
         });
 
