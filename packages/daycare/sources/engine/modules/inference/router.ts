@@ -5,6 +5,7 @@ import { listActiveInferenceProviders } from "../../../providers/catalog.js";
 import type { ProviderSettings } from "../../../settings.js";
 import type { ConfigModule } from "../../config/configModule.js";
 import type { InferenceRegistry } from "../inferenceRegistry.js";
+import { inferenceOutputTokensValidate } from "./inferenceOutputTokensValidate.js";
 
 export type InferenceResult = {
     message: AssistantMessage;
@@ -107,6 +108,7 @@ export class InferenceRouter {
                         sessionId,
                         signal: options?.signal
                     });
+                    inferenceOutputTokensValidate(message);
                     this.logger.debug(
                         `event: Inference completed successfully providerId=${providerConfig.id} modelId=${client.modelId} stopReason=${message.stopReason} contentBlocks=${message.content.length} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
                     );
