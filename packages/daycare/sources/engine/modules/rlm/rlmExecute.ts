@@ -129,7 +129,7 @@ export async function rlmExecute(
                     type: "rlm_tool_call",
                     at,
                     toolCallId,
-                    snapshot: rlmSnapshotEncode(snapshotDump),
+                    snapshotId: rlmSnapshotEncode(snapshotDump),
                     printOutput: [...printOutput],
                     toolCallCount,
                     toolName,

@@ -25,7 +25,7 @@ describe("agentHistoryContext", () => {
                 type: "rlm_tool_call",
                 at: 6,
                 toolCallId: "run-python-1",
-                snapshot: "AQID",
+                snapshotId: "snapshot-id",
                 printOutput: [],
                 toolCallCount: 0,
                 toolName: "echo",

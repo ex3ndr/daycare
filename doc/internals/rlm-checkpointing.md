@@ -87,7 +87,7 @@ sequenceDiagram
 - `rlm_start`
   - `toolCallId`, `code`, `preamble`
 - `rlm_tool_call`
-  - `toolCallId`, cuid2 `snapshot` id, `printOutput`, `toolCallCount`, `toolName`, `toolArgs`
+  - `toolCallId`, cuid2 `snapshotId`, `printOutput`, `toolCallCount`, `toolName`, `toolArgs`
 - `rlm_tool_result`
   - `toolCallId`, `toolName`, `toolResult`, `toolIsError`
 - `rlm_complete`
@@ -97,5 +97,5 @@ sequenceDiagram
 
 - Startup resolves one pending flat-loop phase via `agentLoopPendingPhaseResolve`.
 - `vm_start` phase: re-parse `<run_python>` blocks from the latest `assistant_message` and continue from VM start.
-- `tool_call` phase: load the latest `rlm_tool_call.snapshot` id from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
+- `tool_call` phase: load the latest `rlm_tool_call.snapshotId` from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).

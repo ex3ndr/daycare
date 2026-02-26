@@ -38,7 +38,7 @@ describe("formatHistoryMessages", () => {
                 type: "rlm_tool_call",
                 at: 1001,
                 toolCallId: "tc1",
-                snapshot: "AQID",
+                snapshotId: "snapshot-id",
                 printOutput: [],
                 toolCallCount: 0,
                 toolName: "read",

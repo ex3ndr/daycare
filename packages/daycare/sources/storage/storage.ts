@@ -204,8 +204,8 @@ export class Storage {
             }
             const snapshotId = createId();
             snapshotPath = storageSnapshotPath(this.agentsDir, agentId, sessionId, snapshotId);
-            await storageSnapshotWrite(snapshotPath, storageSnapshotDecode(record.snapshot));
-            persistedRecord = { ...record, snapshot: snapshotId };
+            await storageSnapshotWrite(snapshotPath, storageSnapshotDecode(record.snapshotId));
+            persistedRecord = { ...record, snapshotId };
         }
 
         await this.history.append(sessionId, persistedRecord);
@@ -260,8 +260,8 @@ function storageSnapshotPath(agentsDir: string, agentId: string, sessionId: stri
     return path.join(agentsDir, agentId, "snapshots", sessionId, `${snapshotId}.bin`);
 }
 
-function storageSnapshotDecode(snapshot: string): Uint8Array {
-    return Buffer.from(snapshot, "base64");
+function storageSnapshotDecode(snapshotBase64: string): Uint8Array {
+    return Buffer.from(snapshotBase64, "base64");
 }
 
 async function storageSnapshotWrite(snapshotPath: string, dump: Uint8Array): Promise<void> {

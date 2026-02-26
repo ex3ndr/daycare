@@ -57,7 +57,7 @@ describe("agentLoopPendingPhaseResolve", () => {
                 type: "rlm_tool_call",
                 at: 7,
                 toolCallId: "tool-2",
-                snapshot: "snapshot",
+                snapshotId: "snapshot-id",
                 printOutput: [],
                 toolCallCount: 0,
                 toolName: "echo",
@@ -71,7 +71,7 @@ describe("agentLoopPendingPhaseResolve", () => {
         expect(pending?.type).toBe("tool_call");
         if (pending?.type === "tool_call") {
             expect(pending.start.toolCallId).toBe("tool-2");
-            expect(pending.snapshot.snapshot).toBe("snapshot");
+            expect(pending.snapshot.snapshotId).toBe("snapshot-id");
             expect(pending.blockIndex).toBe(1);
             expect(pending.blocks).toEqual(["echo('a')", "echo('b')"]);
             expect(pending.blockToolCallIds).toEqual(["tool-1", "tool-2"]);

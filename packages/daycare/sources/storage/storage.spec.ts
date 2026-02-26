@@ -156,7 +156,7 @@ describe("Storage", () => {
                     type: "rlm_tool_call",
                     at: 10,
                     toolCallId: "tool-call-1",
-                    snapshot: snapshotDump.toString("base64"),
+                    snapshotId: snapshotDump.toString("base64"),
                     printOutput: [],
                     toolCallCount: 0,
                     toolName: "echo",
@@ -173,13 +173,13 @@ describe("Storage", () => {
                 if (!record || record.type !== "rlm_tool_call") {
                     throw new Error("Expected rlm_tool_call history record.");
                 }
-                expect(cuid2Is(record.snapshot)).toBe(true);
+                expect(cuid2Is(record.snapshotId)).toBe(true);
                 const snapshotPath = path.join(
                     config.agentsDir,
                     agentId,
                     "snapshots",
                     sessionId,
-                    `${record.snapshot}.bin`
+                    `${record.snapshotId}.bin`
                 );
                 await expect(readFile(snapshotPath)).resolves.toEqual(snapshotDump);
             } finally {

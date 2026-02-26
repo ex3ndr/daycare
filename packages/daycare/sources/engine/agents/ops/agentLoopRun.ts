@@ -322,7 +322,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         agentSystem.config.current.agentsDir,
                         agent.ctx.agentId,
                         agent.state.activeSessionId ?? null,
-                        initialPhase.snapshot.snapshot
+                        initialPhase.snapshot.snapshotId
                     );
                     const resumed = await rlmStepResume(
                         blockState.workerKey,
@@ -756,7 +756,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                     type: "rlm_tool_call",
                                     at,
                                     toolCallId: blockState.toolCallId,
-                                    snapshot: rlmSnapshotEncode(snapshotDump),
+                                    snapshotId: rlmSnapshotEncode(snapshotDump),
                                     printOutput: currentPrintOutput,
                                     toolCallCount: currentToolCallCount,
                                     toolName,
