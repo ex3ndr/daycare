@@ -1,6 +1,5 @@
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
-import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
 import type { Logger } from "pino";
 import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
@@ -30,6 +29,8 @@ import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
 import { rlmStepToolCall } from "../../modules/rlm/rlmStepToolCall.js";
 import { rlmToolsForContextResolve } from "../../modules/rlm/rlmToolsForContextResolve.js";
 import { rlmValueFormat } from "../../modules/rlm/rlmValueFormat.js";
+import { rlmVmSnapshotIs } from "../../modules/rlm/rlmVmProgress.js";
+import { rlmWorkerKeyResolve } from "../../modules/rlm/rlmWorkerKeyResolve.js";
 import { sayFileExtract } from "../../modules/say/sayFileExtract.js";
 import { sayFileResolve } from "../../modules/say/sayFileResolve.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
@@ -209,6 +210,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         };
         return {
             ...params,
+            workerKey: rlmWorkerKeyResolve(executionContext.ctx),
             executionContext,
             trackingToolResolver,
             checkSteering: () => {
@@ -300,7 +302,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 };
                 try {
                     const snapshotDump = Buffer.from(initialPhase.snapshot.snapshot, "base64");
-                    const resumed = rlmStepResume(
+                    const resumed = await rlmStepResume(
+                        blockState.workerKey,
                         snapshotDump,
                         {
                             exception: {
@@ -310,7 +313,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         },
                         printCallback
                     );
-                    if (resumed instanceof MontySnapshot) {
+                    if (rlmVmSnapshotIs(resumed)) {
                         phase = {
                             type: "tool_call",
                             blockState,
@@ -322,12 +325,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         };
                     } else {
                         rlmPrintCaptureFlushTrailing(printCapture);
-                        const complete = resumed as MontyComplete;
                         phase = {
                             type: "block_complete",
                             blockState,
                             result: {
-                                output: rlmValueFormat(complete.output),
+                                output: rlmValueFormat(resumed.output),
                                 printOutput,
                                 toolCallCount: initialPhase.snapshot.toolCallCount
                             }
@@ -731,15 +733,18 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             externalFunctions.push(SKIP_TOOL_NAME);
                         }
 
-                        const progress = rlmStepStart({
-                            code: runPythonCode,
-                            preamble: blockState.preamble,
-                            externalFunctions,
-                            limits: RLM_LIMITS,
-                            printCallback
-                        }).progress;
+                        const progress = (
+                            await rlmStepStart({
+                                workerKey: blockState.workerKey,
+                                code: runPythonCode,
+                                preamble: blockState.preamble,
+                                externalFunctions,
+                                limits: RLM_LIMITS,
+                                printCallback
+                            })
+                        ).progress;
 
-                        if (progress instanceof MontySnapshot) {
+                        if (rlmVmSnapshotIs(progress)) {
                             phase = {
                                 type: "tool_call",
                                 blockState,
@@ -753,12 +758,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         }
 
                         rlmPrintCaptureFlushTrailing(printCapture);
-                        const complete = progress as MontyComplete;
                         phase = {
                             type: "block_complete",
                             blockState,
                             result: {
-                                output: rlmValueFormat(complete.output),
+                                output: rlmValueFormat(progress.output),
                                 printOutput,
                                 toolCallCount: 0
                             }
@@ -797,7 +801,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
                         if (!toolByName.has(phase.snapshot.functionName)) {
                             const functionName = phase.snapshot.functionName;
-                            const resumed = rlmStepResume(
+                            const resumed = await rlmStepResume(
+                                blockState.workerKey,
                                 Buffer.from(phase.snapshot.dump()),
                                 {
                                     exception: {
@@ -807,17 +812,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 },
                                 phase.printCallback
                             );
-                            if (resumed instanceof MontySnapshot) {
+                            if (rlmVmSnapshotIs(resumed)) {
                                 phase = { ...phase, snapshot: resumed };
                                 break;
                             }
                             rlmPrintCaptureFlushTrailing(phase.printCapture);
-                            const complete = resumed as MontyComplete;
                             phase = {
                                 type: "block_complete",
                                 blockState,
                                 result: {
-                                    output: rlmValueFormat(complete.output),
+                                    output: rlmValueFormat(resumed.output),
                                     printOutput: phase.printOutput,
                                     toolCallCount: phase.toolCallCount
                                 }
@@ -888,12 +892,13 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                             break;
                         }
 
-                        const resumed = rlmStepResume(
+                        const resumed = await rlmStepResume(
+                            blockState.workerKey,
                             stepResult.snapshotDump,
                             stepResult.resumeOptions,
                             phase.printCallback
                         );
-                        if (resumed instanceof MontySnapshot) {
+                        if (rlmVmSnapshotIs(resumed)) {
                             phase = {
                                 ...phase,
                                 snapshot: resumed,
@@ -903,12 +908,11 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         }
 
                         rlmPrintCaptureFlushTrailing(phase.printCapture);
-                        const complete = resumed as MontyComplete;
                         phase = {
                             type: "block_complete",
                             blockState,
                             result: {
-                                output: rlmValueFormat(complete.output),
+                                output: rlmValueFormat(resumed.output),
                                 printOutput: phase.printOutput,
                                 toolCallCount: nextToolCallCount
                             }

@@ -1,8 +1,7 @@
-import type { MontySnapshot } from "@pydantic/monty";
-
 import type { ToolExecutionContext } from "@/types";
 import type { RlmCheckSteeringCallback, RlmExecuteResult } from "../../modules/rlm/rlmExecute.js";
 import type { RlmPrintCaptureState } from "../../modules/rlm/rlmPrintCapture.js";
+import type { RlmVmSnapshot } from "../../modules/rlm/rlmVmProgress.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 
 type AgentLoopBlockState = {
@@ -11,6 +10,7 @@ type AgentLoopBlockState = {
     blockIndex: number;
     preamble: string;
     toolCallId: string;
+    workerKey: string;
     assistantRecordAt: number;
     historyResponseText: string;
     executionContext: ToolExecutionContext;
@@ -31,7 +31,7 @@ export type VmStartPhase = {
 export type ToolCallPhase = {
     type: "tool_call";
     blockState: AgentLoopBlockState;
-    snapshot: MontySnapshot;
+    snapshot: RlmVmSnapshot;
     printOutput: string[];
     printCapture: RlmPrintCaptureState;
     printCallback: (...values: unknown[]) => void;

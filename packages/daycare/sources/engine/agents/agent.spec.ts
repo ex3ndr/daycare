@@ -996,7 +996,7 @@ describe("Agent", () => {
             const ctx = await contextForAgentIdRequire(agentSystem, agentId);
 
             const startedAt = Date.now();
-            const snapshot = pendingToolCallSnapshotBuild();
+            const snapshot = await pendingToolCallSnapshotBuild();
             const preamble = montyPreambleBuild([waitToolBuild()]);
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
@@ -1206,9 +1206,10 @@ function historyHasSignalText(records: Array<{ type: string; text?: string }>): 
     );
 }
 
-function pendingToolCallSnapshotBuild(): string {
+async function pendingToolCallSnapshotBuild(): Promise<string> {
     const preamble = montyPreambleBuild([waitToolBuild()]);
-    const started = rlmStepStart({
+    const started = await rlmStepStart({
+        workerKey: "test:agent",
         code: "wait(300)",
         preamble,
         externalFunctions: ["wait"],

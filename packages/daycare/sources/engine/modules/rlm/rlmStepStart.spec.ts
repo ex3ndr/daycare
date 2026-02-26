@@ -5,9 +5,10 @@ import { RLM_LIMITS } from "./rlmLimits.js";
 import { rlmStepStart } from "./rlmStepStart.js";
 
 describe("rlmStepStart", () => {
-    it("starts a VM and returns an immediate completion", () => {
+    it("starts a VM and returns an immediate completion", async () => {
         const printCallback = vi.fn();
-        const result = rlmStepStart({
+        const result = await rlmStepStart({
+            workerKey: "test:agent",
             code: "'done'",
             preamble: "",
             externalFunctions: [],
@@ -15,13 +16,13 @@ describe("rlmStepStart", () => {
             printCallback
         });
 
-        expect(result.monty).toBeDefined();
         expect("output" in result.progress).toBe(true);
     });
 
-    it("uses preamble as type-check prefix only and does not execute it", () => {
+    it("uses preamble as type-check prefix only and does not execute it", async () => {
         const printCallback = vi.fn();
-        const result = rlmStepStart({
+        const result = await rlmStepStart({
+            workerKey: "test:agent",
             code: "'done'",
             preamble: "print('prefix-ran')",
             externalFunctions: [],
@@ -33,7 +34,7 @@ describe("rlmStepStart", () => {
         expect(printCallback).not.toHaveBeenCalled();
     });
 
-    it("returns a paused snapshot when the code calls an external function", () => {
+    it("returns a paused snapshot when the code calls an external function", async () => {
         const printCallback = vi.fn();
         const tools = [
             {
@@ -44,7 +45,8 @@ describe("rlmStepStart", () => {
         ];
         const preamble = montyPreambleBuild(tools);
 
-        const result = rlmStepStart({
+        const result = await rlmStepStart({
+            workerKey: "test:agent",
             code: "echo('hello')",
             preamble,
             externalFunctions: ["echo"],

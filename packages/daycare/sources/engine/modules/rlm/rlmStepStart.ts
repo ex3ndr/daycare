@@ -1,4 +1,5 @@
-import { Monty, type MontyComplete, type MontySnapshot } from "@pydantic/monty";
+import type { RlmVmProgress } from "./rlmVmProgress.js";
+import { rlmWorkersSharedGet } from "./rlmWorkers.js";
 
 type RlmStepStartLimits = {
     maxDurationSecs: number;
@@ -8,6 +9,7 @@ type RlmStepStartLimits = {
 };
 
 type RlmStepStartOptions = {
+    workerKey: string;
     code: string;
     preamble: string;
     externalFunctions: string[];
@@ -16,26 +18,22 @@ type RlmStepStartOptions = {
 };
 
 export type RlmStepStartResult = {
-    monty: Monty;
-    progress: MontySnapshot | MontyComplete;
+    progress: RlmVmProgress;
 };
 
 /**
  * Starts a fresh Monty execution and returns the first progress value.
  * Expects: `preamble` contains type-check prefix stubs for Monty.
  */
-export function rlmStepStart(options: RlmStepStartOptions): RlmStepStartResult {
-    const runtimePrelude = "ToolError = RuntimeError";
-    const script = `${runtimePrelude}\n\n${options.code}`;
-    const monty = new Monty(script, {
-        scriptName: "run_python.py",
+export async function rlmStepStart(options: RlmStepStartOptions): Promise<RlmStepStartResult> {
+    const started = await rlmWorkersSharedGet().start(options.workerKey, {
+        code: options.code,
+        preamble: options.preamble,
         externalFunctions: options.externalFunctions,
-        typeCheck: true,
-        typeCheckPrefixCode: options.preamble.length > 0 ? options.preamble : undefined
+        limits: options.limits
     });
-    const progress = monty.start({
-        limits: options.limits,
-        printCallback: options.printCallback
-    });
-    return { monty, progress };
+    for (const line of started.printOutput) {
+        options.printCallback(line);
+    }
+    return { progress: started.progress };
 }

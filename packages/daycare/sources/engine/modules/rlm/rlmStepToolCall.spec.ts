@@ -23,7 +23,7 @@ describe("rlmStepToolCall", () => {
             const payload = args as { text: string };
             return okResult("echo", payload.text);
         });
-        const step = startSnapshotBuild("echo('hello')");
+        const step = await startSnapshotBuild("echo('hello')");
         const beforeExecute = vi.fn(async () => undefined);
 
         const result = await rlmStepToolCall({
@@ -43,7 +43,7 @@ describe("rlmStepToolCall", () => {
 
     it("returns exception resume options for tool errors", async () => {
         const resolver = resolverBuild(async (_name, _args) => errorResult("echo", "boom"));
-        const step = startSnapshotBuild("echo('hello')");
+        const step = await startSnapshotBuild("echo('hello')");
 
         const result = await rlmStepToolCall({
             snapshot: step,
@@ -64,7 +64,7 @@ describe("rlmStepToolCall", () => {
         const resolver = resolverBuild(async () => {
             throw abortErrorBuild();
         });
-        const step = startSnapshotBuild("echo('hello')");
+        const step = await startSnapshotBuild("echo('hello')");
 
         await expect(
             rlmStepToolCall({
@@ -77,8 +77,9 @@ describe("rlmStepToolCall", () => {
     });
 });
 
-function startSnapshotBuild(code: string) {
-    const started = rlmStepStart({
+async function startSnapshotBuild(code: string) {
+    const started = await rlmStepStart({
+        workerKey: "test:agent",
         code,
         preamble: montyPreambleBuild(tools),
         externalFunctions: ["echo"],

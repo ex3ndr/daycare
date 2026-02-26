@@ -1,16 +1,17 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
-import type { MontySnapshot } from "@pydantic/monty";
 
 import type { ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 import { rlmValueFormat } from "./rlmValueFormat.js";
+import type { RlmVmSnapshot } from "./rlmVmProgress.js";
+import type { RlmWorkerResumeOptions } from "./rlmWorkerProtocol.js";
 
-export type RlmStepResumeOptions = { returnValue: unknown } | { exception: { type: string; message: string } };
+export type RlmStepResumeOptions = RlmWorkerResumeOptions;
 
 type RlmStepToolCallOptions = {
-    snapshot: MontySnapshot;
+    snapshot: RlmVmSnapshot;
     toolByName: Map<string, Tool>;
     toolResolver: ToolResolverApi;
     context: ToolExecutionContext;

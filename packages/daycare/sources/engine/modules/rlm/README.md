@@ -42,12 +42,21 @@ dispatch aligned with the active sandboxed tool view.
 
 ## Execution Flow
 
-`rlmExecute()` is now a convenience wrapper over step primitives used by the flat agent loop:
+`rlmExecute()` is a convenience wrapper over step primitives used by the flat agent loop:
 
-1. `rlmStepStart()` starts VM execution and returns `MontySnapshot | MontyComplete`
+1. `rlmStepStart()` starts VM execution and returns paused snapshot state or completion
 2. `rlmStepToolCall()` executes one paused tool call and builds resume options
-3. `rlmStepResume()` reloads snapshot + resumes VM
+3. `rlmStepResume()` reloads snapshot bytes in worker and resumes VM
 4. `rlmExecute()` loops over those primitives for non-agent-loop callers
+
+## Worker Isolation
+
+Monty VM execution runs in dedicated child worker processes managed by `RlmWorkers`:
+
+- each agent context (`ctx.userId + ctx.agentId`) gets its own worker process key
+- `rlmStepStart()` and `rlmStepResume()` route requests through the per-agent worker
+- host process keeps tool execution/orchestration logic and only delegates VM start/resume
+- worker crashes are isolated from the host process; in-flight requests fail and next request respawns worker
 
 ## Print Handling
 

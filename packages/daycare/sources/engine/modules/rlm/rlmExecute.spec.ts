@@ -1,4 +1,3 @@
-import { MontySnapshot } from "@pydantic/monty";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
@@ -95,8 +94,7 @@ describe("rlmExecute", () => {
         expect(result.toolCallCount).toBe(0);
     });
 
-    it("reloads snapshot before resume so duration limits reset after tool calls", async () => {
-        const loadSpy = vi.spyOn(MontySnapshot, "load");
+    it("resumes execution after tool calls and returns final output", async () => {
         const resolver = createResolver(async (name, args) => {
             if (name !== "echo") {
                 throw new Error(`Unexpected tool ${name}`);
@@ -105,7 +103,7 @@ describe("rlmExecute", () => {
             return okResult(name, payload.text);
         });
 
-        await rlmExecute(
+        const result = await rlmExecute(
             "value = echo('hello')\nvalue",
             montyPreambleBuild(baseTools),
             createContext(),
@@ -113,8 +111,8 @@ describe("rlmExecute", () => {
             "tool-call-1"
         );
 
-        expect(loadSpy).toHaveBeenCalledTimes(1);
-        loadSpy.mockRestore();
+        expect(result.output).toBe('{"text":"hello"}');
+        expect(result.toolCallCount).toBe(1);
     });
 
     it("emits checkpoint records through history callback", async () => {
@@ -194,7 +192,7 @@ describe("rlmExecute", () => {
 
         await expect(
             rlmExecute("echo(1)", montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-typing")
-        ).rejects.toThrow("TypeError");
+        ).rejects.toThrow("Python type check failed.");
     });
 });
 
@@ -214,7 +212,7 @@ function createContext(): ToolExecutionContext {
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: null as unknown as ToolExecutionContext["agent"],
-        ctx: null as unknown as ToolExecutionContext["ctx"],
+        ctx: { userId: "user-1", agentId: "agent-1" } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],

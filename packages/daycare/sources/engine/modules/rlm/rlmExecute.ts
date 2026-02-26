@@ -1,5 +1,3 @@
-import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
-
 import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
@@ -11,6 +9,8 @@ import { rlmStepStart } from "./rlmStepStart.js";
 import { rlmStepToolCall } from "./rlmStepToolCall.js";
 import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 import { rlmValueFormat } from "./rlmValueFormat.js";
+import { rlmVmSnapshotIs } from "./rlmVmProgress.js";
+import { rlmWorkerKeyResolve } from "./rlmWorkerKeyResolve.js";
 
 export type RlmExecuteResult = {
     output: string;
@@ -48,6 +48,7 @@ export async function rlmExecute(
     const availableTools = rlmToolsForContextResolve(toolResolver, context).filter(
         (tool) => tool.name !== RLM_TOOL_NAME
     );
+    const workerKey = rlmWorkerKeyResolve(context.ctx);
     const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
     const externalFunctions = [...toolByName.keys()];
     if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
@@ -67,15 +68,18 @@ export async function rlmExecute(
         rlmPrintCaptureAppend(printCapture, values);
     };
     let toolCallCount = 0;
-    let progress = rlmStepStart({
-        code,
-        preamble,
-        externalFunctions,
-        limits: RLM_LIMITS,
-        printCallback
-    }).progress;
+    let progress = (
+        await rlmStepStart({
+            workerKey,
+            code,
+            preamble,
+            externalFunctions,
+            limits: RLM_LIMITS,
+            printCallback
+        })
+    ).progress;
 
-    while (progress instanceof MontySnapshot) {
+    while (rlmVmSnapshotIs(progress)) {
         if (progress.functionName === SKIP_TOOL_NAME) {
             rlmPrintCaptureFlushTrailing(printCapture);
             const skipResult: RlmExecuteResult = {
@@ -99,7 +103,8 @@ export async function rlmExecute(
         if (!toolByName.has(progress.functionName)) {
             const functionName = progress.functionName;
             const snapshotDump = Buffer.from(progress.dump());
-            progress = rlmStepResume(
+            progress = await rlmStepResume(
+                workerKey,
                 snapshotDump,
                 {
                     exception: {
@@ -176,13 +181,12 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
             return steeringResult;
         }
 
-        progress = rlmStepResume(stepResult.snapshotDump, stepResult.resumeOptions, printCallback);
+        progress = await rlmStepResume(workerKey, stepResult.snapshotDump, stepResult.resumeOptions, printCallback);
     }
 
     rlmPrintCaptureFlushTrailing(printCapture);
-    const completed = progress as MontyComplete;
     const result: RlmExecuteResult = {
-        output: rlmValueFormat(completed.output),
+        output: rlmValueFormat(progress.output),
         printOutput,
         toolCallCount
     };

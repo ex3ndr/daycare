@@ -25,7 +25,8 @@ describe("rlmStepResume", () => {
             const payload = args as { text: string };
             return okResult("echo", payload.text);
         });
-        const started = rlmStepStart({
+        const started = await rlmStepStart({
+            workerKey: "test:agent",
             code: "value = echo('hello')\nvalue",
             preamble: montyPreambleBuild(tools),
             externalFunctions: ["echo"],
@@ -42,7 +43,12 @@ describe("rlmStepResume", () => {
             toolResolver: resolver,
             context: contextBuild()
         });
-        const resumed = rlmStepResume(callResult.snapshotDump, callResult.resumeOptions, () => undefined);
+        const resumed = await rlmStepResume(
+            "test:agent",
+            callResult.snapshotDump,
+            callResult.resumeOptions,
+            () => undefined
+        );
 
         expect("output" in resumed).toBe(true);
         if ("output" in resumed) {
