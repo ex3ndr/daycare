@@ -132,12 +132,15 @@ export async function rlmExecute(
                     return;
                 }
                 let snapshotId: string | null = null;
+                const sessionId = context.agent?.state?.activeSessionId ?? null;
+                if (!sessionId) {
+                    return;
+                }
                 try {
                     snapshotId = await rlmSnapshotCreate({
-                        storage: context.agentSystem.storage,
                         config: context.agentSystem.config.current,
                         agentId: context.ctx.agentId,
-                        at,
+                        sessionId,
                         snapshotDump: rlmSnapshotEncode(snapshotDump)
                     });
                 } catch {

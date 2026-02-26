@@ -3,46 +3,32 @@ import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
 import type { Config } from "@/types";
-import type { Storage } from "../../../storage/storage.js";
 
 type RlmSnapshotCreateOptions = {
-    storage: Storage;
     config: Config;
     agentId: string;
-    at: number;
+    sessionId: string;
     snapshotDump: string;
 };
 
 /**
- * Persists an RLM checkpoint dump to the agent snapshot folder and returns cuid2 id.
- * Expects: agent exists and snapshotDump is a base64-encoded Monty dump.
+ * Persists an RLM checkpoint dump to the agent/session snapshot folder and returns cuid2 id.
+ * Expects: sessionId is non-empty and snapshotDump is a base64-encoded Monty dump.
  */
 export async function rlmSnapshotCreate(options: RlmSnapshotCreateOptions): Promise<string> {
-    const sessionId = await rlmSnapshotSessionEnsure(options.storage, options.agentId, options.at);
+    if (!options.sessionId) {
+        throw new Error("Session id is required for snapshot persist.");
+    }
     const snapshotId = createId();
-    const snapshotPath = rlmSnapshotPathResolve(options.config.agentsDir, options.agentId, sessionId, snapshotId);
+    const snapshotPath = rlmSnapshotPathResolve(
+        options.config.agentsDir,
+        options.agentId,
+        options.sessionId,
+        snapshotId
+    );
     await rlmSnapshotWrite(snapshotPath, Buffer.from(options.snapshotDump, "base64"));
     await rlmSnapshotDatabaseSync(options.config.dbPath);
     return snapshotId;
-}
-
-async function rlmSnapshotSessionEnsure(storage: Storage, agentId: string, at: number): Promise<string> {
-    const agent = await storage.agents.findById(agentId);
-    if (!agent) {
-        throw new Error(`Agent not found for snapshot create: ${agentId}`);
-    }
-    if (agent.activeSessionId) {
-        return agent.activeSessionId;
-    }
-    const sessionId = await storage.sessions.create({
-        agentId,
-        createdAt: at
-    });
-    await storage.agents.update(agentId, {
-        activeSessionId: sessionId,
-        updatedAt: Math.max(agent.updatedAt, at)
-    });
-    return sessionId;
 }
 
 function rlmSnapshotPathResolve(agentsDir: string, agentId: string, sessionId: string, snapshotId: string): string {

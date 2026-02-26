@@ -154,11 +154,18 @@ describe("Storage", () => {
                 });
 
                 const snapshotDump = Buffer.from([1, 2, 3]);
+                const sessionId = await storage.sessions.create({
+                    agentId,
+                    createdAt: 10
+                });
+                await storage.agents.update(agentId, {
+                    activeSessionId: sessionId,
+                    updatedAt: 10
+                });
                 const snapshotId = await rlmSnapshotCreate({
-                    storage,
                     config,
                     agentId,
-                    at: 10,
+                    sessionId,
                     snapshotDump: snapshotDump.toString("base64")
                 });
                 await storage.appendHistory(agentId, {
@@ -174,8 +181,8 @@ describe("Storage", () => {
 
                 const persistedAgent = await storage.agents.findById(agentId);
                 expect(persistedAgent?.activeSessionId).toBeTruthy();
-                const sessionId = persistedAgent?.activeSessionId ?? "";
-                const records = await storage.history.findBySessionId(sessionId);
+                const persistedSessionId = persistedAgent?.activeSessionId ?? "";
+                const records = await storage.history.findBySessionId(persistedSessionId);
                 expect(records).toHaveLength(1);
                 const record = records[0];
                 expect(record?.type).toBe("rlm_tool_call");
@@ -186,7 +193,7 @@ describe("Storage", () => {
                 const loaded = await rlmSnapshotLoad({
                     config,
                     agentId,
-                    sessionId,
+                    sessionId: persistedSessionId,
                     snapshotId: record.snapshotId
                 });
                 expect(loaded).toEqual(snapshotDump);

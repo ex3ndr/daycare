@@ -38,11 +38,11 @@ describe("rlmSnapshotCreate", () => {
                 });
 
                 const snapshotDump = Buffer.from([1, 2, 3]).toString("base64");
+                const sessionId = createId();
                 const snapshotId = await rlmSnapshotCreate({
-                    storage,
                     config,
                     agentId,
-                    at: 10,
+                    sessionId,
                     snapshotDump
                 });
 
@@ -50,7 +50,7 @@ describe("rlmSnapshotCreate", () => {
                 const loaded = await rlmSnapshotLoad({
                     config,
                     agentId,
-                    sessionId: (await storage.agents.findById(agentId))?.activeSessionId ?? "",
+                    sessionId,
                     snapshotId
                 });
                 expect(loaded).toEqual(Buffer.from([1, 2, 3]));

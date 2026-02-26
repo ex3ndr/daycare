@@ -19,7 +19,7 @@ The outer assistant/tool protocol remains unchanged:
 RLM checkpoint records are internal and are skipped when rebuilding model context.
 
 Checkpoint file I/O lives in `engine/modules/rlm/`:
-- `rlmSnapshotCreate(...)` writes dump + returns cuid2 `snapshotId`
+- `rlmSnapshotCreate(...)` persists dump for an explicit `sessionId` and returns cuid2 `snapshotId`
 - `rlmSnapshotLoad(...)` reads dump by explicit `sessionId` + `snapshotId` and returns `Uint8Array | null`
 
 ## Normal Flow
@@ -107,7 +107,7 @@ sequenceDiagram
 ## Snapshot Creation Contract
 
 Checkpoint creation is best-effort.
-When snapshot persistence is available, `snapshotId` is a cuid2 id that points to a file.
+When snapshot persistence is available and a session id exists, `snapshotId` is a cuid2 id that points to a file.
 If persistence is unavailable, execution continues and the `rlm_tool_call` checkpoint record is skipped.
 Inline base64 fallback is not allowed.
 
@@ -115,7 +115,7 @@ Inline base64 fallback is not allowed.
 flowchart TD
     A[Tool call reached in run_python] --> B{History record requested?}
     B -->|No| C[Skip checkpoint persistence]
-    B -->|Yes| D{config + storage + agentId present?}
+    B -->|Yes| D{active session id present?}
     D -->|Yes| E[Write snapshot file and store cuid2 snapshotId]
     D -->|No| F[Skip checkpoint record and continue]
 ```

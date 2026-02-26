@@ -1022,11 +1022,14 @@ describe("Agent", () => {
                 code: "wait(300)",
                 preamble
             });
+            const sessionId = (await agentSystem.storage.agents.findById(agentId))?.activeSessionId ?? null;
+            if (!sessionId) {
+                throw new Error("Expected active session before snapshot persist.");
+            }
             const snapshotId = await rlmSnapshotCreate({
-                storage: agentSystem.storage,
                 config,
                 agentId,
-                at: startedAt + 1,
+                sessionId,
                 snapshotDump
             });
             await agentSystem.storage.appendHistory(agentId, {

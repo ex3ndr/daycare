@@ -757,7 +757,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 const snapshotId = await rlmSnapshotIdCreate(
                                     agentSystem,
                                     agent.ctx.agentId,
-                                    at,
+                                    agent.state.activeSessionId ?? null,
                                     snapshotDump
                                 );
                                 if (!snapshotId) {
@@ -1069,15 +1069,17 @@ async function historyRecordAppend(
 async function rlmSnapshotIdCreate(
     agentSystem: AgentSystem,
     agentId: string,
-    at: number,
+    sessionId: string | null,
     snapshotDump: Uint8Array
 ): Promise<string | null> {
+    if (!sessionId) {
+        return null;
+    }
     try {
         return await rlmSnapshotCreate({
-            storage: agentSystem.storage,
             config: agentSystem.config.current,
             agentId,
-            at,
+            sessionId,
             snapshotDump: rlmSnapshotEncode(snapshotDump)
         });
     } catch {
