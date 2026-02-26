@@ -10,10 +10,10 @@ import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { Storage } from "../../../storage/storage.js";
-import { rlmSnapshotCreate } from "./rlmSnapshotCreate.js";
+import { rlmSnapshotSave } from "./rlmSnapshotSave.js";
 import { rlmSnapshotLoad } from "./rlmSnapshotLoad.js";
 
-describe("rlmSnapshotCreate", () => {
+describe("rlmSnapshotSave", () => {
     it("creates snapshot file and returns cuid2 id", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-snapshot-"));
         try {
@@ -39,7 +39,7 @@ describe("rlmSnapshotCreate", () => {
 
                 const snapshotDump = Buffer.from([1, 2, 3]).toString("base64");
                 const sessionId = createId();
-                const snapshotId = await rlmSnapshotCreate({
+                const snapshotId = await rlmSnapshotSave({
                     config,
                     agentId,
                     sessionId,

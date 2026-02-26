@@ -86,7 +86,7 @@ inside the external Daycare tool does not count against the 30-second budget.
 RLM now persists execution checkpoints into agent history:
 
 - `rlm_start`: run metadata (`toolCallId`, code, preamble)
-- `rlm_tool_call`: persisted cuid2 `snapshotId` (dump stored under agent/session folder by `rlmSnapshotCreate` with explicit `sessionId`)
+- `rlm_tool_call`: persisted cuid2 `snapshotId` (dump stored under agent/session folder by `rlmSnapshotSave` with explicit `sessionId`)
 - `rlm_tool_result`: inner tool result after each call
 - `rlm_complete`: terminal execution record (success or error)
 

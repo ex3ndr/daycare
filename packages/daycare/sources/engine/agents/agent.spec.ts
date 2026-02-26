@@ -29,7 +29,7 @@ import type { InferenceRouter } from "../modules/inference/router.js";
 import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import { montyPreambleBuild } from "../modules/monty/montyPreambleBuild.js";
 import { RLM_LIMITS } from "../modules/rlm/rlmLimits.js";
-import { rlmSnapshotCreate } from "../modules/rlm/rlmSnapshotCreate.js";
+import { rlmSnapshotSave } from "../modules/rlm/rlmSnapshotSave.js";
 import { rlmStepStart } from "../modules/rlm/rlmStepStart.js";
 import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
@@ -1025,7 +1025,7 @@ describe("Agent", () => {
             if (!sessionId) {
                 throw new Error("Expected active session before snapshot persist.");
             }
-            const snapshotId = await rlmSnapshotCreate({
+            const snapshotId = await rlmSnapshotSave({
                 config,
                 agentId,
                 sessionId,

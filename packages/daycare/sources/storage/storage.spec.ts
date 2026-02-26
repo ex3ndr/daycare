@@ -6,7 +6,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../config/configResolve.js";
-import { rlmSnapshotCreate } from "../engine/modules/rlm/rlmSnapshotCreate.js";
+import { rlmSnapshotSave } from "../engine/modules/rlm/rlmSnapshotSave.js";
 import { rlmSnapshotLoad } from "../engine/modules/rlm/rlmSnapshotLoad.js";
 import { permissionBuildUser } from "../engine/permissions/permissionBuildUser.js";
 import { UserHome } from "../engine/users/userHome.js";
@@ -162,7 +162,7 @@ describe("Storage", () => {
                     activeSessionId: sessionId,
                     updatedAt: 10
                 });
-                const snapshotId = await rlmSnapshotCreate({
+                const snapshotId = await rlmSnapshotSave({
                     config,
                     agentId,
                     sessionId,

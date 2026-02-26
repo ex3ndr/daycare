@@ -19,7 +19,7 @@ The outer assistant/tool protocol remains unchanged:
 RLM checkpoint records are internal and are skipped when rebuilding model context.
 
 Checkpoint file I/O lives in `engine/modules/rlm/`:
-- `rlmSnapshotCreate(...)` persists dump for an explicit `sessionId` and returns cuid2 `snapshotId`
+- `rlmSnapshotSave(...)` persists dump for an explicit `sessionId` and returns cuid2 `snapshotId`
 - `rlmSnapshotLoad(...)` reads dump by explicit `sessionId` + `snapshotId` and returns `Uint8Array | null`
 
 ## Normal Flow
@@ -38,7 +38,7 @@ sequenceDiagram
     RLM->>History: rlm_start
     RLM->>VM: monty.start()
     VM->>RLM: snapshot (tool call)
-    RLM->>Snap: rlmSnapshotCreate() -> write <cuid2>.bin under agent/session
+    RLM->>Snap: rlmSnapshotSave() -> write <cuid2>.bin under agent/session
     Snap-->>RLM: fsync(snapshot file)
     RLM->>History: rlm_tool_call (snapshot id + args)
     History-->>RLM: append committed
@@ -102,7 +102,7 @@ sequenceDiagram
 - `vm_start` phase: re-parse `<run_python>` blocks from the latest `assistant_message` and continue from VM start.
 - `tool_call` phase: load the latest `rlm_tool_call.snapshotId` from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).
-- Read/write path consistency: both writer and restore reader use `rlmSnapshotCreate(...)` / `rlmSnapshotLoad(...)`.
+- Read/write path consistency: both writer and restore reader use `rlmSnapshotSave(...)` / `rlmSnapshotLoad(...)`.
 
 ## Snapshot Creation Contract
 

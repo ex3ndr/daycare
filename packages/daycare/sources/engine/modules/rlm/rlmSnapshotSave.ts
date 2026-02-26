@@ -4,7 +4,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import type { Config } from "@/types";
 
-type RlmSnapshotCreateOptions = {
+type RlmSnapshotSaveOptions = {
     config: Config;
     agentId: string;
     sessionId: string;
@@ -15,7 +15,7 @@ type RlmSnapshotCreateOptions = {
  * Persists an RLM checkpoint dump to the agent/session snapshot folder and returns cuid2 id.
  * Expects: sessionId is non-empty and snapshotDump is a base64-encoded Monty dump.
  */
-export async function rlmSnapshotCreate(options: RlmSnapshotCreateOptions): Promise<string> {
+export async function rlmSnapshotSave(options: RlmSnapshotSaveOptions): Promise<string> {
     if (!options.sessionId) {
         throw new Error("Session id is required for snapshot persist.");
     }

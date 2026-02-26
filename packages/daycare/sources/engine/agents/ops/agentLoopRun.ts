@@ -26,7 +26,7 @@ import {
     rlmPrintCaptureFlushTrailing
 } from "../../modules/rlm/rlmPrintCapture.js";
 import { rlmResultTextBuild } from "../../modules/rlm/rlmResultTextBuild.js";
-import { rlmSnapshotCreate } from "../../modules/rlm/rlmSnapshotCreate.js";
+import { rlmSnapshotSave } from "../../modules/rlm/rlmSnapshotSave.js";
 import { rlmSnapshotLoad } from "../../modules/rlm/rlmSnapshotLoad.js";
 import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
 import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
@@ -770,7 +770,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 }
                                 let snapshotId: string | null = null;
                                 try {
-                                    snapshotId = await rlmSnapshotCreate({
+                                    snapshotId = await rlmSnapshotSave({
                                         config: agentSystem.config.current,
                                         agentId: agent.ctx.agentId,
                                         sessionId,
