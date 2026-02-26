@@ -12,6 +12,7 @@ Updated prompt guidance for native `run_python` tool-calling and existing VM exe
 - Pending-phase restore reconstructs pending run_python queues from persisted assistant tool calls.
 - History-to-context restore now replays persisted assistant `toolCall` blocks and matching `toolResult` blocks.
 - If restore finds `rlm_start` without a snapshot, it appends synthetic `rlm_complete` error and still resumes inference.
+- Pending-phase recovery reuses standard provider selection (role/model override), not an empty override list.
 - RLM history records (`rlm_start`, `rlm_tool_call`, `rlm_tool_result`, `rlm_complete`) remain intact.
 - Unsupported tool calls in this mode return immediate tool-result errors so inference can recover and continue.
 

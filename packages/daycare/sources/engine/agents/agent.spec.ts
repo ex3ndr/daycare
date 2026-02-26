@@ -938,7 +938,13 @@ describe("Agent", () => {
     it("resumes pending rlm tool_call on restore and continues inference from toolResult", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
-            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
             const complete = vi.fn(async (..._args: unknown[]) => ({
                 providerId: "openai",
                 modelId: "gpt-4.1",
@@ -1042,6 +1048,11 @@ describe("Agent", () => {
             expect(completed?.toolCallCount).toBe(2);
             expect(completed?.printOutput).toEqual(["waiting..."]);
             expect(complete).toHaveBeenCalledTimes(1);
+            const recoveryOptions = complete.mock.calls[0]?.[2] as
+                | { providersOverride?: Array<{ id: string; model: string }> }
+                | undefined;
+            expect(recoveryOptions?.providersOverride).toHaveLength(1);
+            expect(recoveryOptions?.providersOverride?.[0]).toMatchObject({ id: "openai", model: "gpt-4.1" });
             const recoveryContext = complete.mock.calls[0]?.[0] as { messages?: unknown[] } | undefined;
             const hasRunPythonToolCall = recoveryContext?.messages?.some((message) => {
                 if (typeof message !== "object" || message === null) {
@@ -1094,7 +1105,13 @@ describe("Agent", () => {
     it("continues inference after synthetic rlm_complete when pending start has no snapshot", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
-            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
             const complete = vi.fn(async (..._args: unknown[]) => ({
                 providerId: "openai",
                 modelId: "gpt-4.1",
@@ -1185,6 +1202,11 @@ describe("Agent", () => {
             expect(completed?.isError).toBe(true);
             expect(completed?.error).toContain("before any tool call");
             expect(complete).toHaveBeenCalledTimes(1);
+            const recoveryOptions = complete.mock.calls[0]?.[2] as
+                | { providersOverride?: Array<{ id: string; model: string }> }
+                | undefined;
+            expect(recoveryOptions?.providersOverride).toHaveLength(1);
+            expect(recoveryOptions?.providersOverride?.[0]).toMatchObject({ id: "openai", model: "gpt-4.1" });
 
             const recoveryContext = complete.mock.calls[0]?.[0] as { messages?: unknown[] } | undefined;
             const hasRunPythonToolCall = recoveryContext?.messages?.some((message) => {

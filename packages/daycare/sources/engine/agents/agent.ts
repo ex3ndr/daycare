@@ -434,7 +434,9 @@ export class Agent {
         const agentKind = this.resolveAgentKind();
 
         const toolResolver = this.agentSystem.toolResolver;
-        const providerSettings = providerId ? providers.find((provider) => provider.id === providerId) : providers[0];
+        const providerSettings = providerId
+            ? (providers.find((provider) => provider.id === providerId) ?? providers[0])
+            : providers[0];
 
         const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const isFirstMessage = history.length === 0;
@@ -575,7 +577,7 @@ export class Agent {
         const userMessage = await messageBuildUser(entry);
         contextForRun.messages.push(userMessage);
 
-        const providersForAgent = providerId ? providers.filter((provider) => provider.id === providerId) : [];
+        const providersForAgent = providersForAgentResolve(providers, providerId);
 
         logger.debug(`event: handleMessage invoking inference loop agentId=${this.id}`);
         const inferenceAbortController = new AbortController();
@@ -1065,6 +1067,14 @@ export class Agent {
                 : this.descriptor.type === "system"
                   ? this.descriptor.tag
                   : this.descriptor.type;
+        const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
+        const roleKey = agentDescriptorRoleResolve(this.descriptor);
+        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
+        const roleApplied = modelRoleApply(rawProviders, roleConfig);
+        const roleProviders = roleApplied.providers;
+        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);
+        const providers = agentModelOverrideApply(roleProviders, this.state.modelOverride, providerId);
+        const providersForAgent = providersForAgentResolve(providers, providerId);
         const pluginManager = this.agentSystem.pluginManager;
         const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
         const skills = new Skills({
@@ -1105,7 +1115,7 @@ export class Agent {
             skills,
             skillsActiveRoot: this.userHome.skillsActive,
             skillsPersonalRoot: this.userHome.skillsPersonal,
-            providersForAgent: [],
+            providersForAgent,
             logger,
             appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
             notifySubagentFailure: (failureReason, error) => this.notifySubagentFailure(failureReason, error),
@@ -1297,6 +1307,17 @@ function buildResetSystemMessage(text: string, at: number, origin: string): Infe
         content: messageBuildSystemText(text, origin),
         timestamp: at
     };
+}
+
+function providersForAgentResolve(
+    providers: ReturnType<typeof listActiveInferenceProviders>,
+    providerId: string | null
+): ReturnType<typeof listActiveInferenceProviders> {
+    const selected = providerId ? providers.filter((provider) => provider.id === providerId) : providers;
+    if (selected.length > 0) {
+        return selected;
+    }
+    return providers;
 }
 
 function isAbortError(error: unknown, signal?: AbortSignal): boolean {
