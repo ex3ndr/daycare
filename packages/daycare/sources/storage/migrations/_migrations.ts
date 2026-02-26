@@ -27,6 +27,7 @@ import { migration20260225RequireUsertag } from "./20260225_require_usertag.js";
 import { migration20260226RenameUsertagToNametag } from "./20260226_rename_usertag_to_nametag.js";
 import { migration20260227RequireCronTaskId } from "./20260227_require_cron_task_id.js";
 import { migration20260228SoftDeleteTasks } from "./20260228_soft_delete_tasks.js";
+import { migration20260301AddTokenStats } from "./20260301_add_token_stats.js";
 import type { Migration } from "./migrationTypes.js";
 
 export const migrations: Migration[] = [
@@ -58,5 +59,6 @@ export const migrations: Migration[] = [
     migration20260226RenameUsertagToNametag,
     migration20260227RequireCronTaskId,
     migration20260228SoftDeleteTasks,
+    migration20260301AddTokenStats,
     migration20260224AddSystemPrompts
 ];

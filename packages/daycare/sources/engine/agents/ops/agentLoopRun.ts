@@ -84,6 +84,7 @@ type AgentLoopResult = {
     contextOverflow?: boolean;
     contextOverflowTokens?: number;
     tokenStatsUpdates: Array<{
+        at: number;
         provider: string;
         model: string;
         size: {
@@ -93,6 +94,7 @@ type AgentLoopResult = {
             cacheWrite: number;
             total: number;
         };
+        cost: number;
     }>;
 };
 
@@ -453,6 +455,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                               };
                     if (tokenUsage.source === "usage" && tokensEntry) {
                         tokenStatsUpdates.push({
+                            at: response.message.timestamp,
                             provider: tokensEntry.provider,
                             model: tokensEntry.model,
                             size: {
@@ -461,7 +464,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 cacheRead: tokensEntry.size.cacheRead,
                                 cacheWrite: tokensEntry.size.cacheWrite,
                                 total: tokensEntry.size.total
-                            }
+                            },
+                            cost: usageCostResolve(response.message.usage?.cost)
                         });
                     }
 
@@ -1181,6 +1185,39 @@ function messageAssistantTextRewrite(message: InferenceContext["messages"][numbe
         return;
     }
     message.content = nextContent;
+}
+
+function usageCostResolve(cost: unknown): number {
+    if (!cost || typeof cost !== "object") {
+        return 0;
+    }
+    const value = cost as {
+        total?: unknown;
+        input?: unknown;
+        output?: unknown;
+        cacheRead?: unknown;
+        cacheWrite?: unknown;
+    };
+    const total = numberValueNormalize(value.total);
+    if (total > 0) {
+        return total;
+    }
+    return (
+        numberValueNormalize(value.input) +
+        numberValueNormalize(value.output) +
+        numberValueNormalize(value.cacheRead) +
+        numberValueNormalize(value.cacheWrite)
+    );
+}
+
+function numberValueNormalize(value: unknown): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+        return 0;
+    }
+    if (value <= 0) {
+        return 0;
+    }
+    return value;
 }
 
 function abortErrorBuild(): Error {

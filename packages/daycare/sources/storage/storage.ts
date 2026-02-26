@@ -20,6 +20,7 @@ import { SignalEventsRepository } from "./signalEventsRepository.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
 import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
+import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 
 /**
@@ -44,6 +45,7 @@ export class Storage {
     readonly exposeEndpoints: ExposeEndpointsRepository;
     readonly processes: ProcessesRepository;
     readonly systemPrompts: SystemPromptsRepository;
+    readonly tokenStats: TokenStatsRepository;
 
     private readonly connection: ReturnType<typeof databaseOpen>;
     private readonly connectorKeyLocks = new Map<string, AsyncLock>();
@@ -67,6 +69,7 @@ export class Storage {
         this.exposeEndpoints = new ExposeEndpointsRepository(connection);
         this.processes = new ProcessesRepository(connection);
         this.systemPrompts = new SystemPromptsRepository(connection);
+        this.tokenStats = new TokenStatsRepository(connection);
     }
 
     static open(dbPath: string): Storage {
