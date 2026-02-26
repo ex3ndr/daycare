@@ -388,12 +388,7 @@ export class Agent {
             context,
             receivedAt
         };
-        const source =
-            this.descriptor.type === "user"
-                ? this.descriptor.connector
-                : this.descriptor.type === "system"
-                  ? this.descriptor.tag
-                  : this.descriptor.type;
+        const source = this.sourceResolve();
         logger.debug(
             `start: handleMessage start agentId=${this.id} source=${source} textLength=${entry.message.text?.length ?? 0} fileCount=${entry.message.files?.length ?? 0}`
         );
@@ -411,25 +406,11 @@ export class Agent {
             files
         };
 
-        const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        const roleKey = agentDescriptorRoleResolve(this.descriptor);
-        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
-        const roleApplied = modelRoleApply(rawProviders, roleConfig);
-        const roleProviders = roleApplied.providers;
-        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);
-        const providers = agentModelOverrideApply(roleProviders, this.state.modelOverride, providerId);
-
+        const { providers, providerId } = this.inferenceProvidersResolve();
         const connector = this.agentSystem.connectorRegistry.get(source);
-        const pluginManager = this.agentSystem.pluginManager;
-        const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
-        const skills = new Skills({
-            configRoot: configSkillsRoot,
-            pluginManager,
-            userPersonalRoot: this.userHome.skillsPersonal,
-            userActiveRoot: this.userHome.skillsActive,
-            agentsRoot: path.join(os.homedir(), ".agents", "skills")
-        });
+        const skills = this.skillsResolve();
         const agentKind = this.resolveAgentKind();
+        const pluginManager = this.agentSystem.pluginManager;
 
         const toolResolver = this.agentSystem.toolResolver;
         const providerSettings = providerId
@@ -969,15 +950,10 @@ export class Agent {
         if (messages.length === 0) {
             return { ok: false, reason: "empty" };
         }
-        const rawCompactionProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        if (rawCompactionProviders.length === 0) {
+        const { providers, providerId } = this.inferenceProvidersResolve();
+        if (providers.length === 0) {
             return { ok: false, reason: "no_provider" };
         }
-        const roleKey = agentDescriptorRoleResolve(this.descriptor);
-        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
-        const roleApplied = modelRoleApply(rawCompactionProviders, roleConfig);
-        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleApplied.providers);
-        const providers = agentModelOverrideApply(roleApplied.providers, this.state.modelOverride, providerId);
         const stopCompactionTyping = this.startCompactionTypingIndicator();
         const compactionAbortController = new AbortController();
         this.inferenceAbortController = compactionAbortController;
@@ -1059,30 +1035,11 @@ export class Agent {
             );
         }
 
-        const source =
-            this.descriptor.type === "user"
-                ? this.descriptor.connector
-                : this.descriptor.type === "system"
-                  ? this.descriptor.tag
-                  : this.descriptor.type;
+        const source = this.sourceResolve();
         const connector = this.agentSystem.connectorRegistry.get(source);
-        const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        const roleKey = agentDescriptorRoleResolve(this.descriptor);
-        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
-        const roleApplied = modelRoleApply(rawProviders, roleConfig);
-        const roleProviders = roleApplied.providers;
-        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);
-        const providers = agentModelOverrideApply(roleProviders, this.state.modelOverride, providerId);
+        const { providers, providerId } = this.inferenceProvidersResolve();
         const providersForAgent = providersForAgentResolve(providers, providerId);
-        const pluginManager = this.agentSystem.pluginManager;
-        const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
-        const skills = new Skills({
-            configRoot: configSkillsRoot,
-            pluginManager,
-            userPersonalRoot: this.userHome.skillsPersonal,
-            userActiveRoot: this.userHome.skillsActive,
-            agentsRoot: path.join(os.homedir(), ".agents", "skills")
-        });
+        const skills = this.skillsResolve();
         const pendingContext: InferenceContext = {
             messages: await this.buildHistoryContext(records)
         };
@@ -1201,6 +1158,39 @@ export class Agent {
             return "foreground";
         }
         return "background";
+    }
+
+    private sourceResolve(): string {
+        return this.descriptor.type === "user"
+            ? this.descriptor.connector
+            : this.descriptor.type === "system"
+              ? this.descriptor.tag
+              : this.descriptor.type;
+    }
+
+    private inferenceProvidersResolve(): {
+        providers: ReturnType<typeof listActiveInferenceProviders>;
+        providerId: string | null;
+    } {
+        const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
+        const roleKey = agentDescriptorRoleResolve(this.descriptor);
+        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
+        const roleApplied = modelRoleApply(rawProviders, roleConfig);
+        const roleProviders = roleApplied.providers;
+        const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);
+        const providers = agentModelOverrideApply(roleProviders, this.state.modelOverride, providerId);
+        return { providers, providerId };
+    }
+
+    private skillsResolve(): Skills {
+        const configSkillsRoot = path.join(this.agentSystem.config.current.configDir, "skills");
+        return new Skills({
+            configRoot: configSkillsRoot,
+            pluginManager: this.agentSystem.pluginManager,
+            userPersonalRoot: this.userHome.skillsPersonal,
+            userActiveRoot: this.userHome.skillsActive,
+            agentsRoot: path.join(os.homedir(), ".agents", "skills")
+        });
     }
 
     private resolveAgentProvider(providers: ReturnType<typeof listActiveInferenceProviders>): string | null {
