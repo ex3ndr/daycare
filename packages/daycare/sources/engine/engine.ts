@@ -61,6 +61,7 @@ import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
 import { buildReactionTool } from "./modules/tools/reaction.js";
+import { runPythonTool } from "./modules/tools/runPythonTool.js";
 import { sayTool } from "./modules/tools/sayTool.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
@@ -423,6 +424,7 @@ export class Engine {
         this.modules.tools.register("core", buildMediaAnalysisTool(this.modules.mediaAnalysis));
         this.modules.tools.register("core", buildMermaidPngTool());
         this.modules.tools.register("core", buildReactionTool());
+        this.modules.tools.register("core", runPythonTool());
         this.modules.tools.register("core", sayTool());
         this.modules.tools.register("core", buildSendFileTool());
         this.modules.tools.register("core", pdfProcessTool());

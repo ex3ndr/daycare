@@ -9,10 +9,10 @@ import { agentLoopRun } from "./agentLoopRun.js";
 import type { AgentMessage } from "./agentTypes.js";
 
 describe("agentLoopRun", () => {
-    it("always requests inference with the run_python stop sequence", async () => {
+    it("exposes run_python as the only inference tool and does not set stop sequences", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
-        const responses = [assistantMessageBuild("<run_python>echo('x')</run_python>"), assistantMessageBuild("Done")];
+        const responses = [assistantMessageBuild("Done")];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
 
@@ -25,23 +25,17 @@ describe("agentLoopRun", () => {
         );
 
         expect(inferenceRouter.complete).toHaveBeenCalled();
-        expect(inferenceRouter.complete).toHaveBeenNthCalledWith(
-            1,
-            expect.anything(),
-            "agent-1",
-            expect.objectContaining({
-                providerOptions: {
-                    stop: ["</run_python>"]
-                }
-            })
-        );
+        const firstContext = inferenceRouter.complete.mock.calls[0]?.[0];
+        const firstOptions = inferenceRouter.complete.mock.calls[0]?.[2];
+        expect(firstContext?.tools?.map((tool: Tool) => tool.name)).toEqual(["run_python"]);
+        expect(firstOptions?.providerOptions).toBeUndefined();
     });
 
-    it("forwards plain assistant text and executes run_python blocks inline", async () => {
+    it("executes run_python tool calls and continues inference", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
         const responses = [
-            assistantMessageBuild("Preparing execution...\n<run_python>echo('x')</run_python>"),
+            assistantToolCallMessageBuild("tool-1", "run_python", { code: "'step complete'" }),
             assistantMessageBuild("Finished")
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
@@ -55,13 +49,16 @@ describe("agentLoopRun", () => {
             })
         );
 
-        expect(connectorSend).toHaveBeenCalledTimes(2);
-        expect(connectorSend).toHaveBeenNthCalledWith(
-            1,
-            "channel-1",
-            expect.objectContaining({ text: "Preparing execution...\n" })
-        );
-        expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", expect.objectContaining({ text: "Finished" }));
+        expect(inferenceRouter.complete).toHaveBeenCalledTimes(2);
+        const secondContext = inferenceRouter.complete.mock.calls[1]?.[0];
+        expect(
+            secondContext?.messages.some(
+                (message: { role: string; toolCallId?: string }) =>
+                    message.role === "toolResult" && message.toolCallId === "tool-1"
+            )
+        ).toBe(true);
+        expect(connectorSend).toHaveBeenCalledTimes(1);
+        expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
     });
 
     it("nudges child agents when no send_agent_message call was made", async () => {
@@ -84,9 +81,11 @@ describe("agentLoopRun", () => {
         expect(JSON.stringify(secondContext ?? {})).toContain("Use the send_agent_message tool");
     });
 
-    it("tracks send_agent_message during inline python execution for child agents", async () => {
+    it("tracks send_agent_message during run_python tool execution for child agents", async () => {
         const responses = [
-            assistantMessageBuild("<run_python>send_agent_message(text='payload for parent')</run_python>"),
+            assistantToolCallMessageBuild("tool-1", "run_python", {
+                code: 'send_agent_message(text="payload for parent")'
+            }),
             assistantMessageBuild("Done")
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
@@ -106,7 +105,7 @@ describe("agentLoopRun", () => {
     });
 
     it("stops immediately when run_python tool execution aborts", async () => {
-        const responses = [assistantMessageBuild("<run_python>echo('x')</run_python>")];
+        const responses = [assistantToolCallMessageBuild("tool-1", "run_python", { code: 'echo(text="x")' })];
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild(async () => {
             throw abortErrorBuild();
@@ -129,9 +128,9 @@ describe("agentLoopRun", () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
         const responses = [
-            assistantMessageBuild(
-                "<run_python>try:\n    transient_tool()\nexcept ToolError as e:\n    print(e)\n'done'</run_python>"
-            ),
+            assistantToolCallMessageBuild("tool-1", "run_python", {
+                code: "try:\n    transient_tool()\nexcept ToolError as e:\n    print(e)\n'done'"
+            }),
             assistantMessageBuild("Finished")
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
@@ -329,6 +328,11 @@ function toolResolverBuild(
 ): ToolResolverApi {
     const tools = [
         {
+            name: "run_python",
+            description: "Run Python",
+            parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
+        },
+        {
             name: "send_agent_message",
             description: "Send message to parent",
             parameters: Type.Object(
@@ -376,6 +380,36 @@ function assistantMessageBuild(text: string): AssistantMessage {
     return {
         role: "assistant",
         content: [{ type: "text", text }],
+        api: "openai-responses",
+        provider: "openai",
+        model: "gpt-test",
+        usage: {
+            input: 0,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 0,
+            cost: {
+                input: 0,
+                output: 0,
+                cacheRead: 0,
+                cacheWrite: 0,
+                total: 0
+            }
+        },
+        stopReason: "stop",
+        timestamp: Date.now()
+    };
+}
+
+function assistantToolCallMessageBuild(
+    toolCallId: string,
+    toolName: string,
+    args: Record<string, unknown>
+): AssistantMessage {
+    return {
+        role: "assistant",
+        content: [{ id: toolCallId, name: toolName, type: "toolCall", arguments: args }],
         api: "openai-responses",
         provider: "openai",
         model: "gpt-test",

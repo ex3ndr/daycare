@@ -1,38 +1,31 @@
 # RLM Multiline Python Guidance
 
-Updated prompt guidance for inline RLM Python execution and response-tag handling.
+Updated prompt guidance for native `run_python` tool-calling and existing VM execution phases.
 
 ## Summary
-- Added inline-mode support for multiple `<run_python>` tags per assistant response.
-- Added sequential execution semantics: execute in order and stop at first failed block.
-- User-facing output now forwards only plain text before the first `<run_python>` tag.
-- Removed `<say>` tag parsing from runtime forwarding and prompt requirements.
-- On first failed `<run_python>` block, rewrote context history to drop everything after the failed block.
-- Removed synthetic ignored/failure notices from no-tools message flow when rewrite trimming applies.
-- Persisted explicit `assistant_rewrite` history events for each rewrite.
-- Restore now replays `assistant_rewrite` events directly (no trim recomputation on load).
-- Extracted trim logic into ops helpers:
-  `agentMessageRunPythonFailureTrim(successfulExecutionCount)`.
-- Updated inline prompt examples to show multi-tag execution and prefix-only user output before execution blocks.
-- Clarified that tool calls return plain LLM strings, not structured payloads.
-- Added test assertions so these instructions stay present.
+- Replaced `<run_python>...</run_python>` text-tag parsing in the main inference loop with native assistant tool calls.
+- Prompt now instructs models to call `run_python(code=...)` directly.
+- Runtime still uses the same VM phases (`vm_start` -> `tool_call` -> `block_complete`) for execution.
+- Each `run_python` call result is posted back as a `toolResult` message with the original assistant `toolCallId`.
+- RLM history records (`rlm_start`, `rlm_tool_call`, `rlm_tool_result`, `rlm_complete`) remain intact.
+- Unsupported tool calls in this mode return immediate tool-result errors so inference can recover and continue.
 
 ## Flow
 ```mermaid
 flowchart TD
-  U[Assistant response] --> A[Collect run_python blocks in order]
-  A --> B[Execute block 1]
-  B --> C{Success?}
-  C -- Yes --> D[Execute next block]
-  C -- No --> E[Skip remaining blocks]
-  D --> F[All blocks done]
-  E --> G[Stop run_python execution loop]
-  F --> H[Emit python_result messages for successful blocks]
-  U --> I[Forward only text before first run_python]
-  I --> K[Store full assistant text in history]
-  K --> N[Append assistant_rewrite event when failure trim applies]
-  C -- No --> M[Rewrite history: cut text after failed block]
-  M --> O[Append assistant_rewrite failure event]
-  N --> P[Restore: replay assistant_rewrite events]
-  O --> P
+  U[Assistant response] --> A[Extract toolCall blocks]
+  A --> B{run_python calls present?}
+  B -- no --> C[Finish turn / send plain text]
+  B -- yes --> D[Build block queue from run_python.code]
+  D --> E[vm_start phase]
+  E --> F[tool_call phase for runtime function dispatch]
+  F --> G[block_complete phase]
+  G --> H[Append rlm_complete history record]
+  H --> I[Push toolResult message with original toolCallId]
+  I --> J{More run_python calls in same response?}
+  J -- yes --> E
+  J -- no --> K[Continue inference loop]
+  A --> L[Unsupported tool calls]
+  L --> M[Push toolResult error]
+  M --> K
 ```

@@ -39,7 +39,7 @@ async function toolsPythonTemplateCompile(): Promise<HandlebarsTemplateDelegate<
 }
 
 /**
- * Builds no-tools RLM instructions for the system prompt using <run_python> tags.
+ * Builds run_python tool-calling instructions for the system prompt.
  * Expects: tools contains the full runtime tool list used for Monty dispatch.
  */
 export async function rlmNoToolsPromptBuild(

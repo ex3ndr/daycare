@@ -7,6 +7,7 @@ import type { ToolResolverApi } from "../../modules/toolResolver.js";
 type AgentLoopBlockState = {
     iteration: number;
     blocks: string[];
+    blockToolCallIds: string[];
     blockIndex: number;
     preamble: string;
     toolCallId: string;

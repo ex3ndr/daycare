@@ -10,7 +10,7 @@ import { EngineEventBus } from "../../ipc/events.js";
 import { rlmNoToolsPromptBuild } from "./rlmNoToolsPromptBuild.js";
 
 describe("rlmNoToolsPromptBuild", () => {
-    it("renders no-tools run_python tag instructions with generated stubs", async () => {
+    it("renders run_python tool-calling instructions with generated stubs", async () => {
         const tools = [
             { name: "run_python", description: "", parameters: {} },
             { name: "echo", description: "Echo text", parameters: {} },
@@ -20,11 +20,11 @@ describe("rlmNoToolsPromptBuild", () => {
 
         const prompt = await rlmNoToolsPromptBuild(tools);
 
-        expect(prompt).toContain("This mode exposes zero tools to the model.");
-        expect(prompt).toContain("<run_python>...</run_python>");
-        expect(prompt).toContain("You may include multiple `<run_python>` blocks in one response.");
+        expect(prompt).toContain("This mode exposes one native tool to the model: `run_python`.");
+        expect(prompt).toContain("call `run_python` with a string argument `code`");
+        expect(prompt).toContain("You may include multiple `run_python` tool calls in one response.");
         expect(prompt).toContain("executed sequentially from top to bottom");
-        expect(prompt).toContain("all remaining `<run_python>` blocks in that response are skipped");
+        expect(prompt).toContain("all remaining `run_python` calls in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
         expect(prompt).toContain(bundledExamplesDirResolve());
         expect(prompt).toContain("prefer it for user-visible replies");
@@ -34,7 +34,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("def echo() -> EchoResponse:");
         expect(prompt).toContain("def skip() -> SkipResponse:");
         expect(prompt).not.toContain("Available skills");
-        expect(prompt).toContain("<python_result>...</python_result>");
+        expect(prompt).toContain("Execution results are sent back as `run_python` tool results.");
         expect(prompt).toContain("do not use `print()` for the final return value");
         expect(prompt.indexOf("Call tool functions directly (no `await`).")).toBeLessThan(
             prompt.indexOf("Available functions:")
@@ -52,7 +52,7 @@ describe("rlmNoToolsPromptBuild", () => {
 
         expect(prompt).not.toContain("prefer it for user-visible replies");
         expect(prompt).not.toContain("respond to the user with plain text");
-        expect(prompt).toContain("<run_python>...</run_python>");
+        expect(prompt).toContain("run_python");
     });
 
     it("generates python stubs for all registered runtime tools", async () => {

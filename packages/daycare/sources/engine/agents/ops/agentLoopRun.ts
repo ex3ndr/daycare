@@ -1,4 +1,4 @@
-import type { Context as InferenceContext } from "@mariozechner/pi-ai";
+import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
@@ -8,24 +8,26 @@ import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
+import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import { montyPreambleBuild } from "../../modules/monty/montyPreambleBuild.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
+import { rlmErrorTextBuild } from "../../modules/rlm/rlmErrorTextBuild.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import { RLM_LIMITS } from "../../modules/rlm/rlmLimits.js";
-import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
-import { rlmNoToolsResultMessageBuild } from "../../modules/rlm/rlmNoToolsResultMessageBuild.js";
 import {
     rlmPrintCaptureAppend,
     rlmPrintCaptureCreate,
     rlmPrintCaptureFlushTrailing
 } from "../../modules/rlm/rlmPrintCapture.js";
+import { rlmResultTextBuild } from "../../modules/rlm/rlmResultTextBuild.js";
 import { rlmSnapshotEncode } from "../../modules/rlm/rlmSnapshotEncode.js";
 import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
 import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
 import { rlmStepToolCall } from "../../modules/rlm/rlmStepToolCall.js";
+import { rlmToolResultBuild } from "../../modules/rlm/rlmToolResultBuild.js";
 import { rlmToolsForContextResolve } from "../../modules/rlm/rlmToolsForContextResolve.js";
 import { rlmValueFormat } from "../../modules/rlm/rlmValueFormat.js";
 import { rlmVmSnapshotIs } from "../../modules/rlm/rlmVmProgress.js";
@@ -39,7 +41,6 @@ import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import type { AgentLoopPendingPhase } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
-import { agentMessageRunPythonTerminalTrim } from "./agentMessageRunPythonTerminalTrim.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
@@ -155,6 +156,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const blockStateBuild = (params: {
         iteration: number;
         blocks: string[];
+        blockToolCallIds?: string[];
         blockIndex: number;
         preamble: string;
         toolCallId: string;
@@ -174,7 +176,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             agentSystem,
             heartbeats,
             memory,
-            toolResolver,
             skills: activeSkills,
             skillsPersonalRoot: options.skillsPersonalRoot,
             appendHistoryRecord,
@@ -202,8 +203,15 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 return toolResolver.execute(toolCall, toolContext);
             }
         };
+        executionContext.toolResolver = trackingToolResolver;
+        const blockToolCallIds =
+            params.blockToolCallIds && params.blockToolCallIds.length === params.blocks.length
+                ? params.blockToolCallIds
+                : params.blocks.map((_, index) => (index === params.blockIndex ? params.toolCallId : createId()));
+
         return {
             ...params,
+            blockToolCallIds,
             workerKey: rlmWorkerKeyResolve(executionContext.ctx),
             executionContext,
             trackingToolResolver,
@@ -231,7 +239,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 options?.toolCallCount ?? 0
             )
         );
-        context.messages.push(rlmNoToolsResultMessageBuild({ error }));
+        context.messages.push(
+            rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, rlmErrorTextBuild(error), true)
+                .toolMessage
+        );
         const truncated = agentMessageRunPythonFailureTrim(blockState.historyResponseText, blockState.blockIndex);
         if (truncated !== null && response?.message) {
             messageAssistantTextRewrite(response.message, truncated);
@@ -257,7 +268,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             try {
                 activeSkills = await skills.list();
                 await skills.syncToActive(options.skillsActiveRoot, activeSkills);
-                context.tools = [];
+                context.tools = toolListInferenceResolve(toolResolver.listToolsForAgent(toolVisibilityContext));
             } catch (error) {
                 logger.warn(
                     { agentId: agent.id, error },
@@ -283,6 +294,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 const blockState = blockStateBuild({
                     iteration: 0,
                     blocks: initialPhase.blocks,
+                    blockToolCallIds: initialPhase.blocks.map((_, index) =>
+                        index === initialPhase.blockIndex ? initialPhase.start.toolCallId : createId()
+                    ),
                     blockIndex: initialPhase.blockIndex,
                     preamble: initialPhase.start.preamble,
                     toolCallId: initialPhase.start.toolCallId,
@@ -357,11 +371,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
 
                     let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                    context.tools = toolListInferenceResolve(availableTools);
                     try {
                         activeSkills = await skills.list();
                         await skills.syncToActive(options.skillsActiveRoot, activeSkills);
                         availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
-                        context.tools = [];
+                        context.tools = toolListInferenceResolve(availableTools);
                         logger.debug(
                             `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
                         );
@@ -387,9 +402,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
                     response = await inferenceRouter.complete(context, inferenceSessionId, {
                         providersOverride: providersForAgent,
-                        providerOptions: {
-                            stop: ["</run_python>"]
-                        },
                         signal: abortSignal,
                         onAttempt: (providerId, modelId) => {
                             logger.debug(
@@ -470,22 +482,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     );
                     context.messages.push(response.message);
 
-                    let responseText = messageExtractText(response.message);
-                    if (responseText) {
-                        const terminalTrimmed = agentMessageRunPythonTerminalTrim(responseText);
-                        if (terminalTrimmed !== null) {
-                            responseText = terminalTrimmed;
-                            messageAssistantTextRewrite(response.message, terminalTrimmed);
-                            logger.debug("event: Trimmed inline RLM assistant text at first </run_python>");
-                        }
-                    }
+                    const responseText = messageExtractText(response.message);
                     const historyResponseText = responseText ?? "";
-                    const pendingHistoryRewrites: Array<{
-                        text: string;
-                        reason: "run_python_failure_trim";
-                    }> = [];
-                    const runPythonCodes = rlmNoToolsExtract(responseText ?? "");
-                    const hasRunPythonTag = runPythonCodes.length > 0;
+                    const toolCallPartition = runPythonToolCallsPartition(response.message);
                     const suppressUserOutput = messageNoMessageIs(responseText);
                     if (suppressUserOutput) {
                         stripNoMessageTextBlocks(response.message);
@@ -493,26 +492,22 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
                     lastResponseNoMessage = suppressUserOutput;
                     const effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
-                    const visibleResponseText =
-                        hasRunPythonTag && effectiveResponseText
-                            ? responseTextBeforeFirstRunPython(effectiveResponseText)
-                            : effectiveResponseText;
-                    const trimmedText = visibleResponseText?.trim() ?? "";
+                    const trimmedText = effectiveResponseText?.trim() ?? "";
                     const hasResponseText = trimmedText.length > 0;
                     if (!childAgentMessageSent) {
-                        finalResponseText = hasResponseText ? visibleResponseText : null;
+                        finalResponseText = hasResponseText ? effectiveResponseText : null;
                     }
                     lastResponseTextSent = false;
                     if (hasResponseText && connector && targetId) {
                         try {
                             await connector.sendMessage(targetId, {
-                                text: visibleResponseText,
+                                text: effectiveResponseText,
                                 replyToMessageId: entry.context.messageId
                             });
                             eventBus.emit("agent.outgoing", {
                                 agentId: agent.id,
                                 source,
-                                message: { text: visibleResponseText },
+                                message: { text: effectiveResponseText },
                                 context: entry.context
                             });
                             lastResponseTextSent = true;
@@ -533,33 +528,47 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         },
                         appendHistoryRecord
                     );
-                    for (const rewrite of pendingHistoryRewrites) {
-                        await historyRecordAppend(
-                            historyRecords,
-                            {
-                                type: "assistant_rewrite",
-                                at: Date.now(),
-                                assistantAt: assistantRecordAt,
-                                text: rewrite.text,
-                                reason: rewrite.reason
-                            },
-                            appendHistoryRecord
+
+                    for (const unsupportedCall of toolCallPartition.unsupportedCalls) {
+                        context.messages.push(
+                            rlmToolResultBuild(
+                                unsupportedCall,
+                                `Unsupported tool in Python mode: ${unsupportedCall.name}. Use run_python.`,
+                                true
+                            ).toolMessage
+                        );
+                    }
+                    for (const invalidCall of toolCallPartition.invalidRunPythonCalls) {
+                        context.messages.push(
+                            rlmToolResultBuild(
+                                invalidCall,
+                                "Invalid run_python arguments: `code` must be a string.",
+                                true
+                            ).toolMessage
                         );
                     }
 
-                    if (hasRunPythonTag) {
+                    if (toolCallPartition.runPythonCalls.length > 0) {
                         phase = {
                             type: "vm_start",
                             blockState: blockStateBuild({
                                 iteration,
-                                blocks: runPythonCodes,
+                                blocks: toolCallPartition.runPythonCalls.map((call) => call.code),
+                                blockToolCallIds: toolCallPartition.runPythonCalls.map((call) => call.id),
                                 blockIndex: 0,
                                 preamble: montyPreambleBuild(availableTools),
-                                toolCallId: createId(),
+                                toolCallId: toolCallPartition.runPythonCalls[0]!.id,
                                 assistantRecordAt,
                                 historyResponseText
                             })
                         };
+                        break;
+                    }
+                    if (
+                        toolCallPartition.invalidRunPythonCalls.length > 0 ||
+                        toolCallPartition.unsupportedCalls.length > 0
+                    ) {
+                        phase = { type: "inference", iteration: iteration + 1 };
                         break;
                     }
 
@@ -583,7 +592,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         logger.debug("event: Child agent did not send after nudge, accepting");
                     }
 
-                    logger.debug(`event: No run_python blocks, breaking inference loop iteration=${iteration}`);
+                    logger.debug(`event: No run_python tool calls, breaking inference loop iteration=${iteration}`);
                     phase = { type: "done", reason: "complete" };
                     break;
                 }
@@ -827,15 +836,16 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         toolCallCount: result.toolCallCount,
                         isError: false
                     });
-                    context.messages.push(rlmNoToolsResultMessageBuild({ result }));
+                    context.messages.push(
+                        rlmToolResultBuild(
+                            { id: blockState.toolCallId, name: RLM_TOOL_NAME },
+                            rlmResultTextBuild(result),
+                            false
+                        ).toolMessage
+                    );
 
                     if (result.skipTurn) {
-                        context.messages.push({
-                            role: "user",
-                            content: [{ type: "text", text: "Turn skipped" }],
-                            timestamp: Date.now()
-                        });
-                        logger.debug("event: Skip detected, appended 'Turn skipped' and breaking inference loop");
+                        logger.debug("event: Skip detected, breaking inference loop");
                         phase = { type: "done", reason: "skip_turn" };
                         break;
                     }
@@ -848,12 +858,13 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                     }
 
                     if (blockState.blockIndex + 1 < blockState.blocks.length) {
+                        const nextBlockIndex = blockState.blockIndex + 1;
                         phase = {
                             type: "vm_start",
                             blockState: {
                                 ...blockState,
-                                blockIndex: blockState.blockIndex + 1,
-                                toolCallId: createId()
+                                blockIndex: nextBlockIndex,
+                                toolCallId: blockState.blockToolCallIds[nextBlockIndex] ?? createId()
                             }
                         };
                         break;
@@ -1062,14 +1073,45 @@ function messageAssistantTextRewrite(message: InferenceContext["messages"][numbe
     message.content = nextContent;
 }
 
-// Keep only plain assistant text before the first run_python block for user-visible output.
-function responseTextBeforeFirstRunPython(text: string): string {
-    const openTagPattern = /<run_python(?:\s[^>]*)?>/i;
-    const match = openTagPattern.exec(text);
-    if (!match || match.index === undefined) {
-        return text;
+function toolListInferenceResolve(tools: Tool[]): Tool[] {
+    return tools.filter((tool) => tool.name === RLM_TOOL_NAME);
+}
+
+type RunPythonToolCall = {
+    id: string;
+    code: string;
+};
+
+type RunPythonToolCallPartition = {
+    runPythonCalls: RunPythonToolCall[];
+    invalidRunPythonCalls: ToolCall[];
+    unsupportedCalls: ToolCall[];
+};
+
+function runPythonToolCallsPartition(message: InferenceContext["messages"][number]): RunPythonToolCallPartition {
+    const runPythonCalls: RunPythonToolCall[] = [];
+    const invalidRunPythonCalls: ToolCall[] = [];
+    const unsupportedCalls: ToolCall[] = [];
+    for (const toolCall of messageExtractToolCalls(message)) {
+        if (toolCall.name !== RLM_TOOL_NAME) {
+            unsupportedCalls.push(toolCall);
+            continue;
+        }
+        const code = toolCall.arguments.code;
+        if (typeof code !== "string" || code.trim().length === 0) {
+            invalidRunPythonCalls.push(toolCall);
+            continue;
+        }
+        runPythonCalls.push({
+            id: toolCall.id,
+            code
+        });
     }
-    return text.slice(0, match.index);
+    return {
+        runPythonCalls,
+        invalidRunPythonCalls,
+        unsupportedCalls
+    };
 }
 
 function usageCostResolve(cost: unknown): number {

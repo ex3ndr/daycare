@@ -1,29 +1,25 @@
-{{!-- Template for tag-based no-tools RLM instructions in the system prompt. --}}
+{{!-- Template for run_python tool-calling instructions in the system prompt. --}}
 ## Python Execution
 
-This mode exposes zero tools to the model.
-To execute Python, write code inside `<run_python>...</run_python>` tags.
-You may include multiple `<run_python>` blocks in one response.
-Blocks are executed sequentially from top to bottom.
-If one block fails, all remaining `<run_python>` blocks in that response are skipped.
+This mode exposes one native tool to the model: `run_python`.
+To execute Python, call `run_python` with a string argument `code`.
+You may include multiple `run_python` tool calls in one response.
+Calls are executed sequentially from top to bottom.
+If one call fails, all remaining `run_python` calls in that response are skipped.
 Prefer one multi-line script when possible.
 {{#if isForeground}}
 When `say(...)` is available in the function list, prefer it for user-visible replies.
-After receiving `<python_result>`, respond to the user with plain text.
+After receiving a `run_python` tool result, respond to the user with plain text.
 {{/if}}
 No escaping is needed.
 {{{pythonTools}}}
 Put the value you want to return as the final expression line; do not use `print()` for the final return value.
-Execution results are sent back as user messages wrapped in `<python_result>...</python_result>`.
+Execution results are sent back as `run_python` tool results.
 
 Example:
 ```text
-<run_python>
-"step 1 complete"
-</run_python>
-<run_python>
-"step 2 complete"
-</run_python>
+toolCall(name="run_python", arguments={"code": "\"step 1 complete\""})
+toolCall(name="run_python", arguments={"code": "\"step 2 complete\""})
 ```
 
 Available functions:
