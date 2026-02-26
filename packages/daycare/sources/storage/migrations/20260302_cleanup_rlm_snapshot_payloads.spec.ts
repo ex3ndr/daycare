@@ -26,12 +26,18 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
                 "s-1",
                 "rlm_tool_call",
                 2,
+                JSON.stringify({ snapshotId: "AQID", toolName: "echo-inline" })
+            );
+            db.prepare("INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?)").run(
+                "s-1",
+                "rlm_tool_call",
+                3,
                 JSON.stringify({ snapshotId: "abc123abc123abc123abc123", toolName: "echo" })
             );
             db.prepare("INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?)").run(
                 "s-1",
                 "note",
-                3,
+                4,
                 JSON.stringify({ text: "keep me" })
             );
 
@@ -41,13 +47,16 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
                 type: string;
                 data: string;
             }>;
-            expect(rows).toHaveLength(3);
+            expect(rows).toHaveLength(4);
             expect(rows[0]?.type).toBe("rlm_tool_call");
             expect(rows[0]?.data).not.toContain('"snapshot"');
             expect(rows[0]?.data).toContain('"toolName":"echo"');
             expect(rows[1]?.type).toBe("rlm_tool_call");
-            expect(rows[1]?.data).toContain("snapshotId");
-            expect(rows[2]?.type).toBe("note");
+            expect(rows[1]?.data).not.toContain("snapshotId");
+            expect(rows[1]?.data).toContain('"toolName":"echo-inline"');
+            expect(rows[2]?.type).toBe("rlm_tool_call");
+            expect(rows[2]?.data).toContain("snapshotId");
+            expect(rows[3]?.type).toBe("note");
         } finally {
             db.close();
         }
@@ -68,8 +77,8 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
             db.prepare("INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?)").run(
                 "s-1",
                 "rlm_tool_call",
-                1,
-                JSON.stringify({ snapshot: "AQID", toolName: "echo" })
+                2,
+                JSON.stringify({ snapshotId: "AQID", toolName: "echo-inline" })
             );
 
             expect(() => migration20260302CleanupRlmSnapshotPayloads.up(db)).not.toThrow();
@@ -79,6 +88,7 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
             expect(count.count).toBe(1);
             const row = db.prepare("SELECT data FROM session_history LIMIT 1").get() as { data: string };
             expect(row.data).not.toContain('"snapshot"');
+            expect(row.data).not.toContain('"snapshotId"');
         } finally {
             db.close();
         }

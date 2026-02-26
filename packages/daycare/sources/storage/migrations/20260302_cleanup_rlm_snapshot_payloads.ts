@@ -1,4 +1,5 @@
 import type { Migration } from "./migrationTypes.js";
+import { cuid2Is } from "../../utils/cuid2Is.js";
 
 /**
  * Removes legacy embedded VM snapshot payloads from rlm_tool_call session_history JSON blobs.
@@ -19,11 +20,37 @@ export const migration20260302CleanupRlmSnapshotPayloads: Migration = {
             } catch {
                 continue;
             }
-            if (!parsed || typeof parsed !== "object" || !("snapshot" in parsed)) {
+            if (!parsed || typeof parsed !== "object") {
                 continue;
             }
-            delete parsed.snapshot;
-            updateById.run(JSON.stringify(parsed), row.id);
+            const cleaned = migrationRlmToolCallPayloadCleanup(parsed);
+            if (!cleaned.changed) {
+                continue;
+            }
+            updateById.run(JSON.stringify(cleaned.record), row.id);
         }
     }
 };
+
+function migrationRlmToolCallPayloadCleanup(record: Record<string, unknown>): {
+    changed: boolean;
+    record: Record<string, unknown>;
+} {
+    const next = { ...record };
+    let changed = false;
+
+    if ("snapshot" in next) {
+        delete next.snapshot;
+        changed = true;
+    }
+
+    if ("snapshotId" in next) {
+        const value = next.snapshotId;
+        if (typeof value !== "string" || !cuid2Is(value)) {
+            delete next.snapshotId;
+            changed = true;
+        }
+    }
+
+    return { changed, record: next };
+}
