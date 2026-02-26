@@ -131,7 +131,18 @@ export async function rlmExecute(
                 if (!historyCallback) {
                     return;
                 }
-                const snapshotId = await rlmSnapshotIdResolve(context, at, snapshotDump);
+                let snapshotId: string | null = null;
+                try {
+                    snapshotId = await rlmSnapshotCreate({
+                        storage: context.agentSystem.storage,
+                        config: context.agentSystem.config.current,
+                        agentId: context.ctx.agentId,
+                        at,
+                        snapshotDump: rlmSnapshotEncode(snapshotDump)
+                    });
+                } catch {
+                    snapshotId = null;
+                }
                 if (!snapshotId) {
                     return;
                 }
@@ -210,25 +221,4 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         isError: false
     });
     return result;
-}
-
-async function rlmSnapshotIdResolve(
-    context: ToolExecutionContext,
-    at: number,
-    snapshotDump: Uint8Array
-): Promise<string | null> {
-    const config = context.agentSystem.config.current;
-    const storage = context.agentSystem.storage;
-    const agentId = context.ctx.agentId;
-    try {
-        return await rlmSnapshotCreate({
-            storage,
-            config,
-            agentId,
-            at,
-            snapshotDump: rlmSnapshotEncode(snapshotDump)
-        });
-    } catch {
-        return null;
-    }
 }
