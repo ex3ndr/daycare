@@ -41,7 +41,7 @@ describe("agentLoopRun", () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
         const responses = [
-            assistantMessageBuild("<run_python>echo('x')</run_python>"),
+            assistantMessageBuild("Preparing execution...\n<run_python>echo('x')</run_python>"),
             assistantMessageBuild("Finished")
         ];
         const inferenceRouter = inferenceRouterBuild(responses);
@@ -59,7 +59,7 @@ describe("agentLoopRun", () => {
         expect(connectorSend).toHaveBeenNthCalledWith(
             1,
             "channel-1",
-            expect.objectContaining({ text: "<run_python>echo('x')</run_python>" })
+            expect.objectContaining({ text: "Preparing execution...\n" })
         );
         expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", expect.objectContaining({ text: "Finished" }));
     });
@@ -122,7 +122,7 @@ describe("agentLoopRun", () => {
 
         expect(inferenceRouter.complete).toHaveBeenCalledTimes(1);
         expect(notifySubagentFailure).not.toHaveBeenCalled();
-        expect(result.responseText).toBe("<run_python>echo('x')</run_python>");
+        expect(result.responseText).toBeNull();
     });
 
     it("completes run_python when a listed tool disappears before dispatch", async () => {

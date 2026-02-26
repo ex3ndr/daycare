@@ -493,22 +493,26 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
                     lastResponseNoMessage = suppressUserOutput;
                     const effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
-                    const trimmedText = effectiveResponseText?.trim() ?? "";
+                    const visibleResponseText =
+                        hasRunPythonTag && effectiveResponseText
+                            ? responseTextBeforeFirstRunPython(effectiveResponseText)
+                            : effectiveResponseText;
+                    const trimmedText = visibleResponseText?.trim() ?? "";
                     const hasResponseText = trimmedText.length > 0;
                     if (!childAgentMessageSent) {
-                        finalResponseText = hasResponseText ? effectiveResponseText : null;
+                        finalResponseText = hasResponseText ? visibleResponseText : null;
                     }
                     lastResponseTextSent = false;
                     if (hasResponseText && connector && targetId) {
                         try {
                             await connector.sendMessage(targetId, {
-                                text: effectiveResponseText,
+                                text: visibleResponseText,
                                 replyToMessageId: entry.context.messageId
                             });
                             eventBus.emit("agent.outgoing", {
                                 agentId: agent.id,
                                 source,
-                                message: { text: effectiveResponseText },
+                                message: { text: visibleResponseText },
                                 context: entry.context
                             });
                             lastResponseTextSent = true;
@@ -1056,6 +1060,16 @@ function messageAssistantTextRewrite(message: InferenceContext["messages"][numbe
         return;
     }
     message.content = nextContent;
+}
+
+// Keep only plain assistant text before the first run_python block for user-visible output.
+function responseTextBeforeFirstRunPython(text: string): string {
+    const openTagPattern = /<run_python(?:\s[^>]*)?>/i;
+    const match = openTagPattern.exec(text);
+    if (!match || match.index === undefined) {
+        return text;
+    }
+    return text.slice(0, match.index);
 }
 
 function usageCostResolve(cost: unknown): number {
