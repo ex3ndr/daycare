@@ -1072,15 +1072,10 @@ async function rlmSnapshotIdCreate(
     at: number,
     snapshotDump: Uint8Array
 ): Promise<string | null> {
-    const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
-    const storage = (agentSystem as { storage?: unknown }).storage;
-    if (!config || !storage) {
-        return null;
-    }
     try {
         return await rlmSnapshotCreate({
-            storage: storage as AgentSystem["storage"],
-            config: config as AgentSystem["config"]["current"],
+            storage: agentSystem.storage,
+            config: agentSystem.config.current,
             agentId,
             at,
             snapshotDump: rlmSnapshotEncode(snapshotDump)
@@ -1188,13 +1183,8 @@ async function rlmSnapshotDumpLoad(
     if (!sessionId) {
         throw new Error("Python VM crashed: active session is missing.");
     }
-    const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
-    const storage = (agentSystem as { storage?: unknown }).storage;
-    if (!config || !storage) {
-        throw new Error("Python VM crashed: snapshot storage is unavailable.");
-    }
     const snapshotDump = await rlmSnapshotLoad({
-        config: config as AgentSystem["config"]["current"],
+        config: agentSystem.config.current,
         agentId: ctx.agentId,
         sessionId,
         snapshotId

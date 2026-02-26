@@ -218,14 +218,14 @@ async function rlmSnapshotIdResolve(
     snapshotDump: Uint8Array
 ): Promise<string | null> {
     const config = context.agentSystem?.config?.current;
-    const storage = (context.agentSystem as { storage?: unknown } | null | undefined)?.storage;
+    const storage = context.agentSystem?.storage;
     const agentId = context.ctx?.agentId;
     if (!config || !storage || typeof agentId !== "string" || agentId.length === 0) {
         return null;
     }
     try {
         return await rlmSnapshotCreate({
-            storage: storage as ToolExecutionContext["agentSystem"]["storage"],
+            storage,
             config,
             agentId,
             at,
