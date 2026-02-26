@@ -316,12 +316,23 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     rlmPrintCaptureAppend(printCapture, values);
                 };
                 try {
-                    const snapshotDump = await rlmSnapshotDumpLoad(
-                        agentSystem,
-                        agent.ctx,
-                        agent.state.activeSessionId ?? null,
-                        initialPhase.snapshot.snapshotId
-                    );
+                    const snapshotId = initialPhase.snapshot.snapshotId;
+                    if (!cuid2Is(snapshotId)) {
+                        throw new Error("Python VM crashed: checkpoint id is invalid.");
+                    }
+                    const sessionId = agent.state.activeSessionId;
+                    if (!sessionId) {
+                        throw new Error("Python VM crashed: active session is missing.");
+                    }
+                    const snapshotDump = await rlmSnapshotLoad({
+                        config: agentSystem.config.current,
+                        agentId: agent.ctx.agentId,
+                        sessionId,
+                        snapshotId
+                    });
+                    if (!snapshotDump) {
+                        throw new Error(`Python VM crashed: failed to load checkpoint ${snapshotId}`);
+                    }
                     const resumed = await rlmStepResume(
                         blockState.workerKey,
                         snapshotDump,
@@ -1158,30 +1169,6 @@ function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPa
         invalidRunPythonCalls,
         unsupportedCalls
     };
-}
-
-async function rlmSnapshotDumpLoad(
-    agentSystem: AgentSystem,
-    ctx: { agentId: string },
-    sessionId: string | null,
-    snapshotId: string
-): Promise<Uint8Array> {
-    if (!cuid2Is(snapshotId)) {
-        throw new Error("Python VM crashed: checkpoint id is invalid.");
-    }
-    if (!sessionId) {
-        throw new Error("Python VM crashed: active session is missing.");
-    }
-    const snapshotDump = await rlmSnapshotLoad({
-        config: agentSystem.config.current,
-        agentId: ctx.agentId,
-        sessionId,
-        snapshotId
-    });
-    if (!snapshotDump) {
-        throw new Error(`Python VM crashed: failed to load checkpoint ${snapshotId}`);
-    }
-    return snapshotDump;
 }
 
 function usageCostResolve(cost: unknown): number {
