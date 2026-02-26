@@ -935,7 +935,7 @@ describe("Agent", () => {
         }
     });
 
-    it("resumes pending rlm tool_call on restore and continues inference from python_result", async () => {
+    it("resumes pending rlm tool_call on restore and continues inference from toolResult", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
@@ -1001,9 +1001,12 @@ describe("Agent", () => {
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "<run_python>wait(300)</run_python>",
+                text: "",
                 files: [],
-                tokens: null
+                tokens: null,
+                toolCalls: [
+                    { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
+                ]
             });
             await agentSystem.storage.appendHistory(agentId, {
                 type: "rlm_start",
@@ -1040,13 +1043,35 @@ describe("Agent", () => {
             expect(completed?.printOutput).toEqual(["waiting..."]);
             expect(complete).toHaveBeenCalledTimes(1);
             const recoveryContext = complete.mock.calls[0]?.[0] as { messages?: unknown[] } | undefined;
-            const hasPythonResult = recoveryContext?.messages?.some((message) => {
+            const hasRunPythonToolCall = recoveryContext?.messages?.some((message) => {
                 if (typeof message !== "object" || message === null) {
                     return false;
                 }
                 const role = (message as { role?: unknown }).role;
                 const content = (message as { content?: unknown }).content;
-                if (role !== "user" || !Array.isArray(content)) {
+                if (role !== "assistant" || !Array.isArray(content)) {
+                    return false;
+                }
+                return content.some(
+                    (part) =>
+                        typeof part === "object" &&
+                        part !== null &&
+                        "type" in part &&
+                        "id" in part &&
+                        "name" in part &&
+                        (part as { type?: string; id?: string; name?: string }).type === "toolCall" &&
+                        (part as { id?: string }).id === "tool-call-1" &&
+                        (part as { name?: string }).name === "run_python"
+                );
+            });
+            const hasToolResult = recoveryContext?.messages?.some((message) => {
+                if (typeof message !== "object" || message === null) {
+                    return false;
+                }
+                const role = (message as { role?: unknown }).role;
+                const content = (message as { content?: unknown }).content;
+                const toolCallId = (message as { toolCallId?: unknown }).toolCallId;
+                if (role !== "toolResult" || toolCallId !== "tool-call-1" || !Array.isArray(content)) {
                     return false;
                 }
                 return content.some(
@@ -1056,11 +1081,11 @@ describe("Agent", () => {
                         "type" in part &&
                         "text" in part &&
                         (part as { type?: string; text?: string }).type === "text" &&
-                        (part as { text?: string }).text?.includes("<python_result>") &&
                         (part as { text?: string }).text?.includes("Process was restarted")
                 );
             });
-            expect(hasPythonResult).toBe(true);
+            expect(hasRunPythonToolCall).toBe(true);
+            expect(hasToolResult).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

@@ -10,6 +10,7 @@ Updated prompt guidance for native `run_python` tool-calling and existing VM exe
 - Each `run_python` call result is posted back as a `toolResult` message with the original assistant `toolCallId`.
 - Assistant history now persists native assistant `toolCall` blocks on `assistant_message` records.
 - Pending-phase restore reconstructs pending run_python queues from persisted assistant tool calls.
+- History-to-context restore now replays persisted assistant `toolCall` blocks and matching `toolResult` blocks.
 - RLM history records (`rlm_start`, `rlm_tool_call`, `rlm_tool_result`, `rlm_complete`) remain intact.
 - Unsupported tool calls in this mode return immediate tool-result errors so inference can recover and continue.
 
@@ -34,4 +35,5 @@ flowchart TD
   N --> L
   B --> O[On restore: rebuild pending blocks from assistant_message.toolCalls]
   O --> F
+  O --> P[Replay assistant toolCall + toolResult into context]
 ```

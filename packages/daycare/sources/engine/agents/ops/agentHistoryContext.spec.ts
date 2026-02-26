@@ -57,6 +57,71 @@ describe("agentHistoryContext", () => {
         expect(messages[1]?.role).toBe("assistant");
     });
 
+    it("replays assistant tool calls and matching rlm_complete as tool results", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 10,
+                text: "",
+                files: [],
+                tokens: null,
+                toolCalls: [
+                    {
+                        type: "toolCall",
+                        id: "tool-1",
+                        name: "run_python",
+                        arguments: { code: "exec(command='sleep 60')" }
+                    }
+                ]
+            },
+            {
+                type: "rlm_complete",
+                at: 11,
+                toolCallId: "tool-1",
+                output: "",
+                printOutput: ["started"],
+                toolCallCount: 1,
+                isError: true,
+                error: "Process was restarted"
+            },
+            {
+                type: "user_message",
+                at: 12,
+                text: "yo",
+                files: []
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+
+        expect(messages).toHaveLength(3);
+        const assistant = messages[0];
+        const toolResult = messages[1];
+        const user = messages[2];
+        expect(assistant?.role).toBe("assistant");
+        if (!assistant || assistant.role !== "assistant") {
+            throw new Error("Expected assistant message.");
+        }
+        expect(assistant.content).toEqual([
+            {
+                type: "toolCall",
+                id: "tool-1",
+                name: "run_python",
+                arguments: { code: "exec(command='sleep 60')" }
+            }
+        ]);
+        expect(toolResult?.role).toBe("toolResult");
+        if (!toolResult || toolResult.role !== "toolResult") {
+            throw new Error("Expected toolResult message.");
+        }
+        expect(toolResult.toolCallId).toBe("tool-1");
+        expect(toolResult.toolName).toBe("run_python");
+        expect(toolResult.isError).toBe(true);
+        const textPart = toolResult.content.find((part) => part.type === "text");
+        expect(textPart && "text" in textPart ? textPart.text : "").toContain("Process was restarted");
+        expect(user?.role).toBe("user");
+    });
+
     it("replays assistant_rewrite records during restore", async () => {
         const records: AgentHistoryRecord[] = [
             {

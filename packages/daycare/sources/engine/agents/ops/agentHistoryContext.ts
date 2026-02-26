@@ -2,8 +2,12 @@ import type { Context } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 
 import type { AgentHistoryRecord, AgentMessage, MessageContext } from "@/types";
+import { stringTruncateHeadTail } from "../../../utils/stringTruncateHeadTail.js";
 import { messageBuildUser } from "../../messages/messageBuildUser.js";
 import { messageFormatIncoming } from "../../messages/messageFormatIncoming.js";
+import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
+
+const RLM_RESULT_MAX_CHARS = 16_000;
 
 /**
  * Rebuilds conversation context messages from persisted history records.
@@ -14,6 +18,7 @@ export async function agentHistoryContext(
     _agentId: string
 ): Promise<Context["messages"]> {
     const messages: Context["messages"] = [];
+    const assistantToolCallIds = new Set<string>();
     let lastAssistantMessageIndex: number | null = null;
     const assistantMessageIndexByAt = new Map<number, number>();
     for (const record of records) {
@@ -27,6 +32,17 @@ export async function agentHistoryContext(
             continue;
         }
         if (record.type === "rlm_complete") {
+            if (!assistantToolCallIds.has(record.toolCallId)) {
+                continue;
+            }
+            messages.push({
+                role: "toolResult",
+                toolCallId: record.toolCallId,
+                toolName: RLM_TOOL_NAME,
+                content: [{ type: "text", text: rlmHistoryResultTextBuild(record) }],
+                isError: record.isError,
+                timestamp: record.at
+            });
             continue;
         }
         if (record.type === "user_message") {
@@ -48,9 +64,15 @@ export async function agentHistoryContext(
             messages.push(await messageBuildUser(userEntry));
         }
         if (record.type === "assistant_message") {
-            const content: Array<{ type: "text"; text: string }> = [];
+            const content: Extract<Context["messages"][number], { role: "assistant" }>["content"] = [];
             if (record.text.length > 0) {
                 content.push({ type: "text", text: record.text });
+            }
+            if (record.toolCalls && record.toolCalls.length > 0) {
+                for (const toolCall of record.toolCalls) {
+                    assistantToolCallIds.add(toolCall.id);
+                    content.push(toolCall);
+                }
             }
             messages.push({
                 role: "assistant",
@@ -92,6 +114,28 @@ export async function agentHistoryContext(
         }
     }
     return messages;
+}
+
+function rlmHistoryResultTextBuild(record: Extract<AgentHistoryRecord, { type: "rlm_complete" }>): string {
+    const printOutputText = record.printOutput.length > 0 ? record.printOutput.join("\n") : "(none)";
+    if (record.isError) {
+        const errorText = record.error && record.error.length > 0 ? record.error : "Python execution failed.";
+        const text = [
+            "Python execution failed.",
+            `Tool calls: ${record.toolCallCount}`,
+            `Print output:\n${printOutputText}`,
+            `Error:\n${errorText}`
+        ].join("\n\n");
+        return stringTruncateHeadTail(text, RLM_RESULT_MAX_CHARS, "python result");
+    }
+    const outputText = record.output.length > 0 ? record.output : "(empty)";
+    const text = [
+        "Python execution completed.",
+        `Tool calls: ${record.toolCallCount}`,
+        `Print output:\n${printOutputText}`,
+        `Output:\n${outputText}`
+    ].join("\n\n");
+    return stringTruncateHeadTail(text, RLM_RESULT_MAX_CHARS, "python result");
 }
 
 function assistantMessageTextRewrite(message: Context["messages"][number], text: string): void {
