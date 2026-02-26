@@ -751,13 +751,16 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             toolResolver: blockState.trackingToolResolver,
                             context: blockState.executionContext,
                             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
+                                if (!appendHistoryRecord) {
+                                    return;
+                                }
                                 const snapshotId = await rlmSnapshotIdCreate(
                                     agentSystem,
                                     agent.ctx.agentId,
                                     at,
                                     snapshotDump
                                 );
-                                await appendHistoryRecord?.({
+                                await appendHistoryRecord({
                                     type: "rlm_tool_call",
                                     at,
                                     toolCallId: blockState.toolCallId,
@@ -1069,7 +1072,7 @@ async function rlmSnapshotIdCreate(
     const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
     const storage = (agentSystem as { storage?: unknown }).storage;
     if (!config || !storage) {
-        return rlmSnapshotEncode(snapshotDump);
+        throw new Error("Python VM crashed: snapshot storage is unavailable.");
     }
     return rlmSnapshotCreate({
         storage: storage as AgentSystem["storage"],

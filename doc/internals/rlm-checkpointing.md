@@ -103,3 +103,22 @@ sequenceDiagram
 - `tool_call` phase: load the latest `rlm_tool_call.snapshotId` from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).
 - Read/write path consistency: both writer and restore reader use `rlmSnapshotCreate(...)` / `rlmSnapshotLoad(...)`.
+
+## Strict Snapshot Contract
+
+When a checkpoint history record is written, `snapshotId` must always be a cuid2 id that points to a file.
+Inline base64 fallback is not allowed anymore.
+
+```mermaid
+flowchart TD
+    A[Tool call reached in run_python] --> B{History record requested?}
+    B -->|No| C[Skip checkpoint persistence]
+    B -->|Yes| D{config + storage + agentId present?}
+    D -->|Yes| E[Write snapshot file and store cuid2 snapshotId]
+    D -->|No| F[Throw error and fail execution]
+```
+
+## Migration Strategy for Large Databases
+
+Legacy inline snapshots cleanup now scans `session_history` in id-ordered batches (`LIMIT 100`) and updates rows incrementally.
+This avoids loading all `rlm_tool_call` payloads into memory at once on large databases.

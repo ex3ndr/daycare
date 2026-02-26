@@ -128,8 +128,11 @@ export async function rlmExecute(
             toolResolver,
             context,
             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
+                if (!historyCallback) {
+                    return;
+                }
                 const snapshotId = await rlmSnapshotIdResolve(context, at, snapshotDump);
-                await historyCallback?.({
+                await historyCallback({
                     type: "rlm_tool_call",
                     at,
                     toolCallId,
@@ -211,7 +214,7 @@ async function rlmSnapshotIdResolve(context: ToolExecutionContext, at: number, s
     const storage = (context.agentSystem as { storage?: unknown } | null | undefined)?.storage;
     const agentId = context.ctx?.agentId;
     if (!config || !storage || typeof agentId !== "string" || agentId.length === 0) {
-        return rlmSnapshotEncode(snapshotDump);
+        throw new Error("Snapshot persistence is unavailable for checkpoint history.");
     }
     return rlmSnapshotCreate({
         storage: storage as ToolExecutionContext["agentSystem"]["storage"],

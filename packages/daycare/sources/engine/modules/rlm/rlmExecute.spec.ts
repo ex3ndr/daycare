@@ -115,7 +115,7 @@ describe("rlmExecute", () => {
         expect(result.toolCallCount).toBe(1);
     });
 
-    it("emits checkpoint records through history callback", async () => {
+    it("fails when history callback is used without snapshot persistence context", async () => {
         const resolver = createResolver(async (name, args) => {
             if (name !== "echo") {
                 throw new Error(`Unexpected tool ${name}`);
@@ -125,18 +125,19 @@ describe("rlmExecute", () => {
         });
         const records: string[] = [];
 
-        await rlmExecute(
-            "value = echo('hello')\nvalue",
-            montyPreambleBuild(baseTools),
-            createContext(),
-            resolver,
-            "outer-run-python",
-            async (record) => {
-                records.push(record.type);
-            }
-        );
-
-        expect(records).toEqual(["rlm_start", "rlm_tool_call", "rlm_tool_result", "rlm_complete"]);
+        await expect(
+            rlmExecute(
+                "value = echo('hello')\nvalue",
+                montyPreambleBuild(baseTools),
+                createContext(),
+                resolver,
+                "outer-run-python",
+                async (record) => {
+                    records.push(record.type);
+                }
+            )
+        ).rejects.toThrow("Snapshot persistence is unavailable");
+        expect(records).toEqual(["rlm_start"]);
     });
 
     it("aborts execution when skip() is called and sets skipTurn flag", async () => {

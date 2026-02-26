@@ -93,4 +93,48 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
             db.close();
         }
     });
+
+    it("processes large history in batches", () => {
+        const db = databaseOpen(":memory:");
+        try {
+            db.exec(`
+                CREATE TABLE session_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    at INTEGER NOT NULL,
+                    data TEXT NOT NULL
+                );
+            `);
+
+            const insert = db.prepare("INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?)");
+            for (let index = 0; index < 250; index += 1) {
+                insert.run("s-batch", "rlm_tool_call", index, JSON.stringify({ snapshotId: "AQID", toolName: "echo" }));
+            }
+            insert.run(
+                "s-batch",
+                "rlm_tool_call",
+                999,
+                JSON.stringify({ snapshotId: "abc123abc123abc123abc123", toolName: "keep-valid" })
+            );
+
+            migration20260302CleanupRlmSnapshotPayloads.up(db);
+
+            const stats = db
+                .prepare(
+                    `
+                        SELECT
+                            SUM(CASE WHEN data LIKE '%"snapshotId":"AQID"%' THEN 1 ELSE 0 END) AS invalid_count,
+                            SUM(CASE WHEN data LIKE '%"snapshotId":"abc123abc123abc123abc123"%' THEN 1 ELSE 0 END) AS valid_count
+                        FROM session_history
+                        WHERE type = 'rlm_tool_call'
+                    `
+                )
+                .get() as { invalid_count: number | null; valid_count: number | null };
+            expect(stats.invalid_count ?? 0).toBe(0);
+            expect(stats.valid_count ?? 0).toBe(1);
+        } finally {
+            db.close();
+        }
+    });
 });
