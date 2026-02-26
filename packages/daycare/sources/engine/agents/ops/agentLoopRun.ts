@@ -279,14 +279,19 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
             if (initialPhase.type === "vm_start") {
                 const availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                const initialToolCallId =
+                    initialPhase.blockToolCallIds[initialPhase.blockIndex] ??
+                    initialPhase.blockToolCallIds[0] ??
+                    createId();
                 phase = {
                     type: "vm_start",
                     blockState: blockStateBuild({
                         iteration: 0,
                         blocks: initialPhase.blocks,
+                        blockToolCallIds: initialPhase.blockToolCallIds,
                         blockIndex: initialPhase.blockIndex,
                         preamble: montyPreambleBuild(availableTools),
-                        toolCallId: createId(),
+                        toolCallId: initialToolCallId,
                         assistantRecordAt: initialPhase.assistantAt,
                         historyResponseText: initialPhase.historyResponseText
                     })
@@ -295,9 +300,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 const blockState = blockStateBuild({
                     iteration: 0,
                     blocks: initialPhase.blocks,
-                    blockToolCallIds: initialPhase.blocks.map((_, index) =>
-                        index === initialPhase.blockIndex ? initialPhase.start.toolCallId : createId()
-                    ),
+                    blockToolCallIds: initialPhase.blockToolCallIds,
                     blockIndex: initialPhase.blockIndex,
                     preamble: initialPhase.start.preamble,
                     toolCallId: initialPhase.start.toolCallId,
@@ -485,7 +488,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
                     const responseText = messageExtractText(response.message);
                     const historyResponseText = responseText ?? "";
-                    const toolCallPartition = runPythonToolCallsPartition(response.message);
+                    const assistantToolCalls = messageExtractToolCalls(response.message);
+                    const toolCallPartition = runPythonToolCallsPartition(assistantToolCalls);
                     const suppressUserOutput = messageNoMessageIs(responseText);
                     if (suppressUserOutput) {
                         stripNoMessageTextBlocks(response.message);
@@ -525,7 +529,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             at: assistantRecordAt,
                             text: responseText ?? "",
                             files: [],
-                            tokens: tokensEntry
+                            tokens: tokensEntry,
+                            toolCalls: assistantToolCalls.length > 0 ? assistantToolCalls : undefined
                         },
                         appendHistoryRecord
                     );
@@ -1100,11 +1105,11 @@ type RunPythonToolCallPartition = {
     unsupportedCalls: ToolCall[];
 };
 
-function runPythonToolCallsPartition(message: InferenceContext["messages"][number]): RunPythonToolCallPartition {
+function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPartition {
     const runPythonCalls: RunPythonToolCall[] = [];
     const invalidRunPythonCalls: ToolCall[] = [];
     const unsupportedCalls: ToolCall[] = [];
-    for (const toolCall of messageExtractToolCalls(message)) {
+    for (const toolCall of toolCalls) {
         if (toolCall.name !== RLM_TOOL_NAME) {
             unsupportedCalls.push(toolCall);
             continue;

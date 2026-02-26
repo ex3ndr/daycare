@@ -1,16 +1,18 @@
 import type { AgentHistoryRecord, AgentHistoryRlmStartRecord, AgentHistoryRlmToolCallRecord } from "@/types";
-import { rlmNoToolsExtract } from "../../modules/rlm/rlmNoToolsExtract.js";
+import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 
 type AssistantRunPythonContext = {
     assistantAt: number;
     historyResponseText: string;
     blocks: string[];
+    blockToolCallIds: string[];
 };
 
 export type AgentLoopPendingPhase =
     | {
           type: "vm_start";
           blocks: string[];
+          blockToolCallIds: string[];
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;
@@ -20,6 +22,7 @@ export type AgentLoopPendingPhase =
           start: AgentHistoryRlmStartRecord;
           snapshot: AgentHistoryRlmToolCallRecord;
           blocks: string[];
+          blockToolCallIds: string[];
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;
@@ -59,10 +62,17 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
             )
             .sort((a, b) => b.at - a.at);
 
-        const assistantContext = assistantRunPythonForStart(records, pendingStart.at, pendingStart.code);
+        const assistantContext = assistantRunPythonForStart(
+            records,
+            pendingStart.at,
+            pendingStart.toolCallId,
+            pendingStart.code
+        );
         const blocks = assistantContext?.blocks ?? [pendingStart.code];
-        const matchedIndex = blocks.indexOf(pendingStart.code);
-        const blockIndex = matchedIndex >= 0 ? matchedIndex : 0;
+        const blockToolCallIds = assistantContext?.blockToolCallIds ?? [pendingStart.toolCallId];
+        const matchedByToolCallId = blockToolCallIds.indexOf(pendingStart.toolCallId);
+        const matchedByCode = blocks.indexOf(pendingStart.code);
+        const blockIndex = matchedByToolCallId >= 0 ? matchedByToolCallId : matchedByCode >= 0 ? matchedByCode : 0;
 
         if (!snapshots[0]) {
             return {
@@ -76,6 +86,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
             start: pendingStart,
             snapshot: snapshots[0],
             blocks,
+            blockToolCallIds,
             blockIndex,
             assistantAt: assistantContext?.assistantAt ?? pendingStart.at,
             historyResponseText: assistantContext?.historyResponseText ?? ""
@@ -95,6 +106,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
     return {
         type: "vm_start",
         blocks: latestAssistant.blocks,
+        blockToolCallIds: latestAssistant.blockToolCallIds,
         blockIndex: 0,
         assistantAt: latestAssistant.assistantAt,
         historyResponseText: latestAssistant.historyResponseText
@@ -104,28 +116,42 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
 function latestAssistantRunPythonResolve(records: AgentHistoryRecord[]): AssistantRunPythonContext | null {
     const assistantTextByAt = new Map<number, string>();
     const assistantAts: number[] = [];
+    const runPythonByAssistantAt = new Map<number, AssistantRunPythonContext>();
     for (const record of records) {
         if (record.type === "assistant_message") {
             assistantTextByAt.set(record.at, record.text);
             assistantAts.push(record.at);
+            if (record.toolCalls && record.toolCalls.length > 0) {
+                const runPythonCalls = runPythonCallsExtract(record.toolCalls);
+                if (runPythonCalls.length > 0) {
+                    runPythonByAssistantAt.set(record.at, {
+                        assistantAt: record.at,
+                        historyResponseText: record.text,
+                        blocks: runPythonCalls.map((call) => call.code),
+                        blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
+                    });
+                }
+            }
             continue;
         }
         if (record.type === "assistant_rewrite" && assistantTextByAt.has(record.assistantAt)) {
             assistantTextByAt.set(record.assistantAt, record.text);
+            const runPython = runPythonByAssistantAt.get(record.assistantAt);
+            if (runPython) {
+                runPythonByAssistantAt.set(record.assistantAt, {
+                    ...runPython,
+                    historyResponseText: record.text
+                });
+            }
         }
     }
     for (let index = assistantAts.length - 1; index >= 0; index -= 1) {
         const assistantAt = assistantAts[index]!;
-        const text = assistantTextByAt.get(assistantAt) ?? "";
-        const blocks = rlmNoToolsExtract(text);
-        if (blocks.length === 0) {
+        const runPython = runPythonByAssistantAt.get(assistantAt);
+        if (!runPython || runPython.blocks.length === 0) {
             continue;
         }
-        return {
-            assistantAt,
-            historyResponseText: text,
-            blocks
-        };
+        return runPython;
     }
     return null;
 }
@@ -133,6 +159,7 @@ function latestAssistantRunPythonResolve(records: AgentHistoryRecord[]): Assista
 function assistantRunPythonForStart(
     records: AgentHistoryRecord[],
     startAt: number,
+    startToolCallId: string,
     startCode: string
 ): AssistantRunPythonContext | null {
     const candidates: AssistantRunPythonContext[] = [];
@@ -140,6 +167,17 @@ function assistantRunPythonForStart(
     for (const record of records) {
         if (record.type === "assistant_message" && record.at <= startAt) {
             assistantTextByAt.set(record.at, record.text);
+            if (record.toolCalls && record.toolCalls.length > 0) {
+                const runPythonCalls = runPythonCallsExtract(record.toolCalls);
+                if (runPythonCalls.length > 0) {
+                    candidates.push({
+                        assistantAt: record.at,
+                        historyResponseText: record.text,
+                        blocks: runPythonCalls.map((call) => call.code),
+                        blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
+                    });
+                }
+            }
             continue;
         }
         if (
@@ -148,20 +186,44 @@ function assistantRunPythonForStart(
             assistantTextByAt.has(record.assistantAt)
         ) {
             assistantTextByAt.set(record.assistantAt, record.text);
+            for (let index = 0; index < candidates.length; index += 1) {
+                const candidate = candidates[index];
+                if (candidate && candidate.assistantAt === record.assistantAt) {
+                    candidates[index] = { ...candidate, historyResponseText: record.text };
+                }
+            }
         }
-    }
-    for (const [assistantAt, historyResponseText] of assistantTextByAt.entries()) {
-        const blocks = rlmNoToolsExtract(historyResponseText);
-        if (blocks.length === 0) {
-            continue;
-        }
-        candidates.push({ assistantAt, historyResponseText, blocks });
     }
     candidates.sort((a, b) => b.assistantAt - a.assistantAt);
+    for (const candidate of candidates) {
+        if (candidate.blockToolCallIds.includes(startToolCallId)) {
+            return candidate;
+        }
+    }
     for (const candidate of candidates) {
         if (candidate.blocks.some((code) => code === startCode)) {
             return candidate;
         }
     }
     return candidates[0] ?? null;
+}
+
+function runPythonCallsExtract(
+    toolCalls: Array<{ type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> }>
+): Array<{ toolCallId: string; code: string }> {
+    const runPythonCalls: Array<{ toolCallId: string; code: string }> = [];
+    for (const toolCall of toolCalls) {
+        if (toolCall.name !== RLM_TOOL_NAME) {
+            continue;
+        }
+        const code = toolCall.arguments.code;
+        if (typeof code !== "string" || code.trim().length === 0) {
+            continue;
+        }
+        runPythonCalls.push({
+            toolCallId: toolCall.id,
+            code
+        });
+    }
+    return runPythonCalls;
 }

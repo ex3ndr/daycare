@@ -9,14 +9,15 @@ describe("agentLoopPendingPhaseResolve", () => {
         expect(agentLoopPendingPhaseResolve(records)).toBeNull();
     });
 
-    it("returns vm_start phase when assistant message has run_python without rlm_start", () => {
+    it("returns vm_start phase when assistant message has run_python tool calls without rlm_start", () => {
         const records: AgentHistoryRecord[] = [
             {
                 type: "assistant_message",
                 at: 10,
-                text: "<run_python>echo('x')</run_python>",
+                text: "",
                 files: [],
-                tokens: null
+                tokens: null,
+                toolCalls: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('x')" } }]
             }
         ];
 
@@ -26,6 +27,7 @@ describe("agentLoopPendingPhaseResolve", () => {
         expect(pending?.type).toBe("vm_start");
         if (pending?.type === "vm_start") {
             expect(pending.blocks).toEqual(["echo('x')"]);
+            expect(pending.blockToolCallIds).toEqual(["tool-1"]);
             expect(pending.blockIndex).toBe(0);
             expect(pending.assistantAt).toBe(10);
         }
@@ -36,21 +38,25 @@ describe("agentLoopPendingPhaseResolve", () => {
             {
                 type: "assistant_message",
                 at: 5,
-                text: "<run_python>echo('a')</run_python><run_python>echo('b')</run_python>",
+                text: "",
                 files: [],
-                tokens: null
+                tokens: null,
+                toolCalls: [
+                    { type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('a')" } },
+                    { type: "toolCall", id: "tool-2", name: "run_python", arguments: { code: "echo('b')" } }
+                ]
             },
             {
                 type: "rlm_start",
                 at: 6,
-                toolCallId: "run-2",
+                toolCallId: "tool-2",
                 code: "echo('b')",
                 preamble: "..."
             },
             {
                 type: "rlm_tool_call",
                 at: 7,
-                toolCallId: "run-2",
+                toolCallId: "tool-2",
                 snapshot: "snapshot",
                 printOutput: [],
                 toolCallCount: 0,
@@ -64,10 +70,11 @@ describe("agentLoopPendingPhaseResolve", () => {
         expect(pending).not.toBeNull();
         expect(pending?.type).toBe("tool_call");
         if (pending?.type === "tool_call") {
-            expect(pending.start.toolCallId).toBe("run-2");
+            expect(pending.start.toolCallId).toBe("tool-2");
             expect(pending.snapshot.snapshot).toBe("snapshot");
             expect(pending.blockIndex).toBe(1);
             expect(pending.blocks).toEqual(["echo('a')", "echo('b')"]);
+            expect(pending.blockToolCallIds).toEqual(["tool-1", "tool-2"]);
         }
     });
 
@@ -76,14 +83,15 @@ describe("agentLoopPendingPhaseResolve", () => {
             {
                 type: "assistant_message",
                 at: 5,
-                text: "<run_python>echo('a')</run_python>",
+                text: "",
                 files: [],
-                tokens: null
+                tokens: null,
+                toolCalls: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('a')" } }]
             },
             {
                 type: "rlm_start",
                 at: 6,
-                toolCallId: "run-1",
+                toolCallId: "tool-1",
                 code: "echo('a')",
                 preamble: "..."
             }
@@ -94,7 +102,7 @@ describe("agentLoopPendingPhaseResolve", () => {
         expect(pending).not.toBeNull();
         expect(pending?.type).toBe("error");
         if (pending?.type === "error") {
-            expect(pending.start.toolCallId).toBe("run-1");
+            expect(pending.start.toolCallId).toBe("tool-1");
             expect(pending.message).toContain("before any tool call");
         }
     });

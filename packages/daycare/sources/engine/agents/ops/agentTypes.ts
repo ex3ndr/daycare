@@ -111,6 +111,13 @@ export type AgentHistoryRecord =
           text: string;
           files: FileReference[];
           tokens: AgentTokenEntry | null;
+          toolCalls?: Array<{
+              type: "toolCall";
+              id: string;
+              name: string;
+              arguments: Record<string, unknown>;
+              thoughtSignature?: string;
+          }>;
       }
     | AgentHistoryRlmStartRecord
     | AgentHistoryRlmToolCallRecord

@@ -41,7 +41,7 @@ describe("agentLoopRun", () => {
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild();
 
-        await agentLoopRun(
+        const result = await agentLoopRun(
             optionsBuild({
                 connector,
                 inferenceRouter,
@@ -59,6 +59,13 @@ describe("agentLoopRun", () => {
         ).toBe(true);
         expect(connectorSend).toHaveBeenCalledTimes(1);
         expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
+        const firstAssistant = result.historyRecords.find(
+            (record): record is Extract<(typeof result.historyRecords)[number], { type: "assistant_message" }> =>
+                record.type === "assistant_message"
+        );
+        expect(firstAssistant?.toolCalls).toEqual([
+            { type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "'step complete'" } }
+        ]);
     });
 
     it("nudges child agents when no send_agent_message call was made", async () => {
