@@ -82,7 +82,7 @@ describe("agentHistoryContext", () => {
                 printOutput: ["started"],
                 toolCallCount: 1,
                 isError: true,
-                error: "Process was restarted"
+                error: "Daycare server was restarted during executing this command"
             },
             {
                 type: "user_message",
@@ -118,7 +118,9 @@ describe("agentHistoryContext", () => {
         expect(toolResult.toolName).toBe("run_python");
         expect(toolResult.isError).toBe(true);
         const textPart = toolResult.content.find((part) => part.type === "text");
-        expect(textPart && "text" in textPart ? textPart.text : "").toContain("Process was restarted");
+        expect(textPart && "text" in textPart ? textPart.text : "").toContain(
+            "Daycare server was restarted during executing this command"
+        );
         expect(user?.role).toBe("user");
     });
 

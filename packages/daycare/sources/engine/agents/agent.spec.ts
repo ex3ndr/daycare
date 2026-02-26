@@ -1044,7 +1044,7 @@ describe("Agent", () => {
                 );
             expect(completed).toBeTruthy();
             expect(completed?.isError).toBe(true);
-            expect(completed?.error).toContain("Process was restarted");
+            expect(completed?.error).toContain("Daycare server was restarted during executing this command");
             expect(completed?.toolCallCount).toBe(2);
             expect(completed?.printOutput).toEqual(["waiting..."]);
             expect(complete).toHaveBeenCalledTimes(1);
@@ -1092,7 +1092,9 @@ describe("Agent", () => {
                         "type" in part &&
                         "text" in part &&
                         (part as { type?: string; text?: string }).type === "text" &&
-                        (part as { text?: string }).text?.includes("Process was restarted")
+                        (part as { text?: string }).text?.includes(
+                            "Daycare server was restarted during executing this command"
+                        )
                 );
             });
             expect(hasRunPythonToolCall).toBe(true);

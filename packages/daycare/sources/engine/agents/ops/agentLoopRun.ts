@@ -320,7 +320,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         {
                             exception: {
                                 type: "RuntimeError",
-                                message: "Process was restarted"
+                                message: "Daycare server was restarted during executing this command"
                             }
                         },
                         printCallback

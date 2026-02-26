@@ -78,7 +78,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
             return {
                 type: "error",
                 start: pendingStart,
-                message: "Process was restarted before any tool call"
+                message: "Daycare server was restarted during executing this command before any tool call"
             };
         }
         return {
