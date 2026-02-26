@@ -255,6 +255,18 @@ export type UserSummary = {
   updatedAt: number;
 };
 
+export type TokenStatsRow = {
+  hourStart: number;
+  userId: string;
+  agentId: string;
+  model: string;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  cost: number;
+};
+
 export type SystemPromptScope = "global" | "user";
 export type SystemPromptKind = "system" | "first_message";
 export type SystemPromptCondition = "new_user" | "returning_user";
@@ -308,6 +320,10 @@ type AgentSessionsResponse = {
 
 type AgentHistoryResponse = {
   records?: AgentHistoryRecord[];
+};
+
+type TokenStatsResponse = {
+  rows?: TokenStatsRow[];
 };
 
 type MemoryGraphResponse = {
@@ -408,6 +424,37 @@ export async function fetchAgentHistory(agentId: string, options?: { limit?: num
   }
   const data = await fetchJSON<AgentHistoryResponse>(`/api/v1/engine/agents/${encoded}/history?${query}`);
   return data.records ?? [];
+}
+
+export async function fetchTokenStats(options?: {
+  from?: number;
+  to?: number;
+  userId?: string;
+  agentId?: string;
+  model?: string;
+  limit?: number;
+}) {
+  const query = new URLSearchParams();
+  if (options?.from !== undefined) {
+    query.set("from", String(options.from));
+  }
+  if (options?.to !== undefined) {
+    query.set("to", String(options.to));
+  }
+  if (options?.userId) {
+    query.set("userId", options.userId);
+  }
+  if (options?.agentId) {
+    query.set("agentId", options.agentId);
+  }
+  if (options?.model) {
+    query.set("model", options.model);
+  }
+  if (options?.limit !== undefined) {
+    query.set("limit", String(options.limit));
+  }
+  const data = await fetchJSON<TokenStatsResponse>(`/api/v1/engine/token-stats?${query}`);
+  return data.rows ?? [];
 }
 
 type SystemPromptsResponse = {

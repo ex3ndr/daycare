@@ -636,6 +636,16 @@ export class Agent {
                 modelStats.total += update.size.total;
                 providerStats[update.model] = modelStats;
                 this.state.stats[update.provider] = providerStats;
+
+                await this.agentSystem.storage.tokenStats.increment(this.ctx, {
+                    at: update.at,
+                    model: `${update.provider}/${update.model}`,
+                    input: update.size.input,
+                    output: update.size.output,
+                    cacheRead: update.size.cacheRead,
+                    cacheWrite: update.size.cacheWrite,
+                    cost: update.cost
+                });
             }
         }
 

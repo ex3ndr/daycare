@@ -60,6 +60,14 @@ const agentHistoryQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(10000).optional(),
     sessionId: z.string().min(1).optional()
 });
+const tokenStatsQuerySchema = z.object({
+    from: z.coerce.number().int().nonnegative().optional(),
+    to: z.coerce.number().int().nonnegative().optional(),
+    userId: z.string().min(1).optional(),
+    agentId: z.string().min(1).optional(),
+    model: z.string().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(50000).optional()
+});
 const signalGenerateSchema = z.object({
     type: z.string().min(1),
     source: z.discriminatedUnion("type", [
@@ -316,6 +324,39 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         }));
         logger.debug(`event: Users retrieved userCount=${mapped.length}`);
         return reply.send({ ok: true, users: mapped });
+    });
+
+    app.get("/v1/engine/token-stats", async (request, reply) => {
+        const parsed = tokenStatsQuerySchema.safeParse(request.query);
+        if (!parsed.success) {
+            return reply.status(400).send({ ok: false, error: "Invalid query" });
+        }
+        const { from, to, userId, agentId, model, limit } = parsed.data;
+        logger.debug(
+            `event: GET /v1/engine/token-stats from=${from ?? "none"} to=${to ?? "none"} userId=${userId ?? "all"} agentId=${agentId ?? "all"} model=${model ?? "all"}`
+        );
+        const rows = await options.runtime.storage.tokenStats.findAll({
+            from,
+            to,
+            userId,
+            agentId,
+            model,
+            limit
+        });
+        return reply.send({
+            ok: true,
+            rows: rows.map((row) => ({
+                hourStart: row.hourStart,
+                userId: row.userId,
+                agentId: row.agentId,
+                model: row.model,
+                input: row.input,
+                output: row.output,
+                cacheRead: row.cacheRead,
+                cacheWrite: row.cacheWrite,
+                cost: row.cost
+            }))
+        });
     });
 
     app.get("/v1/engine/agents/background", async (_request, reply) => {

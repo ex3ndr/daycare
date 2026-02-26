@@ -180,6 +180,49 @@ describe("agentLoopRun", () => {
         expect(execute).not.toHaveBeenCalled();
         expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
     });
+
+    it("emits token stats updates with cost from usage", async () => {
+        const response = assistantMessageBuild("Done");
+        response.usage = {
+            input: 12,
+            output: 4,
+            cacheRead: 3,
+            cacheWrite: 2,
+            totalTokens: 21,
+            cost: {
+                input: 0.01,
+                output: 0.02,
+                cacheRead: 0.005,
+                cacheWrite: 0.004,
+                total: 0.039
+            }
+        };
+        response.timestamp = 1234567890;
+        const inferenceRouter = inferenceRouterBuild([response]);
+
+        const result = await agentLoopRun(
+            optionsBuild({
+                connector: null,
+                inferenceRouter
+            })
+        );
+
+        expect(result.tokenStatsUpdates).toEqual([
+            {
+                at: 1234567890,
+                provider: "openai",
+                model: "gpt-test",
+                size: {
+                    input: 12,
+                    output: 4,
+                    cacheRead: 3,
+                    cacheWrite: 2,
+                    total: 21
+                },
+                cost: 0.039
+            }
+        ]);
+    });
 });
 
 function optionsBuild(params?: {

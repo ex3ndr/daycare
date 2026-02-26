@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { DashboardShell } from "@/components/dashboard-shell";
+import { TokenUsageChart } from "@/components/token-usage-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ import {
   fetchAgents,
   fetchSignalEvents,
   fetchSignalSubscriptions,
+  fetchTokenStats,
   type BackgroundAgentState,
   type CronTask,
   type EngineEvent,
@@ -53,7 +55,8 @@ import {
   type AgentDescriptor,
   type SignalEvent,
   type SignalSource,
-  type SignalSubscription
+  type SignalSubscription,
+  type TokenStatsRow
 } from "@/lib/engine-client";
 import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
 import type { LucideIcon } from "lucide-react";
@@ -71,6 +74,7 @@ export default function Dashboard() {
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [signals, setSignals] = useState<SignalEvent[]>([]);
   const [subscriptions, setSubscriptions] = useState<SignalSubscription[]>([]);
+  const [tokenStats, setTokenStats] = useState<TokenStatsRow[]>([]);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,11 +115,30 @@ export default function Dashboard() {
     setSubscriptions(data);
   }, []);
 
+  const fetchTokenStatsData = useCallback(async () => {
+    const now = Date.now();
+    const data = await fetchTokenStats({
+      from: now - 7 * 24 * 60 * 60 * 1000,
+      to: now,
+      limit: 10000
+    });
+    setTokenStats(data);
+  }, []);
+
   const refreshAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      await Promise.all([fetchStatus(), fetchCron(), fetchHeartbeats(), fetchBackgroundAgentsData(), fetchAgentsData(), fetchSignals(), fetchSubscriptions()]);
+      await Promise.all([
+        fetchStatus(),
+        fetchCron(),
+        fetchHeartbeats(),
+        fetchBackgroundAgentsData(),
+        fetchAgentsData(),
+        fetchSignals(),
+        fetchSubscriptions(),
+        fetchTokenStatsData()
+      ]);
       setLastUpdated(new Date());
     } catch (err) {
       const message = err instanceof Error ? err.message : "Refresh failed";
@@ -123,7 +146,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchSignals, fetchSubscriptions, fetchStatus]);
+  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchSignals, fetchSubscriptions, fetchStatus, fetchTokenStatsData]);
 
   useEffect(() => {
     void refreshAll();
@@ -176,6 +199,9 @@ export default function Dashboard() {
           void fetchSignals();
           void fetchSubscriptions();
           break;
+        case "agent.outgoing":
+          void fetchTokenStatsData();
+          break;
         default:
           break;
       }
@@ -184,7 +210,7 @@ export default function Dashboard() {
     return () => {
       source.close();
     };
-  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchSignals, fetchSubscriptions, fetchStatus]);
+  }, [fetchAgentsData, fetchBackgroundAgentsData, fetchCron, fetchHeartbeats, fetchSignals, fetchSubscriptions, fetchStatus, fetchTokenStatsData]);
 
   const pluginCount = status?.plugins?.length ?? 0;
   const agentCount = agents.length;
@@ -374,6 +400,7 @@ export default function Dashboard() {
           <div className="grid gap-6 px-4 lg:grid-cols-3 lg:px-6">
             <div className="flex flex-col gap-6 lg:col-span-2">
               <ActivityChart agentCount={agentCount} cronCount={cronCount} />
+              <TokenUsageChart rows={tokenStats} />
               <AgentsTable agents={orderedAgents} />
             </div>
             <div className="flex flex-col gap-6">

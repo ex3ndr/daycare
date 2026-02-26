@@ -419,6 +419,30 @@ export type SessionDbRecord = {
     endedAt: number | null;
 };
 
+export type DatabaseTokenStatsHourlyRow = {
+    hour_start: number;
+    user_id: string;
+    agent_id: string;
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens: number;
+    cache_write_tokens: number;
+    cost: number;
+};
+
+export type TokenStatsHourlyDbRecord = {
+    hourStart: number;
+    userId: string;
+    agentId: string;
+    model: string;
+    input: number;
+    output: number;
+    cacheRead: number;
+    cacheWrite: number;
+    cost: number;
+};
+
 export type CreateUserInput = {
     id?: string;
     isOwner?: boolean;
