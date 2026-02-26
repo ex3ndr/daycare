@@ -4,9 +4,8 @@
 # write_output returns the path (date-prefixed, unique) — always print it.
 
 # --- Block 1: collect and persist ---
-items = ls(path=".", limit=100)
-names = [e["name"] for e in items["entries"]]
-payload = str({"file_count": len(names), "names": names})
+listing = exec(command="ls -1apL .")
+payload = str({"listing": listing["summary"]})
 result = write_output(name="inventory", content=payload)
 print(result["path"])  # e.g. ~/outputs/20250615103045-inventory.md
 

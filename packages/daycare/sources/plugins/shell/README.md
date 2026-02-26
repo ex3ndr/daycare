@@ -1,14 +1,13 @@
 # Shell Plugin
 
-The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `edit`, `write_output`), search/list helpers
-(`grep`, `find`, `ls`), one-shot command execution (`exec`), and durable process management tools.
+The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `edit`, `write_output`), one-shot command
+execution (`exec`), and durable process management tools.
 
 ## Filesystem Helper Tools
 
 - `write_output`: writes markdown or json under `~/outputs` with date-prefixed collision-safe names (`YYYYMMDDHHMMSS-name.md`, `YYYYMMDDHHMMSS-name-1.md`, `YYYYMMDDHHMMSS-name.json`, ...). Use `format: "markdown" | "json"` (default `markdown`). Returns the unique path where the file was written — always print it since the path is not predictable.
-- `grep`: runs `rg --json` and returns `file:line:content` rows with output-size guards.
-- `find`: runs `fd --glob --hidden`, respects ignore rules, and excludes `.git` and `node_modules`.
-- `ls`: runs `ls -1apL`, sorts output alphabetically, and applies entry/size truncation.
+
+Use `exec` for filesystem search/list operations (for example `rg`, `fd`, `ls`) when needed.
 
 ## Read Tool Notes
 

@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
+import { sandboxReadPathNormalize } from "../../sandbox/sandboxReadPathNormalize.js";
 import { shellQuote } from "../../util/shellQuote.js";
 import { findEntriesFormat } from "./findEntriesFormat.js";
 
@@ -50,7 +51,7 @@ export function buildFindTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FindArgs;
             const limit = payload.limit ?? FIND_DEFAULT_LIMIT;
-            const searchPath = payload.path?.trim() || ".";
+            const searchPath = findPathNormalize(payload.path?.trim() || ".", toolContext);
             const command = findCommandBuild(payload.pattern, searchPath, limit);
 
             const execResult = await toolContext.sandbox.exec({
@@ -95,6 +96,17 @@ export function buildFindTool(): ToolDefinition {
             });
         }
     };
+}
+
+function findPathNormalize(
+    searchPath: string,
+    toolContext: { sandbox: { homeDir: string; docker?: { enabled?: boolean } } }
+): string {
+    return sandboxReadPathNormalize(
+        searchPath,
+        toolContext.sandbox.homeDir,
+        toolContext.sandbox.docker?.enabled === true
+    );
 }
 
 function findCommandBuild(pattern: string, searchPath: string, limit: number): string {

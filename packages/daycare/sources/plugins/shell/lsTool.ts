@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
+import { sandboxReadPathNormalize } from "../../sandbox/sandboxReadPathNormalize.js";
 import { shellQuote } from "../../util/shellQuote.js";
 import { lsEntriesFormat } from "./lsEntriesFormat.js";
 
@@ -48,7 +49,7 @@ export function buildLsTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as LsArgs;
             const limit = payload.limit ?? LS_DEFAULT_LIMIT;
-            const targetPath = payload.path?.trim() || ".";
+            const targetPath = lsPathNormalize(payload.path?.trim() || ".", toolContext);
             const command = lsCommandBuild(targetPath);
 
             const execResult = await toolContext.sandbox.exec({
@@ -89,6 +90,17 @@ export function buildLsTool(): ToolDefinition {
             });
         }
     };
+}
+
+function lsPathNormalize(
+    targetPath: string,
+    toolContext: { sandbox: { homeDir: string; docker?: { enabled?: boolean } } }
+): string {
+    return sandboxReadPathNormalize(
+        targetPath,
+        toolContext.sandbox.homeDir,
+        toolContext.sandbox.docker?.enabled === true
+    );
 }
 
 function lsCommandBuild(targetPath: string): string {

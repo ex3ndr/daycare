@@ -6,6 +6,8 @@ Call `skip()` to skip the current turn without producing output for the LLM. For
 Every single Python block runs in a SEPARATE throw away instance. In-memory variables do not persist across blocks. If you need results later, persist them to disk with `write_output(...)` and **always print the returned path** — it contains a timestamp prefix and is unique per call. Then read that path back in a later block.
 When `read(...)` is called from Python execution, text is unbounded for the selected `offset`/`limit` range (no 50KB/2000-line truncation).
 Use `read_json(...)` when you need parsed JSON objects/lists directly instead of raw text.
+For shell commands via `exec(...)`, home paths should use `~` (or `$HOME`) in the command itself; `pwd` is the current
+working directory, not the home directory.
 
 Prefer one script with multiple tool calls over separate invocations. Store results in variables and pass them between tools — do not manually construct or parse strings when a variable already holds the value. Independent tool calls can run sequentially in the same script; this is faster than multiple round-trips.
 ```python
@@ -31,12 +33,16 @@ for node in nodes["results"][:50]:
     print(data["content"])
 ```
 
-Tool output shown to the model is truncated. Prefer filesystem helpers for large results:
+Tool output shown to the model is truncated. Prefer `exec` + `write_output` for larger shell results:
 ```python
-grep_results = grep(pattern="TODO", path=".", glob="*.ts", limit=200)
-find_results = find(pattern="*.md", path=".", limit=200)
-ls_results = ls(path=".", limit=200)
-payload = {"grep": grep_results, "find": find_results, "ls": ls_results}
+rg_result = exec(command="rg --line-number --no-heading 'TODO' .")
+fd_result = exec(command="fd --hidden --glob '*.md' .")
+ls_result = exec(command="ls -1apL .")
+payload = {
+    "rg": rg_result["summary"],
+    "fd": fd_result["summary"],
+    "ls": ls_result["summary"]
+}
 result = write_output(name="search-results", content=str(payload))
 print(result["path"])  # always print — path is date-prefixed and unique
 ```

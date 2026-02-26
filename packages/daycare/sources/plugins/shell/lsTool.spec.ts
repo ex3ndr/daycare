@@ -45,20 +45,65 @@ describe("buildLsTool", () => {
         expect(result.toolMessage.isError).toBe(true);
         expect(result.typedResult.summary).toContain("ls failed");
     });
+
+    it("expands ~ paths before shell quoting", async () => {
+        const tool = buildLsTool();
+        const { context, exec } = createContext(
+            {
+                stdout: "",
+                stderr: "",
+                failed: false,
+                exitCode: 0,
+                signal: null,
+                cwd: "/workspace"
+            },
+            { homeDir: "/sandbox-home" }
+        );
+
+        await tool.execute({ path: "~/projects" }, context, toolCall);
+        expect(exec).toHaveBeenCalledOnce();
+        expect(exec.mock.calls[0]?.[0]?.command).toContain("'/sandbox-home/projects'");
+        expect(exec.mock.calls[0]?.[0]?.command).not.toContain("'~/projects'");
+    });
+
+    it("uses container home when docker sandbox is enabled", async () => {
+        const tool = buildLsTool();
+        const { context, exec } = createContext(
+            {
+                stdout: "",
+                stderr: "",
+                failed: false,
+                exitCode: 0,
+                signal: null,
+                cwd: "/home/workspace"
+            },
+            { homeDir: "/host/home", dockerEnabled: true }
+        );
+
+        await tool.execute({ path: "~/projects" }, context, toolCall);
+        expect(exec).toHaveBeenCalledOnce();
+        expect(exec.mock.calls[0]?.[0]?.command).toContain("'/home/projects'");
+        expect(exec.mock.calls[0]?.[0]?.command).not.toContain("'/host/home/projects'");
+    });
 });
 
-function createContext(execResult: {
-    stdout: string;
-    stderr: string;
-    failed: boolean;
-    exitCode: number | null;
-    signal: string | null;
-    cwd: string;
-}) {
+function createContext(
+    execResult: {
+        stdout: string;
+        stderr: string;
+        failed: boolean;
+        exitCode: number | null;
+        signal: string | null;
+        cwd: string;
+    },
+    options: { homeDir?: string; dockerEnabled?: boolean } = {}
+) {
     const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => execResult);
     const context = {
         sandbox: {
             execWorkingDir: "/workspace",
+            homeDir: options.homeDir ?? "/home/test",
+            docker: options.dockerEnabled ? { enabled: true } : undefined,
             exec
         }
     } as unknown as ToolExecutionContext;

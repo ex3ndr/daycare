@@ -1,19 +1,17 @@
 # File search and reading patterns
-# Use grep, find, ls, and read to explore the filesystem.
+# Use exec + read to explore the filesystem.
 
 # Search for a pattern across files
-results = grep(pattern="TODO", path=".", glob="*.py", limit=50)
-print(results)
+rg = exec(command="rg --line-number --no-heading 'TODO' .")
+print(rg["summary"])
 
 # Find files by name pattern
-py_files = find(pattern="*.py", path=".", limit=50)
-for f in py_files["entries"][:10]:
-    print(f["path"])
+fd = exec(command="fd --hidden --glob '*.py' .")
+print(fd["summary"])
 
 # List a directory
-entries = ls(path=".", limit=50)
-for entry in entries["entries"][:10]:
-    print(f"{entry['name']}  {entry['type']}")
+listing = exec(command="ls -1apL .")
+print(listing["summary"])
 
 # Read a specific file
 content = read(path="./notes.md")

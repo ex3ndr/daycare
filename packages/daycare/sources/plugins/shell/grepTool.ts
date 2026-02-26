@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
+import { sandboxReadPathNormalize } from "../../sandbox/sandboxReadPathNormalize.js";
 import { shellQuote } from "../../util/shellQuote.js";
 import { grepResultsFormat } from "./grepResultsFormat.js";
 
@@ -53,7 +54,7 @@ export function buildGrepTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as GrepArgs;
             const limit = payload.limit ?? GREP_DEFAULT_LIMIT;
-            const searchPath = payload.path?.trim() || ".";
+            const searchPath = grepPathNormalize(payload.path?.trim() || ".", toolContext);
             const command = grepCommandBuild(payload, searchPath, limit);
 
             const execResult = await toolContext.sandbox.exec({
@@ -98,6 +99,17 @@ export function buildGrepTool(): ToolDefinition {
             });
         }
     };
+}
+
+function grepPathNormalize(
+    searchPath: string,
+    toolContext: { sandbox: { homeDir: string; docker?: { enabled?: boolean } } }
+): string {
+    return sandboxReadPathNormalize(
+        searchPath,
+        toolContext.sandbox.homeDir,
+        toolContext.sandbox.docker?.enabled === true
+    );
 }
 
 function grepCommandBuild(payload: GrepArgs, searchPath: string, limit: number): string {

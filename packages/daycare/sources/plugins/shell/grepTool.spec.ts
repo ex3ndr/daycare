@@ -83,20 +83,45 @@ describe("buildGrepTool", () => {
         expect(result.toolMessage.isError).toBe(true);
         expect(result.typedResult.summary).toContain("grep failed");
     });
+
+    it("expands ~ paths before shell quoting", async () => {
+        const tool = buildGrepTool();
+        const { context, exec } = createContext(
+            {
+                stdout: "",
+                stderr: "",
+                failed: true,
+                exitCode: 1,
+                signal: null,
+                cwd: "/workspace"
+            },
+            { homeDir: "/sandbox-home" }
+        );
+
+        await tool.execute({ pattern: "x", path: "~/repo" }, context, toolCall);
+        expect(exec).toHaveBeenCalledOnce();
+        expect(exec.mock.calls[0]?.[0]?.command).toContain("'/sandbox-home/repo'");
+        expect(exec.mock.calls[0]?.[0]?.command).not.toContain("'~/repo'");
+    });
 });
 
-function createContext(execResult: {
-    stdout: string;
-    stderr: string;
-    failed: boolean;
-    exitCode: number | null;
-    signal: string | null;
-    cwd: string;
-}) {
+function createContext(
+    execResult: {
+        stdout: string;
+        stderr: string;
+        failed: boolean;
+        exitCode: number | null;
+        signal: string | null;
+        cwd: string;
+    },
+    options: { homeDir?: string; dockerEnabled?: boolean } = {}
+) {
     const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => execResult);
     const context = {
         sandbox: {
             execWorkingDir: "/workspace",
+            homeDir: options.homeDir ?? "/home/test",
+            docker: options.dockerEnabled ? { enabled: true } : undefined,
             exec
         }
     } as unknown as ToolExecutionContext;
