@@ -22,6 +22,8 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
     const agentsDir = path.join(dataDir, "agents");
     const usersDir = path.join(configDir, "users");
     const dbPath = path.resolve(resolvedSettings.engine?.dbPath ?? path.join(dataDir, "daycare.db"));
+    const dbUrl = configDbUrlResolve(resolvedSettings.engine?.dbUrl);
+    const dbAutoMigrate = resolvedSettings.engine?.autoMigrate ?? true;
     const authPath = path.join(dataDir, "auth.json");
     const socketPath = resolveEngineSocketPath(resolvedSettings.engine?.socketPath);
     const frozenSettings = freezeDeep(structuredClone(resolvedSettings));
@@ -34,6 +36,8 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
         agentsDir,
         usersDir,
         dbPath,
+        dbUrl,
+        dbAutoMigrate,
         authPath,
         socketPath,
         docker: frozenSettings.docker,
@@ -122,4 +126,15 @@ function dockerDnsListNormalize(input: string[] | undefined, fallback: string[])
         result.push(normalized);
     }
     return result;
+}
+
+function configDbUrlResolve(input: string | undefined): string | null {
+    if (!input) {
+        return null;
+    }
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
+    return trimmed;
 }

@@ -2,6 +2,18 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 
 import { PGlite } from "@electric-sql/pglite";
+import { Client as PostgresClient } from "pg";
+
+type StorageQueryResult<TRow> = {
+    rows: TRow[];
+    affectedRows?: number;
+};
+
+type StorageClient = {
+    query: <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => Promise<StorageQueryResult<TRow>>;
+    exec: (sqlText: string) => Promise<void>;
+    close: () => Promise<void>;
+};
 
 export type StorageStatementRunResult = {
     changes?: number;
@@ -17,12 +29,12 @@ export type StorageStatement = {
 export class StorageDatabase {
     readonly __daycareDatabasePath: string | null;
 
-    private readonly client: PGlite;
+    private readonly client: StorageClient;
     private readonly queue: { tail: Promise<void> };
     private closePromise: Promise<void> | null = null;
     private closed = false;
 
-    constructor(client: PGlite, databasePath: string | null) {
+    constructor(client: StorageClient, databasePath: string | null) {
         this.client = client;
         this.__daycareDatabasePath = databasePath;
         this.queue = { tail: Promise.resolve() };
@@ -98,19 +110,27 @@ export class StorageDatabase {
 }
 
 export type StorageDatabasePath = string;
+export type StorageDatabaseTarget =
+    | { kind: "pglite"; path: StorageDatabasePath }
+    | { kind: "postgres"; url: string };
 
 /**
- * Opens a storage database client and initializes either in-memory or file-backed PGlite.
- * Expects: dbPath is ":memory:" or an absolute writable runtime path.
+ * Opens a storage database client for either pglite or server postgres targets.
+ * Expects: pglite path is ":memory:" or writable; postgres URL uses postgres:// or postgresql://.
  */
-export function databaseOpen(dbPath: StorageDatabasePath): StorageDatabase {
+export function databaseOpen(target: StorageDatabasePath | StorageDatabaseTarget): StorageDatabase {
+    if (typeof target !== "string" && target.kind === "postgres") {
+        return new StorageDatabase(postgresClientBuild(target.url), null);
+    }
+
+    const dbPath = typeof target === "string" ? target : target.path;
     if (dbPath === ":memory:") {
-        return new StorageDatabase(new PGlite(), null);
+        return new StorageDatabase(pgliteClientBuild(null), null);
     }
 
     const resolvedPath = databaseDataPathResolve(dbPath);
     mkdirSync(path.dirname(resolvedPath), { recursive: true });
-    return new StorageDatabase(new PGlite(resolvedPath), resolvedPath);
+    return new StorageDatabase(pgliteClientBuild(resolvedPath), resolvedPath);
 }
 
 function databaseDataPathResolve(dbPath: string): string {
@@ -164,4 +184,49 @@ function sqlParametersTransform(sqlText: string): string {
     }
 
     return transformed;
+}
+
+function pgliteClientBuild(databasePath: string | null): StorageClient {
+    const client = databasePath ? new PGlite(databasePath) : new PGlite();
+    return {
+        query: async <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => {
+            const result = await client.query<TRow>(sqlText, params);
+            return {
+                rows: result.rows,
+                affectedRows: result.affectedRows
+            };
+        },
+        exec: async (sqlText: string) => {
+            await client.exec(sqlText);
+        },
+        close: async () => {
+            await client.close();
+        }
+    };
+}
+
+function postgresClientBuild(url: string): StorageClient {
+    const client = new PostgresClient({ connectionString: url });
+    const connected = client.connect();
+    // Avoid process-level unhandled rejection when open succeeds lazily after caller gives up.
+    void connected.catch(() => undefined);
+
+    return {
+        query: async <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => {
+            await connected;
+            const result = await client.query(sqlText, params);
+            return {
+                rows: result.rows as TRow[],
+                affectedRows: result.rowCount ?? 0
+            };
+        },
+        exec: async (sqlText: string) => {
+            await connected;
+            await client.query(sqlText);
+        },
+        close: async () => {
+            await connected.catch(() => undefined);
+            await client.end().catch(() => undefined);
+        }
+    };
 }

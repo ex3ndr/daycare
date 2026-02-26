@@ -13,6 +13,18 @@ describe("configSettingsParse", () => {
         expect(parsed.engine?.dbPath).toBe("/tmp/daycare/daycare.db");
     });
 
+    it("accepts engine.dbUrl and engine.autoMigrate", () => {
+        const parsed = configSettingsParse({
+            engine: {
+                dbUrl: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
+                autoMigrate: false
+            }
+        });
+
+        expect(parsed.engine?.dbUrl).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
+        expect(parsed.engine?.autoMigrate).toBe(false);
+    });
+
     it("accepts full docker settings", () => {
         const parsed = configSettingsParse({
             docker: {

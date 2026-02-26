@@ -15,10 +15,11 @@ export type StorageUpgradeResult = {
 
 /**
  * Opens the configured database and applies pending storage migrations.
- * Expects: config.dbPath points to the runtime SQLite database path.
+ * Expects: config database settings point to a reachable pglite or postgres target.
  */
 export async function storageUpgrade(config: Config): Promise<StorageUpgradeResult> {
-    const db = databaseOpen(config.dbPath);
+    const dbTarget = config.dbUrl ? { kind: "postgres" as const, url: config.dbUrl } : config.dbPath;
+    const db = databaseOpen(dbTarget);
     try {
         const appliedBefore = await migrationAppliedNamesRead(db);
         const pendingBefore = migrations.map((migration) => migration.name).filter((name) => !appliedBefore.has(name));
@@ -30,6 +31,7 @@ export async function storageUpgrade(config: Config): Promise<StorageUpgradeResu
         logger.info(
             {
                 dbPath: config.dbPath,
+                dbTarget: config.dbUrl ? "postgres" : "pglite",
                 pendingBefore,
                 applied
             },

@@ -132,8 +132,15 @@ export class Engine {
     constructor(options: EngineOptions) {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
         this.config = new ConfigModule(options.config);
-        const db = databaseOpen(this.config.current.dbPath);
-        databaseMigrate(db);
+        const dbTarget = this.config.current.dbUrl
+            ? { kind: "postgres" as const, url: this.config.current.dbUrl }
+            : this.config.current.dbPath;
+        const db = databaseOpen(dbTarget);
+        if (this.config.current.dbAutoMigrate) {
+            databaseMigrate(db);
+        } else {
+            logger.info("skip: Auto migrations disabled by engine.autoMigrate=false");
+        }
         this.storage = Storage.fromDatabase(db);
         // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;

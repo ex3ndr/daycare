@@ -36,6 +36,30 @@ describe("configResolve", () => {
         expect(config.dbPath).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
     });
 
+    it("defaults dbUrl to null and auto migrations to true", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve({}, configPath);
+        expect(config.dbUrl).toBeNull();
+        expect(config.dbAutoMigrate).toBe(true);
+    });
+
+    it("resolves dbUrl and auto migration settings", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                engine: {
+                    dbPath: "/tmp/daycare/custom/daycare.db",
+                    dbUrl: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
+                    autoMigrate: false
+                }
+            },
+            configPath
+        );
+        expect(config.dbPath).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
+        expect(config.dbUrl).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
+        expect(config.dbAutoMigrate).toBe(false);
+    });
+
     it("defaults security.appReviewerEnabled to false", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve({}, configPath);
