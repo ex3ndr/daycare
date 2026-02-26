@@ -6,11 +6,13 @@ import type { DatabaseSync as DatabaseSyncType } from "node:sqlite";
 const nodeRequire = createRequire(import.meta.url);
 const { DatabaseSync } = nodeRequire("node:sqlite") as typeof import("node:sqlite");
 
+export type StorageDatabase = DatabaseSyncType;
+
 /**
  * Opens a SQLite database and applies required connection pragmas.
  * Expects: dbPath is absolute and writable by the current process.
  */
-export function databaseOpen(dbPath: string): DatabaseSyncType {
+export function databaseOpen(dbPath: string): StorageDatabase {
     if (dbPath !== ":memory:") {
         mkdirSync(path.dirname(dbPath), { recursive: true });
     }

@@ -106,6 +106,24 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 })
                 .passthrough()
                 .optional(),
+            models: z
+                .object({
+                    user: z.string().min(1).optional(),
+                    memory: z.string().min(1).optional(),
+                    memorySearch: z.string().min(1).optional(),
+                    subagent: z.string().min(1).optional(),
+                    heartbeat: z.string().min(1).optional()
+                })
+                .partial()
+                .optional(),
+            modelSizes: z
+                .object({
+                    small: z.string().min(1).optional(),
+                    normal: z.string().min(1).optional(),
+                    large: z.string().min(1).optional()
+                })
+                .partial()
+                .optional(),
             memory: z
                 .object({
                     enabled: z.boolean().optional(),

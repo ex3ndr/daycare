@@ -1,12 +1,12 @@
-import type { HeartbeatDefinition } from "../heartbeatTypes.js";
+import type { HeartbeatRunTask } from "../heartbeatTypes.js";
 
 /**
  * Builds batch context for running heartbeat tasks.
  *
- * Expects: array of HeartbeatDefinition tasks.
+ * Expects: array of HeartbeatRunTask tasks.
  * Returns: { title, text, code } where text is the prefix context and code is the array of Python code blocks.
  */
-export function heartbeatPromptBuildBatch(tasks: HeartbeatDefinition[]): {
+export function heartbeatPromptBuildBatch(tasks: HeartbeatRunTask[]): {
     title: string;
     text: string;
     code: string[];

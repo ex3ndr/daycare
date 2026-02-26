@@ -54,7 +54,7 @@ describe("task tools", () => {
         const taskId = String(createResult.typedResult.taskId ?? "");
         expect(taskId).toBe("daily-check");
 
-        const stored = await runtime.storage.tasks.findById(taskId);
+        const stored = await runtime.storage.tasks.findById(runtime.context.ctx, taskId);
         expect(stored?.title).toBe("Daily check");
 
         const readTool = buildTaskReadTool();
@@ -73,7 +73,7 @@ describe("task tools", () => {
             runtime.context,
             toolCall("task_update")
         );
-        const updated = await runtime.storage.tasks.findById(taskId);
+        const updated = await runtime.storage.tasks.findById(runtime.context.ctx, taskId);
         expect(updated?.title).toBe("Daily check v2");
         expect(updated?.code).toBe("print('ok2')");
         expect(updated?.description).toBe("Updated");
@@ -93,9 +93,9 @@ describe("task tools", () => {
         const deleteTool = buildTaskDeleteTool();
         const deleteResult = await deleteTool.execute({ taskId }, runtime.context, toolCall("task_delete"));
         expect(deleteResult.typedResult.deleted).toBe(true);
-        expect(await runtime.storage.tasks.findById(taskId)).toBeNull();
-        expect((await runtime.crons.listTriggersForTask(taskId)).length).toBe(0);
-        expect((await runtime.heartbeats.listTriggersForTask(taskId)).length).toBe(0);
+        expect(await runtime.storage.tasks.findById(runtime.context.ctx, taskId)).toBeNull();
+        expect((await runtime.crons.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
+        expect((await runtime.heartbeats.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
     });
 
     it("reuses existing matching triggers during task_create", async () => {
@@ -112,7 +112,6 @@ describe("task tools", () => {
                 name: "Daily check",
                 description: null,
                 schedule: "0 9 * * *",
-                code: "print('ok')",
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
@@ -127,7 +126,6 @@ describe("task tools", () => {
                 taskId: "daily-check",
                 userId: "user-1",
                 title: "Daily check",
-                code: "print('ok')",
                 lastRunAt: null,
                 createdAt: now,
                 updatedAt: now
@@ -179,6 +177,45 @@ describe("task tools", () => {
 
         expect(String(first.typedResult.taskId ?? "")).toBe("weekly-digest");
         expect(String(second.typedResult.taskId ?? "")).toBe("weekly-digest-2");
+    });
+
+    it("allows the same task id for different users", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const createTool = buildTaskCreateTool();
+        const first = await createTool.execute(
+            {
+                title: "Weekly Digest",
+                code: "print('one')"
+            },
+            runtime.context,
+            toolCall("task_create")
+        );
+        const userTwoContext: ToolExecutionContext = {
+            ...runtime.context,
+            agent: { id: "agent-2" } as ToolExecutionContext["agent"],
+            ctx: contextForAgent({ userId: "user-2", agentId: "agent-2" })
+        };
+        const second = await createTool.execute(
+            {
+                title: "Weekly Digest",
+                code: "print('two')"
+            },
+            userTwoContext,
+            toolCall("task_create")
+        );
+
+        const firstTaskId = String(first.typedResult.taskId ?? "");
+        const secondTaskId = String(second.typedResult.taskId ?? "");
+        expect(firstTaskId).toBe("weekly-digest");
+        expect(secondTaskId).toBe("weekly-digest");
+
+        const firstStored = await runtime.storage.tasks.findById(runtime.context.ctx, firstTaskId);
+        const secondStored = await runtime.storage.tasks.findById(userTwoContext.ctx, secondTaskId);
+        expect(firstStored?.userId).toBe("user-1");
+        expect(secondStored?.userId).toBe("user-2");
     });
 
     it("does not reuse a deleted task id", async () => {
@@ -252,7 +289,7 @@ describe("task tools", () => {
             runtime.context,
             toolCall("task_trigger_add")
         );
-        expect((await runtime.crons.listTriggersForTask("task-one")).length).toBe(2);
+        expect((await runtime.crons.listTriggersForTask(runtime.context.ctx, "task-one")).length).toBe(2);
 
         const heartbeatAddResult = await addTool.execute(
             { taskId: "task-one", type: "heartbeat" },
@@ -269,7 +306,7 @@ describe("task tools", () => {
             toolCall("task_trigger_add")
         );
         expect(String(duplicateHeartbeatAddResult.typedResult.heartbeatTriggerId ?? "")).toBe(heartbeatTriggerId);
-        expect((await runtime.heartbeats.listTriggersForTask("task-one")).length).toBe(1);
+        expect((await runtime.heartbeats.listTriggersForTask(runtime.context.ctx, "task-one")).length).toBe(1);
 
         const removeTool = buildTaskTriggerRemoveTool();
         const cronRemoveResult = await removeTool.execute(

@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import { AsyncLock } from "../util/lock.js";
 import type { DatabaseSystemPromptRow, SystemPromptDbRecord, SystemPromptScope } from "./databaseTypes.js";
 

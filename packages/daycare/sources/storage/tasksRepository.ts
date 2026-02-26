@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
 import type { DatabaseTaskRow, TaskDbRecord } from "./databaseTypes.js";
@@ -18,19 +18,24 @@ export class TasksRepository {
         this.db = db;
     }
 
-    async findById(id: string): Promise<TaskDbRecord | null> {
-        const cached = this.tasksById.get(id);
+    async findById(ctx: Context, id: string): Promise<TaskDbRecord | null> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            return null;
+        }
+        const key = taskKey(userId, id);
+        const cached = this.tasksById.get(key);
         if (cached) {
             return cached.deletedAt == null ? taskClone(cached) : null;
         }
 
-        const lock = this.taskLockForId(id);
+        const lock = this.taskLockForId(key);
         return lock.inLock(async () => {
-            const existing = this.tasksById.get(id);
+            const existing = this.tasksById.get(key);
             if (existing) {
                 return existing.deletedAt == null ? taskClone(existing) : null;
             }
-            const loaded = this.taskLoadById(id);
+            const loaded = this.taskLoadById(userId, id);
             if (!loaded) {
                 return null;
             }
@@ -41,19 +46,24 @@ export class TasksRepository {
         });
     }
 
-    async findAnyById(id: string): Promise<TaskDbRecord | null> {
-        const cached = this.tasksById.get(id);
+    async findAnyById(ctx: Context, id: string): Promise<TaskDbRecord | null> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            return null;
+        }
+        const key = taskKey(userId, id);
+        const cached = this.tasksById.get(key);
         if (cached) {
             return taskClone(cached);
         }
 
-        const lock = this.taskLockForId(id);
+        const lock = this.taskLockForId(key);
         return lock.inLock(async () => {
-            const existing = this.tasksById.get(id);
+            const existing = this.tasksById.get(key);
             if (existing) {
                 return taskClone(existing);
             }
-            const loaded = this.taskLoadById(id);
+            const loaded = this.taskLoadById(userId, id);
             if (!loaded) {
                 return null;
             }
@@ -88,7 +98,11 @@ export class TasksRepository {
 
     async create(record: TaskDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            const existing = this.taskLoadById(record.id);
+            const userId = record.userId.trim();
+            if (!userId) {
+                throw new Error("Task userId is required.");
+            }
+            const existing = this.taskLoadById(userId, record.id);
             if (existing?.deletedAt != null) {
                 throw new Error(`Task id is reserved by a deleted task: ${record.id}`);
             }
@@ -106,7 +120,7 @@ export class TasksRepository {
                         updated_at,
                         deleted_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
+                    ON CONFLICT(user_id, id) DO UPDATE SET
                         user_id = excluded.user_id,
                         title = excluded.title,
                         description = excluded.description,
@@ -118,7 +132,7 @@ export class TasksRepository {
                 )
                 .run(
                     record.id,
-                    record.userId,
+                    userId,
                     record.title,
                     record.description,
                     record.code,
@@ -130,16 +144,22 @@ export class TasksRepository {
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet({
                     ...record,
+                    userId,
                     deletedAt: record.deletedAt ?? null
                 });
             });
         });
     }
 
-    async update(id: string, data: Partial<TaskDbRecord>): Promise<void> {
-        const lock = this.taskLockForId(id);
+    async update(ctx: Context, id: string, data: Partial<TaskDbRecord>): Promise<void> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            throw new Error("Task userId is required.");
+        }
+        const key = taskKey(userId, id);
+        const lock = this.taskLockForId(key);
         await lock.inLock(async () => {
-            const current = this.tasksById.get(id) ?? this.taskLoadById(id);
+            const current = this.tasksById.get(key) ?? this.taskLoadById(userId, id);
             if (!current) {
                 throw new Error(`Task not found: ${id}`);
             }
@@ -148,7 +168,7 @@ export class TasksRepository {
                 ...current,
                 ...data,
                 id: current.id,
-                userId: data.userId ?? current.userId,
+                userId: data.userId?.trim() || current.userId,
                 description: data.description === undefined ? current.description : data.description,
                 deletedAt: data.deletedAt === undefined ? current.deletedAt : data.deletedAt
             };
@@ -165,7 +185,7 @@ export class TasksRepository {
                         created_at = ?,
                         updated_at = ?,
                         deleted_at = ?
-                    WHERE id = ?
+                    WHERE user_id = ? AND id = ?
                     `
                 )
                 .run(
@@ -176,6 +196,7 @@ export class TasksRepository {
                     next.createdAt,
                     next.updatedAt,
                     next.deletedAt ?? null,
+                    current.userId,
                     id
                 );
 
@@ -185,17 +206,24 @@ export class TasksRepository {
         });
     }
 
-    async delete(id: string): Promise<boolean> {
-        const lock = this.taskLockForId(id);
+    async delete(ctx: Context, id: string): Promise<boolean> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            return false;
+        }
+        const key = taskKey(userId, id);
+        const lock = this.taskLockForId(key);
         return lock.inLock(async () => {
-            const current = this.tasksById.get(id) ?? this.taskLoadById(id);
+            const current = this.tasksById.get(key) ?? this.taskLoadById(userId, id);
             if (!current || current.deletedAt != null) {
                 return false;
             }
             const now = Date.now();
             this.db
-                .prepare("UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL")
-                .run(now, now, id);
+                .prepare(
+                    "UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ? AND deleted_at IS NULL"
+                )
+                .run(now, now, userId, id);
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet({
                     ...current,
@@ -208,11 +236,13 @@ export class TasksRepository {
     }
 
     private taskCacheSet(record: TaskDbRecord): void {
-        this.tasksById.set(record.id, taskClone(record));
+        this.tasksById.set(taskKey(record.userId, record.id), taskClone(record));
     }
 
-    private taskLoadById(id: string): TaskDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM tasks WHERE id = ? LIMIT 1").get(id) as DatabaseTaskRow | undefined;
+    private taskLoadById(userId: string, id: string): TaskDbRecord | null {
+        const row = this.db.prepare("SELECT * FROM tasks WHERE user_id = ? AND id = ? LIMIT 1").get(userId, id) as
+            | DatabaseTaskRow
+            | undefined;
         if (!row) {
             return null;
         }
@@ -245,4 +275,8 @@ export class TasksRepository {
 
 function taskClone(record: TaskDbRecord): TaskDbRecord {
     return { ...record };
+}
+
+function taskKey(userId: string, id: string): string {
+    return `${userId}\u0000${id}`;
 }

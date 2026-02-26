@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { DatabaseInboxRow, InboxDbRecord } from "./databaseTypes.js";
 
 /**

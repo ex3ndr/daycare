@@ -134,7 +134,7 @@ export function buildTaskCreateTool(): ToolDefinition {
                 throw new Error(`Invalid cron schedule: ${payload.cron}`);
             }
 
-            const taskId = await taskIdGenerateFromTitle(storage, payload.title);
+            const taskId = await taskIdGenerateFromTitle(storage, toolContext.ctx, payload.title);
             const now = Date.now();
 
             let cronTrigger: { id: string; duplicate: boolean } | null = null;
@@ -165,7 +165,7 @@ export function buildTaskCreateTool(): ToolDefinition {
                 if (heartbeatTrigger && !heartbeatTrigger.duplicate) {
                     await toolContext.heartbeats.removeTask(toolContext.ctx, heartbeatTrigger.id).catch(() => {});
                 }
-                await storage.tasks.delete(taskId).catch(() => {});
+                await storage.tasks.delete(toolContext.ctx, taskId).catch(() => {});
                 throw error;
             }
 
@@ -218,8 +218,8 @@ export function buildTaskReadTool(): ToolDefinition {
             const payload = args as TaskReadArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
             const [cronTriggers, heartbeatTriggers] = await Promise.all([
-                toolContext.agentSystem.crons.listTriggersForTask(task.id),
-                toolContext.heartbeats.listTriggersForTask(task.id)
+                toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, task.id),
+                toolContext.heartbeats.listTriggersForTask(toolContext.ctx, task.id)
             ]);
             const cronLines = cronTriggers.map((trigger) => `  - ${trigger.id} (cron: ${trigger.schedule})`);
             const heartbeatLines = heartbeatTriggers.map((trigger) => `  - ${trigger.id} (heartbeat)`);
@@ -266,7 +266,7 @@ export function buildTaskUpdateTool(): ToolDefinition {
                 throw new Error("Provide at least one field to update: title, code, or description.");
             }
 
-            await toolContext.agentSystem.storage.tasks.update(task.id, {
+            await toolContext.agentSystem.storage.tasks.update(toolContext.ctx, task.id, {
                 title: payload.title ?? task.title,
                 code: payload.code ?? task.code,
                 description: payload.description === undefined ? task.description : payload.description,
@@ -301,8 +301,9 @@ export function buildTaskDeleteTool(): ToolDefinition {
                 toolContext.agentSystem.crons.deleteTriggersForTask(toolContext.ctx, task.id),
                 toolContext.heartbeats.deleteTriggersForTask(toolContext.ctx, task.id)
             ]);
-            const deletedDirect = await toolContext.agentSystem.storage.tasks.delete(task.id);
-            const deleted = deletedDirect || (await toolContext.agentSystem.storage.tasks.findById(task.id)) === null;
+            const deletedDirect = await toolContext.agentSystem.storage.tasks.delete(toolContext.ctx, task.id);
+            const deleted =
+                deletedDirect || (await toolContext.agentSystem.storage.tasks.findById(toolContext.ctx, task.id)) === null;
             const summary = deleted
                 ? `Deleted task ${task.id} with ${removedCron} cron trigger(s) and ${removedHeartbeat} heartbeat trigger(s).`
                 : `Task already removed: ${task.id}.`;
@@ -492,8 +493,8 @@ async function taskResolveForUser(
     if (!taskIdIsSafe(normalizedTaskId)) {
         throw new Error("Task id contains invalid characters.");
     }
-    const task = await toolContext.agentSystem.storage.tasks.findById(normalizedTaskId);
-    if (!task || task.userId !== toolContext.ctx.userId.trim()) {
+    const task = await toolContext.agentSystem.storage.tasks.findById(toolContext.ctx, normalizedTaskId);
+    if (!task) {
         throw new Error(`Task not found: ${normalizedTaskId}`);
     }
     return task;
@@ -518,13 +519,14 @@ function toolMessageBuild(
 
 async function taskIdGenerateFromTitle(
     storage: Parameters<ToolDefinition["execute"]>[1]["agentSystem"]["storage"],
+    ctx: Parameters<ToolDefinition["execute"]>[1]["ctx"],
     title: string
 ): Promise<string> {
     const base = stringSlugify(title) || "task";
     let candidate = base;
     let suffix = 2;
 
-    while (await storage.tasks.findAnyById(candidate)) {
+    while (await storage.tasks.findAnyById(ctx, candidate)) {
         candidate = `${base}-${suffix}`;
         suffix += 1;
     }
@@ -543,7 +545,7 @@ async function taskCronTriggerEnsure(
         throw new Error(`Invalid cron schedule: ${schedule}`);
     }
 
-    const existing = await toolContext.agentSystem.crons.listTriggersForTask(taskId);
+    const existing = await toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, taskId);
     const duplicate = existing.find((trigger) => trigger.schedule === normalizedSchedule);
     if (duplicate) {
         return { id: duplicate.id, duplicate: true };
@@ -561,7 +563,7 @@ async function taskHeartbeatTriggerEnsure(
     toolContext: Parameters<ToolDefinition["execute"]>[1],
     taskId: string
 ): Promise<{ id: string; duplicate: boolean }> {
-    const existing = await toolContext.heartbeats.listTriggersForTask(taskId);
+    const existing = await toolContext.heartbeats.listTriggersForTask(toolContext.ctx, taskId);
     if (existing.length > 0) {
         return { id: existing[0]!.id, duplicate: true };
     }

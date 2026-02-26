@@ -3,7 +3,12 @@ import type { Context } from "@/types";
 import { getLogger } from "../../../log.js";
 import type { HeartbeatTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import type { HeartbeatCreateTaskArgs, HeartbeatDefinition, HeartbeatSchedulerOptions } from "../heartbeatTypes.js";
+import type {
+    HeartbeatCreateTaskArgs,
+    HeartbeatDefinition,
+    HeartbeatRunTask,
+    HeartbeatSchedulerOptions
+} from "../heartbeatTypes.js";
 
 const logger = getLogger("heartbeat.scheduler");
 
@@ -86,15 +91,11 @@ export class HeartbeatScheduler {
             throw new Error(`Heartbeat already exists: ${triggerId}`);
         }
 
-        const linkedTask = await this.tasksRepository.findById(definition.taskId);
+        const linkedTask = await this.tasksRepository.findById(ctx, definition.taskId);
         if (!linkedTask) {
             throw new Error(`Task not found: ${definition.taskId}`);
         }
-        if (linkedTask.userId !== userId) {
-            throw new Error(`Task belongs to another user: ${definition.taskId}`);
-        }
         const title = linkedTask.title;
-        const code = linkedTask.code;
 
         const now = Date.now();
         if (existing) {
@@ -103,7 +104,6 @@ export class HeartbeatScheduler {
                 taskId: definition.taskId,
                 userId,
                 title,
-                code,
                 updatedAt: now
             };
             await this.repository.update(triggerId, updated);
@@ -115,7 +115,6 @@ export class HeartbeatScheduler {
             taskId: definition.taskId,
             userId,
             title,
-            code,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now
@@ -229,10 +228,13 @@ export class HeartbeatScheduler {
         }
     }
 
-    private async runTasksResolve(tasks: HeartbeatTaskDbRecord[]): Promise<HeartbeatTaskDbRecord[]> {
-        const resolved: HeartbeatTaskDbRecord[] = [];
+    private async runTasksResolve(tasks: HeartbeatTaskDbRecord[]): Promise<HeartbeatRunTask[]> {
+        const resolved: HeartbeatRunTask[] = [];
         for (const trigger of tasks) {
-            const linked = await this.tasksRepository.findById(trigger.taskId);
+            const linked = await this.tasksRepository.findById(
+                { userId: trigger.userId, agentId: "system:heartbeat" },
+                trigger.taskId
+            );
             if (!linked) {
                 throw new Error(`Heartbeat trigger ${trigger.id} references missing task: ${trigger.taskId}`);
             }

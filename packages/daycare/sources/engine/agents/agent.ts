@@ -1178,7 +1178,12 @@ export class Agent {
         const roleApplied = modelRoleApply(rawProviders, roleConfig);
         const roleProviders = roleApplied.providers;
         const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);
-        const providers = agentModelOverrideApply(roleProviders, this.state.modelOverride, providerId);
+        const providers = agentModelOverrideApply(
+            roleProviders,
+            this.state.modelOverride,
+            providerId,
+            this.agentSystem.config.current.settings.modelSizes
+        );
         return { providers, providerId };
     }
 

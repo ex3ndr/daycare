@@ -24,7 +24,7 @@ import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 
 /**
- * Facade for all SQLite access. Owns one connection and repository instances.
+ * Facade for all storage access. Owns one DB instance and repository instances.
  * Expects: dbPath points to a writable sqlite file or ":memory:".
  */
 export class Storage {

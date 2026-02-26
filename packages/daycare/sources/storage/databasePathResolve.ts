@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 
 /**
  * Resolves the absolute database file path for the main SQLite schema.

@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { contextForAgent } from "../../agents/context.js";
-import type { InferenceRouter } from "../inference/router.js";
 import { agentModelSetToolBuild } from "./agentModelSetToolBuild.js";
 
-// Minimal mock router — tests only check tool structure and visibility
-const mockRouter = {} as InferenceRouter;
-
 describe("agentModelSetToolBuild", () => {
-    const tool = agentModelSetToolBuild(mockRouter);
+    const tool = agentModelSetToolBuild();
 
     it("has the correct tool name", () => {
         expect(tool.tool.name).toBe("set_agent_model");
@@ -71,6 +67,24 @@ describe("agentModelSetToolBuild", () => {
         );
 
         expect(result.toolMessage.isError).toBe(false);
+    });
+
+    it("rejects invalid selectors", async () => {
+        await expect(
+            tool.execute(
+                { agentId: "agent-2", model: "custom-model" },
+                {
+                    ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
+                    agentSystem: {
+                        contextForAgentId: async () => contextForAgent({ userId: "user-1", agentId: "agent-2" }),
+                        updateAgentModelOverride: async () => true
+                    },
+                    agent: { descriptor: { type: "user" } },
+                    messageContext: {}
+                } as never,
+                { id: "tool-1b", name: "set_agent_model" }
+            )
+        ).rejects.toThrow('Model selector must be one of "small", "normal", "large".');
     });
 
     it("rejects model override across users", async () => {

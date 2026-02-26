@@ -20,8 +20,8 @@ Use `set_agent_model` when task requirements change materially (speed, cost, con
 - Use selector shortcuts for quick tier changes:
 - `"small"`: fastest/lowest-cost path for lightweight tasks.
 - `"normal"`: default balanced path for most work.
-- `"big"`: highest-capability path for complex reasoning or difficult coding.
-- Use a direct model name when you need a specific capability or vendor/version behavior. `set_agent_model` validates direct model names before applying them.
+- `"large"`: highest-capability path for complex reasoning or difficult coding.
+- Selector mappings can be configured by operators in `settings.modelSizes`.
 
 #### When to pick what
 

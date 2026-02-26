@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import { createId } from "@paralleldrive/cuid2";
 import type { CreateSessionInput, DatabaseSessionRow, SessionDbRecord } from "./databaseTypes.js";
 

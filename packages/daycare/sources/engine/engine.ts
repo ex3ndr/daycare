@@ -396,7 +396,7 @@ export class Engine {
         this.modules.tools.register("core", memorySearchToolBuild());
         this.modules.tools.register("core", inferenceSummaryToolBuild(this.inferenceRouter, this.config));
         this.modules.tools.register("core", inferenceClassifyToolBuild(this.inferenceRouter, this.config));
-        this.modules.tools.register("core", agentModelSetToolBuild(this.inferenceRouter));
+        this.modules.tools.register("core", agentModelSetToolBuild());
         this.modules.tools.register("core", agentResetToolBuild());
         this.modules.tools.register("core", agentCompactToolBuild());
         this.modules.tools.register("core", sendUserMessageToolBuild());

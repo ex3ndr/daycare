@@ -49,34 +49,52 @@ describe("topologyTool", () => {
             );
 
             expect(result.toolMessage.isError).toBe(false);
-            const text = contentText(result.toolMessage.content);
-            expect(text).toContain("## Agents (0)");
-            expect(text).toContain("## Cron Tasks (0)");
-            expect(text).toContain("## Heartbeat Tasks (0)");
-            expect(text).toContain("## Signal Subscriptions (0)");
-            expect(text).toContain("## Channels (0)");
-            expect(text).toContain("## Expose Endpoints (0)");
-            expect(text).toContain("## Friends (0)");
+            expect(result.typedResult).toMatchObject({
+                agents: [],
+                tasks: [],
+                signalSubscriptions: [],
+                channels: [],
+                exposes: [],
+                subusers: [],
+                friends: [],
+                agentCount: 0,
+                taskCount: 0,
+                cronCount: 0,
+                heartbeatCount: 0,
+                signalSubscriptionCount: 0,
+                channelCount: 0,
+                exposeCount: 0,
+                friendCount: 0
+            });
 
             const details = result.toolMessage.details as
                 | {
                       callerAgentId: string;
                       agents: unknown[];
-                      crons: unknown[];
-                      heartbeats: unknown[];
+                      tasks: unknown[];
                       signalSubscriptions: unknown[];
                       channels: unknown[];
                       exposes: unknown[];
+                      friends: unknown[];
                   }
                 | undefined;
             expect(details).toEqual({
                 callerAgentId: "agent-caller",
                 agents: [],
-                crons: [],
-                heartbeats: [],
+                tasks: [],
                 signalSubscriptions: [],
                 channels: [],
-                exposes: []
+                exposes: [],
+                friends: [],
+                subusers: [],
+                agentCount: 0,
+                taskCount: 0,
+                cronCount: 0,
+                heartbeatCount: 0,
+                signalSubscriptionCount: 0,
+                channelCount: 0,
+                exposeCount: 0,
+                friendCount: 0
             });
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -92,11 +110,12 @@ describe("topologyTool", () => {
                 },
                 path.join(dir, "settings.json")
             );
+            const storage = storageResolve(config);
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
             const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 callerCtx,
                 {
                     type: "subagent",
@@ -109,17 +128,9 @@ describe("topologyTool", () => {
             await agentStateWrite(config, callerCtx, stateBuild(permissions, 50));
 
             const otherCtx = contextForAgent({ userId: "user-1", agentId: "agent-other" });
-            await agentDescriptorWrite(
-                storageResolve(config),
-                otherCtx,
-                {
-                    type: "system",
-                    tag: "cron"
-                },
-                permissions
-            );
+            await agentDescriptorWrite(storage, otherCtx, { type: "system", tag: "cron" }, permissions);
             await agentStateWrite(config, otherCtx, stateBuild(permissions, 10));
-            await storageResolve(config).exposeEndpoints.create({
+            await storage.exposeEndpoints.create({
                 id: "expose-1",
                 userId: "user-1",
                 target: { type: "port", port: 8080 },
@@ -130,6 +141,9 @@ describe("topologyTool", () => {
                 createdAt: 1,
                 updatedAt: 1
             });
+            await topologyTaskCreate(storage, "user-1", "cleanup-task", "Cleanup");
+            await topologyTaskCreate(storage, "user-1", "daily-report-task", "Daily Report");
+            await topologyTaskCreate(storage, "user-1", "task-check-health", "Health Check");
 
             const tool = topologyTool(
                 {
@@ -194,7 +208,6 @@ describe("topologyTool", () => {
                             taskId: "task-check-health",
                             userId: "user-1",
                             title: "Health Check",
-                            code: "Check status",
                             lastRunAt: Date.parse("2025-01-15T10:00:00Z"),
                             createdAt: 1,
                             updatedAt: 1
@@ -204,40 +217,115 @@ describe("topologyTool", () => {
                 toolCall
             );
 
-            const text = contentText(result.toolMessage.content);
-            expect(text).toContain("## Agents (2)");
-            expect(text).toContain('agent-caller type=subagent label="monitor" lifecycle=active');
-            expect(text).toContain("## Cron Tasks (2)");
-            expect(text).toContain('daily-report: Daily Report schedule="0 9 * * *" enabled=true');
-            expect(text).toContain("## Heartbeat Tasks (1)");
-            expect(text).toContain("check-health: Health Check lastRun=2025-01-15T10:00:00.000Z");
-            expect(text).toContain("## Signal Subscriptions (2)");
-            expect(text).toContain("user=user-1 agent=agent-other pattern=deploy:done silent=false");
-            expect(text).not.toContain("user=user-2 agent=agent-secret pattern=secret:* silent=false");
-            expect(text).toContain("## Channels (1)");
-            expect(text).toContain("#dev leader=agent-other members=@monitor(agent-caller)");
-            expect(text).toContain("## Expose Endpoints (1)");
-            expect(text).toContain("## Friends (0)");
-            expect(text).toContain(
-                "expose-1 domain=app.example.com target=port:8080 provider=provider-a mode=public authenticated=false"
+            expect(result.typedResult.agentCount).toBe(2);
+            expect(result.typedResult.cronCount).toBe(2);
+            expect(result.typedResult.heartbeatCount).toBe(1);
+            expect(result.typedResult.signalSubscriptionCount).toBe(2);
+            expect(result.typedResult.channelCount).toBe(1);
+            expect(result.typedResult.exposeCount).toBe(1);
+            expect(result.typedResult.friendCount).toBe(0);
+
+            expect(result.typedResult.agents).toEqual([
+                { id: "agent-caller", type: "subagent", label: "monitor", lifecycle: "active", isYou: false },
+                { id: "agent-other", type: "system", label: "cron", lifecycle: "active", isYou: false }
+            ]);
+
+            const dailyReportTask = result.typedResult.tasks.find((task) => task.id === "daily-report-task");
+            expect(dailyReportTask?.triggers.cron[0]).toMatchObject({
+                id: "daily-report",
+                schedule: "0 9 * * *",
+                name: "Daily Report"
+            });
+            const heartbeatTask = result.typedResult.tasks.find((task) => task.id === "task-check-health");
+            expect(heartbeatTask?.triggers.heartbeat[0]).toMatchObject({
+                id: "check-health",
+                title: "Health Check",
+                lastRunAt: Date.parse("2025-01-15T10:00:00Z")
+            });
+
+            expect(
+                result.typedResult.signalSubscriptions.some(
+                    (subscription) => subscription.agentId === "agent-other" && subscription.pattern === "deploy:done"
+                )
+            ).toBe(true);
+            expect(
+                result.typedResult.signalSubscriptions.some((subscription) => subscription.pattern === "secret:*")
+            ).toBe(false);
+            expect(result.typedResult.channels[0]).toEqual({
+                id: "channel-dev",
+                name: "dev",
+                leader: "agent-other",
+                members: [{ agentId: "agent-caller", username: "monitor" }]
+            });
+            expect(result.typedResult.exposes[0]).toEqual({
+                id: "expose-1",
+                domain: "app.example.com",
+                target: "port:8080",
+                provider: "provider-a",
+                mode: "public",
+                authenticated: false
+            });
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("hides memory and dead agents from topology by default", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-filter-defaults-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir }
+                },
+                path.join(dir, "settings.json")
             );
 
-            const details = result.toolMessage.details as
-                | {
-                      agents: Array<{ id: string }>;
-                      crons: Array<{ id: string }>;
-                      heartbeats: Array<{ id: string }>;
-                      signalSubscriptions: Array<{ agentId: string }>;
-                      channels: Array<{ id: string }>;
-                      exposes: Array<{ id: string }>;
-                  }
-                | undefined;
-            expect(details?.agents).toHaveLength(2);
-            expect(details?.crons).toHaveLength(2);
-            expect(details?.heartbeats).toHaveLength(1);
-            expect(details?.signalSubscriptions).toHaveLength(2);
-            expect(details?.channels).toHaveLength(1);
-            expect(details?.exposes).toHaveLength(1);
+            const storage = storageResolve(config);
+            const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
+
+            const activeCtx = contextForAgent({ userId: "user-1", agentId: "agent-active" });
+            await agentDescriptorWrite(
+                storage,
+                activeCtx,
+                { type: "subagent", id: "visible", parentAgentId: "agent-root", name: "visible" },
+                permissions
+            );
+            await agentStateWrite(config, activeCtx, stateBuild(permissions, 100));
+
+            const memoryCtx = contextForAgent({ userId: "user-1", agentId: "agent-memory" });
+            await agentDescriptorWrite(storage, memoryCtx, { type: "memory-agent", id: "memory-1" }, permissions);
+            await agentStateWrite(config, memoryCtx, stateBuild(permissions, 90));
+
+            const deadCtx = contextForAgent({ userId: "user-1", agentId: "agent-dead" });
+            await agentDescriptorWrite(
+                storage,
+                deadCtx,
+                { type: "subagent", id: "gone", parentAgentId: "agent-root", name: "gone" },
+                permissions
+            );
+            await agentStateWrite(config, deadCtx, stateBuild(permissions, 80, "dead"));
+
+            const tool = topologyTool(
+                { listTasks: async () => [] } as unknown as Crons,
+                { listSubscriptions: async () => [] } as unknown as Signals,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
+                { list: async () => [] } as never
+            );
+
+            const result = await tool.execute(
+                {},
+                contextBuild(config, {
+                    callerAgentId: "agent-active",
+                    callerUserId: "user-1",
+                    heartbeatTasks: []
+                }),
+                toolCall
+            );
+
+            expect(result.typedResult.agentCount).toBe(1);
+            expect(result.typedResult.agents).toEqual([
+                { id: "agent-active", type: "subagent", label: "visible", lifecycle: "active", isYou: true }
+            ]);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -278,6 +366,7 @@ describe("topologyTool", () => {
                 subuserPerms
             );
             await agentStateWrite(config, subuserCtx, stateBuild(subuserPerms, 50));
+            await topologyTaskCreate(storage, "subuser-1", "subuser-cron-task", "Subuser Cron");
 
             const tool = topologyTool(
                 {
@@ -310,19 +399,13 @@ describe("topologyTool", () => {
                 toolCall
             );
 
-            const text = contentText(result.toolMessage.content);
-            // Subuser sees only their own agent
-            expect(text).toContain("## Agents (1)");
-            expect(text).toContain("subuser-gateway");
-            expect(text).not.toContain("owner-agent");
-            // Subuser sees only their own cron tasks
-            expect(text).toContain("## Cron Tasks (1)");
-            expect(text).toContain("subuser-cron");
-            expect(text).not.toContain("owner-cron");
-            // No subusers section for subuser agents
-            expect(text).not.toContain("## Subusers");
-            // No friends section for subuser agents
-            expect(text).not.toContain("## Friends");
+            expect(result.typedResult.agents).toHaveLength(1);
+            expect(result.typedResult.agents[0]?.id).toBe("subuser-gateway");
+            expect(result.typedResult.tasks).toHaveLength(1);
+            expect(result.typedResult.tasks[0]?.id).toBe("subuser-cron-task");
+            expect(result.typedResult.tasks[0]?.triggers.cron[0]?.id).toBe("subuser-cron");
+            expect(result.typedResult.subusers).toEqual([]);
+            expect(result.typedResult.friends).toEqual([]);
         } finally {
             storage.close();
             await rm(dir, { recursive: true, force: true });
@@ -393,14 +476,14 @@ describe("topologyTool", () => {
                 toolCall
             );
 
-            const text = contentText(result.toolMessage.content);
-            // Owner sees all agents (including subuser gateways)
-            expect(text).toContain("## Agents (3)");
-            // Owner sees subusers section
-            expect(text).toContain("## Subusers (2)");
-            expect(text).toContain('sub-a name="app-a" gatewayAgent=gateway-a');
-            expect(text).toContain('sub-b name="app-b" gatewayAgent=gateway-b');
-            expect(text).toContain("## Friends (0)");
+            expect(result.typedResult.agentCount).toBe(3);
+            expect(result.typedResult.subusers).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ id: "sub-a", name: "app-a", gatewayAgentId: "gateway-a" }),
+                    expect.objectContaining({ id: "sub-b", name: "app-b", gatewayAgentId: "gateway-b" })
+                ])
+            );
+            expect(result.typedResult.friendCount).toBe(0);
         } finally {
             storage.close();
             await rm(dir, { recursive: true, force: true });
@@ -459,6 +542,8 @@ describe("topologyTool", () => {
                 createdAt: 2,
                 updatedAt: 2
             });
+            await topologyTaskCreate(storage, ownerUserId, "owner-cron-task", "Owner Cron");
+            await topologyTaskCreate(storage, ownerUserId, "owner-heartbeat-task", "Owner Heartbeat");
 
             const tool = topologyTool(
                 {
@@ -556,7 +641,6 @@ describe("topologyTool", () => {
                             taskId: "owner-heartbeat-task",
                             userId: ownerUserId,
                             title: "Owner Heartbeat",
-                            code: "owner",
                             lastRunAt: null,
                             createdAt: 1,
                             updatedAt: 1
@@ -566,7 +650,6 @@ describe("topologyTool", () => {
                             taskId: "other-heartbeat-task",
                             userId: "other-user",
                             title: "Other Heartbeat",
-                            code: "other",
                             lastRunAt: null,
                             createdAt: 2,
                             updatedAt: 2
@@ -576,21 +659,33 @@ describe("topologyTool", () => {
                 toolCall
             );
 
-            const text = contentText(result.toolMessage.content);
-            expect(text).toContain("owner-main");
-            expect(text).toContain("owner-cron");
-            expect(text).toContain("owner-heartbeat");
-            expect(text).toContain("pattern=owner:*");
-            expect(text).toContain("#owner");
-            expect(text).toContain("owner-expose domain=owner.example.com");
-
-            expect(text).not.toContain("other-main");
-            expect(text).not.toContain("other-cron");
-            expect(text).not.toContain("other-heartbeat");
-            expect(text).not.toContain("pattern=other:*");
-            expect(text).not.toContain("#other");
-            expect(text).not.toContain("other-expose domain=other.example.com");
-            expect(text).not.toContain("legacy-other.example.com");
+            expect(result.typedResult.agents.map((agent) => agent.id)).toEqual(["owner-main"]);
+            expect(result.typedResult.tasks.map((task) => task.id).sort()).toEqual(
+                ["owner-cron-task", "owner-heartbeat-task"].sort()
+            );
+            expect(result.typedResult.tasks.some((task) => task.id === "other-cron-task")).toBe(false);
+            expect(result.typedResult.tasks.some((task) => task.id === "other-heartbeat-task")).toBe(false);
+            expect(result.typedResult.signalSubscriptions).toEqual([
+                { userId: ownerUserId, agentId: "owner-main", pattern: "owner:*", silent: false, isYou: true }
+            ]);
+            expect(result.typedResult.channels).toEqual([
+                {
+                    id: "channel-owner",
+                    name: "owner",
+                    leader: "owner-main",
+                    members: [{ agentId: "owner-main", username: "owner" }]
+                }
+            ]);
+            expect(result.typedResult.exposes).toEqual([
+                {
+                    id: "owner-expose",
+                    domain: "owner.example.com",
+                    target: "port:3001",
+                    provider: "provider-a",
+                    mode: "public",
+                    authenticated: false
+                }
+            ]);
         } finally {
             storage.close();
             await rm(dir, { recursive: true, force: true });
@@ -691,17 +786,36 @@ describe("topologyTool", () => {
                 toolCall
             );
 
-            const text = contentText(result.toolMessage.content);
-            expect(text).toContain("## Friends (1)");
-            expect(text).toContain("swift-fox-42");
-            expect(text).toContain(
-                "→ shared out: helper (nametag=cool-cat-11) gateway=gateway-alice-active status=active"
+            expect(result.typedResult.friends).toHaveLength(1);
+            expect(result.typedResult.friends[0]).toMatchObject({
+                userId: "bob",
+                nametag: "swift-fox-42"
+            });
+            expect(result.typedResult.friends[0]?.sharedOut).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        subuserId: "alice-sub-active",
+                        subuserNametag: "cool-cat-11",
+                        gatewayAgentId: "gateway-alice-active",
+                        status: "active"
+                    }),
+                    expect.objectContaining({
+                        subuserId: "alice-sub-pending",
+                        subuserNametag: "lazy-dog-55",
+                        gatewayAgentId: "gateway-alice-pending",
+                        status: "pending"
+                    })
+                ])
             );
-            expect(text).toContain(
-                "→ shared out: assistant (nametag=lazy-dog-55) gateway=gateway-alice-pending status=pending"
-            );
-            expect(text).toContain(
-                "← shared in: bob-helper (nametag=smart-owl-22) gateway=gateway-bob-active status=active"
+            expect(result.typedResult.friends[0]?.sharedIn).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        subuserId: "bob-sub-active",
+                        subuserNametag: "smart-owl-22",
+                        gatewayAgentId: "gateway-bob-active",
+                        status: "active"
+                    })
+                ])
             );
             expect(result.typedResult.friendCount).toBe(1);
         } finally {
@@ -719,11 +833,12 @@ describe("topologyTool", () => {
                 },
                 path.join(dir, "settings.json")
             );
+            const storage = storageResolve(config);
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
             const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 callerCtx,
                 {
                     type: "user",
@@ -734,6 +849,8 @@ describe("topologyTool", () => {
                 permissions
             );
             await agentStateWrite(config, callerCtx, stateBuild(permissions, 100));
+            await topologyTaskCreate(storage, "user-1", "daily-report-task", "Daily Report");
+            await topologyTaskCreate(storage, "user-1", "task-check-health", "Health Check");
 
             const tool = topologyTool(
                 {
@@ -774,7 +891,6 @@ describe("topologyTool", () => {
                             taskId: "task-check-health",
                             userId: "user-1",
                             title: "Health Check",
-                            code: "Check status",
                             lastRunAt: null,
                             createdAt: 1,
                             updatedAt: 1
@@ -784,22 +900,12 @@ describe("topologyTool", () => {
                 toolCall
             );
 
-            const text = contentText(result.toolMessage.content);
-            expect(text).toContain("agent-caller (You) type=user");
-            expect(text).toContain("enabled=true (You)");
-            expect(text).toContain("silent=true (You)");
-            expect(text).not.toContain("check-health: Health Check lastRun=never (You)");
-
-            const details = result.toolMessage.details as
-                | {
-                      agents: Array<{ isYou: boolean }>;
-                      crons: Array<{ isYou: boolean }>;
-                      signalSubscriptions: Array<{ isYou: boolean }>;
-                  }
-                | undefined;
-            expect(details?.agents[0]?.isYou).toBe(true);
-            expect(details?.crons[0]?.isYou).toBe(true);
-            expect(details?.signalSubscriptions[0]?.isYou).toBe(true);
+            expect(result.typedResult.agents[0]?.isYou).toBe(true);
+            const cronTrigger = result.typedResult.tasks
+                .flatMap((task) => task.triggers.cron)
+                .find((trigger) => trigger.id === "daily-report");
+            expect(cronTrigger?.isYou).toBe(true);
+            expect(result.typedResult.signalSubscriptions[0]?.isYou).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -835,7 +941,11 @@ function contextBuild(
     };
 }
 
-function stateBuild(permissions: SessionPermissions, updatedAt: number): AgentState {
+function stateBuild(
+    permissions: SessionPermissions,
+    updatedAt: number,
+    lifecycle: AgentState["state"] = "active"
+): AgentState {
     return {
         context: { messages: [] },
         permissions,
@@ -843,7 +953,7 @@ function stateBuild(permissions: SessionPermissions, updatedAt: number): AgentSt
         stats: {},
         createdAt: updatedAt,
         updatedAt,
-        state: "active"
+        state: lifecycle
     };
 }
 
@@ -861,7 +971,6 @@ function cronTaskBuild(input: {
         name: input.name,
         description: null,
         schedule: input.schedule,
-        code: "prompt",
         enabled: input.enabled,
         deleteAfterRun: false,
         lastRunAt: null,
@@ -869,6 +978,23 @@ function cronTaskBuild(input: {
         createdAt: 1,
         updatedAt: 1
     };
+}
+
+async function topologyTaskCreate(
+    storage: ReturnType<typeof storageResolve>,
+    userId: string,
+    taskId: string,
+    title: string
+): Promise<void> {
+    await storage.tasks.create({
+        id: taskId,
+        userId,
+        title,
+        description: null,
+        code: "print('ok')",
+        createdAt: 1,
+        updatedAt: 1
+    });
 }
 
 function signalSubscriptionBuild(input: {
@@ -884,20 +1010,4 @@ function signalSubscriptionBuild(input: {
         createdAt: 1,
         updatedAt: 1
     };
-}
-
-function contentText(content: unknown): string {
-    if (!Array.isArray(content)) {
-        return "";
-    }
-    return content
-        .filter((item) => {
-            if (typeof item !== "object" || item === null) {
-                return false;
-            }
-            return (item as { type?: unknown }).type === "text";
-        })
-        .map((item) => (item as { text?: unknown }).text)
-        .filter((value): value is string => typeof value === "string")
-        .join("\n");
 }

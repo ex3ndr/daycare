@@ -87,7 +87,6 @@ describe("Heartbeats", () => {
                 taskId: "task-hb-1",
                 userId: "user-1",
                 title: "beat",
-                code: "check",
                 lastRunAt: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()

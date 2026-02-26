@@ -44,6 +44,7 @@ export type SandboxWriteArgs = {
     path: string;
     content: string | Buffer;
     append?: boolean;
+    exclusive?: boolean;
 };
 
 export type SandboxWriteResult = {

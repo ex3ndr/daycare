@@ -1,5 +1,6 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
+import type { SQLInputValue } from "node:sqlite";
 import { AsyncLock } from "../util/lock.js";
 import type { DatabaseSignalEventRow, SignalEventDbRecord } from "./databaseTypes.js";
 

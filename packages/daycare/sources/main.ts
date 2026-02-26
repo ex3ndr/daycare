@@ -95,7 +95,7 @@ program
 
 program
     .command("models")
-    .description("View and configure per-role model assignments")
+    .description("View and configure role model assignments and selector mappings")
     .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
     .option("-l, --list", "List current model assignments without prompting")
     .action(modelsCommand);

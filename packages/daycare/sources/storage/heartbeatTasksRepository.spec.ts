@@ -31,7 +31,6 @@ describe("HeartbeatTasksRepository", () => {
                 taskId: "task-alpha",
                 userId: "user-1",
                 title: "Alpha",
-                code: "Check alpha",
                 lastRunAt: null,
                 createdAt: 10,
                 updatedAt: 10
@@ -41,7 +40,6 @@ describe("HeartbeatTasksRepository", () => {
                 taskId: "task-beta",
                 userId: "user-1",
                 title: "Beta",
-                code: "Check beta",
                 lastRunAt: null,
                 createdAt: 11,
                 updatedAt: 11
@@ -58,11 +56,11 @@ describe("HeartbeatTasksRepository", () => {
             expect(many.map((task) => task.id).sort()).toEqual(["alpha", "beta"]);
 
             await repo.update("alpha", {
-                code: "Check alpha deeply",
+                title: "Alpha Deep",
                 updatedAt: 20
             });
             const updated = await repo.findById("alpha");
-            expect(updated?.code).toBe("Check alpha deeply");
+            expect(updated?.title).toBe("Alpha Deep");
 
             await repo.recordRun(30);
             const refreshed = await repo.findAll();
@@ -94,7 +92,6 @@ describe("HeartbeatTasksRepository", () => {
                 taskId: "task-cache-heartbeat",
                 userId: "user-1",
                 title: "Cache",
-                code: "Prompt",
                 lastRunAt: null,
                 createdAt: 1,
                 updatedAt: 1

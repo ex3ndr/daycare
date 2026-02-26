@@ -124,12 +124,9 @@ export class Heartbeats {
         }
 
         const taskId = args.taskId;
-        const taskRecord = await this.storage.tasks.findById(taskId);
+        const taskRecord = await this.storage.tasks.findById(ctx, taskId);
         if (!taskRecord) {
             throw new Error(`Task not found: ${taskId}`);
-        }
-        if (taskRecord.userId !== userId) {
-            throw new Error(`Task belongs to another user: ${taskId}`);
         }
 
         return this.scheduler.createTask(ctx, args);
@@ -143,18 +140,15 @@ export class Heartbeats {
 
         const deleted = await this.scheduler.deleteTask(ctx, taskId);
         if (deleted && existing.taskId) {
-            await this.taskDeleteIfOrphan(existing.taskId);
+            await this.taskDeleteIfOrphan(ctx, existing.taskId);
         }
         return deleted;
     }
 
     async addTrigger(ctx: Context, input: { taskId: string; id?: string }) {
-        const task = await this.storage.tasks.findById(input.taskId);
+        const task = await this.storage.tasks.findById(ctx, input.taskId);
         if (!task) {
             throw new Error(`Task not found: ${input.taskId}`);
-        }
-        if (task.userId !== ctx.userId.trim()) {
-            throw new Error(`Task belongs to another user: ${input.taskId}`);
         }
         return this.addTask(ctx, {
             id: input.id,
@@ -162,12 +156,12 @@ export class Heartbeats {
         });
     }
 
-    async listTriggersForTask(taskId: string) {
-        return this.storage.heartbeatTasks.findManyByTaskId(taskId);
+    async listTriggersForTask(ctx: Context, taskId: string) {
+        return this.storage.heartbeatTasks.findManyByTaskId(ctx, taskId);
     }
 
     async deleteTriggersForTask(ctx: Context, taskId: string): Promise<number> {
-        const triggers = await this.storage.heartbeatTasks.findManyByTaskId(taskId);
+        const triggers = await this.storage.heartbeatTasks.findManyByTaskId(ctx, taskId);
         let removed = 0;
         for (const trigger of triggers) {
             if (await this.removeTask(ctx, trigger.id)) {
@@ -177,14 +171,14 @@ export class Heartbeats {
         return removed;
     }
 
-    private async taskDeleteIfOrphan(taskId: string): Promise<void> {
+    private async taskDeleteIfOrphan(ctx: Context, taskId: string): Promise<void> {
         const [cronTriggers, heartbeatTriggers] = await Promise.all([
-            this.storage.cronTasks.findManyByTaskId(taskId),
-            this.storage.heartbeatTasks.findManyByTaskId(taskId)
+            this.storage.cronTasks.findManyByTaskId(ctx, taskId),
+            this.storage.heartbeatTasks.findManyByTaskId(ctx, taskId)
         ]);
         if (cronTriggers.length > 0 || heartbeatTriggers.length > 0) {
             return;
         }
-        await this.storage.tasks.delete(taskId);
+        await this.storage.tasks.delete(ctx, taskId);
     }
 }

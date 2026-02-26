@@ -87,4 +87,26 @@ describe("configSettingsParse", () => {
         expect(parsed.docker?.isolatedDnsServers).toEqual(["9.9.9.9"]);
         expect(parsed.docker?.localDnsServers).toEqual(["192.168.1.1"]);
     });
+
+    it("accepts model role and size overrides", () => {
+        const parsed = configSettingsParse({
+            models: {
+                user: "anthropic/claude-sonnet-4-5"
+            },
+            modelSizes: {
+                small: "openai/gpt-5-mini",
+                normal: "anthropic/claude-sonnet-4-5",
+                large: "anthropic/claude-opus-4-5"
+            }
+        });
+
+        expect(parsed.models).toEqual({
+            user: "anthropic/claude-sonnet-4-5"
+        });
+        expect(parsed.modelSizes).toEqual({
+            small: "openai/gpt-5-mini",
+            normal: "anthropic/claude-sonnet-4-5",
+            large: "anthropic/claude-opus-4-5"
+        });
+    });
 });

@@ -72,42 +72,52 @@ describe("buildWriteOutputTool", () => {
     it("uses dedup suffix when target already exists", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
+        const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
 
-        // Write first file to create collision
-        await tool.execute({ name: "report", content: "old" }, context, toolCall);
+        try {
+            // Write first file to create collision
+            await tool.execute({ name: "report", content: "old" }, context, toolCall);
 
-        // Write second file with same name
-        const result = await tool.execute({ name: "report", content: "# New Summary" }, context, toolCall);
+            // Write second file with same name
+            const result = await tool.execute({ name: "report", content: "# New Summary" }, context, toolCall);
 
-        const text = toolMessageText(result.toolMessage);
-        // Should have -1 suffix for collision
-        expect(text).toMatch(/~\/outputs\/\d{14}-report-1\.md/);
-        const files = await fs.readdir(path.join(homeDir, "outputs"));
-        const dedupFile = files.find((f) => /-report-1\.md$/.test(f));
-        expect(dedupFile).toBeDefined();
-        expect(await fs.readFile(path.join(homeDir, "outputs", dedupFile!), "utf8")).toBe("# New Summary");
+            const text = toolMessageText(result.toolMessage);
+            // Should have -1 suffix for collision
+            expect(text).toMatch(/~\/outputs\/\d{14}-report-1\.md/);
+            const files = await fs.readdir(path.join(homeDir, "outputs"));
+            const dedupFile = files.find((f) => /-report-1\.md$/.test(f));
+            expect(dedupFile).toBeDefined();
+            expect(await fs.readFile(path.join(homeDir, "outputs", dedupFile!), "utf8")).toBe("# New Summary");
+        } finally {
+            nowSpy.mockRestore();
+        }
     });
 
     it("uses dedup suffix for json targets", async () => {
         const tool = buildWriteOutputTool();
         const context = createContext(homeDir);
+        const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
 
-        // Write first file to create collision
-        await tool.execute({ name: "report", format: "json", content: '{"old":true}' }, context, toolCall);
+        try {
+            // Write first file to create collision
+            await tool.execute({ name: "report", format: "json", content: '{"old":true}' }, context, toolCall);
 
-        // Write second file with same name
-        const result = await tool.execute(
-            { name: "report", format: "json", content: '{"ok":true}' },
-            context,
-            toolCall
-        );
+            // Write second file with same name
+            const result = await tool.execute(
+                { name: "report", format: "json", content: '{"ok":true}' },
+                context,
+                toolCall
+            );
 
-        const text = toolMessageText(result.toolMessage);
-        expect(text).toMatch(/~\/outputs\/\d{14}-report-1\.json/);
-        const files = await fs.readdir(path.join(homeDir, "outputs"));
-        const dedupFile = files.find((f) => /-report-1\.json$/.test(f));
-        expect(dedupFile).toBeDefined();
-        expect(await fs.readFile(path.join(homeDir, "outputs", dedupFile!), "utf8")).toBe('{"ok":true}');
+            const text = toolMessageText(result.toolMessage);
+            expect(text).toMatch(/~\/outputs\/\d{14}-report-1\.json/);
+            const files = await fs.readdir(path.join(homeDir, "outputs"));
+            const dedupFile = files.find((f) => /-report-1\.json$/.test(f));
+            expect(dedupFile).toBeDefined();
+            expect(await fs.readFile(path.join(homeDir, "outputs", dedupFile!), "utf8")).toBe('{"ok":true}');
+        } finally {
+            nowSpy.mockRestore();
+        }
     });
 
     it("rejects names that already include an extension", async () => {
@@ -128,21 +138,43 @@ describe("buildWriteOutputTool", () => {
 });
 
 function createContext(homeDir: string): ToolExecutionContext {
-    const write = vi.fn(async ({ path: targetPath, content }: { path: string; content: string | Buffer }) => {
-        const resolvedPath =
-            targetPath === "~"
-                ? homeDir
-                : targetPath.startsWith("~/")
-                  ? path.join(homeDir, targetPath.slice(2))
-                  : targetPath;
-        await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
-        await fs.writeFile(resolvedPath, content);
-        return {
-            bytes: Buffer.isBuffer(content) ? content.byteLength : Buffer.byteLength(content, "utf8"),
-            resolvedPath,
-            sandboxPath: targetPath
-        };
-    });
+    const write = vi.fn(
+        async ({
+            path: targetPath,
+            content,
+            exclusive
+        }: {
+            path: string;
+            content: string | Buffer;
+            exclusive?: boolean;
+        }) => {
+            const resolvedPath =
+                targetPath === "~"
+                    ? homeDir
+                    : targetPath.startsWith("~/")
+                      ? path.join(homeDir, targetPath.slice(2))
+                      : targetPath;
+            await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
+            if (exclusive === true) {
+                try {
+                    await fs.access(resolvedPath);
+                    throw Object.assign(new Error(`EEXIST: file already exists, open '${resolvedPath}'`), {
+                        code: "EEXIST"
+                    });
+                } catch (error) {
+                    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+                        throw error;
+                    }
+                }
+            }
+            await fs.writeFile(resolvedPath, content);
+            return {
+                bytes: Buffer.isBuffer(content) ? content.byteLength : Buffer.byteLength(content, "utf8"),
+                resolvedPath,
+                sandboxPath: targetPath
+            };
+        }
+    );
 
     return {
         sandbox: {

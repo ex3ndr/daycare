@@ -186,7 +186,6 @@ describe("CronScheduler", () => {
         expect(context?.triggerId).toBe("context-test");
         expect(context?.taskId).toBe(created.taskId);
         expect(context?.taskName).toBe("Context Test");
-        expect(context?.code).toBe("Test prompt");
         expect(context?.userId).toBe("user-1");
 
         scheduler.stop();
@@ -252,7 +251,6 @@ async function cronTaskInsert(
         name: input.name,
         description: null,
         schedule: input.schedule,
-        code: input.code,
         agentId: null,
         enabled: input.enabled !== false,
         deleteAfterRun: false,

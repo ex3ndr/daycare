@@ -29,6 +29,17 @@ export type CronTaskContext = {
 };
 
 /**
+ * Snapshot information about a scheduled cron trigger.
+ */
+export type CronTaskInfo = {
+    triggerId: string;
+    taskId: string;
+    taskName: string;
+    agentId: string | null;
+    userId: string;
+};
+
+/**
  * A single field from a parsed cron expression.
  */
 export type CronField = {

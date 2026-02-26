@@ -29,6 +29,8 @@ import { migration20260227RequireCronTaskId } from "./20260227_require_cron_task
 import { migration20260228SoftDeleteTasks } from "./20260228_soft_delete_tasks.js";
 import { migration20260301AddTokenStats } from "./20260301_add_token_stats.js";
 import { migration20260302CleanupRlmSnapshotPayloads } from "./20260302_cleanup_rlm_snapshot_payloads.js";
+import { migration20260303DropTriggerCode } from "./20260303_drop_trigger_code.js";
+import { migration20260304ScopeTaskIdsPerUser } from "./20260304_scope_task_ids_per_user.js";
 import type { Migration } from "./migrationTypes.js";
 
 export const migrations: Migration[] = [
@@ -62,5 +64,7 @@ export const migrations: Migration[] = [
     migration20260228SoftDeleteTasks,
     migration20260301AddTokenStats,
     migration20260302CleanupRlmSnapshotPayloads,
+    migration20260303DropTriggerCode,
+    migration20260304ScopeTaskIdsPerUser,
     migration20260224AddSystemPrompts
 ];

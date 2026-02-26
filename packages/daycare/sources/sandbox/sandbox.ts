@@ -164,6 +164,9 @@ export class Sandbox {
      * Expects: args.path is an absolute path.
      */
     async write(args: SandboxWriteArgs): Promise<SandboxWriteResult> {
+        if (args.append === true && args.exclusive === true) {
+            throw new Error("append and exclusive cannot both be true.");
+        }
         const permissions = this.permissionsEffectiveResolve();
         const normalized = sandboxReadPathNormalize(args.path, this.homeDir, this.docker?.enabled === true);
         const targetPath = this.resolveVirtualPath(normalized);
@@ -183,7 +186,8 @@ export class Sandbox {
             }
         }
 
-        const handle = await fs.open(resolvedPath, args.append ? "a" : "w");
+        const flags = args.exclusive === true ? "wx" : args.append === true ? "a" : "w";
+        const handle = await fs.open(resolvedPath, flags);
         try {
             await handle.writeFile(args.content);
         } finally {

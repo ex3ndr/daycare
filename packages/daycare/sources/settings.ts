@@ -36,12 +36,19 @@ export type ProviderSettings = {
 };
 
 export type ModelRoleKey = "user" | "memory" | "memorySearch" | "subagent" | "heartbeat";
+export type ModelSizeKey = "small" | "normal" | "large";
 
 /**
  * Per-role model overrides. Each value uses "<providerId>/<modelName>" format.
  * When a role has no entry, the provider's default model is used.
  */
 export type ModelRoleConfig = Partial<Record<ModelRoleKey, string>>;
+
+/**
+ * Optional per-size model overrides. Values use "<providerId>/<modelName>" format.
+ * When unset, size selectors resolve from the active provider model catalog.
+ */
+export type ModelSizeConfig = Partial<Record<ModelSizeKey, string>>;
 
 export type AgentSettings = {
     emergencyContextLimit?: number;
@@ -108,6 +115,7 @@ export type SettingsConfig = {
         tasks?: CronTaskConfig[];
     };
     models?: ModelRoleConfig;
+    modelSizes?: ModelSizeConfig;
     memory?: {
         enabled?: boolean;
         maxEntries?: number;

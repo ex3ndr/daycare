@@ -8,13 +8,14 @@ import type { TasksRepository } from "../../storage/tasksRepository.js";
 import type { ConfigModule } from "../config/configModule.js";
 
 export type HeartbeatDefinition = HeartbeatTaskDbRecord;
+export type HeartbeatRunTask = HeartbeatDefinition & { code: string };
 
 export type HeartbeatSchedulerOptions = {
     config: ConfigModule;
     repository: HeartbeatTasksRepository;
     tasksRepository: TasksRepository;
     intervalMs?: number;
-    onRun: (tasks: HeartbeatDefinition[], runAt: Date) => void | Promise<void>;
+    onRun: (tasks: HeartbeatRunTask[], runAt: Date) => void | Promise<void>;
     onError?: (error: unknown, taskIds?: string[]) => void | Promise<void>;
     onTaskComplete?: (task: HeartbeatDefinition, runAt: Date) => void | Promise<void>;
 };

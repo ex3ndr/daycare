@@ -16,12 +16,14 @@ import {
     DEFAULT_SETTINGS_PATH,
     listProviders,
     type ModelRoleKey,
+    type ModelSizeKey,
     type ProviderSettings,
     readSettingsFile,
+    type SettingsConfig,
     updateSettingsFile
 } from "../settings.js";
 import { engineReloadRequest } from "./engineReloadRequest.js";
-import { promptInput, promptSelect } from "./prompts.js";
+import { promptSelect } from "./prompts.js";
 
 export type ModelsCommandOptions = {
     settings?: string;
@@ -37,9 +39,18 @@ const ROLE_LABELS: Record<ModelRoleKey, string> = {
 };
 
 const ROLE_KEYS: ModelRoleKey[] = ["user", "memory", "memorySearch", "subagent", "heartbeat"];
+const SIZE_KEYS: ModelSizeKey[] = ["small", "normal", "large"];
+
+const SIZE_LABELS: Record<ModelSizeKey, string> = {
+    small: "Selector: small",
+    normal: "Selector: normal",
+    large: "Selector: large"
+};
+
+type ModelAssignmentTarget = { type: "role"; key: ModelRoleKey } | { type: "size"; key: ModelSizeKey };
 
 /**
- * CLI command to view and configure per-role model assignments.
+ * CLI command to view and configure role model assignments and selector mappings.
  * Validates models on the fly before saving.
  */
 export async function modelsCommand(options: ModelsCommandOptions): Promise<void> {
@@ -56,7 +67,7 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     const defaultModel = defaultProvider.model ?? "(provider default)";
 
     // Print current assignments
-    console.log("\nModel assignments:");
+    console.log("\nRole model assignments:");
     console.log("─".repeat(60));
     for (const key of ROLE_KEYS) {
         const value = settings.models?.[key];
@@ -64,32 +75,56 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
         const marker = value ? "" : " (default)";
         console.log(`  ${ROLE_LABELS[key].padEnd(24)} ${display}${marker}`);
     }
+    console.log("\nSelector model assignments:");
+    console.log("─".repeat(60));
+    for (const key of SIZE_KEYS) {
+        const value = settings.modelSizes?.[key];
+        const display = value ?? `auto (${key} from provider catalog)`;
+        const marker = value ? "" : " (default)";
+        console.log(`  ${SIZE_LABELS[key].padEnd(24)} ${display}${marker}`);
+    }
     console.log("");
 
     if (options.list) {
         return;
     }
 
-    // Interactive: select a role to configure
+    // Interactive: select an assignment target to configure
     const roleChoices = ROLE_KEYS.map((key) => ({
-        value: key,
+        value: `role:${key}`,
         name: ROLE_LABELS[key],
         description: settings.models?.[key] ?? "default"
     }));
+    const selectorChoices = SIZE_KEYS.map((key) => ({
+        value: `size:${key}`,
+        name: SIZE_LABELS[key],
+        description: settings.modelSizes?.[key] ?? `auto (${key})`
+    }));
 
-    const selectedRole = await promptSelect({
-        message: "Select role to configure",
-        choices: roleChoices
+    const selectedTarget = await promptSelect({
+        message: "Select assignment to configure",
+        choices: [...roleChoices, ...selectorChoices]
     });
 
-    if (!selectedRole) {
+    if (!selectedTarget) {
         console.log("Cancelled.");
         return;
     }
 
+    const target = assignmentTargetParse(selectedTarget);
+    if (!target) {
+        console.log("Invalid assignment target.");
+        return;
+    }
+    const targetLabel = assignmentTargetLabel(target);
+
     // Build model choices from provider catalogs
     const providerModels: Array<{ value: string; name: string; description: string }> = [];
-    const clearChoice = { value: "__clear__", name: "Clear (use default)", description: "Remove role override" };
+    const clearChoice = {
+        value: "__clear__",
+        name: "Clear (use default)",
+        description: target.type === "role" ? "Remove role override" : "Remove selector override"
+    };
 
     for (const provider of configured) {
         const definition = getProviderDefinition(provider.id);
@@ -108,48 +143,22 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
 
     const choices = [clearChoice, ...providerModels];
 
-    const customChoice = "__custom__";
-    choices.push({
-        value: customChoice,
-        name: "Enter custom model",
-        description: "Type provider/model manually"
-    });
-
-    let selectedModel = await promptSelect({
-        message: `Select model for ${ROLE_LABELS[selectedRole]}`,
+    const selectedModel = await promptSelect({
+        message: `Select model for ${targetLabel}`,
         choices
     });
 
-    if (selectedModel === null) {
+    if (!selectedModel) {
         console.log("Cancelled.");
         return;
     }
 
-    if (selectedModel === customChoice) {
-        const custom = await promptInput({
-            message: "Enter model (provider/model)",
-            placeholder: "anthropic/claude-sonnet-4-20250514"
-        });
-        if (!custom) {
-            console.log("Cancelled.");
-            return;
-        }
-        selectedModel = custom;
-    }
-
     // Handle clear
     if (selectedModel === "__clear__") {
-        await updateSettingsFile(settingsPath, (current) => {
-            const models = { ...current.models };
-            delete models[selectedRole];
-            const hasKeys = Object.keys(models).length > 0;
-            return { ...current, models: hasKeys ? models : undefined };
-        });
+        await updateSettingsFile(settingsPath, (current) => assignmentTargetClear(current, target));
         const reloaded = await engineReloadRequest(settingsPath);
         console.log(
-            reloaded
-                ? `Cleared ${selectedRole} model override (engine reloaded).`
-                : `Cleared ${selectedRole} model override.`
+            reloaded ? `Cleared ${targetLabel} override (engine reloaded).` : `Cleared ${targetLabel} override.`
         );
         return;
     }
@@ -180,20 +189,66 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     console.log(`  OK: Model responds (${validation.modelId})`);
 
     // Save
-    await updateSettingsFile(settingsPath, (current) => ({
-        ...current,
-        models: {
-            ...current.models,
-            [selectedRole]: selectedModel
-        }
-    }));
+    await updateSettingsFile(settingsPath, (current) => assignmentTargetSet(current, target, selectedModel));
 
     const reloaded = await engineReloadRequest(settingsPath);
     console.log(
         reloaded
-            ? `Set ${ROLE_LABELS[selectedRole]} model to ${selectedModel} (engine reloaded).`
-            : `Set ${ROLE_LABELS[selectedRole]} model to ${selectedModel}.`
+            ? `Set ${targetLabel} model to ${selectedModel} (engine reloaded).`
+            : `Set ${targetLabel} model to ${selectedModel}.`
     );
+}
+
+function assignmentTargetParse(value: string): ModelAssignmentTarget | null {
+    if (value.startsWith("role:")) {
+        const key = value.slice("role:".length) as ModelRoleKey;
+        return ROLE_KEYS.includes(key) ? { type: "role", key } : null;
+    }
+    if (value.startsWith("size:")) {
+        const key = value.slice("size:".length) as ModelSizeKey;
+        return SIZE_KEYS.includes(key) ? { type: "size", key } : null;
+    }
+    return null;
+}
+
+function assignmentTargetLabel(target: ModelAssignmentTarget): string {
+    return target.type === "role" ? ROLE_LABELS[target.key] : SIZE_LABELS[target.key];
+}
+
+function assignmentTargetClear(settings: SettingsConfig, target: ModelAssignmentTarget): SettingsConfig {
+    if (target.type === "role") {
+        const models = { ...settings.models };
+        delete models[target.key];
+        const hasKeys = Object.keys(models).length > 0;
+        return { ...settings, models: hasKeys ? models : undefined };
+    }
+    const modelSizes = { ...settings.modelSizes };
+    delete modelSizes[target.key];
+    const hasKeys = Object.keys(modelSizes).length > 0;
+    return { ...settings, modelSizes: hasKeys ? modelSizes : undefined };
+}
+
+function assignmentTargetSet(
+    settings: SettingsConfig,
+    target: ModelAssignmentTarget,
+    selectedModel: string
+): SettingsConfig {
+    if (target.type === "role") {
+        return {
+            ...settings,
+            models: {
+                ...settings.models,
+                [target.key]: selectedModel
+            }
+        };
+    }
+    return {
+        ...settings,
+        modelSizes: {
+            ...settings.modelSizes,
+            [target.key]: selectedModel
+        }
+    };
 }
 
 async function validateModel(

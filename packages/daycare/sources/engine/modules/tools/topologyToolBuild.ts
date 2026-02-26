@@ -11,10 +11,153 @@ import type { Signals } from "../../signals/signals.js";
 
 const schema = Type.Object({}, { additionalProperties: false });
 
+const topologyAgentSchema = Type.Object(
+    {
+        id: Type.String(),
+        type: Type.String(),
+        label: Type.String(),
+        lifecycle: Type.String(),
+        isYou: Type.Boolean()
+    },
+    { additionalProperties: false }
+);
+
+const topologyCronTriggerSchema = Type.Object(
+    {
+        id: Type.String(),
+        taskId: Type.String(),
+        userId: Type.String(),
+        name: Type.String(),
+        schedule: Type.String(),
+        enabled: Type.Boolean(),
+        agentId: Type.Union([Type.String(), Type.Null()]),
+        deleteAfterRun: Type.Boolean(),
+        lastRunAt: Type.Union([Type.Number(), Type.Null()]),
+        isYou: Type.Boolean()
+    },
+    { additionalProperties: false }
+);
+
+const topologyHeartbeatTriggerSchema = Type.Object(
+    {
+        id: Type.String(),
+        taskId: Type.String(),
+        userId: Type.String(),
+        title: Type.String(),
+        lastRunAt: Type.Union([Type.Number(), Type.Null()])
+    },
+    { additionalProperties: false }
+);
+
+const topologyTaskSchema = Type.Object(
+    {
+        id: Type.String(),
+        userId: Type.String(),
+        title: Type.Union([Type.String(), Type.Null()]),
+        description: Type.Union([Type.String(), Type.Null()]),
+        updatedAt: Type.Union([Type.Number(), Type.Null()]),
+        triggers: Type.Object(
+            {
+                cron: Type.Array(topologyCronTriggerSchema),
+                heartbeat: Type.Array(topologyHeartbeatTriggerSchema)
+            },
+            { additionalProperties: false }
+        )
+    },
+    { additionalProperties: false }
+);
+
+const topologySignalSubscriptionSchema = Type.Object(
+    {
+        userId: Type.String(),
+        agentId: Type.String(),
+        pattern: Type.String(),
+        silent: Type.Boolean(),
+        isYou: Type.Boolean()
+    },
+    { additionalProperties: false }
+);
+
+const topologyChannelSchema = Type.Object(
+    {
+        id: Type.String(),
+        name: Type.String(),
+        leader: Type.String(),
+        members: Type.Array(
+            Type.Object(
+                {
+                    agentId: Type.String(),
+                    username: Type.String()
+                },
+                { additionalProperties: false }
+            )
+        )
+    },
+    { additionalProperties: false }
+);
+
+const topologyExposeSchema = Type.Object(
+    {
+        id: Type.String(),
+        domain: Type.String(),
+        target: Type.String(),
+        provider: Type.String(),
+        mode: Type.String(),
+        authenticated: Type.Boolean()
+    },
+    { additionalProperties: false }
+);
+
+const topologySubuserSchema = Type.Object(
+    {
+        id: Type.String(),
+        name: Type.Union([Type.String(), Type.Null()]),
+        nametag: Type.Union([Type.String(), Type.Null()]),
+        gatewayAgentId: Type.Union([Type.String(), Type.Null()]),
+        gatewayLifecycle: Type.Union([Type.String(), Type.Null()])
+    },
+    { additionalProperties: false }
+);
+
+const topologyFriendShareSchema = Type.Object(
+    {
+        subuserId: Type.String(),
+        subuserName: Type.String(),
+        subuserNametag: Type.Union([Type.String(), Type.Null()]),
+        gatewayAgentId: Type.Union([Type.String(), Type.Null()]),
+        status: Type.Union([Type.Literal("active"), Type.Literal("pending")])
+    },
+    { additionalProperties: false }
+);
+
+const topologyFriendSchema = Type.Object(
+    {
+        userId: Type.String(),
+        nametag: Type.Union([Type.String(), Type.Null()]),
+        name: Type.Union([Type.String(), Type.Null()]),
+        sharedOut: Type.Array(topologyFriendShareSchema),
+        sharedIn: Type.Array(topologyFriendShareSchema)
+    },
+    { additionalProperties: false }
+);
+
 const topologyResultSchema = Type.Object(
     {
-        summary: Type.String(),
+        agents: Type.Array(topologyAgentSchema),
+        // Nested task trigger structure is validated by tool-specific tests; resolver return-schema
+        // guardrails currently allow only primitive fields (or Any) in array item objects.
+        tasks: Type.Any(),
+        signalSubscriptions: Type.Array(topologySignalSubscriptionSchema),
+        // Channel members are nested arrays of objects; keep schema broad for resolver compatibility.
+        channels: Type.Any(),
+        exposes: Type.Array(topologyExposeSchema),
+        // Subuser fields include primitive unions (e.g. string|null), which are currently rejected
+        // by resolver-level shallow object validation.
+        subusers: Type.Any(),
+        // Friend sharing contains nested object arrays; keep schema broad for resolver compatibility.
+        friends: Type.Any(),
         agentCount: Type.Number(),
+        taskCount: Type.Number(),
         cronCount: Type.Number(),
         heartbeatCount: Type.Number(),
         signalSubscriptionCount: Type.Number(),
@@ -25,9 +168,105 @@ const topologyResultSchema = Type.Object(
     { additionalProperties: false }
 );
 
+type TopologyAgent = {
+    id: string;
+    type: string;
+    label: string;
+    lifecycle: string;
+    isYou: boolean;
+};
+
+type TopologyCronTrigger = {
+    id: string;
+    taskId: string;
+    userId: string;
+    name: string;
+    schedule: string;
+    enabled: boolean;
+    agentId: string | null;
+    deleteAfterRun: boolean;
+    lastRunAt: number | null;
+    isYou: boolean;
+};
+
+type TopologyHeartbeatTrigger = {
+    id: string;
+    taskId: string;
+    userId: string;
+    title: string;
+    lastRunAt: number | null;
+};
+
+type TopologyTask = {
+    id: string;
+    userId: string;
+    title: string | null;
+    description: string | null;
+    updatedAt: number | null;
+    triggers: {
+        cron: TopologyCronTrigger[];
+        heartbeat: TopologyHeartbeatTrigger[];
+    };
+};
+
+type TopologySignalSubscription = {
+    userId: string;
+    agentId: string;
+    pattern: string;
+    silent: boolean;
+    isYou: boolean;
+};
+
+type TopologyChannel = {
+    id: string;
+    name: string;
+    leader: string;
+    members: Array<{ agentId: string; username: string }>;
+};
+
+type TopologyExpose = {
+    id: string;
+    domain: string;
+    target: string;
+    provider: string;
+    mode: string;
+    authenticated: boolean;
+};
+
+type TopologySubuser = {
+    id: string;
+    name: string | null;
+    nametag: string | null;
+    gatewayAgentId: string | null;
+    gatewayLifecycle: string | null;
+};
+
+type TopologyFriendShare = {
+    subuserId: string;
+    subuserName: string;
+    subuserNametag: string | null;
+    gatewayAgentId: string | null;
+    status: "active" | "pending";
+};
+
+type TopologyFriend = {
+    userId: string;
+    nametag: string | null;
+    name: string | null;
+    sharedOut: TopologyFriendShare[];
+    sharedIn: TopologyFriendShare[];
+};
+
 type TopologyResult = {
-    summary: string;
+    agents: TopologyAgent[];
+    tasks: TopologyTask[];
+    signalSubscriptions: TopologySignalSubscription[];
+    channels: TopologyChannel[];
+    exposes: TopologyExpose[];
+    subusers: TopologySubuser[];
+    friends: TopologyFriend[];
     agentCount: number;
+    taskCount: number;
     cronCount: number;
     heartbeatCount: number;
     signalSubscriptionCount: number;
@@ -38,24 +277,24 @@ type TopologyResult = {
 
 const topologyReturns: ToolResultContract<TopologyResult> = {
     schema: topologyResultSchema,
-    toLLMText: (result) => result.summary
+    toLLMText: (result) => JSON.stringify(result)
 };
 
 /**
- * Builds the topology tool that snapshots agents, cron tasks, heartbeat tasks,
- * and signal subscriptions in one response.
+ * Builds the topology tool that returns structured topology data for the caller scope.
+ * Expects: tasks include nested cron/heartbeat triggers keyed by taskId.
  */
 export function topologyTool(
     crons: Crons,
     signals: Signals,
     channels: Pick<Channels, "listForUserIds">,
     _exposes: Pick<Exposes, "list">
-): ToolDefinition {
+): ToolDefinition<typeof schema, TopologyResult> {
     return {
         tool: {
             name: "topology",
             description:
-                "Return a full system topology snapshot (agents, cron tasks, heartbeat tasks, and signal subscriptions).",
+                "Return structured topology for your visible user scope. Agents exclude memory and dead entries by default. Tasks include nested cron and heartbeat triggers.",
             parameters: schema
         },
         returns: topologyReturns,
@@ -63,7 +302,6 @@ export function topologyTool(
             const callerAgentId = toolContext.agent.id;
             const callerUserId = toolContext.ctx.userId;
             const storage = toolContext.agentSystem.storage;
-            let friendCount = 0;
 
             // Determine if caller is a subuser (has parent)
             const callerUser = await storage.users.findById(callerUserId);
@@ -71,7 +309,9 @@ export function topologyTool(
             const ownerSubusers = isSubuser ? [] : await storage.users.findByParentUserId(callerUserId);
 
             // Owners can see their own user scope plus owned subusers. Subusers only see their own scope.
-            const visibleUserIds = isSubuser ? [callerUserId] : [callerUserId, ...ownerSubusers.map((subuser) => subuser.id)];
+            const visibleUserIds = isSubuser
+                ? [callerUserId]
+                : [callerUserId, ...ownerSubusers.map((subuser) => subuser.id)];
             const visibleUserIdSet = new Set(visibleUserIds);
 
             const [allAgentRecords, cronTasks, heartbeatTasks, signalSubscriptions] = await Promise.all([
@@ -82,9 +322,11 @@ export function topologyTool(
             ]);
             const channelEntries = channels.listForUserIds(visibleUserIds);
 
-            const visibleAgentRecords = allAgentRecords.filter((record) => visibleUserIdSet.has(record.userId));
+            const visibleAgentRecords = allAgentRecords.filter(
+                (record) => visibleUserIdSet.has(record.userId) && topologyAgentVisibleByDefault(record)
+            );
 
-            const agents = visibleAgentRecords
+            const agents: TopologyAgent[] = visibleAgentRecords
                 .slice()
                 .sort((left, right) => right.updatedAt - left.updatedAt)
                 .map((record) => ({
@@ -95,30 +337,97 @@ export function topologyTool(
                     isYou: record.id === callerAgentId
                 }));
 
-            const cronsSummary = cronTasks
+            const cronTriggers: TopologyCronTrigger[] = cronTasks
                 .filter((task) => visibleUserIdSet.has(task.userId))
                 .slice()
                 .sort((left, right) => left.id.localeCompare(right.id))
                 .map((task) => ({
                     id: task.id,
+                    taskId: task.taskId,
+                    userId: task.userId,
                     name: task.name,
                     schedule: task.schedule,
                     enabled: task.enabled !== false,
                     agentId: task.agentId ?? null,
+                    deleteAfterRun: task.deleteAfterRun,
+                    lastRunAt: task.lastRunAt,
                     isYou: task.agentId === callerAgentId
                 }));
 
-            const heartbeats = heartbeatTasks
+            const heartbeatTriggers: TopologyHeartbeatTrigger[] = heartbeatTasks
                 .filter((task) => visibleUserIdSet.has(task.userId))
                 .slice()
                 .sort((left, right) => left.id.localeCompare(right.id))
                 .map((task) => ({
                     id: task.id,
+                    taskId: task.taskId,
+                    userId: task.userId,
                     title: task.title,
-                    lastRunAt: typeof task.lastRunAt === "number" ? new Date(task.lastRunAt).toISOString() : null
+                    lastRunAt: task.lastRunAt
                 }));
 
-            const signalSubscriptionsSummary = signalSubscriptions
+            const visibleTaskChunks = await Promise.all(
+                visibleUserIds.map((userId) => storage.tasks.findMany(contextForUser({ userId })))
+            );
+            const visibleTasks = visibleTaskChunks.flat();
+
+            const taskByKey = new Map<string, TopologyTask>();
+            for (const task of visibleTasks) {
+                taskByKey.set(topologyTaskKeyBuild(task.userId, task.id), {
+                    id: task.id,
+                    userId: task.userId,
+                    title: task.title,
+                    description: task.description,
+                    updatedAt: task.updatedAt,
+                    triggers: {
+                        cron: [],
+                        heartbeat: []
+                    }
+                });
+            }
+
+            for (const trigger of cronTriggers) {
+                const task = topologyTaskRequire(
+                    taskByKey,
+                    trigger.userId,
+                    trigger.taskId,
+                    `cron trigger ${trigger.id}`
+                );
+                task.triggers.cron.push(trigger);
+            }
+            for (const trigger of heartbeatTriggers) {
+                const task = topologyTaskRequire(
+                    taskByKey,
+                    trigger.userId,
+                    trigger.taskId,
+                    `heartbeat trigger ${trigger.id}`
+                );
+                task.triggers.heartbeat.push(trigger);
+            }
+
+            const tasks = Array.from(taskByKey.values())
+                .sort((left, right) => {
+                    const leftAt = left.updatedAt ?? -1;
+                    const rightAt = right.updatedAt ?? -1;
+                    if (leftAt !== rightAt) {
+                        return rightAt - leftAt;
+                    }
+                    if (left.userId !== right.userId) {
+                        return left.userId.localeCompare(right.userId);
+                    }
+                    return left.id.localeCompare(right.id);
+                })
+                .map((task) => ({
+                    ...task,
+                    triggers: {
+                        cron: task.triggers.cron.slice().sort((left, right) => left.id.localeCompare(right.id)),
+                        heartbeat: task.triggers.heartbeat
+                            .slice()
+                            .sort((left, right) => left.id.localeCompare(right.id))
+                    }
+                }));
+
+            const signalSubscriptionsSummary: TopologySignalSubscription[] = signalSubscriptions
                 .filter((subscription) => visibleUserIdSet.has(subscription.ctx.userId))
                 .slice()
                 .sort((left, right) => {
@@ -140,7 +449,7 @@ export function topologyTool(
                     isYou: subscription.ctx.agentId === callerAgentId
                 }));
 
-            const channelsSummary = channelEntries
+            const channelsSummary: TopologyChannel[] = channelEntries
                 .slice()
                 .sort((left, right) => left.name.localeCompare(right.name))
                 .map((channel) => ({
@@ -161,7 +470,7 @@ export function topologyTool(
             );
             const visibleExposeEndpoints = visibleExposeEndpointChunks.flat();
 
-            const exposeSummary = visibleExposeEndpoints
+            const exposeSummary: TopologyExpose[] = visibleExposeEndpoints
                 .slice()
                 .sort((left, right) => left.createdAt - right.createdAt)
                 .map((endpoint) => ({
@@ -176,62 +485,50 @@ export function topologyTool(
                     authenticated: Boolean(endpoint.auth)
                 }));
 
-            const sections = [
-                `## Agents (${agents.length})`,
-                ...listAgentsLinesBuild(agents),
-                "",
-                `## Cron Tasks (${cronsSummary.length})`,
-                ...listCronLinesBuild(cronsSummary),
-                "",
-                `## Heartbeat Tasks (${heartbeats.length})`,
-                ...listHeartbeatLinesBuild(heartbeats),
-                "",
-                `## Signal Subscriptions (${signalSubscriptionsSummary.length})`,
-                ...listSignalSubscriptionLines(signalSubscriptionsSummary),
-                "",
-                `## Channels (${channelsSummary.length})`,
-                ...listChannelLinesBuild(channelsSummary),
-                "",
-                `## Expose Endpoints (${exposeSummary.length})`,
-                ...listExposeLinesBuild(exposeSummary)
-            ];
+            const subusers: TopologySubuser[] = isSubuser
+                ? []
+                : ownerSubusers.map((subuser) => {
+                      const gateway = allAgentRecords.find(
+                          (agent) => agent.descriptor.type === "subuser" && agent.descriptor.id === subuser.id
+                      );
+                      return {
+                          id: subuser.id,
+                          name: subuser.name ?? null,
+                          nametag: subuser.nametag ?? null,
+                          gatewayAgentId: gateway?.id ?? null,
+                          gatewayLifecycle: gateway?.lifecycle ?? null
+                      };
+                  });
 
-            // Add subusers section for owner users
-            if (!isSubuser) {
-                if (ownerSubusers.length > 0) {
-                    const subuserLines = ownerSubusers.map((subuser) => {
-                        const gateway = allAgentRecords.find(
-                            (a) => a.descriptor.type === "subuser" && a.descriptor.id === subuser.id
-                        );
-                        return (
-                            `${subuser.id} name="${subuser.name ?? "unnamed"}" ` +
-                            `gatewayAgent=${gateway?.id ?? "none"} ` +
-                            `lifecycle=${gateway?.lifecycle ?? "unknown"}`
-                        );
-                    });
-                    sections.push("", `## Subusers (${ownerSubusers.length})`, ...subuserLines);
-                }
+            const friends = isSubuser ? [] : await friendsListBuild(callerUserId, storage, allAgentRecords);
 
-                const friendsSection = await listFriendLinesBuild(callerUserId, storage, allAgentRecords);
-                friendCount = friendsSection.count;
-                sections.push("", `## Friends (${friendCount})`, ...friendsSection.lines);
-            }
+            const typedResult: TopologyResult = {
+                agents,
+                tasks,
+                signalSubscriptions: signalSubscriptionsSummary,
+                channels: channelsSummary,
+                exposes: exposeSummary,
+                subusers,
+                friends,
+                agentCount: agents.length,
+                taskCount: tasks.length,
+                cronCount: cronTriggers.length,
+                heartbeatCount: heartbeatTriggers.length,
+                signalSubscriptionCount: signalSubscriptionsSummary.length,
+                channelCount: channelsSummary.length,
+                exposeCount: exposeSummary.length,
+                friendCount: friends.length
+            };
 
-            const summary = sections.join("\n");
-
+            const text = JSON.stringify(typedResult);
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
                 toolName: toolCall.name,
-                content: [{ type: "text", text: summary }],
+                content: [{ type: "text", text }],
                 details: {
                     callerAgentId,
-                    agents,
-                    crons: cronsSummary,
-                    heartbeats,
-                    signalSubscriptions: signalSubscriptionsSummary,
-                    channels: channelsSummary,
-                    exposes: exposeSummary
+                    ...typedResult
                 },
                 isError: false,
                 timestamp: Date.now()
@@ -239,122 +536,31 @@ export function topologyTool(
 
             return {
                 toolMessage,
-                typedResult: {
-                    summary,
-                    agentCount: agents.length,
-                    cronCount: cronsSummary.length,
-                    heartbeatCount: heartbeats.length,
-                    signalSubscriptionCount: signalSubscriptionsSummary.length,
-                    channelCount: channelsSummary.length,
-                    exposeCount: exposeSummary.length,
-                    friendCount
-                }
+                typedResult
             };
         }
     };
 }
 
-function listAgentsLinesBuild(
-    agents: Array<{ id: string; type: string; label: string; lifecycle: string; isYou: boolean }>
-): string[] {
-    if (agents.length === 0) {
-        return ["None"];
+function topologyTaskRequire(
+    tasksByKey: Map<string, TopologyTask>,
+    userId: string,
+    taskId: string,
+    source: string
+): TopologyTask {
+    const key = topologyTaskKeyBuild(userId, taskId);
+    const existing = tasksByKey.get(key);
+    if (existing) {
+        return existing;
     }
-
-    return agents.map(
-        (agent) =>
-            `${agent.id}${agent.isYou ? " (You)" : ""} type=${agent.type} label="${agent.label}" lifecycle=${agent.lifecycle}`
-    );
+    throw new Error(`${source} references missing task ${taskId} for user ${userId}.`);
 }
 
-function listCronLinesBuild(
-    cronsSummary: Array<{
-        id: string;
-        name: string;
-        schedule: string;
-        enabled: boolean;
-        isYou: boolean;
-    }>
-): string[] {
-    if (cronsSummary.length === 0) {
-        return ["None"];
-    }
-
-    return cronsSummary.map(
-        (task) =>
-            `${task.id}: ${task.name} schedule="${task.schedule}" enabled=${task.enabled}${task.isYou ? " (You)" : ""}`
-    );
+function topologyTaskKeyBuild(userId: string, taskId: string): string {
+    return `${userId}:${taskId}`;
 }
 
-function listHeartbeatLinesBuild(heartbeats: Array<{ id: string; title: string; lastRunAt: string | null }>): string[] {
-    if (heartbeats.length === 0) {
-        return ["None"];
-    }
-
-    return heartbeats.map((task) => `${task.id}: ${task.title} lastRun=${task.lastRunAt ?? "never"}`);
-}
-
-function listSignalSubscriptionLines(
-    subscriptions: Array<{
-        userId: string;
-        agentId: string;
-        pattern: string;
-        silent: boolean;
-        isYou: boolean;
-    }>
-): string[] {
-    if (subscriptions.length === 0) {
-        return ["None"];
-    }
-
-    return subscriptions.map(
-        (subscription) =>
-            `user=${subscription.userId} agent=${subscription.agentId} pattern=${subscription.pattern} silent=${subscription.silent}${subscription.isYou ? " (You)" : ""}`
-    );
-}
-
-function listChannelLinesBuild(
-    channels: Array<{
-        id: string;
-        name: string;
-        leader: string;
-        members: Array<{ agentId: string; username: string }>;
-    }>
-): string[] {
-    if (channels.length === 0) {
-        return ["None"];
-    }
-
-    return channels.map((channel) => {
-        const members =
-            channel.members.length === 0
-                ? "none"
-                : channel.members.map((member) => `@${member.username}(${member.agentId})`).join(", ");
-        return `#${channel.name} leader=${channel.leader} members=${members}`;
-    });
-}
-
-function listExposeLinesBuild(
-    endpoints: Array<{
-        id: string;
-        domain: string;
-        target: string;
-        provider: string;
-        mode: string;
-        authenticated: boolean;
-    }>
-): string[] {
-    if (endpoints.length === 0) {
-        return ["None"];
-    }
-
-    return endpoints.map(
-        (endpoint) =>
-            `${endpoint.id} domain=${endpoint.domain} target=${endpoint.target} provider=${endpoint.provider} mode=${endpoint.mode} authenticated=${endpoint.authenticated}`
-    );
-}
-
-async function listFriendLinesBuild(
+async function friendsListBuild(
     callerUserId: string,
     storage: {
         connections: {
@@ -374,12 +580,13 @@ async function listFriendLinesBuild(
         };
     },
     agents: Array<{ id: string; descriptor: { type: string; id?: string } }>
-): Promise<{ count: number; lines: string[] }> {
+): Promise<TopologyFriend[]> {
     const friendConnections = await storage.connections.findFriends(callerUserId);
     const userCache = new Map<
         string,
         { id: string; parentUserId: string | null; nametag: string | null; name: string | null }
     >();
+
     const friendUsers = (
         await Promise.all(
             friendConnections.map(async (connection) => {
@@ -387,10 +594,12 @@ async function listFriendLinesBuild(
                 if (friendId === callerUserId) {
                     return null;
                 }
+
                 const cached = userCache.get(friendId);
                 if (cached) {
                     return cached.parentUserId ? null : cached;
                 }
+
                 const user = await storage.users.findById(friendId);
                 if (!user) {
                     return null;
@@ -404,21 +613,16 @@ async function listFriendLinesBuild(
         )
     )
         .filter(
-            (entry): entry is { id: string; parentUserId: string | null; nametag: string; name: string | null } =>
+            (
+                entry
+            ): entry is { id: string; parentUserId: string | null; nametag: string | null; name: string | null } =>
                 !!entry
         )
         .sort((left, right) => {
-            const leftTag = left.nametag;
-            const rightTag = right.nametag;
+            const leftTag = left.nametag ?? left.id;
+            const rightTag = right.nametag ?? right.id;
             return leftTag.localeCompare(rightTag);
         });
-
-    if (friendUsers.length === 0) {
-        return {
-            count: 0,
-            lines: ["None"]
-        };
-    }
 
     const gatewayBySubuserId = new Map(
         agents
@@ -426,51 +630,38 @@ async function listFriendLinesBuild(
             .map((agent) => [agent.descriptor.id as string, agent.id])
     );
 
-    const lines: string[] = [];
-    for (let i = 0; i < friendUsers.length; i += 1) {
-        const friend = friendUsers[i]!;
-        const friendTag = friend.nametag;
-        lines.push(friendTag);
-
+    const friends: TopologyFriend[] = [];
+    for (const friend of friendUsers) {
         const [outgoing, incoming] = await Promise.all([
             storage.connections.findConnectionsWithSubusersOf(friend.id, callerUserId),
             storage.connections.findConnectionsWithSubusersOf(callerUserId, friend.id)
         ]);
 
-        const outgoingLines = await sharedSubuserLinesBuild({
-            connections: outgoing,
-            knownUserId: friend.id,
-            users: storage.users,
-            userCache,
-            gatewayBySubuserId,
-            direction: "out"
+        friends.push({
+            userId: friend.id,
+            nametag: friend.nametag,
+            name: friend.name,
+            sharedOut: await sharedSubusersBuild({
+                connections: outgoing,
+                knownUserId: friend.id,
+                users: storage.users,
+                userCache,
+                gatewayBySubuserId
+            }),
+            sharedIn: await sharedSubusersBuild({
+                connections: incoming,
+                knownUserId: callerUserId,
+                users: storage.users,
+                userCache,
+                gatewayBySubuserId
+            })
         });
-        const incomingLines = await sharedSubuserLinesBuild({
-            connections: incoming,
-            knownUserId: callerUserId,
-            users: storage.users,
-            userCache,
-            gatewayBySubuserId,
-            direction: "in"
-        });
-
-        if (outgoingLines.length === 0 && incomingLines.length === 0) {
-            lines.push("  (no shared subusers)");
-        } else {
-            lines.push(...outgoingLines, ...incomingLines);
-        }
-        if (i < friendUsers.length - 1) {
-            lines.push("");
-        }
     }
 
-    return {
-        count: friendUsers.length,
-        lines
-    };
+    return friends;
 }
 
-async function sharedSubuserLinesBuild(options: {
+async function sharedSubusersBuild(options: {
     connections: Array<{ userAId: string; userBId: string; requestedA: boolean; requestedB: boolean }>;
     knownUserId: string;
     users: {
@@ -480,8 +671,7 @@ async function sharedSubuserLinesBuild(options: {
     };
     userCache: Map<string, { id: string; parentUserId: string | null; nametag: string | null; name: string | null }>;
     gatewayBySubuserId: Map<string, string>;
-    direction: "out" | "in";
-}): Promise<string[]> {
+}): Promise<TopologyFriendShare[]> {
     const sorted = options.connections
         .slice()
         .sort((left, right) =>
@@ -490,7 +680,7 @@ async function sharedSubuserLinesBuild(options: {
             )
         );
 
-    const lines: string[] = [];
+    const entries: TopologyFriendShare[] = [];
     for (const connection of sorted) {
         const subuserId = connectionOtherUserId(connection, options.knownUserId);
         const cached = options.userCache.get(subuserId);
@@ -499,19 +689,27 @@ async function sharedSubuserLinesBuild(options: {
             continue;
         }
         options.userCache.set(subuserId, subuser);
-        const subuserName = subuser.name ?? subuser.id;
-        const subuserTag = subuser.nametag;
-        const gateway = options.gatewayBySubuserId.get(subuserId) ?? "none";
-        const status = connection.requestedA && connection.requestedB ? "active" : "pending";
-        const arrow = options.direction === "out" ? "→" : "←";
-        const relation = options.direction === "out" ? "shared out" : "shared in";
-        lines.push(
-            `  ${arrow} ${relation}: ${subuserName} (nametag=${subuserTag}) gateway=${gateway} status=${status}`
-        );
+
+        entries.push({
+            subuserId,
+            subuserName: subuser.name ?? subuser.id,
+            subuserNametag: subuser.nametag,
+            gatewayAgentId: options.gatewayBySubuserId.get(subuserId) ?? null,
+            status: connection.requestedA && connection.requestedB ? "active" : "pending"
+        });
     }
-    return lines;
+
+    return entries;
 }
 
 function connectionOtherUserId(connection: { userAId: string; userBId: string }, knownUserId: string): string {
     return connection.userAId === knownUserId ? connection.userBId : connection.userAId;
+}
+
+function topologyAgentVisibleByDefault(record: { descriptor: { type: string }; lifecycle: string }): boolean {
+    if (record.lifecycle === "dead") {
+        return false;
+    }
+
+    return record.descriptor.type !== "memory-agent" && record.descriptor.type !== "memory-search";
 }

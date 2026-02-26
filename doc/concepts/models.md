@@ -1,24 +1,34 @@
-# Per-Role Model Configuration
+# Role And Selector Model Configuration
 
 ## Overview
 
-Daycare supports configuring which inference model each agent role uses. By default, all agents use the provider's default model (the first configured provider and its `model` field). The `models` section in `settings.json` allows overriding the model for specific roles.
+Daycare supports two persistent model configuration layers in `settings.json`:
+
+- `models`: role-specific overrides (`user`, `memory`, `memorySearch`, `subagent`, `heartbeat`)
+- `modelSizes`: selector-specific overrides (`small`, `normal`, `large`) used by `set_agent_model`
+
+Both use `<providerId>/<modelName>` values.
 
 ## Settings Format
 
 ```json
 {
     "models": {
-        "user": "anthropic/claude-sonnet-4-20250514",
-        "memory": "openai/gpt-4o-mini",
-        "memorySearch": "openai/gpt-4o-mini",
-        "subagent": "anthropic/claude-haiku-4-5-20251001",
-        "heartbeat": "openai/gpt-4o-mini"
+        "user": "anthropic/claude-sonnet-4-5",
+        "memory": "openai/gpt-5-mini",
+        "memorySearch": "openai/gpt-5-mini",
+        "subagent": "anthropic/claude-haiku-4-5",
+        "heartbeat": "openai/gpt-5-mini"
+    },
+    "modelSizes": {
+        "small": "openai/gpt-5-mini",
+        "normal": "anthropic/claude-sonnet-4-5",
+        "large": "anthropic/claude-opus-4-5"
     }
 }
 ```
 
-Each value uses `<providerId>/<modelName>` format. The provider must be configured and active. Omitted roles use the provider default.
+If `modelSizes` is omitted, selectors resolve from provider model catalogs by size.
 
 ## Roles
 
@@ -39,58 +49,63 @@ flowchart TD
     A[Provider default model] --> B{Role config in settings.models?}
     B -- yes --> C[Apply role config: override provider + model]
     B -- no --> D[Use provider default]
-    C --> E{Runtime modelOverride on agent?}
+    C --> E{Runtime selector via set_agent_model?}
     D --> E
-    E -- yes --> F[Apply runtime override]
-    E -- no --> G[Use resolved model]
-    F --> G
+    E -- no --> H[Use resolved model]
+    E -- yes --> F{settings.modelSizes has selector override?}
+    F -- yes --> G[Apply selector override provider/model]
+    F -- no --> I[Select by provider catalog size]
+    G --> H
+    I --> H
 ```
 
-1. **Runtime override** (`set_agent_model` tool) — highest priority, ephemeral per-agent session
-2. **Settings role config** (`settings.models[role]`) — persistent, applies to all agents of that role
-3. **Provider default** — the model configured on the provider entry
+1. **Runtime selector override** (`set_agent_model` with `small|normal|large`) — highest priority, ephemeral per-agent session
+2. **Selector mapping config** (`settings.modelSizes`) — persistent mapping for selector values
+3. **Settings role config** (`settings.models[role]`) — persistent role defaults
+4. **Provider default** — the model configured on the provider entry
 
 ## CLI
 
 ```bash
-# View current model assignments
+# View current role + selector assignments
 daycare models --list
 
-# Interactive: select a role and model
+# Interactive: configure a role assignment or selector assignment
 daycare models
 
 # With custom settings path
 daycare models -s /path/to/settings.json
 ```
 
-The interactive mode validates the selected model by making a micro inference call before saving.
+The interactive mode validates selected provider/model values before saving.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     subgraph Settings
-        S[settings.json<br>models section]
+        S1[settings.models]
+        S2[settings.modelSizes]
     end
 
     subgraph Resolution
-        R1[agentDescriptorRoleResolve] --> R2[modelRoleResolve]
-        R2 --> R3[modelRoleApply]
+        R1[agentDescriptorRoleResolve] --> R2[modelRoleApply]
+        R2 --> R3[agentModelOverrideApply]
     end
 
     subgraph Agent
         A1[Agent.handleMessage] --> R1
-        R3 --> A2[agentModelOverrideApply<br>runtime override]
-        A2 --> A3[InferenceRouter.complete]
+        R3 --> A2[InferenceRouter.complete]
     end
 
-    S --> R2
+    S1 --> R2
+    S2 --> R3
 ```
 
 | Component | File | Role |
 |---|---|---|
-| `ModelRoleConfig` | `settings.ts` | Type for the `models` settings section |
-| `modelRoleResolve` | `providers/modelRoleResolve.ts` | Parses `provider/model` string, validates provider |
-| `modelRoleApply` | `providers/modelRoleApply.ts` | Applies role config to provider list |
-| `agentDescriptorRoleResolve` | `engine/agents/ops/agentDescriptorRoleResolve.ts` | Maps descriptor to role key |
-| `modelsCommand` | `commands/models.ts` | CLI command for managing role assignments |
+| `ModelRoleConfig` / `ModelSizeConfig` | `packages/daycare/sources/settings.ts` | Settings types for role and selector overrides |
+| `modelRoleApply` | `packages/daycare/sources/providers/modelRoleApply.ts` | Applies configured `provider/model` override |
+| `agentModelOverrideApply` | `packages/daycare/sources/engine/agents/ops/agentModelOverrideApply.ts` | Applies runtime selector and `modelSizes` mapping |
+| `set_agent_model` tool | `packages/daycare/sources/engine/modules/tools/agentModelSetToolBuild.ts` | Runtime selector override (`small|normal|large`) |
+| `modelsCommand` | `packages/daycare/sources/commands/models.ts` | CLI for role + selector assignments |

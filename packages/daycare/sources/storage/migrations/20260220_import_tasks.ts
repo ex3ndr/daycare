@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
 import matter from "gray-matter";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { stringSlugify } from "../../utils/stringSlugify.js";

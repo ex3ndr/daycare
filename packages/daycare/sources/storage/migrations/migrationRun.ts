@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
 import { migrations } from "./_migrations.js";
 import { migrationPending } from "./migrationPending.js";
 

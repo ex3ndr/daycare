@@ -178,6 +178,37 @@ describe("Sandbox", () => {
         await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("start-end");
     });
 
+    it("writes exclusively and fails when file already exists", async () => {
+        const outputPath = path.join(writeDir, "exclusive.txt");
+        await sandbox.write({
+            path: outputPath,
+            content: "first",
+            exclusive: true
+        });
+
+        await expect(
+            sandbox.write({
+                path: outputPath,
+                content: "second",
+                exclusive: true
+            })
+        ).rejects.toMatchObject({ code: "EEXIST" });
+        await expect(fs.readFile(outputPath, "utf8")).resolves.toBe("first");
+    });
+
+    it("rejects append and exclusive when both are true", async () => {
+        const outputPath = path.join(writeDir, "invalid-flags.txt");
+
+        await expect(
+            sandbox.write({
+                path: outputPath,
+                content: "invalid",
+                append: true,
+                exclusive: true
+            })
+        ).rejects.toThrow("append and exclusive cannot both be true.");
+    });
+
     it("rejects writing outside granted directories", async () => {
         const outputPath = path.join(outsideDir, "out.txt");
         await expect(sandbox.write({ path: outputPath, content: "nope" })).rejects.toThrow(

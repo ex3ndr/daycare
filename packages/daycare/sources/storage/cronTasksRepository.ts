@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
 import type { CronTaskDbRecord, DatabaseCronTaskRow } from "./databaseTypes.js";
@@ -92,10 +92,10 @@ export class CronTasksRepository {
         return parsed.map((task) => cronTaskClone(task));
     }
 
-    async findManyByTaskId(taskId: string): Promise<CronTaskDbRecord[]> {
+    async findManyByTaskId(ctx: Context, taskId: string): Promise<CronTaskDbRecord[]> {
         const rows = this.db
-            .prepare("SELECT * FROM tasks_cron WHERE task_id = ? ORDER BY updated_at ASC")
-            .all(taskId) as DatabaseCronTaskRow[];
+            .prepare("SELECT * FROM tasks_cron WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
+            .all(ctx.userId, taskId) as DatabaseCronTaskRow[];
         return rows.map((row) => cronTaskClone(this.taskParse(row)));
     }
 
@@ -115,21 +115,19 @@ export class CronTasksRepository {
                     name,
                     description,
                     schedule,
-                    code,
                     agent_id,
                     enabled,
                     delete_after_run,
                     last_run_at,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                     task_id = excluded.task_id,
                     user_id = excluded.user_id,
                     name = excluded.name,
                     description = excluded.description,
                     schedule = excluded.schedule,
-                    code = excluded.code,
                     agent_id = excluded.agent_id,
                     enabled = excluded.enabled,
                     delete_after_run = excluded.delete_after_run,
@@ -145,7 +143,6 @@ export class CronTasksRepository {
                     record.name,
                     record.description,
                     record.schedule,
-                    record.code,
                     record.agentId,
                     record.enabled ? 1 : 0,
                     record.deleteAfterRun ? 1 : 0,
@@ -192,7 +189,6 @@ export class CronTasksRepository {
                     name = ?,
                     description = ?,
                     schedule = ?,
-                    code = ?,
                     agent_id = ?,
                     enabled = ?,
                     delete_after_run = ?,
@@ -208,7 +204,6 @@ export class CronTasksRepository {
                     next.name,
                     next.description,
                     next.schedule,
-                    next.code,
                     next.agentId,
                     next.enabled ? 1 : 0,
                     next.deleteAfterRun ? 1 : 0,
@@ -265,7 +260,6 @@ export class CronTasksRepository {
             name: row.name,
             description: row.description,
             schedule: row.schedule,
-            code: row.code,
             agentId: row.agent_id,
             enabled: row.enabled === 1,
             deleteAfterRun: row.delete_after_run === 1,

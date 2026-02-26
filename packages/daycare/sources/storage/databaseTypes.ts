@@ -80,7 +80,6 @@ export type DatabaseCronTaskRow = {
     name: string;
     description: string | null;
     schedule: string;
-    code: string;
     agent_id: string | null;
     enabled: number;
     delete_after_run: number;
@@ -96,7 +95,6 @@ export type CronTaskDbRecord = {
     name: string;
     description: string | null;
     schedule: string;
-    code: string;
     agentId: string | null;
     enabled: boolean;
     deleteAfterRun: boolean;
@@ -110,7 +108,6 @@ export type DatabaseHeartbeatTaskRow = {
     task_id: string;
     user_id: string;
     title: string;
-    code: string;
     last_run_at: number | null;
     created_at: number;
     updated_at: number;
@@ -121,7 +118,6 @@ export type HeartbeatTaskDbRecord = {
     taskId: string;
     userId: string;
     title: string;
-    code: string;
     lastRunAt: number | null;
     createdAt: number;
     updatedAt: number;

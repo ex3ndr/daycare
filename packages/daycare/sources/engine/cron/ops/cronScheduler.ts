@@ -6,7 +6,7 @@ import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import type { TasksRepository } from "../../../storage/tasksRepository.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
-import type { CronTaskContext, CronTaskDefinition, ScheduledTask } from "../cronTypes.js";
+import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
 
 const logger = getLogger("cron.scheduler");
@@ -125,12 +125,9 @@ export class CronScheduler {
         if (existing && existing.userId !== userId) {
             throw new Error(`Cron task belongs to another user: ${triggerId}`);
         }
-        const linkedTask = await this.tasksRepository.findById(definition.taskId);
+        const linkedTask = await this.tasksRepository.findById(ctx, definition.taskId);
         if (!linkedTask) {
             throw new Error(`Task not found: ${definition.taskId}`);
-        }
-        if (linkedTask.userId !== userId) {
-            throw new Error(`Task belongs to another user: ${definition.taskId}`);
         }
         const now = Date.now();
         const task: CronTaskDbRecord = {
@@ -140,7 +137,6 @@ export class CronScheduler {
             name: linkedTask.title,
             description: linkedTask.description,
             schedule: definition.schedule,
-            code: linkedTask.code,
             agentId: definition.agentId ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
@@ -181,7 +177,7 @@ export class CronScheduler {
         return this.repository.findById(taskId);
     }
 
-    getTaskContext(taskId: string): CronTaskContext | null {
+    getTaskContext(taskId: string): CronTaskInfo | null {
         const scheduled = this.tasks.get(taskId);
         if (!scheduled) {
             return null;
@@ -191,7 +187,6 @@ export class CronScheduler {
             triggerId: scheduled.task.id,
             taskId: scheduled.task.taskId,
             taskName: scheduled.task.name,
-            code: scheduled.task.code,
             agentId: scheduled.task.agentId,
             userId: scheduled.task.userId
         };
@@ -270,7 +265,10 @@ export class CronScheduler {
     private async taskRuntimeResolve(
         task: CronTaskDbRecord
     ): Promise<{ taskId: string; taskTitle: string; code: string }> {
-        const linkedTask = await this.tasksRepository.findById(task.taskId);
+        const linkedTask = await this.tasksRepository.findById(
+            { userId: task.userId, agentId: task.agentId ?? "system:cron" },
+            task.taskId
+        );
         if (!linkedTask) {
             throw new Error(`Cron trigger ${task.id} references missing task: ${task.taskId}`);
         }

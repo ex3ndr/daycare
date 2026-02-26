@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { exposeDomainNormalize, exposeTargetParse } from "../engine/expose/exposeTypes.js";
 import { AsyncLock } from "../util/lock.js";

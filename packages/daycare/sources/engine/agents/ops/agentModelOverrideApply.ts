@@ -1,13 +1,14 @@
 import { getProviderDefinition } from "../../../providers/catalog.js";
+import { modelRoleApply } from "../../../providers/modelRoleApply.js";
 import { providerModelSelectBySize } from "../../../providers/providerModelSelectBySize.js";
 import type { ProviderModelSize } from "../../../providers/types.js";
-import type { ProviderSettings } from "../../../settings.js";
+import type { ModelSizeConfig, ProviderSettings } from "../../../settings.js";
 import type { AgentModelOverride } from "./agentTypes.js";
 
-const SELECTOR_TO_SIZE: Record<string, ProviderModelSize> = {
+const SELECTOR_TO_SIZE: Record<AgentModelOverride["value"], ProviderModelSize> = {
     small: "small",
     normal: "normal",
-    big: "large"
+    large: "large"
 };
 
 /**
@@ -19,10 +20,19 @@ const SELECTOR_TO_SIZE: Record<string, ProviderModelSize> = {
 export function agentModelOverrideApply(
     providers: ProviderSettings[],
     override: AgentModelOverride | null | undefined,
-    providerId: string | null
+    providerId: string | null,
+    selectorOverrides: ModelSizeConfig | undefined
 ): ProviderSettings[] {
     if (!override) {
         return providers;
+    }
+
+    const configuredModel = selectorOverrides?.[override.value];
+    if (configuredModel) {
+        const configuredApply = modelRoleApply(providers, configuredModel);
+        if (configuredApply.providerId) {
+            return configuredApply.providers;
+        }
     }
 
     const target = providerId ? providers.find((p) => p.id === providerId) : providers[0];
@@ -30,24 +40,14 @@ export function agentModelOverrideApply(
         return providers;
     }
 
-    let resolvedModel: string | undefined;
+    const size = SELECTOR_TO_SIZE[override.value];
+    const definition = getProviderDefinition(target.id);
+    const models = definition?.models ?? [];
+    const resolvedModel = models.length > 0 ? (providerModelSelectBySize(models, size) ?? undefined) : undefined;
 
-    if (override.type === "selector") {
-        const size = SELECTOR_TO_SIZE[override.value];
-        if (!size) {
-            return providers;
-        }
-        const definition = getProviderDefinition(target.id);
-        const models = definition?.models ?? [];
-        if (models.length > 0) {
-            resolvedModel = providerModelSelectBySize(models, size) ?? undefined;
-        }
-        // If no model catalog or no match, keep provider default
-        if (!resolvedModel) {
-            return providers;
-        }
-    } else {
-        resolvedModel = override.value;
+    // If no model catalog or no match, keep provider default
+    if (!resolvedModel) {
+        return providers;
     }
 
     return providers.map((p) => {

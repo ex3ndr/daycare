@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
 import type { DatabaseHeartbeatTaskRow, HeartbeatTaskDbRecord } from "./databaseTypes.js";
@@ -74,10 +74,10 @@ export class HeartbeatTasksRepository {
         return parsed.map((task) => heartbeatTaskClone(task));
     }
 
-    async findManyByTaskId(taskId: string): Promise<HeartbeatTaskDbRecord[]> {
+    async findManyByTaskId(ctx: Context, taskId: string): Promise<HeartbeatTaskDbRecord[]> {
         const rows = this.db
-            .prepare("SELECT * FROM tasks_heartbeat WHERE task_id = ? ORDER BY updated_at ASC")
-            .all(taskId) as DatabaseHeartbeatTaskRow[];
+            .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
+            .all(ctx.userId, taskId) as DatabaseHeartbeatTaskRow[];
         return rows.map((row) => heartbeatTaskClone(this.taskParse(row)));
     }
 
@@ -95,16 +95,14 @@ export class HeartbeatTasksRepository {
                     task_id,
                     user_id,
                     title,
-                    code,
                     last_run_at,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                     task_id = excluded.task_id,
                     user_id = excluded.user_id,
                     title = excluded.title,
-                    code = excluded.code,
                     last_run_at = excluded.last_run_at,
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at
@@ -115,7 +113,6 @@ export class HeartbeatTasksRepository {
                     taskId,
                     record.userId,
                     record.title,
-                    record.code,
                     record.lastRunAt,
                     record.createdAt,
                     record.updatedAt
@@ -155,7 +152,6 @@ export class HeartbeatTasksRepository {
                     task_id = ?,
                     user_id = ?,
                     title = ?,
-                    code = ?,
                     last_run_at = ?,
                     created_at = ?,
                     updated_at = ?
@@ -166,7 +162,6 @@ export class HeartbeatTasksRepository {
                     next.taskId.trim(),
                     next.userId,
                     next.title,
-                    next.code,
                     next.lastRunAt,
                     next.createdAt,
                     next.updatedAt,
@@ -233,7 +228,6 @@ export class HeartbeatTasksRepository {
             taskId,
             userId: row.user_id,
             title: row.title,
-            code: row.code,
             lastRunAt: row.last_run_at,
             createdAt: row.created_at,
             updatedAt: row.updated_at

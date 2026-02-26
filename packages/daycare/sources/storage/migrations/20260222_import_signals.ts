@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { DatabaseSync } from "node:sqlite";
+import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
 import { databasePathResolve } from "../databasePathResolve.js";
 import type { Migration } from "./migrationTypes.js";
 

@@ -1,8 +1,6 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
 import { writeOutputFileNameResolve } from "./writeOutputFileNameResolve.js";
 
@@ -19,6 +17,9 @@ const writeOutputSchema = Type.Object(
 
 type WriteOutputArgs = Static<typeof writeOutputSchema>;
 type WriteOutputFormat = Static<typeof writeOutputFormatSchema>;
+type WriteOutputExtension = "md" | "json";
+
+const WRITE_OUTPUT_MAX_SUFFIX = 99;
 
 const writeOutputResultSchema = Type.Object(
     {
@@ -53,19 +54,15 @@ export function buildWriteOutputTool(): ToolDefinition {
             const format = payload.format ?? "markdown";
             const extension = outputExtensionResolve(format);
             const normalizedName = outputNameNormalize(payload.name);
-            // Host path for listing existing files — no sandbox.readDir API available
-            const outputsHostDir = path.join(toolContext.sandbox.homeDir, "outputs");
-            const existingFileNames = await outputFileNamesList(outputsHostDir);
-            const fileName = writeOutputFileNameResolve(normalizedName, existingFileNames, extension);
-            const outputPath = `~/outputs/${fileName}`;
-            const writeResult = await toolContext.sandbox.write({
-                path: outputPath,
+            const writeResult = await outputWriteWithUniqueName(toolContext.sandbox, {
+                name: normalizedName,
+                extension,
                 content: payload.content
             });
-            const summary = `Wrote ${writeResult.bytes} bytes to ${outputPath}.`;
+            const summary = `Wrote ${writeResult.bytes} bytes to ${writeResult.path}.`;
             const toolMessage = buildToolMessage(toolCall, summary, false, {
                 action: "write_output",
-                path: outputPath,
+                path: writeResult.path,
                 bytes: writeResult.bytes,
                 format
             });
@@ -73,7 +70,7 @@ export function buildWriteOutputTool(): ToolDefinition {
                 summary,
                 action: "write_output",
                 isError: false,
-                path: outputPath,
+                path: writeResult.path,
                 bytes: writeResult.bytes,
                 format
             });
@@ -98,26 +95,50 @@ function outputNameNormalize(value: string): string {
     return trimmed;
 }
 
-function outputExtensionResolve(format: WriteOutputFormat): "md" | "json" {
+function outputExtensionResolve(format: WriteOutputFormat): WriteOutputExtension {
     return format === "json" ? "json" : "md";
 }
 
-async function outputFileNamesList(outputsHostDir: string): Promise<Set<string>> {
-    try {
-        const entries = await fs.readdir(outputsHostDir, { withFileTypes: true });
-        const names = new Set<string>();
-        for (const entry of entries) {
-            if (entry.isFile()) {
-                names.add(entry.name);
+async function outputWriteWithUniqueName(
+    sandbox: ToolExecutionContext["sandbox"],
+    input: { name: string; extension: WriteOutputExtension; content: string }
+): Promise<{ path: string; bytes: number }> {
+    const now = Date.now();
+    const collisions = new Set<string>();
+
+    for (let attempt = 0; attempt <= WRITE_OUTPUT_MAX_SUFFIX; attempt += 1) {
+        const fileName = writeOutputFileNameResolve(
+            input.name,
+            collisions,
+            input.extension,
+            WRITE_OUTPUT_MAX_SUFFIX,
+            now
+        );
+        const outputPath = `~/outputs/${fileName}`;
+        try {
+            const result = await sandbox.write({
+                path: outputPath,
+                content: input.content,
+                exclusive: true
+            });
+            return { path: outputPath, bytes: result.bytes };
+        } catch (error) {
+            if (outputWriteCollisionErrorIs(error)) {
+                collisions.add(fileName);
+                continue;
             }
+            throw error;
         }
-        return names;
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-            return new Set<string>();
-        }
-        throw error;
     }
+
+    throw new Error(
+        `Could not resolve unique output name for "${input.name}" after ${WRITE_OUTPUT_MAX_SUFFIX} attempts.`
+    );
+}
+
+function outputWriteCollisionErrorIs(error: unknown): boolean {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "EEXIST";
 }
 
 function buildToolMessage(
