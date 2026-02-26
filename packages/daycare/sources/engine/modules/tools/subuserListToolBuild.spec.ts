@@ -20,7 +20,7 @@ describe("subuserListToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const context = contextBuild(ownerUserId, {
@@ -51,7 +51,7 @@ describe("subuserListToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-empty-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const context = contextBuild(ownerUserId, {

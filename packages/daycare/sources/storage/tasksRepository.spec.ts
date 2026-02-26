@@ -6,7 +6,7 @@ import { TasksRepository } from "./tasksRepository.js";
 
 describe("TasksRepository", () => {
     it("supports create, find, update, and delete", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const repo = new TasksRepository(storage.db);
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -54,7 +54,7 @@ describe("TasksRepository", () => {
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const repo = new TasksRepository(storage.db);
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -81,7 +81,7 @@ describe("TasksRepository", () => {
     });
 
     it("scopes ids by user", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const repo = new TasksRepository(storage.db);
             const ctxA = contextForAgent({ userId: "user-1", agentId: "agent-1" });

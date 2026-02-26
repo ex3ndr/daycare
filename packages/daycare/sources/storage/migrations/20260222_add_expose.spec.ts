@@ -5,7 +5,7 @@ import { migration20260222AddExpose } from "./20260222_add_expose.js";
 
 describe("migration20260222AddExpose", () => {
     it("creates expose_endpoints table", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260222AddExpose.up(db);
             const columns = db.prepare("PRAGMA table_info(expose_endpoints)").all() as Array<{ name: string }>;

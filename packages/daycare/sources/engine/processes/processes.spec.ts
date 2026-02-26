@@ -13,6 +13,7 @@ vi.mock("../../sandbox/sandboxDockerEnvironmentIs.js", () => ({
 import type { SessionPermissions } from "@/types";
 import { getLogger } from "../../log.js";
 import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironmentIs.js";
+import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Processes } from "./processes.js";
 
@@ -23,6 +24,7 @@ describe("Processes", () => {
     let workspaceDir: string;
     let permissions: SessionPermissions;
     let managers: Processes[];
+    let storage: Storage;
 
     beforeEach(async () => {
         baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-processes-"));
@@ -34,6 +36,7 @@ describe("Processes", () => {
         };
         vi.mocked(sandboxDockerEnvironmentIs).mockResolvedValue(false);
         managers = [];
+        storage = storageOpenTest();
     });
 
     afterEach(async () => {
@@ -45,6 +48,7 @@ describe("Processes", () => {
             }
             manager.unload();
         }
+        storage.db.close();
         await fs.rm(baseDir, { recursive: true, force: true });
     });
 
@@ -286,39 +290,34 @@ describe("Processes", () => {
             const processDir = path.join(baseDir, "processes", processId);
             const now = Date.now();
             await fs.mkdir(processDir, { recursive: true });
-            const storage = storageOpenTest(path.join(baseDir, "daycare.db"));
-            try {
-                await storage.processes.create({
-                    id: processId,
-                    userId: "owner",
-                    name: "persisted-boot-test",
-                    command: `node -e "setInterval(() => {}, 1000)"`,
-                    cwd: workspaceDir,
-                    home: null,
-                    env: {},
-                    packageManagers: [],
-                    allowedDomains: [],
-                    allowLocalBinding: false,
-                    permissions,
-                    owner: null,
-                    keepAlive: false,
-                    desiredState: "running",
-                    status: "running",
-                    pid: 123_456,
-                    bootTimeMs: 1_000,
-                    restartCount: 0,
-                    restartFailureCount: 0,
-                    nextRestartAt: null,
-                    settingsPath: path.join(processDir, "sandbox.json"),
-                    logPath: path.join(processDir, "process.log"),
-                    createdAt: now,
-                    updatedAt: now,
-                    lastStartedAt: now,
-                    lastExitedAt: null
-                });
-            } finally {
-                storage.db.close();
-            }
+            await storage.processes.create({
+                id: processId,
+                userId: "owner",
+                name: "persisted-boot-test",
+                command: `node -e "setInterval(() => {}, 1000)"`,
+                cwd: workspaceDir,
+                home: null,
+                env: {},
+                packageManagers: [],
+                allowedDomains: [],
+                allowLocalBinding: false,
+                permissions,
+                owner: null,
+                keepAlive: false,
+                desiredState: "running",
+                status: "running",
+                pid: 123_456,
+                bootTimeMs: 1_000,
+                restartCount: 0,
+                restartFailureCount: 0,
+                nextRestartAt: null,
+                settingsPath: path.join(processDir, "sandbox.json"),
+                logPath: path.join(processDir, "process.log"),
+                createdAt: now,
+                updatedAt: now,
+                lastStartedAt: now,
+                lastExitedAt: null
+            });
 
             const manager = await createManager(baseDir, { bootTimeMs: 2_000 });
             const listed = await manager.list();
@@ -328,15 +327,10 @@ describe("Processes", () => {
             expect(item?.pid).toBeNull();
             expect(item?.status).toBe("exited");
 
-            const persistedStorage = storageOpenTest(path.join(baseDir, "daycare.db"));
-            try {
-                const persisted = await persistedStorage.processes.findById(processId);
-                expect(persisted?.pid).toBeNull();
-                expect(persisted?.bootTimeMs).toBe(2_000);
-                expect(persisted?.status).toBe("exited");
-            } finally {
-                persistedStorage.db.close();
-            }
+            const persisted = await storage.processes.findById(processId);
+            expect(persisted?.pid).toBeNull();
+            expect(persisted?.bootTimeMs).toBe(2_000);
+            expect(persisted?.status).toBe("exited");
         },
         TEST_TIMEOUT_MS
     );
@@ -395,7 +389,6 @@ describe("Processes", () => {
     );
 
     async function createManager(dir: string, options: { bootTimeMs?: number | null } = {}): Promise<Processes> {
-        const storage = storageOpenTest(path.join(dir, "daycare.db"));
         const manager = new Processes(dir, getLogger("test.processes"), {
             repository: storage.processes,
             bootTimeProvider: options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null

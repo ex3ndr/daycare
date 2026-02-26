@@ -34,8 +34,9 @@ describe("migration20260222ImportExpose", () => {
                 "utf8"
             );
 
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             try {
+                (db as typeof db & { __daycareDatabasePath?: string }).__daycareDatabasePath = dbPath;
                 migration20260220AddUsers.up(db);
                 db.prepare("INSERT INTO users (id, is_owner, created_at, updated_at) VALUES (?, ?, ?, ?)").run(
                     "owner-user",

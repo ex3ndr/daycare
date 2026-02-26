@@ -87,8 +87,9 @@ describe("AgentSystem durable inboxes", () => {
 
     it("replays persisted rows after restart and then cleans them up", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
+        const sharedStorage = storageOpenTest();
         try {
-            const first = await harnessCreate(dir);
+            const first = await harnessCreate(dir, { storage: sharedStorage });
             await first.agentSystem.load();
             const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-replay" };
             await post(
@@ -100,6 +101,7 @@ describe("AgentSystem durable inboxes", () => {
             const beforeRestart = await first.storage.inbox.findByAgentId(agentId);
             expect(beforeRestart).toHaveLength(1);
             const second = await harnessCreate(dir, {
+                storage: sharedStorage,
                 inferenceRouter: {
                     complete: vi.fn(async () => inferenceResponse("ok"))
                 } as unknown as InferenceRouter
@@ -117,8 +119,10 @@ describe("AgentSystem durable inboxes", () => {
 
     it("drops stale in-flight durable row and continues inference after pending rlm recovery", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
+        const sharedStorage = storageOpenTest();
         try {
             const first = await harnessCreate(dir, {
+                storage: sharedStorage,
                 inferenceRouter: {
                     complete: vi.fn(async () => inferenceResponse("unexpected-replay"))
                 } as unknown as InferenceRouter
@@ -172,6 +176,7 @@ describe("AgentSystem durable inboxes", () => {
 
             const complete = vi.fn(async () => inferenceResponse("unexpected-replay"));
             const second = await harnessCreate(dir, {
+                storage: sharedStorage,
                 inferenceRouter: {
                     complete
                 } as unknown as InferenceRouter
@@ -185,7 +190,7 @@ describe("AgentSystem durable inboxes", () => {
             });
             const ctx = await contextForAgentIdRequire(second.agentSystem, agentId);
             await vi.waitFor(async () => {
-                const history = await agentHistoryLoad(second.config, ctx);
+                const history = await agentHistoryLoad(second.storage, ctx);
                 expect(
                     history.some(
                         (record) => record.type === "rlm_complete" && record.toolCallId === "run-1" && record.isError
@@ -193,7 +198,7 @@ describe("AgentSystem durable inboxes", () => {
                 ).toBe(true);
             });
 
-            const history = await agentHistoryLoad(second.config, ctx);
+            const history = await agentHistoryLoad(second.storage, ctx);
             const userMessages = history.filter(
                 (record): record is Extract<AgentHistoryRecord, { type: "user_message" }> =>
                     record.type === "user_message"
@@ -245,8 +250,9 @@ describe("AgentSystem durable inboxes", () => {
 
     it("clears durable rows when an unloaded sleeping subagent is killed by poison-pill", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
+        const sharedStorage = storageOpenTest();
         try {
-            const first = await harnessCreate(dir);
+            const first = await harnessCreate(dir, { storage: sharedStorage });
             await first.agentSystem.load();
             await first.agentSystem.start();
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
@@ -258,7 +264,7 @@ describe("AgentSystem durable inboxes", () => {
                 JSON.stringify({ type: "reset", message: "pending" })
             );
 
-            const second = await harnessCreate(dir);
+            const second = await harnessCreate(dir, { storage: sharedStorage });
             await second.agentSystem.load();
             await second.agentSystem.start();
             await second.signals.generate({
@@ -285,7 +291,7 @@ describe("AgentSystem durable inboxes", () => {
 
 async function harnessCreate(
     dir: string,
-    options?: { inferenceRouter?: InferenceRouter }
+    options?: { inferenceRouter?: InferenceRouter; storage?: Storage }
 ): Promise<{
     config: ReturnType<typeof configResolve>;
     storage: Storage;
@@ -301,7 +307,7 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
-    const storage = storageOpenTest(config.dbPath);
+    const storage = options?.storage ?? storageOpenTest();
     const eventBus = new EngineEventBus();
     const signals = new Signals({
         eventBus,

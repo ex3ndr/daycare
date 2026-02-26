@@ -9,7 +9,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function createStorage(): Storage {
-    return storageOpenTest(":memory:");
+    return storageOpenTest();
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {

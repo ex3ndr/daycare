@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { configResolve } from "../../config/configResolve.js";
+import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { ConfigModule } from "../config/configModule.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -14,8 +15,9 @@ import type { ExposeTunnelProvider } from "./exposeTypes.js";
 describe("Exposes", () => {
     it("supports create/update/remove/list lifecycle", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const exposes = createExposes(dir);
+            const exposes = createExposes(dir, storage);
             const provider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -54,7 +56,7 @@ describe("Exposes", () => {
             expect(updatedEnabled.endpoint.auth).not.toBeNull();
             expect(updatedEnabled.password).toBeTruthy();
 
-            const persisted = exposeEndpointRowRead(dir, created.endpoint.id);
+            const persisted = exposeEndpointRowRead(storage, created.endpoint.id);
             expect(persisted.auth?.passwordHash).toBeTruthy();
             expect(persisted.auth?.passwordHash).not.toBe(updatedEnabled.password);
 
@@ -64,14 +66,16 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("selects providers and errors when ambiguous", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const exposes = createExposes(dir);
+            const exposes = createExposes(dir, storage);
             await exposes.start();
 
             await expect(
@@ -134,14 +138,16 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("restores endpoints from disk on restart", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const first = createExposes(dir);
+            const first = createExposes(dir, storage);
             const provider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -160,7 +166,7 @@ describe("Exposes", () => {
             );
             await first.stop();
 
-            const second = createExposes(dir);
+            const second = createExposes(dir, storage);
             await second.registerProvider(provider);
             await second.start();
 
@@ -172,14 +178,16 @@ describe("Exposes", () => {
 
             await second.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("updates endpoints even when provider is unavailable", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const first = createExposes(dir);
+            const first = createExposes(dir, storage);
             const provider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -198,7 +206,7 @@ describe("Exposes", () => {
             );
             await first.stop();
 
-            const second = createExposes(dir);
+            const second = createExposes(dir, storage);
             await second.start();
 
             const updated = await second.update(created.endpoint.id, {
@@ -209,14 +217,16 @@ describe("Exposes", () => {
 
             await second.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("rolls back tunnels when domain normalization fails", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const expose = createExposes(dir);
+            const expose = createExposes(dir, storage);
             const createFailProvider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -238,7 +248,7 @@ describe("Exposes", () => {
             expect(createFailProvider.destroyTunnel).toHaveBeenCalledWith("https://broken.example.com");
             await expose.stop();
 
-            const first = createExposes(dir);
+            const first = createExposes(dir, storage);
             const validProvider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -256,7 +266,7 @@ describe("Exposes", () => {
             );
             await first.stop();
 
-            const second = createExposes(dir);
+            const second = createExposes(dir, storage);
             const restoreFailProvider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -267,14 +277,16 @@ describe("Exposes", () => {
             expect(restoreFailProvider.destroyTunnel).toHaveBeenCalledWith("https://broken-restore.example.com");
             await second.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("keeps the reactivated domain when update triggers tunnel activation", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const exposes = createExposes(dir);
+            const exposes = createExposes(dir, storage);
             const provider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -306,19 +318,21 @@ describe("Exposes", () => {
             const listed = await exposes.list();
             expect(listed[0]?.domain).toBe("reactivated.a.example.com");
 
-            const persisted = exposeEndpointRowRead(dir, created.endpoint.id);
+            const persisted = exposeEndpointRowRead(storage, created.endpoint.id);
             expect(persisted.domain).toBe("reactivated.a.example.com");
 
             await exposes.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("applies new auth hash when update reactivates a dormant endpoint", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
+        const storage = storageOpenTest();
         try {
-            const exposes = createExposes(dir);
+            const exposes = createExposes(dir, storage);
             const provider = providerBuild({
                 instanceId: "provider-a",
                 domain: "a.example.com",
@@ -353,19 +367,19 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 });
 
-function createExposes(rootDir: string): Exposes {
+function createExposes(rootDir: string, storage: Storage): Exposes {
     const config = configResolve(
         {
             engine: { dataDir: path.join(rootDir, ".daycare") }
         },
         path.join(rootDir, "settings.json")
     );
-    const storage = storageOpenTest(config.dbPath);
     return new Exposes({
         config: new ConfigModule(config),
         eventBus: new EngineEventBus(),
@@ -395,26 +409,12 @@ function providerBuild(options: { instanceId: string; domain: string; domains: s
     };
 }
 
-function exposeEndpointRowRead(
-    rootDir: string,
-    endpointId: string
-): { domain: string; auth: { passwordHash: string } | null } {
-    const config = configResolve(
-        {
-            engine: { dataDir: path.join(rootDir, ".daycare") }
-        },
-        path.join(rootDir, "settings.json")
-    );
-    const storage = storageOpenTest(config.dbPath);
-    try {
-        const row = storage.db
-            .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")
-            .get(endpointId) as { domain?: string; auth?: string | null } | undefined;
-        return {
-            domain: row?.domain ?? "",
-            auth: row?.auth ? (JSON.parse(row.auth) as { passwordHash: string }) : null
-        };
-    } finally {
-        storage.db.close();
-    }
+function exposeEndpointRowRead(storage: Storage, endpointId: string): { domain: string; auth: { passwordHash: string } | null } {
+    const row = storage.db
+        .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")
+        .get(endpointId) as { domain?: string; auth?: string | null } | undefined;
+    return {
+        domain: row?.domain ?? "",
+        auth: row?.auth ? (JSON.parse(row.auth) as { passwordHash: string }) : null
+    };
 }

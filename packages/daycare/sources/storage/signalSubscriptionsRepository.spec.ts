@@ -6,7 +6,7 @@ import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.j
 
 describe("SignalSubscriptionsRepository", () => {
     it("creates, updates, deletes, and reads subscriptions", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new SignalSubscriptionsRepository(db);
@@ -46,7 +46,7 @@ describe("SignalSubscriptionsRepository", () => {
     });
 
     it("matches patterns and user scope", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new SignalSubscriptionsRepository(db);
@@ -93,7 +93,7 @@ describe("SignalSubscriptionsRepository", () => {
     });
 
     it("normalizes ctx userId for keyed and matching lookups", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new SignalSubscriptionsRepository(db);

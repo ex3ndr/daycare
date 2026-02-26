@@ -6,7 +6,7 @@ import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 
 describe("ExposeEndpointsRepository", () => {
     it("supports CRUD and user scoping", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new ExposeEndpointsRepository(db);

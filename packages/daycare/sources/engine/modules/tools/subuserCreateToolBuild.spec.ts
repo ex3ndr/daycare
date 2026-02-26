@@ -19,7 +19,7 @@ describe("subuserCreateToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
 
             // Bootstrap migration creates an owner; find it
             const owner = await storage.users.findOwner();
@@ -65,7 +65,7 @@ describe("subuserCreateToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-reject-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
 
             // Bootstrap creates owner; create a regular user
             await storage.users.create({ id: "regular-user" });

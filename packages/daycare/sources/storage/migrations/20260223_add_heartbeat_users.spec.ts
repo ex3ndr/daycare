@@ -9,7 +9,7 @@ import { migration20260223AddHeartbeatUsers } from "./20260223_add_heartbeat_use
 
 describe("migration20260223AddHeartbeatUsers", () => {
     it("adds user_id to tasks_heartbeat and backfills owner user", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);
@@ -51,7 +51,7 @@ describe("migration20260223AddHeartbeatUsers", () => {
     });
 
     it("fails when heartbeat rows need backfill but no owner user exists", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);

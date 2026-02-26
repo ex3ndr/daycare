@@ -72,8 +72,9 @@ describe("migration20260220ImportTasks", () => {
                 "utf8"
             );
 
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             try {
+                (db as typeof db & { __daycareDatabasePath?: string }).__daycareDatabasePath = dbPath;
                 migration20260219Initial.up(db);
                 migration20260220AddUsers.up(db);
                 migration20260220UsersBootstrap.up(db);

@@ -46,7 +46,7 @@ async function createApi<TSettings>(
     const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
     const auth = new AuthStore(config);
     const fileStore = new FileFolder(path.join(config.dataDir, "files"));
-    const storage = storageOpenTest(path.join(dir, "daycare.db"));
+    const storage = storageOpenTest();
     const inference = {
         complete: async () => {
             throw new Error("Inference not available in tests");

@@ -6,7 +6,7 @@ import { migration20260224AddMemoryColumns } from "./20260224_add_memory_columns
 
 describe("migration20260224AddMemoryColumns", () => {
     it("adds invalidated_at and processed_until columns to sessions", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260224AddMemoryColumns.up(db);
@@ -21,7 +21,7 @@ describe("migration20260224AddMemoryColumns", () => {
     });
 
     it("creates index on invalidated_at", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260224AddMemoryColumns.up(db);
@@ -34,7 +34,7 @@ describe("migration20260224AddMemoryColumns", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260224AddMemoryColumns.up(db);

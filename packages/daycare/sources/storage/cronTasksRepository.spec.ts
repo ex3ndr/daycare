@@ -6,7 +6,7 @@ import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("CronTasksRepository", () => {
     it("supports create, find, update, and delete", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const repo = new CronTasksRepository(storage.db);
             await storage.tasks.create({
@@ -68,7 +68,7 @@ describe("CronTasksRepository", () => {
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const repo = new CronTasksRepository(storage.db);
             await storage.tasks.create({

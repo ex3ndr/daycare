@@ -4,7 +4,7 @@ import type { Storage } from "./storage.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
 function createStorage(): Storage {
-    return storageOpenTest(":memory:");
+    return storageOpenTest();
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {

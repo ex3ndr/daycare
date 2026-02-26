@@ -7,7 +7,7 @@ import { migration20260225RequireUsertag } from "./20260225_require_usertag.js";
 
 describe("migration20260225RequireUsertag", () => {
     it("backfills empty usertags and enforces required usertags in DB", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -66,7 +66,7 @@ describe("migration20260225RequireUsertag", () => {
     });
 
     it("assigns generated usertags for legacy users", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -99,7 +99,7 @@ describe("migration20260225RequireUsertag", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);

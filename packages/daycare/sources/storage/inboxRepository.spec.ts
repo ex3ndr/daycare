@@ -5,7 +5,7 @@ import { InboxRepository } from "./inboxRepository.js";
 
 describe("InboxRepository", () => {
     it("supports insert, ordered lookup, and delete operations", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new InboxRepository(db);

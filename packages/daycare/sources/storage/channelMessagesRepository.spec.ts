@@ -6,7 +6,7 @@ import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("ChannelMessagesRepository", () => {
     it("creates messages and returns recent entries", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new ChannelMessagesRepository(db);

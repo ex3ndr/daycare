@@ -16,7 +16,7 @@ describe("buildSignalSubscribeTool", () => {
     it("subscribes target agent when it exists", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
         try {
-            const storage = storageOpenTest(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,
@@ -55,7 +55,7 @@ describe("buildSignalSubscribeTool", () => {
     it("throws when target agent does not exist", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
         try {
-            const storage = storageOpenTest(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,
@@ -78,7 +78,7 @@ describe("buildSignalSubscribeTool", () => {
     it("throws when target agent belongs to another user", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
         try {
-            const storage = storageOpenTest(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,

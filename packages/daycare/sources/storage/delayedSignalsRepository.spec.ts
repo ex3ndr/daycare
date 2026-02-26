@@ -6,7 +6,7 @@ import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 
 describe("DelayedSignalsRepository", () => {
     it("creates, reads due records, deletes, and cancels by repeat key", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new DelayedSignalsRepository(db);

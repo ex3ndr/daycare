@@ -32,7 +32,7 @@ describe("database plugin", () => {
         const fileStore = new FileFolder(path.join(config.dataDir, "files"));
         const modules = new ModuleRegistry({ onMessage: async () => undefined });
         const pluginRegistry = new PluginRegistry(modules);
-        const storage = storageOpenTest(path.join(baseDir, "daycare.db"));
+        const storage = storageOpenTest();
 
         const instanceId = "database-1";
         const registrar = pluginRegistry.createRegistrar(instanceId);

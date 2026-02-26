@@ -6,7 +6,7 @@ import { TokenStatsRepository } from "./tokenStatsRepository.js";
 
 describe("TokenStatsRepository", () => {
     it("increments hourly rows and merges by hour/user/agent/model", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new TokenStatsRepository(db);
@@ -51,7 +51,7 @@ describe("TokenStatsRepository", () => {
     });
 
     it("filters rows by range and identity", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new TokenStatsRepository(db);

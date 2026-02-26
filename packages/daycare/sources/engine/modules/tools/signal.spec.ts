@@ -17,7 +17,7 @@ describe("buildSignalGenerateTool", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-tool-"));
         try {
             const eventBus = new EngineEventBus();
-            const storage = storageOpenTest(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest();
             const signals = new Signals({
                 eventBus,
                 signalEvents: storage.signalEvents,

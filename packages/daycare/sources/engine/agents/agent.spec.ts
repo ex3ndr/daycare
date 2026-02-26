@@ -1622,7 +1622,7 @@ function signalsBuild(
     eventBus: EngineEventBus,
     onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void>
 ): Signals {
-    const storage = storageOpenTest(config.dbPath);
+    const storage = storageOpenTest();
     return new Signals({
         eventBus,
         signalEvents: storage.signalEvents,
@@ -1632,7 +1632,7 @@ function signalsBuild(
 }
 
 function delayedSignalsBuild(config: ConfigModule, eventBus: EngineEventBus, signals: Signals): DelayedSignals {
-    const storage = storageOpenTest(config.current.dbPath);
+    const storage = storageOpenTest();
     return new DelayedSignals({
         config,
         eventBus,

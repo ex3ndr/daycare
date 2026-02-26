@@ -6,7 +6,7 @@ import { databaseSchemaMatches } from "./databaseSchemaMatches.js";
 
 describe("databaseSchemaMatches", () => {
     it("returns match for a migrated database", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             databaseMigrate(db);
 
@@ -21,7 +21,7 @@ describe("databaseSchemaMatches", () => {
     });
 
     it("reports mismatch details when schema deviates", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             databaseMigrate(db);
             db.exec("DROP INDEX idx_users_nametag");

@@ -16,7 +16,7 @@ describe("rlmSnapshotLoad", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-snapshot-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();

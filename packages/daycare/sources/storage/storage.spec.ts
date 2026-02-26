@@ -17,7 +17,7 @@ import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("Storage", () => {
     it("does not run migrations when built from an existing database instance", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             const storage = Storage.fromDatabase(db);
             const tables = storage.db
@@ -32,7 +32,7 @@ describe("Storage", () => {
     });
 
     it("opens with migrations and closes connection", () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         const tables = storage.db
             .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name ASC")
             .all() as Array<{ name?: string }>;
@@ -44,7 +44,7 @@ describe("Storage", () => {
     });
 
     it("resolves user by connector key under concurrent requests", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const results = await Promise.all(
                 Array.from({ length: 12 }).map(() => storage.resolveUserByConnectorKey("telegram:alice"))
@@ -67,7 +67,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -111,7 +111,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -151,7 +151,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();

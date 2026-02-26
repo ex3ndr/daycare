@@ -8,7 +8,7 @@ import { migration20260226RenameUsertagToNametag } from "./20260226_rename_usert
 
 describe("migration20260226RenameUsertagToNametag", () => {
     it("renames usertag column to nametag and recreates indexes/triggers", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -56,7 +56,7 @@ describe("migration20260226RenameUsertagToNametag", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);

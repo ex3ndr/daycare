@@ -7,7 +7,7 @@ import { migration20260224RenamePromptToCode } from "./20260224_rename_prompt_to
 
 describe("migration20260224AddTasksTable", () => {
     it("creates tasks table and adds task_id columns to trigger tables", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddTasks.up(db);

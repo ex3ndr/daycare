@@ -28,7 +28,7 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
         );
-        const storage = storageOpenTest(config.dbPath);
+        const storage = storageOpenTest();
         const agentId = "agent-app-1";
         const now = Date.now();
         await storage.agents.create({
@@ -172,7 +172,7 @@ describe("appExecute", () => {
         });
         expect(Object.keys(item as Record<string, unknown>).sort()).toEqual(["context", "message", "type"]);
 
-        const updated = await agentStateRead(config, contextForAgent({ userId: "user-1", agentId }));
+        const updated = await agentStateRead(storage, contextForAgent({ userId: "user-1", agentId }));
         expect(updated?.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));
         expect(updated?.permissions.writeDirs).toEqual([path.join(rootDir, "apps", "github-reviewer", "data")]);
         storage.db.close();
@@ -183,7 +183,7 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
         );
-        const storage = storageOpenTest(config.dbPath);
+        const storage = storageOpenTest();
         const agentId = "agent-app-2";
         const now = Date.now();
         await storage.agents.create({

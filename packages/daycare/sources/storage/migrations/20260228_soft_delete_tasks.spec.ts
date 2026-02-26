@@ -6,7 +6,7 @@ import { migration20260228SoftDeleteTasks } from "./20260228_soft_delete_tasks.j
 
 describe("migration20260228SoftDeleteTasks", () => {
     it("adds deleted_at to tasks when missing", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks (
@@ -30,7 +30,7 @@ describe("migration20260228SoftDeleteTasks", () => {
     });
 
     it("is idempotent when deleted_at already exists", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks_cron (

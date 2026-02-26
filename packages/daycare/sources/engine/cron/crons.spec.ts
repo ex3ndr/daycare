@@ -26,7 +26,7 @@ describe("Crons", () => {
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
             postAndAwait: vi.fn(async () => ({ status: "completed" }))
         } as unknown as CronsOptions["agentSystem"];
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const crons = new Crons({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
@@ -67,7 +67,7 @@ describe("Crons", () => {
             postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
         };
         const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const crons = new Crons({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),

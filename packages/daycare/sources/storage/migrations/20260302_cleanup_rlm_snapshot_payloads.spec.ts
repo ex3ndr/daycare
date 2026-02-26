@@ -5,7 +5,7 @@ import { migration20260302CleanupRlmSnapshotPayloads } from "./20260302_cleanup_
 
 describe("migration20260302CleanupRlmSnapshotPayloads", () => {
     it("removes only legacy inline snapshot payloads while keeping rows", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE session_history (
@@ -63,7 +63,7 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE session_history (
@@ -95,7 +95,7 @@ describe("migration20260302CleanupRlmSnapshotPayloads", () => {
     });
 
     it("processes large history in batches", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE session_history (

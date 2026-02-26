@@ -11,7 +11,7 @@ describe("databaseOpenTest", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-db-open-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             const foreignKeys = db.prepare("PRAGMA foreign_keys").get() as { foreign_keys?: number } | undefined;
             db.close();
 

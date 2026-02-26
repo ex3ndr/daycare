@@ -9,7 +9,7 @@ const toolCall = { id: "tool-1", name: "friend_send" };
 
 describe("friendSendToolBuild", () => {
     it("sends a friend message to the target user's frontend agents", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -39,7 +39,7 @@ describe("friendSendToolBuild", () => {
     });
 
     it("fails when users are not friends", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -62,7 +62,7 @@ describe("friendSendToolBuild", () => {
     });
 
     it("sends to a shared subuser gateway agent", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -116,7 +116,7 @@ describe("friendSendToolBuild", () => {
     });
 
     it("fails when subuser share is not active", async () => {
-        const storage = storageOpenTest(":memory:");
+        const storage = storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });

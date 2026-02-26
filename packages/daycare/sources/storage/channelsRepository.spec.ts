@@ -5,7 +5,7 @@ import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("ChannelsRepository", () => {
     it("supports channel CRUD with user filters", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new ChannelsRepository(db);
@@ -46,7 +46,7 @@ describe("ChannelsRepository", () => {
     });
 
     it("supports member operations", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new ChannelsRepository(db);

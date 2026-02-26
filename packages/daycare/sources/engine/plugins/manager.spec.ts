@@ -65,7 +65,7 @@ function createManager(
             }
         ]
     ]);
-    const storage = storageOpenTest(path.join(rootDir, "daycare.db"));
+    const storage = storageOpenTest();
     const processesRuntime =
         processes ??
         new Processes(rootDir, getLogger("test.processes"), {

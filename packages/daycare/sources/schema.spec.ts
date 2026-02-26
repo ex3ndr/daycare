@@ -5,7 +5,7 @@ import { migrationRun } from "./storage/migrations/migrationRun.js";
 
 describe("schema", () => {
     it("keeps critical table and index invariants after migrations", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migrationRun(db);
 

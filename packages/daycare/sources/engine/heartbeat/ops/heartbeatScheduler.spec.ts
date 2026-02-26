@@ -11,7 +11,7 @@ import { HeartbeatScheduler } from "./heartbeatScheduler.js";
 
 async function createTempScheduler() {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-heartbeat-"));
-    const storage = storageOpenTest(":memory:");
+    const storage = storageOpenTest();
     return { dir, storage };
 }
 

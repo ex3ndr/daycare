@@ -6,7 +6,7 @@ import { migration20260222AddUsertagConnections } from "./20260222_add_usertag_c
 
 describe("migration20260222AddUsertagConnections", () => {
     it("adds usertag column and connections table", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -29,7 +29,7 @@ describe("migration20260222AddUsertagConnections", () => {
     });
 
     it("creates expected indexes", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);
@@ -45,7 +45,7 @@ describe("migration20260222AddUsertagConnections", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUsertagConnections.up(db);

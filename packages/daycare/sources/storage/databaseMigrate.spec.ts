@@ -5,7 +5,7 @@ import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("databaseMigrate", () => {
     it("applies pending migrations", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             const applied = databaseMigrate(db);
             expect(applied.length).toBeGreaterThan(0);

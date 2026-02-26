@@ -6,7 +6,7 @@ import { ProcessesRepository } from "./processesRepository.js";
 
 describe("ProcessesRepository", () => {
     it("supports CRUD and filtering by user and owner", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new ProcessesRepository(db);

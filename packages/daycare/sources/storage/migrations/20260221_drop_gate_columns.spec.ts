@@ -5,7 +5,7 @@ import { migration20260221DropGateColumns } from "./20260221_drop_gate_columns.j
 
 describe("migration20260221DropGateColumns", () => {
     it("drops gate columns when present", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks_cron (
@@ -32,7 +32,7 @@ describe("migration20260221DropGateColumns", () => {
     });
 
     it("is a no-op when gate columns are already absent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks_cron (

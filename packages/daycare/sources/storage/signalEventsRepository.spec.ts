@@ -6,7 +6,7 @@ import { SignalEventsRepository } from "./signalEventsRepository.js";
 
 describe("SignalEventsRepository", () => {
     it("creates records and filters by user/type", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new SignalEventsRepository(db);
@@ -52,7 +52,7 @@ describe("SignalEventsRepository", () => {
     });
 
     it("returns recent records with limit normalization", async () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             schemaCreate(db);
             const repository = new SignalEventsRepository(db);

@@ -17,7 +17,7 @@ describe("CronScheduler", () => {
     beforeEach(async () => {
         vi.useFakeTimers();
         tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "cron-scheduler-test-"));
-        storage = storageOpenTest(":memory:");
+        storage = storageOpenTest();
     });
 
     afterEach(async () => {

@@ -13,7 +13,7 @@ describe("migrationPending", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             const pending = migrationPending(db, migrations);
             db.close();
 
@@ -27,7 +27,7 @@ describe("migrationPending", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-pending-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)");
             const firstMigration = migrations[0];
             if (!firstMigration) {

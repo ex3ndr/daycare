@@ -9,7 +9,7 @@ import { migration20260220UsersBootstrap } from "./20260220_users_bootstrap.js";
 
 describe("migration20260220UsersBootstrap", () => {
     it("creates one owner user when agents table is empty", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);
@@ -31,7 +31,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 
     it("deduplicates connector identities and assigns shared user_id", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             agentInsert(db, {
@@ -77,7 +77,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 
     it("creates one user per connector identity and marks earliest as owner", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             agentInsert(db, {
@@ -125,7 +125,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 
     it("assigns owner user_id to non-user agents", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             agentInsert(db, {

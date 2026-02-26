@@ -35,7 +35,7 @@ describe("gemini-media plugin", () => {
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
         const auth = new AuthStore(config);
         await auth.setApiKey("google", "test-google-key");
-        const storage = storageOpenTest(path.join(dir, "daycare.db"));
+        const storage = storageOpenTest();
 
         const registrationState: {
             provider: RegisteredProvider | null;
@@ -225,7 +225,7 @@ describe("gemini-media plugin", () => {
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
         const auth = new AuthStore(config);
         await auth.setApiKey("google", "test-google-key");
-        const storage = storageOpenTest(path.join(dir, "daycare.db"));
+        const storage = storageOpenTest();
 
         const registrationState: {
             provider: RegisteredProvider | null;

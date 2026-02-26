@@ -5,7 +5,7 @@ import { migration20260220AddTasks } from "./20260220_add_tasks.js";
 
 describe("migration20260220AddTasks", () => {
     it("creates tasks tables with expected columns", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddTasks.up(db);
 

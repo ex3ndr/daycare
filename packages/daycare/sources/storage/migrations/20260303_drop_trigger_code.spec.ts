@@ -5,7 +5,7 @@ import { migration20260303DropTriggerCode } from "./20260303_drop_trigger_code.j
 
 describe("migration20260303DropTriggerCode", () => {
     it("removes code columns from trigger tables while keeping trigger metadata", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks (

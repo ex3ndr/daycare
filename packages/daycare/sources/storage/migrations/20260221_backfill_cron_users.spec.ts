@@ -10,7 +10,7 @@ import { migration20260221BackfillCronUsers } from "./20260221_backfill_cron_use
 
 describe("migration20260221BackfillCronUsers", () => {
     it("fills missing cron user_id with owner user id", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddUsers.up(db);

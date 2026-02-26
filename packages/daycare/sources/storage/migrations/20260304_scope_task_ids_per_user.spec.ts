@@ -4,7 +4,7 @@ import { migration20260304ScopeTaskIdsPerUser } from "./20260304_scope_task_ids_
 
 describe("migration20260304ScopeTaskIdsPerUser", () => {
     it("scopes task and trigger ids by user", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks (
@@ -109,7 +109,7 @@ describe("migration20260304ScopeTaskIdsPerUser", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             db.exec(`
                 CREATE TABLE tasks (

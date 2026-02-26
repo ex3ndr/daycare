@@ -26,7 +26,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
             const context = contextBuild({
@@ -47,11 +47,11 @@ describe("permanentAgentToolBuild", () => {
                 toolCall
             );
 
-            const agents = await agentPermanentList(config);
+            const agents = await agentPermanentList(storage);
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created).not.toBeNull();
             const state = await agentStateRead(
-                config,
+                storage,
                 contextForAgent({ userId: "creator-user", agentId: created!.agentId })
             );
             expect(state?.permissions.writeDirs).toContain(
@@ -74,7 +74,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             const tool = permanentAgentToolBuild();
             const context = contextBuild({
                 config: { current: config },
@@ -94,7 +94,7 @@ describe("permanentAgentToolBuild", () => {
                 toolCall
             );
 
-            const agents = await agentPermanentList(config);
+            const agents = await agentPermanentList(storage);
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created?.descriptor.username).toBe("opsbot");
             storage.db.close();
@@ -112,7 +112,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpenTest(config.dbPath);
+            const storage = storageOpenTest();
             const tool = permanentAgentToolBuild();
             const context = {
                 ...contextBuild({

@@ -5,7 +5,7 @@ import { migration20260301AddTokenStats } from "./20260301_add_token_stats.js";
 
 describe("migration20260301AddTokenStats", () => {
     it("creates token_stats_hourly table and indexes", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260301AddTokenStats.up(db);
 
@@ -34,7 +34,7 @@ describe("migration20260301AddTokenStats", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             expect(() => migration20260301AddTokenStats.up(db)).not.toThrow();
             expect(() => migration20260301AddTokenStats.up(db)).not.toThrow();

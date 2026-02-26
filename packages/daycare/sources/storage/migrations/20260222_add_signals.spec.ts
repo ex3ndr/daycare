@@ -5,7 +5,7 @@ import { migration20260222AddSignals } from "./20260222_add_signals.js";
 
 describe("migration20260222AddSignals", () => {
     it("creates signal tables with expected columns", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260222AddSignals.up(db);
 

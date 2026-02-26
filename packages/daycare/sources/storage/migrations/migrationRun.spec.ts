@@ -13,7 +13,7 @@ describe("migrationRun", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-run-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             const firstApplied = migrationRun(db);
             const secondApplied = migrationRun(db);
 
@@ -44,7 +44,7 @@ describe("migrationRun", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-run-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
-            const db = databaseOpenTest(dbPath);
+            const db = databaseOpenTest();
             migrationRun(db);
             db.exec("PRAGMA foreign_keys = OFF");
             db.prepare(

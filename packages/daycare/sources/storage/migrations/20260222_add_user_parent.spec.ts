@@ -6,7 +6,7 @@ import { migration20260222AddUserParent } from "./20260222_add_user_parent.js";
 
 describe("migration20260222AddUserParent", () => {
     it("adds parent_user_id and name columns to users", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUserParent.up(db);
@@ -21,7 +21,7 @@ describe("migration20260222AddUserParent", () => {
     });
 
     it("creates partial index on parent_user_id", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUserParent.up(db);
@@ -34,7 +34,7 @@ describe("migration20260222AddUserParent", () => {
     });
 
     it("is idempotent", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260220AddUsers.up(db);
             migration20260222AddUserParent.up(db);

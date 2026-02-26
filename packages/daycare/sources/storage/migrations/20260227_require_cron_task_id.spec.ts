@@ -9,7 +9,7 @@ import { migration20260227RequireCronTaskId } from "./20260227_require_cron_task
 
 describe("migration20260227RequireCronTaskId", () => {
     it("drops task_uid and enforces NOT NULL task_id", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddTasks.up(db);
@@ -68,7 +68,7 @@ describe("migration20260227RequireCronTaskId", () => {
     });
 
     it("fails when a trigger has no task_id", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260219Initial.up(db);
             migration20260220AddTasks.up(db);

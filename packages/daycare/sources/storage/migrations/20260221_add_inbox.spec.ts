@@ -5,7 +5,7 @@ import { migration20260221AddInbox } from "./20260221_add_inbox.js";
 
 describe("migration20260221AddInbox", () => {
     it("creates inbox table and agent ordering index", () => {
-        const db = databaseOpenTest(":memory:");
+        const db = databaseOpenTest();
         try {
             migration20260221AddInbox.up(db);
 

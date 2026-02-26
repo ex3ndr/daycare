@@ -10,7 +10,7 @@ const permissions: SessionPermissions = {
 };
 
 async function createTestStorage() {
-    const storage = storageOpenTest(":memory:");
+    const storage = storageOpenTest();
     const owner = (await storage.users.findMany())[0];
     if (!owner) {
         throw new Error("Owner user missing");

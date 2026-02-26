@@ -45,7 +45,7 @@ describeIf("nano-banana-pro image generation", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const auth = new AuthStore(config);
             await auth.setApiKey("nano-banana-pro", apiKey);
-            const storage = storageOpenTest(path.join(dir, "daycare.db"));
+            const storage = storageOpenTest();
 
             const fileStore = new FileFolder(path.join(config.dataDir, "files"));
             let registeredProvider: ImageGenerationProvider | null = null;
