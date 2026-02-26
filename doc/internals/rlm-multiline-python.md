@@ -13,6 +13,7 @@ Updated prompt guidance for native `run_python` tool-calling and existing VM exe
 - History-to-context restore now replays persisted assistant `toolCall` blocks and matching `toolResult` blocks.
 - If restore finds `rlm_start` without a snapshot, it appends synthetic `rlm_complete` error and still resumes inference.
 - Pending-phase recovery reuses standard provider selection (role/model override), not an empty override list.
+- Recovery is only triggered from the `restore` inbox item, which is enqueued at the front and processed first.
 - RLM history records (`rlm_start`, `rlm_tool_call`, `rlm_tool_result`, `rlm_complete`) remain intact.
 - Unsupported tool calls in this mode return immediate tool-result errors so inference can recover and continue.
 
@@ -35,7 +36,7 @@ flowchart TD
   A --> M[Unsupported tool calls]
   M --> N[Push toolResult error]
   N --> L
-  B --> O[On restore: rebuild pending blocks from assistant_message.toolCalls]
+  B --> O[On restore inbox item (processed first): rebuild pending blocks from assistant_message.toolCalls]
   O --> F
   O --> P[Replay assistant toolCall + toolResult into context]
   O --> Q[No snapshot: append synthetic rlm_complete error]

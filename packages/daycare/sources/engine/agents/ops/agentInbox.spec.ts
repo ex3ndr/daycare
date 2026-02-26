@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AgentInbox } from "./agentInbox.js";
 
 const buildReset = () => ({ type: "reset" as const });
+const buildRestore = () => ({ type: "restore" as const });
 const buildMessage = (text: string, messageId: string) => ({
     type: "message" as const,
     message: { text },
@@ -98,6 +99,15 @@ describe("AgentInbox", () => {
         expect(inbox.size()).toBe(2);
         expect(first.id).toBe("persisted-1");
         expect(second.id).toBe("persisted-2");
+    });
+
+    it("can prioritize restore entry to the front of the queue", async () => {
+        const inbox = new AgentInbox("agent-11");
+        inbox.post(buildReset());
+        inbox.post(buildRestore(), null, { front: true });
+
+        const first = await inbox.next();
+        expect(first.item.type).toBe("restore");
     });
 
     describe("steering", () => {

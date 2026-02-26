@@ -56,7 +56,11 @@ export class AgentInbox {
             waiter(entry);
             return entry;
         }
-        this.items.push(entry);
+        if (options?.front) {
+            this.items.unshift(entry);
+        } else {
+            this.items.push(entry);
+        }
         return entry;
     }
 
@@ -129,6 +133,7 @@ type AgentInboxPostOptions = {
     id?: string;
     postedAt?: number;
     merge?: boolean;
+    front?: boolean;
 };
 
 function messageItemMerge(left: AgentInboxMessage, right: AgentInboxMessage): AgentInboxMessage {

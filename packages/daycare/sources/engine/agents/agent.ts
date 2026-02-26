@@ -411,8 +411,6 @@ export class Agent {
             files
         };
 
-        await this.completePendingToolCalls("session_crashed");
-
         const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
         const roleKey = agentDescriptorRoleResolve(this.descriptor);
         const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;

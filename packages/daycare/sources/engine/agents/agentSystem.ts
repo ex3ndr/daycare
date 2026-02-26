@@ -217,7 +217,7 @@ export class AgentSystem {
                 agent,
                 inbox
             });
-            registered.inbox.post({ type: "restore" });
+            registered.inbox.post({ type: "restore" }, null, { front: true });
             await this.replayPersistedInboxItems(registered);
             logger.info({ agentId }, "restore: Agent restored");
             this.startEntryIfRunning(registered);
@@ -995,7 +995,7 @@ export class AgentSystem {
             agent,
             inbox
         });
-        entry.inbox.post({ type: "restore" });
+        entry.inbox.post({ type: "restore" }, null, { front: true });
         await this.replayPersistedInboxItems(entry);
         this.startEntryIfRunning(entry);
         return entry;
