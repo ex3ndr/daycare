@@ -760,6 +760,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                     at,
                                     snapshotDump
                                 );
+                                if (!snapshotId) {
+                                    return;
+                                }
                                 await appendHistoryRecord({
                                     type: "rlm_tool_call",
                                     at,
@@ -1068,19 +1071,23 @@ async function rlmSnapshotIdCreate(
     agentId: string,
     at: number,
     snapshotDump: Uint8Array
-): Promise<string> {
+): Promise<string | null> {
     const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
     const storage = (agentSystem as { storage?: unknown }).storage;
     if (!config || !storage) {
-        throw new Error("Python VM crashed: snapshot storage is unavailable.");
+        return null;
     }
-    return rlmSnapshotCreate({
-        storage: storage as AgentSystem["storage"],
-        config: config as AgentSystem["config"]["current"],
-        agentId,
-        at,
-        snapshotDump: rlmSnapshotEncode(snapshotDump)
-    });
+    try {
+        return await rlmSnapshotCreate({
+            storage: storage as AgentSystem["storage"],
+            config: config as AgentSystem["config"]["current"],
+            agentId,
+            at,
+            snapshotDump: rlmSnapshotEncode(snapshotDump)
+        });
+    } catch {
+        return null;
+    }
 }
 
 // Remove NO_MESSAGE text blocks so the sentinel never re-enters future model context.

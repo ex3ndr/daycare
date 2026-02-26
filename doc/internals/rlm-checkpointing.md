@@ -104,10 +104,12 @@ sequenceDiagram
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).
 - Read/write path consistency: both writer and restore reader use `rlmSnapshotCreate(...)` / `rlmSnapshotLoad(...)`.
 
-## Strict Snapshot Contract
+## Snapshot Creation Contract
 
-When a checkpoint history record is written, `snapshotId` must always be a cuid2 id that points to a file.
-Inline base64 fallback is not allowed anymore.
+Checkpoint creation is best-effort.
+When snapshot persistence is available, `snapshotId` is a cuid2 id that points to a file.
+If persistence is unavailable, execution continues and the `rlm_tool_call` checkpoint record is skipped.
+Inline base64 fallback is not allowed.
 
 ```mermaid
 flowchart TD
@@ -115,7 +117,7 @@ flowchart TD
     B -->|No| C[Skip checkpoint persistence]
     B -->|Yes| D{config + storage + agentId present?}
     D -->|Yes| E[Write snapshot file and store cuid2 snapshotId]
-    D -->|No| F[Throw error and fail execution]
+    D -->|No| F[Skip checkpoint record and continue]
 ```
 
 ## Migration Strategy for Large Databases

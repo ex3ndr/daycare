@@ -132,6 +132,9 @@ export async function rlmExecute(
                     return;
                 }
                 const snapshotId = await rlmSnapshotIdResolve(context, at, snapshotDump);
+                if (!snapshotId) {
+                    return;
+                }
                 await historyCallback({
                     type: "rlm_tool_call",
                     at,
@@ -209,18 +212,26 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
     return result;
 }
 
-async function rlmSnapshotIdResolve(context: ToolExecutionContext, at: number, snapshotDump: Uint8Array): Promise<string> {
+async function rlmSnapshotIdResolve(
+    context: ToolExecutionContext,
+    at: number,
+    snapshotDump: Uint8Array
+): Promise<string | null> {
     const config = context.agentSystem?.config?.current;
     const storage = (context.agentSystem as { storage?: unknown } | null | undefined)?.storage;
     const agentId = context.ctx?.agentId;
     if (!config || !storage || typeof agentId !== "string" || agentId.length === 0) {
-        throw new Error("Snapshot persistence is unavailable for checkpoint history.");
+        return null;
     }
-    return rlmSnapshotCreate({
-        storage: storage as ToolExecutionContext["agentSystem"]["storage"],
-        config,
-        agentId,
-        at,
-        snapshotDump: rlmSnapshotEncode(snapshotDump)
-    });
+    try {
+        return await rlmSnapshotCreate({
+            storage: storage as ToolExecutionContext["agentSystem"]["storage"],
+            config,
+            agentId,
+            at,
+            snapshotDump: rlmSnapshotEncode(snapshotDump)
+        });
+    } catch {
+        return null;
+    }
 }
