@@ -753,12 +753,21 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 if (!appendHistoryRecord) {
                                     return;
                                 }
-                                const snapshotId = await rlmSnapshotIdCreate(
-                                    agentSystem,
-                                    agent.ctx.agentId,
-                                    agent.state.activeSessionId ?? null,
-                                    snapshotDump
-                                );
+                                const sessionId = agent.state.activeSessionId;
+                                if (!sessionId) {
+                                    return;
+                                }
+                                let snapshotId: string | null = null;
+                                try {
+                                    snapshotId = await rlmSnapshotCreate({
+                                        config: agentSystem.config.current,
+                                        agentId: agent.ctx.agentId,
+                                        sessionId,
+                                        snapshotDump: Buffer.from(snapshotDump).toString("base64")
+                                    });
+                                } catch {
+                                    snapshotId = null;
+                                }
                                 if (!snapshotId) {
                                     return;
                                 }
@@ -1063,27 +1072,6 @@ async function historyRecordAppend(
 ): Promise<void> {
     historyRecords.push(record);
     await appendHistoryRecord?.(record);
-}
-
-async function rlmSnapshotIdCreate(
-    agentSystem: AgentSystem,
-    agentId: string,
-    sessionId: string | null,
-    snapshotDump: Uint8Array
-): Promise<string | null> {
-    if (!sessionId) {
-        return null;
-    }
-    try {
-        return await rlmSnapshotCreate({
-            config: agentSystem.config.current,
-            agentId,
-            sessionId,
-            snapshotDump: Buffer.from(snapshotDump).toString("base64")
-        });
-    } catch {
-        return null;
-    }
 }
 
 // Remove NO_MESSAGE text blocks so the sentinel never re-enters future model context.
