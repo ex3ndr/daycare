@@ -4,6 +4,8 @@ import { createId } from "@paralleldrive/cuid2";
 import type { AgentHistoryRecord, AgentMessage, MessageContext } from "@/types";
 import { stringTruncateHeadTail } from "../../../utils/stringTruncateHeadTail.js";
 import { messageBuildUser } from "../../messages/messageBuildUser.js";
+import { messageContentClone } from "../../messages/messageContentClone.js";
+import { messageContentExtractToolCalls } from "../../messages/messageContentExtractToolCalls.js";
 import { messageFormatIncoming } from "../../messages/messageFormatIncoming.js";
 import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 
@@ -64,15 +66,9 @@ export async function agentHistoryContext(
             messages.push(await messageBuildUser(userEntry));
         }
         if (record.type === "assistant_message") {
-            const content: Extract<Context["messages"][number], { role: "assistant" }>["content"] = [];
-            if (record.text.length > 0) {
-                content.push({ type: "text", text: record.text });
-            }
-            if (record.toolCalls && record.toolCalls.length > 0) {
-                for (const toolCall of record.toolCalls) {
-                    assistantToolCallIds.add(toolCall.id);
-                    content.push(toolCall);
-                }
+            const content = messageContentClone(record.content);
+            for (const toolCall of messageContentExtractToolCalls(content)) {
+                assistantToolCallIds.add(toolCall.id);
             }
             messages.push({
                 role: "assistant",

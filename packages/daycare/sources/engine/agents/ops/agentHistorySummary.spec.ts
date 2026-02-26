@@ -31,8 +31,7 @@ describe("agentHistorySummary", () => {
             buildRecord({
                 type: "assistant_message",
                 at: 120,
-                text: "hello",
-                files: [],
+                content: [{ type: "text", text: "hello" }],
                 tokens: null
             }),
             buildRecord({

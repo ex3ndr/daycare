@@ -1,4 +1,4 @@
-import type { Context } from "@mariozechner/pi-ai";
+import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 
 import type { ConnectorMessage, FileReference, MessageContext, SessionPermissions, Signal } from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
@@ -26,11 +26,11 @@ export type AgentTokenEntry = {
     size: AgentTokenSnapshotSize;
 };
 
+export type AgentAssistantContent = AssistantMessage["content"];
+
 export type AgentTokenStats = Record<string, Record<string, AgentTokenSize>>;
 
-export type AgentModelOverride =
-    | { type: "selector"; value: "small" | "normal" | "big" }
-    | { type: "model"; value: string };
+export type AgentModelOverride = { type: "selector"; value: "small" | "normal" | "large" };
 
 export type AgentState = {
     context: Context;
@@ -109,16 +109,8 @@ export type AgentHistoryRecord =
     | {
           type: "assistant_message";
           at: number;
-          text: string;
-          files: FileReference[];
+          content: AgentAssistantContent;
           tokens: AgentTokenEntry | null;
-          toolCalls?: Array<{
-              type: "toolCall";
-              id: string;
-              name: string;
-              arguments: Record<string, unknown>;
-              thoughtSignature?: string;
-          }>;
       }
     | AgentHistoryRlmStartRecord
     | AgentHistoryRlmToolCallRecord

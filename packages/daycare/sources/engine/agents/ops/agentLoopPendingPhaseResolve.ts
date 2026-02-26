@@ -1,4 +1,6 @@
 import type { AgentHistoryRecord, AgentHistoryRlmStartRecord, AgentHistoryRlmToolCallRecord } from "@/types";
+import { messageContentExtractText } from "../../messages/messageContentExtractText.js";
+import { messageContentExtractToolCalls } from "../../messages/messageContentExtractToolCalls.js";
 import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 
 type AssistantRunPythonContext = {
@@ -114,28 +116,25 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
 }
 
 function latestAssistantRunPythonResolve(records: AgentHistoryRecord[]): AssistantRunPythonContext | null {
-    const assistantTextByAt = new Map<number, string>();
+    const assistantAtsWithRecord = new Set<number>();
     const assistantAts: number[] = [];
     const runPythonByAssistantAt = new Map<number, AssistantRunPythonContext>();
     for (const record of records) {
         if (record.type === "assistant_message") {
-            assistantTextByAt.set(record.at, record.text);
+            assistantAtsWithRecord.add(record.at);
             assistantAts.push(record.at);
-            if (record.toolCalls && record.toolCalls.length > 0) {
-                const runPythonCalls = runPythonCallsExtract(record.toolCalls);
-                if (runPythonCalls.length > 0) {
-                    runPythonByAssistantAt.set(record.at, {
-                        assistantAt: record.at,
-                        historyResponseText: record.text,
-                        blocks: runPythonCalls.map((call) => call.code),
-                        blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
-                    });
-                }
+            const runPythonCalls = runPythonCallsExtract(messageContentExtractToolCalls(record.content));
+            if (runPythonCalls.length > 0) {
+                runPythonByAssistantAt.set(record.at, {
+                    assistantAt: record.at,
+                    historyResponseText: messageContentExtractText(record.content),
+                    blocks: runPythonCalls.map((call) => call.code),
+                    blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
+                });
             }
             continue;
         }
-        if (record.type === "assistant_rewrite" && assistantTextByAt.has(record.assistantAt)) {
-            assistantTextByAt.set(record.assistantAt, record.text);
+        if (record.type === "assistant_rewrite" && assistantAtsWithRecord.has(record.assistantAt)) {
             const runPython = runPythonByAssistantAt.get(record.assistantAt);
             if (runPython) {
                 runPythonByAssistantAt.set(record.assistantAt, {
@@ -163,29 +162,26 @@ function assistantRunPythonForStart(
     startCode: string
 ): AssistantRunPythonContext | null {
     const candidates: AssistantRunPythonContext[] = [];
-    const assistantTextByAt = new Map<number, string>();
+    const assistantAtsWithRecord = new Set<number>();
     for (const record of records) {
         if (record.type === "assistant_message" && record.at <= startAt) {
-            assistantTextByAt.set(record.at, record.text);
-            if (record.toolCalls && record.toolCalls.length > 0) {
-                const runPythonCalls = runPythonCallsExtract(record.toolCalls);
-                if (runPythonCalls.length > 0) {
-                    candidates.push({
-                        assistantAt: record.at,
-                        historyResponseText: record.text,
-                        blocks: runPythonCalls.map((call) => call.code),
-                        blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
-                    });
-                }
+            assistantAtsWithRecord.add(record.at);
+            const runPythonCalls = runPythonCallsExtract(messageContentExtractToolCalls(record.content));
+            if (runPythonCalls.length > 0) {
+                candidates.push({
+                    assistantAt: record.at,
+                    historyResponseText: messageContentExtractText(record.content),
+                    blocks: runPythonCalls.map((call) => call.code),
+                    blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
+                });
             }
             continue;
         }
         if (
             record.type === "assistant_rewrite" &&
             record.assistantAt <= startAt &&
-            assistantTextByAt.has(record.assistantAt)
+            assistantAtsWithRecord.has(record.assistantAt)
         ) {
-            assistantTextByAt.set(record.assistantAt, record.text);
             for (let index = 0; index < candidates.length; index += 1) {
                 const candidate = candidates[index];
                 if (candidate && candidate.assistantAt === record.assistantAt) {

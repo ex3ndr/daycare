@@ -10,6 +10,7 @@ import { agentDescriptorRead } from "../../agents/ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "../../agents/ops/agentHistoryLoad.js";
 import { agentHistorySummary } from "../../agents/ops/agentHistorySummary.js";
 import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.js";
+import { messageContentExtractText } from "../../messages/messageContentExtractText.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 
 const schema = Type.Object(
@@ -231,7 +232,8 @@ function recordSummaryLineBuild(record: AgentHistoryRecord): string {
         return `${prefix} user_message text="${singleLine(stringTruncate(record.text, 700))}"`;
     }
     if (record.type === "assistant_message") {
-        return `${prefix} assistant_message text="${singleLine(stringTruncate(record.text, 700))}"`;
+        const assistantText = messageContentExtractText(record.content);
+        return `${prefix} assistant_message text="${singleLine(stringTruncate(assistantText, 700))}"`;
     }
     if (record.type === "assistant_rewrite") {
         return `${prefix} assistant_rewrite assistantAt=${record.assistantAt} reason=${record.reason} text="${singleLine(stringTruncate(record.text, 700))}"`;

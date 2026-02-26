@@ -18,8 +18,7 @@ describe("formatHistoryMessages", () => {
             {
                 type: "assistant_message",
                 at: 1000,
-                text: "Hi!",
-                files: [],
+                content: [{ type: "text", text: "Hi!" }],
                 tokens: null
             }
         ];
@@ -71,8 +70,7 @@ describe("formatHistoryMessages", () => {
             {
                 type: "assistant_message",
                 at: 1001,
-                text: "A",
-                files: [],
+                content: [{ type: "text", text: "A" }],
                 tokens: null
             }
         ];
@@ -86,8 +84,7 @@ describe("formatHistoryMessages", () => {
             {
                 type: "assistant_message",
                 at: 1001,
-                text: "Done.",
-                files: [],
+                content: [{ type: "text", text: "Done." }],
                 tokens: null
             }
         ];

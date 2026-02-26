@@ -137,10 +137,8 @@ describe("AgentSystem durable inboxes", () => {
             await first.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [{ type: "toolCall", id: "run-1", name: "run_python", arguments: { code: "wait(60)" } }]
+                content: [{ type: "toolCall", id: "run-1", name: "run_python", arguments: { code: "wait(60)" } }]
             });
             await first.storage.appendHistory(agentId, {
                 type: "rlm_start",

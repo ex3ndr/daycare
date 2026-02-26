@@ -1,4 +1,5 @@
 import type { AgentHistoryRecord } from "@/types";
+import { messageContentExtractText } from "../../../messages/messageContentExtractText.js";
 
 /**
  * Formats agent history records into a human-readable markdown transcript.
@@ -18,8 +19,9 @@ export function formatHistoryMessages(records: AgentHistoryRecord[], isForegroun
                 break;
 
             case "assistant_message":
-                if (record.text.length > 0) {
-                    parts.push(`## ${assistantLabel}\n\n${record.text}`);
+                const assistantText = messageContentExtractText(record.content);
+                if (assistantText.length > 0) {
+                    parts.push(`## ${assistantLabel}\n\n${assistantText}`);
                 }
                 break;
 

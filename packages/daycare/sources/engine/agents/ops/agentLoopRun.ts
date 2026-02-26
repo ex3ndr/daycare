@@ -12,6 +12,7 @@ import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
+import { messageContentClone } from "../../messages/messageContentClone.js";
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
@@ -546,10 +547,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         {
                             type: "assistant_message",
                             at: assistantRecordAt,
-                            text: responseText ?? "",
-                            files: [],
-                            tokens: tokensEntry,
-                            toolCalls: assistantToolCalls.length > 0 ? assistantToolCalls : undefined
+                            content: messageContentClone(response.message.content),
+                            tokens: tokensEntry
                         },
                         appendHistoryRecord
                     );

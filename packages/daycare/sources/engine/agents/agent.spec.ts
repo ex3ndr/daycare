@@ -1007,10 +1007,8 @@ describe("Agent", () => {
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [
+                content: [
                     { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
                 ]
             });
@@ -1193,10 +1191,8 @@ describe("Agent", () => {
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [
+                content: [
                     { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
                 ]
             });
@@ -1313,10 +1309,8 @@ describe("Agent", () => {
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [
+                content: [
                     { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
                 ]
             });
@@ -1462,8 +1456,7 @@ describe("Agent", () => {
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
                 at: startedAt - 1,
-                text: "<run_python>wait(300)</run_python>",
-                files: [],
+                content: [{ type: "text", text: "<run_python>wait(300)</run_python>" }],
                 tokens: null
             });
             await agentSystem.storage.appendHistory(agentId, {

@@ -20,7 +20,7 @@ function estimateRecordSymbols(record: AgentHistoryRecord): number {
         return record.text.length + estimateFileSymbols(record.files);
     }
     if (record.type === "assistant_message") {
-        return record.text.length + estimateFileSymbols(record.files);
+        return estimateAssistantContentSymbols(record.content);
     }
     return 0;
 }
@@ -32,6 +32,29 @@ function estimateFileSymbols(files: FileReference[]): number {
 function estimateFileSymbol(file: FileReference): number {
     if (file.mimeType.startsWith("image/")) {
         return IMAGE_SYMBOLS_ESTIMATE;
+    }
+    return 0;
+}
+
+function estimateAssistantContentSymbols(record: Extract<AgentHistoryRecord, { type: "assistant_message" }>["content"]): number {
+    return record.reduce((total, block) => total + estimateAssistantBlockSymbols(block), 0);
+}
+
+function estimateAssistantBlockSymbols(
+    block: Extract<AgentHistoryRecord, { type: "assistant_message" }>["content"][number]
+): number {
+    if (block.type === "text") {
+        return block.text.length;
+    }
+    if (block.type === "thinking") {
+        return block.thinking.length;
+    }
+    if (block.type === "toolCall") {
+        try {
+            return JSON.stringify(block.arguments)?.length ?? 0;
+        } catch {
+            return 0;
+        }
     }
     return 0;
 }

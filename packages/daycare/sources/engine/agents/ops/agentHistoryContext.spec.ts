@@ -10,8 +10,7 @@ describe("agentHistoryContext", () => {
             {
                 type: "assistant_message",
                 at: 4,
-                text: "Working on it",
-                files: [],
+                content: [{ type: "text", text: "Working on it" }],
                 tokens: null
             },
             {
@@ -62,10 +61,8 @@ describe("agentHistoryContext", () => {
             {
                 type: "assistant_message",
                 at: 10,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [
+                content: [
                     {
                         type: "toolCall",
                         id: "tool-1",
@@ -129,8 +126,7 @@ describe("agentHistoryContext", () => {
             {
                 type: "assistant_message",
                 at: 2,
-                text: "before<run_python>echo()</run_python>",
-                files: [],
+                content: [{ type: "text", text: "before<run_python>echo()</run_python>" }],
                 tokens: null
             },
             {
@@ -159,15 +155,13 @@ describe("agentHistoryContext", () => {
             {
                 type: "assistant_message",
                 at: 10,
-                text: "first raw",
-                files: [],
+                content: [{ type: "text", text: "first raw" }],
                 tokens: null
             },
             {
                 type: "assistant_message",
                 at: 20,
-                text: "second untouched",
-                files: [],
+                content: [{ type: "text", text: "second untouched" }],
                 tokens: null
             },
             {

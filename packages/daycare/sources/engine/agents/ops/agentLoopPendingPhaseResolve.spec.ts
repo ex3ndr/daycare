@@ -14,10 +14,8 @@ describe("agentLoopPendingPhaseResolve", () => {
             {
                 type: "assistant_message",
                 at: 10,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('x')" } }]
+                content: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('x')" } }]
             }
         ];
 
@@ -38,10 +36,8 @@ describe("agentLoopPendingPhaseResolve", () => {
             {
                 type: "assistant_message",
                 at: 5,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [
+                content: [
                     { type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('a')" } },
                     { type: "toolCall", id: "tool-2", name: "run_python", arguments: { code: "echo('b')" } }
                 ]
@@ -83,10 +79,8 @@ describe("agentLoopPendingPhaseResolve", () => {
             {
                 type: "assistant_message",
                 at: 5,
-                text: "",
-                files: [],
                 tokens: null,
-                toolCalls: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('a')" } }]
+                content: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('a')" } }]
             },
             {
                 type: "rlm_start",

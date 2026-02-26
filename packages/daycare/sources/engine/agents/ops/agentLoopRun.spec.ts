@@ -63,7 +63,7 @@ describe("agentLoopRun", () => {
             (record): record is Extract<(typeof result.historyRecords)[number], { type: "assistant_message" }> =>
                 record.type === "assistant_message"
         );
-        expect(firstAssistant?.toolCalls).toEqual([
+        expect(firstAssistant?.content).toEqual([
             { type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "'step complete'" } }
         ]);
     });

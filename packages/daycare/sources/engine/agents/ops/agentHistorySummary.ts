@@ -1,4 +1,5 @@
 import type { AgentHistoryRecord } from "@/types";
+import { messageContentExtractText } from "../../messages/messageContentExtractText.js";
 
 type AgentHistoryRecordType = AgentHistoryRecord["type"];
 type AgentHistorySummaryCounts = Record<AgentHistoryRecordType, number>;
@@ -37,7 +38,7 @@ export function agentHistorySummary(records: AgentHistoryRecord[]): AgentHistory
             continue;
         }
         if (record.type === "assistant_message") {
-            lastAssistantMessage = record.text;
+            lastAssistantMessage = messageContentExtractText(record.content);
             continue;
         }
         if (record.type === "assistant_rewrite") {

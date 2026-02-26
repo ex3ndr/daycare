@@ -1,4 +1,5 @@
 import type { Context, ToolCall } from "@mariozechner/pi-ai";
+import { messageContentExtractToolCalls } from "./messageContentExtractToolCalls.js";
 
 /**
  * Extracts native tool-call blocks from an assistant message.
@@ -8,5 +9,5 @@ export function messageExtractToolCalls(message: Context["messages"][number]): T
     if (message.role !== "assistant") {
         return [];
     }
-    return message.content.filter((block): block is ToolCall => block.type === "toolCall");
+    return messageContentExtractToolCalls(message.content);
 }

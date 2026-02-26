@@ -13,8 +13,7 @@ describe("contextEstimateTokens", () => {
             {
                 type: "assistant_message",
                 at: 2,
-                text: assistantText,
-                files: [],
+                content: [{ type: "text", text: assistantText }],
                 tokens: null
             }
         ];
@@ -42,8 +41,7 @@ describe("contextEstimateTokens", () => {
         const assistant: AgentHistoryRecord = {
             type: "assistant_message",
             at: 2,
-            text: "ack",
-            files: [imageFile],
+            content: [{ type: "text", text: "ack" }],
             tokens: null
         };
 
