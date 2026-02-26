@@ -67,6 +67,13 @@ export type AgentHistoryRlmToolCallRecord = {
     toolArgs: unknown;
 };
 
+export type AgentHistoryRlmToolCallAppendRecord =
+    | AgentHistoryRlmToolCallRecord
+    | (Omit<AgentHistoryRlmToolCallRecord, "snapshotId"> & {
+          /** Serialized VM checkpoint payload, used only before persistence. */
+          snapshotDump: string;
+      });
+
 export type AgentHistoryRlmToolResultRecord = {
     type: "rlm_tool_result";
     at: number;
@@ -126,6 +133,10 @@ export type AgentHistoryRecord =
     | AgentHistoryRlmCompleteRecord
     | AgentHistoryAssistantRewriteRecord
     | { type: "note"; at: number; text: string };
+
+export type AgentHistoryAppendRecord =
+    | Exclude<AgentHistoryRecord, AgentHistoryRlmToolCallRecord>
+    | AgentHistoryRlmToolCallAppendRecord;
 
 export type AgentInboxItem =
     | {

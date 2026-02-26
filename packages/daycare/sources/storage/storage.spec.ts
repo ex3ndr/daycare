@@ -156,7 +156,7 @@ describe("Storage", () => {
                     type: "rlm_tool_call",
                     at: 10,
                     toolCallId: "tool-call-1",
-                    snapshotId: snapshotDump.toString("base64"),
+                    snapshotDump: snapshotDump.toString("base64"),
                     printOutput: [],
                     toolCallCount: 0,
                     toolName: "echo",

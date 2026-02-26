@@ -18,6 +18,9 @@ The outer assistant/tool protocol remains unchanged:
 
 RLM checkpoint records are internal and are skipped when rebuilding model context.
 
+At append time, the runtime emits a transient `snapshotDump` (base64) field for `rlm_tool_call`.
+`Storage.appendHistory()` writes that dump to disk and persists only cuid2 `snapshotId` in `session_history`.
+
 ## Normal Flow
 
 ```mermaid
@@ -99,3 +102,4 @@ sequenceDiagram
 - `vm_start` phase: re-parse `<run_python>` blocks from the latest `assistant_message` and continue from VM start.
 - `tool_call` phase: load the latest `rlm_tool_call.snapshotId` from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).
+- Read/write path consistency: both writer and restore reader use `agentSnapshotPathResolve(...)` to resolve the same file path.

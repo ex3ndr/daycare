@@ -1002,7 +1002,7 @@ describe("Agent", () => {
             const ctx = await contextForAgentIdRequire(agentSystem, agentId);
 
             const startedAt = Date.now();
-            const snapshotId = await pendingToolCallSnapshotBuild();
+            const snapshotDump = await pendingToolCallSnapshotBuild();
             const preamble = montyPreambleBuild([waitToolBuild()]);
             await agentSystem.storage.appendHistory(agentId, {
                 type: "assistant_message",
@@ -1025,7 +1025,7 @@ describe("Agent", () => {
                 type: "rlm_tool_call",
                 at: startedAt + 1,
                 toolCallId: "tool-call-1",
-                snapshotId,
+                snapshotDump,
                 printOutput: ["waiting..."],
                 toolCallCount: 2,
                 toolName: "wait",

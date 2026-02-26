@@ -2,9 +2,11 @@ import { access, mkdir, open } from "node:fs/promises";
 import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
-import type { AgentHistoryRecord } from "@/types";
+import type { AgentHistoryAppendRecord, AgentHistoryRecord, AgentHistoryRlmToolCallRecord } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
+import { agentSnapshotPathResolve } from "../engine/agents/ops/agentSnapshotPathResolve.js";
 import { AsyncLock } from "../util/lock.js";
+import { cuid2Is } from "../utils/cuid2Is.js";
 import { AgentsRepository } from "./agentsRepository.js";
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
 import { ChannelsRepository } from "./channelsRepository.js";
@@ -178,7 +180,7 @@ export class Storage {
         }
     }
 
-    async appendHistory(agentId: string, record: AgentHistoryRecord): Promise<void> {
+    async appendHistory(agentId: string, record: AgentHistoryAppendRecord): Promise<void> {
         const agent = await this.agents.findById(agentId);
         if (!agent) {
             throw new Error(`Agent not found for history append: ${agentId}`);
@@ -196,16 +198,21 @@ export class Storage {
             });
         }
 
-        let persistedRecord = record;
+        let persistedRecord = record as AgentHistoryRecord;
         let snapshotPath: string | null = null;
         if (record.type === "rlm_tool_call") {
             if (!this.agentsDir) {
                 throw new Error("Agent snapshot persistence requires a configured agentsDir.");
             }
-            const snapshotId = createId();
-            snapshotPath = storageSnapshotPath(this.agentsDir, agentId, sessionId, snapshotId);
-            await storageSnapshotWrite(snapshotPath, storageSnapshotDecode(record.snapshotId));
-            persistedRecord = { ...record, snapshotId };
+            const persisted = storageRlmToolCallPersistRecord({
+                record,
+                snapshotIdBuild: () => createId()
+            });
+            if (persisted.snapshotDump) {
+                snapshotPath = agentSnapshotPathResolve(this.agentsDir, agentId, sessionId, persisted.record.snapshotId);
+                await storageSnapshotWrite(snapshotPath, storageSnapshotDecode(persisted.snapshotDump));
+            }
+            persistedRecord = persisted.record;
         }
 
         await this.history.append(sessionId, persistedRecord);
@@ -256,12 +263,48 @@ function sqliteUniqueConstraintOnConnectorKeyIs(error: unknown): boolean {
     return sqliteUniqueConstraintErrorIs(error) && message.includes("user_connector_keys.connector_key");
 }
 
-function storageSnapshotPath(agentsDir: string, agentId: string, sessionId: string, snapshotId: string): string {
-    return path.join(agentsDir, agentId, "snapshots", sessionId, `${snapshotId}.bin`);
-}
-
 function storageSnapshotDecode(snapshotBase64: string): Uint8Array {
     return Buffer.from(snapshotBase64, "base64");
+}
+
+function storageRlmToolCallPersistRecord(options: {
+    record: Extract<AgentHistoryAppendRecord, { type: "rlm_tool_call" }>;
+    snapshotIdBuild: () => string;
+}): {
+    record: AgentHistoryRlmToolCallRecord;
+    snapshotDump: string | null;
+} {
+    const { record } = options;
+    if ("snapshotDump" in record) {
+        return {
+            record: {
+                type: "rlm_tool_call",
+                at: record.at,
+                toolCallId: record.toolCallId,
+                snapshotId: options.snapshotIdBuild(),
+                printOutput: record.printOutput,
+                toolCallCount: record.toolCallCount,
+                toolName: record.toolName,
+                toolArgs: record.toolArgs
+            },
+            snapshotDump: record.snapshotDump
+        };
+    }
+
+    if (cuid2Is(record.snapshotId)) {
+        return {
+            record,
+            snapshotDump: null
+        };
+    }
+
+    return {
+        record: {
+            ...record,
+            snapshotId: options.snapshotIdBuild()
+        },
+        snapshotDump: record.snapshotId
+    };
 }
 
 async function storageSnapshotWrite(snapshotPath: string, dump: Uint8Array): Promise<void> {

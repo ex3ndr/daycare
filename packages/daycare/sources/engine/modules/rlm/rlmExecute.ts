@@ -1,4 +1,6 @@
-import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
+import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
+
+import type { AgentHistoryAppendRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
@@ -23,7 +25,7 @@ export type RlmExecuteResult = {
     skipTurn?: boolean;
 };
 
-export type RlmHistoryCallback = (record: AgentHistoryRecord) => Promise<void>;
+export type RlmHistoryCallback = (record: AgentHistoryAppendRecord) => Promise<void>;
 
 export type RlmSteeringInfo = {
     text: string;
@@ -129,7 +131,7 @@ export async function rlmExecute(
                     type: "rlm_tool_call",
                     at,
                     toolCallId,
-                    snapshotId: rlmSnapshotEncode(snapshotDump),
+                    snapshotDump: rlmSnapshotEncode(snapshotDump),
                     printOutput: [...printOutput],
                     toolCallCount,
                     toolName,

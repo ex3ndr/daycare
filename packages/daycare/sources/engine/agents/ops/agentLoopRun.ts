@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
 
 import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
@@ -48,7 +47,8 @@ import type { AgentLoopPendingPhase } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
-import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
+import type { AgentHistoryAppendRecord, AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
+import { agentSnapshotPathResolve } from "./agentSnapshotPathResolve.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
 import { inferenceErrorAnthropicPromptOverflowTokensExtract } from "./inferenceErrorAnthropicPromptOverflowTokensExtract.js";
 import { tokensResolve } from "./tokensResolve.js";
@@ -76,7 +76,7 @@ type AgentLoopRunOptions = {
     providersForAgent: ProviderSettings[];
     logger: Logger;
     abortSignal?: AbortSignal;
-    appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
+    appendHistoryRecord?: (record: AgentHistoryAppendRecord) => Promise<void>;
     notifySubagentFailure: (reason: string, error?: unknown) => Promise<void>;
     initialPhase?: AgentLoopPendingPhase;
     stopAfterPendingPhase?: boolean;
@@ -756,7 +756,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                     type: "rlm_tool_call",
                                     at,
                                     toolCallId: blockState.toolCallId,
-                                    snapshotId: rlmSnapshotEncode(snapshotDump),
+                                    snapshotDump: rlmSnapshotEncode(snapshotDump),
                                     printOutput: currentPrintOutput,
                                     toolCallCount: currentToolCallCount,
                                     toolName,
@@ -1049,7 +1049,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
 async function historyRecordAppend(
     historyRecords: AgentHistoryRecord[],
     record: AgentHistoryRecord,
-    appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>
+    appendHistoryRecord?: (record: AgentHistoryAppendRecord) => Promise<void>
 ): Promise<void> {
     historyRecords.push(record);
     await appendHistoryRecord?.(record);
@@ -1153,7 +1153,8 @@ async function rlmSnapshotDumpLoad(
     if (!cuid2Is(snapshotId)) {
         throw new Error("Python VM crashed: checkpoint id is invalid.");
     }
-    const snapshotPath = path.join(agentsDir, agentId, "snapshots", sessionId, `${snapshotId}.bin`);
+    // Mirrors Storage.appendHistory() writer path via the same resolver.
+    const snapshotPath = agentSnapshotPathResolve(agentsDir, agentId, sessionId, snapshotId);
     try {
         return await readFile(snapshotPath);
     } catch (error) {
