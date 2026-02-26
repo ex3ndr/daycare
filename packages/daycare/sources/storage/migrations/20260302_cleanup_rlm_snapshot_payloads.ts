@@ -7,6 +7,7 @@ import { cuid2Is } from "../../utils/cuid2Is.js";
  */
 export const migration20260302CleanupRlmSnapshotPayloads: Migration = {
     name: "20260302_cleanup_rlm_snapshot_payloads",
+    inTransaction: false,
     up(db): void {
         const batchSize = 100;
         const selectBatch = db.prepare(
@@ -28,22 +29,29 @@ export const migration20260302CleanupRlmSnapshotPayloads: Migration = {
             if (rows.length === 0) {
                 return;
             }
-            for (const row of rows) {
-                lastId = row.id;
-                let parsed: Record<string, unknown> | null = null;
-                try {
-                    parsed = JSON.parse(row.data) as Record<string, unknown>;
-                } catch {
-                    continue;
+            db.exec("BEGIN");
+            try {
+                for (const row of rows) {
+                    lastId = row.id;
+                    let parsed: Record<string, unknown> | null = null;
+                    try {
+                        parsed = JSON.parse(row.data) as Record<string, unknown>;
+                    } catch {
+                        continue;
+                    }
+                    if (!parsed || typeof parsed !== "object") {
+                        continue;
+                    }
+                    const cleaned = migrationRlmToolCallPayloadCleanup(parsed);
+                    if (!cleaned.changed) {
+                        continue;
+                    }
+                    updateById.run(JSON.stringify(cleaned.record), row.id);
                 }
-                if (!parsed || typeof parsed !== "object") {
-                    continue;
-                }
-                const cleaned = migrationRlmToolCallPayloadCleanup(parsed);
-                if (!cleaned.changed) {
-                    continue;
-                }
-                updateById.run(JSON.stringify(cleaned.record), row.id);
+                db.exec("COMMIT");
+            } catch (error) {
+                db.exec("ROLLBACK");
+                throw error;
             }
         }
     }

@@ -18,6 +18,12 @@ export function migrationRun(db: DatabaseSync): string[] {
     const applied: string[] = [];
 
     for (const migration of pending) {
+        if (migration.inTransaction === false) {
+            migration.up(db);
+            db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(migration.name, Date.now());
+            applied.push(migration.name);
+            continue;
+        }
         db.exec("BEGIN");
         try {
             migration.up(db);

@@ -130,11 +130,11 @@ export async function rlmExecute(
                 if (!historyCallback) {
                     return;
                 }
-                let snapshotId: string | null = null;
                 const sessionId = context.agent?.state?.activeSessionId ?? null;
                 if (!sessionId) {
                     return;
                 }
+                let snapshotId = "";
                 try {
                     snapshotId = await rlmSnapshotSave({
                         config: context.agentSystem.config.current,
@@ -142,11 +142,17 @@ export async function rlmExecute(
                         sessionId,
                         snapshotDump: Buffer.from(snapshotDump).toString("base64")
                     });
-                } catch {
-                    snapshotId = null;
-                }
-                if (!snapshotId) {
-                    return;
+                } catch (error) {
+                    const message = `Python VM crashed: failed to persist checkpoint: ${errorMessageResolve(error)}`;
+                    await historyCallback({
+                        type: "rlm_tool_result",
+                        at: Date.now(),
+                        toolCallId,
+                        toolName,
+                        toolResult: `ToolError: ${message}`,
+                        toolIsError: true
+                    });
+                    throw new Error(message);
                 }
                 await historyCallback({
                     type: "rlm_tool_call",
@@ -223,4 +229,11 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         isError: false
     });
     return result;
+}
+
+function errorMessageResolve(error: unknown): string {
+    if (error instanceof Error && error.message.length > 0) {
+        return error.message;
+    }
+    return String(error);
 }

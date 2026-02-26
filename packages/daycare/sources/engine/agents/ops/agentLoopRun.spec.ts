@@ -131,6 +131,47 @@ describe("agentLoopRun", () => {
         expect(result.responseText).toBeNull();
     });
 
+    it("fails run_python when checkpoint save fails and records tool_result error", async () => {
+        const responses = [assistantMessageBuild("<run_python>echo('x')</run_python>"), assistantMessageBuild("<say>done</say>")];
+        const inferenceRouter = inferenceRouterBuild(responses);
+        const toolResolver = toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "ok"));
+        const historyRecords: Array<{
+            type: string;
+            toolIsError?: boolean;
+            toolResult?: string;
+        }> = [];
+        const options = optionsBuild({
+            connector: null,
+            inferenceRouter,
+            toolResolver
+        });
+        options.appendHistoryRecord = async (record) => {
+            historyRecords.push(record as (typeof historyRecords)[number]);
+        };
+        (
+            options.agent as unknown as {
+                state: { activeSessionId?: string };
+            }
+        ).state.activeSessionId = "session-1";
+        (
+            options.agentSystem as unknown as {
+                config: { current: { agentsDir?: string; dbPath?: string } };
+            }
+        ).config.current.agentsDir = "/dev/null";
+        (
+            options.agentSystem as unknown as {
+                config: { current: { agentsDir?: string; dbPath?: string } };
+            }
+        ).config.current.dbPath = ":memory:";
+
+        await agentLoopRun(options);
+
+        expect(historyRecords.some((record) => record.type === "rlm_tool_call")).toBe(false);
+        const toolResult = historyRecords.find((record) => record.type === "rlm_tool_result");
+        expect(toolResult?.toolIsError).toBe(true);
+        expect(toolResult?.toolResult).toContain("failed to persist checkpoint");
+    });
+
     it("completes run_python when a listed tool disappears before dispatch", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);

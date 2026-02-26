@@ -39,4 +39,30 @@ describe("migrationRun", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("reruns non-transactional snapshot cleanup migration with batched commits", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-migration-run-"));
+        const dbPath = path.join(dir, "daycare.db");
+        try {
+            const db = databaseOpen(dbPath);
+            migrationRun(db);
+            db.exec("PRAGMA foreign_keys = OFF");
+            db.prepare(
+                "INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?)"
+            ).run("session-1", "rlm_tool_call", 1, JSON.stringify({ snapshot: "AQID", toolName: "echo" }));
+            db.exec("PRAGMA foreign_keys = ON");
+            db.prepare("DELETE FROM _migrations WHERE name = ?").run("20260302_cleanup_rlm_snapshot_payloads");
+
+            const reapplied = migrationRun(db);
+            const row = db.prepare("SELECT data FROM session_history WHERE type = 'rlm_tool_call' LIMIT 1").get() as
+                | { data: string }
+                | undefined;
+            db.close();
+
+            expect(reapplied).toContain("20260302_cleanup_rlm_snapshot_payloads");
+            expect(row?.data).not.toContain('"snapshot"');
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });

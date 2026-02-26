@@ -768,7 +768,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 if (!sessionId) {
                                     return;
                                 }
-                                let snapshotId: string | null = null;
+                                let snapshotId = "";
                                 try {
                                     snapshotId = await rlmSnapshotSave({
                                         config: agentSystem.config.current,
@@ -776,11 +776,17 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                         sessionId,
                                         snapshotDump: Buffer.from(snapshotDump).toString("base64")
                                     });
-                                } catch {
-                                    snapshotId = null;
-                                }
-                                if (!snapshotId) {
-                                    return;
+                                } catch (error) {
+                                    const message = `Python VM crashed: failed to persist checkpoint: ${errorMessageResolve(error)}`;
+                                    await appendHistoryRecord({
+                                        type: "rlm_tool_result",
+                                        at: Date.now(),
+                                        toolCallId: blockState.toolCallId,
+                                        toolName,
+                                        toolResult: `ToolError: ${message}`,
+                                        toolIsError: true
+                                    });
+                                    throw new Error(message);
                                 }
                                 await appendHistoryRecord({
                                     type: "rlm_tool_call",
@@ -1202,6 +1208,13 @@ function numberValueNormalize(value: unknown): number {
         return 0;
     }
     return value;
+}
+
+function errorMessageResolve(error: unknown): string {
+    if (error instanceof Error && error.message.length > 0) {
+        return error.message;
+    }
+    return String(error);
 }
 
 function abortErrorBuild(): Error {

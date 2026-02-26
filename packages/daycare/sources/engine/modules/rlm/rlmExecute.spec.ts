@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
+import type { AgentHistoryRecord, ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
@@ -140,6 +140,40 @@ describe("rlmExecute", () => {
         expect(records).toEqual(["rlm_start", "rlm_tool_result", "rlm_complete"]);
     });
 
+    it("fails fast when checkpoint persistence fails and records tool_result", async () => {
+        const resolver = createResolver(async (name, args) => {
+            if (name !== "echo") {
+                throw new Error(`Unexpected tool ${name}`);
+            }
+            const payload = args as { text: string };
+            return okResult(name, payload.text);
+        });
+        const records: AgentHistoryRecord[] = [];
+
+        await expect(
+            rlmExecute(
+                "value = echo('hello')\nvalue",
+                montyPreambleBuild(baseTools),
+                createContext({
+                    activeSessionId: "session-1",
+                    agentsDir: "/dev/null"
+                }),
+                resolver,
+                "outer-run-python",
+                async (record) => {
+                    records.push(record);
+                }
+            )
+        ).rejects.toThrow("Python VM crashed: failed to persist checkpoint");
+
+        expect(records.map((record) => record.type)).toEqual(["rlm_start", "rlm_tool_result"]);
+        const toolResult = records.find((record): record is Extract<AgentHistoryRecord, { type: "rlm_tool_result" }> =>
+            record.type === "rlm_tool_result"
+        );
+        expect(toolResult?.toolIsError).toBe(true);
+        expect(toolResult?.toolResult).toContain("failed to persist checkpoint");
+    });
+
     it("aborts execution when skip() is called and sets skipTurn flag", async () => {
         const resolver = createResolver(async (name) => {
             throw new Error(`Unexpected tool ${name}`);
@@ -205,21 +239,27 @@ function createResolver(handler: (name: string, args: unknown) => Promise<ToolEx
     };
 }
 
-function createContext(): ToolExecutionContext {
+function createContext(options?: {
+    activeSessionId?: string | null;
+    agentsDir?: string;
+}): ToolExecutionContext {
+    const activeSessionId = options?.activeSessionId ?? null;
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        agent: null as unknown as ToolExecutionContext["agent"],
+        agent: activeSessionId
+            ? ({ state: { activeSessionId } } as unknown as ToolExecutionContext["agent"])
+            : (null as unknown as ToolExecutionContext["agent"]),
         ctx: { userId: "user-1", agentId: "agent-1" } as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: {
             config: {
                 current: {
-                    agentsDir: "/tmp/daycare-test",
+                    agentsDir: options?.agentsDir ?? "/tmp/daycare-test",
                     dbPath: ":memory:"
                 }
             },

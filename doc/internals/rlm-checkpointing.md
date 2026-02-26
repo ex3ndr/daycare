@@ -106,21 +106,23 @@ sequenceDiagram
 
 ## Snapshot Creation Contract
 
-Checkpoint creation is best-effort.
-When snapshot persistence is available and a session id exists, `snapshotId` is a cuid2 id that points to a file.
-If persistence is unavailable, execution continues and the `rlm_tool_call` checkpoint record is skipped.
+Checkpoint creation is strict when history checkpointing is active.
+When a history callback is present and a session id exists, snapshot persistence must succeed before inner tool execution.
+If checkpoint save fails, runtime appends an error `rlm_tool_result` and aborts the current `run_python` block.
 Inline base64 fallback is not allowed.
 
 ```mermaid
 flowchart TD
     A[Tool call reached in run_python] --> B{History record requested?}
-    B -->|No| C[Skip checkpoint persistence]
+    B -->|No| C[Execute tool without checkpoint]
     B -->|Yes| D{active session id present?}
-    D -->|Yes| E[Write snapshot file and store cuid2 snapshotId]
-    D -->|No| F[Skip checkpoint record and continue]
+    D -->|No| C
+    D -->|Yes| E{Snapshot save succeeded?}
+    E -->|Yes| F[Append rlm_tool_call and execute tool]
+    E -->|No| G[Append error rlm_tool_result and fail run_python]
 ```
 
 ## Migration Strategy for Large Databases
 
 Legacy inline snapshots cleanup now scans `session_history` in id-ordered batches (`LIMIT 100`) and updates rows incrementally.
-This avoids loading all `rlm_tool_call` payloads into memory at once on large databases.
+The migration runs outside the global migration transaction and commits per batch to bound WAL/journal growth on large databases.
