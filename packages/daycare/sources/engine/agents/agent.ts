@@ -1065,6 +1065,7 @@ export class Agent {
                 : this.descriptor.type === "system"
                   ? this.descriptor.tag
                   : this.descriptor.type;
+        const connector = this.agentSystem.connectorRegistry.get(source);
         const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
         const roleKey = agentDescriptorRoleResolve(this.descriptor);
         const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
@@ -1100,7 +1101,7 @@ export class Agent {
             agent: this,
             source,
             context: pendingContext,
-            connector: null,
+            connector,
             connectorRegistry: this.agentSystem.connectorRegistry,
             inferenceRouter: this.agentSystem.inferenceRouter,
             toolResolver: this.agentSystem.toolResolver,

@@ -14,6 +14,7 @@ Updated prompt guidance for native `run_python` tool-calling and existing VM exe
 - If restore finds `rlm_start` without a snapshot, it appends synthetic `rlm_complete` error and still resumes inference.
 - Pending-phase recovery reuses standard provider selection (role/model override), not an empty override list.
 - Recovery is only triggered from the `restore` inbox item, which is enqueued at the front and processed first.
+- Restore recovery uses the connector resolved from the agent source, so foreground replies are delivered normally.
 - RLM history records (`rlm_start`, `rlm_tool_call`, `rlm_tool_result`, `rlm_complete`) remain intact.
 - Unsupported tool calls in this mode return immediate tool-result errors so inference can recover and continue.
 

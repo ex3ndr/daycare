@@ -1102,6 +1102,124 @@ describe("Agent", () => {
         }
     });
 
+    it("sends restore recovery response through user connector", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const sendMessage = vi.fn(async () => undefined);
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: () => () => undefined,
+                sendMessage
+            };
+            expect(connectorRegistry.register("telegram", connector)).toEqual({ ok: true, status: "loaded" });
+            const complete = vi.fn(async (..._args: unknown[]) => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant",
+                    content: [{ type: "text", text: "continued after restart" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "reset",
+                    message: "seed session"
+                }
+            );
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
+
+            const startedAt = Date.now();
+            const snapshot = await pendingToolCallSnapshotBuild();
+            const preamble = montyPreambleBuild([waitToolBuild()]);
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "assistant_message",
+                at: startedAt - 1,
+                text: "",
+                files: [],
+                tokens: null,
+                toolCalls: [
+                    { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
+                ]
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_start",
+                at: startedAt,
+                toolCallId: "tool-call-1",
+                code: "wait(300)",
+                preamble
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_tool_call",
+                at: startedAt + 1,
+                toolCallId: "tool-call-1",
+                snapshot,
+                printOutput: ["waiting..."],
+                toolCallCount: 2,
+                toolName: "wait",
+                toolArgs: { seconds: 300 }
+            });
+
+            const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
+            expect(restoreResult).toEqual({ type: "restore", ok: true });
+            expect(sendMessage).toHaveBeenCalledWith(
+                "channel-1",
+                expect.objectContaining({
+                    text: "continued after restart"
+                })
+            );
+            await connectorRegistry.unregisterAll("test");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("continues inference after synthetic rlm_complete when pending start has no snapshot", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
