@@ -1,3 +1,7 @@
+import { access, mkdir, open } from "node:fs/promises";
+import path from "node:path";
+
+import { createId } from "@paralleldrive/cuid2";
 import type { AgentHistoryRecord } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
@@ -22,6 +26,10 @@ import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
+
+type StorageOpenOptions = {
+    agentsDir?: string;
+};
 
 /**
  * Facade for all SQLite access. Owns one connection and repository instances.
@@ -48,10 +56,20 @@ export class Storage {
     readonly tokenStats: TokenStatsRepository;
 
     private readonly connection: ReturnType<typeof databaseOpen>;
+    private readonly dbPath: string;
+    private readonly agentsDir: string | null;
     private readonly connectorKeyLocks = new Map<string, AsyncLock>();
 
-    private constructor(connection: ReturnType<typeof databaseOpen>) {
+    private constructor(
+        connection: ReturnType<typeof databaseOpen>,
+        options: {
+            dbPath: string;
+            agentsDir: string | null;
+        }
+    ) {
         this.connection = connection;
+        this.dbPath = options.dbPath;
+        this.agentsDir = options.agentsDir;
         this.users = new UsersRepository(connection);
         this.agents = new AgentsRepository(connection);
         this.sessions = new SessionsRepository(connection);
@@ -72,10 +90,12 @@ export class Storage {
         this.tokenStats = new TokenStatsRepository(connection);
     }
 
-    static open(dbPath: string): Storage {
+    static open(dbPath: string, options?: StorageOpenOptions): Storage {
         const db = databaseOpen(dbPath);
         migrationRun(db);
-        return new Storage(db);
+        const agentsDir =
+            options?.agentsDir ?? (dbPath === ":memory:" ? null : path.join(path.dirname(dbPath), "agents"));
+        return new Storage(db, { dbPath, agentsDir });
     }
 
     get db(): ReturnType<typeof databaseOpen> {
@@ -176,7 +196,22 @@ export class Storage {
             });
         }
 
-        await this.history.append(sessionId, record);
+        let persistedRecord = record;
+        let snapshotPath: string | null = null;
+        if (record.type === "rlm_tool_call") {
+            if (!this.agentsDir) {
+                throw new Error("Agent snapshot persistence requires a configured agentsDir.");
+            }
+            const snapshotId = createId();
+            snapshotPath = storageSnapshotPath(this.agentsDir, agentId, sessionId, snapshotId);
+            await storageSnapshotWrite(snapshotPath, storageSnapshotDecode(record.snapshot));
+            persistedRecord = { ...record, snapshot: snapshotId };
+        }
+
+        await this.history.append(sessionId, persistedRecord);
+        if (snapshotPath) {
+            await storageDatabaseSync(this.dbPath);
+        }
     }
 
     private connectorKeyLockFor(connectorKey: string): AsyncLock {
@@ -219,4 +254,50 @@ function sqliteUniqueConstraintOnNametagIs(error: unknown): boolean {
 function sqliteUniqueConstraintOnConnectorKeyIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
     return sqliteUniqueConstraintErrorIs(error) && message.includes("user_connector_keys.connector_key");
+}
+
+function storageSnapshotPath(agentsDir: string, agentId: string, sessionId: string, snapshotId: string): string {
+    return path.join(agentsDir, agentId, "snapshots", sessionId, `${snapshotId}.bin`);
+}
+
+function storageSnapshotDecode(snapshot: string): Uint8Array {
+    return Buffer.from(snapshot, "base64");
+}
+
+async function storageSnapshotWrite(snapshotPath: string, dump: Uint8Array): Promise<void> {
+    await mkdir(path.dirname(snapshotPath), { recursive: true });
+    const handle = await open(snapshotPath, "w");
+    try {
+        await handle.writeFile(dump);
+        await handle.sync();
+    } finally {
+        await handle.close();
+    }
+    await storagePathSync(path.dirname(snapshotPath));
+}
+
+async function storageDatabaseSync(dbPath: string): Promise<void> {
+    if (dbPath === ":memory:") {
+        return;
+    }
+    await storagePathSyncIfExists(dbPath);
+    await storagePathSyncIfExists(`${dbPath}-wal`);
+}
+
+async function storagePathSyncIfExists(targetPath: string): Promise<void> {
+    try {
+        await access(targetPath);
+    } catch {
+        return;
+    }
+    await storagePathSync(targetPath);
+}
+
+async function storagePathSync(targetPath: string): Promise<void> {
+    const handle = await open(targetPath, "r");
+    try {
+        await handle.sync();
+    } finally {
+        await handle.close();
+    }
 }

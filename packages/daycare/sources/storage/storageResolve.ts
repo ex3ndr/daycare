@@ -16,7 +16,7 @@ export function storageResolve(input: Storage | Config): Storage {
     if (cached) {
         return cached;
     }
-    const storage = Storage.open(input.dbPath);
+    const storage = Storage.open(input.dbPath, { agentsDir: input.agentsDir });
     sharedStorageByDbPath.set(input.dbPath, storage);
     return storage;
 }

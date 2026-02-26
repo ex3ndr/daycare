@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { Type } from "@sinclair/typebox";
@@ -5,6 +8,8 @@ import type { Logger } from "pino";
 import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
+import { tagExtractAll } from "../../../util/tagExtract.js";
+import { cuid2Is } from "../../../utils/cuid2Is.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
@@ -313,7 +318,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     rlmPrintCaptureAppend(printCapture, values);
                 };
                 try {
-                    const snapshotDump = Buffer.from(initialPhase.snapshot.snapshot, "base64");
+                    const snapshotDump = await rlmSnapshotDumpLoad(
+                        agentSystem.config.current.agentsDir,
+                        agent.ctx.agentId,
+                        agent.state.activeSessionId ?? null,
+                        initialPhase.snapshot.snapshot
+                    );
                     const resumed = await rlmStepResume(
                         blockState.workerKey,
                         snapshotDump,
@@ -1129,6 +1139,27 @@ function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPa
         invalidRunPythonCalls,
         unsupportedCalls
     };
+}
+
+async function rlmSnapshotDumpLoad(
+    agentsDir: string,
+    agentId: string,
+    sessionId: string | null,
+    snapshotId: string
+): Promise<Uint8Array> {
+    if (!sessionId) {
+        throw new Error("Python VM crashed: active session is missing.");
+    }
+    if (!cuid2Is(snapshotId)) {
+        throw new Error("Python VM crashed: checkpoint id is invalid.");
+    }
+    const snapshotPath = path.join(agentsDir, agentId, "snapshots", sessionId, `${snapshotId}.bin`);
+    try {
+        return await readFile(snapshotPath);
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error ?? "");
+        throw new Error(`Python VM crashed: failed to load checkpoint ${snapshotId} (${reason})`);
+    }
 }
 
 function usageCostResolve(cost: unknown): number {

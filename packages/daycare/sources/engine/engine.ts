@@ -129,7 +129,7 @@ export class Engine {
     constructor(options: EngineOptions) {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
         this.config = new ConfigModule(options.config);
-        this.storage = Storage.open(this.config.current.dbPath);
+        this.storage = Storage.open(this.config.current.dbPath, { agentsDir: this.config.current.agentsDir });
         // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;
         this.signals = new Signals({

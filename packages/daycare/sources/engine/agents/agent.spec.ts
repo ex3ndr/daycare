@@ -1377,6 +1377,116 @@ describe("Agent", () => {
         }
     });
 
+    it("simulates python vm crash when pending snapshot cannot be loaded on restore", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const complete = vi.fn(async (..._args: unknown[]) => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant",
+                    content: [{ type: "text", text: "continued after snapshot crash" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "slack",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "reset",
+                    message: "seed session"
+                }
+            );
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
+            const ctx = await contextForAgentIdRequire(agentSystem, agentId);
+
+            const startedAt = Date.now();
+            const preamble = montyPreambleBuild([waitToolBuild()]);
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "assistant_message",
+                at: startedAt - 1,
+                text: "<run_python>wait(300)</run_python>",
+                files: [],
+                tokens: null
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_start",
+                at: startedAt,
+                toolCallId: "tool-call-crash",
+                code: "wait(300)",
+                preamble
+            });
+
+            const persistedAgent = await agentSystem.storage.agents.findById(agentId);
+            const sessionId = persistedAgent?.activeSessionId ?? "";
+            await agentSystem.storage.history.append(sessionId, {
+                type: "rlm_tool_call",
+                at: startedAt + 1,
+                toolCallId: "tool-call-crash",
+                snapshot: createId(),
+                printOutput: ["waiting..."],
+                toolCallCount: 1,
+                toolName: "wait",
+                toolArgs: { seconds: 300 }
+            });
+
+            const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
+            expect(restoreResult).toEqual({ type: "restore", ok: true });
+
+            const history = await agentHistoryLoad(config, ctx);
+            const completed = [...history]
+                .reverse()
+                .find(
+                    (record): record is Extract<AgentHistoryRecord, { type: "rlm_complete" }> =>
+                        record.type === "rlm_complete" && record.toolCallId === "tool-call-crash"
+                );
+            expect(completed).toBeTruthy();
+            expect(completed?.isError).toBe(true);
+            expect(completed?.error).toContain("Python VM crashed");
+            expect(completed?.printOutput).toEqual(["waiting..."]);
+            expect(complete).toHaveBeenCalledTimes(1);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("uses permanent agent workspaceDir as workingDir on restore", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {

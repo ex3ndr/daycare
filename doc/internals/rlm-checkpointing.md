@@ -7,7 +7,7 @@ RLM checkpointing persists `run_python` interpreter progress into agent history 
 Each `run_python` call now writes:
 
 - `rlm_start` when execution begins
-- `rlm_tool_call` before each inner tool call (includes VM snapshot)
+- `rlm_tool_call` before each inner tool call (stores snapshot id)
 - `rlm_tool_result` after each inner tool call
 - `rlm_complete` when execution ends (success or error)
 
@@ -27,13 +27,18 @@ sequenceDiagram
     participant VM as Monty VM
     participant Tool as Inner Tool
     participant History
+    participant Snap as Snapshot Files
 
     LLM->>RLM: run_python(code)
     Note over History: assistant_message (outer tool call)
     RLM->>History: rlm_start
     RLM->>VM: monty.start()
     VM->>RLM: snapshot (tool call)
-    RLM->>History: rlm_tool_call (snapshot + args)
+    RLM->>Snap: write <cuid2>.bin under agent/session
+    Snap-->>RLM: fsync(snapshot file)
+    RLM->>History: rlm_tool_call (snapshot id + args)
+    History-->>RLM: append committed
+    RLM->>History: fsync(db + wal)
     RLM->>Tool: execute()
     Tool-->>RLM: result
     RLM->>History: rlm_tool_result
@@ -61,7 +66,13 @@ sequenceDiagram
         Loop->>History: rlm_start
     else rlm_start + latest rlm_tool_call
         History-->>Agent: tool_call phase
-        Agent->>VM: load snapshot + resume(exception: "Process was restarted")
+        Agent->>Snap: load snapshot by id from active session folder
+        alt snapshot load fails
+            Snap-->>Agent: missing/corrupt snapshot
+            Agent->>History: rlm_complete(isError=true, "Python VM crashed ...")
+        else snapshot loaded
+            Agent->>VM: resume(exception: "Process was restarted")
+        end
         VM-->>Loop: next snapshot or complete
     else rlm_start with no snapshot
         History-->>Agent: error phase
@@ -75,7 +86,7 @@ sequenceDiagram
 - `rlm_start`
   - `toolCallId`, `code`, `preamble`
 - `rlm_tool_call`
-  - `toolCallId`, base64 `snapshot`, `printOutput`, `toolCallCount`, `toolName`, `toolArgs`
+  - `toolCallId`, cuid2 `snapshot` id, `printOutput`, `toolCallCount`, `toolName`, `toolArgs`
 - `rlm_tool_result`
   - `toolCallId`, `toolName`, `toolResult`, `toolIsError`
 - `rlm_complete`
@@ -85,5 +96,5 @@ sequenceDiagram
 
 - Startup resolves one pending flat-loop phase via `agentLoopPendingPhaseResolve`.
 - `vm_start` phase: re-parse `<run_python>` blocks from the latest `assistant_message` and continue from VM start.
-- `tool_call` phase: load the latest `rlm_tool_call.snapshot`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
+- `tool_call` phase: load the latest `rlm_tool_call.snapshot` id from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).

@@ -59,6 +59,7 @@ export type AgentHistoryRlmToolCallRecord = {
     type: "rlm_tool_call";
     at: number;
     toolCallId: string;
+    /** Checkpoint snapshot id (cuid2), resolved to a file under the agent folder. */
     snapshot: string;
     printOutput: string[];
     toolCallCount: number;

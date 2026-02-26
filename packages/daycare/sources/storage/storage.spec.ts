@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { configResolve } from "../config/configResolve.js";
 import { permissionBuildUser } from "../engine/permissions/permissionBuildUser.js";
 import { UserHome } from "../engine/users/userHome.js";
+import { cuid2Is } from "../utils/cuid2Is.js";
 import { Storage } from "./storage.js";
 
 describe("Storage", () => {
@@ -119,6 +120,68 @@ describe("Storage", () => {
                 await expect(
                     storage.appendHistory("missing-agent", { type: "note", at: 11, text: "x" })
                 ).rejects.toThrow("Agent not found for history append");
+            } finally {
+                storage.close();
+            }
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("stores rlm snapshots in agent session folders and keeps snapshot id in history", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const storage = Storage.open(config.dbPath, { agentsDir: config.agentsDir });
+            try {
+                const user = await storage.createUser({});
+                const agentId = createId();
+                const permissions = permissionBuildUser(new UserHome(config.usersDir, user.id));
+                await storage.agents.create({
+                    id: agentId,
+                    userId: user.id,
+                    type: "cron",
+                    descriptor: { type: "cron", id: agentId, name: "sync" },
+                    activeSessionId: null,
+                    permissions,
+                    tokens: null,
+                    stats: {},
+                    lifecycle: "active",
+                    createdAt: 1,
+                    updatedAt: 1
+                });
+
+                const snapshotDump = Buffer.from([1, 2, 3]);
+                await storage.appendHistory(agentId, {
+                    type: "rlm_tool_call",
+                    at: 10,
+                    toolCallId: "tool-call-1",
+                    snapshot: snapshotDump.toString("base64"),
+                    printOutput: [],
+                    toolCallCount: 0,
+                    toolName: "echo",
+                    toolArgs: { text: "x" }
+                });
+
+                const persistedAgent = await storage.agents.findById(agentId);
+                expect(persistedAgent?.activeSessionId).toBeTruthy();
+                const sessionId = persistedAgent?.activeSessionId ?? "";
+                const records = await storage.history.findBySessionId(sessionId);
+                expect(records).toHaveLength(1);
+                const record = records[0];
+                expect(record?.type).toBe("rlm_tool_call");
+                if (!record || record.type !== "rlm_tool_call") {
+                    throw new Error("Expected rlm_tool_call history record.");
+                }
+                expect(cuid2Is(record.snapshot)).toBe(true);
+                const snapshotPath = path.join(
+                    config.agentsDir,
+                    agentId,
+                    "snapshots",
+                    sessionId,
+                    `${record.snapshot}.bin`
+                );
+                await expect(readFile(snapshotPath)).resolves.toEqual(snapshotDump);
             } finally {
                 storage.close();
             }
