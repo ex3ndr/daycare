@@ -7,7 +7,7 @@ import type { Sandbox } from "../../../sandbox/sandbox.js";
 import type { AssistantSettings } from "../../../settings.js";
 import type { Agent } from "../../agents/agent.js";
 import type { AgentSystem } from "../../agents/agentSystem.js";
-import type { AgentHistoryAppendRecord } from "../../agents/ops/agentTypes.js";
+import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Memory } from "../../memory/memory.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
@@ -35,7 +35,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     toolResolver?: ToolResolverApi;
     skills?: AgentSkill[];
     skillsPersonalRoot?: string;
-    appendHistoryRecord?: (record: AgentHistoryAppendRecord) => Promise<void>;
+    appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     pythonExecution?: boolean;
     allowedToolNames?: ReadonlySet<string>;
     abortSignal?: AbortSignal;

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -6,6 +6,8 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../config/configResolve.js";
+import { rlmSnapshotCreate } from "../engine/modules/rlm/rlmSnapshotCreate.js";
+import { rlmSnapshotLoad } from "../engine/modules/rlm/rlmSnapshotLoad.js";
 import { permissionBuildUser } from "../engine/permissions/permissionBuildUser.js";
 import { UserHome } from "../engine/users/userHome.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
@@ -128,11 +130,11 @@ describe("Storage", () => {
         }
     });
 
-    it("stores rlm snapshots in agent session folders and keeps snapshot id in history", async () => {
+    it("stores rlm snapshots via rlm helpers and keeps snapshot id in history", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath, { agentsDir: config.agentsDir });
+            const storage = Storage.open(config.dbPath);
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -152,11 +154,18 @@ describe("Storage", () => {
                 });
 
                 const snapshotDump = Buffer.from([1, 2, 3]);
+                const snapshotId = await rlmSnapshotCreate({
+                    storage,
+                    config,
+                    agentId,
+                    at: 10,
+                    snapshotDump: snapshotDump.toString("base64")
+                });
                 await storage.appendHistory(agentId, {
                     type: "rlm_tool_call",
                     at: 10,
                     toolCallId: "tool-call-1",
-                    snapshotDump: snapshotDump.toString("base64"),
+                    snapshotId,
                     printOutput: [],
                     toolCallCount: 0,
                     toolName: "echo",
@@ -174,14 +183,13 @@ describe("Storage", () => {
                     throw new Error("Expected rlm_tool_call history record.");
                 }
                 expect(cuid2Is(record.snapshotId)).toBe(true);
-                const snapshotPath = path.join(
-                    config.agentsDir,
+                const loaded = await rlmSnapshotLoad({
+                    storage,
+                    config,
                     agentId,
-                    "snapshots",
-                    sessionId,
-                    `${record.snapshotId}.bin`
-                );
-                await expect(readFile(snapshotPath)).resolves.toEqual(snapshotDump);
+                    snapshotId: record.snapshotId
+                });
+                expect(loaded).toEqual(snapshotDump);
             } finally {
                 storage.close();
             }

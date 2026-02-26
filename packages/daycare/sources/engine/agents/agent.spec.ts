@@ -29,6 +29,7 @@ import type { InferenceRouter } from "../modules/inference/router.js";
 import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import { montyPreambleBuild } from "../modules/monty/montyPreambleBuild.js";
 import { RLM_LIMITS } from "../modules/rlm/rlmLimits.js";
+import { rlmSnapshotCreate } from "../modules/rlm/rlmSnapshotCreate.js";
 import { rlmSnapshotEncode } from "../modules/rlm/rlmSnapshotEncode.js";
 import { rlmStepStart } from "../modules/rlm/rlmStepStart.js";
 import { ToolResolver } from "../modules/toolResolver.js";
@@ -1021,11 +1022,18 @@ describe("Agent", () => {
                 code: "wait(300)",
                 preamble
             });
+            const snapshotId = await rlmSnapshotCreate({
+                storage: agentSystem.storage,
+                config,
+                agentId,
+                at: startedAt + 1,
+                snapshotDump
+            });
             await agentSystem.storage.appendHistory(agentId, {
                 type: "rlm_tool_call",
                 at: startedAt + 1,
                 toolCallId: "tool-call-1",
-                snapshotDump,
+                snapshotId,
                 printOutput: ["waiting..."],
                 toolCallCount: 2,
                 toolName: "wait",

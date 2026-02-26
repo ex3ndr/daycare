@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { Type } from "@sinclair/typebox";
@@ -28,7 +26,9 @@ import {
     rlmPrintCaptureFlushTrailing
 } from "../../modules/rlm/rlmPrintCapture.js";
 import { rlmResultTextBuild } from "../../modules/rlm/rlmResultTextBuild.js";
+import { rlmSnapshotCreate } from "../../modules/rlm/rlmSnapshotCreate.js";
 import { rlmSnapshotEncode } from "../../modules/rlm/rlmSnapshotEncode.js";
+import { rlmSnapshotLoad } from "../../modules/rlm/rlmSnapshotLoad.js";
 import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
 import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
 import { rlmStepToolCall } from "../../modules/rlm/rlmStepToolCall.js";
@@ -47,8 +47,7 @@ import type { AgentLoopPendingPhase } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
-import type { AgentHistoryAppendRecord, AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
-import { agentSnapshotPathResolve } from "./agentSnapshotPathResolve.js";
+import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
 import { inferenceErrorAnthropicPromptOverflowTokensExtract } from "./inferenceErrorAnthropicPromptOverflowTokensExtract.js";
 import { tokensResolve } from "./tokensResolve.js";
@@ -76,7 +75,7 @@ type AgentLoopRunOptions = {
     providersForAgent: ProviderSettings[];
     logger: Logger;
     abortSignal?: AbortSignal;
-    appendHistoryRecord?: (record: AgentHistoryAppendRecord) => Promise<void>;
+    appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     notifySubagentFailure: (reason: string, error?: unknown) => Promise<void>;
     initialPhase?: AgentLoopPendingPhase;
     stopAfterPendingPhase?: boolean;
@@ -319,9 +318,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 };
                 try {
                     const snapshotDump = await rlmSnapshotDumpLoad(
-                        agentSystem.config.current.agentsDir,
-                        agent.ctx.agentId,
-                        agent.state.activeSessionId ?? null,
+                        agentSystem,
+                        agent.ctx,
                         initialPhase.snapshot.snapshotId
                     );
                     const resumed = await rlmStepResume(
@@ -752,11 +750,17 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             toolResolver: blockState.trackingToolResolver,
                             context: blockState.executionContext,
                             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
+                                const snapshotId = await rlmSnapshotIdCreate(
+                                    agentSystem,
+                                    agent.ctx.agentId,
+                                    at,
+                                    snapshotDump
+                                );
                                 await appendHistoryRecord?.({
                                     type: "rlm_tool_call",
                                     at,
                                     toolCallId: blockState.toolCallId,
-                                    snapshotDump: rlmSnapshotEncode(snapshotDump),
+                                    snapshotId,
                                     printOutput: currentPrintOutput,
                                     toolCallCount: currentToolCallCount,
                                     toolName,
@@ -1049,10 +1053,30 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
 async function historyRecordAppend(
     historyRecords: AgentHistoryRecord[],
     record: AgentHistoryRecord,
-    appendHistoryRecord?: (record: AgentHistoryAppendRecord) => Promise<void>
+    appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>
 ): Promise<void> {
     historyRecords.push(record);
     await appendHistoryRecord?.(record);
+}
+
+async function rlmSnapshotIdCreate(
+    agentSystem: AgentSystem,
+    agentId: string,
+    at: number,
+    snapshotDump: Uint8Array
+): Promise<string> {
+    const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
+    const storage = (agentSystem as { storage?: unknown }).storage;
+    if (!config || !storage) {
+        return rlmSnapshotEncode(snapshotDump);
+    }
+    return rlmSnapshotCreate({
+        storage: storage as AgentSystem["storage"],
+        config: config as AgentSystem["config"]["current"],
+        agentId,
+        at,
+        snapshotDump: rlmSnapshotEncode(snapshotDump)
+    });
 }
 
 // Remove NO_MESSAGE text blocks so the sentinel never re-enters future model context.
@@ -1142,25 +1166,28 @@ function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPa
 }
 
 async function rlmSnapshotDumpLoad(
-    agentsDir: string,
-    agentId: string,
-    sessionId: string | null,
+    agentSystem: AgentSystem,
+    ctx: { agentId: string },
     snapshotId: string
 ): Promise<Uint8Array> {
-    if (!sessionId) {
-        throw new Error("Python VM crashed: active session is missing.");
-    }
     if (!cuid2Is(snapshotId)) {
         throw new Error("Python VM crashed: checkpoint id is invalid.");
     }
-    // Mirrors Storage.appendHistory() writer path via the same resolver.
-    const snapshotPath = agentSnapshotPathResolve(agentsDir, agentId, sessionId, snapshotId);
-    try {
-        return await readFile(snapshotPath);
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error ?? "");
-        throw new Error(`Python VM crashed: failed to load checkpoint ${snapshotId} (${reason})`);
+    const config = (agentSystem as { config?: { current?: unknown } }).config?.current;
+    const storage = (agentSystem as { storage?: unknown }).storage;
+    if (!config || !storage) {
+        throw new Error("Python VM crashed: snapshot storage is unavailable.");
     }
+    const snapshotDump = await rlmSnapshotLoad({
+        storage: storage as AgentSystem["storage"],
+        config: config as AgentSystem["config"]["current"],
+        agentId: ctx.agentId,
+        snapshotId
+    });
+    if (!snapshotDump) {
+        throw new Error(`Python VM crashed: failed to load checkpoint ${snapshotId}`);
+    }
+    return snapshotDump;
 }
 
 function usageCostResolve(cost: unknown): number {

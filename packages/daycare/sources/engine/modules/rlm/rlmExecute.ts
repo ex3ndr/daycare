@@ -1,10 +1,11 @@
 import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
 
-import type { AgentHistoryAppendRecord, ToolExecutionContext } from "@/types";
+import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
 import { rlmPrintCaptureAppend, rlmPrintCaptureCreate, rlmPrintCaptureFlushTrailing } from "./rlmPrintCapture.js";
+import { rlmSnapshotCreate } from "./rlmSnapshotCreate.js";
 import { rlmSnapshotEncode } from "./rlmSnapshotEncode.js";
 import { rlmStepResume } from "./rlmStepResume.js";
 import { rlmStepStart } from "./rlmStepStart.js";
@@ -25,7 +26,7 @@ export type RlmExecuteResult = {
     skipTurn?: boolean;
 };
 
-export type RlmHistoryCallback = (record: AgentHistoryAppendRecord) => Promise<void>;
+export type RlmHistoryCallback = (record: AgentHistoryRecord) => Promise<void>;
 
 export type RlmSteeringInfo = {
     text: string;
@@ -127,11 +128,12 @@ export async function rlmExecute(
             toolResolver,
             context,
             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
+                const snapshotId = await rlmSnapshotIdResolve(context, at, snapshotDump);
                 await historyCallback?.({
                     type: "rlm_tool_call",
                     at,
                     toolCallId,
-                    snapshotDump: rlmSnapshotEncode(snapshotDump),
+                    snapshotId,
                     printOutput: [...printOutput],
                     toolCallCount,
                     toolName,
@@ -202,4 +204,20 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         isError: false
     });
     return result;
+}
+
+async function rlmSnapshotIdResolve(context: ToolExecutionContext, at: number, snapshotDump: Uint8Array): Promise<string> {
+    const config = context.agentSystem?.config?.current;
+    const storage = (context.agentSystem as { storage?: unknown } | null | undefined)?.storage;
+    const agentId = context.ctx?.agentId;
+    if (!config || !storage || typeof agentId !== "string" || agentId.length === 0) {
+        return rlmSnapshotEncode(snapshotDump);
+    }
+    return rlmSnapshotCreate({
+        storage: storage as ToolExecutionContext["agentSystem"]["storage"],
+        config,
+        agentId,
+        at,
+        snapshotDump: rlmSnapshotEncode(snapshotDump)
+    });
 }

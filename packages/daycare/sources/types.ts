@@ -7,7 +7,6 @@ export { Context, contextForAgent, contextForUser } from "./engine/agents/contex
 export type { AgentDescriptor, AgentFetchStrategy } from "./engine/agents/ops/agentDescriptorTypes.js";
 // Agents
 export type {
-    AgentHistoryAppendRecord,
     AgentHistoryAssistantRewriteRecord,
     AgentHistoryRecord,
     AgentHistoryRlmCompleteRecord,

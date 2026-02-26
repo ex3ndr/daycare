@@ -18,8 +18,9 @@ The outer assistant/tool protocol remains unchanged:
 
 RLM checkpoint records are internal and are skipped when rebuilding model context.
 
-At append time, the runtime emits a transient `snapshotDump` (base64) field for `rlm_tool_call`.
-`Storage.appendHistory()` writes that dump to disk and persists only cuid2 `snapshotId` in `session_history`.
+Checkpoint file I/O lives in `engine/modules/rlm/`:
+- `rlmSnapshotCreate(...)` writes dump + returns cuid2 `snapshotId`
+- `rlmSnapshotLoad(...)` reads dump by `snapshotId` and returns `Uint8Array | null`
 
 ## Normal Flow
 
@@ -37,11 +38,10 @@ sequenceDiagram
     RLM->>History: rlm_start
     RLM->>VM: monty.start()
     VM->>RLM: snapshot (tool call)
-    RLM->>Snap: write <cuid2>.bin under agent/session
+    RLM->>Snap: rlmSnapshotCreate() -> write <cuid2>.bin under agent/session
     Snap-->>RLM: fsync(snapshot file)
     RLM->>History: rlm_tool_call (snapshot id + args)
     History-->>RLM: append committed
-    RLM->>History: fsync(db + wal)
     RLM->>Tool: execute()
     Tool-->>RLM: result
     RLM->>History: rlm_tool_result
@@ -102,4 +102,4 @@ sequenceDiagram
 - `vm_start` phase: re-parse `<run_python>` blocks from the latest `assistant_message` and continue from VM start.
 - `tool_call` phase: load the latest `rlm_tool_call.snapshotId` from `agents/<agentId>/snapshots/<sessionId>/`, resume with runtime error (`Process was restarted`), then continue normal tool-call phases.
 - `error` phase: append `rlm_complete` with `isError=true` and error text (`Process was restarted before any tool call`).
-- Read/write path consistency: both writer and restore reader use `agentSnapshotPathResolve(...)` to resolve the same file path.
+- Read/write path consistency: both writer and restore reader use `rlmSnapshotCreate(...)` / `rlmSnapshotLoad(...)`.
