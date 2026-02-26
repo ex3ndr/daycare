@@ -206,8 +206,10 @@ describe("skillToolBuild", () => {
 
     it("denies direct-path skill load when file is outside approved read scope", async () => {
         const dirs = await activeRootCreate();
-        // Create under os.homedir() which is in sandbox read boundary deny list
-        const homeBaseDir = await fs.mkdtemp(path.join(os.homedir(), ".daycare-skill-tool-deny-"));
+        const deniedHomeDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-tool-deny-home-"));
+        const homedirSpy = vi.spyOn(os, "homedir").mockReturnValue(deniedHomeDir);
+        // Create under mocked os.homedir(), which is in sandbox read boundary deny list.
+        const homeBaseDir = await fs.mkdtemp(path.join(deniedHomeDir, ".daycare-skill-tool-deny-"));
         try {
             const skillDir = path.join(homeBaseDir, "denied");
             await fs.mkdir(skillDir, { recursive: true });
@@ -226,7 +228,8 @@ describe("skillToolBuild", () => {
             );
         } finally {
             await dirs.cleanup();
-            await fs.rm(homeBaseDir, { recursive: true, force: true });
+            homedirSpy.mockRestore();
+            await fs.rm(deniedHomeDir, { recursive: true, force: true });
         }
     });
 
