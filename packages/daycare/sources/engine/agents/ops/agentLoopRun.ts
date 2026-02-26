@@ -27,7 +27,6 @@ import {
 } from "../../modules/rlm/rlmPrintCapture.js";
 import { rlmResultTextBuild } from "../../modules/rlm/rlmResultTextBuild.js";
 import { rlmSnapshotCreate } from "../../modules/rlm/rlmSnapshotCreate.js";
-import { rlmSnapshotEncode } from "../../modules/rlm/rlmSnapshotEncode.js";
 import { rlmSnapshotLoad } from "../../modules/rlm/rlmSnapshotLoad.js";
 import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
 import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
@@ -1080,7 +1079,7 @@ async function rlmSnapshotIdCreate(
             config: agentSystem.config.current,
             agentId,
             sessionId,
-            snapshotDump: rlmSnapshotEncode(snapshotDump)
+            snapshotDump: Buffer.from(snapshotDump).toString("base64")
         });
     } catch {
         return null;

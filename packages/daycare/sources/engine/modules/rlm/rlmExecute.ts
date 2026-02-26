@@ -6,7 +6,6 @@ import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
 import { rlmPrintCaptureAppend, rlmPrintCaptureCreate, rlmPrintCaptureFlushTrailing } from "./rlmPrintCapture.js";
 import { rlmSnapshotCreate } from "./rlmSnapshotCreate.js";
-import { rlmSnapshotEncode } from "./rlmSnapshotEncode.js";
 import { rlmStepResume } from "./rlmStepResume.js";
 import { rlmStepStart } from "./rlmStepStart.js";
 import { rlmStepToolCall } from "./rlmStepToolCall.js";
@@ -141,7 +140,7 @@ export async function rlmExecute(
                         config: context.agentSystem.config.current,
                         agentId: context.ctx.agentId,
                         sessionId,
-                        snapshotDump: rlmSnapshotEncode(snapshotDump)
+                        snapshotDump: Buffer.from(snapshotDump).toString("base64")
                     });
                 } catch {
                     snapshotId = null;

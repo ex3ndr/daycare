@@ -30,7 +30,6 @@ import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import { montyPreambleBuild } from "../modules/monty/montyPreambleBuild.js";
 import { RLM_LIMITS } from "../modules/rlm/rlmLimits.js";
 import { rlmSnapshotCreate } from "../modules/rlm/rlmSnapshotCreate.js";
-import { rlmSnapshotEncode } from "../modules/rlm/rlmSnapshotEncode.js";
 import { rlmStepStart } from "../modules/rlm/rlmStepStart.js";
 import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
@@ -1651,7 +1650,7 @@ async function pendingToolCallSnapshotBuild(): Promise<string> {
     if (!("functionName" in started.progress)) {
         throw new Error("Expected Monty to pause at wait() tool call");
     }
-    return rlmSnapshotEncode(started.progress.dump());
+    return Buffer.from(started.progress.dump()).toString("base64");
 }
 
 function waitToolBuild(): Tool {
