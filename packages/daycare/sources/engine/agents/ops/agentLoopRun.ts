@@ -1,5 +1,6 @@
 import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
+import { Type } from "@sinclair/typebox";
 import type { Logger } from "pino";
 import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
@@ -268,7 +269,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             try {
                 activeSkills = await skills.list();
                 await skills.syncToActive(options.skillsActiveRoot, activeSkills);
-                context.tools = toolListInferenceResolve(toolResolver.listToolsForAgent(toolVisibilityContext));
+                context.tools = toolListInferenceResolve();
             } catch (error) {
                 logger.warn(
                     { agentId: agent.id, error },
@@ -371,12 +372,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
 
                     let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
-                    context.tools = toolListInferenceResolve(availableTools);
+                    context.tools = toolListInferenceResolve();
                     try {
                         activeSkills = await skills.list();
                         await skills.syncToActive(options.skillsActiveRoot, activeSkills);
                         availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
-                        context.tools = toolListInferenceResolve(availableTools);
+                        context.tools = toolListInferenceResolve();
                         logger.debug(
                             `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
                         );
@@ -1073,8 +1074,19 @@ function messageAssistantTextRewrite(message: InferenceContext["messages"][numbe
     message.content = nextContent;
 }
 
-function toolListInferenceResolve(tools: Tool[]): Tool[] {
-    return tools.filter((tool) => tool.name === RLM_TOOL_NAME);
+const runPythonInferenceTool: Tool = {
+    name: RLM_TOOL_NAME,
+    description: "Execute Python code in the Daycare runtime and return the execution summary.",
+    parameters: Type.Object(
+        {
+            code: Type.String({ minLength: 1 })
+        },
+        { additionalProperties: false }
+    )
+};
+
+function toolListInferenceResolve(): Tool[] {
+    return [runPythonInferenceTool];
 }
 
 type RunPythonToolCall = {

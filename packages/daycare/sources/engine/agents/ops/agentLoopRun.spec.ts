@@ -328,11 +328,6 @@ function toolResolverBuild(
 ): ToolResolverApi {
     const tools = [
         {
-            name: "run_python",
-            description: "Run Python",
-            parameters: Type.Object({ code: Type.String() }, { additionalProperties: false })
-        },
-        {
             name: "send_agent_message",
             description: "Send message to parent",
             parameters: Type.Object(
