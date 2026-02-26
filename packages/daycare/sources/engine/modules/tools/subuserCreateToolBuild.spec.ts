@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { contextForAgent } from "../../agents/context.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
@@ -18,7 +19,7 @@ describe("subuserCreateToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
 
             // Bootstrap migration creates an owner; find it
             const owner = await storage.users.findOwner();
@@ -54,7 +55,7 @@ describe("subuserCreateToolBuild", () => {
             expect(agent!.type).toBe("subuser");
             expect(agent!.descriptor.type).toBe("subuser");
 
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -64,7 +65,7 @@ describe("subuserCreateToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-create-reject-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
 
             // Bootstrap creates owner; create a regular user
             await storage.users.create({ id: "regular-user" });
@@ -79,7 +80,7 @@ describe("subuserCreateToolBuild", () => {
                 "Only the owner user can create subusers."
             );
 
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

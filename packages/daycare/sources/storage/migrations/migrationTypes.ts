@@ -1,7 +1,7 @@
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
+import type { StorageDatabase } from "../databaseOpen.js";
 
 export type Migration = {
     name: string;
-    up: (db: DatabaseSync) => void;
+    up: (db: StorageDatabase) => void;
     inTransaction?: boolean;
 };

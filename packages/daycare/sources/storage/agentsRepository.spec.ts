@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SessionPermissions } from "@/types";
 import { AgentsRepository } from "./agentsRepository.js";
 import type { AgentDbRecord } from "./databaseTypes.js";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
@@ -12,7 +12,7 @@ const permissions: SessionPermissions = {
 
 describe("AgentsRepository", () => {
     it("supports create, find and update", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const users = await storage.users.findMany();
             const ownerUser = users[0];
@@ -50,12 +50,12 @@ describe("AgentsRepository", () => {
             expect(listed).toHaveLength(1);
             expect(listed[0]?.id).toBe("agent-1");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("returns cached agent on repeated read", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const ownerUser = (await storage.users.findMany())[0];
             if (!ownerUser) {
@@ -83,12 +83,12 @@ describe("AgentsRepository", () => {
             const second = await repo.findById("agent-cache");
             expect(second?.id).toBe("agent-cache");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("loads from db on cache miss", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const ownerUser = (await storage.users.findMany())[0];
             if (!ownerUser) {
@@ -131,12 +131,12 @@ describe("AgentsRepository", () => {
             expect(loaded?.id).toBe("agent-db");
             expect(loaded?.updatedAt).toBe(2);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("finds agents by user id", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const users = await storage.users.findMany();
             const ownerUser = users[0];
@@ -179,7 +179,7 @@ describe("AgentsRepository", () => {
             const otherAgents = await repo.findByUserId(otherUser.id);
             expect(otherAgents.map((agent) => agent.id)).toEqual(["agent-other"]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

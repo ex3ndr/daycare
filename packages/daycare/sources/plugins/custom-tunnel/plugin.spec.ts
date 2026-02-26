@@ -59,7 +59,7 @@ describe("custom-tunnel plugin", () => {
             }
 
             const provider = registeredProvider as ExposeTunnelProvider;
-            const created = await provider.createTunnel(4010, "public");
+            const created = await provider.createTunnel(4010, "public", "user-1");
             expect(created.domain).toBe("custom-4010.example.com");
 
             await provider.destroyTunnel(created.domain);

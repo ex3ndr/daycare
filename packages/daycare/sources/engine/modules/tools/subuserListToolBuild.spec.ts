@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./subuserListToolBuild.js";
@@ -19,7 +20,7 @@ describe("subuserListToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const context = contextBuild(ownerUserId, {
@@ -40,7 +41,7 @@ describe("subuserListToolBuild", () => {
             expect(result.typedResult.summary).toContain("app-one");
             expect(result.typedResult.summary).toContain("app-two");
 
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -50,7 +51,7 @@ describe("subuserListToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-list-empty-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const context = contextBuild(ownerUserId, {
@@ -64,7 +65,7 @@ describe("subuserListToolBuild", () => {
             expect(result.typedResult.count).toBe(0);
             expect(result.typedResult.summary).toContain("No subusers");
 
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

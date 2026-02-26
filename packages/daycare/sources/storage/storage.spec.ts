@@ -6,28 +6,45 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../config/configResolve.js";
-import { rlmSnapshotSave } from "../engine/modules/rlm/rlmSnapshotSave.js";
 import { rlmSnapshotLoad } from "../engine/modules/rlm/rlmSnapshotLoad.js";
+import { rlmSnapshotSave } from "../engine/modules/rlm/rlmSnapshotSave.js";
 import { permissionBuildUser } from "../engine/permissions/permissionBuildUser.js";
 import { UserHome } from "../engine/users/userHome.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
+import { databaseOpen } from "./databaseOpen.js";
 import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 describe("Storage", () => {
+    it("does not run migrations when built from an existing database instance", () => {
+        const db = databaseOpen(":memory:");
+        try {
+            const storage = Storage.fromDatabase(db);
+            const tables = storage.db
+                .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name ASC")
+                .all() as Array<{ name?: string }>;
+
+            expect(tables.some((entry) => entry.name === "agents")).toBe(false);
+            expect(tables.some((entry) => entry.name === "users")).toBe(false);
+        } finally {
+            db.close();
+        }
+    });
+
     it("opens with migrations and closes connection", () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         const tables = storage.db
             .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name ASC")
             .all() as Array<{ name?: string }>;
         expect(tables.some((entry) => entry.name === "agents")).toBe(true);
         expect(tables.some((entry) => entry.name === "users")).toBe(true);
-        storage.close();
+        storage.db.close();
 
         expect(() => storage.db.prepare("SELECT 1").get()).toThrow();
     });
 
     it("resolves user by connector key under concurrent requests", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const results = await Promise.all(
                 Array.from({ length: 12 }).map(() => storage.resolveUserByConnectorKey("telegram:alice"))
@@ -42,7 +59,7 @@ describe("Storage", () => {
             expect(resolved?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:alice"]);
             expect(resolved?.nametag).toBeTruthy();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -50,7 +67,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -83,7 +100,7 @@ describe("Storage", () => {
                 const persistedSession = await storage.sessions.findById(result.sessionId);
                 expect(persistedSession?.inferenceSessionId).toBe("infer-1");
             } finally {
-                storage.close();
+                storage.db.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -94,7 +111,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -123,7 +140,7 @@ describe("Storage", () => {
                     storage.appendHistory("missing-agent", { type: "note", at: 11, text: "x" })
                 ).rejects.toThrow("Agent not found for history append");
             } finally {
-                storage.close();
+                storage.db.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -134,7 +151,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -198,7 +215,7 @@ describe("Storage", () => {
                 });
                 expect(loaded).toEqual(snapshotDump);
             } finally {
-                storage.close();
+                storage.db.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });

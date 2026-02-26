@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { EngineEventBus } from "../../ipc/events.js";
 import { Signals } from "../../signals/signals.js";
 import { buildSignalSubscribeTool } from "./signalSubscribeToolBuild.js";
@@ -15,7 +16,12 @@ describe("buildSignalSubscribeTool", () => {
     it("subscribes target agent when it exists", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const tool = buildSignalSubscribeTool(signals);
             const result = await tool.execute(
                 { pattern: "build:*:done", silent: false, agentId: "agent-target" },
@@ -49,7 +55,12 @@ describe("buildSignalSubscribeTool", () => {
     it("throws when target agent does not exist", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const tool = buildSignalSubscribeTool(signals);
 
             await expect(
@@ -67,7 +78,12 @@ describe("buildSignalSubscribeTool", () => {
     it("throws when target agent belongs to another user", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-subscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const tool = buildSignalSubscribeTool(signals);
 
             await expect(

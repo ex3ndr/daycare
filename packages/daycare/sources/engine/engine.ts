@@ -10,6 +10,9 @@ import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
 import { dockerContainersStaleRemove } from "../sandbox/docker/dockerContainersStaleRemove.js";
+import { databaseClose } from "../storage/databaseClose.js";
+import { databaseMigrate } from "../storage/databaseMigrate.js";
+import { databaseOpen } from "../storage/databaseOpen.js";
 import { Storage } from "../storage/storage.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { InvalidateSync } from "../util/sync.js";
@@ -129,7 +132,9 @@ export class Engine {
     constructor(options: EngineOptions) {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
         this.config = new ConfigModule(options.config);
-        this.storage = Storage.open(this.config.current.dbPath);
+        const db = databaseOpen(this.config.current.dbPath);
+        databaseMigrate(db);
+        this.storage = Storage.fromDatabase(db);
         // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;
         this.signals = new Signals({
@@ -473,7 +478,7 @@ export class Engine {
         this.processes.unload();
         await this.exposes.stop();
         await this.pluginManager.unloadAll();
-        this.storage.close();
+        databaseClose(this.storage.db);
     }
 
     getStatus() {

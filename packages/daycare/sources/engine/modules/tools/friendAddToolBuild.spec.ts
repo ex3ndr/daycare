@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { contextForAgent } from "../../agents/context.js";
 import { friendAddToolBuild } from "./friendAddToolBuild.js";
 
@@ -9,7 +10,7 @@ const toolCall = { id: "tool-1", name: "friend_add" };
 
 describe("friendAddToolBuild", () => {
     it("sends a request and confirms when the other side adds back", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -53,12 +54,12 @@ describe("friendAddToolBuild", () => {
             expect(friends?.requestedA).toBe(true);
             expect(friends?.requestedB).toBe(true);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("accepts a pending subuser share and notifies the owner", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -93,12 +94,12 @@ describe("friendAddToolBuild", () => {
             expect(share?.requestedA).toBe(true);
             expect(share?.requestedB).toBe(true);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("rejects subuser accept when no pending offer exists", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -124,12 +125,12 @@ describe("friendAddToolBuild", () => {
                 )
             ).rejects.toThrow("No pending share request for this subuser.");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("rejects subuser accept when caller is not friends with owner", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -154,12 +155,12 @@ describe("friendAddToolBuild", () => {
                 )
             ).rejects.toThrow("You are not friends with subuser owner");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("enforces cooldown after a rejected request", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -180,7 +181,7 @@ describe("friendAddToolBuild", () => {
                 )
             ).rejects.toThrow("Friend request cooldown is active");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
-import { Storage } from "../../storage/storage.js";
+import type { Storage } from "../../storage/storage.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { MemoryWorker, type MemoryWorkerPostFn } from "./memoryWorker.js";
 
@@ -17,7 +18,7 @@ function mockConfig(): ConfigModule {
 }
 
 async function createTestStorage() {
-    const storage = Storage.open(":memory:");
+    const storage = storageOpen(":memory:");
     const owner = (await storage.users.findMany())[0];
     if (!owner) {
         throw new Error("Owner user missing");
@@ -87,7 +88,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -129,7 +130,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -169,7 +170,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -216,7 +217,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -239,7 +240,7 @@ describe("MemoryWorker", () => {
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).toBe(maxId);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -283,7 +284,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

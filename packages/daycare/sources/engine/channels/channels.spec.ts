@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
-
+import { storageOpen } from "../../storage/storageOpen.js";
 import { Channels } from "./channels.js";
 
 describe("Channels", () => {
@@ -12,8 +12,10 @@ describe("Channels", () => {
         try {
             const subscribe = vi.fn();
             const unsubscribe = vi.fn();
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const channels = new Channels({
-                configDir: dir,
+                channels: storage.channels,
+                channelMessages: storage.channelMessages,
                 signals: { subscribe, unsubscribe },
                 agentSystem: {
                     agentExists: async (agentId: string) => agentId !== "missing",
@@ -54,8 +56,10 @@ describe("Channels", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-channels-"));
         try {
             const post = vi.fn(async () => undefined);
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const channels = new Channels({
-                configDir: dir,
+                channels: storage.channels,
+                channelMessages: storage.channelMessages,
                 signals: {
                     subscribe: vi.fn(),
                     unsubscribe: vi.fn()
@@ -124,8 +128,10 @@ describe("Channels", () => {
     it("restores channels from disk and replays member subscriptions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-channels-"));
         try {
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const first = new Channels({
-                configDir: dir,
+                channels: storage.channels,
+                channelMessages: storage.channelMessages,
                 signals: {
                     subscribe: vi.fn(),
                     unsubscribe: vi.fn()
@@ -144,8 +150,10 @@ describe("Channels", () => {
             await first.addMember("ops", { agentId: "agent-a", userId: "user-1" }, "alice");
 
             const subscribe = vi.fn();
+            const reloadedStorage = storageOpen(path.join(dir, "daycare.db"));
             const second = new Channels({
-                configDir: dir,
+                channels: reloadedStorage.channels,
+                channelMessages: reloadedStorage.channelMessages,
                 signals: {
                     subscribe,
                     unsubscribe: vi.fn()

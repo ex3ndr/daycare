@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { userStateDetect } from "./userStateDetect.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function createStorage(): Storage {
-    return Storage.open(":memory:");
+    return storageOpen(":memory:");
 }
 
 describe("userStateDetect", () => {
@@ -17,7 +18,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "nonexistent");
             expect(state).toBe("new_user");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -30,7 +31,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("new_user");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -59,7 +60,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("new_user");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -90,7 +91,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("active_user");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -127,7 +128,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("returning_user");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -167,7 +168,7 @@ describe("userStateDetect", () => {
             // Even though user is < 7 days old, compaction means they're not "new"
             expect(state).toBe("active_user");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

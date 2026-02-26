@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { HistoryRepository } from "./historyRepository.js";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 const permissions: SessionPermissions = {
     workingDir: "/workspace",
@@ -10,7 +10,7 @@ const permissions: SessionPermissions = {
 };
 
 async function createTestStorage() {
-    const storage = Storage.open(":memory:");
+    const storage = storageOpen(":memory:");
     const owner = (await storage.users.findMany())[0];
     if (!owner) {
         throw new Error("Owner user missing");
@@ -51,7 +51,7 @@ describe("HistoryRepository", () => {
                 { type: "note", at: 21, text: "B1" }
             ]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -67,7 +67,7 @@ describe("HistoryRepository", () => {
             expect(id1).toBeGreaterThan(0);
             expect(id2).toBeGreaterThan(id1);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -87,7 +87,7 @@ describe("HistoryRepository", () => {
                 expect(records[0]).toEqual({ type: "note", at: 12, text: "b" });
                 expect(records[1]).toEqual({ type: "note", at: 13, text: "c" });
             } finally {
-                storage.close();
+                storage.db.close();
             }
         });
 
@@ -102,7 +102,7 @@ describe("HistoryRepository", () => {
                 const records = await history.findSinceId(sessionId, lastId);
                 expect(records).toHaveLength(0);
             } finally {
-                storage.close();
+                storage.db.close();
             }
         });
     });
@@ -120,7 +120,7 @@ describe("HistoryRepository", () => {
                 const maxId = await history.maxId(sessionId);
                 expect(maxId).toBe(id2);
             } finally {
-                storage.close();
+                storage.db.close();
             }
         });
 
@@ -133,7 +133,7 @@ describe("HistoryRepository", () => {
                 const maxId = await history.maxId(sessionId);
                 expect(maxId).toBeNull();
             } finally {
-                storage.close();
+                storage.db.close();
             }
         });
     });

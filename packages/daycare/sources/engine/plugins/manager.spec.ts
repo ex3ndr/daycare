@@ -6,6 +6,7 @@ import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings } from "../../settings.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { contextForUser } from "../agents/context.js";
 import { ConfigModule } from "../config/configModule.js";
 import { FileFolder } from "../files/fileFolder.js";
@@ -64,6 +65,12 @@ function createManager(
             }
         ]
     ]);
+    const storage = storageOpen(path.join(rootDir, "daycare.db"));
+    const processesRuntime =
+        processes ??
+        new Processes(rootDir, getLogger("test.processes"), {
+            repository: storage.processes
+        });
     return {
         modules,
         config: configModule,
@@ -74,7 +81,7 @@ function createManager(
             fileStore,
             pluginCatalog: catalog,
             inferenceRouter,
-            processes: processes ?? new Processes(rootDir, getLogger("test.processes")),
+            processes: processesRuntime,
             exposes: {
                 registerProvider: async () => undefined,
                 unregisterProvider: async () => undefined,

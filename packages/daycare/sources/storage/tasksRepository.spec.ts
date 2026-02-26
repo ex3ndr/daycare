@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { contextForAgent } from "../engine/agents/context.js";
 import type { TaskDbRecord } from "./databaseTypes.js";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 import { TasksRepository } from "./tasksRepository.js";
 
 describe("TasksRepository", () => {
     it("supports create, find, update, and delete", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new TasksRepository(storage.db);
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -49,12 +49,12 @@ describe("TasksRepository", () => {
             expect(deleted?.id).toBe("task-1");
             expect(typeof deleted?.deletedAt).toBe("number");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new TasksRepository(storage.db);
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -76,12 +76,12 @@ describe("TasksRepository", () => {
             const second = await repo.findById(ctx, "cached-task");
             expect(second?.id).toBe("cached-task");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("scopes ids by user", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new TasksRepository(storage.db);
             const ctxA = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -113,7 +113,7 @@ describe("TasksRepository", () => {
             expect(first?.title).toBe("A");
             expect(second?.title).toBe("B");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

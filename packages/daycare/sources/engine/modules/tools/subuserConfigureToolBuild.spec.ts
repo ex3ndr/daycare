@@ -6,7 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserConfigureToolBuild } from "./subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
@@ -19,7 +20,7 @@ describe("subuserConfigureToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const updateAgentDescriptor = vi.fn();
@@ -62,7 +63,7 @@ describe("subuserConfigureToolBuild", () => {
             // Verify in-memory update was called
             expect(updateAgentDescriptor).toHaveBeenCalled();
 
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -72,7 +73,7 @@ describe("subuserConfigureToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-reject-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             await storage.users.create({ id: "regular-user" });
 
             const tool = subuserConfigureToolBuild();
@@ -86,7 +87,7 @@ describe("subuserConfigureToolBuild", () => {
                 tool.execute({ subuserId: "some-id", systemPrompt: "prompt" }, context, configureToolCall)
             ).rejects.toThrow("Only the owner user can configure subusers.");
 
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

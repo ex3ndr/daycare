@@ -1,4 +1,4 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseInboxRow, InboxDbRecord } from "./databaseTypes.js";
 
 /**
@@ -6,9 +6,9 @@ import type { DatabaseInboxRow, InboxDbRecord } from "./databaseTypes.js";
  * Expects: schema migrations already applied for the inbox table.
  */
 export class InboxRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

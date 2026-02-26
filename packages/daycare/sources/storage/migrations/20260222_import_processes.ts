@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
+import type { StorageDatabase } from "../databaseOpen.js";
 import { databasePathResolve } from "../databasePathResolve.js";
 import type { Migration } from "./migrationTypes.js";
 
@@ -97,13 +97,13 @@ export const migration20260222ImportProcesses: Migration = {
     }
 };
 
-function ownerUserIdResolve(db: Pick<DatabaseSync, "prepare">): string {
+function ownerUserIdResolve(db: Pick<StorageDatabase, "prepare">): string {
     const row = db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get() as { id?: unknown } | undefined;
     const ownerId = typeof row?.id === "string" ? row.id.trim() : "";
     return ownerId || "owner";
 }
 
-function agentUserIdResolve(db: Pick<DatabaseSync, "prepare">, agentId: string): string | null {
+function agentUserIdResolve(db: Pick<StorageDatabase, "prepare">, agentId: string): string | null {
     const row = db.prepare("SELECT user_id FROM agents WHERE id = ? LIMIT 1").get(agentId) as
         | { user_id?: unknown }
         | undefined;

@@ -1,9 +1,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
 import matter from "gray-matter";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { stringSlugify } from "../../utils/stringSlugify.js";
+import type { StorageDatabase } from "../databaseOpen.js";
 import { databasePathResolve } from "../databasePathResolve.js";
 import type { Migration } from "./migrationTypes.js";
 
@@ -22,7 +22,7 @@ export const migration20260220ImportTasks: Migration = {
     }
 };
 
-function cronTasksImport(db: Pick<DatabaseSync, "prepare">, cronDir: string, ownerUserId: string | null): void {
+function cronTasksImport(db: Pick<StorageDatabase, "prepare">, cronDir: string, ownerUserId: string | null): void {
     if (!existsSync(cronDir)) {
         return;
     }
@@ -113,7 +113,7 @@ function cronTasksImport(db: Pick<DatabaseSync, "prepare">, cronDir: string, own
     }
 }
 
-function ownerUserIdResolve(db: Pick<DatabaseSync, "prepare">): string | null {
+function ownerUserIdResolve(db: Pick<StorageDatabase, "prepare">): string | null {
     const row = db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get() as { id?: unknown } | undefined;
     if (typeof row?.id !== "string") {
         return null;
@@ -122,7 +122,7 @@ function ownerUserIdResolve(db: Pick<DatabaseSync, "prepare">): string | null {
     return trimmed.length > 0 ? trimmed : null;
 }
 
-function heartbeatTasksImport(db: Pick<DatabaseSync, "prepare">, heartbeatDir: string): void {
+function heartbeatTasksImport(db: Pick<StorageDatabase, "prepare">, heartbeatDir: string): void {
     if (!existsSync(heartbeatDir)) {
         return;
     }

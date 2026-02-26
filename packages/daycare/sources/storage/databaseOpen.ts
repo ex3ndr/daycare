@@ -1,15 +1,12 @@
 import { mkdirSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-import type { DatabaseSync as DatabaseSyncType } from "node:sqlite";
+import Database from "better-sqlite3";
+import type { DaycareDatabaseClient } from "../schema.js";
 
-const nodeRequire = createRequire(import.meta.url);
-const { DatabaseSync } = nodeRequire("node:sqlite") as typeof import("node:sqlite");
-
-export type StorageDatabase = DatabaseSyncType;
+export type StorageDatabase = DaycareDatabaseClient;
 
 /**
- * Opens a SQLite database and applies required connection pragmas.
+ * Opens a SQLite database client and applies required connection pragmas.
  * Expects: dbPath is absolute and writable by the current process.
  */
 export function databaseOpen(dbPath: string): StorageDatabase {
@@ -17,10 +14,10 @@ export function databaseOpen(dbPath: string): StorageDatabase {
         mkdirSync(path.dirname(dbPath), { recursive: true });
     }
 
-    const db = new DatabaseSync(dbPath);
+    const db = new Database(dbPath);
     if (dbPath !== ":memory:") {
-        db.exec("PRAGMA journal_mode=WAL;");
+        db.pragma("journal_mode = WAL");
     }
-    db.exec("PRAGMA foreign_keys=ON;");
+    db.pragma("foreign_keys = ON");
     return db;
 }

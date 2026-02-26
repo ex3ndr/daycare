@@ -67,7 +67,7 @@ export const plugin = definePlugin({
                         public: true,
                         localNetwork: false
                     },
-                    createTunnel: async (proxyPort) => {
+                    createTunnel: async (proxyPort, _mode, _userId) => {
                         const url = await customTunnelScriptRun(settings.exposeScript, [String(proxyPort)]);
                         const resolved = customTunnelDomainResolve(url);
                         activeDomains.set(resolved.domain, resolved.publicUrl);

@@ -6,14 +6,13 @@ import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
 import { ChannelsRepository } from "./channelsRepository.js";
 import { ConnectionsRepository } from "./connectionsRepository.js";
 import { CronTasksRepository } from "./cronTasksRepository.js";
-import { databaseOpen } from "./databaseOpen.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
-import { migrationRun } from "./migrations/migrationRun.js";
 import { ProcessesRepository } from "./processesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
@@ -24,8 +23,8 @@ import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 
 /**
- * Facade for all storage access. Owns one DB instance and repository instances.
- * Expects: dbPath points to a writable sqlite file or ":memory:".
+ * Facade for all storage access and repository instances.
+ * Expects: connection is an open SQLite database with required migrations applied.
  */
 export class Storage {
     readonly users: UsersRepository;
@@ -47,10 +46,10 @@ export class Storage {
     readonly systemPrompts: SystemPromptsRepository;
     readonly tokenStats: TokenStatsRepository;
 
-    private readonly connection: ReturnType<typeof databaseOpen>;
+    private readonly connection: StorageDatabase;
     private readonly connectorKeyLocks = new Map<string, AsyncLock>();
 
-    private constructor(connection: ReturnType<typeof databaseOpen>) {
+    private constructor(connection: StorageDatabase) {
         this.connection = connection;
         this.users = new UsersRepository(connection);
         this.agents = new AgentsRepository(connection);
@@ -72,18 +71,12 @@ export class Storage {
         this.tokenStats = new TokenStatsRepository(connection);
     }
 
-    static open(dbPath: string): Storage {
-        const db = databaseOpen(dbPath);
-        migrationRun(db);
+    static fromDatabase(db: StorageDatabase): Storage {
         return new Storage(db);
     }
 
-    get db(): ReturnType<typeof databaseOpen> {
+    get db(): StorageDatabase {
         return this.connection;
-    }
-
-    close(): void {
-        this.connection.close();
     }
 
     async createUser(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {

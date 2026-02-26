@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { friendShareSubuserToolBuild } from "./friendShareSubuserToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_share_subuser" };
 
 describe("friendShareSubuserToolBuild", () => {
     it("shares a subuser with an existing friend", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -46,12 +47,12 @@ describe("friendShareSubuserToolBuild", () => {
                 requestedB: false
             });
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("fails when owner and friend are not connected", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -75,12 +76,12 @@ describe("friendShareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("You are not friends");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("fails when caller does not own the subuser", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -107,12 +108,12 @@ describe("friendShareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("Subuser does not belong to the calling user.");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("fails when share is already active", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -141,7 +142,7 @@ describe("friendShareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("already shared");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

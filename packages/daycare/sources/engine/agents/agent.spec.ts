@@ -14,10 +14,12 @@ import type {
     AgentState,
     Connector,
     Context,
-    Signal
+    Signal,
+    SignalSubscription
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
@@ -529,12 +531,8 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = new Signals({
-                eventBus,
-                configDir: config.configDir,
-                onDeliver: async (signal, subscriptions) => {
-                    await agentSystem.signalDeliver(signal, subscriptions);
-                }
+            const signals = signalsBuild(config, eventBus, async (signal, subscriptions) => {
+                await agentSystem.signalDeliver(signal, subscriptions);
             });
             agentSystem.setSignals(signals);
             await agentSystem.load();
@@ -583,12 +581,8 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = new Signals({
-                eventBus,
-                configDir: config.configDir,
-                onDeliver: async (signal, subscriptions) => {
-                    await agentSystem.signalDeliver(signal, subscriptions);
-                }
+            const signals = signalsBuild(config, eventBus, async (signal, subscriptions) => {
+                await agentSystem.signalDeliver(signal, subscriptions);
             });
             agentSystem.setSignals(signals);
             await agentSystem.load();
@@ -642,12 +636,8 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = new Signals({
-                eventBus,
-                configDir: config.configDir,
-                onDeliver: async (signal, subscriptions) => {
-                    await agentSystem.signalDeliver(signal, subscriptions);
-                }
+            const signals = signalsBuild(config, eventBus, async (signal, subscriptions) => {
+                await agentSystem.signalDeliver(signal, subscriptions);
             });
             agentSystem.setSignals(signals);
             await agentSystem.load();
@@ -732,7 +722,7 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = new Signals({ eventBus, configDir: config.configDir });
+            const signals = signalsBuild(config, eventBus);
             agentSystem.setSignals(signals);
             await agentSystem.load();
             await agentSystem.start();
@@ -772,8 +762,8 @@ describe("Agent", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const eventBus = new EngineEventBus();
             const configModule = new ConfigModule(config);
-            const signals = new Signals({ eventBus, configDir: config.configDir });
-            delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
+            const signals = signalsBuild(config, eventBus);
+            delayedSignals = delayedSignalsBuild(configModule, eventBus, signals);
             const agentSystem = new AgentSystem({
                 config: configModule,
                 eventBus,
@@ -832,8 +822,8 @@ describe("Agent", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const eventBus = new EngineEventBus();
             const configModule = new ConfigModule(config);
-            const signals = new Signals({ eventBus, configDir: config.configDir });
-            delayedSignals = new DelayedSignals({ config: configModule, eventBus, signals });
+            const signals = signalsBuild(config, eventBus);
+            delayedSignals = delayedSignalsBuild(configModule, eventBus, signals);
             const agentSystem = new AgentSystem({
                 config: configModule,
                 eventBus,
@@ -1008,9 +998,7 @@ describe("Agent", () => {
                 type: "assistant_message",
                 at: startedAt - 1,
                 tokens: null,
-                content: [
-                    { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
-                ]
+                content: [{ type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }]
             });
             await agentSystem.storage.appendHistory(agentId, {
                 type: "rlm_start",
@@ -1192,9 +1180,7 @@ describe("Agent", () => {
                 type: "assistant_message",
                 at: startedAt - 1,
                 tokens: null,
-                content: [
-                    { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
-                ]
+                content: [{ type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }]
             });
             await agentSystem.storage.appendHistory(agentId, {
                 type: "rlm_start",
@@ -1310,9 +1296,7 @@ describe("Agent", () => {
                 type: "assistant_message",
                 at: startedAt - 1,
                 tokens: null,
-                content: [
-                    { type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }
-                ]
+                content: [{ type: "toolCall", id: "tool-call-1", name: "run_python", arguments: { code: "wait(300)" } }]
             });
             await agentSystem.storage.appendHistory(agentId, {
                 type: "rlm_start",
@@ -1631,6 +1615,30 @@ async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: strin
         throw new Error(`Agent not found: ${agentId}`);
     }
     return ctx;
+}
+
+function signalsBuild(
+    config: { dbPath: string },
+    eventBus: EngineEventBus,
+    onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void>
+): Signals {
+    const storage = storageOpen(config.dbPath);
+    return new Signals({
+        eventBus,
+        signalEvents: storage.signalEvents,
+        signalSubscriptions: storage.signalSubscriptions,
+        onDeliver
+    });
+}
+
+function delayedSignalsBuild(config: ConfigModule, eventBus: EngineEventBus, signals: Signals): DelayedSignals {
+    const storage = storageOpen(config.current.dbPath);
+    return new DelayedSignals({
+        config,
+        eventBus,
+        signals,
+        delayedSignals: storage.delayedSignals
+    });
 }
 
 function historyHasSignalText(records: Array<{ type: string; text?: string }>): boolean {

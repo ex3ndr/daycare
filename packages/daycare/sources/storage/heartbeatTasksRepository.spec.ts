@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { HeartbeatTaskDbRecord } from "./databaseTypes.js";
 import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 describe("HeartbeatTasksRepository", () => {
     it("supports create, find, update, delete, and recordRun", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
             await storage.tasks.create({
@@ -70,12 +70,12 @@ describe("HeartbeatTasksRepository", () => {
             expect(await repo.delete("beta")).toBe(false);
             expect(await repo.findById("beta")).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
             await storage.tasks.create({
@@ -104,7 +104,7 @@ describe("HeartbeatTasksRepository", () => {
             const second = await repo.findById("cache-heartbeat");
             expect(second?.id).toBe("cache-heartbeat");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

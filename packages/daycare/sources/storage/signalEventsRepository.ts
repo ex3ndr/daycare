@@ -1,8 +1,9 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
-import type { SQLInputValue } from "node:sqlite";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseSignalEventRow, SignalEventDbRecord } from "./databaseTypes.js";
+
+type SQLInputValue = string | number | bigint | Uint8Array | null;
 
 export type SignalEventsFindManyOptions = {
     type?: string;
@@ -19,14 +20,14 @@ type SignalEventsQueryOptions = SignalEventsFindManyOptions & {
  * Expects: schema migrations already applied for signals_events.
  */
 export class SignalEventsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly eventsById = new Map<string, SignalEventDbRecord>();
     private readonly eventLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allEventsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

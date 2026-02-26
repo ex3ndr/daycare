@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 describe("ConnectionsRepository", () => {
     it("upserts requests with canonical pair ordering", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -22,12 +22,12 @@ describe("ConnectionsRepository", () => {
             expect(confirmed.requestedAAt).toBe(100);
             expect(confirmed.requestedBAt).toBe(200);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("clears the selected side and preserves timestamps for cooldown checks", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -41,12 +41,12 @@ describe("ConnectionsRepository", () => {
             expect(cleared?.requestedAAt).toBe(100);
             expect(cleared?.requestedBAt).toBe(200);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("finds friendships scoped to a user and deletes connection rows", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -65,12 +65,12 @@ describe("ConnectionsRepository", () => {
             expect(removed).toBe(true);
             expect(await storage.connections.find("alice", "bob")).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("finds all connections that involve subusers of an owner", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -92,12 +92,12 @@ describe("ConnectionsRepository", () => {
                 "alice-sub-2:bob"
             ]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("finds connections between a friend and another owner's subusers", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -119,7 +119,7 @@ describe("ConnectionsRepository", () => {
             expect(rows).toHaveLength(2);
             expect(rows.map((row) => `${row.userAId}:${row.userBId}`)).toEqual(["alice-sub-1:bob", "alice-sub-2:bob"]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

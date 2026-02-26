@@ -1,9 +1,10 @@
 import type { Config } from "@/types";
 import { getLogger } from "../log.js";
+import { databaseClose } from "./databaseClose.js";
+import { databaseMigrate } from "./databaseMigrate.js";
 import { databaseOpen } from "./databaseOpen.js";
 import { migrations } from "./migrations/_migrations.js";
 import { migrationPending } from "./migrations/migrationPending.js";
-import { migrationRun } from "./migrations/migrationRun.js";
 
 const logger = getLogger("storage.upgrade");
 
@@ -20,7 +21,7 @@ export async function storageUpgrade(config: Config): Promise<StorageUpgradeResu
     const db = databaseOpen(config.dbPath);
     try {
         const pendingBefore = migrationPending(db, migrations).map((entry) => entry.name);
-        const applied = migrationRun(db);
+        const applied = databaseMigrate(db);
         logger.info(
             {
                 dbPath: config.dbPath,
@@ -31,6 +32,6 @@ export async function storageUpgrade(config: Config): Promise<StorageUpgradeResu
         );
         return { pendingBefore, applied };
     } finally {
-        db.close();
+        databaseClose(db);
     }
 }

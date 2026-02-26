@@ -117,7 +117,7 @@ export const plugin = definePlugin({
 
         let provider: ExposeTunnelProvider | null = null;
 
-        const processEnsure = async (proxyPort: number): Promise<void> => {
+        const processEnsure = async (proxyPort: number, userId: string): Promise<void> => {
             const expectedName = processNameBuild(instanceId, proxyPort);
             const existing = await api.processes.listByOwner(processOwner);
             if (existing.length > 0) {
@@ -129,7 +129,6 @@ export const plugin = definePlugin({
                 workingDir: api.dataDir,
                 writeDirs: [api.dataDir]
             };
-            const userId = await api.processes.defaultUserId();
             await api.processes.create(
                 {
                     name: expectedName,
@@ -160,14 +159,14 @@ export const plugin = definePlugin({
                         public: true,
                         localNetwork: true
                     },
-                    createTunnel: async (proxyPort) => {
+                    createTunnel: async (proxyPort, _mode, userId) => {
                         if (activeDomains.size > 0) {
                             throw new Error(
                                 "Local Expose provider supports only one active expose endpoint at a time."
                             );
                         }
 
-                        await processEnsure(proxyPort);
+                        await processEnsure(proxyPort, userId);
                         activeDomains.add(configuredDomain);
                         return { domain: configuredDomain };
                     },

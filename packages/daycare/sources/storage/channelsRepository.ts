@@ -1,6 +1,6 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type {
     ChannelDbRecord,
     ChannelMemberDbRecord,
@@ -13,7 +13,7 @@ import type {
  * Expects: schema migrations already applied for channels and channel_members.
  */
 export class ChannelsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly channelsById = new Map<string, ChannelDbRecord>();
     private readonly channelIdByName = new Map<string, string>();
     private readonly channelLocks = new Map<string, AsyncLock>();
@@ -21,7 +21,7 @@ export class ChannelsRepository {
     private readonly createLock = new AsyncLock();
     private allChannelsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

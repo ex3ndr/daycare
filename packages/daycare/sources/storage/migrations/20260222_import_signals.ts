@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
+import type { StorageDatabase } from "../databaseOpen.js";
 import { databasePathResolve } from "../databasePathResolve.js";
 import type { Migration } from "./migrationTypes.js";
 
@@ -29,13 +29,13 @@ type LegacySignalEvent = {
     createdAt?: unknown;
 };
 
-function ownerUserIdResolve(db: Pick<DatabaseSync, "prepare">): string {
+function ownerUserIdResolve(db: Pick<StorageDatabase, "prepare">): string {
     const row = db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get() as { id?: unknown } | undefined;
     const ownerId = typeof row?.id === "string" ? row.id.trim() : "";
     return ownerId || "owner";
 }
 
-function signalEventsImport(db: Pick<DatabaseSync, "prepare">, eventsPath: string, ownerUserId: string): void {
+function signalEventsImport(db: Pick<StorageDatabase, "prepare">, eventsPath: string, ownerUserId: string): void {
     if (!existsSync(eventsPath)) {
         return;
     }
@@ -84,7 +84,7 @@ function signalEventsImport(db: Pick<DatabaseSync, "prepare">, eventsPath: strin
     }
 }
 
-function delayedSignalsImport(db: Pick<DatabaseSync, "prepare">, delayedPath: string, ownerUserId: string): void {
+function delayedSignalsImport(db: Pick<StorageDatabase, "prepare">, delayedPath: string, ownerUserId: string): void {
     if (!existsSync(delayedPath)) {
         return;
     }

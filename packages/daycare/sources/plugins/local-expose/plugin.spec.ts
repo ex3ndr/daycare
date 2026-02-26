@@ -55,7 +55,6 @@ describe("local-expose plugin", () => {
                 }
             },
             processes: {
-                defaultUserId: vi.fn(async () => "owner-user"),
                 listByOwner: vi.fn(async () => []),
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
@@ -71,7 +70,7 @@ describe("local-expose plugin", () => {
         }
         const provider = registeredProvider as ExposeTunnelProvider;
 
-        const created = await provider.createTunnel(3000, "public");
+        const created = await provider.createTunnel(3000, "public", "user-1");
         expect(created).toEqual({ domain: "local.example.test" });
         expect(api.processes.create).toHaveBeenCalledTimes(1);
         expect(api.processes.create).toHaveBeenCalledWith(
@@ -82,7 +81,8 @@ describe("local-expose plugin", () => {
                 owner: { type: "plugin", id: "local-expose-1" },
                 cwd: "/tmp/daycare/plugins/local-expose-1",
                 home: "/tmp/daycare/plugins/local-expose-1",
-                allowedDomains: ["127.0.0.1", "localhost"]
+                allowedDomains: ["127.0.0.1", "localhost"],
+                userId: "user-1"
             }),
             {
                 workingDir: "/tmp/daycare/plugins/local-expose-1",
@@ -129,7 +129,6 @@ describe("local-expose plugin", () => {
                 }
             },
             processes: {
-                defaultUserId: vi.fn(async () => "owner-user"),
                 listByOwner: vi.fn(async () => [
                     {
                         id: "proc-1",
@@ -162,7 +161,7 @@ describe("local-expose plugin", () => {
             throw new Error("Expected provider registration");
         }
         const provider = registeredProvider as ExposeTunnelProvider;
-        await provider.createTunnel(3000, "public");
+        await provider.createTunnel(3000, "public", "user-1");
 
         expect(api.processes.removeByOwner).toHaveBeenCalledWith({
             type: "plugin",
@@ -195,7 +194,6 @@ describe("local-expose plugin", () => {
                 }
             },
             processes: {
-                defaultUserId: vi.fn(async () => "owner-user"),
                 listByOwner: vi.fn(async () => []),
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
@@ -210,8 +208,8 @@ describe("local-expose plugin", () => {
         }
         const provider = registeredProvider as ExposeTunnelProvider;
 
-        const created = await provider.createTunnel(3000, "public");
-        await expect(provider.createTunnel(3001, "public")).rejects.toThrow(
+        const created = await provider.createTunnel(3000, "public", "user-1");
+        await expect(provider.createTunnel(3001, "public", "user-1")).rejects.toThrow(
             "Local Expose provider supports only one active expose endpoint at a time."
         );
         await provider.destroyTunnel(created.domain);

@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { EngineEventBus } from "../../ipc/events.js";
 import { Signals } from "../../signals/signals.js";
 import { buildSignalUnsubscribeTool } from "./signalUnsubscribeToolBuild.js";
@@ -15,7 +16,12 @@ describe("buildSignalUnsubscribeTool", () => {
     it("removes an existing subscription", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-unsubscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             await signals.subscribe({
                 ctx: { userId: "user-source", agentId: "agent-target" },
                 pattern: "build:*:done",
@@ -47,7 +53,12 @@ describe("buildSignalUnsubscribeTool", () => {
     it("throws when target agent does not exist", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-unsubscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const tool = buildSignalUnsubscribeTool(signals);
 
             await expect(
@@ -65,7 +76,12 @@ describe("buildSignalUnsubscribeTool", () => {
     it("returns removed=false when subscription does not exist", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-unsubscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const tool = buildSignalUnsubscribeTool(signals);
             const result = await tool.execute(
                 { pattern: "build:*:done", agentId: "agent-target" },
@@ -82,7 +98,12 @@ describe("buildSignalUnsubscribeTool", () => {
     it("throws when target agent belongs to another user", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-unsubscribe-tool-"));
         try {
-            const signals = new Signals({ eventBus: new EngineEventBus(), configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus: new EngineEventBus(),
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const tool = buildSignalUnsubscribeTool(signals);
 
             await expect(

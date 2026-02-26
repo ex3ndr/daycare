@@ -1,6 +1,6 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseProcessRow, ProcessDbRecord, ProcessOwnerDbRecord } from "./databaseTypes.js";
 
 export type ProcessesFindManyOptions = {
@@ -17,14 +17,14 @@ type ProcessesFindAllOptions = ProcessesFindManyOptions & {
  * Expects: schema migrations already applied for processes.
  */
 export class ProcessesRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly recordsById = new Map<string, ProcessDbRecord>();
     private readonly recordLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allRecordsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

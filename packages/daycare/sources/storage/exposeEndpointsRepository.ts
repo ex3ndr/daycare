@@ -1,7 +1,7 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { exposeDomainNormalize, exposeTargetParse } from "../engine/expose/exposeTypes.js";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseExposeEndpointRow, ExposeEndpointDbRecord } from "./databaseTypes.js";
 
 /**
@@ -9,14 +9,14 @@ import type { DatabaseExposeEndpointRow, ExposeEndpointDbRecord } from "./databa
  * Expects: schema migrations already applied for expose_endpoints.
  */
 export class ExposeEndpointsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly endpointsById = new Map<string, ExposeEndpointDbRecord>();
     private readonly endpointLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allEndpointsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

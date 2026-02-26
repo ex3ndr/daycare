@@ -4,13 +4,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { HeartbeatScheduler } from "./heartbeatScheduler.js";
 
 async function createTempScheduler() {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-heartbeat-"));
-    const storage = Storage.open(":memory:");
+    const storage = storageOpen(":memory:");
     return { dir, storage };
 }
 
@@ -24,7 +25,7 @@ describe("HeartbeatScheduler", () => {
         await Promise.all(temps.map((dir) => rm(dir, { recursive: true, force: true })));
         temps.length = 0;
         for (const storage of storages) {
-            storage.close();
+            storage.db.close();
         }
         storages.length = 0;
     });

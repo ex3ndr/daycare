@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { getLogger } from "../../log.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { Processes } from "../processes/processes.js";
 import { PluginModuleLoader } from "./loader.js";
 
@@ -53,6 +54,7 @@ export const plugin = {
         const loader = new PluginModuleLoader("test-plugin");
         const { module } = await loader.load(pluginPath);
         const settings = module.settingsSchema.parse({ name: "demo" });
+        const storage = storageOpen(path.join(dir, "daycare.db"));
         const instance = await module.create({
             instance: { instanceId: "demo", pluginId: "demo" },
             settings,
@@ -73,7 +75,9 @@ export const plugin = {
                     throw new Error("Inference not available in test.");
                 }
             },
-            processes: new Processes(dir, getLogger("test.processes.loader")),
+            processes: new Processes(dir, getLogger("test.processes.loader"), {
+                repository: storage.processes
+            }),
             mode: "runtime",
             events: {
                 emit: () => undefined

@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { EngineEventBus } from "../../ipc/events.js";
 import { Signals } from "../../signals/signals.js";
 import { buildSignalGenerateTool } from "./signal.js";
@@ -16,7 +17,12 @@ describe("buildSignalGenerateTool", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signal-tool-"));
         try {
             const eventBus = new EngineEventBus();
-            const signals = new Signals({ eventBus, configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus,
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const events: Array<{ type: string; payload: unknown }> = [];
 
             const unsubscribe = eventBus.onEvent((event) => {

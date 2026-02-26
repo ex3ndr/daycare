@@ -9,6 +9,7 @@ import { FileFolder } from "../../../engine/files/fileFolder.js";
 import type { PluginRegistrar } from "../../../engine/plugins/registry.js";
 import { Processes } from "../../../engine/processes/processes.js";
 import { getLogger } from "../../../log.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { plugin as mediaAnalysis } from "../plugin.js";
 
 type RegisteredProvider = {
@@ -34,6 +35,7 @@ describe("gemini-media plugin", () => {
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
         const auth = new AuthStore(config);
         await auth.setApiKey("google", "test-google-key");
+        const storage = storageOpen(path.join(dir, "daycare.db"));
 
         const registrationState: {
             provider: RegisteredProvider | null;
@@ -104,7 +106,9 @@ describe("gemini-media plugin", () => {
                     throw new Error("Inference not available in tests");
                 }
             },
-            processes: new Processes(dir, getLogger("test.processes.gemini-media")),
+            processes: new Processes(dir, getLogger("test.processes.gemini-media"), {
+                repository: storage.processes
+            }),
             mode: "runtime",
             events: {
                 emit: () => undefined
@@ -221,6 +225,7 @@ describe("gemini-media plugin", () => {
         const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
         const auth = new AuthStore(config);
         await auth.setApiKey("google", "test-google-key");
+        const storage = storageOpen(path.join(dir, "daycare.db"));
 
         const registrationState: {
             provider: RegisteredProvider | null;
@@ -270,7 +275,9 @@ describe("gemini-media plugin", () => {
                     throw new Error("Inference not available in tests");
                 }
             },
-            processes: new Processes(dir, getLogger("test.processes.gemini-media")),
+            processes: new Processes(dir, getLogger("test.processes.gemini-media"), {
+                repository: storage.processes
+            }),
             mode: "runtime",
             events: {
                 emit: () => undefined

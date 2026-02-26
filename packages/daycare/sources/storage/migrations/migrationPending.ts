@@ -1,11 +1,11 @@
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
+import type { StorageDatabase } from "../databaseOpen.js";
 import type { Migration } from "./migrationTypes.js";
 
 /**
  * Returns migrations that are not yet recorded in the _migrations table.
  * Expects: migration names are unique.
  */
-export function migrationPending(db: DatabaseSync, migrations: Migration[]): Migration[] {
+export function migrationPending(db: StorageDatabase, migrations: Migration[]): Migration[] {
     const table = db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = '_migrations' LIMIT 1")
         .get() as { name?: string } | undefined;

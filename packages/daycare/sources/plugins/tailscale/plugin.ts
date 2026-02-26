@@ -45,7 +45,7 @@ export const plugin = definePlugin({
                         public: true,
                         localNetwork: true
                     },
-                    createTunnel: async (proxyPort, mode) => {
+                    createTunnel: async (proxyPort, mode, _userId) => {
                         if (activeDomains.size > 0) {
                             throw new Error("Tailscale provider supports only one active expose endpoint at a time.");
                         }

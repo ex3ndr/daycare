@@ -586,11 +586,16 @@ async function harnessCreate(
     const configModule = new ConfigModule(config);
     const storage = storageResolve(config);
     const eventBus = new EngineEventBus();
-    const signals = new Signals({ eventBus, configDir: config.configDir });
+    const signals = new Signals({
+        eventBus,
+        signalEvents: storage.signalEvents,
+        signalSubscriptions: storage.signalSubscriptions
+    });
     const delayedSignals = new DelayedSignals({
         config: configModule,
         eventBus,
-        signals
+        signals,
+        delayedSignals: storage.delayedSignals
     });
     await delayedSignals.ensureDir();
     const pluginManager = {

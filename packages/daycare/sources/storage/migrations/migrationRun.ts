@@ -1,4 +1,4 @@
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
+import type { StorageDatabase } from "../databaseOpen.js";
 import { migrations } from "./_migrations.js";
 import { migrationPending } from "./migrationPending.js";
 
@@ -6,7 +6,7 @@ import { migrationPending } from "./migrationPending.js";
  * Applies pending migrations in order and records each successful migration.
  * Expects: migration definitions are deterministic and side-effect free outside SQL.
  */
-export function migrationRun(db: DatabaseSync): string[] {
+export function migrationRun(db: StorageDatabase): string[] {
     db.exec(`
     CREATE TABLE IF NOT EXISTS _migrations (
       name TEXT PRIMARY KEY,

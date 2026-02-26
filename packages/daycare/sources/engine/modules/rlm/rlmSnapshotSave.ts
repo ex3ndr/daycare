@@ -27,7 +27,7 @@ export async function rlmSnapshotSave(options: RlmSnapshotSaveOptions): Promise<
         snapshotId
     );
     await rlmSnapshotWrite(snapshotPath, Buffer.from(options.snapshotDump, "base64"));
-    await rlmSnapshotDatabaseSync(options.config.dbPath);
+    await rlmSnapshotDatabaseFlush(options.config.dbPath);
     return snapshotId;
 }
 
@@ -47,7 +47,7 @@ async function rlmSnapshotWrite(snapshotPath: string, dump: Uint8Array): Promise
     await rlmSnapshotPathSync(path.dirname(snapshotPath));
 }
 
-async function rlmSnapshotDatabaseSync(dbPath: string): Promise<void> {
+async function rlmSnapshotDatabaseFlush(dbPath: string): Promise<void> {
     if (dbPath === ":memory:") {
         return;
     }

@@ -16,6 +16,7 @@ import { PluginRegistry } from "../../../engine/plugins/registry.js";
 import { Processes } from "../../../engine/processes/processes.js";
 import { UserHome } from "../../../engine/users/userHome.js";
 import { getLogger } from "../../../log.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { plugin } from "../plugin.js";
 
 describe("database plugin", () => {
@@ -31,6 +32,7 @@ describe("database plugin", () => {
         const fileStore = new FileFolder(path.join(config.dataDir, "files"));
         const modules = new ModuleRegistry({ onMessage: async () => undefined });
         const pluginRegistry = new PluginRegistry(modules);
+        const storage = storageOpen(path.join(baseDir, "daycare.db"));
 
         const instanceId = "database-1";
         const registrar = pluginRegistry.createRegistrar(instanceId);
@@ -85,7 +87,9 @@ describe("database plugin", () => {
                     throw new Error("Inference not available in test.");
                 }
             },
-            processes: new Processes(baseDir, getLogger("test.processes.database")),
+            processes: new Processes(baseDir, getLogger("test.processes.database"), {
+                repository: storage.processes
+            }),
             mode: "runtime" as const,
             events: {
                 emit: () => undefined

@@ -407,7 +407,7 @@ describe("topologyTool", () => {
             expect(result.typedResult.subusers).toEqual([]);
             expect(result.typedResult.friends).toEqual([]);
         } finally {
-            storage.close();
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -485,7 +485,7 @@ describe("topologyTool", () => {
             );
             expect(result.typedResult.friendCount).toBe(0);
         } finally {
-            storage.close();
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -687,7 +687,7 @@ describe("topologyTool", () => {
                 }
             ]);
         } finally {
-            storage.close();
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -819,7 +819,7 @@ describe("topologyTool", () => {
             );
             expect(result.typedResult.friendCount).toBe(1);
         } finally {
-            storage.close();
+            storage.db.close();
             await rm(dir, { recursive: true, force: true });
         }
     });

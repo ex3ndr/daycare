@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { friendSendToolBuild } from "./friendSendToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_send" };
 
 describe("friendSendToolBuild", () => {
     it("sends a friend message to the target user's frontend agents", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -33,12 +34,12 @@ describe("friendSendToolBuild", () => {
                 })
             );
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("fails when users are not friends", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -56,12 +57,12 @@ describe("friendSendToolBuild", () => {
                 )
             ).rejects.toThrow("You are not friends");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("sends to a shared subuser gateway agent", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -110,12 +111,12 @@ describe("friendSendToolBuild", () => {
             );
             expect(postToUserAgents).not.toHaveBeenCalled();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("fails when subuser share is not active", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -141,7 +142,7 @@ describe("friendSendToolBuild", () => {
                 )
             ).rejects.toThrow("No active shared access");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

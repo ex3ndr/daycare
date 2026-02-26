@@ -1,7 +1,7 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { signalTypeMatchesPattern } from "../engine/signals/signalTypeMatchesPattern.js";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseSignalSubscriptionRow, SignalSubscriptionDbRecord } from "./databaseTypes.js";
 
 /**
@@ -9,14 +9,14 @@ import type { DatabaseSignalSubscriptionRow, SignalSubscriptionDbRecord } from "
  * Expects: schema migrations already applied for signals_subscriptions.
  */
 export class SignalSubscriptionsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly subscriptionsByKey = new Map<string, SignalSubscriptionDbRecord>();
     private readonly subscriptionLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allSubscriptionsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

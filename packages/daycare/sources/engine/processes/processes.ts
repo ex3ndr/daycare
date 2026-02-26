@@ -15,7 +15,6 @@ import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPol
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
 import type { ProcessesRepository } from "../../storage/processesRepository.js";
-import { Storage } from "../../storage/storage.js";
 import { atomicWrite } from "../../util/atomicWrite.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import { AsyncLock } from "../../util/lock.js";
@@ -116,9 +115,6 @@ export class Processes {
         ProcessesRepository,
         "create" | "findAll" | "findById" | "update" | "delete" | "deleteByOwner"
     >;
-    private readonly fallbackUserIdResolve: () => Promise<string>;
-    private readonly ownedStorage: Storage | null;
-    private ownedStorageClosed = false;
     private readonly records = new Map<string, ProcessRecord>();
     private readonly children = new Map<string, ChildProcess>();
     private currentBootTimeMs: number | null = null;
@@ -130,35 +126,17 @@ export class Processes {
         logger: Logger,
         options: {
             bootTimeProvider?: () => Promise<number | null>;
-            repository?: Pick<
+            repository: Pick<
                 ProcessesRepository,
                 "create" | "findAll" | "findById" | "update" | "delete" | "deleteByOwner"
             >;
-        } = {}
+        }
     ) {
         this.baseDir = path.resolve(baseDir);
         this.recordsDir = path.join(this.baseDir, "processes");
         this.logger = logger;
         this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
-
-        if (options.repository) {
-            this.repository = options.repository;
-            this.fallbackUserIdResolve = async () => {
-                throw new Error("Default process user is not configured.");
-            };
-            this.ownedStorage = null;
-        } else {
-            const storage = Storage.open(path.join(this.baseDir, "daycare.db"));
-            this.repository = storage.processes;
-            this.fallbackUserIdResolve = async () => {
-                const owner = await storage.users.findOwner();
-                if (!owner?.id) {
-                    throw new Error("Default process user is not available.");
-                }
-                return owner.id;
-            };
-            this.ownedStorage = storage;
-        }
+        this.repository = options.repository;
     }
 
     async load(): Promise<void> {
@@ -184,14 +162,6 @@ export class Processes {
             clearInterval(this.monitorHandle);
             this.monitorHandle = null;
         }
-        if (this.ownedStorage && !this.ownedStorageClosed) {
-            this.ownedStorage.close();
-            this.ownedStorageClosed = true;
-        }
-    }
-
-    async defaultUserId(): Promise<string> {
-        return this.fallbackUserIdResolve();
     }
 
     async create(input: ProcessCreateInput, permissions: SessionPermissions): Promise<ProcessInfo> {

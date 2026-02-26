@@ -12,7 +12,7 @@ The `Context` class itself changes: `agentId` becomes optional (set via factory)
 - `CronTaskDefinition`/`CronTaskContext` carry raw userId/agentId instead of ctx
 - `Memory` class methods take raw `userId` instead of ctx
 - `MemoryWorker` does not carry any userId context
-- Silent owner-fallback resolution in multiple places (`resolveUserIdForDescriptor`, `resolveUserIdForConnectorKey`, `agentDescriptorWrite`, `fallbackUserIdResolve` in Exposes/Processes) masks bugs — if userId is unknown, it should throw, not silently assign to owner
+- Silent owner-fallback resolution in multiple places (`resolveUserIdForDescriptor`, `resolveUserIdForConnectorKey`, `agentDescriptorWrite`, `default user resolver` in Exposes/Processes) masks bugs — if userId is unknown, it should throw, not silently assign to owner
 
 ## Context (from discovery)
 
@@ -42,9 +42,9 @@ The `Context` class itself changes: `agentId` becomes optional (set via factory)
 1. **`agentDescriptorWrite`** — fallback chain: existing userId → provided userId → find owner → create owner. Must be removed: ctx always carries resolved userId, no fallback
 2. **`resolveUserIdForDescriptor`** — subagent/app falls back to `ownerUserIdEnsure()` when parent not found; default case falls back to owner. Must throw instead
 3. **`resolveUserIdForConnectorKey`** — falls back to `ownerUserIdEnsure()` when connector lookup fails. Must throw instead
-4. **`fallbackUserIdResolve`** in `engine.ts` — `async () => owner?.id ?? "owner"` passed to Exposes. Must be removed
-5. **`Exposes.fallbackUserIdResolve`** — used when no userId override in `create()`. Must require ctx instead
-6. **`Processes.fallbackUserIdResolve`** / `defaultUserId()` — returns `"owner"` literal or looks up owner. Must require ctx from caller
+4. **`default user resolver`** in `engine.ts` — `async () => owner?.id ?? "owner"` passed to Exposes. Must be removed
+5. **`Exposes.default user resolver`** — used when no userId override in `create()`. Must require ctx instead
+6. **`Processes.default user resolver`** / legacy default-user accessor — returns `"owner"` literal or looks up owner. Must require ctx from caller
 7. **`ownerUserIdEnsure()`** itself — still needed for engine startup (ensuring owner home dir exists), but must NOT be used as a fallback in identity resolution chains. Rename to `ownerCtxEnsure()` to return a `Context` and restrict usage to startup only
 
 ### Cross-user contamination vectors (found via audit)
@@ -165,14 +165,14 @@ The `Context` class itself changes: `agentId` becomes optional (set via factory)
 - [ ] Update tests
 - [ ] Run tests — must pass before next task
 
-### Task 9: Remove fallbackUserIdResolve from Exposes and Processes, remove contextUserIdResolve helpers
-- [ ] **Exposes**: remove `fallbackUserIdResolve` option and field entirely. Change `create(input, userIdOverride?)` → `create(ctx, input)` — ctx provides userId, no fallback. Remove `normalizeUserId()` helper
-- [ ] **Processes**: remove `fallbackUserIdResolve` field and `defaultUserId()` method. Remove the `"owner"` literal string fallback
-- [ ] **engine.ts**: remove the `fallbackUserIdResolve` lambda. Update Exposes/Processes construction — they no longer accept fallback functions
+### Task 9: Remove default user resolver from Exposes and Processes, remove contextUserIdResolve helpers
+- [ ] **Exposes**: remove `default user resolver` option and field entirely. Change `create(input, userIdOverride?)` → `create(ctx, input)` — ctx provides userId, no fallback. Remove `normalizeUserId()` helper
+- [ ] **Processes**: remove `default user resolver` field and legacy default-user accessor. Remove the `"owner"` literal string fallback
+- [ ] **engine.ts**: remove the `default user resolver` lambda. Update Exposes/Processes construction — they no longer accept fallback functions
 - [ ] **exposeCreateToolBuild.ts**: pass `toolContext.ctx` to `exposes.create(ctx, input)` instead of extracting `toolContext.ctx.userId`
 - [ ] **permanentAgentToolBuild.ts**: remove `contextUserIdResolve()` helper — use `toolContext.ctx.userId` directly (ctx is always present, non-optional). Also update all `agentDescriptorWrite`/`agentStateRead`/`agentStateWrite` calls in this file to pass ctx
 - [ ] **appInstallToolBuild.ts**: remove `contextUserIdResolve()` helper — use `toolContext.ctx.userId` directly
-- [ ] Update all callers of `Exposes.create()` and `Processes.defaultUserId()` to provide ctx
+- [ ] Update all callers of `Exposes.create()` and process APIs to provide ctx
 - [ ] Update tests for Exposes, Processes, permanentAgentToolBuild, appInstallToolBuild
 - [ ] Run tests — must pass before next task
 

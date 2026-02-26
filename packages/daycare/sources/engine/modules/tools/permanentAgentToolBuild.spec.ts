@@ -6,7 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { contextForAgent } from "../../agents/context.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
@@ -25,7 +26,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
             const context = contextBuild({
@@ -58,7 +59,7 @@ describe("permanentAgentToolBuild", () => {
             );
             expect(updateAgentDescriptor).toHaveBeenCalledTimes(1);
             expect(updateAgentPermissions).toHaveBeenCalledTimes(1);
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -73,7 +74,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = contextBuild({
                 config: { current: config },
@@ -96,7 +97,7 @@ describe("permanentAgentToolBuild", () => {
             const agents = await agentPermanentList(config);
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created?.descriptor.username).toBe("opsbot");
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -111,7 +112,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             const tool = permanentAgentToolBuild();
             const context = {
                 ...contextBuild({
@@ -134,7 +135,7 @@ describe("permanentAgentToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow("Tool context userId is required.");
-            storage.close();
+            storage.db.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

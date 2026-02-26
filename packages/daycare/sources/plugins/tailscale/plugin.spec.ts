@@ -70,10 +70,12 @@ describe("tailscale plugin", () => {
         const provider = registeredProvider as ExposeTunnelProvider;
 
         execSuccess("ok");
-        const created = await provider.createTunnel(3000, "public");
+        const created = await provider.createTunnel(3000, "public", "user-1");
         expect(created.domain).toBe("machine.tail123.ts.net");
 
-        await expect(provider.createTunnel(3001, "public")).rejects.toThrow("only one active expose endpoint");
+        await expect(provider.createTunnel(3001, "public", "user-1")).rejects.toThrow(
+            "only one active expose endpoint"
+        );
 
         execSuccess("ok");
         await provider.destroyTunnel(created.domain);

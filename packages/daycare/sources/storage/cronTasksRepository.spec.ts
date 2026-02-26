@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { CronTasksRepository } from "./cronTasksRepository.js";
 import type { CronTaskDbRecord } from "./databaseTypes.js";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 describe("CronTasksRepository", () => {
     it("supports create, find, update, and delete", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
             await storage.tasks.create({
@@ -63,12 +63,12 @@ describe("CronTasksRepository", () => {
             expect(await repo.delete("daily-report")).toBe(false);
             expect(await repo.findById("daily-report")).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const repo = new CronTasksRepository(storage.db);
             await storage.tasks.create({
@@ -102,7 +102,7 @@ describe("CronTasksRepository", () => {
             const second = await repo.findById("cached-task");
             expect(second?.id).toBe("cached-task");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

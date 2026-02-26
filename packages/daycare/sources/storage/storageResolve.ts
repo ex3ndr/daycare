@@ -1,5 +1,6 @@
 import type { Config } from "@/types";
 import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 
 const sharedStorageByDbPath = new Map<string, Storage>();
 
@@ -16,7 +17,7 @@ export function storageResolve(input: Storage | Config): Storage {
     if (cached) {
         return cached;
     }
-    const storage = Storage.open(input.dbPath);
+    const storage = storageOpen(input.dbPath);
     sharedStorageByDbPath.set(input.dbPath, storage);
     return storage;
 }

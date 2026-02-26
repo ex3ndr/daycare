@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Signal } from "@/types";
 import { databaseOpen } from "../../storage/databaseOpen.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { Signals } from "./signals.js";
 
@@ -14,7 +15,12 @@ describe("Signals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
             const eventBus = new EngineEventBus();
-            const signals = new Signals({ eventBus, configDir: dir });
+            const storage = storageOpen(path.join(dir, "daycare.db"));
+            const signals = new Signals({
+                eventBus,
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
+            });
             const events: Array<{ type: string; payload: unknown }> = [];
 
             const unsubscribe = eventBus.onEvent((event) => {
@@ -61,9 +67,11 @@ describe("Signals", () => {
     it("returns all persisted events without recent-limit truncation", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
-                configDir: dir
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
             });
             await signals.generate({ type: "event.one", source: { type: "system", userId: "user-1" }, data: { n: 1 } });
             await signals.generate({ type: "event.two", source: { type: "system", userId: "user-1" }, data: { n: 2 } });
@@ -83,9 +91,11 @@ describe("Signals", () => {
     it("throws a validation error when source userId is missing at runtime", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
-                configDir: dir
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions
             });
             await expect(
                 signals.generate({
@@ -101,13 +111,15 @@ describe("Signals", () => {
     it("delivers only matching subscriptions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const delivered: Array<{
                 signalType: string;
                 subscriptions: Array<{ userId: string; agentId: string; pattern: string; silent: boolean }>;
             }> = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
-                configDir: dir,
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions,
                 onDeliver: (signal, subscriptions) => {
                     delivered.push({
                         signalType: signal.type,
@@ -152,10 +164,12 @@ describe("Signals", () => {
     it("stops delivering after unsubscribe", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const delivered: string[] = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
-                configDir: dir,
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions,
                 onDeliver: (_signal, subscriptions) => {
                     delivered.push(...subscriptions.map((subscription) => subscription.ctx.agentId));
                 }
@@ -189,10 +203,12 @@ describe("Signals", () => {
     it("filters matched subscriptions by signal source userId when present", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
+            const storage = storageOpen(path.join(dir, "daycare.db"));
             const delivered: Array<{ userId: string; agentId: string }> = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
-                configDir: dir,
+                signalEvents: storage.signalEvents,
+                signalSubscriptions: storage.signalSubscriptions,
                 onDeliver: (_signal, subscriptions) => {
                     delivered.push(
                         ...subscriptions.map((subscription) => ({

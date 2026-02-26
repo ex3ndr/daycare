@@ -1,5 +1,5 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { AgentDbRecord, DatabaseAgentRow } from "./databaseTypes.js";
 
 /**
@@ -7,14 +7,14 @@ import type { AgentDbRecord, DatabaseAgentRow } from "./databaseTypes.js";
  * Expects: schema migrations already applied for agents.
  */
 export class AgentsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly agentsById = new Map<string, AgentDbRecord>();
     private readonly agentLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allAgentsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

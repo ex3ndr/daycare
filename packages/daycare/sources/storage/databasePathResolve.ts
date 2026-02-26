@@ -1,10 +1,10 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 
 /**
  * Resolves the absolute database file path for the main SQLite schema.
  * Expects: db is an open sqlite connection.
  */
-export function databasePathResolve(db: Pick<DatabaseSync, "prepare">): string | null {
+export function databasePathResolve(db: Pick<StorageDatabase, "prepare">): string | null {
     const rows = db.prepare("PRAGMA database_list").all() as Array<{ name?: string; file?: string }>;
     const main = rows.find((row) => row.name === "main") ?? rows[0];
     const file = main?.file?.trim() ?? "";

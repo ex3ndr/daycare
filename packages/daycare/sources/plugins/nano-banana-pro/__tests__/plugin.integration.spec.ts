@@ -11,6 +11,7 @@ import { FileFolder } from "../../../engine/files/fileFolder.js";
 import type { PluginRegistrar } from "../../../engine/plugins/registry.js";
 import { Processes } from "../../../engine/processes/processes.js";
 import { getLogger } from "../../../log.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { plugin as nanoBananaPro } from "../plugin.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,7 @@ describeIf("nano-banana-pro image generation", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const auth = new AuthStore(config);
             await auth.setApiKey("nano-banana-pro", apiKey);
+            const storage = storageOpen(path.join(dir, "daycare.db"));
 
             const fileStore = new FileFolder(path.join(config.dataDir, "files"));
             let registeredProvider: ImageGenerationProvider | null = null;
@@ -85,7 +87,9 @@ describeIf("nano-banana-pro image generation", () => {
                 },
                 fileStore,
                 inference,
-                processes: new Processes(dir, getLogger("test.processes.nano-banana-pro")),
+                processes: new Processes(dir, getLogger("test.processes.nano-banana-pro"), {
+                    repository: storage.processes
+                }),
                 mode: "runtime",
                 events: {
                     emit: () => undefined

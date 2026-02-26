@@ -5,7 +5,6 @@ import bcrypt from "bcryptjs";
 
 import { getLogger } from "../../log.js";
 import type { ExposeEndpointsRepository } from "../../storage/exposeEndpointsRepository.js";
-import { Storage } from "../../storage/storage.js";
 import { AsyncLock } from "../../util/lock.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
@@ -29,8 +28,7 @@ type ExposeRuntimeEndpoint = ExposeEndpoint & { userId: string };
 export type ExposesOptions = {
     config: ConfigModule;
     eventBus: EngineEventBus;
-    exposeEndpoints?: Pick<ExposeEndpointsRepository, "create" | "findAll" | "update" | "delete">;
-    fallbackUserIdResolve?: () => Promise<string>;
+    exposeEndpoints: Pick<ExposeEndpointsRepository, "create" | "findAll" | "update" | "delete">;
 };
 
 /**
@@ -41,7 +39,6 @@ export class Exposes implements ExposeProviderRegistrationApi {
     private readonly lock = new AsyncLock();
     private readonly proxy = new ExposeProxy();
     private readonly exposeEndpoints: Pick<ExposeEndpointsRepository, "create" | "findAll" | "update" | "delete">;
-    private readonly fallbackUserIdResolve: () => Promise<string>;
     private readonly providers = new Map<string, ExposeTunnelProvider>();
     private readonly endpoints = new Map<string, ExposeRuntimeEndpoint>();
     private readonly activeDomains = new Map<string, string>();
@@ -50,27 +47,7 @@ export class Exposes implements ExposeProviderRegistrationApi {
 
     constructor(options: ExposesOptions) {
         void options.eventBus;
-        if (options.exposeEndpoints) {
-            this.exposeEndpoints = options.exposeEndpoints;
-            this.fallbackUserIdResolve =
-                options.fallbackUserIdResolve ??
-                (async () => {
-                    throw new Error("Default expose user is not configured.");
-                });
-            return;
-        }
-
-        const storage = Storage.open(options.config.current.dbPath);
-        this.exposeEndpoints = storage.exposeEndpoints;
-        this.fallbackUserIdResolve =
-            options.fallbackUserIdResolve ??
-            (async () => {
-                const owner = await storage.users.findOwner();
-                if (!owner?.id) {
-                    throw new Error("Default expose user is not available.");
-                }
-                return owner.id;
-            });
+        this.exposeEndpoints = options.exposeEndpoints;
     }
 
     async start(): Promise<void> {
@@ -169,10 +146,7 @@ export class Exposes implements ExposeProviderRegistrationApi {
             .sort((left, right) => left.instanceId.localeCompare(right.instanceId));
     }
 
-    async create(
-        input: ExposeCreateInput,
-        userIdOverride?: string
-    ): Promise<{ endpoint: ExposeEndpoint; password?: string }> {
+    async create(input: ExposeCreateInput, userId: string): Promise<{ endpoint: ExposeEndpoint; password?: string }> {
         return this.lock.inLock(async () => {
             if (!this.started || this.proxyPort === null) {
                 throw new Error("Expose module is not started.");
@@ -185,22 +159,25 @@ export class Exposes implements ExposeProviderRegistrationApi {
                     `Expose provider ${provider.instanceId} does not support ${normalizedInput.mode} mode.`
                 );
             }
+            const normalizedUserId = userId.trim();
+            if (!normalizedUserId) {
+                throw new Error("Expose user id is required.");
+            }
 
             const now = Date.now();
             const id = createId();
             const auth = normalizedInput.authenticated ? await authEntryCreate() : null;
-            const userId = normalizeUserId(userIdOverride) ?? (await this.fallbackUserIdResolve());
 
             let endpoint: ExposeRuntimeEndpoint | null = null;
             let tunnelDomain: string | null = null;
             let normalizedDomain: string | null = null;
             try {
-                const tunnel = await provider.createTunnel(this.proxyPort, normalizedInput.mode);
+                const tunnel = await provider.createTunnel(this.proxyPort, normalizedInput.mode, normalizedUserId);
                 tunnelDomain = tunnel.domain;
                 normalizedDomain = exposeDomainNormalize(tunnel.domain);
                 endpoint = {
                     id,
-                    userId,
+                    userId: normalizedUserId,
                     target: normalizedInput.target,
                     provider: provider.instanceId,
                     domain: normalizedDomain,
@@ -371,7 +348,7 @@ export class Exposes implements ExposeProviderRegistrationApi {
         let tunnelDomain: string | null = null;
         let domain: string | null = null;
         try {
-            const tunnel = await provider.createTunnel(this.proxyPort, endpoint.mode);
+            const tunnel = await provider.createTunnel(this.proxyPort, endpoint.mode, endpoint.userId);
             tunnelDomain = tunnel.domain;
             domain = exposeDomainNormalize(tunnel.domain);
 
@@ -510,12 +487,4 @@ function cloneEndpoint(endpoint: ExposeRuntimeEndpoint): ExposeEndpoint {
         createdAt: endpoint.createdAt,
         updatedAt: endpoint.updatedAt
     };
-}
-
-function normalizeUserId(userId?: string): string | null {
-    if (typeof userId !== "string") {
-        return null;
-    }
-    const normalized = userId.trim();
-    return normalized.length > 0 ? normalized : null;
 }

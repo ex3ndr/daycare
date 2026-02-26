@@ -1,5 +1,5 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { AgentHistoryRecord } from "@/types";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseSessionHistoryRow } from "./databaseTypes.js";
 
 /**
@@ -7,9 +7,9 @@ import type { DatabaseSessionHistoryRow } from "./databaseTypes.js";
  * Expects: schema migrations already applied for session_history.
  */
 export class HistoryRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

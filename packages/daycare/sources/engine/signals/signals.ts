@@ -1,4 +1,3 @@
-import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import type { Context } from "@/types";
 
@@ -6,7 +5,6 @@ import { getLogger } from "../../log.js";
 import type { SignalEventDbRecord, SignalSubscriptionDbRecord } from "../../storage/databaseTypes.js";
 import type { SignalEventsRepository } from "../../storage/signalEventsRepository.js";
 import type { SignalSubscriptionsRepository } from "../../storage/signalSubscriptionsRepository.js";
-import { Storage } from "../../storage/storage.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type {
     Signal,
@@ -27,14 +25,10 @@ type SignalsRepositoryOptions = {
     >;
 };
 
-type SignalsLegacyOptions = {
-    configDir: string;
-};
-
 export type SignalsOptions = {
     eventBus: EngineEventBus;
     onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void> | void;
-} & (SignalsRepositoryOptions | SignalsLegacyOptions);
+} & SignalsRepositoryOptions;
 
 export class Signals {
     private readonly eventBus: EngineEventBus;
@@ -47,14 +41,8 @@ export class Signals {
 
     constructor(options: SignalsOptions) {
         this.eventBus = options.eventBus;
-        if ("signalEvents" in options) {
-            this.signalEvents = options.signalEvents;
-            this.signalSubscriptions = options.signalSubscriptions;
-        } else {
-            const storage = Storage.open(path.join(options.configDir, "daycare.db"));
-            this.signalEvents = storage.signalEvents;
-            this.signalSubscriptions = storage.signalSubscriptions;
-        }
+        this.signalEvents = options.signalEvents;
+        this.signalSubscriptions = options.signalSubscriptions;
         this.onDeliver = options.onDeliver;
     }
 

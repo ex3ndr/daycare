@@ -1,5 +1,5 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseSystemPromptRow, SystemPromptDbRecord, SystemPromptScope } from "./databaseTypes.js";
 
 /**
@@ -7,14 +7,14 @@ import type { DatabaseSystemPromptRow, SystemPromptDbRecord, SystemPromptScope }
  * Expects: schema migrations already applied for system_prompts.
  */
 export class SystemPromptsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly promptsById = new Map<string, SystemPromptDbRecord>();
     private readonly promptLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

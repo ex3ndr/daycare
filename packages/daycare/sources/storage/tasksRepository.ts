@@ -1,6 +1,6 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseTaskRow, TaskDbRecord } from "./databaseTypes.js";
 
 /**
@@ -8,13 +8,13 @@ import type { DatabaseTaskRow, TaskDbRecord } from "./databaseTypes.js";
  * Expects: schema migrations already applied for tasks.
  */
 export class TasksRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly tasksById = new Map<string, TaskDbRecord>();
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

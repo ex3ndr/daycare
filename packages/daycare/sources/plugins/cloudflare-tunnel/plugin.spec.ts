@@ -55,7 +55,6 @@ describe("cloudflare tunnel plugin", () => {
                 }
             },
             processes: {
-                defaultUserId: vi.fn(async () => "owner-user"),
                 listByOwner: vi.fn(async () => []),
                 removeByOwner: vi.fn(async () => 0),
                 create: vi.fn(async () => undefined)
@@ -67,6 +66,16 @@ describe("cloudflare tunnel plugin", () => {
         const instance = await plugin.create(api as never);
         await instance.load?.();
 
+        expect(api.processes.create).not.toHaveBeenCalled();
+
+        if (!registeredProvider) {
+            throw new Error("Expected provider registration");
+        }
+        const provider = registeredProvider as ExposeTunnelProvider;
+
+        execSuccess("ok");
+        const created = await provider.createTunnel(3000, "public", "user-1");
+        expect(created.domain).toMatch(/^[a-z0-9]{12}\.example\.com$/);
         expect(api.processes.create).toHaveBeenCalledWith(
             {
                 name: "cloudflared-cloudflare-1",
@@ -77,22 +86,13 @@ describe("cloudflare tunnel plugin", () => {
                 allowedDomains: ["*.argotunnel.com", "*.cftunnel.com", "*.cloudflare.com"],
                 keepAlive: true,
                 owner: { type: "plugin", id: "cloudflare-1" },
-                userId: "owner-user"
+                userId: "user-1"
             },
             {
                 workingDir: "/tmp/daycare/plugins/cloudflare-1",
                 writeDirs: ["/tmp/daycare/plugins/cloudflare-1"]
             }
         );
-
-        if (!registeredProvider) {
-            throw new Error("Expected provider registration");
-        }
-        const provider = registeredProvider as ExposeTunnelProvider;
-
-        execSuccess("ok");
-        const created = await provider.createTunnel(3000, "public");
-        expect(created.domain).toMatch(/^[a-z0-9]{12}\.example\.com$/);
 
         execSuccess("ok");
         await provider.destroyTunnel(created.domain);
@@ -133,6 +133,7 @@ describe("cloudflare tunnel plugin", () => {
     });
 
     it("does not create another cloudflared process when one is already desired running", async () => {
+        let registeredProvider: ExposeTunnelProvider | null = null;
         const api = {
             instance: { instanceId: "cloudflare-1", pluginId: "cloudflare-tunnel", enabled: true },
             settings: {},
@@ -144,7 +145,9 @@ describe("cloudflare tunnel plugin", () => {
             dataDir: "/tmp/daycare/plugins/cloudflare-1",
             registrar: {},
             exposes: {
-                registerProvider: vi.fn(async () => undefined),
+                registerProvider: vi.fn(async (provider: ExposeTunnelProvider) => {
+                    registeredProvider = provider;
+                }),
                 unregisterProvider: vi.fn(async () => undefined),
                 listProviders: () => []
             },
@@ -155,7 +158,6 @@ describe("cloudflare tunnel plugin", () => {
                 }
             },
             processes: {
-                defaultUserId: vi.fn(async () => "owner-user"),
                 listByOwner: vi.fn(async () => [
                     {
                         id: "proc-1",
@@ -184,6 +186,13 @@ describe("cloudflare tunnel plugin", () => {
         execSuccess(JSON.stringify({ result: { hostname: "web.example.com" } }));
         const instance = await plugin.create(api as never);
         await instance.load?.();
+
+        if (!registeredProvider) {
+            throw new Error("Expected provider registration");
+        }
+        const provider = registeredProvider as ExposeTunnelProvider;
+        execSuccess("ok");
+        await provider.createTunnel(3000, "public", "user-1");
 
         expect(api.processes.create).not.toHaveBeenCalled();
     });

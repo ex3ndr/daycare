@@ -45,7 +45,7 @@ export const plugin = definePlugin({
             });
         };
 
-        const processEnsure = async (): Promise<void> => {
+        const processEnsure = async (userId: string): Promise<void> => {
             const token = await api.auth.getToken(instanceId);
             if (!token) {
                 throw new Error("Missing cloudflare tunnel token in auth store.");
@@ -63,7 +63,6 @@ export const plugin = definePlugin({
                 workingDir: api.dataDir,
                 writeDirs: [api.dataDir]
             };
-            const userId = await api.processes.defaultUserId();
             await api.processes.create(
                 {
                     name: `cloudflared-${instanceId}`,
@@ -88,9 +87,6 @@ export const plugin = definePlugin({
 
         return {
             load: async () => {
-                if (api.mode === "runtime") {
-                    await processEnsure();
-                }
                 const info = await runWithToken("cloudflared", ["tunnel", "info", "--output", "json"]);
                 const resolved = cloudflareDomainResolve(info);
 
@@ -101,7 +97,8 @@ export const plugin = definePlugin({
                         public: true,
                         localNetwork: false
                     },
-                    createTunnel: async (proxyPort) => {
+                    createTunnel: async (proxyPort, _mode, userId) => {
+                        await processEnsure(userId);
                         const label = crypto.randomBytes(6).toString("hex");
                         const domain = `${label}.${resolved.domain}`;
                         const command = cloudflareTunnelCommandBuild({

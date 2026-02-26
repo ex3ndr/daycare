@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@/types";
 
 import { configResolve } from "../../config/configResolve.js";
-import { Storage } from "../../storage/storage.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Heartbeats, type HeartbeatsOptions } from "./heartbeats.js";
 
@@ -25,7 +25,7 @@ describe("Heartbeats", () => {
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
             postAndAwait: vi.fn(async () => ({ status: "completed" }))
         } as unknown as HeartbeatsOptions["agentSystem"];
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const heartbeats = new Heartbeats({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
@@ -49,7 +49,7 @@ describe("Heartbeats", () => {
             await expect(heartbeats.removeTask(contextBuild("user-b"), task.id)).resolves.toBe(false);
             await expect(heartbeats.removeTask(contextBuild("user-a"), task.id)).resolves.toBe(true);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -63,7 +63,7 @@ describe("Heartbeats", () => {
             postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
         };
         const agentSystem = agentSystemMock as unknown as HeartbeatsOptions["agentSystem"];
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const heartbeats = new Heartbeats({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
@@ -103,7 +103,7 @@ describe("Heartbeats", () => {
                 })
             );
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

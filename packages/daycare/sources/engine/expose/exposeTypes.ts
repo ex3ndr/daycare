@@ -37,7 +37,7 @@ export type ExposeTunnelProvider = {
         public: boolean;
         localNetwork: boolean;
     };
-    createTunnel: (proxyPort: number, mode: ExposeMode) => Promise<{ domain: string }>;
+    createTunnel: (proxyPort: number, mode: ExposeMode, userId: string) => Promise<{ domain: string }>;
     destroyTunnel: (domain: string) => Promise<void>;
 };
 

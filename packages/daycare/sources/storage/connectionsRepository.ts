@@ -1,4 +1,4 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { ConnectionDbRecord, DatabaseConnectionRow } from "./databaseTypes.js";
 
 /**
@@ -6,9 +6,9 @@ import type { ConnectionDbRecord, DatabaseConnectionRow } from "./databaseTypes.
  * Expects: schema migrations already applied for connections.
  */
 export class ConnectionsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

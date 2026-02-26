@@ -9,7 +9,6 @@ import type {
 import { getLogger } from "../../log.js";
 import type { DelayedSignalDbRecord } from "../../storage/databaseTypes.js";
 import type { DelayedSignalsRepository } from "../../storage/delayedSignalsRepository.js";
-import { Storage } from "../../storage/storage.js";
 import { AsyncLock } from "../../util/lock.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
@@ -22,17 +21,13 @@ type DelayedSignalsRepositoryOptions = {
     delayedSignals: Pick<DelayedSignalsRepository, "create" | "findDue" | "findAll" | "delete" | "deleteByRepeatKey">;
 };
 
-type DelayedSignalsLegacyOptions = {
-    config: ConfigModule;
-};
-
 export type DelayedSignalsOptions = {
     config: ConfigModule;
     eventBus: EngineEventBus;
     signals: Pick<Signals, "generate">;
     failureRetryMs?: number;
     maxTimerMs?: number;
-} & (DelayedSignalsRepositoryOptions | DelayedSignalsLegacyOptions);
+} & DelayedSignalsRepositoryOptions;
 
 /**
  * Manages persistent delayed signal scheduling by wall-time (unix milliseconds).
@@ -60,12 +55,7 @@ export class DelayedSignals {
         this.config = options.config;
         this.eventBus = options.eventBus;
         this.signals = options.signals;
-        if ("delayedSignals" in options) {
-            this.delayedSignals = options.delayedSignals;
-        } else {
-            const storage = Storage.open(options.config.current.dbPath);
-            this.delayedSignals = storage.delayedSignals;
-        }
+        this.delayedSignals = options.delayedSignals;
         this.failureRetryMs = Math.max(10, Math.floor(options.failureRetryMs ?? 1_000));
         this.maxTimerMs = Math.max(1_000, Math.floor(options.maxTimerMs ?? 60_000));
     }

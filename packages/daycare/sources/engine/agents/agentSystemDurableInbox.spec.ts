@@ -13,7 +13,8 @@ import type {
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
-import { Storage } from "../../storage/storage.js";
+import type { Storage } from "../../storage/storage.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
@@ -300,9 +301,13 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
-    const storage = Storage.open(config.dbPath);
+    const storage = storageOpen(config.dbPath);
     const eventBus = new EngineEventBus();
-    const signals = new Signals({ eventBus, configDir: config.configDir });
+    const signals = new Signals({
+        eventBus,
+        signalEvents: storage.signalEvents,
+        signalSubscriptions: storage.signalSubscriptions
+    });
     const pluginManager = {
         getSystemPrompts: async () => [],
         listRegisteredSkills: () => []

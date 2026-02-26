@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { Storage } from "./storage.js";
+import { storageOpen } from "./storageOpen.js";
 import { UsersRepository } from "./usersRepository.js";
 
 describe("UsersRepository", () => {
     it("supports CRUD and connector key operations", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const users = new UsersRepository(storage.db);
             const created = await users.create({
@@ -44,12 +44,12 @@ describe("UsersRepository", () => {
             expect(await users.findByConnectorKey("telegram:1")).toBeNull();
             expect(await users.findByNametag("swift-fox-42")).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("returns cached user on repeated read", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const users = new UsersRepository(storage.db);
             const created = await users.create({ createdAt: 1, updatedAt: 1 });
@@ -61,12 +61,12 @@ describe("UsersRepository", () => {
             const second = await users.findById(created.id);
             expect(second?.id).toBe(created.id);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("loads from db on cache miss and invalidates after delete", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const users = new UsersRepository(storage.db);
             storage.db
@@ -86,7 +86,7 @@ describe("UsersRepository", () => {
             expect(await users.findByConnectorKey("telegram:1")).toBeNull();
             expect(await users.findByNametag("brave-wolf-99")).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

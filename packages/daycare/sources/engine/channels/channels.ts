@@ -1,4 +1,3 @@
-import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 
 import type {
@@ -13,7 +12,6 @@ import type {
 import { getLogger } from "../../log.js";
 import type { ChannelMessagesRepository } from "../../storage/channelMessagesRepository.js";
 import type { ChannelsRepository } from "../../storage/channelsRepository.js";
-import { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "../agents/context.js";
 import type { Signals } from "../signals/signals.js";
@@ -25,20 +23,14 @@ const HISTORY_CONTEXT_LIMIT = 12;
 type ChannelRuntimeRecord = Channel & { userId: string };
 
 export type ChannelsOptions = {
+    channels: Pick<
+        ChannelsRepository,
+        "create" | "findByName" | "findAll" | "update" | "delete" | "addMember" | "removeMember" | "findMembers"
+    >;
+    channelMessages: Pick<ChannelMessagesRepository, "create" | "findRecent">;
     signals: Pick<Signals, "subscribe" | "unsubscribe">;
     agentSystem: Pick<AgentSystem, "agentExists" | "post" | "contextForAgentId">;
-} & (
-    | {
-          channels: Pick<
-              ChannelsRepository,
-              "create" | "findByName" | "findAll" | "update" | "delete" | "addMember" | "removeMember" | "findMembers"
-          >;
-          channelMessages: Pick<ChannelMessagesRepository, "create" | "findRecent">;
-      }
-    | {
-          configDir: string;
-      }
-);
+};
 
 export class Channels {
     private readonly channels: Pick<
@@ -51,14 +43,8 @@ export class Channels {
     private readonly items = new Map<string, ChannelRuntimeRecord>();
 
     constructor(options: ChannelsOptions) {
-        if ("channels" in options) {
-            this.channels = options.channels;
-            this.channelMessages = options.channelMessages;
-        } else {
-            const storage = Storage.open(path.join(options.configDir, "daycare.db"));
-            this.channels = storage.channels;
-            this.channelMessages = storage.channelMessages;
-        }
+        this.channels = options.channels;
+        this.channelMessages = options.channelMessages;
         this.signals = options.signals;
         this.agentSystem = options.agentSystem;
     }
@@ -111,11 +97,7 @@ export class Channels {
     }
 
     listForUserIds(userIds: string[]): Channel[] {
-        const allowedUserIds = new Set(
-            userIds
-                .map((userId) => userId.trim())
-                .filter((userId) => userId.length > 0)
-        );
+        const allowedUserIds = new Set(userIds.map((userId) => userId.trim()).filter((userId) => userId.length > 0));
         return Array.from(this.items.values())
             .filter((channel) => allowedUserIds.has(channel.userId))
             .map((channel) => cloneChannel(channel))

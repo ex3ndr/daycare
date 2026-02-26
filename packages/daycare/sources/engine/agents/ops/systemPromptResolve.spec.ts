@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { SystemPromptDbRecord } from "../../../storage/databaseTypes.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { systemPromptResolve } from "./systemPromptResolve.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function createStorage(): Storage {
-    return Storage.open(":memory:");
+    return storageOpen(":memory:");
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {
@@ -72,7 +73,7 @@ describe("systemPromptResolve", () => {
             expect(result.systemPromptSections).toEqual([]);
             expect(result.firstMessagePrompt).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -85,7 +86,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Be concise."]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -104,7 +105,7 @@ describe("systemPromptResolve", () => {
             const result2 = await systemPromptResolve(storage, "u2", false);
             expect(result2.systemPromptSections).toEqual([]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -122,7 +123,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Active."]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -141,7 +142,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Welcome new user!"]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -163,7 +164,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Welcome back!"]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -182,7 +183,7 @@ describe("systemPromptResolve", () => {
             const resultNotFirst = await systemPromptResolve(storage, "u1", false);
             expect(resultNotFirst.firstMessagePrompt).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -200,7 +201,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", true);
             expect(result.firstMessagePrompt).toBe("Line 1.\nLine 2.");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
@@ -224,7 +225,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Global rule.", "User-specific rule."]);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

@@ -1,9 +1,9 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
-import type { SQLInputValue } from "node:sqlite";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseTokenStatsHourlyRow, TokenStatsHourlyDbRecord } from "./databaseTypes.js";
 
 const HOUR_MS = 60 * 60 * 1000;
+type SQLInputValue = string | number | bigint | Uint8Array | null;
 
 export type TokenStatsIncrementInput = {
     at?: number;
@@ -29,9 +29,9 @@ export type TokenStatsFindManyOptions = {
  * Expects: schema migrations already applied for token_stats_hourly.
  */
 export class TokenStatsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

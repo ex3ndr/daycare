@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { friendRemoveToolBuild } from "./friendRemoveToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_remove" };
 
 describe("friendRemoveToolBuild", () => {
     it("unfriends and notifies the other user", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -33,12 +34,12 @@ describe("friendRemoveToolBuild", () => {
             expect(state?.requestedA).toBe(false);
             expect(state?.requestedB).toBe(true);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("rejects a pending incoming request without notification", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -59,12 +60,12 @@ describe("friendRemoveToolBuild", () => {
             expect(state?.requestedA).toBe(false);
             expect(state?.requestedB).toBe(false);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("cancels an outgoing pending request", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -85,12 +86,12 @@ describe("friendRemoveToolBuild", () => {
             expect(state?.requestedA).toBe(false);
             expect(state?.requestedB).toBe(false);
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("removes an active shared subuser and notifies the owner", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const owner = await storage.users.create({ id: "owner", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -126,12 +127,12 @@ describe("friendRemoveToolBuild", () => {
                 expect(state?.requestedB).toBe(false);
             }
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("rejects an incoming shared subuser offer without notification", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const owner = await storage.users.create({ id: "owner", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -155,12 +156,12 @@ describe("friendRemoveToolBuild", () => {
             expect(postToUserAgents).not.toHaveBeenCalled();
             expect(await storage.connections.find(subuser.id, bob.id)).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("cascades subuser-share cleanup when unfriending a user", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -196,7 +197,7 @@ describe("friendRemoveToolBuild", () => {
             expect(await storage.connections.find(aliceSub.id, bob.id)).toBeNull();
             expect(await storage.connections.find(bobSub.id, alice.id)).toBeNull();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

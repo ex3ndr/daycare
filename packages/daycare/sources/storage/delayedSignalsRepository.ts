@@ -1,6 +1,6 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseDelayedSignalRow, DelayedSignalDbRecord } from "./databaseTypes.js";
 
 /**
@@ -8,14 +8,14 @@ import type { DatabaseDelayedSignalRow, DelayedSignalDbRecord } from "./database
  * Expects: schema migrations already applied for signals_delayed.
  */
 export class DelayedSignalsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly signalsById = new Map<string, DelayedSignalDbRecord>();
     private readonly signalLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allSignalsLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

@@ -1,7 +1,7 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import { createId } from "@paralleldrive/cuid2";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type {
     CreateUserInput,
     DatabaseUserConnectorKeyRow,
@@ -15,7 +15,7 @@ import type {
  * Expects: schema migrations already applied for users and user_connector_keys.
  */
 export class UsersRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly usersById = new Map<string, UserWithConnectorKeysDbRecord>();
     private readonly userIdByConnectorKey = new Map<string, string>();
     private readonly userIdByNametag = new Map<string, string>();
@@ -24,7 +24,7 @@ export class UsersRepository {
     private readonly createLock = new AsyncLock();
     private allUsersLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

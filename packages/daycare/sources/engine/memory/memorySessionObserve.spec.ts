@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
-import { Storage } from "../../storage/storage.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { Context } from "../agents/context.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import { memorySessionObserve } from "./memorySessionObserve.js";
@@ -40,7 +40,7 @@ function mockInferenceRouter(responseText: string): InferenceRouter {
 
 describe("memorySessionObserve", () => {
     it("returns observations from inference", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const owner = (await storage.users.findMany())[0];
             if (!owner) {
@@ -91,12 +91,12 @@ describe("memorySessionObserve", () => {
             ]);
             expect(router.complete).toHaveBeenCalledOnce();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("passes isForeground to inferObservations and uses background labels", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const owner = (await storage.users.findMany())[0];
             if (!owner) {
@@ -148,12 +148,12 @@ describe("memorySessionObserve", () => {
             expect(context.systemPrompt).toContain("automated agent");
             expect(context.systemPrompt).not.toContain("between a person and an AI assistant");
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 
     it("returns empty array when no records", async () => {
-        const storage = Storage.open(":memory:");
+        const storage = storageOpen(":memory:");
         try {
             const owner = (await storage.users.findMany())[0];
             if (!owner) {
@@ -174,7 +174,7 @@ describe("memorySessionObserve", () => {
             expect(observations).toEqual([]);
             expect(router.complete).not.toHaveBeenCalled();
         } finally {
-            storage.close();
+            storage.db.close();
         }
     });
 });

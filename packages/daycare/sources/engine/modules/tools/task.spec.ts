@@ -4,7 +4,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { Storage } from "../../../storage/storage.js";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { contextForAgent } from "../../agents/context.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
@@ -29,7 +30,7 @@ describe("task tools", () => {
         await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
         tempDirs.length = 0;
         for (const storage of storages) {
-            storage.close();
+            storage.db.close();
         }
         storages.length = 0;
     });
@@ -333,7 +334,7 @@ async function runtimeBuild(): Promise<{
     postAndAwait: (...args: unknown[]) => Promise<unknown>;
 }> {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-task-tools-"));
-    const storage = Storage.open(":memory:");
+    const storage = storageOpen(":memory:");
     const postAndAwait = vi.fn(async () => ({ status: "completed" }));
     const eventBus = { emit: vi.fn() };
     const config = new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json")));

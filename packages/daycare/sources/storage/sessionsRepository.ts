@@ -1,5 +1,5 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import { createId } from "@paralleldrive/cuid2";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { CreateSessionInput, DatabaseSessionRow, SessionDbRecord } from "./databaseTypes.js";
 
 /**
@@ -7,9 +7,9 @@ import type { CreateSessionInput, DatabaseSessionRow, SessionDbRecord } from "./
  * Expects: schema migrations already applied for sessions.
  */
 export class SessionsRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 

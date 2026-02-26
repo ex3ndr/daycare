@@ -6,19 +6,19 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
+import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
-import { cuid2Is } from "../../../utils/cuid2Is.js";
-import { Storage } from "../../../storage/storage.js";
-import { rlmSnapshotSave } from "./rlmSnapshotSave.js";
 import { rlmSnapshotLoad } from "./rlmSnapshotLoad.js";
+import { rlmSnapshotSave } from "./rlmSnapshotSave.js";
 
 describe("rlmSnapshotSave", () => {
     it("creates snapshot file and returns cuid2 id", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-snapshot-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = Storage.open(config.dbPath);
+            const storage = storageOpen(config.dbPath);
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -55,7 +55,7 @@ describe("rlmSnapshotSave", () => {
                 });
                 expect(loaded).toEqual(Buffer.from([1, 2, 3]));
             } finally {
-                storage.close();
+                storage.db.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });

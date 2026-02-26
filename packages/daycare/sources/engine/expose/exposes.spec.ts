@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { configResolve } from "../../config/configResolve.js";
-import { Storage } from "../../storage/storage.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { ConfigModule } from "../config/configModule.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { Exposes } from "./exposes.js";
@@ -25,11 +25,14 @@ describe("Exposes", () => {
             await exposes.registerProvider(provider);
             await exposes.start();
 
-            const created = await exposes.create({
-                target: { type: "port", port: 3000 },
-                mode: "public",
-                authenticated: true
-            });
+            const created = await exposes.create(
+                {
+                    target: { type: "port", port: 3000 },
+                    mode: "public",
+                    authenticated: true
+                },
+                "user-1"
+            );
 
             expect(created.endpoint.provider).toBe("provider-a");
             expect(created.endpoint.domain).toBe("ep1.a.example.com");
@@ -72,11 +75,14 @@ describe("Exposes", () => {
             await exposes.start();
 
             await expect(
-                exposes.create({
-                    target: { type: "port", port: 3001 },
-                    mode: "public",
-                    authenticated: false
-                })
+                exposes.create(
+                    {
+                        target: { type: "port", port: 3001 },
+                        mode: "public",
+                        authenticated: false
+                    },
+                    "user-1"
+                )
             ).rejects.toThrow("No expose tunnel providers are configured");
 
             const providerA = providerBuild({
@@ -86,11 +92,14 @@ describe("Exposes", () => {
             });
             await exposes.registerProvider(providerA);
 
-            const created = await exposes.create({
-                target: { type: "port", port: 3002 },
-                mode: "public",
-                authenticated: false
-            });
+            const created = await exposes.create(
+                {
+                    target: { type: "port", port: 3002 },
+                    mode: "public",
+                    authenticated: false
+                },
+                "user-1"
+            );
             expect(created.endpoint.provider).toBe("provider-a");
 
             const providerB = providerBuild({
@@ -101,20 +110,26 @@ describe("Exposes", () => {
             await exposes.registerProvider(providerB);
 
             await expect(
-                exposes.create({
-                    target: { type: "port", port: 3003 },
-                    mode: "public",
-                    authenticated: false
-                })
+                exposes.create(
+                    {
+                        target: { type: "port", port: 3003 },
+                        mode: "public",
+                        authenticated: false
+                    },
+                    "user-1"
+                )
             ).rejects.toThrow("Specify provider");
 
             await expect(
-                exposes.create({
-                    target: { type: "port", port: 3004 },
-                    provider: "missing-provider",
-                    mode: "public",
-                    authenticated: false
-                })
+                exposes.create(
+                    {
+                        target: { type: "port", port: 3004 },
+                        provider: "missing-provider",
+                        mode: "public",
+                        authenticated: false
+                    },
+                    "user-1"
+                )
             ).rejects.toThrow("Expose provider not found");
 
             await exposes.stop();
@@ -135,11 +150,14 @@ describe("Exposes", () => {
 
             await first.registerProvider(provider);
             await first.start();
-            const created = await first.create({
-                target: { type: "port", port: 3000 },
-                mode: "public",
-                authenticated: false
-            });
+            const created = await first.create(
+                {
+                    target: { type: "port", port: 3000 },
+                    mode: "public",
+                    authenticated: false
+                },
+                "user-1"
+            );
             await first.stop();
 
             const second = createExposes(dir);
@@ -170,11 +188,14 @@ describe("Exposes", () => {
 
             await first.registerProvider(provider);
             await first.start();
-            const created = await first.create({
-                target: { type: "port", port: 3000 },
-                mode: "public",
-                authenticated: false
-            });
+            const created = await first.create(
+                {
+                    target: { type: "port", port: 3000 },
+                    mode: "public",
+                    authenticated: false
+                },
+                "user-1"
+            );
             await first.stop();
 
             const second = createExposes(dir);
@@ -205,11 +226,14 @@ describe("Exposes", () => {
             await expose.start();
 
             await expect(
-                expose.create({
-                    target: { type: "port", port: 3000 },
-                    mode: "public",
-                    authenticated: false
-                })
+                expose.create(
+                    {
+                        target: { type: "port", port: 3000 },
+                        mode: "public",
+                        authenticated: false
+                    },
+                    "user-1"
+                )
             ).rejects.toThrow("Invalid expose domain");
             expect(createFailProvider.destroyTunnel).toHaveBeenCalledWith("https://broken.example.com");
             await expose.stop();
@@ -222,11 +246,14 @@ describe("Exposes", () => {
             });
             await first.registerProvider(validProvider);
             await first.start();
-            await first.create({
-                target: { type: "port", port: 3001 },
-                mode: "public",
-                authenticated: false
-            });
+            await first.create(
+                {
+                    target: { type: "port", port: 3001 },
+                    mode: "public",
+                    authenticated: false
+                },
+                "user-1"
+            );
             await first.stop();
 
             const second = createExposes(dir);
@@ -257,11 +284,14 @@ describe("Exposes", () => {
             await exposes.registerProvider(provider);
             await exposes.start();
 
-            const created = await exposes.create({
-                target: { type: "port", port: 3000 },
-                mode: "public",
-                authenticated: false
-            });
+            const created = await exposes.create(
+                {
+                    target: { type: "port", port: 3000 },
+                    mode: "public",
+                    authenticated: false
+                },
+                "user-1"
+            );
 
             const internal = exposes as unknown as {
                 endpointDeactivate: (endpointId: string) => Promise<void>;
@@ -298,11 +328,14 @@ describe("Exposes", () => {
             await exposes.registerProvider(provider);
             await exposes.start();
 
-            const created = await exposes.create({
-                target: { type: "port", port: 3000 },
-                mode: "public",
-                authenticated: false
-            });
+            const created = await exposes.create(
+                {
+                    target: { type: "port", port: 3000 },
+                    mode: "public",
+                    authenticated: false
+                },
+                "user-1"
+            );
 
             const internal = exposes as unknown as {
                 endpointDeactivate: (endpointId: string) => Promise<void>;
@@ -332,15 +365,17 @@ function createExposes(rootDir: string): Exposes {
         },
         path.join(rootDir, "settings.json")
     );
+    const storage = storageOpen(config.dbPath);
     return new Exposes({
         config: new ConfigModule(config),
-        eventBus: new EngineEventBus()
+        eventBus: new EngineEventBus(),
+        exposeEndpoints: storage.exposeEndpoints
     });
 }
 
 function providerBuild(options: { instanceId: string; domain: string; domains: string[] }): ExposeTunnelProvider {
     const pendingDomains = [...options.domains];
-    const createTunnel = vi.fn<[number, "public" | "local-network"], Promise<{ domain: string }>>(async () => {
+    const createTunnel = vi.fn<[number, "public" | "local-network", string], Promise<{ domain: string }>>(async () => {
         const domain = pendingDomains.shift();
         if (!domain) {
             throw new Error("No pending domain configured for test provider");
@@ -370,7 +405,7 @@ function exposeEndpointRowRead(
         },
         path.join(rootDir, "settings.json")
     );
-    const storage = Storage.open(config.dbPath);
+    const storage = storageOpen(config.dbPath);
     try {
         const row = storage.db
             .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")
@@ -380,6 +415,6 @@ function exposeEndpointRowRead(
             auth: row?.auth ? (JSON.parse(row.auth) as { passwordHash: string }) : null
         };
     } finally {
-        storage.close();
+        storage.db.close();
     }
 }

@@ -1,8 +1,7 @@
-import type { StorageDatabase as DatabaseSync } from "../databaseOpen.js";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
-
 import type { AgentDescriptor } from "@/types";
+import type { StorageDatabase } from "../databaseOpen.js";
 import { databaseOpen } from "../databaseOpen.js";
 import { migration20260219Initial } from "./20260219_initial.js";
 import { migration20260220AddUsers } from "./20260220_add_users.js";
@@ -191,7 +190,7 @@ describe("migration20260220UsersBootstrap", () => {
     });
 });
 
-function agentInsert(db: DatabaseSync, input: { id: string; descriptor: AgentDescriptor; createdAt: number }): void {
+function agentInsert(db: StorageDatabase, input: { id: string; descriptor: AgentDescriptor; createdAt: number }): void {
     db.prepare(
         `
       INSERT INTO agents (

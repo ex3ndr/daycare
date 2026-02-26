@@ -1,6 +1,6 @@
-import type { StorageDatabase as DatabaseSync } from "./databaseOpen.js";
 import type { Context } from "@/types";
 import { AsyncLock } from "../util/lock.js";
+import type { StorageDatabase } from "./databaseOpen.js";
 import type { DatabaseHeartbeatTaskRow, HeartbeatTaskDbRecord } from "./databaseTypes.js";
 
 /**
@@ -8,7 +8,7 @@ import type { DatabaseHeartbeatTaskRow, HeartbeatTaskDbRecord } from "./database
  * Expects: schema migrations already applied for tasks_heartbeat.
  */
 export class HeartbeatTasksRepository {
-    private readonly db: DatabaseSync;
+    private readonly db: StorageDatabase;
     private readonly tasksById = new Map<string, HeartbeatTaskDbRecord>();
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
@@ -16,7 +16,7 @@ export class HeartbeatTasksRepository {
     private readonly runLock = new AsyncLock();
     private allTasksLoaded = false;
 
-    constructor(db: DatabaseSync) {
+    constructor(db: StorageDatabase) {
         this.db = db;
     }
 
@@ -158,15 +158,7 @@ export class HeartbeatTasksRepository {
                   WHERE id = ?
                 `
                 )
-                .run(
-                    next.taskId.trim(),
-                    next.userId,
-                    next.title,
-                    next.lastRunAt,
-                    next.createdAt,
-                    next.updatedAt,
-                    id
-                );
+                .run(next.taskId.trim(), next.userId, next.title, next.lastRunAt, next.createdAt, next.updatedAt, id);
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);
