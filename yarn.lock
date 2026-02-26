@@ -4247,20 +4247,6 @@
     use-latest-callback "^0.2.4"
     use-sync-external-store "^1.5.0"
 
-"@react-navigation/core@^7.15.0":
-  version "7.15.0"
-  resolved "https://registry.yarnpkg.com/@react-navigation/core/-/core-7.15.0.tgz#1afedf37722625e92e8bd3510282553d311f4b92"
-  integrity sha512-vK8OQItB7G7SzUcnQAJmPZK4+ET8xm+N0hcLaCpSxDs36M2gQ544jBpc6WPY22/yabzFRGjP4EP9sEzABezPWQ==
-  dependencies:
-    "@react-navigation/routers" "^7.5.3"
-    escape-string-regexp "^4.0.0"
-    fast-deep-equal "^3.1.3"
-    nanoid "^3.3.11"
-    query-string "^7.1.3"
-    react-is "^19.1.0"
-    use-latest-callback "^0.2.4"
-    use-sync-external-store "^1.5.0"
-
 "@react-navigation/elements@^2.9.5":
   version "2.9.8"
   resolved "https://registry.yarnpkg.com/@react-navigation/elements/-/elements-2.9.8.tgz#88833bc7a73e1f022302ea99171cbbb8fe509a9b"
@@ -4286,17 +4272,6 @@
   integrity sha512-d1QDn+KNHfHGt3UIwOZvupvdsDdiHYZBEj7+wL2yDVo3tMezamYy60H9s3EnNVE1Ae1ty0trc7F2OKqo/RmsdQ==
   dependencies:
     "@react-navigation/core" "^7.14.0"
-    escape-string-regexp "^4.0.0"
-    fast-deep-equal "^3.1.3"
-    nanoid "^3.3.11"
-    use-latest-callback "^0.2.4"
-
-"@react-navigation/native@^7.1.8":
-  version "7.1.30"
-  resolved "https://registry.yarnpkg.com/@react-navigation/native/-/native-7.1.30.tgz#f4ceafade29c20fd61f3fc6806ae354a07b75083"
-  integrity sha512-AxVmFjNEkcOGZsppRGQ0A3Ne2kLAdc+lFPFsjSzBKZH+bsJoQRiEJvJfYq27zvNj+X4fzOd060phA7CLzhMhgw==
-  dependencies:
-    "@react-navigation/core" "^7.15.0"
     escape-string-regexp "^4.0.0"
     fast-deep-equal "^3.1.3"
     nanoid "^3.3.11"

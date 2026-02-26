@@ -16,7 +16,7 @@
     "dependencies": {
         "@expo/metro-runtime": "~55.0.6",
         "@expo/vector-icons": "^15.0.2",
-        "@react-navigation/native": "^7.1.8",
+        "@react-navigation/native": "7.1.28",
         "expo": "^55.0.2",
         "expo-clipboard": "~55.0.8",
         "expo-constants": "~55.0.7",
