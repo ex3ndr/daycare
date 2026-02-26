@@ -33,7 +33,7 @@ export class SignalEventsRepository {
 
     async create(record: SignalEventDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO signals_events (
@@ -95,7 +95,7 @@ export class SignalEventsRepository {
         if (where.length > 0) {
             sql += ` WHERE ${where.join(" AND ")}`;
         }
-        sql += " ORDER BY created_at ASC, rowid ASC";
+        sql += " ORDER BY created_at ASC, id ASC";
         if (limit !== null) {
             sql += " LIMIT ?";
             values.push(limit);
@@ -105,7 +105,7 @@ export class SignalEventsRepository {
             values.push(offset);
         }
 
-        const rows = this.db.prepare(sql).all(...values) as DatabaseSignalEventRow[];
+        const rows = await this.db.prepare(sql).all(...values) as DatabaseSignalEventRow[];
         const parsed = rows.map((row) => this.eventParse(row));
 
         if (!hasFilter) {
@@ -122,8 +122,8 @@ export class SignalEventsRepository {
 
     async findRecent(ctx: Context, limit = 200): Promise<SignalEventDbRecord[]> {
         const normalizedLimit = Math.min(1000, Math.max(1, Math.floor(limit)));
-        const rows = this.db
-            .prepare("SELECT * FROM signals_events WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?")
+        const rows = await this.db
+            .prepare("SELECT * FROM signals_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?")
             .all(ctx.userId, normalizedLimit) as DatabaseSignalEventRow[];
         const parsed = rows.map((row) => this.eventParse(row)).reverse();
         return parsed.map((event) => signalEventClone(event));
@@ -140,8 +140,8 @@ export class SignalEventsRepository {
             return all.slice(all.length - normalizedLimit).map((event) => signalEventClone(event));
         }
 
-        const rows = this.db
-            .prepare("SELECT * FROM signals_events ORDER BY created_at DESC, rowid DESC LIMIT ?")
+        const rows = await this.db
+            .prepare("SELECT * FROM signals_events ORDER BY created_at DESC, id DESC LIMIT ?")
             .all(normalizedLimit) as DatabaseSignalEventRow[];
         const parsed = rows.map((row) => this.eventParse(row)).reverse();
         return parsed.map((event) => signalEventClone(event));
@@ -171,7 +171,7 @@ export class SignalEventsRepository {
             if (existing) {
                 return existing;
             }
-            const loaded = this.eventLoadById(id);
+            const loaded = await this.eventLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -186,8 +186,8 @@ export class SignalEventsRepository {
         this.eventsById.set(record.id, signalEventClone(record));
     }
 
-    private eventLoadById(id: string): SignalEventDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM signals_events WHERE id = ? LIMIT 1").get(id) as
+    private async eventLoadById(id: string): Promise<SignalEventDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM signals_events WHERE id = ? LIMIT 1").get(id) as
             | DatabaseSignalEventRow
             | undefined;
         if (!row) {

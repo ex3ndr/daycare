@@ -1,40 +1,14 @@
 import type { StorageDatabase } from "../databaseOpen.js";
 import { migrations } from "./_migrations.js";
-import { migrationPending } from "./migrationPending.js";
 
 /**
- * Applies pending migrations in order and records each successful migration.
- * Expects: migration definitions are deterministic and side-effect free outside SQL.
+ * Applies bootstrap migrations for storage.
+ * Expects: database connection is open.
  */
 export function migrationRun(db: StorageDatabase): string[] {
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      name TEXT PRIMARY KEY,
-      applied_at INTEGER NOT NULL
-    );
-  `);
-
-    const pending = migrationPending(db, migrations);
-    const applied: string[] = [];
-
-    for (const migration of pending) {
-        if (migration.inTransaction === false) {
-            migration.up(db);
-            db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(migration.name, Date.now());
-            applied.push(migration.name);
-            continue;
-        }
-        db.exec("BEGIN");
-        try {
-            migration.up(db);
-            db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(migration.name, Date.now());
-            db.exec("COMMIT");
-            applied.push(migration.name);
-        } catch (error) {
-            db.exec("ROLLBACK");
-            throw error;
-        }
+    for (const migration of migrations) {
+        migration.up(db);
     }
 
-    return applied;
+    return migrations.map((migration) => migration.name);
 }

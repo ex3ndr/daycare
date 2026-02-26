@@ -30,7 +30,7 @@ export class ProcessesRepository {
 
     async create(record: ProcessDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO processes (
@@ -148,7 +148,7 @@ export class ProcessesRepository {
             if (existing) {
                 return existing;
             }
-            const loaded = this.recordLoadById(id);
+            const loaded = await this.recordLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -175,10 +175,10 @@ export class ProcessesRepository {
         }
 
         const rows = options.userId
-            ? (this.db
+            ? (await this.db
                   .prepare("SELECT * FROM processes WHERE user_id = ? ORDER BY created_at ASC, id ASC")
                   .all(options.userId) as DatabaseProcessRow[])
-            : (this.db
+            : (await this.db
                   .prepare("SELECT * FROM processes ORDER BY created_at ASC, id ASC")
                   .all() as DatabaseProcessRow[]);
 
@@ -199,7 +199,7 @@ export class ProcessesRepository {
     async update(id: string, data: Partial<ProcessDbRecord>): Promise<void> {
         const lock = this.recordLockForId(id);
         await lock.inLock(async () => {
-            const current = this.recordsById.get(id) ?? this.recordLoadById(id);
+            const current = this.recordsById.get(id) ?? (await this.recordLoadById(id));
             if (!current) {
                 throw new Error(`Process not found: ${id}`);
             }
@@ -235,7 +235,7 @@ export class ProcessesRepository {
                 lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE processes
@@ -306,7 +306,7 @@ export class ProcessesRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.recordLockForId(id);
         return lock.inLock(async () => {
-            const removed = this.db.prepare("DELETE FROM processes WHERE id = ?").run(id);
+            const removed = await this.db.prepare("DELETE FROM processes WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
             await this.cacheLock.inLock(() => {
@@ -347,8 +347,8 @@ export class ProcessesRepository {
         });
     }
 
-    private recordLoadById(id: string): ProcessDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM processes WHERE id = ? LIMIT 1").get(id) as
+    private async recordLoadById(id: string): Promise<ProcessDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM processes WHERE id = ? LIMIT 1").get(id) as
             | DatabaseProcessRow
             | undefined;
         if (!row) {

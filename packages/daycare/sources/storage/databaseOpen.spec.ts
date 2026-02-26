@@ -7,16 +7,16 @@ import { describe, expect, it } from "vitest";
 import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("databaseOpenTest", () => {
-    it("opens in-memory and enables foreign keys", async () => {
+    it("opens in-memory and does not create a file on disk", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-db-open-"));
         const dbPath = path.join(dir, "daycare.db");
         try {
             const db = databaseOpenTest();
-            const foreignKeys = db.prepare("PRAGMA foreign_keys").get() as { foreign_keys?: number } | undefined;
+            const row = await db.prepare("SELECT 1 AS value").get<{ value: number }>();
             db.close();
 
             await expect(access(dbPath)).rejects.toThrow();
-            expect(foreignKeys?.foreign_keys).toBe(1);
+            expect(row?.value).toBe(1);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

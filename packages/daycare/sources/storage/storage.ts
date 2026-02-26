@@ -24,7 +24,7 @@ import { UsersRepository } from "./usersRepository.js";
 
 /**
  * Facade for all storage access and repository instances.
- * Expects: connection is an open SQLite database with required migrations applied.
+ * Expects: connection is an open storage database with required migrations applied.
  */
 export class Storage {
     readonly users: UsersRepository;
@@ -127,7 +127,7 @@ export class Storage {
         };
 
         const sessionCreatedAt = input.session?.createdAt ?? baseRecord.createdAt;
-        this.connection.exec("BEGIN");
+        await this.connection.exec("BEGIN");
         try {
             await this.agents.create(baseRecord);
             const sessionId = await this.sessions.create({
@@ -142,10 +142,10 @@ export class Storage {
                 updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)
             };
             await this.agents.update(baseRecord.id, agent);
-            this.connection.exec("COMMIT");
+            await this.connection.exec("COMMIT");
             return { agent, sessionId };
         } catch (error) {
-            this.connection.exec("ROLLBACK");
+            await this.connection.exec("ROLLBACK");
             await this.agents.invalidate(baseRecord.id);
             throw error;
         }
@@ -201,15 +201,25 @@ export class Storage {
 
 function sqliteUniqueConstraintErrorIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
-    return message.includes("UNIQUE constraint failed");
+    return (
+        message.includes("UNIQUE constraint failed") || message.includes("duplicate key value violates unique constraint")
+    );
 }
 
 function sqliteUniqueConstraintOnNametagIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
-    return message.includes("UNIQUE constraint failed: users.nametag");
+    return (
+        message.includes("UNIQUE constraint failed: users.nametag") ||
+        message.includes("users_nametag") ||
+        message.includes("idx_users_nametag")
+    );
 }
 
 function sqliteUniqueConstraintOnConnectorKeyIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
-    return sqliteUniqueConstraintErrorIs(error) && message.includes("user_connector_keys.connector_key");
+    return (
+        sqliteUniqueConstraintErrorIs(error) &&
+        (message.includes("user_connector_keys.connector_key") ||
+            message.includes("user_connector_keys_connector_key_unique"))
+    );
 }

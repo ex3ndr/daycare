@@ -27,7 +27,7 @@ export class ChannelsRepository {
 
     async create(record: ChannelDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO channels (
@@ -69,7 +69,7 @@ export class ChannelsRepository {
             if (existing) {
                 return channelClone(existing);
             }
-            const loaded = this.channelLoadById(id);
+            const loaded = await this.channelLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -89,7 +89,7 @@ export class ChannelsRepository {
             return null;
         }
 
-        const row = this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name) as
+        const row = await this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name) as
             | DatabaseChannelRow
             | undefined;
         if (!row) {
@@ -103,7 +103,7 @@ export class ChannelsRepository {
     }
 
     async findMany(ctx: Context): Promise<ChannelDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM channels WHERE user_id = ? ORDER BY created_at ASC, id ASC")
             .all(ctx.userId) as DatabaseChannelRow[];
         return rows.map((row) => channelClone(this.channelParse(row)));
@@ -114,7 +114,7 @@ export class ChannelsRepository {
             return channelsSort(Array.from(this.channelsById.values())).map((record) => channelClone(record));
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM channels ORDER BY created_at ASC, id ASC")
             .all() as DatabaseChannelRow[];
         const parsed = rows.map((row) => this.channelParse(row));
@@ -132,7 +132,7 @@ export class ChannelsRepository {
     async update(id: string, data: Partial<ChannelDbRecord>): Promise<void> {
         const lock = this.channelLockForId(id);
         await lock.inLock(async () => {
-            const current = this.channelsById.get(id) ?? this.channelLoadById(id);
+            const current = this.channelsById.get(id) ?? (await this.channelLoadById(id));
             if (!current) {
                 throw new Error(`Channel not found: ${id}`);
             }
@@ -148,7 +148,7 @@ export class ChannelsRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE channels
@@ -167,8 +167,8 @@ export class ChannelsRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.channelLockForId(id);
         return lock.inLock(async () => {
-            const current = this.channelsById.get(id) ?? this.channelLoadById(id);
-            const removed = this.db.prepare("DELETE FROM channels WHERE id = ?").run(id);
+            const current = this.channelsById.get(id) ?? (await this.channelLoadById(id));
+            const removed = await this.db.prepare("DELETE FROM channels WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
@@ -187,7 +187,7 @@ export class ChannelsRepository {
         channelId: string,
         record: Omit<ChannelMemberDbRecord, "id" | "channelId"> & { channelId?: string }
     ): Promise<ChannelMemberDbRecord> {
-        const inserted = this.db
+        await this.db
             .prepare(
                 `
               INSERT INTO channel_members (
@@ -205,26 +205,17 @@ export class ChannelsRepository {
             )
             .run(channelId, record.userId, record.agentId, record.username, record.joinedAt);
 
-        const existing = this.db
+        const existing = await this.db
             .prepare("SELECT * FROM channel_members WHERE channel_id = ? AND agent_id = ? LIMIT 1")
             .get(channelId, record.agentId) as DatabaseChannelMemberRow | undefined;
         if (!existing) {
-            const rowIdRaw = inserted.lastInsertRowid;
-            const rowId = typeof rowIdRaw === "bigint" ? Number(rowIdRaw) : rowIdRaw;
-            return {
-                id: rowId,
-                channelId,
-                userId: record.userId,
-                agentId: record.agentId,
-                username: record.username,
-                joinedAt: record.joinedAt
-            };
+            throw new Error("Failed to load inserted channel member.");
         }
         return memberParse(existing);
     }
 
     async removeMember(channelId: string, agentId: string): Promise<boolean> {
-        const removed = this.db
+        const removed = await this.db
             .prepare("DELETE FROM channel_members WHERE channel_id = ? AND agent_id = ?")
             .run(channelId, agentId);
         const rawChanges = (removed as { changes?: number | bigint }).changes;
@@ -233,7 +224,7 @@ export class ChannelsRepository {
     }
 
     async findMembers(channelId: string): Promise<ChannelMemberDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM channel_members WHERE channel_id = ? ORDER BY joined_at ASC, id ASC")
             .all(channelId) as DatabaseChannelMemberRow[];
         return rows.map((row) => memberParse(row));
@@ -244,8 +235,8 @@ export class ChannelsRepository {
         this.channelIdByName.set(record.name, record.id);
     }
 
-    private channelLoadById(id: string): ChannelDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id) as
+    private async channelLoadById(id: string): Promise<ChannelDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id) as
             | DatabaseChannelRow
             | undefined;
         if (!row) {

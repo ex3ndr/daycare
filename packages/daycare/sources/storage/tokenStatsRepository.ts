@@ -50,7 +50,7 @@ export class TokenStatsRepository {
         }
         const hourStart = hourStartResolve(input.at ?? Date.now());
 
-        this.db
+        await this.db
             .prepare(
                 `
                 INSERT INTO token_stats_hourly (
@@ -65,11 +65,11 @@ export class TokenStatsRepository {
                     cost
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(hour_start, user_id, agent_id, model) DO UPDATE SET
-                    input_tokens = input_tokens + excluded.input_tokens,
-                    output_tokens = output_tokens + excluded.output_tokens,
-                    cache_read_tokens = cache_read_tokens + excluded.cache_read_tokens,
-                    cache_write_tokens = cache_write_tokens + excluded.cache_write_tokens,
-                    cost = cost + excluded.cost
+                    input_tokens = token_stats_hourly.input_tokens + excluded.input_tokens,
+                    output_tokens = token_stats_hourly.output_tokens + excluded.output_tokens,
+                    cache_read_tokens = token_stats_hourly.cache_read_tokens + excluded.cache_read_tokens,
+                    cache_write_tokens = token_stats_hourly.cache_write_tokens + excluded.cache_write_tokens,
+                    cost = token_stats_hourly.cost + excluded.cost
             `
             )
             .run(
@@ -139,7 +139,7 @@ export class TokenStatsRepository {
             values.push(limit);
         }
 
-        const rows = this.db.prepare(sql).all(...values) as DatabaseTokenStatsHourlyRow[];
+        const rows = await this.db.prepare(sql).all(...values) as DatabaseTokenStatsHourlyRow[];
         return rows.map((row) => rowParse(row));
     }
 }

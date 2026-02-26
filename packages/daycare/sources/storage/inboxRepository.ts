@@ -13,7 +13,7 @@ export class InboxRepository {
     }
 
     async insert(id: string, agentId: string, postedAt: number, type: string, data: string): Promise<void> {
-        this.db
+        await this.db
             .prepare(
                 `
                 INSERT INTO inbox (
@@ -34,7 +34,7 @@ export class InboxRepository {
     }
 
     async findByAgentId(agentId: string): Promise<InboxDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM inbox WHERE agent_id = ? ORDER BY posted_at ASC, id ASC")
             .all(agentId) as DatabaseInboxRow[];
         return rows.map((row) => ({
@@ -47,10 +47,10 @@ export class InboxRepository {
     }
 
     async delete(id: string): Promise<void> {
-        this.db.prepare("DELETE FROM inbox WHERE id = ?").run(id);
+        await this.db.prepare("DELETE FROM inbox WHERE id = ?").run(id);
     }
 
     async deleteByAgentId(agentId: string): Promise<void> {
-        this.db.prepare("DELETE FROM inbox WHERE agent_id = ?").run(agentId);
+        await this.db.prepare("DELETE FROM inbox WHERE agent_id = ?").run(agentId);
     }
 }

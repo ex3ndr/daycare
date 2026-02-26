@@ -14,7 +14,7 @@ export class SessionsRepository {
     }
 
     async findById(id: string): Promise<SessionDbRecord | null> {
-        const row = this.db.prepare("SELECT * FROM sessions WHERE id = ? LIMIT 1").get(id) as
+        const row = await this.db.prepare("SELECT * FROM sessions WHERE id = ? LIMIT 1").get(id) as
             | DatabaseSessionRow
             | undefined;
         if (!row) {
@@ -24,7 +24,7 @@ export class SessionsRepository {
     }
 
     async findByAgentId(agentId: string): Promise<SessionDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM sessions WHERE agent_id = ? ORDER BY created_at ASC")
             .all(agentId) as DatabaseSessionRow[];
         return rows.map((row) => this.sessionParse(row));
@@ -33,7 +33,7 @@ export class SessionsRepository {
     async create(input: CreateSessionInput): Promise<string> {
         const sessionId = createId();
         const createdAt = input.createdAt ?? Date.now();
-        this.db
+        await this.db
             .prepare(
                 `
               INSERT INTO sessions (
@@ -56,7 +56,7 @@ export class SessionsRepository {
      * Expects: sessionId is valid.
      */
     async endSession(sessionId: string, endedAt: number): Promise<void> {
-        this.db.prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL").run(endedAt, sessionId);
+        await this.db.prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL").run(endedAt, sessionId);
     }
 
     /**
@@ -65,7 +65,7 @@ export class SessionsRepository {
      * Expects: sessionId and historyId are valid.
      */
     async invalidate(sessionId: string, historyId: number): Promise<void> {
-        this.db
+        await this.db
             .prepare(
                 `
               UPDATE sessions
@@ -81,7 +81,7 @@ export class SessionsRepository {
      * Expects: limit > 0.
      */
     async findInvalidated(limit: number): Promise<SessionDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM sessions WHERE invalidated_at IS NOT NULL ORDER BY invalidated_at ASC LIMIT ?")
             .all(limit) as DatabaseSessionRow[];
         return rows.map((row) => this.sessionParse(row));
@@ -93,7 +93,7 @@ export class SessionsRepository {
      * Returns true if the update was applied.
      */
     async markProcessed(sessionId: string, processedUntil: number, expectedInvalidatedAt: number): Promise<boolean> {
-        const result = this.db
+        const result = await this.db
             .prepare(
                 `
               UPDATE sessions

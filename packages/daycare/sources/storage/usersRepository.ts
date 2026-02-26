@@ -42,7 +42,7 @@ export class UsersRepository {
             if (existing) {
                 return userClone(existing);
             }
-            const loaded = this.userLoadById(id);
+            const loaded = await this.userLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -59,7 +59,7 @@ export class UsersRepository {
             return this.findById(cachedUserId);
         }
 
-        const row = this.db
+        const row = await this.db
             .prepare(
                 `
               SELECT user_id
@@ -101,7 +101,7 @@ export class UsersRepository {
             return null;
         }
 
-        const row = this.db.prepare("SELECT id FROM users WHERE nametag = ? LIMIT 1").get(normalized) as
+        const row = await this.db.prepare("SELECT id FROM users WHERE nametag = ? LIMIT 1").get(normalized) as
             | { id?: string }
             | undefined;
         const userId = row?.id?.trim() ?? "";
@@ -127,10 +127,10 @@ export class UsersRepository {
             return usersSort(Array.from(this.usersById.values())).map((user) => userClone(user));
         }
 
-        const userRows = this.db
+        const userRows = await this.db
             .prepare("SELECT * FROM users ORDER BY created_at ASC, id ASC")
             .all() as DatabaseUserRow[];
-        const keyRows = this.db
+        const keyRows = await this.db
             .prepare(
                 `
               SELECT id, user_id, connector_key
@@ -185,7 +185,7 @@ export class UsersRepository {
         if (this.allUsersLoaded) {
             return null;
         }
-        const row = this.db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get() as
+        const row = await this.db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get() as
             | { id?: string }
             | undefined;
         const userId = row?.id?.trim() ?? "";
@@ -213,7 +213,7 @@ export class UsersRepository {
             for (let attempt = 0; attempt < maxGeneratedNametagAttempts; attempt += 1) {
                 nametag = shouldGenerateNametag ? nametagGenerate() : explicitNametag;
                 try {
-                    this.db
+                    await this.db
                         .prepare(
                             "INSERT INTO users (id, is_owner, parent_user_id, name, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
                         )
@@ -233,12 +233,13 @@ export class UsersRepository {
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
             if (connectorKey) {
-                const inserted = this.db
-                    .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?)")
-                    .run(id, connectorKey);
-                const rawRowId = inserted.lastInsertRowid;
-                const rowId = typeof rawRowId === "bigint" ? Number(rawRowId) : rawRowId;
-                connectorKeys.push({ id: rowId, userId: id, connectorKey });
+                const inserted = await this.db
+                    .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?) RETURNING id")
+                    .get(id, connectorKey) as { id: number | bigint } | undefined;
+                if (!inserted) {
+                    throw new Error("Failed to insert connector key.");
+                }
+                connectorKeys.push({ id: Number(inserted.id), userId: id, connectorKey });
             }
 
             const record: UserWithConnectorKeysDbRecord = {
@@ -261,7 +262,7 @@ export class UsersRepository {
     async update(id: string, data: UpdateUserInput): Promise<void> {
         const lock = this.userLockForId(id);
         await lock.inLock(async () => {
-            const current = this.usersById.get(id) ?? this.userLoadById(id);
+            const current = this.usersById.get(id) ?? (await this.userLoadById(id));
             if (!current) {
                 throw new Error(`User not found: ${id}`);
             }
@@ -273,7 +274,7 @@ export class UsersRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE users
@@ -292,8 +293,8 @@ export class UsersRepository {
     async delete(id: string): Promise<void> {
         const lock = this.userLockForId(id);
         await lock.inLock(async () => {
-            const current = this.usersById.get(id) ?? this.userLoadById(id);
-            this.db.prepare("DELETE FROM users WHERE id = ?").run(id);
+            const current = this.usersById.get(id) ?? (await this.userLoadById(id));
+            await this.db.prepare("DELETE FROM users WHERE id = ?").run(id);
             await this.cacheLock.inLock(() => {
                 if (current) {
                     for (const connectorKey of current.connectorKeys) {
@@ -322,16 +323,18 @@ export class UsersRepository {
     async addConnectorKey(userId: string, connectorKey: string): Promise<void> {
         const lock = this.userLockForId(userId);
         await lock.inLock(async () => {
-            const current = this.usersById.get(userId) ?? this.userLoadById(userId);
+            const current = this.usersById.get(userId) ?? (await this.userLoadById(userId));
             if (!current) {
                 throw new Error(`User not found: ${userId}`);
             }
 
-            const inserted = this.db
-                .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?)")
-                .run(userId, connectorKey);
-            const rawRowId = inserted.lastInsertRowid;
-            const rowId = typeof rawRowId === "bigint" ? Number(rawRowId) : rawRowId;
+            const inserted = await this.db
+                .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?) RETURNING id")
+                .get(userId, connectorKey) as { id: number | bigint } | undefined;
+            if (!inserted) {
+                throw new Error("Failed to insert connector key.");
+            }
+            const rowId = Number(inserted.id);
 
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
@@ -353,14 +356,14 @@ export class UsersRepository {
         return lock;
     }
 
-    private userLoadById(userId: string): UserWithConnectorKeysDbRecord | null {
-        const userRow = this.db.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").get(userId) as
+    private async userLoadById(userId: string): Promise<UserWithConnectorKeysDbRecord | null> {
+        const userRow = await this.db.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").get(userId) as
             | DatabaseUserRow
             | undefined;
         if (!userRow) {
             return null;
         }
-        const keyRows = this.db
+        const keyRows = await this.db
             .prepare(
                 `
               SELECT id, user_id, connector_key
@@ -398,7 +401,10 @@ export class UsersRepository {
 
 function sqliteUniqueConstraintOnNametagIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
-    return message.includes("UNIQUE constraint failed: users.nametag");
+    return (
+        message.includes("UNIQUE constraint failed: users.nametag") ||
+        message.includes("duplicate key value violates unique constraint")
+    );
 }
 
 function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeysDbRecord {

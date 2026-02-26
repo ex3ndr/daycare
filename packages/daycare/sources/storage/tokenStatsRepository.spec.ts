@@ -8,7 +8,7 @@ describe("TokenStatsRepository", () => {
     it("increments hourly rows and merges by hour/user/agent/model", async () => {
         const db = databaseOpenTest();
         try {
-            schemaCreate(db);
+            await schemaCreate(db);
             const repository = new TokenStatsRepository(db);
             const ctx = ctxBuild("user-a", "agent-a");
             const hour = Date.UTC(2026, 1, 26, 9, 12, 0, 0);
@@ -53,7 +53,7 @@ describe("TokenStatsRepository", () => {
     it("filters rows by range and identity", async () => {
         const db = databaseOpenTest();
         try {
-            schemaCreate(db);
+            await schemaCreate(db);
             const repository = new TokenStatsRepository(db);
 
             await repository.increment(ctxBuild("user-a", "agent-a"), {
@@ -107,10 +107,10 @@ describe("TokenStatsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
+async function schemaCreate(db: ReturnType<typeof databaseOpenTest>): Promise<void> {
+    await db.exec(`
         CREATE TABLE token_stats_hourly (
-            hour_start INTEGER NOT NULL,
+            hour_start BIGINT NOT NULL,
             user_id TEXT NOT NULL,
             agent_id TEXT NOT NULL,
             model TEXT NOT NULL,

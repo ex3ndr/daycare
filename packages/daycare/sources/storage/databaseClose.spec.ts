@@ -4,9 +4,9 @@ import { databaseClose } from "./databaseClose.js";
 import { databaseOpenTest } from "./databaseOpenTest.js";
 
 describe("databaseClose", () => {
-    it("closes an open database", () => {
+    it("closes an open database", async () => {
         const db = databaseOpenTest();
-        databaseClose(db);
-        expect(() => db.prepare("SELECT 1").get()).toThrow();
+        await databaseClose(db);
+        await expect(db.prepare("SELECT 1").get()).rejects.toThrow();
     });
 });

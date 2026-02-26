@@ -22,7 +22,7 @@ export class ExposeEndpointsRepository {
 
     async create(record: ExposeEndpointDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO expose_endpoints (
@@ -89,7 +89,7 @@ export class ExposeEndpointsRepository {
             if (existing) {
                 return existing;
             }
-            const loaded = this.endpointLoadById(id);
+            const loaded = await this.endpointLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -101,7 +101,7 @@ export class ExposeEndpointsRepository {
     }
 
     async findMany(ctx: Context): Promise<ExposeEndpointDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM expose_endpoints WHERE user_id = ? ORDER BY created_at ASC, id ASC")
             .all(ctx.userId) as DatabaseExposeEndpointRow[];
         return rows.map((entry) => endpointClone(this.endpointParse(entry)));
@@ -118,7 +118,7 @@ export class ExposeEndpointsRepository {
             return cached;
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM expose_endpoints ORDER BY created_at ASC, id ASC")
             .all() as DatabaseExposeEndpointRow[];
 
@@ -137,7 +137,8 @@ export class ExposeEndpointsRepository {
     async update(id: string, data: Partial<ExposeEndpointDbRecord>): Promise<void> {
         const lock = this.endpointLockForId(id);
         await lock.inLock(async () => {
-            const current = await this.cacheLock.inLock(() => this.endpointsById.get(id) ?? this.endpointLoadById(id));
+            const cached = await this.cacheLock.inLock(() => this.endpointsById.get(id));
+            const current = cached ? endpointClone(cached) : await this.endpointLoadById(id);
             if (!current) {
                 throw new Error(`Expose endpoint not found: ${id}`);
             }
@@ -156,7 +157,7 @@ export class ExposeEndpointsRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE expose_endpoints
@@ -193,7 +194,7 @@ export class ExposeEndpointsRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.endpointLockForId(id);
         return lock.inLock(async () => {
-            const removed = this.db.prepare("DELETE FROM expose_endpoints WHERE id = ?").run(id);
+            const removed = await this.db.prepare("DELETE FROM expose_endpoints WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
@@ -204,8 +205,8 @@ export class ExposeEndpointsRepository {
         });
     }
 
-    private endpointLoadById(id: string): ExposeEndpointDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM expose_endpoints WHERE id = ? LIMIT 1").get(id) as
+    private async endpointLoadById(id: string): Promise<ExposeEndpointDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM expose_endpoints WHERE id = ? LIMIT 1").get(id) as
             | DatabaseExposeEndpointRow
             | undefined;
         if (!row) {

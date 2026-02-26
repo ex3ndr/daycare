@@ -22,7 +22,7 @@ export class SignalSubscriptionsRepository {
 
     async create(record: SignalSubscriptionDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO signals_subscriptions (
@@ -64,7 +64,7 @@ export class SignalSubscriptionsRepository {
         const key = subscriptionKeyBuild(keys, pattern);
         const lock = await this.subscriptionLockForKey(key);
         return lock.inLock(async () => {
-            const removed = this.db
+            const removed = await this.db
                 .prepare("DELETE FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ?")
                 .run(keys.userId, keys.agentId, pattern);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
@@ -99,7 +99,7 @@ export class SignalSubscriptionsRepository {
                 return existing;
             }
 
-            const loaded = this.subscriptionLoadByKey(ctx, pattern);
+            const loaded = await this.subscriptionLoadByKey(ctx, pattern);
             if (!loaded) {
                 return null;
             }
@@ -123,7 +123,7 @@ export class SignalSubscriptionsRepository {
             return cached;
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare(
                 "SELECT * FROM signals_subscriptions ORDER BY user_id ASC, agent_id ASC, pattern ASC, created_at ASC, id ASC"
             )
@@ -166,12 +166,12 @@ export class SignalSubscriptionsRepository {
         );
     }
 
-    private subscriptionLoadByKey(ctx: Context, pattern: string): SignalSubscriptionDbRecord | null {
+    private async subscriptionLoadByKey(ctx: Context, pattern: string): Promise<SignalSubscriptionDbRecord | null> {
         const keys = contextKeysNormalize(ctx);
         if (!keys) {
             return null;
         }
-        const row = this.db
+        const row = await this.db
             .prepare("SELECT * FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ? LIMIT 1")
             .get(keys.userId, keys.agentId, pattern) as DatabaseSignalSubscriptionRow | undefined;
         if (!row) {

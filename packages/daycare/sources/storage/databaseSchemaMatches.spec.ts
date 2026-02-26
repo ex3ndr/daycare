@@ -5,12 +5,12 @@ import { databaseOpenTest } from "./databaseOpenTest.js";
 import { databaseSchemaMatches } from "./databaseSchemaMatches.js";
 
 describe("databaseSchemaMatches", () => {
-    it("returns match for a migrated database", () => {
+    it("returns match for a migrated database", async () => {
         const db = databaseOpenTest();
         try {
             databaseMigrate(db);
 
-            const result = databaseSchemaMatches(db);
+            const result = await databaseSchemaMatches(db);
             expect(result.matches).toBe(true);
             expect(result.missingTables).toEqual([]);
             expect(result.unexpectedTables).toEqual([]);
@@ -20,14 +20,14 @@ describe("databaseSchemaMatches", () => {
         }
     });
 
-    it("reports mismatch details when schema deviates", () => {
+    it("reports mismatch details when schema deviates", async () => {
         const db = databaseOpenTest();
         try {
             databaseMigrate(db);
-            db.exec("DROP INDEX idx_users_nametag");
-            db.exec("CREATE TABLE extra_table (id TEXT PRIMARY KEY)");
+            await db.exec("DROP INDEX idx_users_nametag");
+            await db.exec("CREATE TABLE extra_table (id TEXT PRIMARY KEY)");
 
-            const result = databaseSchemaMatches(db);
+            const result = await databaseSchemaMatches(db);
             expect(result.matches).toBe(false);
             expect(result.unexpectedTables).toContain("extra_table");
 

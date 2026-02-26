@@ -30,7 +30,7 @@ export class AgentsRepository {
             if (existing) {
                 return agentClone(existing);
             }
-            const row = this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id) as
+            const row = await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id) as
                 | DatabaseAgentRow
                 | undefined;
             if (!row) {
@@ -48,7 +48,7 @@ export class AgentsRepository {
         if (this.allAgentsLoaded) {
             return agentsSort(Array.from(this.agentsById.values())).map((record) => agentClone(record));
         }
-        const rows = this.db.prepare("SELECT * FROM agents ORDER BY updated_at ASC").all() as DatabaseAgentRow[];
+        const rows = await this.db.prepare("SELECT * FROM agents ORDER BY updated_at ASC").all() as DatabaseAgentRow[];
         const parsed = rows.map((row) => this.agentParse(row));
         await this.cacheLock.inLock(() => {
             this.agentsById.clear();
@@ -66,7 +66,7 @@ export class AgentsRepository {
             return agentsSort(filtered).map((record) => agentClone(record));
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM agents WHERE user_id = ? ORDER BY updated_at ASC")
             .all(userId) as DatabaseAgentRow[];
         const parsed = rows.map((row) => this.agentParse(row));
@@ -82,7 +82,7 @@ export class AgentsRepository {
 
     async create(record: AgentDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO agents (
@@ -134,7 +134,7 @@ export class AgentsRepository {
     async update(id: string, data: Partial<AgentDbRecord>): Promise<void> {
         const lock = this.agentLockForId(id);
         await lock.inLock(async () => {
-            const current = this.agentsById.get(id) ?? this.agentLoadById(id);
+            const current = this.agentsById.get(id) ?? (await this.agentLoadById(id));
             if (!current) {
                 throw new Error(`Agent not found: ${id}`);
             }
@@ -148,7 +148,7 @@ export class AgentsRepository {
                 tokens: data.tokens === undefined ? current.tokens : data.tokens
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE agents
@@ -207,8 +207,8 @@ export class AgentsRepository {
         this.agentsById.set(record.id, agentClone(record));
     }
 
-    private agentLoadById(id: string): AgentDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id) as
+    private async agentLoadById(id: string): Promise<AgentDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id) as
             | DatabaseAgentRow
             | undefined;
         if (!row) {

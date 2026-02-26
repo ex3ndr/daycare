@@ -7,7 +7,7 @@ describe("ChannelsRepository", () => {
     it("supports channel CRUD with user filters", async () => {
         const db = databaseOpenTest();
         try {
-            schemaCreate(db);
+            await schemaCreate(db);
             const repository = new ChannelsRepository(db);
 
             await repository.create({
@@ -48,7 +48,7 @@ describe("ChannelsRepository", () => {
     it("supports member operations", async () => {
         const db = databaseOpenTest();
         try {
-            schemaCreate(db);
+            await schemaCreate(db);
             const repository = new ChannelsRepository(db);
 
             await repository.create({
@@ -87,10 +87,8 @@ describe("ChannelsRepository", () => {
     });
 });
 
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        PRAGMA foreign_keys = ON;
-
+async function schemaCreate(db: ReturnType<typeof databaseOpenTest>): Promise<void> {
+    await db.exec(`
         CREATE TABLE channels (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -101,7 +99,7 @@ function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
         );
 
         CREATE TABLE channel_members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
             user_id TEXT NOT NULL,
             agent_id TEXT NOT NULL,

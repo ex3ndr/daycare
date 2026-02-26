@@ -15,7 +15,7 @@ export class ConnectionsRepository {
     async upsertRequest(requesterId: string, targetId: string, requestedAt = Date.now()): Promise<ConnectionDbRecord> {
         const [userAId, userBId] = sortPair(requesterId, targetId);
         if (requesterId === userAId) {
-            this.db
+            await this.db
                 .prepare(
                     `
                     INSERT INTO connections (
@@ -33,7 +33,7 @@ export class ConnectionsRepository {
                 )
                 .run(userAId, userBId, requestedAt);
         } else {
-            this.db
+            await this.db
                 .prepare(
                     `
                     INSERT INTO connections (
@@ -62,7 +62,7 @@ export class ConnectionsRepository {
     async clearSide(userId: string, otherId: string): Promise<ConnectionDbRecord | null> {
         const [userAId, userBId] = sortPair(userId, otherId);
         if (userId === userAId) {
-            this.db
+            await this.db
                 .prepare(
                     `
                     UPDATE connections
@@ -72,7 +72,7 @@ export class ConnectionsRepository {
                 )
                 .run(userAId, userBId);
         } else {
-            this.db
+            await this.db
                 .prepare(
                     `
                     UPDATE connections
@@ -87,7 +87,7 @@ export class ConnectionsRepository {
 
     async find(id1: string, id2: string): Promise<ConnectionDbRecord | null> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const row = this.db
+        const row = await this.db
             .prepare(
                 `
                 SELECT *
@@ -104,7 +104,7 @@ export class ConnectionsRepository {
     }
 
     async findFriends(userId: string): Promise<ConnectionDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare(
                 `
                 SELECT *
@@ -120,7 +120,7 @@ export class ConnectionsRepository {
     }
 
     async findConnectionsForSubusersOf(ownerUserId: string): Promise<ConnectionDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare(
                 `
                 SELECT DISTINCT c.*
@@ -136,7 +136,7 @@ export class ConnectionsRepository {
     }
 
     async findConnectionsWithSubusersOf(friendUserId: string, ownerUserId: string): Promise<ConnectionDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare(
                 `
                 SELECT c.*
@@ -157,7 +157,7 @@ export class ConnectionsRepository {
 
     async delete(id1: string, id2: string): Promise<boolean> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const removed = this.db
+        const removed = await this.db
             .prepare("DELETE FROM connections WHERE user_a_id = ? AND user_b_id = ?")
             .run(userAId, userBId);
         const rawChanges = (removed as { changes?: number | bigint }).changes;

@@ -38,7 +38,7 @@ export class CronTasksRepository {
             if (existing) {
                 return cronTaskClone(existing);
             }
-            const loaded = this.taskLoadById(id);
+            const loaded = await this.taskLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -52,10 +52,10 @@ export class CronTasksRepository {
     async findMany(ctx: Context, options: CronTasksFindManyOptions = {}): Promise<CronTaskDbRecord[]> {
         const includeDisabled = options.includeDisabled === true;
         const rows = includeDisabled
-            ? (this.db
+            ? (await this.db
                   .prepare("SELECT * FROM tasks_cron WHERE user_id = ? ORDER BY updated_at ASC")
                   .all(ctx.userId) as DatabaseCronTaskRow[])
-            : (this.db
+            : (await this.db
                   .prepare("SELECT * FROM tasks_cron WHERE user_id = ? AND enabled = 1 ORDER BY updated_at ASC")
                   .all(ctx.userId) as DatabaseCronTaskRow[]);
         return rows.map((row) => cronTaskClone(this.taskParse(row)));
@@ -71,8 +71,8 @@ export class CronTasksRepository {
         }
 
         const rows = includeDisabled
-            ? (this.db.prepare("SELECT * FROM tasks_cron ORDER BY updated_at ASC").all() as DatabaseCronTaskRow[])
-            : (this.db
+            ? (await this.db.prepare("SELECT * FROM tasks_cron ORDER BY updated_at ASC").all() as DatabaseCronTaskRow[])
+            : (await this.db
                   .prepare("SELECT * FROM tasks_cron WHERE enabled = 1 ORDER BY updated_at ASC")
                   .all() as DatabaseCronTaskRow[]);
         const parsed = rows.map((row) => this.taskParse(row));
@@ -93,7 +93,7 @@ export class CronTasksRepository {
     }
 
     async findManyByTaskId(ctx: Context, taskId: string): Promise<CronTaskDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM tasks_cron WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
             .all(ctx.userId, taskId) as DatabaseCronTaskRow[];
         return rows.map((row) => cronTaskClone(this.taskParse(row)));
@@ -105,7 +105,7 @@ export class CronTasksRepository {
             throw new Error("Cron trigger taskId is required.");
         }
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO tasks_cron (
@@ -160,7 +160,7 @@ export class CronTasksRepository {
     async update(id: string, data: Partial<CronTaskDbRecord>): Promise<void> {
         const lock = this.taskLockForId(id);
         await lock.inLock(async () => {
-            const current = this.tasksById.get(id) ?? this.taskLoadById(id);
+            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
             if (!current) {
                 throw new Error(`Cron task not found: ${id}`);
             }
@@ -179,7 +179,7 @@ export class CronTasksRepository {
                 throw new Error("Cron trigger taskId is required.");
             }
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE tasks_cron
@@ -222,7 +222,7 @@ export class CronTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const removed = this.db.prepare("DELETE FROM tasks_cron WHERE id = ?").run(id);
+            const removed = await this.db.prepare("DELETE FROM tasks_cron WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
@@ -238,8 +238,8 @@ export class CronTasksRepository {
         this.tasksById.set(record.id, cronTaskClone(record));
     }
 
-    private taskLoadById(id: string): CronTaskDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM tasks_cron WHERE id = ? LIMIT 1").get(id) as
+    private async taskLoadById(id: string): Promise<CronTaskDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM tasks_cron WHERE id = ? LIMIT 1").get(id) as
             | DatabaseCronTaskRow
             | undefined;
         if (!row) {

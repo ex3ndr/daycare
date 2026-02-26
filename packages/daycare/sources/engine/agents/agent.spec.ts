@@ -55,6 +55,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -79,17 +80,17 @@ describe("Agent", () => {
             const ctx = contextForAgent({ userId, agentId });
             await Agent.create(ctx, descriptor, new AgentInbox(agentId), agentSystem, userHome);
 
-            const restoredDescriptor = await agentDescriptorRead(config, ctx);
+            const restoredDescriptor = await agentDescriptorRead(agentSystem.storage, ctx);
             expect(restoredDescriptor).toEqual(descriptor);
 
-            const state = await agentStateRead(config, ctx);
+            const state = await agentStateRead(agentSystem.storage, ctx);
             if (!state) {
                 throw new Error("State not found");
             }
             expect(state.permissions.workingDir).toBe(userHome.desktop);
             expect(state?.activeSessionId).toBeTruthy();
 
-            const history = await agentHistoryLoad(config, ctx);
+            const history = await agentHistoryLoad(agentSystem.storage, ctx);
             expect(history).toEqual([]);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -162,6 +163,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -183,11 +185,17 @@ describe("Agent", () => {
             };
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "first reset" });
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const firstState = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const firstState = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             expect(firstState?.inferenceSessionId).toBeTruthy();
 
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "second reset" });
-            const secondState = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const secondState = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             expect(secondState?.inferenceSessionId).toBeTruthy();
             expect(secondState?.inferenceSessionId).not.toBe(firstState?.inferenceSessionId);
         } finally {
@@ -871,20 +879,7 @@ describe("Agent", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const agentSystem = new AgentSystem({
-                config: new ConfigModule(config),
-                eventBus: new EngineEventBus(),
-                connectorRegistry: new ConnectorRegistry({
-                    onMessage: async () => undefined
-                }),
-                imageRegistry: new ImageGenerationRegistry(),
-                mediaRegistry: new MediaAnalysisRegistry(),
-                toolResolver: new ToolResolver(),
-                pluginManager: {} as unknown as PluginManager,
-                inferenceRouter: {} as unknown as InferenceRouter,
-                authStore: new AuthStore(config)
-            });
-            agentSystem.setCrons({} as unknown as Crons);
+            const agentSystem = {} as unknown as AgentSystem;
 
             const agentId = createId();
             const userId = createId();
@@ -927,6 +922,7 @@ describe("Agent", () => {
 
     it("resumes pending rlm tool_call on restore and continues inference from toolResult", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        let agentSystem: AgentSystem | null = null;
         try {
             const config = configResolve(
                 {
@@ -956,9 +952,10 @@ describe("Agent", () => {
                     timestamp: Date.now()
                 }
             }));
-            const agentSystem = new AgentSystem({
+            agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -1031,7 +1028,7 @@ describe("Agent", () => {
             const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
             expect(restoreResult).toEqual({ type: "restore", ok: true });
 
-            const history = await agentHistoryLoad(config, ctx);
+            const history = await agentHistoryLoad(agentSystem.storage, ctx);
             const completed = [...history]
                 .reverse()
                 .find(
@@ -1102,6 +1099,7 @@ describe("Agent", () => {
 
     it("sends restore recovery response through user connector", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        let agentSystem: AgentSystem | null = null;
         try {
             const config = configResolve(
                 {
@@ -1141,9 +1139,10 @@ describe("Agent", () => {
                     timestamp: Date.now()
                 }
             }));
-            const agentSystem = new AgentSystem({
+            agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: storageOpenTest(),
                 connectorRegistry,
                 imageRegistry: new ImageGenerationRegistry(),
                 mediaRegistry: new MediaAnalysisRegistry(),
@@ -1220,6 +1219,9 @@ describe("Agent", () => {
             );
             await connectorRegistry.unregisterAll("test");
         } finally {
+            if (agentSystem) {
+                await agentSystem.storage.db.close().catch(() => undefined);
+            }
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -1258,6 +1260,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -1309,7 +1312,7 @@ describe("Agent", () => {
             const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
             expect(restoreResult).toEqual({ type: "restore", ok: true });
 
-            const history = await agentHistoryLoad(config, ctx);
+            const history = await agentHistoryLoad(agentSystem.storage, ctx);
             const completed = [...history]
                 .reverse()
                 .find(
@@ -1403,6 +1406,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -1467,7 +1471,7 @@ describe("Agent", () => {
             const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
             expect(restoreResult).toEqual({ type: "restore", ok: true });
 
-            const history = await agentHistoryLoad(config, ctx);
+            const history = await agentHistoryLoad(agentSystem.storage, ctx);
             const completed = [...history]
                 .reverse()
                 .find(
@@ -1488,20 +1492,7 @@ describe("Agent", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const agentSystem = new AgentSystem({
-                config: new ConfigModule(config),
-                eventBus: new EngineEventBus(),
-                connectorRegistry: new ConnectorRegistry({
-                    onMessage: async () => undefined
-                }),
-                imageRegistry: new ImageGenerationRegistry(),
-                mediaRegistry: new MediaAnalysisRegistry(),
-                toolResolver: new ToolResolver(),
-                pluginManager: {} as unknown as PluginManager,
-                inferenceRouter: {} as unknown as InferenceRouter,
-                authStore: new AuthStore(config)
-            });
-            agentSystem.setCrons({} as unknown as Crons);
+            const agentSystem = {} as unknown as AgentSystem;
 
             const agentId = createId();
             const userId = createId();

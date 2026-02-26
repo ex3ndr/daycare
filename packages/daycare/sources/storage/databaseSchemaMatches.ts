@@ -1,4 +1,4 @@
-import { getTableConfig } from "drizzle-orm/sqlite-core";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { schema } from "../schema.js";
 import type { StorageDatabase } from "./databaseOpen.js";
 
@@ -18,7 +18,6 @@ type DatabaseSchemaExpectedIndex = {
 type DatabaseSchemaActualIndex = {
     unique: boolean;
     columns: string[];
-    origin?: string;
 };
 
 export type DatabaseSchemaTableIssue = {
@@ -48,11 +47,11 @@ export type DatabaseSchemaMatchesResult = {
 
 /**
  * Checks whether a database matches the current Drizzle schema shape.
- * Expects: db is an open SQLite connection for the target Daycare database.
+ * Expects: db is an open PostgreSQL-compatible connection for the target Daycare database.
  */
-export function databaseSchemaMatches(db: StorageDatabase): DatabaseSchemaMatchesResult {
+export async function databaseSchemaMatches(db: StorageDatabase): Promise<DatabaseSchemaMatchesResult> {
     const expected = schemaExpectedBuild();
-    const actualTables = sqliteTableNamesRead(db);
+    const actualTables = await postgresTableNamesRead(db);
 
     const expectedTableNames = new Set(Object.keys(expected));
     const actualTableNames = new Set(actualTables);
@@ -69,7 +68,7 @@ export function databaseSchemaMatches(db: StorageDatabase): DatabaseSchemaMatche
         if (!expectedTable) {
             continue;
         }
-        const issue = tableIssueBuild(db, tableName, expectedTable);
+        const issue = await tableIssueBuild(db, tableName, expectedTable);
         if (tableIssueHas(issue)) {
             tableIssues.push(issue);
         }
@@ -106,7 +105,11 @@ function schemaExpectedBuild(): Record<string, DatabaseSchemaTableExpected> {
 
         const indexes: Record<string, DatabaseSchemaExpectedIndex> = {};
         for (const index of config.indexes) {
-            indexes[index.config.name] = {
+            const name = index.config.name?.trim();
+            if (!name) {
+                continue;
+            }
+            indexes[name] = {
                 unique: !!index.config.unique,
                 columns: index.config.columns
                     .map((column) => ("name" in column && typeof column.name === "string" ? column.name : ""))
@@ -118,7 +121,11 @@ function schemaExpectedBuild(): Record<string, DatabaseSchemaTableExpected> {
             if (!column.isUnique) {
                 continue;
             }
-            indexes[`__column_unique__${column.name}`] = {
+            const uniqueName = column.uniqueName?.trim();
+            if (!uniqueName) {
+                continue;
+            }
+            indexes[uniqueName] = {
                 unique: true,
                 columns: [column.name]
             };
@@ -130,59 +137,105 @@ function schemaExpectedBuild(): Record<string, DatabaseSchemaTableExpected> {
     return result;
 }
 
-function sqliteTableNamesRead(db: StorageDatabase): string[] {
-    const rows = db
-        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name ASC")
-        .all() as Array<{ name: string }>;
+async function postgresTableNamesRead(db: StorageDatabase): Promise<string[]> {
+    const rows = await db
+        .prepare(
+            `
+            SELECT table_name AS name
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+            ORDER BY table_name ASC
+            `
+        )
+        .all<{ name: string }>();
     return rows.map((row) => row.name);
 }
 
-function sqliteColumnsRead(db: StorageDatabase, tableName: string): Record<string, DatabaseSchemaActualColumn> {
-    const rows = db.prepare(`PRAGMA table_info("${sqliteIdentifierEscape(tableName)}")`).all() as Array<{
-        name: string;
-        pk: number;
-    }>;
+async function postgresColumnsRead(
+    db: StorageDatabase,
+    tableName: string
+): Promise<Record<string, DatabaseSchemaActualColumn>> {
+    const rows = await db
+        .prepare(
+            `
+            SELECT
+                att.attname AS name,
+                EXISTS (
+                    SELECT 1
+                    FROM pg_index idx
+                    WHERE idx.indrelid = tbl.oid
+                      AND idx.indisprimary
+                      AND att.attnum = ANY(idx.indkey)
+                ) AS is_primary
+            FROM pg_class tbl
+            JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+            JOIN pg_attribute att ON att.attrelid = tbl.oid
+            WHERE ns.nspname = 'public'
+              AND tbl.relname = ?
+              AND att.attnum > 0
+              AND NOT att.attisdropped
+            ORDER BY att.attnum ASC
+            `
+        )
+        .all<{ name: string; is_primary: boolean | number | string }>(tableName);
 
     const result: Record<string, DatabaseSchemaActualColumn> = {};
     for (const row of rows) {
         result[row.name] = {
-            primary: row.pk > 0
+            primary: booleanLikeParse(row.is_primary)
         };
     }
     return result;
 }
 
-function sqliteIndexesRead(db: StorageDatabase, tableName: string): Record<string, DatabaseSchemaActualIndex> {
-    const listRows = db.prepare(`PRAGMA index_list("${sqliteIdentifierEscape(tableName)}")`).all() as Array<{
-        name: string;
-        unique: number;
-        origin?: string;
-    }>;
+async function postgresIndexesRead(
+    db: StorageDatabase,
+    tableName: string
+): Promise<Record<string, DatabaseSchemaActualIndex>> {
+    const rows = await db
+        .prepare(
+            `
+            SELECT
+                idx_class.relname AS name,
+                idx.indisunique AS is_unique,
+                COALESCE(string_agg(att.attname, ',' ORDER BY ord.ordinality), '') AS columns_csv
+            FROM pg_class tbl
+            JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+            JOIN pg_index idx ON idx.indrelid = tbl.oid
+            JOIN pg_class idx_class ON idx_class.oid = idx.indexrelid
+            LEFT JOIN LATERAL unnest(idx.indkey) WITH ORDINALITY AS ord(attnum, ordinality) ON true
+            LEFT JOIN pg_attribute att ON att.attrelid = tbl.oid AND att.attnum = ord.attnum
+            WHERE ns.nspname = 'public'
+              AND tbl.relname = ?
+              AND NOT idx.indisprimary
+            GROUP BY idx_class.relname, idx.indisunique
+            ORDER BY idx_class.relname ASC
+            `
+        )
+        .all<{ name: string; is_unique: boolean | number | string; columns_csv: string }>(tableName);
 
-    const explicitIndexes = listRows.filter((row) => row.origin !== "pk");
     const result: Record<string, DatabaseSchemaActualIndex> = {};
-
-    for (const row of explicitIndexes) {
-        const columnRows = db.prepare(`PRAGMA index_info("${sqliteIdentifierEscape(row.name)}")`).all() as Array<{
-            name: string | null;
-        }>;
+    for (const row of rows) {
         result[row.name] = {
-            unique: row.unique === 1,
-            columns: columnRows.map((entry) => entry.name).filter((entry): entry is string => entry !== null),
-            origin: row.origin
+            unique: booleanLikeParse(row.is_unique),
+            columns: row.columns_csv
+                .split(",")
+                .map((entry) => entry.trim())
+                .filter((entry) => entry.length > 0)
         };
     }
-
     return result;
 }
 
-function tableIssueBuild(
+async function tableIssueBuild(
     db: StorageDatabase,
     tableName: string,
     expected: DatabaseSchemaTableExpected
-): DatabaseSchemaTableIssue {
-    const actualColumns = sqliteColumnsRead(db, tableName);
-    const actualIndexes = sqliteIndexesRead(db, tableName);
+): Promise<DatabaseSchemaTableIssue> {
+    const [actualColumns, actualIndexes] = await Promise.all([
+        postgresColumnsRead(db, tableName),
+        postgresIndexesRead(db, tableName)
+    ]);
 
     const expectedColumnNames = Object.keys(expected.columns);
     const actualColumnNames = Object.keys(actualColumns);
@@ -268,10 +321,16 @@ function tableIssueHas(issue: DatabaseSchemaTableIssue): boolean {
     );
 }
 
-function sqliteIdentifierEscape(value: string): string {
-    return value.replaceAll('"', '""');
-}
-
 function indexSignatureBuild(index: DatabaseSchemaExpectedIndex | DatabaseSchemaActualIndex): string {
     return `${index.unique ? "1" : "0"}:${index.columns.join("\0")}`;
+}
+
+function booleanLikeParse(value: boolean | number | string): boolean {
+    if (typeof value === "boolean") {
+        return value;
+    }
+    if (typeof value === "number") {
+        return value === 1;
+    }
+    return value === "true" || value === "t" || value === "1";
 }

@@ -33,7 +33,7 @@ export class SystemPromptsRepository {
             if (existing) {
                 return promptClone(existing);
             }
-            const loaded = this.promptLoadById(id);
+            const loaded = await this.promptLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -49,7 +49,7 @@ export class SystemPromptsRepository {
             return Array.from(this.promptsById.values()).map((p) => promptClone(p));
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM system_prompts ORDER BY created_at ASC")
             .all() as DatabaseSystemPromptRow[];
         const parsed = rows.map((row) => promptParse(row));
@@ -67,12 +67,12 @@ export class SystemPromptsRepository {
 
     async findByScope(scope: SystemPromptScope, userId?: string): Promise<SystemPromptDbRecord[]> {
         if (scope === "user" && userId) {
-            const rows = this.db
+            const rows = await this.db
                 .prepare("SELECT * FROM system_prompts WHERE scope = ? AND user_id = ? ORDER BY created_at ASC")
                 .all(scope, userId) as DatabaseSystemPromptRow[];
             return rows.map((row) => promptParse(row));
         }
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM system_prompts WHERE scope = ? ORDER BY created_at ASC")
             .all(scope) as DatabaseSystemPromptRow[];
         return rows.map((row) => promptParse(row));
@@ -80,14 +80,14 @@ export class SystemPromptsRepository {
 
     async findEnabled(userId?: string): Promise<SystemPromptDbRecord[]> {
         if (userId) {
-            const rows = this.db
+            const rows = await this.db
                 .prepare(
                     "SELECT * FROM system_prompts WHERE enabled = 1 AND (scope = 'global' OR (scope = 'user' AND user_id = ?)) ORDER BY created_at ASC"
                 )
                 .all(userId) as DatabaseSystemPromptRow[];
             return rows.map((row) => promptParse(row));
         }
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM system_prompts WHERE enabled = 1 AND scope = 'global' ORDER BY created_at ASC")
             .all() as DatabaseSystemPromptRow[];
         return rows.map((row) => promptParse(row));
@@ -95,7 +95,7 @@ export class SystemPromptsRepository {
 
     async create(record: SystemPromptDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                 INSERT INTO system_prompts (id, scope, user_id, kind, condition, prompt, enabled, created_at, updated_at)
@@ -132,7 +132,7 @@ export class SystemPromptsRepository {
     async updateById(id: string, data: Partial<SystemPromptDbRecord>): Promise<void> {
         const lock = this.promptLockForId(id);
         await lock.inLock(async () => {
-            const current = this.promptsById.get(id) ?? this.promptLoadById(id);
+            const current = this.promptsById.get(id) ?? (await this.promptLoadById(id));
             if (!current) {
                 throw new Error(`System prompt not found: ${id}`);
             }
@@ -143,7 +143,7 @@ export class SystemPromptsRepository {
                 id: current.id
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                 UPDATE system_prompts
@@ -172,7 +172,7 @@ export class SystemPromptsRepository {
     async deleteById(id: string): Promise<boolean> {
         const lock = this.promptLockForId(id);
         return lock.inLock(async () => {
-            const removed = this.db.prepare("DELETE FROM system_prompts WHERE id = ?").run(id);
+            const removed = await this.db.prepare("DELETE FROM system_prompts WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
@@ -188,8 +188,8 @@ export class SystemPromptsRepository {
         this.promptsById.set(record.id, promptClone(record));
     }
 
-    private promptLoadById(id: string): SystemPromptDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM system_prompts WHERE id = ? LIMIT 1").get(id) as
+    private async promptLoadById(id: string): Promise<SystemPromptDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM system_prompts WHERE id = ? LIMIT 1").get(id) as
             | DatabaseSystemPromptRow
             | undefined;
         if (!row) {

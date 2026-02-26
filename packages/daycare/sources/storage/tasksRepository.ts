@@ -35,7 +35,7 @@ export class TasksRepository {
             if (existing) {
                 return existing.deletedAt == null ? taskClone(existing) : null;
             }
-            const loaded = this.taskLoadById(userId, id);
+            const loaded = await this.taskLoadById(userId, id);
             if (!loaded) {
                 return null;
             }
@@ -63,7 +63,7 @@ export class TasksRepository {
             if (existing) {
                 return taskClone(existing);
             }
-            const loaded = this.taskLoadById(userId, id);
+            const loaded = await this.taskLoadById(userId, id);
             if (!loaded) {
                 return null;
             }
@@ -75,14 +75,14 @@ export class TasksRepository {
     }
 
     async findMany(ctx: Context): Promise<TaskDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM tasks WHERE user_id = ? AND deleted_at IS NULL ORDER BY updated_at ASC")
             .all(ctx.userId) as DatabaseTaskRow[];
         return rows.map((row) => taskClone(this.taskParse(row)));
     }
 
     async findAll(): Promise<TaskDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY updated_at ASC")
             .all() as DatabaseTaskRow[];
         const parsed = rows.map((row) => this.taskParse(row));
@@ -102,12 +102,12 @@ export class TasksRepository {
             if (!userId) {
                 throw new Error("Task userId is required.");
             }
-            const existing = this.taskLoadById(userId, record.id);
+            const existing = await this.taskLoadById(userId, record.id);
             if (existing?.deletedAt != null) {
                 throw new Error(`Task id is reserved by a deleted task: ${record.id}`);
             }
 
-            this.db
+            await this.db
                 .prepare(
                     `
                     INSERT INTO tasks (
@@ -159,7 +159,7 @@ export class TasksRepository {
         const key = taskKey(userId, id);
         const lock = this.taskLockForId(key);
         await lock.inLock(async () => {
-            const current = this.tasksById.get(key) ?? this.taskLoadById(userId, id);
+            const current = this.tasksById.get(key) ?? (await this.taskLoadById(userId, id));
             if (!current) {
                 throw new Error(`Task not found: ${id}`);
             }
@@ -173,7 +173,7 @@ export class TasksRepository {
                 deletedAt: data.deletedAt === undefined ? current.deletedAt : data.deletedAt
             };
 
-            this.db
+            await this.db
                 .prepare(
                     `
                     UPDATE tasks
@@ -214,12 +214,12 @@ export class TasksRepository {
         const key = taskKey(userId, id);
         const lock = this.taskLockForId(key);
         return lock.inLock(async () => {
-            const current = this.tasksById.get(key) ?? this.taskLoadById(userId, id);
+            const current = this.tasksById.get(key) ?? (await this.taskLoadById(userId, id));
             if (!current || current.deletedAt != null) {
                 return false;
             }
             const now = Date.now();
-            this.db
+            await this.db
                 .prepare(
                     "UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ? AND deleted_at IS NULL"
                 )
@@ -239,8 +239,8 @@ export class TasksRepository {
         this.tasksById.set(taskKey(record.userId, record.id), taskClone(record));
     }
 
-    private taskLoadById(userId: string, id: string): TaskDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM tasks WHERE user_id = ? AND id = ? LIMIT 1").get(userId, id) as
+    private async taskLoadById(userId: string, id: string): Promise<TaskDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM tasks WHERE user_id = ? AND id = ? LIMIT 1").get(userId, id) as
             | DatabaseTaskRow
             | undefined;
         if (!row) {

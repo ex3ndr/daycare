@@ -16,12 +16,14 @@ import { Storage } from "./storage.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("Storage", () => {
-    it("does not run migrations when built from an existing database instance", () => {
+    it("does not run migrations when built from an existing database instance", async () => {
         const db = databaseOpenTest();
         try {
             const storage = Storage.fromDatabase(db);
-            const tables = storage.db
-                .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name ASC")
+            const tables = await storage.db
+                .prepare(
+                    "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
+                )
                 .all() as Array<{ name?: string }>;
 
             expect(tables.some((entry) => entry.name === "agents")).toBe(false);
@@ -31,16 +33,18 @@ describe("Storage", () => {
         }
     });
 
-    it("opens with migrations and closes connection", () => {
+    it("opens with migrations and closes connection", async () => {
         const storage = storageOpenTest();
-        const tables = storage.db
-            .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name ASC")
+        const tables = await storage.db
+            .prepare(
+                "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
+            )
             .all() as Array<{ name?: string }>;
         expect(tables.some((entry) => entry.name === "agents")).toBe(true);
         expect(tables.some((entry) => entry.name === "users")).toBe(true);
         storage.db.close();
 
-        expect(() => storage.db.prepare("SELECT 1").get()).toThrow();
+        await expect(storage.db.prepare("SELECT 1").get()).rejects.toThrow();
     });
 
     it("resolves user by connector key under concurrent requests", async () => {

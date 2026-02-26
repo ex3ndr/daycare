@@ -56,7 +56,7 @@ describe("Exposes", () => {
             expect(updatedEnabled.endpoint.auth).not.toBeNull();
             expect(updatedEnabled.password).toBeTruthy();
 
-            const persisted = exposeEndpointRowRead(storage, created.endpoint.id);
+            const persisted = await exposeEndpointRowRead(storage, created.endpoint.id);
             expect(persisted.auth?.passwordHash).toBeTruthy();
             expect(persisted.auth?.passwordHash).not.toBe(updatedEnabled.password);
 
@@ -318,7 +318,7 @@ describe("Exposes", () => {
             const listed = await exposes.list();
             expect(listed[0]?.domain).toBe("reactivated.a.example.com");
 
-            const persisted = exposeEndpointRowRead(storage, created.endpoint.id);
+            const persisted = await exposeEndpointRowRead(storage, created.endpoint.id);
             expect(persisted.domain).toBe("reactivated.a.example.com");
 
             await exposes.stop();
@@ -409,8 +409,11 @@ function providerBuild(options: { instanceId: string; domain: string; domains: s
     };
 }
 
-function exposeEndpointRowRead(storage: Storage, endpointId: string): { domain: string; auth: { passwordHash: string } | null } {
-    const row = storage.db
+async function exposeEndpointRowRead(
+    storage: Storage,
+    endpointId: string
+): Promise<{ domain: string; auth: { passwordHash: string } | null }> {
+    const row = await storage.db
         .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")
         .get(endpointId) as { domain?: string; auth?: string | null } | undefined;
     return {

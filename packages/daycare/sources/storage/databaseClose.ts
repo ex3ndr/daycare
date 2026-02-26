@@ -3,6 +3,6 @@ import type { StorageDatabase } from "./databaseOpen.js";
 /**
  * Closes an open storage database connection.
  */
-export function databaseClose(db: StorageDatabase): void {
-    db.close();
+export async function databaseClose(db: StorageDatabase): Promise<void> {
+    await db.close();
 }

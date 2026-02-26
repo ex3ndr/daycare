@@ -21,17 +21,17 @@ export class DelayedSignalsRepository {
 
     async create(record: DelayedSignalDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            this.db.exec("BEGIN");
+            await this.db.exec("BEGIN");
             try {
                 if (record.repeatKey) {
-                    this.db
+                    await this.db
                         .prepare(
                             "DELETE FROM signals_delayed WHERE user_id = ? AND type = ? AND repeat_key = ? AND id <> ?"
                         )
                         .run(record.userId, record.type, record.repeatKey, record.id);
                 }
 
-                this.db
+                await this.db
                     .prepare(
                         `
                       INSERT INTO signals_delayed (
@@ -67,9 +67,9 @@ export class DelayedSignalsRepository {
                         record.createdAt,
                         record.updatedAt
                     );
-                this.db.exec("COMMIT");
+                await this.db.exec("COMMIT");
             } catch (error) {
-                this.db.exec("ROLLBACK");
+                await this.db.exec("ROLLBACK");
                 throw error;
             }
 
@@ -108,7 +108,7 @@ export class DelayedSignalsRepository {
             if (existing) {
                 return delayedSignalClone(existing);
             }
-            const loaded = this.signalLoadById(id);
+            const loaded = await this.signalLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -120,7 +120,7 @@ export class DelayedSignalsRepository {
     }
 
     async findDue(now: number): Promise<DelayedSignalDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM signals_delayed WHERE deliver_at <= ? ORDER BY deliver_at ASC, id ASC")
             .all(now) as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
@@ -136,7 +136,7 @@ export class DelayedSignalsRepository {
 
     async findMany(ctx: Context): Promise<DelayedSignalDbRecord[]> {
         const userId = contextUserIdRequire(ctx);
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM signals_delayed WHERE user_id = ? ORDER BY deliver_at ASC, id ASC")
             .all(userId) as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
@@ -155,7 +155,7 @@ export class DelayedSignalsRepository {
             return delayedSignalsSort(Array.from(this.signalsById.values())).map((entry) => delayedSignalClone(entry));
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM signals_delayed ORDER BY deliver_at ASC, id ASC")
             .all() as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
@@ -173,7 +173,7 @@ export class DelayedSignalsRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.signalLockForId(id);
         return lock.inLock(async () => {
-            const removed = this.db.prepare("DELETE FROM signals_delayed WHERE id = ?").run(id);
+            const removed = await this.db.prepare("DELETE FROM signals_delayed WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
             await this.cacheLock.inLock(() => {
@@ -185,7 +185,7 @@ export class DelayedSignalsRepository {
 
     async deleteByRepeatKey(ctx: Context, type: string, repeatKey: string): Promise<number> {
         const normalizedUserId = contextUserIdRequire(ctx);
-        const removed = this.db
+        const removed = await this.db
             .prepare("DELETE FROM signals_delayed WHERE user_id = ? AND type = ? AND repeat_key = ?")
             .run(normalizedUserId, type, repeatKey);
         const rawChanges = (removed as { changes?: number | bigint }).changes;
@@ -208,8 +208,8 @@ export class DelayedSignalsRepository {
         this.signalsById.set(record.id, delayedSignalClone(record));
     }
 
-    private signalLoadById(id: string): DelayedSignalDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM signals_delayed WHERE id = ? LIMIT 1").get(id) as
+    private async signalLoadById(id: string): Promise<DelayedSignalDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM signals_delayed WHERE id = ? LIMIT 1").get(id) as
             | DatabaseDelayedSignalRow
             | undefined;
         if (!row) {

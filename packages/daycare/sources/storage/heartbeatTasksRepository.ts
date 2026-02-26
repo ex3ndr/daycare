@@ -35,7 +35,7 @@ export class HeartbeatTasksRepository {
             if (existing) {
                 return heartbeatTaskClone(existing);
             }
-            const loaded = this.taskLoadById(id);
+            const loaded = await this.taskLoadById(id);
             if (!loaded) {
                 return null;
             }
@@ -47,7 +47,7 @@ export class HeartbeatTasksRepository {
     }
 
     async findMany(ctx: Context): Promise<HeartbeatTaskDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? ORDER BY updated_at ASC")
             .all(ctx.userId) as DatabaseHeartbeatTaskRow[];
         return rows.map((task) => heartbeatTaskClone(this.taskParse(task)));
@@ -58,7 +58,7 @@ export class HeartbeatTasksRepository {
             return heartbeatTasksSort(Array.from(this.tasksById.values())).map((task) => heartbeatTaskClone(task));
         }
 
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM tasks_heartbeat ORDER BY updated_at ASC")
             .all() as DatabaseHeartbeatTaskRow[];
         const parsed = rows.map((row) => this.taskParse(row));
@@ -75,7 +75,7 @@ export class HeartbeatTasksRepository {
     }
 
     async findManyByTaskId(ctx: Context, taskId: string): Promise<HeartbeatTaskDbRecord[]> {
-        const rows = this.db
+        const rows = await this.db
             .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
             .all(ctx.userId, taskId) as DatabaseHeartbeatTaskRow[];
         return rows.map((row) => heartbeatTaskClone(this.taskParse(row)));
@@ -87,7 +87,7 @@ export class HeartbeatTasksRepository {
             throw new Error("Heartbeat trigger taskId is required.");
         }
         await this.createLock.inLock(async () => {
-            this.db
+            await this.db
                 .prepare(
                     `
                   INSERT INTO tasks_heartbeat (
@@ -127,7 +127,7 @@ export class HeartbeatTasksRepository {
     async update(id: string, data: Partial<HeartbeatTaskDbRecord>): Promise<void> {
         const lock = this.taskLockForId(id);
         await lock.inLock(async () => {
-            const current = this.tasksById.get(id) ?? this.taskLoadById(id);
+            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
             if (!current) {
                 throw new Error(`Heartbeat task not found: ${id}`);
             }
@@ -144,7 +144,7 @@ export class HeartbeatTasksRepository {
                 throw new Error("Heartbeat trigger taskId is required.");
             }
 
-            this.db
+            await this.db
                 .prepare(
                     `
                   UPDATE tasks_heartbeat
@@ -169,7 +169,7 @@ export class HeartbeatTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const removed = this.db.prepare("DELETE FROM tasks_heartbeat WHERE id = ?").run(id);
+            const removed = await this.db.prepare("DELETE FROM tasks_heartbeat WHERE id = ?").run(id);
             const rawChanges = (removed as { changes?: number | bigint }).changes;
             const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
 
@@ -183,7 +183,7 @@ export class HeartbeatTasksRepository {
 
     async recordRun(runAt: number): Promise<void> {
         await this.runLock.inLock(async () => {
-            this.db.prepare("UPDATE tasks_heartbeat SET last_run_at = ?, updated_at = ?").run(runAt, runAt);
+            await this.db.prepare("UPDATE tasks_heartbeat SET last_run_at = ?, updated_at = ?").run(runAt, runAt);
             await this.cacheLock.inLock(() => {
                 for (const [taskId, task] of this.tasksById.entries()) {
                     this.tasksById.set(taskId, {
@@ -200,8 +200,8 @@ export class HeartbeatTasksRepository {
         this.tasksById.set(record.id, heartbeatTaskClone(record));
     }
 
-    private taskLoadById(id: string): HeartbeatTaskDbRecord | null {
-        const row = this.db.prepare("SELECT * FROM tasks_heartbeat WHERE id = ? LIMIT 1").get(id) as
+    private async taskLoadById(id: string): Promise<HeartbeatTaskDbRecord | null> {
+        const row = await this.db.prepare("SELECT * FROM tasks_heartbeat WHERE id = ? LIMIT 1").get(id) as
             | DatabaseHeartbeatTaskRow
             | undefined;
         if (!row) {
