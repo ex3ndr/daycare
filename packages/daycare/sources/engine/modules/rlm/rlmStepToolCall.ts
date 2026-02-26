@@ -31,15 +31,17 @@ export type RlmStepToolCallResult = {
  * Expects: caller persists history records and performs VM resume separately.
  */
 export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<RlmStepToolCallResult> {
-    const snapshotDump = options.snapshot.dump();
     const toolName = options.snapshot.functionName;
+    const snapshotArgs = options.snapshot.args;
+    const snapshotKwargs = options.snapshot.kwargs;
+    const snapshotDump = Buffer.from(options.snapshot.dump());
     const tool = options.toolByName.get(toolName);
     if (!tool) {
         const message = `ToolError: Unknown tool: ${toolName}`;
         return {
             snapshotDump,
             toolName,
-            toolArgs: { args: options.snapshot.args, kwargs: options.snapshot.kwargs },
+            toolArgs: { args: snapshotArgs, kwargs: snapshotKwargs },
             toolResult: message,
             toolIsError: true,
             resumeOptions: {
@@ -51,11 +53,11 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
         };
     }
 
-    let toolArgs: unknown = { args: options.snapshot.args, kwargs: options.snapshot.kwargs };
+    let toolArgs: unknown = { args: snapshotArgs, kwargs: snapshotKwargs };
     let parsedArgs: unknown = null;
     let argsError: unknown = null;
     try {
-        parsedArgs = rlmArgsConvert(options.snapshot.args, options.snapshot.kwargs, tool);
+        parsedArgs = rlmArgsConvert(snapshotArgs, snapshotKwargs, tool);
         toolArgs = parsedArgs;
     } catch (error) {
         argsError = error;

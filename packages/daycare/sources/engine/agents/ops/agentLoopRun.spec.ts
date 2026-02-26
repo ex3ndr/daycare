@@ -123,6 +123,63 @@ describe("agentLoopRun", () => {
         expect(notifySubagentFailure).not.toHaveBeenCalled();
         expect(result.responseText).toBeNull();
     });
+
+    it("completes run_python when a listed tool disappears before dispatch", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const responses = [
+            assistantMessageBuild(
+                "<run_python>try:\n    transient_tool()\nexcept ToolError as e:\n    print(e)\n'done'</run_python>"
+            ),
+            assistantMessageBuild("<say>Finished</say>")
+        ];
+        const inferenceRouter = inferenceRouterBuild(responses);
+        const baseTools = toolResolverBuild().listToolsForAgent({
+            ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
+            descriptor: {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            }
+        });
+        const toolsWithTransient = [
+            ...baseTools,
+            {
+                name: "transient_tool",
+                description: "May disappear",
+                parameters: Type.Object({}, { additionalProperties: false })
+            }
+        ] as unknown as Tool[];
+        const execute = vi.fn(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "unexpected"));
+        let listToolsForAgentCalls = 0;
+        const toolResolver: ToolResolverApi = {
+            listTools: () => toolsWithTransient,
+            listToolsForAgent: () => {
+                listToolsForAgentCalls += 1;
+                return listToolsForAgentCalls <= 3 ? toolsWithTransient : baseTools;
+            },
+            execute
+        };
+        let sawNonErrorComplete = false;
+        const appendHistoryRecord = vi.fn(async (record: { type: string; isError?: boolean }) => {
+            if (record.type === "rlm_complete" && record.isError === false) {
+                sawNonErrorComplete = true;
+            }
+        });
+        const options = optionsBuild({
+            connector,
+            inferenceRouter,
+            toolResolver
+        });
+        options.appendHistoryRecord = appendHistoryRecord;
+
+        await agentLoopRun(options);
+
+        expect(sawNonErrorComplete).toBe(true);
+        expect(execute).not.toHaveBeenCalled();
+        expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
+    });
 });
 
 function optionsBuild(params?: {

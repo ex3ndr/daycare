@@ -97,12 +97,18 @@ export async function rlmExecute(
         }
 
         if (!toolByName.has(progress.functionName)) {
-            progress = progress.resume({
-                exception: {
-                    type: "RuntimeError",
-                    message: `ToolError: Unknown tool: ${progress.functionName}`
-                }
-            });
+            const functionName = progress.functionName;
+            const snapshotDump = Buffer.from(progress.dump());
+            progress = rlmStepResume(
+                snapshotDump,
+                {
+                    exception: {
+                        type: "RuntimeError",
+                        message: `ToolError: Unknown tool: ${functionName}`
+                    }
+                },
+                printCallback
+            );
             continue;
         }
 

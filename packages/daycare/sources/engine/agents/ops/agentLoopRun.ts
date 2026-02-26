@@ -792,12 +792,17 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         const toolByName = new Map(runtimeTools.map((tool) => [tool.name, tool]));
 
                         if (!toolByName.has(phase.snapshot.functionName)) {
-                            const resumed = phase.snapshot.resume({
-                                exception: {
-                                    type: "RuntimeError",
-                                    message: `ToolError: Unknown tool: ${phase.snapshot.functionName}`
-                                }
-                            });
+                            const functionName = phase.snapshot.functionName;
+                            const resumed = rlmStepResume(
+                                Buffer.from(phase.snapshot.dump()),
+                                {
+                                    exception: {
+                                        type: "RuntimeError",
+                                        message: `ToolError: Unknown tool: ${functionName}`
+                                    }
+                                },
+                                phase.printCallback
+                            );
                             if (resumed instanceof MontySnapshot) {
                                 phase = { ...phase, snapshot: resumed };
                                 break;

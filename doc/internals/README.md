@@ -24,6 +24,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `agent-group-channels.md` - agent group channel model, storage, and signal delivery flow
 - `auth.md` - auth store and helper commands
 - `inference.md` - inference runtime and provider catalog
+- `rlm-snapshot-reload-unknown-tool.md` - dump/load snapshot safety for unknown-tool RLM resumes
 - `permissions.md` - permission system and resolution
 - `workspace-permission.md` - `@workspace` permission behavior and defaults
 - `app-folder-prompt-path.md` - app folder path rendering in permissions system prompt
