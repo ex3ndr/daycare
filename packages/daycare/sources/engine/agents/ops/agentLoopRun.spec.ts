@@ -55,8 +55,13 @@ describe("agentLoopRun", () => {
             })
         );
 
-        expect(connectorSend).toHaveBeenCalledTimes(1);
-        expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
+        expect(connectorSend).toHaveBeenCalledTimes(2);
+        expect(connectorSend).toHaveBeenNthCalledWith(
+            1,
+            "channel-1",
+            expect.objectContaining({ text: "<run_python>echo('x')</run_python>" })
+        );
+        expect(connectorSend).toHaveBeenNthCalledWith(2, "channel-1", expect.objectContaining({ text: "Finished" }));
     });
 
     it("nudges child agents when no send_agent_message call was made", async () => {
@@ -117,7 +122,7 @@ describe("agentLoopRun", () => {
 
         expect(inferenceRouter.complete).toHaveBeenCalledTimes(1);
         expect(notifySubagentFailure).not.toHaveBeenCalled();
-        expect(result.responseText).toBeNull();
+        expect(result.responseText).toBe("<run_python>echo('x')</run_python>");
     });
 
     it("completes run_python when a listed tool disappears before dispatch", async () => {

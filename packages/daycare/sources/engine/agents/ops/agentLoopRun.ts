@@ -495,19 +495,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     const effectiveResponseText: string | null = suppressUserOutput ? null : responseText;
                     const trimmedText = effectiveResponseText?.trim() ?? "";
                     const hasResponseText = trimmedText.length > 0;
-                    if (hasRunPythonTag) {
-                        if (!childAgentMessageSent) {
-                            finalResponseText = null;
-                        }
-                        lastResponseTextSent = true;
-                        logger.debug("event: run_python tag detected; suppressing raw response text");
-                    } else {
-                        if (!childAgentMessageSent) {
-                            finalResponseText = hasResponseText ? effectiveResponseText : null;
-                        }
-                        lastResponseTextSent = false;
+                    if (!childAgentMessageSent) {
+                        finalResponseText = hasResponseText ? effectiveResponseText : null;
                     }
-                    if (hasResponseText && !hasRunPythonTag && connector && targetId) {
+                    lastResponseTextSent = false;
+                    if (hasResponseText && connector && targetId) {
                         try {
                             await connector.sendMessage(targetId, {
                                 text: effectiveResponseText,
