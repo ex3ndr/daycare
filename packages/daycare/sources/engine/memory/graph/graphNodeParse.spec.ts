@@ -13,6 +13,7 @@ describe("graphNodeParse", () => {
             "  - __root__",
             "refs:",
             "  - abc123",
+            "version: 3",
             "createdAt: 1708531200000",
             "updatedAt: 1708531300000",
             "---",
@@ -28,6 +29,7 @@ describe("graphNodeParse", () => {
             title: "User prefers dark mode",
             description: "UI preference observed during onboarding",
             parents: ["profile", "__root__"],
+            version: 3,
             createdAt: 1708531200000,
             updatedAt: 1708531300000
         });
@@ -42,6 +44,7 @@ describe("graphNodeParse", () => {
             title: "node-1",
             description: "",
             parents: ["__root__"],
+            version: 1,
             createdAt: 0,
             updatedAt: 0
         });
@@ -56,6 +59,7 @@ describe("graphNodeParse", () => {
             "description: 7",
             "parents: [__root__]",
             "refs: [__root__]",
+            "version: invalid",
             "createdAt: invalid",
             "updatedAt: 1708531200001",
             "---"
@@ -67,10 +71,37 @@ describe("graphNodeParse", () => {
             title: "Memory Summary",
             description: "Structured summary of all memories",
             parents: [],
+            version: 1,
             createdAt: 0,
             updatedAt: 1708531200001
         });
         expect(parsed.content).toBe("");
         expect(parsed.refs).toEqual([]);
+    });
+
+    it("defaults version to 1 when missing or invalid", () => {
+        const missingVersionRaw = [
+            "---",
+            "title: Node",
+            "description: Node description",
+            "parents: [__root__]",
+            "---",
+            "Body"
+        ].join("\n");
+        const invalidVersionRaw = [
+            "---",
+            "title: Node",
+            "description: Node description",
+            "parents: [__root__]",
+            "version: 0",
+            "---",
+            "Body"
+        ].join("\n");
+
+        const missing = graphNodeParse("node-1", missingVersionRaw);
+        const invalid = graphNodeParse("node-1", invalidVersionRaw);
+
+        expect(missing.frontmatter.version).toBe(1);
+        expect(invalid.frontmatter.version).toBe(1);
     });
 });

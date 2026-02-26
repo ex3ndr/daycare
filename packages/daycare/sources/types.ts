@@ -54,7 +54,7 @@ export type {
     ExposeUpdateInput
 } from "./engine/expose/exposeTypes.js";
 // Memory
-export type { GraphNode, GraphNodeFrontmatter, GraphTree } from "./engine/memory/graph/graphTypes.js";
+export type { GraphNode, GraphNodeFrontmatter, GraphNodeVersion, GraphTree } from "./engine/memory/graph/graphTypes.js";
 export type { Memory } from "./engine/memory/memory.js";
 // Connectors
 export type {

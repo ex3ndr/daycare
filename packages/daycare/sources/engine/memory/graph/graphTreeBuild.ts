@@ -20,6 +20,7 @@ export function graphTreeBuild(nodes: GraphNode[]): GraphTree {
                 title: "Memory Summary",
                 description: "Structured summary of all memories",
                 parents: [],
+                version: 1,
                 createdAt: 0,
                 updatedAt: 0
             },

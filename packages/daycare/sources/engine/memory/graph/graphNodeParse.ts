@@ -7,6 +7,7 @@ type GraphNodeFrontmatterInput = {
     description?: unknown;
     parents?: unknown;
     refs?: unknown;
+    version?: unknown;
     createdAt?: unknown;
     updatedAt?: unknown;
 };
@@ -47,6 +48,7 @@ function graphNodeFrontmatterNormalize(id: string, input: GraphNodeFrontmatterIn
     const title = stringValue(input.title) ?? defaultTitle;
     const description = stringValue(input.description) ?? defaultDescription;
     const parents = graphNodeParentsNormalize(id, input.parents, defaultParents);
+    const version = positiveIntegerValue(input.version) ?? 1;
     const createdAt = numberValue(input.createdAt) ?? 0;
     const updatedAt = numberValue(input.updatedAt) ?? createdAt;
 
@@ -54,6 +56,7 @@ function graphNodeFrontmatterNormalize(id: string, input: GraphNodeFrontmatterIn
         title,
         description,
         parents,
+        version,
         createdAt,
         updatedAt
     };
@@ -143,4 +146,12 @@ function numberValue(value: unknown): number | null {
         }
     }
     return null;
+}
+
+function positiveIntegerValue(value: unknown): number | null {
+    const parsed = numberValue(value);
+    if (parsed === null || !Number.isInteger(parsed) || parsed < 1) {
+        return null;
+    }
+    return parsed;
 }

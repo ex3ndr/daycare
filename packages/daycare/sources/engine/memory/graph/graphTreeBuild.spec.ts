@@ -10,6 +10,7 @@ function nodeCreate(input: { id: string; title: string; parents?: string[]; refs
             title: input.title,
             description: `${input.title} description`,
             parents: input.parents ?? ["__root__"],
+            version: 1,
             createdAt: 1,
             updatedAt: 1
         },

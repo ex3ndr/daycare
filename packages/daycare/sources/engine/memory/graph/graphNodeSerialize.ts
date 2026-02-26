@@ -12,6 +12,7 @@ export function graphNodeSerialize(node: GraphNode): string {
         description: node.frontmatter.description,
         parents: node.frontmatter.parents,
         refs: node.refs,
+        version: node.frontmatter.version,
         createdAt: node.frontmatter.createdAt,
         updatedAt: node.frontmatter.updatedAt
     });

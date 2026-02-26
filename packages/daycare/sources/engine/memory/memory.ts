@@ -2,15 +2,22 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { Context } from "@/types";
+import { graphNodeChangeDetect } from "./graph/graphNodeChangeDetect.js";
 import { graphNodeParse } from "./graph/graphNodeParse.js";
 import { graphRootNodeRead } from "./graph/graphRootNodeRead.js";
 import { graphStoreRead } from "./graph/graphStoreRead.js";
 import { graphStoreWrite } from "./graph/graphStoreWrite.js";
 import { graphTreeBuild } from "./graph/graphTreeBuild.js";
-import { GRAPH_ROOT_NODE_ID, type GraphNode, type GraphTree } from "./graph/graphTypes.js";
+import { GRAPH_ROOT_NODE_ID, type GraphNode, type GraphNodeVersion, type GraphTree } from "./graph/graphTypes.js";
+import { graphVersionRead } from "./graph/graphVersionRead.js";
+import { graphVersionWrite } from "./graph/graphVersionWrite.js";
 
 export type MemoryOptions = {
     usersDir: string;
+};
+
+export type WriteNodeOptions = {
+    changeDescription?: string;
 };
 
 /**
@@ -59,12 +66,36 @@ export class Memory {
         }
     }
 
-    async writeNode(ctx: Context, node: GraphNode): Promise<void> {
+    async writeNode(ctx: Context, node: GraphNode, options: WriteNodeOptions = {}): Promise<GraphNode> {
+        if (node.id === GRAPH_ROOT_NODE_ID) {
+            throw new Error("Root node is virtual and cannot be written to disk.");
+        }
+
         const memoryDir = this.resolveMemoryDir(ctx);
-        await graphStoreWrite(memoryDir, node);
+        const existing = await this.readNode(ctx, node.id);
+        const existingVersion = existing ? Math.max(existing.frontmatter.version, 1) : 1;
+        const normalizedNode: GraphNode = {
+            ...node,
+            frontmatter: {
+                ...node.frontmatter,
+                version: existing ? existingVersion : 1
+            }
+        };
+
+        const changeDescription = options.changeDescription?.trim();
+        if (existing && changeDescription) {
+            const changed = graphNodeChangeDetect(existing, normalizedNode);
+            if (changed) {
+                await graphVersionWrite(memoryDir, existing, changeDescription);
+                normalizedNode.frontmatter.version = existingVersion + 1;
+            }
+        }
+
+        await graphStoreWrite(memoryDir, normalizedNode);
+        return normalizedNode;
     }
 
-    async append(ctx: Context, nodeId: string, content: string): Promise<void> {
+    async append(ctx: Context, nodeId: string, content: string, changeDescription?: string): Promise<void> {
         const node = await this.readNode(ctx, nodeId);
         if (!node) {
             throw new Error(`Memory node not found: ${nodeId}`);
@@ -80,6 +111,11 @@ export class Memory {
             content: `${node.content}${separator}${content}`
         };
 
-        await this.writeNode(ctx, updatedNode);
+        await this.writeNode(ctx, updatedNode, { changeDescription });
+    }
+
+    async readNodeVersions(ctx: Context, nodeId: string): Promise<GraphNodeVersion[]> {
+        const memoryDir = this.resolveMemoryDir(ctx);
+        return graphVersionRead(memoryDir, nodeId);
     }
 }

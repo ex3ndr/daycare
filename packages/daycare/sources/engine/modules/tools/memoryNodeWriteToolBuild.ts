@@ -12,7 +12,8 @@ const schema = Type.Object(
         description: Type.String({ minLength: 1 }),
         content: Type.String(),
         parents: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
-        refs: Type.Optional(Type.Array(Type.String({ minLength: 1 })))
+        refs: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+        changeDescription: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -22,12 +23,13 @@ type MemoryNodeWriteArgs = Static<typeof schema>;
 const resultSchema = Type.Object(
     {
         summary: Type.String(),
-        nodeId: Type.String()
+        nodeId: Type.String(),
+        version: Type.Number()
     },
     { additionalProperties: false }
 );
 
-type MemoryNodeWriteResult = { summary: string; nodeId: string };
+type MemoryNodeWriteResult = { summary: string; nodeId: string; version: number };
 
 const returns: ToolResultContract<MemoryNodeWriteResult> = {
     schema: resultSchema,
@@ -46,7 +48,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
         tool: {
             name: "memory_node_write",
             description:
-                "Create or update a memory document. Provide title, description, content (markdown body), parents (required list of parent node ids — use __root__ or root for top-level), and optional refs (cross-reference node ids). Omit nodeId to create; provide nodeId to update.",
+                "Create or update a memory document. Provide title, description, content (markdown body), parents (required list of parent node ids — use __root__ or root for top-level), optional refs (cross-reference node ids), and changeDescription when updating an existing node. Omit nodeId to create; provide nodeId to update.",
             parameters: schema
         },
         returns,
@@ -89,22 +91,31 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
 
             const now = Date.now();
             const existing = await memory.readNode(toolContext.ctx, nodeId);
+            const changeDescription = payload.changeDescription?.trim();
+            if (existing && !changeDescription) {
+                throw new Error("changeDescription is required when updating an existing memory node.");
+            }
 
-            await memory.writeNode(toolContext.ctx, {
-                id: nodeId,
-                frontmatter: {
-                    title,
-                    description,
-                    parents,
-                    createdAt: existing?.frontmatter.createdAt ?? now,
-                    updatedAt: now
+            const writtenNode = await memory.writeNode(
+                toolContext.ctx,
+                {
+                    id: nodeId,
+                    frontmatter: {
+                        title,
+                        description,
+                        parents,
+                        version: existing?.frontmatter.version ?? 1,
+                        createdAt: existing?.frontmatter.createdAt ?? now,
+                        updatedAt: now
+                    },
+                    content: payload.content,
+                    refs
                 },
-                content: payload.content,
-                refs
-            });
+                { changeDescription }
+            );
 
             const action = existing ? "Updated" : "Created";
-            const summary = `${action} memory node: ${nodeId} ("${title}")`;
+            const summary = `${action} memory node: ${nodeId} ("${title}", version ${writtenNode.frontmatter.version})`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -116,7 +127,7 @@ export function memoryNodeWriteToolBuild(): ToolDefinition {
 
             return {
                 toolMessage,
-                typedResult: { summary, nodeId }
+                typedResult: { summary, nodeId, version: writtenNode.frontmatter.version }
             };
         }
     };

@@ -26,6 +26,7 @@ describe("graphStoreRead", () => {
                 title: "Memory Summary",
                 description: "Root",
                 parents: [],
+                version: 1,
                 createdAt: 1,
                 updatedAt: 1
             },
@@ -38,6 +39,7 @@ describe("graphStoreRead", () => {
                 title: "Node 1",
                 description: "Child",
                 parents: ["__root__"],
+                version: 1,
                 createdAt: 2,
                 updatedAt: 3
             },
@@ -57,6 +59,40 @@ describe("graphStoreRead", () => {
         expect(nodes[0]?.refs).toEqual(["node-1"]);
         expect(nodes[1]?.frontmatter.parents).toEqual(["__root__"]);
         expect(nodes[1]?.frontmatter.title).toBe("Node 1");
+    });
+
+    it("excludes version snapshot files from graph nodes", async () => {
+        const currentNode: GraphNode = {
+            id: "node-1",
+            frontmatter: {
+                title: "Node 1",
+                description: "Current",
+                parents: ["__root__"],
+                version: 2,
+                createdAt: 2,
+                updatedAt: 4
+            },
+            content: "Current body",
+            refs: []
+        };
+        const oldNode: GraphNode = {
+            ...currentNode,
+            frontmatter: {
+                ...currentNode.frontmatter,
+                version: 1,
+                updatedAt: 3
+            },
+            content: "Old body"
+        };
+
+        await fs.writeFile(path.join(memoryDir, "node-1.md"), graphNodeSerialize(currentNode), "utf8");
+        await fs.writeFile(path.join(memoryDir, "node-1.v1.md"), graphNodeSerialize(oldNode), "utf8");
+
+        const nodes = await graphStoreRead(memoryDir);
+
+        expect(nodes).toHaveLength(1);
+        expect(nodes[0]?.id).toBe("node-1");
+        expect(nodes[0]?.frontmatter.version).toBe(2);
     });
 
     it("returns empty array when memory dir does not exist", async () => {

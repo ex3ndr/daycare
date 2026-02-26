@@ -5,15 +5,28 @@ import type { GraphNode } from "../../memory/graph/graphTypes.js";
 import { memoryNodeWriteToolBuild } from "./memoryNodeWriteToolBuild.js";
 
 function makeContext(existingNode: GraphNode | null) {
-    const written: GraphNode[] = [];
+    const written: Array<{ node: GraphNode; options: { changeDescription?: string } | undefined }> = [];
     return {
         context: {
             memory: {
                 readNode: async (_userId: string, _nodeId: string) => {
                     return existingNode;
                 },
-                writeNode: async (_userId: string, node: GraphNode) => {
-                    written.push(node);
+                writeNode: async (
+                    _userId: string,
+                    node: GraphNode,
+                    options?: { changeDescription?: string }
+                ): Promise<GraphNode> => {
+                    const version = existingNode ? existingNode.frontmatter.version + 1 : 1;
+                    const writtenNode: GraphNode = {
+                        ...node,
+                        frontmatter: {
+                            ...node.frontmatter,
+                            version
+                        }
+                    };
+                    written.push({ node: writtenNode, options });
+                    return writtenNode;
                 }
             },
             ctx: { agentId: "agent-1", userId: "user-1" }
@@ -53,12 +66,13 @@ describe("memoryNodeWriteToolBuild", () => {
             { id: "tc1", name: "memory_node_write" }
         );
         expect(result.typedResult.summary).toContain("Created");
+        expect(result.typedResult.version).toBe(1);
         expect(isCuid(result.typedResult.nodeId as string)).toBe(true);
         expect(written).toHaveLength(1);
-        expect(written[0]!.frontmatter.title).toBe("User Preferences");
-        expect(written[0]!.frontmatter.description).toBe("Stable user communication preferences");
-        expect(written[0]!.frontmatter.parents).toEqual(["__root__"]);
-        expect(written[0]!.content).toBe("Prefers dark mode.");
+        expect(written[0]!.node.frontmatter.title).toBe("User Preferences");
+        expect(written[0]!.node.frontmatter.description).toBe("Stable user communication preferences");
+        expect(written[0]!.node.frontmatter.parents).toEqual(["__root__"]);
+        expect(written[0]!.node.content).toBe("Prefers dark mode.");
     });
 
     it("updates existing node and preserves createdAt", async () => {
@@ -68,6 +82,7 @@ describe("memoryNodeWriteToolBuild", () => {
                 title: "Old Title",
                 description: "Old description",
                 parents: ["__root__"],
+                version: 1,
                 createdAt: 1000,
                 updatedAt: 1500
             },
@@ -81,13 +96,16 @@ describe("memoryNodeWriteToolBuild", () => {
                 title: "User Preferences",
                 description: "Current preferences and communication style",
                 content: "Updated content.",
-                parents: ["__root__"]
+                parents: ["__root__"],
+                changeDescription: "Updated preference wording"
             },
             context,
             { id: "tc1", name: "memory_node_write" }
         );
         expect(result.typedResult.summary).toContain("Updated");
-        expect(written[0]!.frontmatter.createdAt).toBe(1000);
+        expect(result.typedResult.version).toBe(2);
+        expect(written[0]!.node.frontmatter.createdAt).toBe(1000);
+        expect(written[0]!.options?.changeDescription).toBe("Updated preference wording");
     });
 
     it("normalizes parents and refs by trimming, deduping, and removing self references", async () => {
@@ -106,8 +124,8 @@ describe("memoryNodeWriteToolBuild", () => {
         );
 
         expect(written).toHaveLength(1);
-        expect(written[0]!.frontmatter.parents).toEqual(["__root__", "topic-a"]);
-        expect(written[0]!.refs).toEqual(["ref-a"]);
+        expect(written[0]!.node.frontmatter.parents).toEqual(["__root__", "topic-a"]);
+        expect(written[0]!.node.refs).toEqual(["ref-a"]);
     });
 
     it("normalizes parent root alias to __root__", async () => {
@@ -126,7 +144,37 @@ describe("memoryNodeWriteToolBuild", () => {
         );
 
         expect(written).toHaveLength(1);
-        expect(written[0]!.frontmatter.parents).toEqual(["__root__", "topic-a"]);
+        expect(written[0]!.node.frontmatter.parents).toEqual(["__root__", "topic-a"]);
+    });
+
+    it("requires changeDescription when updating existing node", async () => {
+        const existing: GraphNode = {
+            id: "node-1",
+            frontmatter: {
+                title: "Node",
+                description: "Description",
+                parents: ["__root__"],
+                version: 2,
+                createdAt: 1,
+                updatedAt: 2
+            },
+            content: "Body",
+            refs: []
+        };
+        const { context } = makeContext(existing);
+        await expect(
+            tool.execute(
+                {
+                    nodeId: "node-1",
+                    title: "Node",
+                    description: "Description",
+                    content: "Updated body",
+                    parents: ["__root__"]
+                },
+                context,
+                { id: "tc1", name: "memory_node_write" }
+            )
+        ).rejects.toThrow("changeDescription is required");
     });
 
     it("rejects reserved node ids", async () => {

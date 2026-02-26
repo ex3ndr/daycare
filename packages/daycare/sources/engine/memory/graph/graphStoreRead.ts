@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { graphNodeParse } from "./graphNodeParse.js";
-import type { GraphNode } from "./graphTypes.js";
+import { GRAPH_VERSION_FILE_PATTERN, type GraphNode } from "./graphTypes.js";
 
 /**
  * Reads all markdown graph nodes from a memory directory.
@@ -20,7 +20,7 @@ export async function graphStoreRead(memoryDir: string): Promise<GraphNode[]> {
     }
 
     const markdownFiles = entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && !GRAPH_VERSION_FILE_PATTERN.test(entry.name))
         .map((entry) => entry.name)
         .sort();
 

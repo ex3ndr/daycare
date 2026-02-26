@@ -12,6 +12,7 @@ describe("graphNodeSerialize", () => {
                 title: "Preference",
                 description: "Observed user preference",
                 parents: ["__root__"],
+                version: 1,
                 createdAt: 1700000000000,
                 updatedAt: 1700000000500
             },
@@ -35,6 +36,7 @@ describe("graphNodeSerialize", () => {
                 title: "Cross link",
                 description: "Contains wiki links",
                 parents: ["topic-1"],
+                version: 2,
                 createdAt: 1,
                 updatedAt: 2
             },
@@ -48,5 +50,25 @@ describe("graphNodeSerialize", () => {
         expect(reparsed.content).toContain("[[ref-a]]");
         expect(reparsed.content).toContain("[[ref-b]]");
         expect(reparsed.refs).toEqual(["ref-a", "ref-b"]);
+    });
+
+    it("serializes version in frontmatter", () => {
+        const node: GraphNode = {
+            id: "node-3",
+            frontmatter: {
+                title: "Versioned",
+                description: "Has version number",
+                parents: ["__root__"],
+                version: 5,
+                createdAt: 10,
+                updatedAt: 20
+            },
+            content: "Body",
+            refs: []
+        };
+
+        const serialized = graphNodeSerialize(node);
+
+        expect(serialized).toContain("version: 5");
     });
 });

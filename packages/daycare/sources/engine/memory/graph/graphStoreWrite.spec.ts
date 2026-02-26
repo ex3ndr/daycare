@@ -25,6 +25,7 @@ describe("graphStoreWrite", () => {
                 title: "Memory Summary",
                 description: "Root",
                 parents: [],
+                version: 1,
                 createdAt: 1,
                 updatedAt: 1
             },
@@ -42,6 +43,7 @@ describe("graphStoreWrite", () => {
                 title: "Node",
                 description: "Desc",
                 parents: ["__root__"],
+                version: 1,
                 createdAt: 1,
                 updatedAt: 2
             },

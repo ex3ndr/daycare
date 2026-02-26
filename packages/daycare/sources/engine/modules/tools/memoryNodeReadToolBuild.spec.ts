@@ -9,6 +9,7 @@ const sampleNode: GraphNode = {
         title: "User Preferences",
         description: "General user preferences",
         parents: ["__root__"],
+        version: 1,
         createdAt: 1000,
         updatedAt: 2000
     },
@@ -22,6 +23,7 @@ const rootNode: GraphNode = {
         title: "Memory Summary",
         description: "Structured summary of all memories",
         parents: [],
+        version: 1,
         createdAt: 0,
         updatedAt: 0
     },

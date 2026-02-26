@@ -23,6 +23,7 @@ describe("serverMemoryRoutesRegister", () => {
                     title: "Memory Summary",
                     description: "Structured summary",
                     parents: [],
+                    version: 1,
                     createdAt: 1,
                     updatedAt: 1
                 },
@@ -39,6 +40,7 @@ describe("serverMemoryRoutesRegister", () => {
                                 title: "Node 1",
                                 description: "Node one description",
                                 parents: ["__root__"],
+                                version: 1,
                                 createdAt: 2,
                                 updatedAt: 3
                             },
@@ -82,6 +84,7 @@ describe("serverMemoryRoutesRegister", () => {
                         title: "Known",
                         description: "Known node",
                         parents: ["__root__"],
+                        version: 1,
                         createdAt: 1,
                         updatedAt: 1
                     },
@@ -101,6 +104,7 @@ describe("serverMemoryRoutesRegister", () => {
                             title: "Memory Summary",
                             description: "Structured summary",
                             parents: [],
+                            version: 1,
                             createdAt: 1,
                             updatedAt: 1
                         },
@@ -142,6 +146,7 @@ describe("graphTreeJsonBuild", () => {
                     title: "Memory Summary",
                     description: "Structured summary",
                     parents: [],
+                    version: 1,
                     createdAt: 0,
                     updatedAt: 0
                 },
@@ -158,6 +163,7 @@ describe("graphTreeJsonBuild", () => {
                                 title: "Child",
                                 description: "Child description",
                                 parents: ["__root__"],
+                                version: 1,
                                 createdAt: 0,
                                 updatedAt: 0
                             },

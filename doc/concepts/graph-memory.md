@@ -3,12 +3,13 @@
 Graph memory stores user knowledge as markdown nodes in `~/.daycare/users/<userId>/memory/graph/`.
 The root node (`__root__`) is virtual — its content comes from a bundled prompt in source code and is never stored on disk.
 Every other node is `<nodeId>.md` with frontmatter and markdown content.
+Node updates are versioned as immutable snapshots in the same folder.
 
 ## Node Structure
 
 ```mermaid
 flowchart TD
-    File["<nodeId>.md"] --> FM["Frontmatter\ntitle\ndescription\ncreatedAt\nupdatedAt"]
+    File["<nodeId>.md"] --> FM["Frontmatter\ntitle\ndescription\nversion\ncreatedAt\nupdatedAt"]
     File --> Body["Markdown body"]
     Body --> Refs["Wiki refs [[nodeId]]"]
     FM --> Node[GraphNode]
@@ -38,6 +39,30 @@ flowchart LR
     Memory -->|update updatedAt + append body| Memory
     Memory -->|writeNode| Disk
 ```
+
+## Node Versioning
+
+Every node starts at `version: 1`. On meaningful updates (title, description, parents, refs, or content changes) with a
+`changeDescription`, the previous state is saved as `<nodeId>.v<N>.md` and the active node increments to `N+1`.
+Version files include full node frontmatter/content plus `changeDescription`.
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Memory
+    participant Disk
+
+    Caller->>Memory: writeNode(node, changeDescription)
+    Memory->>Disk: read current <nodeId>.md
+    Memory->>Memory: detect meaningful change
+    alt changed and changeDescription provided
+        Memory->>Disk: write <nodeId>.vN.md (old snapshot)
+        Memory->>Memory: set node.version = N+1
+    end
+    Memory->>Disk: write <nodeId>.md (current state)
+```
+
+`graphStoreRead` excludes `*.v<N>.md` files so snapshots never appear as active graph nodes.
 
 ## Tree Projection
 
