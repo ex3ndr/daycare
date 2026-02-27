@@ -158,4 +158,46 @@ describe("IncomingMessages", () => {
             vi.useRealTimers();
         }
     });
+
+    it("merges context enrichments without duplicates", async () => {
+        vi.useFakeTimers();
+        const records: IncomingMessageBatch[][] = [];
+        const incoming = new IncomingMessages({
+            delayMs: 100,
+            onFlush: async (items) => {
+                records.push(items);
+            }
+        });
+
+        try {
+            incoming.post({
+                descriptor: userDescriptor("channel-1"),
+                message: { text: "a" },
+                context: {
+                    enrichments: [{ key: "profile_name_notice", value: "Set profile name." }]
+                }
+            });
+            incoming.post({
+                descriptor: userDescriptor("channel-1"),
+                message: { text: "b" },
+                context: {
+                    enrichments: [
+                        { key: "profile_name_notice", value: "Set profile name." },
+                        { key: "timezone_change_notice", value: "Timezone updated automatically." }
+                    ]
+                }
+            });
+
+            await vi.advanceTimersByTimeAsync(100);
+            expect(records).toHaveLength(1);
+            const batch = records[0]?.[0];
+            expect(batch?.context.enrichments).toEqual([
+                { key: "profile_name_notice", value: "Set profile name." },
+                { key: "timezone_change_notice", value: "Timezone updated automatically." }
+            ]);
+        } finally {
+            await incoming.flush();
+            vi.useRealTimers();
+        }
+    });
 });

@@ -28,6 +28,12 @@ export type ConnectorMessage = {
 export type MessageContext = {
     messageId?: string;
     timezone?: string;
+    enrichments?: MessageContextEnrichment[];
+};
+
+export type MessageContextEnrichment = {
+    key: string;
+    value: string;
 };
 
 export type MessageHandler = (

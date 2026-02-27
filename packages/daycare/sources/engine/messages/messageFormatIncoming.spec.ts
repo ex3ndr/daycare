@@ -31,4 +31,20 @@ describe("messageFormatIncoming", () => {
         expect(result.text).toContain("(UTC)");
         expect(result.text).not.toContain("<timezone>");
     });
+
+    it("renders custom context enrichments as tags", () => {
+        const message = { text: "hello" };
+        const context = {
+            enrichments: [
+                { key: "timezone_change_notice", value: "Timezone updated automatically from UTC to CET." },
+                { key: "profile_name_notice", value: "User first/last name are not set." }
+            ]
+        };
+        const result = messageFormatIncoming(message, context, new Date("2024-01-01T00:00:00Z"));
+
+        expect(result.text).toContain(
+            "<timezone_change_notice>Timezone updated automatically from UTC to CET.</timezone_change_notice>"
+        );
+        expect(result.text).toContain("<profile_name_notice>User first/last name are not set.</profile_name_notice>");
+    });
 });

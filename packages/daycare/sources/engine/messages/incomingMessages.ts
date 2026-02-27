@@ -1,5 +1,6 @@
 import type { AgentDescriptor, ConnectorMessage, MessageContext } from "@/types";
 import { agentDescriptorCacheKey } from "../agents/ops/agentDescriptorCacheKey.js";
+import { messageContextMerge } from "./messageContextMerge.js";
 import { messageIsEmpty } from "./messageIsEmpty.js";
 
 export type IncomingMessageInput = {
@@ -132,15 +133,6 @@ function connectorMessageMerge(left: ConnectorMessage, right: ConnectorMessage):
         ...(rawText !== null ? { rawText } : {}),
         ...(files.length > 0 ? { files } : {}),
         ...(replyToMessageId ? { replyToMessageId } : {})
-    };
-}
-
-function messageContextMerge(left: MessageContext, right: MessageContext): MessageContext {
-    const messageId = right.messageId ?? left.messageId;
-    const timezone = right.timezone ?? left.timezone;
-    return {
-        ...(messageId ? { messageId } : {}),
-        ...(timezone ? { timezone } : {})
     };
 }
 

@@ -1,6 +1,13 @@
 import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 
-import type { ConnectorMessage, FileReference, MessageContext, SessionPermissions, Signal } from "@/types";
+import type {
+    ConnectorMessage,
+    FileReference,
+    MessageContext,
+    MessageContextEnrichment,
+    SessionPermissions,
+    Signal
+} from "@/types";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 
 export type AgentMessage = {
@@ -101,6 +108,7 @@ export type AgentHistoryRecord =
           at: number;
           text: string;
           files: FileReference[];
+          enrichments?: MessageContextEnrichment[];
           /** Set when a first-message prompt was prepended to the user's text. */
           firstMessagePrepended?: boolean;
           /** The prompt text that was prepended, for reconstruction of original message. */

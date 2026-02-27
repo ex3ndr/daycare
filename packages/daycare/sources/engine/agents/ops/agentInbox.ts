@@ -7,6 +7,7 @@ import type {
     AgentInboxMessage,
     AgentInboxSteering
 } from "./agentTypes.js";
+import { messageContextMerge } from "../../messages/messageContextMerge.js";
 
 /**
  * AgentInbox is a single-consumer queue for agent work items.
@@ -150,18 +151,6 @@ function messageItemMerge(left: AgentInboxMessage, right: AgentInboxMessage): Ag
                 : {})
         },
         context: messageContextMerge(left.context, right.context)
-    };
-}
-
-function messageContextMerge(
-    left: AgentInboxMessage["context"],
-    right: AgentInboxMessage["context"]
-): AgentInboxMessage["context"] {
-    const messageId = right.messageId ?? left.messageId;
-    const timezone = right.timezone ?? left.timezone;
-    return {
-        ...(messageId ? { messageId } : {}),
-        ...(timezone ? { timezone } : {})
     };
 }
 

@@ -403,7 +403,8 @@ export class Agent {
             type: "user_message",
             at: receivedAt,
             text: rawText,
-            files
+            files,
+            ...(context.enrichments ? { enrichments: context.enrichments.map((item) => ({ ...item })) } : {})
         };
 
         const { providers, providerId } = this.inferenceProvidersResolve();

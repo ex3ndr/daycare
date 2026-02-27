@@ -67,6 +67,7 @@ export type {
     ConnectorFileMode,
     ConnectorMessage,
     MessageContext,
+    MessageContextEnrichment,
     MessageHandler,
     MessageUnsubscribe,
     PluginCommandDefinition,

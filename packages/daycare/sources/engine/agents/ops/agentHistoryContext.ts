@@ -48,7 +48,9 @@ export async function agentHistoryContext(
             continue;
         }
         if (record.type === "user_message") {
-            const context: MessageContext = {};
+            const context: MessageContext = {
+                ...(record.enrichments ? { enrichments: record.enrichments.map((item) => ({ ...item })) } : {})
+            };
             const message = messageFormatIncoming(
                 {
                     text: record.text,

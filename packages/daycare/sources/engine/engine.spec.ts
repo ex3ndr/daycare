@@ -60,7 +60,11 @@ describe("Engine reset command", () => {
             expect(postSpy).toHaveBeenCalledWith(
                 expect.objectContaining({ userId: user.id }),
                 { descriptor },
-                { type: "reset", message: "Manual reset requested by the user.", context }
+                {
+                    type: "reset",
+                    message: "Manual reset requested by the user.",
+                    context: expect.objectContaining(context)
+                }
             );
             expect(sendMessage).not.toHaveBeenCalled();
 
@@ -128,7 +132,11 @@ describe("Engine reset command", () => {
             expect(postSpy).toHaveBeenCalledWith(
                 expect.objectContaining({ userId: user.id }),
                 { descriptor },
-                { type: "reset", message: "Manual reset requested by the user.", context: { messageId: "2" } }
+                {
+                    type: "reset",
+                    message: "Manual reset requested by the user.",
+                    context: expect.objectContaining({ messageId: "2" })
+                }
             );
 
             await engine.modules.connectors.unregisterAll("test");
@@ -153,6 +161,92 @@ describe("Engine context tool list", () => {
 
             await engine.shutdown();
         } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("Engine timezone mismatch handling", () => {
+    it("auto-updates profile timezone and emits enrichment notices", async () => {
+        vi.useFakeTimers();
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const state: {
+                messageHandler?: (
+                    message: ConnectorMessage,
+                    context: MessageContext,
+                    descriptor: AgentDescriptor
+                ) => void | Promise<void>;
+            } = {};
+
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: (handler) => {
+                    state.messageHandler = handler;
+                    return () => undefined;
+                },
+                onCommand: () => () => undefined,
+                sendMessage: async () => undefined
+            };
+
+            const registerResult = engine.modules.connectors.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "123",
+                userId: "123"
+            };
+            const messageHandler = state.messageHandler;
+            if (!messageHandler) {
+                throw new Error("Expected message handler to be registered");
+            }
+
+            await messageHandler({ text: "seed" }, { messageId: "seed-1" }, descriptor);
+            await vi.advanceTimersByTimeAsync(100);
+            postSpy.mockClear();
+
+            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+            await engine.storage.users.update(user.id, {
+                timezone: "UTC",
+                updatedAt: Date.now()
+            });
+
+            await messageHandler({ text: "hello" }, { messageId: "msg-1", timezone: "America/New_York" }, descriptor);
+            await vi.advanceTimersByTimeAsync(100);
+
+            expect(postSpy).toHaveBeenCalledTimes(1);
+            const call = postSpy.mock.calls[0];
+            if (!call) {
+                throw new Error("Expected agent post call");
+            }
+            const postedMessage = call[2] as { type: string; message: ConnectorMessage; context: MessageContext };
+            expect(postedMessage.type).toBe("message");
+            expect(postedMessage.context.timezone).toBe("America/New_York");
+            expect(postedMessage.context.enrichments).toEqual(
+                expect.arrayContaining([
+                    {
+                        key: "timezone_change_notice",
+                        value: "Timezone updated automatically from UTC to America/New_York."
+                    },
+                    {
+                        key: "profile_name_notice",
+                        value: "User first/last name are not set. Ask the user and call user_profile_update ASAP."
+                    }
+                ])
+            );
+
+            const updatedUser = await engine.storage.users.findById(user.id);
+            expect(updatedUser?.timezone).toBe("America/New_York");
+
+            await engine.modules.connectors.unregisterAll("test");
+            await engine.shutdown();
+        } finally {
+            vi.useRealTimers();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -454,7 +548,7 @@ describe("Engine compact command", () => {
             expect(postSpy).toHaveBeenCalledWith(
                 expect.objectContaining({ userId: user.id }),
                 { descriptor },
-                { type: "compact", context }
+                { type: "compact", context: expect.objectContaining(context) }
             );
             expect(sendMessage).not.toHaveBeenCalled();
 
@@ -513,7 +607,7 @@ describe("Engine plugin commands", () => {
             const context: MessageContext = { messageId: "56" };
             await commandHandler("/upgrade now", context, descriptor);
 
-            expect(pluginHandler).toHaveBeenCalledWith("/upgrade now", context, descriptor);
+            expect(pluginHandler).toHaveBeenCalledWith("/upgrade now", expect.objectContaining(context), descriptor);
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();
@@ -576,7 +670,7 @@ describe("Engine message batching", () => {
                 {
                     type: "message",
                     message: { text: "first\nsecond", rawText: "first\nsecond" },
-                    context: { messageId: "2" }
+                    context: expect.objectContaining({ messageId: "2" })
                 }
             );
 

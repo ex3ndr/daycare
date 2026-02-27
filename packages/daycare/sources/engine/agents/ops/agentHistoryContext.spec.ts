@@ -190,4 +190,30 @@ describe("agentHistoryContext", () => {
         expect(firstTextPart && "text" in firstTextPart ? firstTextPart.text : "").toBe("first rewritten");
         expect(secondTextPart && "text" in secondTextPart ? secondTextPart.text : "").toBe("second untouched");
     });
+
+    it("replays user_message context enrichments as formatted tags", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "user_message",
+                at: 10,
+                text: "hello",
+                files: [],
+                enrichments: [{ key: "profile_name_notice", value: "Set profile name." }]
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+        expect(messages).toHaveLength(1);
+        const user = messages[0];
+        if (!user || user.role !== "user") {
+            throw new Error("Expected user message.");
+        }
+        const text =
+            typeof user.content === "string"
+                ? user.content
+                : user.content
+                      .map((part) => (part.type === "text" ? part.text : ""))
+                      .join("\n");
+        expect(text).toContain("<profile_name_notice>Set profile name.</profile_name_notice>");
+    });
 });

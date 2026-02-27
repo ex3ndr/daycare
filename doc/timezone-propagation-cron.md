@@ -48,18 +48,29 @@ flowchart LR
 
 ## Connector timezone sync
 
-- Incoming connector timezone now updates `users.timezone` automatically when it differs.
-- The incoming message is prepended with a system notice when timezone changes.
+- Incoming connector timezone is compared with `users.timezone` from profile.
+- When values differ, runtime updates `users.timezone` automatically and emits a context enrichment notice.
+- When user names are missing, runtime emits a profile-name context enrichment notice.
+- Enrichments are stored as structured `{ key, value }` entries in message context and persisted in history records.
 - Invalid incoming/profile timezone strings are ignored.
 
 ```mermaid
 flowchart TD
     A[Incoming connector message] --> B{context.timezone valid?}
-    B -- yes --> C[Update users.timezone if changed]
-    C --> D[Prepend system notice to message text]
-    B -- no --> E[Keep existing valid profile timezone]
-    D --> F[Post message to agent]
-    E --> F
+    B -- yes --> C{Differs from users.timezone?}
+    C -- yes --> D[Auto-update users.timezone]
+    D --> E[Add timezone_change_notice enrichment]
+    C -- no --> F[Skip timezone update]
+    A --> G{firstName/lastName missing?}
+    G -- yes --> H[Add profile_name_notice enrichment]
+    G -- no --> I[No profile notice]
+    B -- no --> J[Keep existing valid profile timezone]
+    E --> K[Persist enrichments in user_message history]
+    F --> K
+    H --> K
+    I --> K
+    J --> K
+    K --> L[Rebuild tags precisely during history replay]
 ```
 
 ## Strict timezone requirement for cron tool calls

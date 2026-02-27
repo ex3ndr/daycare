@@ -11,11 +11,23 @@ export function messageFormatIncoming(
     }
     const time = formatTimeAI(receivedAt, { timezone: context.timezone ?? "UTC" });
     const text = message.text ?? "";
+    const enrichmentTags = contextEnrichmentTagsBuild(context);
     const timezoneTag = context.timezone ? `<timezone>${context.timezone}</timezone>` : "";
     const messageIdTag = context.messageId ? `<message_id>${context.messageId}</message_id>` : "";
     return {
         ...message,
         rawText: message.rawText ?? message.text,
-        text: `${timezoneTag}<time>${time}</time>${messageIdTag}<message>${text}</message>`
+        text: `${enrichmentTags}${timezoneTag}<time>${time}</time>${messageIdTag}<message>${text}</message>`
     };
+}
+
+function contextEnrichmentTagsBuild(context: MessageContext): string {
+    const items = context.enrichments ?? [];
+    if (items.length === 0) {
+        return "";
+    }
+    return items
+        .filter((item) => item.key.trim().length > 0 && item.value.trim().length > 0)
+        .map((item) => `<${item.key.trim()}>${item.value.trim()}</${item.key.trim()}>`)
+        .join("");
 }

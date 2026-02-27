@@ -59,6 +59,38 @@ describe("AgentInbox", () => {
         });
     });
 
+    it("merges message context enrichments when combining entries", async () => {
+        const inbox = new AgentInbox("agent-4b");
+        inbox.post({
+            type: "message",
+            message: { text: "first" },
+            context: {
+                messageId: "1",
+                enrichments: [{ key: "profile_name_notice", value: "Set profile name." }]
+            }
+        });
+        inbox.post({
+            type: "message",
+            message: { text: "second" },
+            context: {
+                messageId: "2",
+                enrichments: [{ key: "timezone_change_notice", value: "Timezone updated automatically." }]
+            }
+        });
+
+        const entry = await inbox.next();
+        if (entry.item.type !== "message") {
+            throw new Error("Expected merged message entry");
+        }
+        expect(entry.item.context).toEqual({
+            messageId: "2",
+            enrichments: [
+                { key: "profile_name_notice", value: "Set profile name." },
+                { key: "timezone_change_notice", value: "Timezone updated automatically." }
+            ]
+        });
+    });
+
     it("resolves completion handlers for all merged messages", async () => {
         const inbox = new AgentInbox("agent-5");
         const resolveFirst = vi.fn();
