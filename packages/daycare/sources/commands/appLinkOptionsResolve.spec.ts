@@ -10,6 +10,7 @@ describe("appLinkOptionsResolve", () => {
                 settings: {
                     host: "0.0.0.0",
                     port: 7444,
+                    publicDomain: "app.example.com",
                     jwtSecret: "plugin-secret"
                 }
             }
@@ -18,6 +19,7 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved).toEqual({
             host: "0.0.0.0",
             port: 7444,
+            publicDomain: "app.example.com",
             expiresInSeconds: 3600,
             settingsJwtSecret: "plugin-secret"
         });
@@ -28,6 +30,7 @@ describe("appLinkOptionsResolve", () => {
             {
                 host: "localhost",
                 port: "9000",
+                publicDomain: "https://public.example.com",
                 expiresInSeconds: "120"
             },
             [
@@ -36,7 +39,8 @@ describe("appLinkOptionsResolve", () => {
                     pluginId: "daycare-app-server",
                     settings: {
                         host: "127.0.0.1",
-                        port: 7332
+                        port: 7332,
+                        publicDomain: "app.internal.example"
                     }
                 }
             ]
@@ -44,6 +48,7 @@ describe("appLinkOptionsResolve", () => {
 
         expect(resolved.host).toBe("localhost");
         expect(resolved.port).toBe(9000);
+        expect(resolved.publicDomain).toBe("https://public.example.com");
         expect(resolved.expiresInSeconds).toBe(120);
     });
 
@@ -63,6 +68,7 @@ describe("appLinkOptionsResolve", () => {
 
         expect(resolved.host).toBe("127.0.0.1");
         expect(resolved.port).toBe(7332);
+        expect(resolved.publicDomain).toBeUndefined();
         expect(resolved.expiresInSeconds).toBe(3600);
     });
 });

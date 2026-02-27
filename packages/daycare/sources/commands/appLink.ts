@@ -37,6 +37,7 @@ export async function appLinkCommand(userId: string, options: AppLinkOptions): P
         const link = await appAuthLinkGenerate({
             host: resolved.host,
             port: resolved.port,
+            ...(resolved.publicDomain ? { publicDomain: resolved.publicDomain } : {}),
             userId: trimmedUserId,
             secret,
             expiresInSeconds: resolved.expiresInSeconds

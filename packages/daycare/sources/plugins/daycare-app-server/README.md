@@ -6,6 +6,7 @@ Serves the Daycare Expo web build, exposes token auth endpoints, and provides `/
 
 - `host`: bind host, default `127.0.0.1`
 - `port`: bind port, default `7332`
+- `publicDomain` (optional): public hostname or URL used in generated `/app` links (for example `app.example.com` or `https://app.example.com`)
 - `jwtSecret` (optional): HS256 JWT signing secret; when omitted, plugin uses auth store key `app-auth.jwtSecret`
 
 ## Routes
@@ -22,6 +23,8 @@ Serves the Daycare Expo web build, exposes token auth endpoints, and provides `/
 
 Both generate a short-lived app URL in the form:
 `http://<host>:<port>/auth#<base64url-json>`
+
+When `publicDomain` is configured, links use that public domain instead.
 
 Hash payload JSON shape:
 

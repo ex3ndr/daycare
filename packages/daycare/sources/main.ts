@@ -46,6 +46,7 @@ program
     .option("--instance <instanceId>", "daycare-app-server plugin instance id")
     .option("--host <host>", "Override host in the generated URL")
     .option("--port <port>", "Override port in the generated URL")
+    .option("--public-domain <domain>", "Override public domain (or URL) in the generated URL")
     .option("--expires-in-seconds <seconds>", "Token expiration in seconds")
     .option("--json", "Print full json payload instead of plain URL")
     .action(appLinkCommand);

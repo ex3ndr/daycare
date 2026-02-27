@@ -128,6 +128,19 @@ describe("appLinkCommand", () => {
         );
     });
 
+    it("passes public domain override to link generator", async () => {
+        await appLinkCommand("user-1", { publicDomain: "app.example.com" });
+
+        expect(appAuthLinkGenerateMock).toHaveBeenCalledWith({
+            host: "127.0.0.1",
+            port: 7332,
+            publicDomain: "app.example.com",
+            userId: "user-1",
+            secret: "resolved-secret",
+            expiresInSeconds: 3600
+        });
+    });
+
     it("sets non-zero exit code for empty user id", async () => {
         await appLinkCommand("   ", {});
 

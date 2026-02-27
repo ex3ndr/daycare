@@ -7,6 +7,7 @@ const APP_DEFAULT_PORT = 7332;
 export type AppLinkCommandOptions = {
     host?: string;
     port?: string;
+    publicDomain?: string;
     instance?: string;
     expiresInSeconds?: string;
 };
@@ -14,6 +15,7 @@ export type AppLinkCommandOptions = {
 export type AppLinkResolvedOptions = {
     host: string;
     port: number;
+    publicDomain?: string;
     expiresInSeconds: number;
     settingsJwtSecret?: string;
 };
@@ -31,12 +33,14 @@ export function appLinkOptionsResolve(
 
     const host = appLinkHostResolve(options.host, pluginSettings.host);
     const port = appLinkPortResolve(options.port, pluginSettings.port);
+    const publicDomain = appLinkPublicDomainResolve(options.publicDomain, pluginSettings.publicDomain);
     const expiresInSeconds = appLinkExpiresResolve(options.expiresInSeconds);
     const settingsJwtSecret = appLinkSecretResolve(pluginSettings.jwtSecret);
 
     return {
         host,
         port,
+        publicDomain,
         expiresInSeconds,
         settingsJwtSecret
     };
@@ -98,6 +102,23 @@ function appLinkPortResolve(portOption: string | undefined, portSetting: unknown
     }
 
     return APP_DEFAULT_PORT;
+}
+
+function appLinkPublicDomainResolve(
+    publicDomainOption: string | undefined,
+    publicDomainSetting: unknown
+): string | undefined {
+    const fromOption = publicDomainOption?.trim();
+    if (fromOption) {
+        return fromOption;
+    }
+
+    if (typeof publicDomainSetting !== "string") {
+        return undefined;
+    }
+
+    const normalized = publicDomainSetting.trim();
+    return normalized ? normalized : undefined;
 }
 
 function appLinkPortParse(value: string | undefined): number | null {

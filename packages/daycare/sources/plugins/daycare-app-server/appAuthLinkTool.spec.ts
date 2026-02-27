@@ -10,15 +10,19 @@ describe("appAuthLinkUrlBuild", () => {
         const parsed = new URL(url);
         expect(parsed.origin).toBe("http://127.0.0.1:7332");
         expect(parsed.pathname).toBe("/auth");
-
-        const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
-        const decoded = JSON.parse(Buffer.from(hash, "base64url").toString("utf8")) as {
-            backendUrl: string;
-            token: string;
-        };
-
-        expect(decoded).toEqual({
+        expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
+            token: "token-1"
+        });
+    });
+
+    it("uses public domain in generated URL and payload backend", () => {
+        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", "app.example.com");
+        const parsed = new URL(url);
+        expect(parsed.origin).toBe("https://app.example.com");
+        expect(parsed.pathname).toBe("/auth");
+        expect(appAuthLinkPayloadDecode(url)).toEqual({
+            backendUrl: "https://app.example.com",
             token: "token-1"
         });
     });
@@ -67,3 +71,12 @@ describe("appAuthLinkTool", () => {
         expect(payload.userId).toBe("user-11");
     });
 });
+
+function appAuthLinkPayloadDecode(url: string): { backendUrl: string; token: string } {
+    const parsed = new URL(url);
+    const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+    return JSON.parse(Buffer.from(hash, "base64url").toString("utf8")) as {
+        backendUrl: string;
+        token: string;
+    };
+}
