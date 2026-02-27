@@ -323,6 +323,9 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         const mapped = users.map((user) => ({
             id: user.id,
             isOwner: user.isOwner,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            country: user.country,
             nametag: user.nametag,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt

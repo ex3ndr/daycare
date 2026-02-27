@@ -355,6 +355,9 @@ export type DatabaseUserRow = {
     is_owner: number;
     parent_user_id: string | null;
     name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    country: string | null;
     nametag: string;
     created_at: number;
     updated_at: number;
@@ -371,6 +374,9 @@ export type UserDbRecord = {
     isOwner: boolean;
     parentUserId: string | null;
     name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    country: string | null;
     nametag: string;
     createdAt: number;
     updatedAt: number;
@@ -444,6 +450,9 @@ export type CreateUserInput = {
     isOwner?: boolean;
     parentUserId?: string;
     name?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    country?: string | null;
     nametag?: string;
     createdAt?: number;
     updatedAt?: number;
@@ -480,6 +489,9 @@ export type SystemPromptDbRecord = {
 
 export type UpdateUserInput = {
     isOwner?: boolean;
+    firstName?: string | null;
+    lastName?: string | null;
+    country?: string | null;
     createdAt?: number;
     updatedAt?: number;
 };

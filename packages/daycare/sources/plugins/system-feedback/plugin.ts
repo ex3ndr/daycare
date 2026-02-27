@@ -115,7 +115,7 @@ export const plugin = definePlugin({
                                 );
                             }
 
-                            const userName = user.name?.trim() || "Unknown";
+                            const userName = userDisplayNameResolve(user);
                             const userNametag = user.nametag?.trim() || "unknown";
                             const formattedNametag = userNametag.startsWith("@") ? userNametag : `@${userNametag}`;
 
@@ -135,6 +135,9 @@ export const plugin = definePlugin({
                                 userId: context.ctx.userId,
                                 nametag: userNametag,
                                 name: userName,
+                                firstName: user.firstName ?? null,
+                                lastName: user.lastName ?? null,
+                                country: user.country ?? null,
                                 prompt
                             };
 
@@ -221,4 +224,19 @@ function systemFeedbackResultBuild(
             feedbackLogPath
         }
     };
+}
+
+function userDisplayNameResolve(user: {
+    firstName: string | null;
+    lastName: string | null;
+    name: string | null;
+}): string {
+    const firstName = user.firstName?.trim() ?? "";
+    const lastName = user.lastName?.trim() ?? "";
+    const structured = [firstName, lastName].filter((entry) => entry.length > 0).join(" ");
+    if (structured) {
+        return structured;
+    }
+    const legacy = user.name?.trim() ?? "";
+    return legacy || "Unknown";
 }

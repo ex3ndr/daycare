@@ -284,6 +284,7 @@ describe("Engine tool registration", () => {
             expect(toolNames).toContain("skill");
             expect(toolNames).toContain("agent_reset");
             expect(toolNames).toContain("agent_compact");
+            expect(toolNames).toContain("user_profile_update");
 
             await engine.shutdown();
         } finally {

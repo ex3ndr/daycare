@@ -250,6 +250,9 @@ type SignalGenerateResponse = {
 export type UserSummary = {
   id: string;
   isOwner: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  country: string | null;
   nametag: string;
   createdAt: number;
   updatedAt: number;

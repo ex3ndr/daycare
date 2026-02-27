@@ -9,20 +9,32 @@ describe("schema", () => {
         try {
             await migrationRun(db);
 
-            const tables = await db
+            const tables = (await db
                 .prepare(
                     "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
                 )
-                .all() as Array<{ name?: string }>;
+                .all()) as Array<{ name?: string }>;
             const tableNames = new Set(tables.map((entry) => entry.name).filter((entry): entry is string => !!entry));
 
             expect(tableNames.has("users")).toBe(true);
             expect(tableNames.has("tasks")).toBe(true);
             expect(tableNames.has("token_stats_hourly")).toBe(true);
 
-            const indexes = await db
+            const userColumns = (await db
+                .prepare(
+                    "SELECT column_name AS name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users'"
+                )
+                .all()) as Array<{ name?: string }>;
+            const userColumnNames = new Set(
+                userColumns.map((entry) => entry.name).filter((entry): entry is string => !!entry)
+            );
+            expect(userColumnNames.has("first_name")).toBe(true);
+            expect(userColumnNames.has("last_name")).toBe(true);
+            expect(userColumnNames.has("country")).toBe(true);
+
+            const indexes = (await db
                 .prepare("SELECT indexname AS name FROM pg_indexes WHERE schemaname = 'public' ORDER BY indexname ASC")
-                .all() as Array<{ name?: string }>;
+                .all()) as Array<{ name?: string }>;
             const indexNames = new Set(indexes.map((entry) => entry.name).filter((entry): entry is string => !!entry));
 
             expect(indexNames.has("idx_users_nametag_required")).toBe(true);

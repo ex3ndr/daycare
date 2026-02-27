@@ -88,6 +88,7 @@ import {
     buildTaskUpdateTool
 } from "./modules/tools/task.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
+import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -137,7 +138,9 @@ export class Engine {
             : this.config.current.db.path;
         const db = databaseOpen(dbTarget);
         if (this.config.current.db.autoMigrate) {
-            void databaseMigrate(db);
+            void databaseMigrate(db).catch((error) => {
+                logger.warn({ error }, "migrate: Failed to apply storage migrations");
+            });
         } else {
             logger.info("skip: Auto migrations disabled by engine.db.autoMigrate=false");
         }
@@ -415,6 +418,7 @@ export class Engine {
         this.modules.tools.register("core", skillToolBuild());
         this.modules.tools.register("core", skillAddToolBuild());
         this.modules.tools.register("core", skillRemoveToolBuild());
+        this.modules.tools.register("core", userProfileUpdateTool());
         this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.exposes));
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
@@ -453,7 +457,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: tasks, topology, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();

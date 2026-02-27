@@ -59,7 +59,7 @@ export class UsersRepository {
             return this.findById(cachedUserId);
         }
 
-        const row = await this.db
+        const row = (await this.db
             .prepare(
                 `
               SELECT user_id
@@ -68,7 +68,7 @@ export class UsersRepository {
               LIMIT 1
             `
             )
-            .get(key) as { user_id?: string } | undefined;
+            .get(key)) as { user_id?: string } | undefined;
 
         const userId = row?.user_id?.trim() ?? "";
         if (!userId) {
@@ -101,7 +101,7 @@ export class UsersRepository {
             return null;
         }
 
-        const row = await this.db.prepare("SELECT id FROM users WHERE nametag = ? LIMIT 1").get(normalized) as
+        const row = (await this.db.prepare("SELECT id FROM users WHERE nametag = ? LIMIT 1").get(normalized)) as
             | { id?: string }
             | undefined;
         const userId = row?.id?.trim() ?? "";
@@ -127,10 +127,10 @@ export class UsersRepository {
             return usersSort(Array.from(this.usersById.values())).map((user) => userClone(user));
         }
 
-        const userRows = await this.db
+        const userRows = (await this.db
             .prepare("SELECT * FROM users ORDER BY created_at ASC, id ASC")
-            .all() as DatabaseUserRow[];
-        const keyRows = await this.db
+            .all()) as DatabaseUserRow[];
+        const keyRows = (await this.db
             .prepare(
                 `
               SELECT id, user_id, connector_key
@@ -138,7 +138,7 @@ export class UsersRepository {
               ORDER BY id ASC
             `
             )
-            .all() as DatabaseUserConnectorKeyRow[];
+            .all()) as DatabaseUserConnectorKeyRow[];
 
         const keysByUserId = new Map<string, DatabaseUserConnectorKeyRow[]>();
         for (const keyRow of keyRows) {
@@ -153,6 +153,9 @@ export class UsersRepository {
                 isOwner: row.is_owner === 1,
                 parentUserId: row.parent_user_id ?? null,
                 name: row.name ?? null,
+                firstName: row.first_name ?? null,
+                lastName: row.last_name ?? null,
+                country: row.country ?? null,
                 nametag: row.nametag,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
@@ -185,7 +188,7 @@ export class UsersRepository {
         if (this.allUsersLoaded) {
             return null;
         }
-        const row = await this.db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get() as
+        const row = (await this.db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get()) as
             | { id?: string }
             | undefined;
         const userId = row?.id?.trim() ?? "";
@@ -204,6 +207,9 @@ export class UsersRepository {
             const isOwner = input.isOwner ?? false;
             const parentUserId = input.parentUserId ?? null;
             const name = input.name ?? null;
+            const firstName = textNullableNormalize(input.firstName);
+            const lastName = textNullableNormalize(input.lastName);
+            const country = textNullableNormalize(input.country);
             const connectorKey = input.connectorKey?.trim() ?? "";
             const explicitNametag = input.nametag?.trim() ?? "";
             const shouldGenerateNametag = explicitNametag.length === 0;
@@ -215,9 +221,20 @@ export class UsersRepository {
                 try {
                     await this.db
                         .prepare(
-                            "INSERT INTO users (id, is_owner, parent_user_id, name, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO users (id, is_owner, parent_user_id, name, first_name, last_name, country, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         )
-                        .run(id, isOwner ? 1 : 0, parentUserId, name, nametag, createdAt, updatedAt);
+                        .run(
+                            id,
+                            isOwner ? 1 : 0,
+                            parentUserId,
+                            name,
+                            firstName,
+                            lastName,
+                            country,
+                            nametag,
+                            createdAt,
+                            updatedAt
+                        );
                     break;
                 } catch (error) {
                     if (!shouldGenerateNametag || !sqliteUniqueConstraintOnNametagIs(error)) {
@@ -233,9 +250,9 @@ export class UsersRepository {
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
             if (connectorKey) {
-                const inserted = await this.db
+                const inserted = (await this.db
                     .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?) RETURNING id")
-                    .get(id, connectorKey) as { id: number | bigint } | undefined;
+                    .get(id, connectorKey)) as { id: number | bigint } | undefined;
                 if (!inserted) {
                     throw new Error("Failed to insert connector key.");
                 }
@@ -247,6 +264,9 @@ export class UsersRepository {
                 isOwner,
                 parentUserId,
                 name,
+                firstName,
+                lastName,
+                country,
                 nametag,
                 createdAt,
                 updatedAt,
@@ -270,6 +290,9 @@ export class UsersRepository {
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
                 ...(data.isOwner === undefined ? {} : { isOwner: data.isOwner }),
+                ...(data.firstName === undefined ? {} : { firstName: textNullableNormalize(data.firstName) }),
+                ...(data.lastName === undefined ? {} : { lastName: textNullableNormalize(data.lastName) }),
+                ...(data.country === undefined ? {} : { country: textNullableNormalize(data.country) }),
                 createdAt: data.createdAt ?? current.createdAt,
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
@@ -278,11 +301,19 @@ export class UsersRepository {
                 .prepare(
                     `
                   UPDATE users
-                  SET is_owner = ?, created_at = ?, updated_at = ?
+                  SET is_owner = ?, first_name = ?, last_name = ?, country = ?, created_at = ?, updated_at = ?
                   WHERE id = ?
                 `
                 )
-                .run(next.isOwner ? 1 : 0, next.createdAt, next.updatedAt, id);
+                .run(
+                    next.isOwner ? 1 : 0,
+                    next.firstName,
+                    next.lastName,
+                    next.country,
+                    next.createdAt,
+                    next.updatedAt,
+                    id
+                );
 
             await this.cacheLock.inLock(() => {
                 this.userCacheSet(next);
@@ -328,9 +359,9 @@ export class UsersRepository {
                 throw new Error(`User not found: ${userId}`);
             }
 
-            const inserted = await this.db
+            const inserted = (await this.db
                 .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?) RETURNING id")
-                .get(userId, connectorKey) as { id: number | bigint } | undefined;
+                .get(userId, connectorKey)) as { id: number | bigint } | undefined;
             if (!inserted) {
                 throw new Error("Failed to insert connector key.");
             }
@@ -357,13 +388,13 @@ export class UsersRepository {
     }
 
     private async userLoadById(userId: string): Promise<UserWithConnectorKeysDbRecord | null> {
-        const userRow = await this.db.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").get(userId) as
+        const userRow = (await this.db.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").get(userId)) as
             | DatabaseUserRow
             | undefined;
         if (!userRow) {
             return null;
         }
-        const keyRows = await this.db
+        const keyRows = (await this.db
             .prepare(
                 `
               SELECT id, user_id, connector_key
@@ -372,13 +403,16 @@ export class UsersRepository {
               ORDER BY id ASC
             `
             )
-            .all(userId) as DatabaseUserConnectorKeyRow[];
+            .all(userId)) as DatabaseUserConnectorKeyRow[];
 
         return {
             id: userRow.id,
             isOwner: userRow.is_owner === 1,
             parentUserId: userRow.parent_user_id ?? null,
             name: userRow.name ?? null,
+            firstName: userRow.first_name ?? null,
+            lastName: userRow.last_name ?? null,
+            country: userRow.country ?? null,
             nametag: userRow.nametag,
             createdAt: userRow.created_at,
             updatedAt: userRow.updated_at,
@@ -416,4 +450,12 @@ function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeys
 
 function usersSort(records: UserWithConnectorKeysDbRecord[]): UserWithConnectorKeysDbRecord[] {
     return records.slice().sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
+}
+
+function textNullableNormalize(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
 }

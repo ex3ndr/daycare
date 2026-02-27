@@ -11,12 +11,18 @@ describe("UsersRepository", () => {
                 isOwner: false,
                 createdAt: 1,
                 updatedAt: 2,
+                firstName: "Steve",
+                lastName: "Jobs",
+                country: "US",
                 nametag: "swift-fox-42",
                 connectorKey: "telegram:1"
             });
             expect(created.isOwner).toBe(false);
             expect(created.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
             expect(created.nametag).toBe("swift-fox-42");
+            expect(created.firstName).toBe("Steve");
+            expect(created.lastName).toBe("Jobs");
+            expect(created.country).toBe("US");
 
             const byId = await users.findById(created.id);
             expect(byId?.id).toBe(created.id);
@@ -30,10 +36,19 @@ describe("UsersRepository", () => {
             const updated = await users.findById(created.id);
             expect(updated?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1", "slack:1"]);
 
-            await users.update(created.id, { isOwner: false, updatedAt: 3 });
+            await users.update(created.id, {
+                isOwner: false,
+                firstName: "Steven",
+                lastName: null,
+                country: "USA",
+                updatedAt: 3
+            });
             const updatedOwner = await users.findById(created.id);
             expect(updatedOwner?.isOwner).toBe(false);
             expect(updatedOwner?.updatedAt).toBe(3);
+            expect(updatedOwner?.firstName).toBe("Steven");
+            expect(updatedOwner?.lastName).toBeNull();
+            expect(updatedOwner?.country).toBe("USA");
 
             const owner = await users.findOwner();
             expect(owner).toBeTruthy();

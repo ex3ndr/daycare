@@ -1,19 +1,19 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { sql } from "drizzle-orm";
-import { type PgliteDatabase, drizzle } from "drizzle-orm/pglite";
 import {
     bigint,
     check,
     foreignKey,
     index,
     integer,
+    pgTable,
     primaryKey,
     real,
-    pgTable,
     serial,
     text,
     uniqueIndex
 } from "drizzle-orm/pg-core";
+import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 
 export const migrationsTable = pgTable("_migrations", {
     name: text("name").primaryKey(),
@@ -29,6 +29,9 @@ export const usersTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
         parentUserId: text("parent_user_id"),
         name: text("name"),
+        firstName: text("first_name"),
+        lastName: text("last_name"),
+        country: text("country"),
         nametag: text("nametag").notNull()
     },
     (table) => [
@@ -109,7 +112,7 @@ export const sessionHistoryTable = pgTable(
 );
 
 export const inboxTable = pgTable(
-        "inbox",
+    "inbox",
     {
         id: text("id").primaryKey(),
         agentId: text("agent_id").notNull(),
