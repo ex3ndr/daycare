@@ -1609,7 +1609,7 @@ async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: strin
 }
 
 async function signalsBuild(
-    config: { path: string },
+    _config: unknown,
     eventBus: EngineEventBus,
     onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void>
 ): Promise<Signals> {

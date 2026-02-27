@@ -6,9 +6,11 @@ export type Config = {
     dataDir: string;
     agentsDir: string;
     usersDir: string;
-    path: string;
-    url: string | null;
-    dbAutoMigrate: boolean;
+    db: {
+        path: string;
+        url: string | null;
+        autoMigrate: boolean;
+    };
     authPath: string;
     socketPath: string;
     docker: ResolvedDockerSettings;

@@ -70,9 +70,14 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 .object({
                     socketPath: z.string().min(1).optional(),
                     dataDir: z.string().min(1).optional(),
-                    path: z.string().min(1).optional(),
-                    url: z.string().min(1).optional(),
-                    autoMigrate: z.boolean().optional()
+                    db: z
+                        .object({
+                            path: z.string().min(1).optional(),
+                            url: z.string().min(1).optional(),
+                            autoMigrate: z.boolean().optional()
+                        })
+                        .passthrough()
+                        .optional()
                 })
                 .passthrough()
                 .optional(),

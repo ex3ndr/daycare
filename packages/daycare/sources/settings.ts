@@ -101,9 +101,11 @@ export type SettingsConfig = {
     engine?: {
         socketPath?: string;
         dataDir?: string;
-        path?: string;
-        url?: string;
-        autoMigrate?: boolean;
+        db?: {
+            path?: string;
+            url?: string;
+            autoMigrate?: boolean;
+        };
     };
     assistant?: AssistantSettings;
     agents?: AgentSettings;

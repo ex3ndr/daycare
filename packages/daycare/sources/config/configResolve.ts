@@ -21,9 +21,9 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
     const dataDir = path.resolve(resolvedSettings.engine?.dataDir ?? DEFAULT_DAYCARE_DIR);
     const agentsDir = path.join(dataDir, "agents");
     const usersDir = path.join(configDir, "users");
-    const databasePath = path.resolve(resolvedSettings.engine?.path ?? path.join(dataDir, "daycare.db"));
-    const databaseUrl = configDatabaseUrlResolve(resolvedSettings.engine?.url);
-    const dbAutoMigrate = resolvedSettings.engine?.autoMigrate ?? true;
+    const databasePath = path.resolve(resolvedSettings.engine?.db?.path ?? path.join(dataDir, "daycare.db"));
+    const databaseUrl = configDatabaseUrlResolve(resolvedSettings.engine?.db?.url);
+    const databaseAutoMigrate = resolvedSettings.engine?.db?.autoMigrate ?? true;
     const authPath = path.join(dataDir, "auth.json");
     const socketPath = resolveEngineSocketPath(resolvedSettings.engine?.socketPath);
     const frozenSettings = freezeDeep(structuredClone(resolvedSettings));
@@ -35,9 +35,11 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
         dataDir,
         agentsDir,
         usersDir,
-        path: databasePath,
-        url: databaseUrl,
-        dbAutoMigrate,
+        db: {
+            path: databasePath,
+            url: databaseUrl,
+            autoMigrate: databaseAutoMigrate
+        },
         authPath,
         socketPath,
         docker: frozenSettings.docker,

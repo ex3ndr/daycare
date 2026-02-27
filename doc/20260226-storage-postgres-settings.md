@@ -6,26 +6,26 @@ Date: 2026-02-26
 
 This change adds explicit settings for:
 
-- Selecting a server database via `engine.url`
-- Toggling automatic migrations via `engine.autoMigrate`
+- Selecting a server database via `engine.db.url`
+- Toggling automatic migrations via `engine.db.autoMigrate`
 
-If `engine.url` is set, storage opens a server Postgres connection.
+If `engine.db.url` is set, storage opens a server Postgres connection.
 If not set, storage continues using local PGlite path resolution.
 
 ## Config Fields
 
-- `engine.path`: local database path (used for PGlite target)
-- `engine.url`: optional server database URL
-- `engine.autoMigrate`: optional boolean (default `true`)
+- `engine.db.path`: local database path (used for PGlite target)
+- `engine.db.url`: optional server database URL
+- `engine.db.autoMigrate`: optional boolean (default `true`)
 
 ## Runtime Flow
 
 ```mermaid
 flowchart TD
-    A[Load Settings] --> B{engine.url set?}
+    A[Load Settings] --> B{engine.db.url set?}
     B -- yes --> C[Open Postgres client]
-    B -- no --> D[Open PGlite target from engine.path]
-    C --> E{engine.autoMigrate?}
+    B -- no --> D[Open PGlite target from engine.db.path]
+    C --> E{engine.db.autoMigrate?}
     D --> E
     E -- true --> F[Run databaseMigrate]
     E -- false --> G[Skip migrations]

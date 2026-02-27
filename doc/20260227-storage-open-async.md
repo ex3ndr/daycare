@@ -4,7 +4,7 @@
 - Made `storageOpen` asynchronous and migration-aware via `await databaseMigrate(...)`.
 - Made `storageOpenTest` asynchronous and migration-aware via `await databaseMigrate(...)`.
 - Updated all test call sites to `await storageOpenTest()` so schema setup completes before repository usage.
-- Kept `storageResolve` synchronous for existing runtime call paths, while preserving `dbAutoMigrate` fire-and-forget behavior.
+- Kept `storageResolve` synchronous for existing runtime call paths, while preserving `config.db.autoMigrate` fire-and-forget behavior.
 
 ## Flow
 ```mermaid

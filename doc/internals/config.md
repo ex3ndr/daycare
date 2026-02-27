@@ -44,13 +44,13 @@ flowchart LR
 
 ## Agent DB path
 
-`dbPath` resolves to `<dataDir>/daycare.db` by default and can be overridden with
-`engine.dbPath` in settings.
+`db.path` resolves to `<dataDir>/daycare.db` by default and can be overridden with
+`engine.db.path` in settings.
 
 ```mermaid
 flowchart LR
-  Settings[settings.json engine.dbPath?] --> Resolve[configResolve]
-  Resolve --> DBPath[Config.dbPath]
+  Settings[settings.json engine.db.path?] --> Resolve[configResolve]
+  Resolve --> DBPath[Config.db.path]
   DBPath --> Storage[storage/*.ts]
 ```
 

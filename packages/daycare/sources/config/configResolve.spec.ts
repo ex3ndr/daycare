@@ -19,45 +19,49 @@ describe("configResolve", () => {
         expect(config.dataDir).toBe(path.resolve("/tmp/daycare/.daycare"));
         expect(config.agentsDir).toBe(path.resolve("/tmp/daycare/.daycare/agents"));
         expect(config.usersDir).toBe(path.resolve("/tmp/daycare/users"));
-        expect(config.path).toBe(path.resolve("/tmp/daycare/.daycare/daycare.db"));
+        expect(config.db.path).toBe(path.resolve("/tmp/daycare/.daycare/daycare.db"));
     });
 
-    it("resolves engine.path from settings", () => {
+    it("resolves engine.db.path from settings", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve(
             {
                 engine: {
                     dataDir: "/tmp/daycare/.daycare",
-                    path: "/tmp/daycare/custom/daycare.db"
+                    db: {
+                        path: "/tmp/daycare/custom/daycare.db"
+                    }
                 }
             },
             configPath
         );
-        expect(config.path).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
+        expect(config.db.path).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
     });
 
-    it("defaults engine.url to null and auto migrations to true", () => {
+    it("defaults engine.db.url to null and auto migrations to true", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve({}, configPath);
-        expect(config.url).toBeNull();
-        expect(config.dbAutoMigrate).toBe(true);
+        expect(config.db.url).toBeNull();
+        expect(config.db.autoMigrate).toBe(true);
     });
 
-    it("resolves engine.url and auto migration settings", () => {
+    it("resolves engine.db.url and auto migration settings", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve(
             {
                 engine: {
-                    path: "/tmp/daycare/custom/daycare.db",
-                    url: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
-                    autoMigrate: false
+                    db: {
+                        path: "/tmp/daycare/custom/daycare.db",
+                        url: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
+                        autoMigrate: false
+                    }
                 }
             },
             configPath
         );
-        expect(config.path).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
-        expect(config.url).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
-        expect(config.dbAutoMigrate).toBe(false);
+        expect(config.db.path).toBe(path.resolve("/tmp/daycare/custom/daycare.db"));
+        expect(config.db.url).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
+        expect(config.db.autoMigrate).toBe(false);
     });
 
     it("defaults security.appReviewerEnabled to false", () => {

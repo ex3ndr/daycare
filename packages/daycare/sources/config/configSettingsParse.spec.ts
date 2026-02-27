@@ -3,36 +3,42 @@ import { describe, expect, it } from "vitest";
 import { configSettingsParse } from "./configSettingsParse.js";
 
 describe("configSettingsParse", () => {
-    it("accepts engine.path", () => {
+    it("accepts engine.db.path", () => {
         const parsed = configSettingsParse({
             engine: {
-                path: "/tmp/daycare/daycare.db"
+                db: {
+                    path: "/tmp/daycare/daycare.db"
+                }
             }
         });
 
-        expect(parsed.engine?.path).toBe("/tmp/daycare/daycare.db");
+        expect(parsed.engine?.db?.path).toBe("/tmp/daycare/daycare.db");
     });
 
-    it("accepts engine.url and engine.autoMigrate", () => {
+    it("accepts engine.db.url and engine.db.autoMigrate", () => {
         const parsed = configSettingsParse({
             engine: {
-                url: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
-                autoMigrate: false
+                db: {
+                    url: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
+                    autoMigrate: false
+                }
             }
         });
 
-        expect(parsed.engine?.url).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
-        expect(parsed.engine?.autoMigrate).toBe(false);
+        expect(parsed.engine?.db?.url).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
+        expect(parsed.engine?.db?.autoMigrate).toBe(false);
     });
 
-    it("accepts non-postgres engine.url values", () => {
+    it("accepts non-postgres engine.db.url values", () => {
         const parsed = configSettingsParse({
             engine: {
-                url: "mysql://localhost/daycare"
+                db: {
+                    url: "mysql://localhost/daycare"
+                }
             }
         });
 
-        expect(parsed.engine?.url).toBe("mysql://localhost/daycare");
+        expect(parsed.engine?.db?.url).toBe("mysql://localhost/daycare");
     });
 
     it("accepts full docker settings", () => {

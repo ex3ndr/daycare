@@ -158,14 +158,18 @@ describe("agentLoopRun", () => {
         ).state.activeSessionId = "session-1";
         (
             options.agentSystem as unknown as {
-                config: { current: { agentsDir?: string; path?: string } };
+                config: {
+                    current: { agentsDir?: string; db?: { path?: string; url?: string | null; autoMigrate?: boolean } };
+                };
             }
         ).config.current.agentsDir = "/dev/null";
         (
             options.agentSystem as unknown as {
-                config: { current: { agentsDir?: string; path?: string } };
+                config: {
+                    current: { agentsDir?: string; db?: { path?: string; url?: string | null; autoMigrate?: boolean } };
+                };
             }
-        ).config.current.path = ":memory:";
+        ).config.current.db = { path: ":memory:", url: null, autoMigrate: true };
 
         await agentLoopRun(options);
 

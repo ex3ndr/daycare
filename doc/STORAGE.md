@@ -8,7 +8,7 @@ Daycare persists data using five mechanisms:
 
 | Mechanism | Format | Primary location |
 | --- | --- | --- |
-| SQLite | relational tables | `config.path` (default: `<dataDir>/daycare.db`) |
+| SQLite | relational tables | `config.db.path` (default: `<dataDir>/daycare.db`) |
 | JSON files | structured objects | `configDir`, `dataDir`, `workspaceDir`, and plugin `dataDir` |
 | JSONL append files | one JSON object per line | legacy migration inputs only (`configDir/channels/*/history.jsonl`, `configDir/signals/events.jsonl`) |
 | Markdown (+ frontmatter for some files) | markdown bodies and YAML-like metadata | app/memory/skills files |
@@ -25,7 +25,11 @@ export type Config = {
   dataDir: string;
   agentsDir: string;
   usersDir: string;
-  path: string;
+  db: {
+    path: string;
+    url: string | null;
+    autoMigrate: boolean;
+  };
   filesDir: string;
   authPath: string;
   socketPath: string;
@@ -38,7 +42,7 @@ Resolved by `sources/config/configResolve.ts`:
 
 - `configDir = dirname(settingsPath)`
 - `dataDir = settings.engine.dataDir ?? DEFAULT_DAYCARE_DIR`
-- `path = settings.engine.path ?? path.join(dataDir, "daycare.db")`
+- `db.path = settings.engine.db.path ?? path.join(dataDir, "daycare.db")`
 - `agentsDir = path.join(dataDir, "agents")`
 - `usersDir = path.join(dataDir, "users")`
 - `authPath = path.join(dataDir, "auth.json")`

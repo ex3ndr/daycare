@@ -19,9 +19,9 @@ export function storageResolve(input: Storage | Config): Storage {
     if (cached) {
         return cached;
     }
-    const dbTarget = input.url ? { kind: "postgres" as const, url: input.url } : input.path;
+    const dbTarget = input.db.url ? { kind: "postgres" as const, url: input.db.url } : input.db.path;
     const db = databaseOpen(dbTarget);
-    if (input.dbAutoMigrate) {
+    if (input.db.autoMigrate) {
         void databaseMigrate(db);
     }
     const storage = Storage.fromDatabase(db);
@@ -30,8 +30,8 @@ export function storageResolve(input: Storage | Config): Storage {
 }
 
 function storageKeyResolve(config: Config): string {
-    if (config.url) {
-        return `postgres:${config.url}`;
+    if (config.db.url) {
+        return `postgres:${config.db.url}`;
     }
-    return `pglite:${config.path}`;
+    return `pglite:${config.db.path}`;
 }
