@@ -11,7 +11,9 @@ export type MessageContextEnrichIncomingOptions = {
  * Enriches incoming message context with stable key/value metadata tags.
  * Expects: user belongs to the active message scope and timezonePersist updates profile timezone.
  */
-export async function messageContextEnrichIncoming(options: MessageContextEnrichIncomingOptions): Promise<MessageContext> {
+export async function messageContextEnrichIncoming(
+    options: MessageContextEnrichIncomingOptions
+): Promise<MessageContext> {
     const context = options.context;
     const user = options.user;
     const enrichments = [...(context.enrichments ?? [])];

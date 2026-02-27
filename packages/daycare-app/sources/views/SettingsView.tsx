@@ -1,9 +1,9 @@
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useAuthStore } from "@/modules/auth/authContext";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
+import { useAuthStore } from "@/modules/auth/authContext";
 
 export function SettingsView() {
     const { theme } = useUnistyles();

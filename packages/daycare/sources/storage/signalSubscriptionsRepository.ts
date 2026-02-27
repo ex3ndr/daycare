@@ -123,11 +123,11 @@ export class SignalSubscriptionsRepository {
             return cached;
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare(
                 "SELECT * FROM signals_subscriptions ORDER BY user_id ASC, agent_id ASC, pattern ASC, created_at ASC, id ASC"
             )
-            .all() as DatabaseSignalSubscriptionRow[];
+            .all()) as DatabaseSignalSubscriptionRow[];
         const parsed = signalSubscriptionsSort(rows.map((row) => this.subscriptionParse(row)));
 
         await this.cacheLock.inLock(() => {
@@ -171,9 +171,9 @@ export class SignalSubscriptionsRepository {
         if (!keys) {
             return null;
         }
-        const row = await this.db
+        const row = (await this.db
             .prepare("SELECT * FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ? LIMIT 1")
-            .get(keys.userId, keys.agentId, pattern) as DatabaseSignalSubscriptionRow | undefined;
+            .get(keys.userId, keys.agentId, pattern)) as DatabaseSignalSubscriptionRow | undefined;
         if (!row) {
             return null;
         }

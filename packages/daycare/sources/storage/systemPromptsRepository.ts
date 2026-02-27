@@ -49,9 +49,9 @@ export class SystemPromptsRepository {
             return Array.from(this.promptsById.values()).map((p) => promptClone(p));
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM system_prompts ORDER BY created_at ASC")
-            .all() as DatabaseSystemPromptRow[];
+            .all()) as DatabaseSystemPromptRow[];
         const parsed = rows.map((row) => promptParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -67,29 +67,29 @@ export class SystemPromptsRepository {
 
     async findByScope(scope: SystemPromptScope, userId?: string): Promise<SystemPromptDbRecord[]> {
         if (scope === "user" && userId) {
-            const rows = await this.db
+            const rows = (await this.db
                 .prepare("SELECT * FROM system_prompts WHERE scope = ? AND user_id = ? ORDER BY created_at ASC")
-                .all(scope, userId) as DatabaseSystemPromptRow[];
+                .all(scope, userId)) as DatabaseSystemPromptRow[];
             return rows.map((row) => promptParse(row));
         }
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM system_prompts WHERE scope = ? ORDER BY created_at ASC")
-            .all(scope) as DatabaseSystemPromptRow[];
+            .all(scope)) as DatabaseSystemPromptRow[];
         return rows.map((row) => promptParse(row));
     }
 
     async findEnabled(userId?: string): Promise<SystemPromptDbRecord[]> {
         if (userId) {
-            const rows = await this.db
+            const rows = (await this.db
                 .prepare(
                     "SELECT * FROM system_prompts WHERE enabled = 1 AND (scope = 'global' OR (scope = 'user' AND user_id = ?)) ORDER BY created_at ASC"
                 )
-                .all(userId) as DatabaseSystemPromptRow[];
+                .all(userId)) as DatabaseSystemPromptRow[];
             return rows.map((row) => promptParse(row));
         }
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM system_prompts WHERE enabled = 1 AND scope = 'global' ORDER BY created_at ASC")
-            .all() as DatabaseSystemPromptRow[];
+            .all()) as DatabaseSystemPromptRow[];
         return rows.map((row) => promptParse(row));
     }
 
@@ -189,7 +189,7 @@ export class SystemPromptsRepository {
     }
 
     private async promptLoadById(id: string): Promise<SystemPromptDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM system_prompts WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM system_prompts WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseSystemPromptRow
             | undefined;
         if (!row) {

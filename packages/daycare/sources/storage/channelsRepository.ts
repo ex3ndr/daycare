@@ -89,7 +89,7 @@ export class ChannelsRepository {
             return null;
         }
 
-        const row = await this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name) as
+        const row = (await this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name)) as
             | DatabaseChannelRow
             | undefined;
         if (!row) {
@@ -103,9 +103,9 @@ export class ChannelsRepository {
     }
 
     async findMany(ctx: Context): Promise<ChannelDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM channels WHERE user_id = ? ORDER BY created_at ASC, id ASC")
-            .all(ctx.userId) as DatabaseChannelRow[];
+            .all(ctx.userId)) as DatabaseChannelRow[];
         return rows.map((row) => channelClone(this.channelParse(row)));
     }
 
@@ -114,9 +114,9 @@ export class ChannelsRepository {
             return channelsSort(Array.from(this.channelsById.values())).map((record) => channelClone(record));
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM channels ORDER BY created_at ASC, id ASC")
-            .all() as DatabaseChannelRow[];
+            .all()) as DatabaseChannelRow[];
         const parsed = rows.map((row) => this.channelParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -205,9 +205,9 @@ export class ChannelsRepository {
             )
             .run(channelId, record.userId, record.agentId, record.username, record.joinedAt);
 
-        const existing = await this.db
+        const existing = (await this.db
             .prepare("SELECT * FROM channel_members WHERE channel_id = ? AND agent_id = ? LIMIT 1")
-            .get(channelId, record.agentId) as DatabaseChannelMemberRow | undefined;
+            .get(channelId, record.agentId)) as DatabaseChannelMemberRow | undefined;
         if (!existing) {
             throw new Error("Failed to load inserted channel member.");
         }
@@ -224,9 +224,9 @@ export class ChannelsRepository {
     }
 
     async findMembers(channelId: string): Promise<ChannelMemberDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM channel_members WHERE channel_id = ? ORDER BY joined_at ASC, id ASC")
-            .all(channelId) as DatabaseChannelMemberRow[];
+            .all(channelId)) as DatabaseChannelMemberRow[];
         return rows.map((row) => memberParse(row));
     }
 
@@ -236,7 +236,7 @@ export class ChannelsRepository {
     }
 
     private async channelLoadById(id: string): Promise<ChannelDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseChannelRow
             | undefined;
         if (!row) {

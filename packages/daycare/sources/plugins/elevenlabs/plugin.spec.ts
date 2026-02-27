@@ -61,25 +61,7 @@ describe("elevenlabs plugin", () => {
 
         const fetchMock = vi.fn(async (input: unknown, init?: RequestInit) => {
             const url = String(input);
-            if (url.endsWith("/v1/voices")) {
-                return new Response(
-                    JSON.stringify({
-                        voices: [
-                            {
-                                voice_id: "voice-rachel",
-                                name: "Rachel",
-                                labels: { language: "en" },
-                                preview_url: "https://example.com/rachel.mp3"
-                            }
-                        ]
-                    }),
-                    {
-                        status: 200,
-                        headers: { "Content-Type": "application/json" }
-                    }
-                );
-            }
-            if (url.includes("/v1/text-to-speech/voice-rachel")) {
+            if (url.includes("/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM")) {
                 expect(init?.method).toBe("POST");
                 return new Response(Buffer.from("audio-bytes"), {
                     status: 200,
@@ -135,10 +117,20 @@ describe("elevenlabs plugin", () => {
         });
         expect(voices).toEqual([
             {
-                id: "voice-rachel",
-                name: "Rachel",
-                language: "en",
-                preview: "https://example.com/rachel.mp3"
+                id: "21m00Tcm4TlvDq8ikWAM",
+                description: "Rachel - warm, expressive female voice suited for narration and assistants."
+            },
+            {
+                id: "AZnzlk1XvdvUeBnXmlld",
+                description: "Domi - clear female voice with energetic delivery for short-form content."
+            },
+            {
+                id: "EXAVITQu4vr4xnSDxMaL",
+                description: "Bella - friendly female voice with conversational tone."
+            },
+            {
+                id: "ErXwobaYiN019PkySvjV",
+                description: "Antoni - deep male voice for announcements and narration."
             }
         ]);
 

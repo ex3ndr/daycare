@@ -24,7 +24,8 @@ export type SpeechGenerationContext = {
 
 export type SpeechVoice = {
     id: string;
-    name: string;
+    description: string;
+    name?: string;
     language?: string;
     preview?: string;
 };

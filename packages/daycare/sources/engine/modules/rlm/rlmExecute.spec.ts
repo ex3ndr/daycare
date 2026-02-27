@@ -167,8 +167,9 @@ describe("rlmExecute", () => {
         ).rejects.toThrow("Python VM crashed: failed to persist checkpoint");
 
         expect(records.map((record) => record.type)).toEqual(["rlm_start", "rlm_tool_result"]);
-        const toolResult = records.find((record): record is Extract<AgentHistoryRecord, { type: "rlm_tool_result" }> =>
-            record.type === "rlm_tool_result"
+        const toolResult = records.find(
+            (record): record is Extract<AgentHistoryRecord, { type: "rlm_tool_result" }> =>
+                record.type === "rlm_tool_result"
         );
         expect(toolResult?.toolIsError).toBe(true);
         expect(toolResult?.toolResult).toContain("failed to persist checkpoint");
@@ -239,10 +240,7 @@ function createResolver(handler: (name: string, args: unknown) => Promise<ToolEx
     };
 }
 
-function createContext(options?: {
-    activeSessionId?: string | null;
-    agentsDir?: string;
-}): ToolExecutionContext {
+function createContext(options?: { activeSessionId?: string | null; agentsDir?: string }): ToolExecutionContext {
     const activeSessionId = options?.activeSessionId ?? null;
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],

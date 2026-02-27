@@ -12,11 +12,11 @@ describe("databaseMigrate", () => {
             const applied = await databaseMigrate(db);
             expect(applied.length).toBeGreaterThan(0);
 
-            const tables = await db
+            const tables = (await db
                 .prepare(
                     "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
                 )
-                .all() as Array<{ name?: string }>;
+                .all()) as Array<{ name?: string }>;
             expect(tables.some((entry) => entry.name === "users")).toBe(true);
         } finally {
             db.close();

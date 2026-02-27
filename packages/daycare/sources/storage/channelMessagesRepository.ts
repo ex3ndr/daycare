@@ -48,7 +48,7 @@ export class ChannelMessagesRepository {
 
     async findRecent(ctx: Context, channelId: string, limit = 50): Promise<ChannelMessageDbRecord[]> {
         const normalizedLimit = Math.min(500, Math.max(1, Math.floor(limit)));
-        const rows = await this.db
+        const rows = (await this.db
             .prepare(
                 `
                   SELECT *
@@ -58,7 +58,7 @@ export class ChannelMessagesRepository {
                   LIMIT ?
                 `
             )
-            .all(ctx.userId, channelId, normalizedLimit) as DatabaseChannelMessageRow[];
+            .all(ctx.userId, channelId, normalizedLimit)) as DatabaseChannelMessageRow[];
         return rows
             .map((row) => this.messageParse(row))
             .reverse()

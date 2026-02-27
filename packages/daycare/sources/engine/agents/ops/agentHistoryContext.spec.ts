@@ -211,9 +211,7 @@ describe("agentHistoryContext", () => {
         const text =
             typeof user.content === "string"
                 ? user.content
-                : user.content
-                      .map((part) => (part.type === "text" ? part.text : ""))
-                      .join("\n");
+                : user.content.map((part) => (part.type === "text" ? part.text : "")).join("\n");
         expect(text).toContain("<profile_name_notice>Set profile name.</profile_name_notice>");
     });
 });

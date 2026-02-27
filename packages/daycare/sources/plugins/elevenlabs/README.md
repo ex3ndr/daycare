@@ -6,17 +6,20 @@ The `elevenlabs` plugin registers a `SpeechGenerationProvider` for speech synthe
 
 - Registers a speech provider via `registerSpeechProvider()`
 - Implements `generate()` using ElevenLabs text-to-speech API
-- Implements `listVoices()` using ElevenLabs voices API
+- Implements `listVoices()` using a local voice catalog (`id` + `description`)
 - Saves generated audio via `fileStore.saveBuffer()`
 
 ## Settings
 
 - `model` (optional): default TTS model (`eleven_multilingual_v2`)
-- `voice` (optional): default voice id or name (`Rachel`)
+- `voice` (optional): default voice id (`21m00Tcm4TlvDq8ikWAM`)
 - `outputFormat` (optional): default ElevenLabs output format (`mp3_44100_128`)
 - `providerId` (optional): registered provider id (defaults to plugin id)
 - `label` (optional): provider label shown in registry
 - `authId` (optional): auth key id used to read the API token (defaults to `elevenlabs`)
+- `voices` (optional): hardcoded voice catalog entries used by `list_voices`
+  - item shape: `{ id: string, description: string }`
+  - defaults to built-in catalog from `voiceCatalog.ts`
 
 ## Auth
 
@@ -34,9 +37,8 @@ sequenceDiagram
 
     Tool->>Registry: Resolve provider
     Tool->>Plugin: generate(request) or listVoices()
-    Plugin->>API: GET /v1/voices
     Plugin->>API: POST /v1/text-to-speech/{voice_id}
-    API-->>Plugin: voices JSON / audio bytes
+    API-->>Plugin: audio bytes
     Plugin->>FS: saveBuffer(audio)
     Plugin-->>Tool: FileReference[] or SpeechVoice[]
 ```

@@ -51,7 +51,7 @@ describe("Signals", () => {
             expect(all).toHaveLength(1);
             expect(all[0]?.id).toBe(signal.id);
 
-            const rows = await storage.db.prepare("SELECT type FROM signals_events").all() as Array<{ type: string }>;
+            const rows = (await storage.db.prepare("SELECT type FROM signals_events").all()) as Array<{ type: string }>;
             expect(rows.map((row) => row.type)).toEqual(["build.completed"]);
         } finally {
             await rm(dir, { recursive: true, force: true });

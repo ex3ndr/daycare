@@ -202,7 +202,8 @@ export class Storage {
 function sqliteUniqueConstraintErrorIs(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error ?? "");
     return (
-        message.includes("UNIQUE constraint failed") || message.includes("duplicate key value violates unique constraint")
+        message.includes("UNIQUE constraint failed") ||
+        message.includes("duplicate key value violates unique constraint")
     );
 }
 

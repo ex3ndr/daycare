@@ -14,7 +14,7 @@ export class SessionsRepository {
     }
 
     async findById(id: string): Promise<SessionDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM sessions WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM sessions WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseSessionRow
             | undefined;
         if (!row) {
@@ -24,9 +24,9 @@ export class SessionsRepository {
     }
 
     async findByAgentId(agentId: string): Promise<SessionDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM sessions WHERE agent_id = ? ORDER BY created_at ASC")
-            .all(agentId) as DatabaseSessionRow[];
+            .all(agentId)) as DatabaseSessionRow[];
         return rows.map((row) => this.sessionParse(row));
     }
 
@@ -56,7 +56,9 @@ export class SessionsRepository {
      * Expects: sessionId is valid.
      */
     async endSession(sessionId: string, endedAt: number): Promise<void> {
-        await this.db.prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL").run(endedAt, sessionId);
+        await this.db
+            .prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL")
+            .run(endedAt, sessionId);
     }
 
     /**
@@ -81,9 +83,9 @@ export class SessionsRepository {
      * Expects: limit > 0.
      */
     async findInvalidated(limit: number): Promise<SessionDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM sessions WHERE invalidated_at IS NOT NULL ORDER BY invalidated_at ASC LIMIT ?")
-            .all(limit) as DatabaseSessionRow[];
+            .all(limit)) as DatabaseSessionRow[];
         return rows.map((row) => this.sessionParse(row));
     }
 

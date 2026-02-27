@@ -34,9 +34,9 @@ export class InboxRepository {
     }
 
     async findByAgentId(agentId: string): Promise<InboxDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM inbox WHERE agent_id = ? ORDER BY posted_at ASC, id ASC")
-            .all(agentId) as DatabaseInboxRow[];
+            .all(agentId)) as DatabaseInboxRow[];
         return rows.map((row) => ({
             id: row.id,
             agentId: row.agent_id,

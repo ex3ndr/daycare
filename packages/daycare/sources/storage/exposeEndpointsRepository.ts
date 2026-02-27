@@ -101,9 +101,9 @@ export class ExposeEndpointsRepository {
     }
 
     async findMany(ctx: Context): Promise<ExposeEndpointDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM expose_endpoints WHERE user_id = ? ORDER BY created_at ASC, id ASC")
-            .all(ctx.userId) as DatabaseExposeEndpointRow[];
+            .all(ctx.userId)) as DatabaseExposeEndpointRow[];
         return rows.map((entry) => endpointClone(this.endpointParse(entry)));
     }
 
@@ -118,9 +118,9 @@ export class ExposeEndpointsRepository {
             return cached;
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM expose_endpoints ORDER BY created_at ASC, id ASC")
-            .all() as DatabaseExposeEndpointRow[];
+            .all()) as DatabaseExposeEndpointRow[];
 
         const parsed = rows.map((row) => this.endpointParse(row));
 
@@ -206,7 +206,7 @@ export class ExposeEndpointsRepository {
     }
 
     private async endpointLoadById(id: string): Promise<ExposeEndpointDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM expose_endpoints WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM expose_endpoints WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseExposeEndpointRow
             | undefined;
         if (!row) {

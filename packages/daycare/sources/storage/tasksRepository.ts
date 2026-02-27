@@ -75,16 +75,16 @@ export class TasksRepository {
     }
 
     async findMany(ctx: Context): Promise<TaskDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM tasks WHERE user_id = ? AND deleted_at IS NULL ORDER BY updated_at ASC")
-            .all(ctx.userId) as DatabaseTaskRow[];
+            .all(ctx.userId)) as DatabaseTaskRow[];
         return rows.map((row) => taskClone(this.taskParse(row)));
     }
 
     async findAll(): Promise<TaskDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY updated_at ASC")
-            .all() as DatabaseTaskRow[];
+            .all()) as DatabaseTaskRow[];
         const parsed = rows.map((row) => this.taskParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -240,9 +240,9 @@ export class TasksRepository {
     }
 
     private async taskLoadById(userId: string, id: string): Promise<TaskDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM tasks WHERE user_id = ? AND id = ? LIMIT 1").get(userId, id) as
-            | DatabaseTaskRow
-            | undefined;
+        const row = (await this.db
+            .prepare("SELECT * FROM tasks WHERE user_id = ? AND id = ? LIMIT 1")
+            .get(userId, id)) as DatabaseTaskRow | undefined;
         if (!row) {
             return null;
         }

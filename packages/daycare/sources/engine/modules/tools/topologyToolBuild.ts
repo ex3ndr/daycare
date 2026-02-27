@@ -50,7 +50,7 @@ const topologyHeartbeatTriggerSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const topologyTaskSchema = Type.Object(
+const _topologyTaskSchema = Type.Object(
     {
         id: Type.String(),
         userId: Type.String(),
@@ -79,7 +79,7 @@ const topologySignalSubscriptionSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const topologyChannelSchema = Type.Object(
+const _topologyChannelSchema = Type.Object(
     {
         id: Type.String(),
         name: Type.String(),
@@ -109,7 +109,7 @@ const topologyExposeSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const topologySubuserSchema = Type.Object(
+const _topologySubuserSchema = Type.Object(
     {
         id: Type.String(),
         name: Type.Union([Type.String(), Type.Null()]),
@@ -131,7 +131,7 @@ const topologyFriendShareSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const topologyFriendSchema = Type.Object(
+const _topologyFriendSchema = Type.Object(
     {
         userId: Type.String(),
         nametag: Type.Union([Type.String(), Type.Null()]),

@@ -307,7 +307,7 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
-    const storage = options?.storage ?? await storageOpenTest();
+    const storage = options?.storage ?? (await storageOpenTest());
     const eventBus = new EngineEventBus();
     const signals = new Signals({
         eventBus,

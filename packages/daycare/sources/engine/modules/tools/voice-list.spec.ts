@@ -12,8 +12,8 @@ describe("buildVoiceListTool", () => {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-voice-list-tool-"));
         try {
             const listVoices = vi.fn(async () => [
-                { id: "voice-1", name: "Voice One", language: "en" },
-                { id: "voice-2", name: "Voice Two", language: "es" }
+                { id: "voice-1", description: "Voice One (English)" },
+                { id: "voice-2", description: "Voice Two (Spanish)" }
             ]);
             const registry = new SpeechGenerationRegistry();
             registry.register("plugin-a", {
@@ -30,8 +30,8 @@ describe("buildVoiceListTool", () => {
 
             expect(listVoices).toHaveBeenCalledTimes(1);
             expect(result.typedResult.voices).toEqual([
-                { id: "voice-1", name: "Voice One", provider: "provider-a", language: "en" },
-                { id: "voice-2", name: "Voice Two", provider: "provider-a", language: "es" }
+                { id: "voice-1", description: "Voice One (English)", provider: "provider-a" },
+                { id: "voice-2", description: "Voice Two (Spanish)", provider: "provider-a" }
             ]);
             expect(result.typedResult.summary).toContain("Found 2 voice(s)");
         } finally {
@@ -69,13 +69,13 @@ describe("buildVoiceListTool", () => {
                 id: "provider-a",
                 label: "Provider A",
                 generate: vi.fn(async () => ({ files: [] })),
-                listVoices: vi.fn(async () => [{ id: "voice-1", name: "Voice One", language: "en" }])
+                listVoices: vi.fn(async () => [{ id: "voice-1", description: "Voice One (English)" }])
             });
             registry.register("plugin-b", {
                 id: "provider-b",
                 label: "Provider B",
                 generate: vi.fn(async () => ({ files: [] })),
-                listVoices: vi.fn(async () => [{ id: "voice-2", name: "Voice Two", language: "fr" }])
+                listVoices: vi.fn(async () => [{ id: "voice-2", description: "Voice Two (French)" }])
             });
 
             const result = await buildVoiceListTool(registry).execute({}, contextBuild(tempDir), {
@@ -84,8 +84,8 @@ describe("buildVoiceListTool", () => {
             });
 
             expect(result.typedResult.voices).toEqual([
-                { id: "voice-1", name: "Voice One", provider: "provider-a", language: "en" },
-                { id: "voice-2", name: "Voice Two", provider: "provider-b", language: "fr" }
+                { id: "voice-1", description: "Voice One (English)", provider: "provider-a" },
+                { id: "voice-2", description: "Voice Two (French)", provider: "provider-b" }
             ]);
         } finally {
             await fs.rm(tempDir, { recursive: true, force: true });

@@ -47,9 +47,9 @@ export class HeartbeatTasksRepository {
     }
 
     async findMany(ctx: Context): Promise<HeartbeatTaskDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId) as DatabaseHeartbeatTaskRow[];
+            .all(ctx.userId)) as DatabaseHeartbeatTaskRow[];
         return rows.map((task) => heartbeatTaskClone(this.taskParse(task)));
     }
 
@@ -58,9 +58,9 @@ export class HeartbeatTasksRepository {
             return heartbeatTasksSort(Array.from(this.tasksById.values())).map((task) => heartbeatTaskClone(task));
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM tasks_heartbeat ORDER BY updated_at ASC")
-            .all() as DatabaseHeartbeatTaskRow[];
+            .all()) as DatabaseHeartbeatTaskRow[];
         const parsed = rows.map((row) => this.taskParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -75,9 +75,9 @@ export class HeartbeatTasksRepository {
     }
 
     async findManyByTaskId(ctx: Context, taskId: string): Promise<HeartbeatTaskDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId, taskId) as DatabaseHeartbeatTaskRow[];
+            .all(ctx.userId, taskId)) as DatabaseHeartbeatTaskRow[];
         return rows.map((row) => heartbeatTaskClone(this.taskParse(row)));
     }
 
@@ -201,7 +201,7 @@ export class HeartbeatTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<HeartbeatTaskDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM tasks_heartbeat WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM tasks_heartbeat WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseHeartbeatTaskRow
             | undefined;
         if (!row) {

@@ -120,9 +120,9 @@ export class DelayedSignalsRepository {
     }
 
     async findDue(now: number): Promise<DelayedSignalDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM signals_delayed WHERE deliver_at <= ? ORDER BY deliver_at ASC, id ASC")
-            .all(now) as DatabaseDelayedSignalRow[];
+            .all(now)) as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -136,9 +136,9 @@ export class DelayedSignalsRepository {
 
     async findMany(ctx: Context): Promise<DelayedSignalDbRecord[]> {
         const userId = contextUserIdRequire(ctx);
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM signals_delayed WHERE user_id = ? ORDER BY deliver_at ASC, id ASC")
-            .all(userId) as DatabaseDelayedSignalRow[];
+            .all(userId)) as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -155,9 +155,9 @@ export class DelayedSignalsRepository {
             return delayedSignalsSort(Array.from(this.signalsById.values())).map((entry) => delayedSignalClone(entry));
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM signals_delayed ORDER BY deliver_at ASC, id ASC")
-            .all() as DatabaseDelayedSignalRow[];
+            .all()) as DatabaseDelayedSignalRow[];
         const parsed = rows.map((row) => this.signalParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -209,7 +209,7 @@ export class DelayedSignalsRepository {
     }
 
     private async signalLoadById(id: string): Promise<DelayedSignalDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM signals_delayed WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM signals_delayed WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseDelayedSignalRow
             | undefined;
         if (!row) {

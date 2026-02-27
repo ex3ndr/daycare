@@ -14,9 +14,9 @@ export class HistoryRepository {
     }
 
     async findBySessionId(sessionId: string): Promise<AgentHistoryRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM session_history WHERE session_id = ? ORDER BY id ASC")
-            .all(sessionId) as DatabaseSessionHistoryRow[];
+            .all(sessionId)) as DatabaseSessionHistoryRow[];
 
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
@@ -30,7 +30,7 @@ export class HistoryRepository {
               ORDER BY s.created_at ASC, h.id ASC
               ${limit !== undefined ? `LIMIT ${limit}` : ""}
             `;
-        const rows = await this.db.prepare(sql).all(agentId) as DatabaseSessionHistoryRow[];
+        const rows = (await this.db.prepare(sql).all(agentId)) as DatabaseSessionHistoryRow[];
 
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
@@ -41,13 +41,13 @@ export class HistoryRepository {
      */
     async append(sessionId: string, record: AgentHistoryRecord): Promise<number> {
         const { type, at, ...data } = record;
-        const inserted = await this.db
+        const inserted = (await this.db
             .prepare(
                 `
               INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?) RETURNING id
             `
             )
-            .get(sessionId, type, at, JSON.stringify(data)) as { id: number | bigint } | undefined;
+            .get(sessionId, type, at, JSON.stringify(data))) as { id: number | bigint } | undefined;
         if (!inserted) {
             throw new Error("Failed to append history record.");
         }
@@ -59,9 +59,9 @@ export class HistoryRepository {
      * Expects: afterId >= 0; returns empty array when no records exist after afterId.
      */
     async findSinceId(sessionId: string, afterId: number): Promise<AgentHistoryRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM session_history WHERE session_id = ? AND id > ? ORDER BY id ASC")
-            .all(sessionId, afterId) as DatabaseSessionHistoryRow[];
+            .all(sessionId, afterId)) as DatabaseSessionHistoryRow[];
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
 
@@ -70,9 +70,9 @@ export class HistoryRepository {
      * Returns null when the session has no history records.
      */
     async maxId(sessionId: string): Promise<number | null> {
-        const row = await this.db
+        const row = (await this.db
             .prepare("SELECT MAX(id) AS max_id FROM session_history WHERE session_id = ?")
-            .get(sessionId) as { max_id: number | bigint | null };
+            .get(sessionId)) as { max_id: number | bigint | null };
         return row.max_id !== null ? Number(row.max_id) : null;
     }
 }

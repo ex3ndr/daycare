@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-
+import { messageContextMerge } from "../../messages/messageContextMerge.js";
 import type {
     AgentInboxCompletion,
     AgentInboxEntry,
@@ -7,7 +7,6 @@ import type {
     AgentInboxMessage,
     AgentInboxSteering
 } from "./agentTypes.js";
-import { messageContextMerge } from "../../messages/messageContextMerge.js";
 
 /**
  * AgentInbox is a single-consumer queue for agent work items.

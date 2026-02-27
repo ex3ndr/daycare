@@ -6,9 +6,10 @@ import type {
     SpeechVoice
 } from "../../engine/modules/speech/types.js";
 import { definePlugin } from "../../engine/plugins/types.js";
+import { type ElevenLabsVoiceCatalogEntry, elevenLabsVoiceCatalogDefault } from "./voiceCatalog.js";
 
 const DEFAULT_MODEL = "eleven_multilingual_v2";
-const DEFAULT_VOICE = "Rachel";
+const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_OUTPUT_FORMAT = "mp3_44100_128";
 const DEFAULT_BASE_URL = "https://api.elevenlabs.io";
 
@@ -19,24 +20,20 @@ const settingsSchema = z
         outputFormat: z.string().min(1).optional(),
         providerId: z.string().min(1).optional(),
         label: z.string().min(1).optional(),
-        authId: z.string().min(1).optional()
+        authId: z.string().min(1).optional(),
+        voices: z
+            .array(
+                z.object({
+                    id: z.string().min(1),
+                    description: z.string().min(1)
+                })
+            )
+            .nonempty()
+            .optional()
     })
     .passthrough();
 
 type ElevenLabsSettings = z.infer<typeof settingsSchema>;
-
-type ElevenLabsVoiceRecord = {
-    voice_id?: string;
-    name?: string;
-    preview_url?: string;
-    labels?: {
-        language?: string;
-    };
-};
-
-type ElevenLabsVoicesResponse = {
-    voices?: ElevenLabsVoiceRecord[];
-};
 
 export const plugin = definePlugin({
     settingsSchema,
@@ -63,6 +60,7 @@ export const plugin = definePlugin({
         const providerId = settings.providerId ?? api.instance.pluginId;
         const label = settings.label ?? providerId;
         const authId = settings.authId ?? "elevenlabs";
+        const voiceCatalog = speechVoiceCatalogResolve(settings);
 
         return {
             load: async () => {
@@ -70,10 +68,10 @@ export const plugin = definePlugin({
                     id: providerId,
                     label,
                     generate: async (request, context) => {
-                        return speechGenerate(request, context, settings, authId);
+                        return speechGenerate(request, context, settings, authId, voiceCatalog);
                     },
-                    listVoices: async (context) => {
-                        return speechVoicesList(context, authId);
+                    listVoices: async () => {
+                        return speechVoicesList(voiceCatalog);
                     }
                 });
             },
@@ -88,7 +86,8 @@ async function speechGenerate(
     request: SpeechGenerationRequest,
     context: SpeechGenerationContext,
     settings: ElevenLabsSettings,
-    authId: string
+    authId: string,
+    voiceCatalog: ElevenLabsVoiceCatalogEntry[]
 ): Promise<SpeechGenerationResult> {
     const apiKey = await context.auth.getApiKey(authId);
     if (!apiKey) {
@@ -96,9 +95,9 @@ async function speechGenerate(
     }
 
     const model = request.model ?? settings.model ?? DEFAULT_MODEL;
-    const voice = request.voice ?? settings.voice ?? DEFAULT_VOICE;
+    const voice = request.voice ?? settings.voice ?? DEFAULT_VOICE_ID;
     const outputFormat = request.outputFormat ?? settings.outputFormat ?? DEFAULT_OUTPUT_FORMAT;
-    const voiceId = await speechVoiceIdResolve(voice, apiKey);
+    const voiceId = speechVoiceIdResolve(voice, voiceCatalog);
 
     const payload: Record<string, unknown> = {
         text: request.text,
@@ -150,68 +149,37 @@ async function speechGenerate(
     };
 }
 
-async function speechVoicesList(context: SpeechGenerationContext, authId: string): Promise<SpeechVoice[]> {
-    const apiKey = await context.auth.getApiKey(authId);
-    if (!apiKey) {
-        throw new Error("Missing elevenlabs apiKey in auth store");
-    }
-
-    const voices = await speechVoicesFetch(apiKey);
-    const mapped: SpeechVoice[] = [];
-    for (const voice of voices) {
-        const id = voice.voice_id?.trim() ?? "";
-        const name = voice.name?.trim() ?? "";
-        if (id.length === 0 || name.length === 0) {
-            continue;
-        }
-        const language = voice.labels?.language?.trim() || undefined;
-        const preview = voice.preview_url?.trim() || undefined;
-        mapped.push({
-            id,
-            name,
-            language,
-            preview
-        });
-    }
-    return mapped;
+function speechVoicesList(voiceCatalog: ElevenLabsVoiceCatalogEntry[]): Promise<SpeechVoice[]> {
+    return Promise.resolve(
+        voiceCatalog.map((voice) => ({
+            id: voice.id,
+            description: voice.description
+        }))
+    );
 }
 
-async function speechVoiceIdResolve(voice: string, apiKey: string): Promise<string> {
+function speechVoiceIdResolve(voice: string, voiceCatalog: ElevenLabsVoiceCatalogEntry[]): string {
     const value = voice.trim();
     if (value.length === 0) {
         throw new Error("Voice must be a non-empty string");
     }
 
-    const voices = await speechVoicesFetch(apiKey);
     const targetLower = value.toLowerCase();
-    for (const entry of voices) {
-        if (entry.voice_id?.trim() === value) {
-            return entry.voice_id;
+    for (const entry of voiceCatalog) {
+        if (entry.id === value) {
+            return entry.id;
         }
     }
-    for (const entry of voices) {
-        const entryName = entry.name?.trim().toLowerCase();
-        if (entryName && entryName === targetLower && entry.voice_id?.trim()) {
-            return entry.voice_id;
+    for (const entry of voiceCatalog) {
+        if (entry.description.toLowerCase() === targetLower) {
+            return entry.id;
         }
     }
-
-    throw new Error(`ElevenLabs voice not found: ${voice}`);
+    return value;
 }
 
-async function speechVoicesFetch(apiKey: string): Promise<ElevenLabsVoiceRecord[]> {
-    const response = await fetch(`${DEFAULT_BASE_URL}/v1/voices`, {
-        method: "GET",
-        headers: {
-            "xi-api-key": apiKey
-        }
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`ElevenLabs voices request failed: ${response.status} - ${errorText}`);
-    }
-    const data = (await response.json()) as ElevenLabsVoicesResponse;
-    return data.voices ?? [];
+function speechVoiceCatalogResolve(settings: ElevenLabsSettings): ElevenLabsVoiceCatalogEntry[] {
+    return settings.voices ?? elevenLabsVoiceCatalogDefault;
 }
 
 function speechMimeTypeResolve(outputFormat: string, contentType: string | null): string {

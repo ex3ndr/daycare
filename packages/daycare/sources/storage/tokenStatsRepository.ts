@@ -139,7 +139,7 @@ export class TokenStatsRepository {
             values.push(limit);
         }
 
-        const rows = await this.db.prepare(sql).all(...values) as DatabaseTokenStatsHourlyRow[];
+        const rows = (await this.db.prepare(sql).all(...values)) as DatabaseTokenStatsHourlyRow[];
         return rows.map((row) => rowParse(row));
     }
 }

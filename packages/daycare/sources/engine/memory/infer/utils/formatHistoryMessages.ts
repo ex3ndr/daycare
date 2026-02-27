@@ -18,12 +18,13 @@ export function formatHistoryMessages(records: AgentHistoryRecord[], isForegroun
                 parts.push(`## ${userLabel}\n\n${record.text}`);
                 break;
 
-            case "assistant_message":
+            case "assistant_message": {
                 const assistantText = messageContentExtractText(record.content);
                 if (assistantText.length > 0) {
                     parts.push(`## ${assistantLabel}\n\n${assistantText}`);
                 }
                 break;
+            }
 
             case "note":
                 parts.push(`> Note: ${record.text}`);

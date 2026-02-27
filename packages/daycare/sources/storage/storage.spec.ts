@@ -20,11 +20,11 @@ describe("Storage", () => {
         const db = databaseOpenTest();
         try {
             const storage = Storage.fromDatabase(db);
-            const tables = await storage.db
+            const tables = (await storage.db
                 .prepare(
                     "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
                 )
-                .all() as Array<{ name?: string }>;
+                .all()) as Array<{ name?: string }>;
 
             expect(tables.some((entry) => entry.name === "agents")).toBe(false);
             expect(tables.some((entry) => entry.name === "users")).toBe(false);
@@ -35,11 +35,11 @@ describe("Storage", () => {
 
     it("opens with migrations and closes connection", async () => {
         const storage = await storageOpenTest();
-        const tables = await storage.db
+        const tables = (await storage.db
             .prepare(
                 "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
             )
-            .all() as Array<{ name?: string }>;
+            .all()) as Array<{ name?: string }>;
         expect(tables.some((entry) => entry.name === "agents")).toBe(true);
         expect(tables.some((entry) => entry.name === "users")).toBe(true);
         storage.db.close();

@@ -132,11 +132,10 @@ describe("process management user scope", () => {
         const stopAllForContext = vi.fn(async () => []);
         const tool = buildProcessStopAllTool({ stopAllForContext } as unknown as Processes);
 
-        await tool.execute(
-            { signal: "SIGTERM" },
-            createContext({ workingDir: "/workspace", writeDirs: ["/tmp"] }),
-            { id: "call-stop-all", name: "process_stop_all" }
-        );
+        await tool.execute({ signal: "SIGTERM" }, createContext({ workingDir: "/workspace", writeDirs: ["/tmp"] }), {
+            id: "call-stop-all",
+            name: "process_stop_all"
+        });
 
         expect(stopAllForContext).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1" }), "SIGTERM");
     });

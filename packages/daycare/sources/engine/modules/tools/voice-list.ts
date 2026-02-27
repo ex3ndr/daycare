@@ -19,9 +19,8 @@ const voiceListResultSchema = Type.Object(
             Type.Object(
                 {
                     id: Type.String(),
-                    name: Type.String(),
-                    provider: Type.String(),
-                    language: Type.Optional(Type.String())
+                    description: Type.String(),
+                    provider: Type.String()
                 },
                 { additionalProperties: false }
             )
@@ -34,9 +33,8 @@ type VoiceListResult = {
     summary: string;
     voices: Array<{
         id: string;
-        name: string;
+        description: string;
         provider: string;
-        language?: string;
     }>;
 };
 
@@ -81,9 +79,8 @@ export function buildVoiceListTool(speechRegistry: SpeechGenerationRegistry): To
                 for (const voice of listed) {
                     voices.push({
                         id: voice.id,
-                        name: voice.name,
-                        provider: provider.id,
-                        language: voice.language
+                        description: voice.description,
+                        provider: provider.id
                     });
                 }
             }

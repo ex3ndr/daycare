@@ -175,12 +175,12 @@ export class ProcessesRepository {
         }
 
         const rows = options.userId
-            ? (await this.db
+            ? ((await this.db
                   .prepare("SELECT * FROM processes WHERE user_id = ? ORDER BY created_at ASC, id ASC")
-                  .all(options.userId) as DatabaseProcessRow[])
-            : (await this.db
+                  .all(options.userId)) as DatabaseProcessRow[])
+            : ((await this.db
                   .prepare("SELECT * FROM processes ORDER BY created_at ASC, id ASC")
-                  .all() as DatabaseProcessRow[]);
+                  .all()) as DatabaseProcessRow[]);
 
         const parsed = rows.map((row) => this.recordParse(row));
 
@@ -348,7 +348,7 @@ export class ProcessesRepository {
     }
 
     private async recordLoadById(id: string): Promise<ProcessDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM processes WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM processes WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseProcessRow
             | undefined;
         if (!row) {

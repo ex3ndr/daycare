@@ -53,7 +53,11 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
             const payload = args as SignalEventsCsvArgs;
             const timeRange = signalEventsCsvTimeRangeNormalize(payload.fromAt, payload.toAt);
             const types = signalTypesNormalize(payload.types);
-            const records = signalEventsFilter(await signals.listRecentForContext(toolContext.ctx, 1000), timeRange, types);
+            const records = signalEventsFilter(
+                await signals.listRecentForContext(toolContext.ctx, 1000),
+                timeRange,
+                types
+            );
             const text = signalEventsCsvBuild(records);
 
             const summary = text;

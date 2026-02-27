@@ -105,7 +105,7 @@ export class SignalEventsRepository {
             values.push(offset);
         }
 
-        const rows = await this.db.prepare(sql).all(...values) as DatabaseSignalEventRow[];
+        const rows = (await this.db.prepare(sql).all(...values)) as DatabaseSignalEventRow[];
         const parsed = rows.map((row) => this.eventParse(row));
 
         if (!hasFilter) {
@@ -122,9 +122,9 @@ export class SignalEventsRepository {
 
     async findRecent(ctx: Context, limit = 200): Promise<SignalEventDbRecord[]> {
         const normalizedLimit = Math.min(1000, Math.max(1, Math.floor(limit)));
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM signals_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?")
-            .all(ctx.userId, normalizedLimit) as DatabaseSignalEventRow[];
+            .all(ctx.userId, normalizedLimit)) as DatabaseSignalEventRow[];
         const parsed = rows.map((row) => this.eventParse(row)).reverse();
         return parsed.map((event) => signalEventClone(event));
     }
@@ -140,9 +140,9 @@ export class SignalEventsRepository {
             return all.slice(all.length - normalizedLimit).map((event) => signalEventClone(event));
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM signals_events ORDER BY created_at DESC, id DESC LIMIT ?")
-            .all(normalizedLimit) as DatabaseSignalEventRow[];
+            .all(normalizedLimit)) as DatabaseSignalEventRow[];
         const parsed = rows.map((row) => this.eventParse(row)).reverse();
         return parsed.map((event) => signalEventClone(event));
     }
@@ -187,7 +187,7 @@ export class SignalEventsRepository {
     }
 
     private async eventLoadById(id: string): Promise<SignalEventDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM signals_events WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM signals_events WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseSignalEventRow
             | undefined;
         if (!row) {

@@ -251,7 +251,10 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoadAll(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -309,7 +312,10 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoadAll(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -421,10 +427,16 @@ describe("Agent", () => {
                 replyToMessageId: "88"
             });
 
-            const state = await agentStateRead(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
+            const state = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             expect(state?.activeSessionId).toBeTruthy();
             expect(state?.activeSessionId).not.toBe(beforeCompaction?.activeSessionId);
-            const history = await agentHistoryLoad(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoad(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             const firstHistoryRecord = history[0];
             expect(firstHistoryRecord?.type).toBe("user_message");
             if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
@@ -573,7 +585,10 @@ describe("Agent", () => {
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
-            const history = await agentHistoryLoad(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoad(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             expect(historyHasSignalText(history)).toBe(false);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -629,7 +644,10 @@ describe("Agent", () => {
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
-            const history = await agentHistoryLoadAll(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoadAll(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             expect(historyHasSignalText(history)).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -1637,7 +1655,11 @@ async function signalsBuild(
     });
 }
 
-async function delayedSignalsBuild(config: ConfigModule, eventBus: EngineEventBus, signals: Signals): Promise<DelayedSignals> {
+async function delayedSignalsBuild(
+    config: ConfigModule,
+    eventBus: EngineEventBus,
+    signals: Signals
+): Promise<DelayedSignals> {
     const storage = await storageOpenTest();
     return new DelayedSignals({
         config,

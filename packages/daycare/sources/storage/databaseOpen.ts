@@ -73,10 +73,12 @@ export class StorageDatabase {
         }
 
         this.closed = true;
-        this.closePromise = this.queue.tail.then(() => this.client.close()).then(
-            () => undefined,
-            () => undefined
-        );
+        this.closePromise = this.queue.tail
+            .then(() => this.client.close())
+            .then(
+                () => undefined,
+                () => undefined
+            );
         return this.closePromise;
     }
 
@@ -110,9 +112,7 @@ export class StorageDatabase {
 }
 
 export type StorageDatabasePath = string;
-export type StorageDatabaseTarget =
-    | { kind: "pglite"; path: StorageDatabasePath }
-    | { kind: "postgres"; url: string };
+export type StorageDatabaseTarget = { kind: "pglite"; path: StorageDatabasePath } | { kind: "postgres"; url: string };
 
 /**
  * Opens a storage database client for either pglite or server postgres targets.

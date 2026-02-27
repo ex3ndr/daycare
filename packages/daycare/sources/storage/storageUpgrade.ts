@@ -2,8 +2,8 @@ import type { Config } from "@/types";
 import { getLogger } from "../log.js";
 import { databaseClose } from "./databaseClose.js";
 import { databaseMigrate } from "./databaseMigrate.js";
-import { databaseOpen } from "./databaseOpen.js";
 import type { StorageDatabase } from "./databaseOpen.js";
+import { databaseOpen } from "./databaseOpen.js";
 import { migrations } from "./migrations/_migrations.js";
 
 const logger = getLogger("storage.upgrade");

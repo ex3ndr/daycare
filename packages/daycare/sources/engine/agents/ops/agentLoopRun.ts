@@ -5,14 +5,13 @@ import type { Logger } from "pino";
 import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
-import { tagExtractAll } from "../../../util/tagExtract.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
+import { messageContentClone } from "../../messages/messageContentClone.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
-import { messageContentClone } from "../../messages/messageContentClone.js";
 import { messageNoMessageIs } from "../../messages/messageNoMessageIs.js";
 import type { ConnectorRegistry } from "../../modules/connectorRegistry.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
@@ -27,8 +26,8 @@ import {
     rlmPrintCaptureFlushTrailing
 } from "../../modules/rlm/rlmPrintCapture.js";
 import { rlmResultTextBuild } from "../../modules/rlm/rlmResultTextBuild.js";
-import { rlmSnapshotSave } from "../../modules/rlm/rlmSnapshotSave.js";
 import { rlmSnapshotLoad } from "../../modules/rlm/rlmSnapshotLoad.js";
+import { rlmSnapshotSave } from "../../modules/rlm/rlmSnapshotSave.js";
 import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
 import { rlmStepStart } from "../../modules/rlm/rlmStepStart.js";
 import { rlmStepToolCall } from "../../modules/rlm/rlmStepToolCall.js";

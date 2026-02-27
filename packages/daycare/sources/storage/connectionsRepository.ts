@@ -87,7 +87,7 @@ export class ConnectionsRepository {
 
     async find(id1: string, id2: string): Promise<ConnectionDbRecord | null> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const row = await this.db
+        const row = (await this.db
             .prepare(
                 `
                 SELECT *
@@ -96,7 +96,7 @@ export class ConnectionsRepository {
                 LIMIT 1
             `
             )
-            .get(userAId, userBId) as DatabaseConnectionRow | undefined;
+            .get(userAId, userBId)) as DatabaseConnectionRow | undefined;
         if (!row) {
             return null;
         }
@@ -104,7 +104,7 @@ export class ConnectionsRepository {
     }
 
     async findFriends(userId: string): Promise<ConnectionDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare(
                 `
                 SELECT *
@@ -115,12 +115,12 @@ export class ConnectionsRepository {
                 ORDER BY user_a_id ASC, user_b_id ASC
             `
             )
-            .all(userId, userId) as DatabaseConnectionRow[];
+            .all(userId, userId)) as DatabaseConnectionRow[];
         return rows.map((row) => connectionParse(row));
     }
 
     async findConnectionsForSubusersOf(ownerUserId: string): Promise<ConnectionDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare(
                 `
                 SELECT DISTINCT c.*
@@ -131,12 +131,12 @@ export class ConnectionsRepository {
                 ORDER BY c.user_a_id ASC, c.user_b_id ASC
             `
             )
-            .all(ownerUserId) as DatabaseConnectionRow[];
+            .all(ownerUserId)) as DatabaseConnectionRow[];
         return rows.map((row) => connectionParse(row));
     }
 
     async findConnectionsWithSubusersOf(friendUserId: string, ownerUserId: string): Promise<ConnectionDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare(
                 `
                 SELECT c.*
@@ -151,7 +151,7 @@ export class ConnectionsRepository {
                 ORDER BY c.user_a_id ASC, c.user_b_id ASC
             `
             )
-            .all(friendUserId, friendUserId, ownerUserId) as DatabaseConnectionRow[];
+            .all(friendUserId, friendUserId, ownerUserId)) as DatabaseConnectionRow[];
         return rows.map((row) => connectionParse(row));
     }
 

@@ -1,5 +1,3 @@
-import { type MontyComplete, MontySnapshot } from "@pydantic/monty";
-
 import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";

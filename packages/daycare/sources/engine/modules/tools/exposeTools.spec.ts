@@ -5,10 +5,12 @@ import { exposeListToolBuild } from "./exposeListToolBuild.js";
 import { exposeRemoveToolBuild } from "./exposeRemoveToolBuild.js";
 import { exposeUpdateToolBuild } from "./exposeUpdateToolBuild.js";
 
-function toolContextBuild(options: {
-    findMany?: () => Promise<unknown[]>;
-    findById?: (id: string) => Promise<{ id: string; userId: string } | null>;
-} = {}) {
+function toolContextBuild(
+    options: {
+        findMany?: () => Promise<unknown[]>;
+        findById?: (id: string) => Promise<{ id: string; userId: string } | null>;
+    } = {}
+) {
     return {
         ctx: {
             agentId: "agent-1",

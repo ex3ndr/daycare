@@ -36,7 +36,9 @@ function estimateFileSymbol(file: FileReference): number {
     return 0;
 }
 
-function estimateAssistantContentSymbols(record: Extract<AgentHistoryRecord, { type: "assistant_message" }>["content"]): number {
+function estimateAssistantContentSymbols(
+    record: Extract<AgentHistoryRecord, { type: "assistant_message" }>["content"]
+): number {
     return record.reduce((total, block) => total + estimateAssistantBlockSymbols(block), 0);
 }
 

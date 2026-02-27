@@ -1,5 +1,5 @@
-import * as React from "react";
 import { Ionicons } from "@expo/vector-icons";
+import * as React from "react";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
@@ -40,7 +40,12 @@ export default React.memo(function Welcome() {
                 </View>
 
                 <View style={[styles.instructionCard, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
-                    <Ionicons name="mail-unread-outline" size={24} color={theme.colors.onSurface} style={styles.instructionIcon} />
+                    <Ionicons
+                        name="mail-unread-outline"
+                        size={24}
+                        color={theme.colors.onSurface}
+                        style={styles.instructionIcon}
+                    />
                     <View style={styles.instructionTextContainer}>
                         <Text style={[styles.instructionTitle, { color: theme.colors.onSurface }]}>Ready to join?</Text>
                         <Text style={[styles.instructionSubtitle, { color: theme.colors.onSurfaceVariant }]}>
@@ -53,7 +58,21 @@ export default React.memo(function Welcome() {
     );
 });
 
-function FeatureItem({ icon, title, description, theme }: any) {
+type FeatureItemProps = {
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    title: string;
+    description: string;
+    theme: {
+        colors: {
+            primary: string;
+            onSurface: string;
+            onSurfaceVariant: string;
+            surfaceContainerHigh: string;
+        };
+    };
+};
+
+function FeatureItem({ icon, title, description, theme }: FeatureItemProps) {
     return (
         <View style={styles.featureItem}>
             <View style={[styles.featureIconContainer, { backgroundColor: theme.colors.surfaceContainerHigh }]}>

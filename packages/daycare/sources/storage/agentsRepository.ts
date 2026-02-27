@@ -30,7 +30,7 @@ export class AgentsRepository {
             if (existing) {
                 return agentClone(existing);
             }
-            const row = await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id) as
+            const row = (await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id)) as
                 | DatabaseAgentRow
                 | undefined;
             if (!row) {
@@ -48,7 +48,9 @@ export class AgentsRepository {
         if (this.allAgentsLoaded) {
             return agentsSort(Array.from(this.agentsById.values())).map((record) => agentClone(record));
         }
-        const rows = await this.db.prepare("SELECT * FROM agents ORDER BY updated_at ASC").all() as DatabaseAgentRow[];
+        const rows = (await this.db
+            .prepare("SELECT * FROM agents ORDER BY updated_at ASC")
+            .all()) as DatabaseAgentRow[];
         const parsed = rows.map((row) => this.agentParse(row));
         await this.cacheLock.inLock(() => {
             this.agentsById.clear();
@@ -66,9 +68,9 @@ export class AgentsRepository {
             return agentsSort(filtered).map((record) => agentClone(record));
         }
 
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM agents WHERE user_id = ? ORDER BY updated_at ASC")
-            .all(userId) as DatabaseAgentRow[];
+            .all(userId)) as DatabaseAgentRow[];
         const parsed = rows.map((row) => this.agentParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -208,7 +210,7 @@ export class AgentsRepository {
     }
 
     private async agentLoadById(id: string): Promise<AgentDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseAgentRow
             | undefined;
         if (!row) {

@@ -799,7 +799,11 @@ export class TelegramConnector implements Connector {
         }
     }
 
-    private async downloadFileFromTelegram(fileId: string, name: string, mimeType: string): Promise<FileReference | null> {
+    private async downloadFileFromTelegram(
+        fileId: string,
+        name: string,
+        mimeType: string
+    ): Promise<FileReference | null> {
         const downloadDir = path.join(this.dataDir, "downloads");
         await fs.mkdir(downloadDir, { recursive: true });
         try {

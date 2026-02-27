@@ -52,12 +52,12 @@ export class CronTasksRepository {
     async findMany(ctx: Context, options: CronTasksFindManyOptions = {}): Promise<CronTaskDbRecord[]> {
         const includeDisabled = options.includeDisabled === true;
         const rows = includeDisabled
-            ? (await this.db
+            ? ((await this.db
                   .prepare("SELECT * FROM tasks_cron WHERE user_id = ? ORDER BY updated_at ASC")
-                  .all(ctx.userId) as DatabaseCronTaskRow[])
-            : (await this.db
+                  .all(ctx.userId)) as DatabaseCronTaskRow[])
+            : ((await this.db
                   .prepare("SELECT * FROM tasks_cron WHERE user_id = ? AND enabled = 1 ORDER BY updated_at ASC")
-                  .all(ctx.userId) as DatabaseCronTaskRow[]);
+                  .all(ctx.userId)) as DatabaseCronTaskRow[]);
         return rows.map((row) => cronTaskClone(this.taskParse(row)));
     }
 
@@ -71,10 +71,12 @@ export class CronTasksRepository {
         }
 
         const rows = includeDisabled
-            ? (await this.db.prepare("SELECT * FROM tasks_cron ORDER BY updated_at ASC").all() as DatabaseCronTaskRow[])
-            : (await this.db
+            ? ((await this.db
+                  .prepare("SELECT * FROM tasks_cron ORDER BY updated_at ASC")
+                  .all()) as DatabaseCronTaskRow[])
+            : ((await this.db
                   .prepare("SELECT * FROM tasks_cron WHERE enabled = 1 ORDER BY updated_at ASC")
-                  .all() as DatabaseCronTaskRow[]);
+                  .all()) as DatabaseCronTaskRow[]);
         const parsed = rows.map((row) => this.taskParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -93,9 +95,9 @@ export class CronTasksRepository {
     }
 
     async findManyByTaskId(ctx: Context, taskId: string): Promise<CronTaskDbRecord[]> {
-        const rows = await this.db
+        const rows = (await this.db
             .prepare("SELECT * FROM tasks_cron WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId, taskId) as DatabaseCronTaskRow[];
+            .all(ctx.userId, taskId)) as DatabaseCronTaskRow[];
         return rows.map((row) => cronTaskClone(this.taskParse(row)));
     }
 
@@ -247,7 +249,7 @@ export class CronTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<CronTaskDbRecord | null> {
-        const row = await this.db.prepare("SELECT * FROM tasks_cron WHERE id = ? LIMIT 1").get(id) as
+        const row = (await this.db.prepare("SELECT * FROM tasks_cron WHERE id = ? LIMIT 1").get(id)) as
             | DatabaseCronTaskRow
             | undefined;
         if (!row) {
