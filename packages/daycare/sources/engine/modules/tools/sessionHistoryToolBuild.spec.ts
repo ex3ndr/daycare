@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import { contextForAgent } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
@@ -31,10 +32,11 @@ describe("sessionHistoryToolBuild", () => {
             const currentAgentId = createId();
             const targetAgentId = createId();
             const userId = createId();
+            const storage = await storageOpen(config.db.path);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 targetCtx,
                 {
                     type: "subagent",
@@ -94,10 +96,11 @@ describe("sessionHistoryToolBuild", () => {
             const currentAgentId = createId();
             const targetAgentId = createId();
             const userId = createId();
+            const storage = await storageOpen(config.db.path);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 targetCtx,
                 {
                     type: "subagent",
@@ -166,10 +169,11 @@ describe("sessionHistoryToolBuild", () => {
             const currentAgentId = createId();
             const targetAgentId = createId();
             const userId = createId();
+            const storage = await storageOpen(config.db.path);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 targetCtx,
                 {
                     type: "subagent",

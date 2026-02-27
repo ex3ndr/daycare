@@ -19,6 +19,7 @@ import type {
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
@@ -116,6 +117,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
                 connectorRegistry,
                 imageRegistry: new ImageGenerationRegistry(),
                 mediaRegistry: new MediaAnalysisRegistry(),
@@ -216,6 +218,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -248,7 +251,7 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoadAll(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -273,6 +276,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -305,7 +309,7 @@ describe("Agent", () => {
             );
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoadAll(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
             const userRecord = history.find((record) => record.type === "user_message");
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
@@ -374,6 +378,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
                 connectorRegistry,
                 imageRegistry: new ImageGenerationRegistry(),
                 mediaRegistry: new MediaAnalysisRegistry(),
@@ -395,7 +400,10 @@ describe("Agent", () => {
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "seed context" });
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
-            const beforeCompaction = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const beforeCompaction = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
             expect(beforeCompaction?.inferenceSessionId).toBeTruthy();
             const result = await postAndAwait(
                 agentSystem,
@@ -413,10 +421,10 @@ describe("Agent", () => {
                 replyToMessageId: "88"
             });
 
-            const state = await agentStateRead(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const state = await agentStateRead(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
             expect(state?.activeSessionId).toBeTruthy();
             expect(state?.activeSessionId).not.toBe(beforeCompaction?.activeSessionId);
-            const history = await agentHistoryLoad(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoad(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
             const firstHistoryRecord = history[0];
             expect(firstHistoryRecord?.type).toBe("user_message");
             if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
@@ -482,6 +490,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
                 connectorRegistry,
                 imageRegistry: new ImageGenerationRegistry(),
                 mediaRegistry: new MediaAnalysisRegistry(),
@@ -528,6 +537,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus,
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -563,7 +573,7 @@ describe("Agent", () => {
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
-            const history = await agentHistoryLoad(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoad(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
             expect(historyHasSignalText(history)).toBe(false);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -578,6 +588,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus,
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -618,7 +629,7 @@ describe("Agent", () => {
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
 
-            const history = await agentHistoryLoadAll(config, await contextForAgentIdRequire(agentSystem, agentId));
+            const history = await agentHistoryLoadAll(agentSystem.storage, await contextForAgentIdRequire(agentSystem, agentId));
             expect(historyHasSignalText(history)).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -633,6 +644,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus,
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -719,6 +731,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus,
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -775,6 +788,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: configModule,
                 eventBus,
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -835,6 +849,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: configModule,
                 eventBus,
+                storage: await storageOpen(config.db.path),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),

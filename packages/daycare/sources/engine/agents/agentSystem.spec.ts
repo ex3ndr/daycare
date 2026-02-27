@@ -8,7 +8,7 @@ import type { AgentDescriptor, AgentInboxItem, AgentInboxResult, AgentPostTarget
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import type { Storage } from "../../storage/storage.js";
-import { storageResolve } from "../../storage/storageResolve.js";
+import { storageOpen } from "../../storage/storageOpen.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
@@ -122,7 +122,7 @@ describe("AgentSystem", () => {
             await vi.advanceTimersByTimeAsync(POISON_PILL_DELAY_MS);
             await vi.waitFor(async () => {
                 const state = await agentStateRead(
-                    harness.config,
+                    harness.storage,
                     await contextForAgentIdRequire(harness.agentSystem, agentId)
                 );
                 expect(state?.state).toBe("dead");
@@ -153,7 +153,7 @@ describe("AgentSystem", () => {
             });
 
             const state = await agentStateRead(
-                harness.config,
+                harness.storage,
                 await contextForAgentIdRequire(harness.agentSystem, agentId)
             );
             expect(state?.state).toBe("sleeping");
@@ -221,7 +221,7 @@ describe("AgentSystem", () => {
             ).rejects.toThrow(`Agent is dead: ${agentId}`);
             await vi.waitFor(async () => {
                 const state = await agentStateRead(
-                    harness.config,
+                    harness.storage,
                     await contextForAgentIdRequire(harness.agentSystem, agentId)
                 );
                 expect(state?.state).toBe("dead");
@@ -247,7 +247,7 @@ describe("AgentSystem", () => {
 
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
             const beforeRestart = await agentStateRead(
-                first.config,
+                first.storage,
                 await contextForAgentIdRequire(first.agentSystem, agentId)
             );
             expect(beforeRestart?.state).toBe("sleeping");
@@ -262,7 +262,7 @@ describe("AgentSystem", () => {
 
             await vi.waitFor(async () => {
                 const state = await agentStateRead(
-                    second.config,
+                    second.storage,
                     await contextForAgentIdRequire(second.agentSystem, agentId)
                 );
                 expect(state?.state).toBe("dead");
@@ -290,7 +290,7 @@ describe("AgentSystem", () => {
 
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
             const beforeRestart = await agentStateRead(
-                first.config,
+                first.storage,
                 await contextForAgentIdRequire(first.agentSystem, agentId)
             );
             expect(beforeRestart?.state).toBe("sleeping");
@@ -325,14 +325,14 @@ describe("AgentSystem", () => {
 
             const agentId = await subagentCreate(first.agentSystem, first.eventBus);
             const current = await agentStateRead(
-                first.config,
+                first.storage,
                 await contextForAgentIdRequire(first.agentSystem, agentId)
             );
             if (!current) {
                 throw new Error("Missing state for subagent");
             }
             const deadState = { ...current, state: "dead" as const, updatedAt: Date.now() };
-            await agentStateWrite(first.config, await contextForAgentIdRequire(first.agentSystem, agentId), deadState);
+            await agentStateWrite(first.storage, await contextForAgentIdRequire(first.agentSystem, agentId), deadState);
             delayedSignalsA.stop();
 
             const second = await harnessCreate(dir);
@@ -395,7 +395,7 @@ describe("AgentSystem", () => {
                 throw new Error("Agent context missing");
             }
             const state = await agentStateRead(
-                harness.config,
+                harness.storage,
                 await contextForAgentIdRequire(harness.agentSystem, agentId)
             );
             if (!state) {
@@ -584,7 +584,7 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
-    const storage = storageResolve(config);
+    const storage = await storageOpen(config.db.path);
     const eventBus = new EngineEventBus();
     const signals = new Signals({
         eventBus,

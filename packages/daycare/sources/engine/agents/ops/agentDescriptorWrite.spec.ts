@@ -6,7 +6,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
-import { storageResolve } from "../../../storage/storageResolve.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent } from "../context.js";
@@ -23,7 +23,7 @@ describe("agentDescriptorWrite", () => {
 
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageResolve(config);
+            const storage = await storageOpen(config.db.path);
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const ctx = contextForAgent({ userId, agentId });

@@ -5,7 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../../../config/configResolve.js";
-import { storageResolve } from "../../../storage/storageResolve.js";
+import { storageOpen } from "../../../storage/storageOpen.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent } from "../context.js";
@@ -20,11 +20,12 @@ describe("agentStateRead", () => {
         const agentId = createId();
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const storage = await storageOpen(config.db.path);
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const ctx = contextForAgent({ userId, agentId });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 ctx,
                 {
                     type: "cron",
@@ -33,7 +34,7 @@ describe("agentStateRead", () => {
                 },
                 permissions
             );
-            const sessionId = await storageResolve(config).sessions.create({
+            const sessionId = await storage.sessions.create({
                 agentId,
                 inferenceSessionId: "session-1",
                 createdAt: 1
@@ -69,6 +70,7 @@ describe("agentStateRead", () => {
         const ctx = contextForAgent({ userId: createId(), agentId });
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            await storageOpen(config.db.path);
 
             const restored = await agentStateRead(config, ctx);
             expect(restored).toBeNull();
@@ -82,11 +84,12 @@ describe("agentStateRead", () => {
         const agentId = createId();
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const storage = await storageOpen(config.db.path);
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const ctx = contextForAgent({ userId, agentId });
             await agentDescriptorWrite(
-                storageResolve(config),
+                storage,
                 ctx,
                 {
                     type: "cron",
