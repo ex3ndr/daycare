@@ -134,6 +134,11 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
     const pluginCatalog = buildPluginCatalog();
     serverMemoryRoutesRegister(app, options.runtime);
 
+    app.get("/", async (_request, reply) => {
+        logger.debug("event: GET /");
+        return reply.type("text/plain; charset=utf-8").send("Welcome to Daycare API!");
+    });
+
     app.get("/v1/engine/status", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/status");
         const status = options.runtime.getStatus();

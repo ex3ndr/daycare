@@ -39,6 +39,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `subagent-dead-state.md` - subagent poison-pill lifecycle and dead-state transitions
 - `agent-context-restore.md` - active-session history context rebuild on restore
 - `engine.md` - engine socket updates and control plane
+- `api-root-welcome.md` - API root route plain-text welcome response
 - `engine-agent.md` - engine agent helpers
 - `engine-heartbeat-utils.md` - engine heartbeat utilities
 - `engine-message-agent-helpers.md` - extracted message + agent helpers
