@@ -62,7 +62,16 @@ export function appAuthLinkUrlBuild(host: string, port: number, token: string): 
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
         throw new Error("App port must be an integer between 1 and 65535.");
     }
-    return `http://${normalizedHost}:${port}/auth?token=${encodeURIComponent(token)}`;
+    const backendUrl = `http://${normalizedHost}:${port}`;
+    const hashPayload = appAuthLinkHashPayloadEncode({
+        backendUrl,
+        token
+    });
+    return `${backendUrl}/auth#${hashPayload}`;
+}
+
+function appAuthLinkHashPayloadEncode(payload: { backendUrl: string; token: string }): string {
+    return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
 
 export type AppAuthLinkToolOptions = {

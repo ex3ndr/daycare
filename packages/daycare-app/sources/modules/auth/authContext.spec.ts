@@ -10,33 +10,33 @@ describe("authStoreCreate", () => {
         };
 
         const store = authStoreCreate({
-            baseUrl: "http://localhost:7332",
             storage,
             validateToken: vi.fn(async () => ({ ok: true, userId: "user-1" }))
         });
 
         expect(store.getState().state).toBe("unauthenticated");
 
-        await store.getState().login("jwt-token");
+        await store.getState().login("http://localhost:7332", "jwt-token");
         expect(store.getState().state).toBe("authenticated");
+        expect(store.getState().baseUrl).toBe("http://localhost:7332");
         expect(store.getState().token).toBe("jwt-token");
         expect(store.getState().userId).toBe("user-1");
 
         await store.getState().logout();
         expect(store.getState().state).toBe("unauthenticated");
+        expect(store.getState().baseUrl).toBeNull();
         expect(store.getState().token).toBeNull();
         expect(store.getState().userId).toBeNull();
     });
 
-    it("restores persisted token on bootstrap", async () => {
+    it("restores persisted session on bootstrap", async () => {
         const storage = {
-            read: vi.fn(async () => "stored-token"),
+            read: vi.fn(async () => ({ baseUrl: "http://localhost:7332", token: "stored-token" })),
             write: vi.fn(async () => undefined),
             clear: vi.fn(async () => undefined)
         };
 
         const store = authStoreCreate({
-            baseUrl: "http://localhost:7332",
             storage,
             validateToken: vi.fn(async () => ({ ok: true, userId: "user-2" }))
         });
@@ -45,6 +45,7 @@ describe("authStoreCreate", () => {
 
         expect(store.getState().ready).toBe(true);
         expect(store.getState().state).toBe("authenticated");
+        expect(store.getState().baseUrl).toBe("http://localhost:7332");
         expect(store.getState().token).toBe("stored-token");
         expect(store.getState().userId).toBe("user-2");
     });

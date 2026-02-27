@@ -2,25 +2,30 @@ import { create } from "zustand";
 
 export type AuthState = "unauthenticated" | "authenticated";
 
-export type AuthTokenStorage = {
-    read: () => Promise<string | null>;
-    write: (token: string) => Promise<void>;
+export type AuthSession = {
+    baseUrl: string;
+    token: string;
+};
+
+export type AuthSessionStorage = {
+    read: () => Promise<AuthSession | null>;
+    write: (session: AuthSession) => Promise<void>;
     clear: () => Promise<void>;
 };
 
 export type AuthStoreDependencies = {
-    baseUrl: string;
-    storage: AuthTokenStorage;
+    storage: AuthSessionStorage;
     validateToken: (baseUrl: string, token: string) => Promise<{ ok: boolean; userId?: string }>;
 };
 
 export type AuthStore = {
     ready: boolean;
     state: AuthState;
+    baseUrl: string | null;
     token: string | null;
     userId: string | null;
     bootstrap: () => Promise<void>;
-    login: (token: string) => Promise<void>;
+    login: (baseUrl: string, token: string) => Promise<void>;
     logout: () => Promise<void>;
 };
 
@@ -32,40 +37,48 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
     return create<AuthStore>((set) => ({
         ready: false,
         state: "unauthenticated",
+        baseUrl: null,
         token: null,
         userId: null,
         bootstrap: async () => {
-            const storedToken = await dependencies.storage.read();
-            if (!storedToken) {
-                set({ ready: true, state: "unauthenticated", token: null, userId: null });
+            const storedSession = await dependencies.storage.read();
+            if (!storedSession) {
+                set({ ready: true, state: "unauthenticated", baseUrl: null, token: null, userId: null });
                 return;
             }
 
-            const result = await dependencies.validateToken(dependencies.baseUrl, storedToken);
+            const result = await dependencies.validateToken(storedSession.baseUrl, storedSession.token);
             if (result.ok !== true || typeof result.userId !== "string") {
                 await dependencies.storage.clear();
-                set({ ready: true, state: "unauthenticated", token: null, userId: null });
+                set({ ready: true, state: "unauthenticated", baseUrl: null, token: null, userId: null });
                 return;
             }
 
             set({
                 ready: true,
                 state: "authenticated",
-                token: storedToken,
+                baseUrl: storedSession.baseUrl,
+                token: storedSession.token,
                 userId: result.userId
             });
         },
-        login: async (token) => {
-            const result = await dependencies.validateToken(dependencies.baseUrl, token);
+        login: async (baseUrl, token) => {
+            const trimmedBaseUrl = baseUrl.trim();
+            const trimmedToken = token.trim();
+            const result = await dependencies.validateToken(trimmedBaseUrl, trimmedToken);
             if (result.ok !== true || typeof result.userId !== "string") {
                 throw new Error("Invalid or expired token.");
             }
 
-            await dependencies.storage.write(token);
+            await dependencies.storage.write({
+                baseUrl: trimmedBaseUrl,
+                token: trimmedToken
+            });
             set({
                 ready: true,
                 state: "authenticated",
-                token,
+                baseUrl: trimmedBaseUrl,
+                token: trimmedToken,
                 userId: result.userId
             });
         },
@@ -74,6 +87,7 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
             set({
                 ready: true,
                 state: "unauthenticated",
+                baseUrl: null,
                 token: null,
                 userId: null
             });

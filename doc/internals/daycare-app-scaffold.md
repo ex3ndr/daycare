@@ -9,9 +9,11 @@ flowchart LR
     User[User sends /app] --> Command[/app slash command]
     Command --> Plugin[daycare-app-server]
     Plugin --> JWT[Sign token userId + exp]
-    JWT --> Link[http://host:port/auth?token=...]
+    JWT --> Link[http://host:port/auth#base64url(...)]
     Link --> App[Daycare Expo app]
-    App --> Validate[POST /auth/validate]
+    App --> Decode[Decode hash payload backendUrl + token]
+    Decode --> Enter[Show welcome + Enter button]
+    Enter --> Validate[POST backendUrl/auth/validate]
     Validate --> Plugin
     Plugin --> Shell[Authenticated 3-pane shell]
 ```
@@ -48,7 +50,7 @@ flowchart LR
     Settings --> PluginSettings[Resolve daycare-app-server host/port/jwtSecret]
     PluginSettings --> Secret[Resolve/generate app-auth.jwtSecret in auth store]
     Secret --> Sign[Sign token userId + exp]
-    Sign --> URL[Print http://host:port/auth?token=...]
+    Sign --> URL[Print http://host:port/auth#base64url(...)]
 ```
 
 ## Token stack

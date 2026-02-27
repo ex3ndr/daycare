@@ -21,7 +21,16 @@ Serves the Daycare Expo web build, exposes token auth endpoints, and provides `/
 - Slash command: `/app`
 
 Both generate a short-lived app URL in the form:
-`http://<host>:<port>/auth?token=<jwt>`
+`http://<host>:<port>/auth#<base64url-json>`
+
+Hash payload JSON shape:
+
+```json
+{
+    "backendUrl": "http://<host>:<port>",
+    "token": "<jwt>"
+}
+```
 
 Token signing/verifying is implemented with `privacy-kit` ephemeral tokens.
 

@@ -23,7 +23,9 @@ Expo app scaffold for Daycare (iOS/Android/Web) with a token-based magic-link au
 
 ## Auth flow
 
-- Open `/auth?token=<jwt>` from the app server link.
-- The app calls `POST /auth/validate`.
-- On success it stores the token in secure storage (native) or localStorage (web).
+- Open `/auth#<base64url-json>` from the app server link.
+- Hash payload JSON must contain `backendUrl` and `token`.
+- The app displays backend server info and waits for the user to tap `Enter`.
+- On enter, the app calls `POST <backendUrl>/auth/validate`.
+- On success it stores `{ baseUrl, token }` in secure storage (native) or localStorage (web).
 - App shell then renders the authenticated route group.

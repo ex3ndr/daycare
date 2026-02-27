@@ -70,9 +70,6 @@ export default {
         extra: {
             router: {
                 root: "./sources/app"
-            },
-            app: {
-                apiBaseUrl: process.env.EXPO_PUBLIC_DAYCARE_API_BASE_URL
             }
         }
     }

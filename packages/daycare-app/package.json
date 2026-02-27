@@ -5,7 +5,7 @@
     "main": "index.ts",
     "scripts": {
         "start": "expo start",
-        "start:local-server": "EXPO_PUBLIC_DAYCARE_API_BASE_URL=http://localhost:7332 expo start -c",
+        "start:local-server": "expo start -c",
         "export:web": "expo export --platform web",
         "web": "expo start --web",
         "ios": "expo run:ios",

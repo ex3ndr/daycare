@@ -1,53 +1,87 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import * as React from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
+import { authLinkPayloadParse } from "@/modules/auth/authLinkPayloadParse";
 import { useAuthStore } from "@/modules/auth/authContext";
 
 export default function AuthMagicLinkScreen() {
     const { theme } = useUnistyles();
     const login = useAuthStore((state) => state.login);
-    const params = useLocalSearchParams<{ token?: string }>();
+    const payload = React.useMemo(() => {
+        if (typeof window === "undefined") {
+            return null;
+        }
+        return authLinkPayloadParse(window.location.hash);
+    }, []);
+
+    const serverLabel = React.useMemo(() => {
+        if (!payload) {
+            return null;
+        }
+
+        try {
+            const url = new URL(payload.backendUrl);
+            return `${url.host}${url.pathname === "/" ? "" : url.pathname}`;
+        } catch {
+            return payload.backendUrl;
+        }
+    }, [payload]);
+
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
 
-    React.useEffect(() => {
-        const token = typeof params.token === "string" ? params.token.trim() : "";
-        if (!token) {
-            setError("Missing token. Request a new /app link.");
+    const enter = React.useCallback(async () => {
+        if (!payload || isSubmitting) {
             return;
         }
 
-        let canceled = false;
-        void (async () => {
-            try {
-                await login(token);
-                if (!canceled) {
-                    router.replace("/(app)" as never);
-                }
-            } catch {
-                if (!canceled) {
-                    setError("Magic link expired or invalid. Request a new /app link.");
-                }
-            }
-        })();
-
-        return () => {
-            canceled = true;
-        };
-    }, [login, params.token]);
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await login(payload.backendUrl, payload.token);
+            router.replace("/(app)" as never);
+        } catch {
+            setError("Magic link expired or invalid. Request a new /app link.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [isSubmitting, login, payload]);
 
     return (
         <SinglePanelLayout>
             <View style={styles.content}>
-                {error ? (
-                    <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text>
-                ) : (
+                <Text style={[styles.title, { color: theme.colors.onSurface }]}>Welcome to Daycare</Text>
+                {payload ? (
                     <>
-                        <ActivityIndicator size="large" color={theme.colors.primary} />
-                        <Text style={[styles.message, { color: theme.colors.onSurface }]}>Validating your link...</Text>
+                        <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+                            Server: <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
+                        </Text>
+                        <Pressable
+                            accessibilityRole="button"
+                            disabled={isSubmitting}
+                            onPress={() => void enter()}
+                            style={({ pressed }) => [
+                                styles.button,
+                                { backgroundColor: theme.colors.primary },
+                                pressed && !isSubmitting ? styles.buttonPressed : null,
+                                isSubmitting ? styles.buttonDisabled : null
+                            ]}
+                        >
+                            {isSubmitting ? (
+                                <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                            ) : (
+                                <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Enter</Text>
+                            )}
+                        </Pressable>
                     </>
+                ) : (
+                    <Text style={[styles.message, { color: theme.colors.error }]}>
+                        Invalid link payload. Request a new /app link.
+                    </Text>
                 )}
+                {error ? <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text> : null}
             </View>
         </SinglePanelLayout>
     );
@@ -58,11 +92,37 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        gap: 12,
+        gap: 14,
         paddingHorizontal: 24
+    },
+    title: {
+        fontSize: 26,
+        fontWeight: "700",
+        textAlign: "center"
     },
     message: {
         fontSize: 16,
         textAlign: "center"
+    },
+    value: {
+        fontWeight: "600"
+    },
+    button: {
+        minWidth: 160,
+        height: 44,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 18
+    },
+    buttonText: {
+        fontSize: 16,
+        fontWeight: "600"
+    },
+    buttonPressed: {
+        opacity: 0.9
+    },
+    buttonDisabled: {
+        opacity: 0.75
     }
 });

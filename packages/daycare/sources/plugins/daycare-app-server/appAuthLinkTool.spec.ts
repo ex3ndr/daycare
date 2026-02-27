@@ -7,7 +7,20 @@ import { appAuthLinkGenerate, appAuthLinkTool, appAuthLinkUrlBuild } from "./app
 describe("appAuthLinkUrlBuild", () => {
     it("builds auth URL", () => {
         const url = appAuthLinkUrlBuild("127.0.0.1", 7332, "token-1");
-        expect(url).toBe("http://127.0.0.1:7332/auth?token=token-1");
+        const parsed = new URL(url);
+        expect(parsed.origin).toBe("http://127.0.0.1:7332");
+        expect(parsed.pathname).toBe("/auth");
+
+        const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+        const decoded = JSON.parse(Buffer.from(hash, "base64url").toString("utf8")) as {
+            backendUrl: string;
+            token: string;
+        };
+
+        expect(decoded).toEqual({
+            backendUrl: "http://127.0.0.1:7332",
+            token: "token-1"
+        });
     });
 });
 
@@ -20,7 +33,7 @@ describe("appAuthLinkGenerate", () => {
             secret: "test-secret"
         });
 
-        expect(result.url.startsWith("http://127.0.0.1:7332/auth?token=")).toBe(true);
+        expect(result.url.startsWith("http://127.0.0.1:7332/auth#")).toBe(true);
         const payload = await jwtVerify(result.token, "test-secret");
         expect(payload.userId).toBe("user-7");
     });

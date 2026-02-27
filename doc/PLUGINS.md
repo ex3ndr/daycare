@@ -87,8 +87,9 @@ sequenceDiagram
 
     User->>Agent: /app
     Agent->>Plugin: registerCommand handler
-    Plugin-->>User: http://host:port/auth?token=...
+    Plugin-->>User: http://host:port/auth#base64url(...)
     User->>App: Open link
+    App->>App: Decode hash { backendUrl, token }
     App->>Plugin: POST /auth/validate
     Plugin-->>App: { ok, userId }
 ```
