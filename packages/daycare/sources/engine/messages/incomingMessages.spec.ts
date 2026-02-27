@@ -127,4 +127,34 @@ describe("IncomingMessages", () => {
             vi.useRealTimers();
         }
     });
+
+    it("ignores empty connector messages", async () => {
+        vi.useFakeTimers();
+        const records: IncomingMessageBatch[][] = [];
+        const incoming = new IncomingMessages({
+            delayMs: 100,
+            onFlush: async (items) => {
+                records.push(items);
+            }
+        });
+
+        try {
+            incoming.post({
+                descriptor: userDescriptor("channel-1"),
+                message: { text: "   " },
+                context: {}
+            });
+            incoming.post({
+                descriptor: userDescriptor("channel-1"),
+                message: { text: null, rawText: "  " },
+                context: {}
+            });
+            await vi.advanceTimersByTimeAsync(100);
+
+            expect(records).toHaveLength(0);
+        } finally {
+            await incoming.flush();
+            vi.useRealTimers();
+        }
+    });
 });

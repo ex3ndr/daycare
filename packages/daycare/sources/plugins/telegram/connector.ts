@@ -129,7 +129,7 @@ export class TelegramConnector implements Connector {
                 return;
             }
             logger.debug(
-                `receive: Received Telegram message chatId=${message.chat.id} fromId=${message.from?.id} messageId=${message.message_id} hasText=${!!message.text} hasCaption=${!!message.caption} hasPhoto=${!!message.photo} hasDocument=${!!message.document}`
+                `receive: Received Telegram message chatId=${message.chat.id} fromId=${message.from?.id} messageId=${message.message_id} hasText=${!!message.text} hasCaption=${!!message.caption} hasPhoto=${!!message.photo} hasDocument=${!!message.document} hasVoice=${!!message.voice} hasAudio=${!!message.audio}`
             );
             const rawText = typeof message.text === "string" ? message.text : null;
             const trimmedText = rawText?.trim() ?? "";
@@ -678,6 +678,30 @@ export class TelegramConnector implements Connector {
                 message.document.file_id,
                 message.document.file_name ?? `document-${message.document.file_id}`,
                 message.document.mime_type ?? "application/octet-stream"
+            );
+            if (stored) {
+                files.push(stored);
+            }
+        }
+
+        if (message.voice?.file_id) {
+            const stored = await this.downloadFile(
+                message.voice.file_id,
+                `voice-${message.voice.file_id}.ogg`,
+                message.voice.mime_type ?? "audio/ogg"
+            );
+            if (stored) {
+                files.push(stored);
+            }
+        }
+
+        if (message.audio?.file_id) {
+            const mimeType = message.audio.mime_type ?? "audio/mpeg";
+            const stored = await this.downloadFile(
+                message.audio.file_id,
+                (message.audio.title?.trim() ? `${message.audio.title.trim()}.mp3` : null) ??
+                    `audio-${message.audio.file_id}.mp3`,
+                mimeType
             );
             if (stored) {
                 files.push(stored);

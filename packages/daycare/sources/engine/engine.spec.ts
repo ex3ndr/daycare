@@ -588,6 +588,56 @@ describe("Engine message batching", () => {
         }
     });
 
+    it("ignores empty connector messages", async () => {
+        vi.useFakeTimers();
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const messageState: {
+                handler?: (
+                    message: ConnectorMessage,
+                    context: MessageContext,
+                    descriptor: AgentDescriptor
+                ) => void | Promise<void>;
+            } = {};
+
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: (handler) => {
+                    messageState.handler = handler;
+                    return () => undefined;
+                },
+                sendMessage: async () => undefined
+            };
+
+            const registerResult = engine.modules.connectors.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
+            const handler = messageState.handler;
+            if (!handler) {
+                throw new Error("Expected message handler to be registered");
+            }
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "123",
+                userId: "123"
+            };
+            await handler({ text: "   " }, { messageId: "1" }, descriptor);
+            await vi.advanceTimersByTimeAsync(100);
+
+            expect(postSpy).not.toHaveBeenCalled();
+
+            await engine.modules.connectors.unregisterAll("test");
+            await engine.shutdown();
+        } finally {
+            vi.useRealTimers();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("routes incoming connector files from staging to user downloads before posting", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {

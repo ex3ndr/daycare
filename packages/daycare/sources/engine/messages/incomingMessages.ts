@@ -1,5 +1,6 @@
 import type { AgentDescriptor, ConnectorMessage, MessageContext } from "@/types";
 import { agentDescriptorCacheKey } from "../agents/ops/agentDescriptorCacheKey.js";
+import { messageEmptyIs } from "./messageEmptyIs.js";
 
 export type IncomingMessageInput = {
     descriptor: AgentDescriptor;
@@ -33,6 +34,9 @@ export class IncomingMessages {
     }
 
     post(input: IncomingMessageInput): void {
+        if (messageEmptyIs(input.message)) {
+            return;
+        }
         this.pending.push(input);
         this.schedule();
     }

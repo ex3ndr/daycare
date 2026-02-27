@@ -218,6 +218,74 @@ describe("TelegramConnector incoming documents", () => {
     });
 });
 
+describe("TelegramConnector incoming voice", () => {
+    beforeEach(() => {
+        telegramInstances.length = 0;
+    });
+
+    it("routes incoming voice messages to message handlers", async () => {
+        const fileStore = {
+            saveFromPath: vi.fn(async (input: { name: string; mimeType: string; path: string }) => ({
+                id: "f-voice",
+                name: input.name,
+                mimeType: input.mimeType,
+                path: "/tmp/stored-voice.ogg",
+                size: 256
+            }))
+        } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandlerMock = vi.fn(async (_message, _context, _descriptor) => undefined);
+        connector.onMessage(messageHandlerMock);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        bot!.downloadFile.mockResolvedValueOnce("/tmp/downloaded-voice.ogg");
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        await botMessageHandler?.({
+            message_id: 57,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            voice: {
+                file_id: "voice-1",
+                mime_type: "audio/ogg"
+            }
+        });
+
+        expect(messageHandlerMock).toHaveBeenCalledTimes(1);
+        const [message, context, descriptor] = messageHandlerMock.mock.calls[0] as [
+            { text: string | null; files?: Array<{ name: string; mimeType: string; path: string; size: number }> },
+            MessageContext,
+            AgentDescriptor
+        ];
+        expect(message.text).toBeNull();
+        expect(message.files).toEqual([
+            {
+                id: "f-voice",
+                name: "voice-voice-1.ogg",
+                mimeType: "audio/ogg",
+                path: "/tmp/stored-voice.ogg",
+                size: 256
+            }
+        ]);
+        expect(context).toMatchObject({ messageId: "57" });
+        expect(descriptor).toMatchObject({
+            type: "user",
+            connector: "telegram",
+            channelId: "123",
+            userId: "123"
+        });
+    });
+});
+
 describe("TelegramConnector access mode", () => {
     beforeEach(() => {
         telegramInstances.length = 0;
