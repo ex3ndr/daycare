@@ -3,26 +3,36 @@ import { describe, expect, it } from "vitest";
 import { configSettingsParse } from "./configSettingsParse.js";
 
 describe("configSettingsParse", () => {
-    it("accepts engine.dbPath", () => {
+    it("accepts engine.path", () => {
         const parsed = configSettingsParse({
             engine: {
-                dbPath: "/tmp/daycare/daycare.db"
+                path: "/tmp/daycare/daycare.db"
             }
         });
 
-        expect(parsed.engine?.dbPath).toBe("/tmp/daycare/daycare.db");
+        expect(parsed.engine?.path).toBe("/tmp/daycare/daycare.db");
     });
 
-    it("accepts engine.dbUrl and engine.autoMigrate", () => {
+    it("accepts engine.url and engine.autoMigrate", () => {
         const parsed = configSettingsParse({
             engine: {
-                dbUrl: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
+                url: "postgres://postgres:postgres@127.0.0.1:5432/daycare",
                 autoMigrate: false
             }
         });
 
-        expect(parsed.engine?.dbUrl).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
+        expect(parsed.engine?.url).toBe("postgres://postgres:postgres@127.0.0.1:5432/daycare");
         expect(parsed.engine?.autoMigrate).toBe(false);
+    });
+
+    it("accepts non-postgres engine.url values", () => {
+        const parsed = configSettingsParse({
+            engine: {
+                url: "mysql://localhost/daycare"
+            }
+        });
+
+        expect(parsed.engine?.url).toBe("mysql://localhost/daycare");
     });
 
     it("accepts full docker settings", () => {

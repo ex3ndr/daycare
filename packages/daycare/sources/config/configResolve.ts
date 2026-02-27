@@ -21,8 +21,8 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
     const dataDir = path.resolve(resolvedSettings.engine?.dataDir ?? DEFAULT_DAYCARE_DIR);
     const agentsDir = path.join(dataDir, "agents");
     const usersDir = path.join(configDir, "users");
-    const dbPath = path.resolve(resolvedSettings.engine?.dbPath ?? path.join(dataDir, "daycare.db"));
-    const dbUrl = configDbUrlResolve(resolvedSettings.engine?.dbUrl);
+    const databasePath = path.resolve(resolvedSettings.engine?.path ?? path.join(dataDir, "daycare.db"));
+    const databaseUrl = configDatabaseUrlResolve(resolvedSettings.engine?.url);
     const dbAutoMigrate = resolvedSettings.engine?.autoMigrate ?? true;
     const authPath = path.join(dataDir, "auth.json");
     const socketPath = resolveEngineSocketPath(resolvedSettings.engine?.socketPath);
@@ -35,8 +35,8 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
         dataDir,
         agentsDir,
         usersDir,
-        dbPath,
-        dbUrl,
+        path: databasePath,
+        url: databaseUrl,
         dbAutoMigrate,
         authPath,
         socketPath,
@@ -128,7 +128,7 @@ function dockerDnsListNormalize(input: string[] | undefined, fallback: string[])
     return result;
 }
 
-function configDbUrlResolve(input: string | undefined): string | null {
+function configDatabaseUrlResolve(input: string | undefined): string | null {
     if (!input) {
         return null;
     }

@@ -36,7 +36,9 @@ describe("appLinkCommand", () => {
             dataDir: "/tmp/data",
             agentsDir: "/tmp/agents",
             usersDir: "/tmp/users",
-            dbPath: "/tmp/daycare.sqlite",
+            path: "/tmp/daycare.sqlite",
+            url: null,
+            dbAutoMigrate: true,
             authPath: "/tmp/auth.json",
             socketPath: "/tmp/daycare.sock",
             docker: {

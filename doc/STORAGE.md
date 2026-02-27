@@ -8,7 +8,7 @@ Daycare persists data using five mechanisms:
 
 | Mechanism | Format | Primary location |
 | --- | --- | --- |
-| SQLite | relational tables | `config.dbPath` (default: `<dataDir>/daycare.db`) |
+| SQLite | relational tables | `config.path` (default: `<dataDir>/daycare.db`) |
 | JSON files | structured objects | `configDir`, `dataDir`, `workspaceDir`, and plugin `dataDir` |
 | JSONL append files | one JSON object per line | legacy migration inputs only (`configDir/channels/*/history.jsonl`, `configDir/signals/events.jsonl`) |
 | Markdown (+ frontmatter for some files) | markdown bodies and YAML-like metadata | app/memory/skills files |
@@ -25,7 +25,7 @@ export type Config = {
   dataDir: string;
   agentsDir: string;
   usersDir: string;
-  dbPath: string;
+  path: string;
   filesDir: string;
   authPath: string;
   socketPath: string;
@@ -38,7 +38,7 @@ Resolved by `sources/config/configResolve.ts`:
 
 - `configDir = dirname(settingsPath)`
 - `dataDir = settings.engine.dataDir ?? DEFAULT_DAYCARE_DIR`
-- `dbPath = settings.engine.dbPath ?? path.join(dataDir, "daycare.db")`
+- `path = settings.engine.path ?? path.join(dataDir, "daycare.db")`
 - `agentsDir = path.join(dataDir, "agents")`
 - `usersDir = path.join(dataDir, "users")`
 - `authPath = path.join(dataDir, "auth.json")`
@@ -104,7 +104,7 @@ persistent `DatabaseSync` connection and repository instances.
 
 ```mermaid
 flowchart TD
-    A[Storage.open dbPath] --> B[DatabaseSync connection]
+    A[Storage.open path] --> B[DatabaseSync connection]
     A --> C[UsersRepository cache: users + connector index]
     A --> D[AgentsRepository cache: agents]
     A --> E[SessionsRepository no cache]
@@ -752,7 +752,9 @@ export type SettingsConfig = {
   engine?: {
     socketPath?: string;
     dataDir?: string;
-    dbPath?: string;
+    path?: string;
+    url?: string;
+    autoMigrate?: boolean;
   };
   assistant?: {
     workspaceDir?: string;

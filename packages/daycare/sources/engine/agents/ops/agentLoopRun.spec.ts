@@ -158,14 +158,14 @@ describe("agentLoopRun", () => {
         ).state.activeSessionId = "session-1";
         (
             options.agentSystem as unknown as {
-                config: { current: { agentsDir?: string; dbPath?: string } };
+                config: { current: { agentsDir?: string; path?: string } };
             }
         ).config.current.agentsDir = "/dev/null";
         (
             options.agentSystem as unknown as {
-                config: { current: { agentsDir?: string; dbPath?: string } };
+                config: { current: { agentsDir?: string; path?: string } };
             }
-        ).config.current.dbPath = ":memory:";
+        ).config.current.path = ":memory:";
 
         await agentLoopRun(options);
 

@@ -6,8 +6,8 @@ export type Config = {
     dataDir: string;
     agentsDir: string;
     usersDir: string;
-    dbPath: string;
-    dbUrl: string | null;
+    path: string;
+    url: string | null;
     dbAutoMigrate: boolean;
     authPath: string;
     socketPath: string;

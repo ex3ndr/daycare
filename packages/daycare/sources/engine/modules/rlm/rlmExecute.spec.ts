@@ -260,7 +260,7 @@ function createContext(options?: {
             config: {
                 current: {
                     agentsDir: options?.agentsDir ?? "/tmp/daycare-test",
-                    dbPath: ":memory:"
+                    path: ":memory:"
                 }
             },
             storage: {}

@@ -18,8 +18,8 @@ export function storageResolve(input: Storage | Config): Storage {
     if (cached) {
         return cached;
     }
-    const storage = storageOpen(input.dbPath, {
-        dbUrl: input.dbUrl,
+    const storage = storageOpen(input.path, {
+        url: input.url,
         autoMigrate: input.dbAutoMigrate
     });
     sharedStorageByKey.set(key, storage);
@@ -27,8 +27,8 @@ export function storageResolve(input: Storage | Config): Storage {
 }
 
 function storageKeyResolve(config: Config): string {
-    if (config.dbUrl) {
-        return `postgres:${config.dbUrl}`;
+    if (config.url) {
+        return `postgres:${config.url}`;
     }
-    return `pglite:${config.dbPath}`;
+    return `pglite:${config.path}`;
 }

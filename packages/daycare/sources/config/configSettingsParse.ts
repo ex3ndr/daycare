@@ -70,15 +70,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 .object({
                     socketPath: z.string().min(1).optional(),
                     dataDir: z.string().min(1).optional(),
-                    dbPath: z.string().min(1).optional(),
-                    dbUrl: z
-                        .string()
-                        .min(1)
-                        .refine(
-                            (value) => value.startsWith("postgres://") || value.startsWith("postgresql://"),
-                            "engine.dbUrl must start with postgres:// or postgresql://"
-                        )
-                        .optional(),
+                    path: z.string().min(1).optional(),
+                    url: z.string().min(1).optional(),
                     autoMigrate: z.boolean().optional()
                 })
                 .passthrough()

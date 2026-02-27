@@ -27,7 +27,7 @@ export async function rlmSnapshotSave(options: RlmSnapshotSaveOptions): Promise<
         snapshotId
     );
     await rlmSnapshotWrite(snapshotPath, Buffer.from(options.snapshotDump, "base64"));
-    await rlmSnapshotDatabaseFlush(options.config.dbPath);
+    await rlmSnapshotDatabaseFlush(options.config.path);
     return snapshotId;
 }
 
