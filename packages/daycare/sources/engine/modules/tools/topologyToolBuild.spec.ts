@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import { databaseMigrate } from "../../../storage/databaseMigrate.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import { contextForAgent } from "../../agents/context.js";
@@ -27,10 +28,12 @@ describe("topologyTool", () => {
         try {
             const config = configResolve(
                 {
-                    engine: { dataDir: dir }
+                    engine: { dataDir: dir, db: { autoMigrate: false } }
                 },
                 path.join(dir, "settings.json")
             );
+            const storage = storageResolve(config);
+            await databaseMigrate(storage.db);
 
             const tool = topologyTool(
                 { listTasks: async () => [] } as unknown as Crons,
@@ -106,11 +109,12 @@ describe("topologyTool", () => {
         try {
             const config = configResolve(
                 {
-                    engine: { dataDir: dir }
+                    engine: { dataDir: dir, db: { autoMigrate: false } }
                 },
                 path.join(dir, "settings.json")
             );
             const storage = storageResolve(config);
+            await databaseMigrate(storage.db);
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
             const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
@@ -234,6 +238,7 @@ describe("topologyTool", () => {
             expect(dailyReportTask?.triggers.cron[0]).toMatchObject({
                 id: "daily-report",
                 schedule: "0 9 * * *",
+                timezone: "UTC",
                 name: "Daily Report"
             });
             const heartbeatTask = result.typedResult.tasks.find((task) => task.id === "task-check-health");
@@ -275,12 +280,13 @@ describe("topologyTool", () => {
         try {
             const config = configResolve(
                 {
-                    engine: { dataDir: dir }
+                    engine: { dataDir: dir, db: { autoMigrate: false } }
                 },
                 path.join(dir, "settings.json")
             );
 
             const storage = storageResolve(config);
+            await databaseMigrate(storage.db);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
 
             const activeCtx = contextForAgent({ userId: "user-1", agentId: "agent-active" });
@@ -333,8 +339,12 @@ describe("topologyTool", () => {
 
     it("subuser agent sees only their own agents and crons in topology", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-subuser-"));
-        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const config = configResolve(
+            { engine: { dataDir: dir, db: { autoMigrate: false } } },
+            path.join(dir, "settings.json")
+        );
         const storage = storageResolve(config);
+        await databaseMigrate(storage.db);
         try {
             // Find the owner user (created by bootstrap migration)
             const owner = await storage.users.findOwner();
@@ -414,8 +424,12 @@ describe("topologyTool", () => {
 
     it("owner user sees subusers section in topology", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-owner-subusers-"));
-        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const config = configResolve(
+            { engine: { dataDir: dir, db: { autoMigrate: false } } },
+            path.join(dir, "settings.json")
+        );
         const storage = storageResolve(config);
+        await databaseMigrate(storage.db);
         try {
             // Find the owner user
             const owner = await storage.users.findOwner();
@@ -492,8 +506,12 @@ describe("topologyTool", () => {
 
     it("filters topology sections to caller user scope", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-user-scope-"));
-        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const config = configResolve(
+            { engine: { dataDir: dir, db: { autoMigrate: false } } },
+            path.join(dir, "settings.json")
+        );
         const storage = storageResolve(config);
+        await databaseMigrate(storage.db);
         try {
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
@@ -694,8 +712,12 @@ describe("topologyTool", () => {
 
     it("renders friends with outgoing/incoming shared subusers and pending markers", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-friends-sharing-"));
-        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const config = configResolve(
+            { engine: { dataDir: dir, db: { autoMigrate: false } } },
+            path.join(dir, "settings.json")
+        );
         const storage = storageResolve(config);
+        await databaseMigrate(storage.db);
         try {
             await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -829,11 +851,12 @@ describe("topologyTool", () => {
         try {
             const config = configResolve(
                 {
-                    engine: { dataDir: dir }
+                    engine: { dataDir: dir, db: { autoMigrate: false } }
                 },
                 path.join(dir, "settings.json")
             );
             const storage = storageResolve(config);
+            await databaseMigrate(storage.db);
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
             const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
@@ -961,6 +984,7 @@ function cronTaskBuild(input: {
     id: string;
     name: string;
     schedule: string;
+    timezone?: string;
     enabled: boolean;
     agentId?: string;
 }): CronTaskDbRecord {
@@ -971,6 +995,7 @@ function cronTaskBuild(input: {
         name: input.name,
         description: null,
         schedule: input.schedule,
+        timezone: input.timezone ?? "UTC",
         enabled: input.enabled,
         deleteAfterRun: false,
         lastRunAt: null,

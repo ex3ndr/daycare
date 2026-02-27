@@ -35,6 +35,7 @@ export class Crons {
             config: options.config,
             repository: this.storage.cronTasks,
             tasksRepository: this.storage.tasks,
+            usersRepository: this.storage.users,
             onTask: async (task, messageContext) => {
                 const target = task.agentId
                     ? { agentId: task.agentId }
@@ -125,6 +126,7 @@ export class Crons {
         input: {
             taskId: string;
             schedule: string;
+            timezone?: string;
             id?: string;
             agentId?: string;
             enabled?: boolean;
@@ -139,6 +141,7 @@ export class Crons {
             id: input.id,
             taskId: input.taskId,
             schedule: input.schedule,
+            timezone: input.timezone,
             agentId: input.agentId,
             enabled: input.enabled,
             deleteAfterRun: input.deleteAfterRun
@@ -172,7 +175,13 @@ export class Crons {
     }
 }
 
-function cronTaskPromptBuild(task: { code: string; triggerId: string; taskId: string; taskName: string }): {
+function cronTaskPromptBuild(task: {
+    code: string;
+    triggerId: string;
+    taskId: string;
+    taskName: string;
+    timezone: string;
+}): {
     text: string;
     code: string[];
 } {
@@ -180,7 +189,8 @@ function cronTaskPromptBuild(task: { code: string; triggerId: string; taskId: st
         "[cron]",
         `triggerId: ${task.triggerId}`,
         `taskId: ${task.taskId}`,
-        `taskName: ${task.taskName}`
+        `taskName: ${task.taskName}`,
+        `timezone: ${task.timezone}`
     ].join("\n");
     return { text, code: [task.code] };
 }

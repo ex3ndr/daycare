@@ -80,6 +80,7 @@ export type DatabaseCronTaskRow = {
     name: string;
     description: string | null;
     schedule: string;
+    timezone: string;
     agent_id: string | null;
     enabled: number;
     delete_after_run: number;
@@ -95,6 +96,7 @@ export type CronTaskDbRecord = {
     name: string;
     description: string | null;
     schedule: string;
+    timezone: string;
     agentId: string | null;
     enabled: boolean;
     deleteAfterRun: boolean;
@@ -358,6 +360,7 @@ export type DatabaseUserRow = {
     first_name: string | null;
     last_name: string | null;
     country: string | null;
+    timezone: string | null;
     nametag: string;
     created_at: number;
     updated_at: number;
@@ -377,6 +380,7 @@ export type UserDbRecord = {
     firstName: string | null;
     lastName: string | null;
     country: string | null;
+    timezone: string | null;
     nametag: string;
     createdAt: number;
     updatedAt: number;
@@ -453,6 +457,7 @@ export type CreateUserInput = {
     firstName?: string | null;
     lastName?: string | null;
     country?: string | null;
+    timezone?: string | null;
     nametag?: string;
     createdAt?: number;
     updatedAt?: number;
@@ -492,6 +497,7 @@ export type UpdateUserInput = {
     firstName?: string | null;
     lastName?: string | null;
     country?: string | null;
+    timezone?: string | null;
     createdAt?: number;
     updatedAt?: number;
 };

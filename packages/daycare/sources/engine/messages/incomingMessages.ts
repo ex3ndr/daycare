@@ -137,8 +137,10 @@ function connectorMessageMerge(left: ConnectorMessage, right: ConnectorMessage):
 
 function messageContextMerge(left: MessageContext, right: MessageContext): MessageContext {
     const messageId = right.messageId ?? left.messageId;
+    const timezone = right.timezone ?? left.timezone;
     return {
-        ...(messageId ? { messageId } : {})
+        ...(messageId ? { messageId } : {}),
+        ...(timezone ? { timezone } : {})
     };
 }
 

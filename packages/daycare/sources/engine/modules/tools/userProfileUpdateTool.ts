@@ -8,7 +8,13 @@ const schema = Type.Object(
     {
         firstName: Type.Optional(Type.String({ minLength: 1 })),
         lastName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-        country: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+        country: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+        timezone: Type.Optional(
+            Type.Union([
+                Type.String({ minLength: 1, description: "IANA timezone (for example America/New_York)." }),
+                Type.Null()
+            ])
+        )
     },
     { additionalProperties: false }
 );
@@ -22,6 +28,7 @@ const resultSchema = Type.Object(
         firstName: Type.Union([Type.String(), Type.Null()]),
         lastName: Type.Union([Type.String(), Type.Null()]),
         country: Type.Union([Type.String(), Type.Null()]),
+        timezone: Type.Union([Type.String(), Type.Null()]),
         nametag: Type.String()
     },
     { additionalProperties: false }
@@ -43,14 +50,19 @@ export function userProfileUpdateTool(): ToolDefinition {
         tool: {
             name: "user_profile_update",
             description:
-                "Update your user profile fields: firstName, optional lastName, and country. Use null to clear lastName or country.",
+                "Update your user profile fields: firstName, optional lastName, country, and timezone. Use null to clear optional fields.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.descriptor.type === "user",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as UserProfileUpdateArgs;
-            if (payload.firstName === undefined && payload.lastName === undefined && payload.country === undefined) {
+            if (
+                payload.firstName === undefined &&
+                payload.lastName === undefined &&
+                payload.country === undefined &&
+                payload.timezone === undefined
+            ) {
                 throw new Error("At least one profile field must be provided.");
             }
 
@@ -71,6 +83,10 @@ export function userProfileUpdateTool(): ToolDefinition {
                 const country = valueOptionalNormalize(payload.country, "country");
                 updates.country = country ? country.toUpperCase() : null;
                 changed.push("country");
+            }
+            if (payload.timezone !== undefined) {
+                updates.timezone = timezoneOptionalNormalize(payload.timezone);
+                changed.push("timezone");
             }
 
             const users = toolContext.agentSystem.storage.users;
@@ -99,6 +115,7 @@ export function userProfileUpdateTool(): ToolDefinition {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     country: user.country,
+                    timezone: user.timezone,
                     nametag: user.nametag
                 }
             };
@@ -123,4 +140,20 @@ function valueOptionalNormalize(value: string | null, field: string): string | n
         throw new Error(`${field} must be a non-empty string or null.`);
     }
     return normalized;
+}
+
+function timezoneOptionalNormalize(value: string | null): string | null {
+    if (value === null) {
+        return null;
+    }
+    const normalized = value.trim();
+    if (!normalized) {
+        throw new Error("timezone must be a non-empty IANA timezone string or null.");
+    }
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone: normalized });
+        return normalized;
+    } catch {
+        throw new Error(`Invalid timezone: ${normalized}`);
+    }
 }

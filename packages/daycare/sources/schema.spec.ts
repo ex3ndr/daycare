@@ -31,6 +31,17 @@ describe("schema", () => {
             expect(userColumnNames.has("first_name")).toBe(true);
             expect(userColumnNames.has("last_name")).toBe(true);
             expect(userColumnNames.has("country")).toBe(true);
+            expect(userColumnNames.has("timezone")).toBe(true);
+
+            const cronColumns = (await db
+                .prepare(
+                    "SELECT column_name AS name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks_cron'"
+                )
+                .all()) as Array<{ name?: string }>;
+            const cronColumnNames = new Set(
+                cronColumns.map((entry) => entry.name).filter((entry): entry is string => !!entry)
+            );
+            expect(cronColumnNames.has("timezone")).toBe(true);
 
             const indexes = (await db
                 .prepare("SELECT indexname AS name FROM pg_indexes WHERE schemaname = 'public' ORDER BY indexname ASC")

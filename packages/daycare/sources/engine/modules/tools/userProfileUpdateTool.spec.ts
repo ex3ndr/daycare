@@ -21,7 +21,8 @@ describe("userProfileUpdateTool", () => {
                 {
                     firstName: "  Steve  ",
                     lastName: "  Jobs  ",
-                    country: " us "
+                    country: " us ",
+                    timezone: " America/Los_Angeles "
                 },
                 contextBuild(created.id, storage),
                 toolCall
@@ -33,6 +34,7 @@ describe("userProfileUpdateTool", () => {
                 firstName: "Steve",
                 lastName: "Jobs",
                 country: "US",
+                timezone: "America/Los_Angeles",
                 nametag: "swift-fox-42"
             });
         } finally {
@@ -55,7 +57,8 @@ describe("userProfileUpdateTool", () => {
             const result = await tool.execute(
                 {
                     lastName: null,
-                    country: null
+                    country: null,
+                    timezone: null
                 },
                 contextBuild(created.id, storage),
                 toolCall
@@ -64,6 +67,30 @@ describe("userProfileUpdateTool", () => {
             expect(result.typedResult.firstName).toBe("Taylor");
             expect(result.typedResult.lastName).toBeNull();
             expect(result.typedResult.country).toBeNull();
+            expect(result.typedResult.timezone).toBeNull();
+        } finally {
+            storage.db.close();
+        }
+    });
+
+    it("rejects invalid timezone values", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const created = await storage.users.create({
+                id: "user-4",
+                nametag: "calm-bird-12"
+            });
+            const tool = userProfileUpdateTool();
+
+            await expect(
+                tool.execute(
+                    {
+                        timezone: "Mars/Base"
+                    },
+                    contextBuild(created.id, storage),
+                    toolCall
+                )
+            ).rejects.toThrow("Invalid timezone: Mars/Base");
         } finally {
             storage.db.close();
         }

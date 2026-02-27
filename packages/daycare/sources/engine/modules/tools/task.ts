@@ -18,6 +18,12 @@ const taskCreateSchema = Type.Object(
         }),
         description: Type.Optional(Type.String()),
         cron: Type.Optional(Type.String({ minLength: 1, description: "Cron expression (e.g. '0 * * * *')." })),
+        cronTimezone: Type.Optional(
+            Type.String({
+                minLength: 1,
+                description: "IANA timezone for cron (for example America/New_York). Defaults to profile timezone."
+            })
+        ),
         heartbeat: Type.Optional(Type.Boolean({ description: "Attach a heartbeat trigger (~30 min interval)." })),
         agentId: Type.Optional(
             Type.String({
@@ -70,7 +76,8 @@ const taskTriggerAddSchema = Type.Object(
     {
         taskId: Type.String({ minLength: 1 }),
         type: Type.Union([Type.Literal("cron"), Type.Literal("heartbeat")]),
-        schedule: Type.Optional(Type.String({ minLength: 1 }))
+        schedule: Type.Optional(Type.String({ minLength: 1 })),
+        timezone: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -152,7 +159,13 @@ export function buildTaskCreateTool(): ToolDefinition {
                 });
 
                 if (payload.cron) {
-                    cronTrigger = await taskCronTriggerEnsure(toolContext, taskId, payload.cron, payload.agentId);
+                    cronTrigger = await taskCronTriggerEnsure(
+                        toolContext,
+                        taskId,
+                        payload.cron,
+                        payload.agentId,
+                        payload.cronTimezone
+                    );
                 }
 
                 if (payload.heartbeat === true) {
@@ -221,7 +234,9 @@ export function buildTaskReadTool(): ToolDefinition {
                 toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, task.id),
                 toolContext.heartbeats.listTriggersForTask(toolContext.ctx, task.id)
             ]);
-            const cronLines = cronTriggers.map((trigger) => `  - ${trigger.id} (cron: ${trigger.schedule})`);
+            const cronLines = cronTriggers.map(
+                (trigger) => `  - ${trigger.id} (cron: ${trigger.schedule}, timezone: ${trigger.timezone})`
+            );
             const heartbeatLines = heartbeatTriggers.map((trigger) => `  - ${trigger.id} (heartbeat)`);
 
             const lines = [
@@ -303,7 +318,8 @@ export function buildTaskDeleteTool(): ToolDefinition {
             ]);
             const deletedDirect = await toolContext.agentSystem.storage.tasks.delete(toolContext.ctx, task.id);
             const deleted =
-                deletedDirect || (await toolContext.agentSystem.storage.tasks.findById(toolContext.ctx, task.id)) === null;
+                deletedDirect ||
+                (await toolContext.agentSystem.storage.tasks.findById(toolContext.ctx, task.id)) === null;
             const summary = deleted
                 ? `Deleted task ${task.id} with ${removedCron} cron trigger(s) and ${removedHeartbeat} heartbeat trigger(s).`
                 : `Task already removed: ${task.id}.`;
@@ -381,9 +397,15 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
                 if (!payload.schedule) {
                     throw new Error("schedule is required when type is cron.");
                 }
-                const ensured = await taskCronTriggerEnsure(toolContext, task.id, payload.schedule);
+                const ensured = await taskCronTriggerEnsure(
+                    toolContext,
+                    task.id,
+                    payload.schedule,
+                    undefined,
+                    payload.timezone
+                );
                 const summary = ensured.duplicate
-                    ? `Cron trigger for schedule ${payload.schedule.trim()} already exists on task ${task.id} (${ensured.id}).`
+                    ? `Cron trigger for schedule ${payload.schedule.trim()} (${ensured.timezone}) already exists on task ${task.id} (${ensured.id}).`
                     : `Added cron trigger ${ensured.id} to task ${task.id}.`;
                 const typedResult: TaskResult = {
                     summary,
@@ -394,6 +416,7 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
                     toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
                         taskId: task.id,
                         cronTriggerId: ensured.id,
+                        timezone: ensured.timezone,
                         duplicate: ensured.duplicate
                     }),
                     typedResult
@@ -538,25 +561,30 @@ async function taskCronTriggerEnsure(
     toolContext: Parameters<ToolDefinition["execute"]>[1],
     taskId: string,
     schedule: string,
-    agentId?: string
-): Promise<{ id: string; duplicate: boolean }> {
+    agentId?: string,
+    timezone?: string
+): Promise<{ id: string; duplicate: boolean; timezone: string }> {
     const normalizedSchedule = schedule.trim();
     if (!cronExpressionParse(normalizedSchedule)) {
         throw new Error(`Invalid cron schedule: ${schedule}`);
     }
+    const normalizedTimezone = await taskCronTimezoneResolve(toolContext, timezone);
 
     const existing = await toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, taskId);
-    const duplicate = existing.find((trigger) => trigger.schedule === normalizedSchedule);
+    const duplicate = existing.find(
+        (trigger) => trigger.schedule === normalizedSchedule && trigger.timezone === normalizedTimezone
+    );
     if (duplicate) {
-        return { id: duplicate.id, duplicate: true };
+        return { id: duplicate.id, duplicate: true, timezone: normalizedTimezone };
     }
 
     const created = await toolContext.agentSystem.crons.addTrigger(toolContext.ctx, {
         taskId,
         schedule: normalizedSchedule,
+        timezone: normalizedTimezone,
         agentId
     });
-    return { id: created.id, duplicate: false };
+    return { id: created.id, duplicate: false, timezone: normalizedTimezone };
 }
 
 async function taskHeartbeatTriggerEnsure(
@@ -570,4 +598,32 @@ async function taskHeartbeatTriggerEnsure(
 
     const created = await toolContext.heartbeats.addTrigger(toolContext.ctx, { taskId });
     return { id: created.id, duplicate: false };
+}
+
+async function taskCronTimezoneResolve(
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    timezone?: string
+): Promise<string> {
+    const provided = timezone?.trim() ?? "";
+    if (provided) {
+        if (!timezoneIsValid(provided)) {
+            throw new Error(`Invalid cron timezone: ${provided}`);
+        }
+        return provided;
+    }
+    const user = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
+    const profileTimezone = user?.timezone?.trim() ?? "";
+    if (profileTimezone && timezoneIsValid(profileTimezone)) {
+        return profileTimezone;
+    }
+    return "UTC";
+}
+
+function timezoneIsValid(timezone: string): boolean {
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+        return true;
+    } catch {
+        return false;
+    }
 }

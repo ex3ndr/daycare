@@ -29,5 +29,8 @@ Your nametag is `{{nametag}}`.
 {{#if country}}
 - Country: `{{country}}`
 {{/if}}
+{{#if timezone}}
+- Timezone: `{{timezone}}`
+{{/if}}
 Load the `daycare-friendship` skill to learn about nametags, adding friends, and sharing subusers.
 {{/if}}

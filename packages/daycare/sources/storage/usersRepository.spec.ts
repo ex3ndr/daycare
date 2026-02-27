@@ -14,6 +14,7 @@ describe("UsersRepository", () => {
                 firstName: "Steve",
                 lastName: "Jobs",
                 country: "US",
+                timezone: "America/Los_Angeles",
                 nametag: "swift-fox-42",
                 connectorKey: "telegram:1"
             });
@@ -23,6 +24,7 @@ describe("UsersRepository", () => {
             expect(created.firstName).toBe("Steve");
             expect(created.lastName).toBe("Jobs");
             expect(created.country).toBe("US");
+            expect(created.timezone).toBe("America/Los_Angeles");
 
             const byId = await users.findById(created.id);
             expect(byId?.id).toBe(created.id);
@@ -41,6 +43,7 @@ describe("UsersRepository", () => {
                 firstName: "Steven",
                 lastName: null,
                 country: "USA",
+                timezone: "America/New_York",
                 updatedAt: 3
             });
             const updatedOwner = await users.findById(created.id);
@@ -49,6 +52,7 @@ describe("UsersRepository", () => {
             expect(updatedOwner?.firstName).toBe("Steven");
             expect(updatedOwner?.lastName).toBeNull();
             expect(updatedOwner?.country).toBe("USA");
+            expect(updatedOwner?.timezone).toBe("America/New_York");
 
             const owner = await users.findOwner();
             expect(owner).toBeTruthy();

@@ -156,6 +156,7 @@ export class UsersRepository {
                 firstName: row.first_name ?? null,
                 lastName: row.last_name ?? null,
                 country: row.country ?? null,
+                timezone: row.timezone ?? null,
                 nametag: row.nametag,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at,
@@ -210,6 +211,7 @@ export class UsersRepository {
             const firstName = textNullableNormalize(input.firstName);
             const lastName = textNullableNormalize(input.lastName);
             const country = textNullableNormalize(input.country);
+            const timezone = textNullableNormalize(input.timezone);
             const connectorKey = input.connectorKey?.trim() ?? "";
             const explicitNametag = input.nametag?.trim() ?? "";
             const shouldGenerateNametag = explicitNametag.length === 0;
@@ -221,7 +223,7 @@ export class UsersRepository {
                 try {
                     await this.db
                         .prepare(
-                            "INSERT INTO users (id, is_owner, parent_user_id, name, first_name, last_name, country, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO users (id, is_owner, parent_user_id, name, first_name, last_name, country, timezone, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         )
                         .run(
                             id,
@@ -231,6 +233,7 @@ export class UsersRepository {
                             firstName,
                             lastName,
                             country,
+                            timezone,
                             nametag,
                             createdAt,
                             updatedAt
@@ -267,6 +270,7 @@ export class UsersRepository {
                 firstName,
                 lastName,
                 country,
+                timezone,
                 nametag,
                 createdAt,
                 updatedAt,
@@ -293,6 +297,7 @@ export class UsersRepository {
                 ...(data.firstName === undefined ? {} : { firstName: textNullableNormalize(data.firstName) }),
                 ...(data.lastName === undefined ? {} : { lastName: textNullableNormalize(data.lastName) }),
                 ...(data.country === undefined ? {} : { country: textNullableNormalize(data.country) }),
+                ...(data.timezone === undefined ? {} : { timezone: textNullableNormalize(data.timezone) }),
                 createdAt: data.createdAt ?? current.createdAt,
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
@@ -301,7 +306,7 @@ export class UsersRepository {
                 .prepare(
                     `
                   UPDATE users
-                  SET is_owner = ?, first_name = ?, last_name = ?, country = ?, created_at = ?, updated_at = ?
+                  SET is_owner = ?, first_name = ?, last_name = ?, country = ?, timezone = ?, created_at = ?, updated_at = ?
                   WHERE id = ?
                 `
                 )
@@ -310,6 +315,7 @@ export class UsersRepository {
                     next.firstName,
                     next.lastName,
                     next.country,
+                    next.timezone,
                     next.createdAt,
                     next.updatedAt,
                     id
@@ -413,6 +419,7 @@ export class UsersRepository {
             firstName: userRow.first_name ?? null,
             lastName: userRow.last_name ?? null,
             country: userRow.country ?? null,
+            timezone: userRow.timezone ?? null,
             nametag: userRow.nametag,
             createdAt: userRow.created_at,
             updatedAt: userRow.updated_at,

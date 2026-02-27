@@ -9,12 +9,13 @@ export function messageFormatIncoming(
     if (!message.text && (!message.files || message.files.length === 0)) {
         return message;
     }
-    const time = formatTimeAI(receivedAt);
+    const time = formatTimeAI(receivedAt, { timezone: context.timezone });
     const text = message.text ?? "";
+    const timezoneTag = context.timezone ? `<timezone>${context.timezone}</timezone>` : "";
     const messageIdTag = context.messageId ? `<message_id>${context.messageId}</message_id>` : "";
     return {
         ...message,
         rawText: message.rawText ?? message.text,
-        text: `<time>${time}</time>${messageIdTag}<message>${text}</message>`
+        text: `${timezoneTag}<time>${time}</time>${messageIdTag}<message>${text}</message>`
     };
 }

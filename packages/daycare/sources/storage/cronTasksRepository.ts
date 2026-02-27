@@ -104,6 +104,7 @@ export class CronTasksRepository {
         if (!taskId) {
             throw new Error("Cron trigger taskId is required.");
         }
+        const timezone = timezoneNormalize(record.timezone);
         await this.createLock.inLock(async () => {
             await this.db
                 .prepare(
@@ -115,19 +116,21 @@ export class CronTasksRepository {
                     name,
                     description,
                     schedule,
+                    timezone,
                     agent_id,
                     enabled,
                     delete_after_run,
                     last_run_at,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                     task_id = excluded.task_id,
                     user_id = excluded.user_id,
                     name = excluded.name,
                     description = excluded.description,
                     schedule = excluded.schedule,
+                    timezone = excluded.timezone,
                     agent_id = excluded.agent_id,
                     enabled = excluded.enabled,
                     delete_after_run = excluded.delete_after_run,
@@ -143,6 +146,7 @@ export class CronTasksRepository {
                     record.name,
                     record.description,
                     record.schedule,
+                    timezone,
                     record.agentId,
                     record.enabled ? 1 : 0,
                     record.deleteAfterRun ? 1 : 0,
@@ -172,12 +176,14 @@ export class CronTasksRepository {
                 taskId: data.taskId ?? current.taskId,
                 userId: data.userId === undefined ? current.userId : data.userId,
                 description: data.description === undefined ? current.description : data.description,
+                timezone: data.timezone === undefined ? current.timezone : data.timezone,
                 agentId: data.agentId === undefined ? current.agentId : data.agentId,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
             if (!next.taskId.trim()) {
                 throw new Error("Cron trigger taskId is required.");
             }
+            next.timezone = timezoneNormalize(next.timezone);
 
             await this.db
                 .prepare(
@@ -189,6 +195,7 @@ export class CronTasksRepository {
                     name = ?,
                     description = ?,
                     schedule = ?,
+                    timezone = ?,
                     agent_id = ?,
                     enabled = ?,
                     delete_after_run = ?,
@@ -204,6 +211,7 @@ export class CronTasksRepository {
                     next.name,
                     next.description,
                     next.schedule,
+                    next.timezone,
                     next.agentId,
                     next.enabled ? 1 : 0,
                     next.deleteAfterRun ? 1 : 0,
@@ -260,6 +268,7 @@ export class CronTasksRepository {
             name: row.name,
             description: row.description,
             schedule: row.schedule,
+            timezone: timezoneNormalize(row.timezone),
             agentId: row.agent_id,
             enabled: row.enabled === 1,
             deleteAfterRun: row.delete_after_run === 1,
@@ -286,4 +295,12 @@ function cronTaskClone(record: CronTaskDbRecord): CronTaskDbRecord {
 
 function cronTasksSort(records: CronTaskDbRecord[]): CronTaskDbRecord[] {
     return records.slice().sort((left, right) => left.updatedAt - right.updatedAt);
+}
+
+function timezoneNormalize(value: string): string {
+    const normalized = value.trim();
+    if (!normalized) {
+        return "UTC";
+    }
+    return normalized;
 }

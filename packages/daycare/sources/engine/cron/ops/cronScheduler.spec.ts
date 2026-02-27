@@ -39,6 +39,7 @@ describe("CronScheduler", () => {
             config: configModule(tempDir),
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask
         });
 
@@ -67,6 +68,7 @@ describe("CronScheduler", () => {
             config: configModule(tempDir),
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask
         });
 
@@ -103,6 +105,7 @@ describe("CronScheduler", () => {
             config,
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask: vi.fn()
         });
 
@@ -127,6 +130,7 @@ describe("CronScheduler", () => {
             config: configModule(tempDir),
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask
         });
 
@@ -144,6 +148,7 @@ describe("CronScheduler", () => {
             config: configModule(tempDir),
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask
         });
 
@@ -177,6 +182,7 @@ describe("CronScheduler", () => {
             config: configModule(tempDir),
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask
         });
 
@@ -207,6 +213,7 @@ describe("CronScheduler", () => {
             config: configModule(tempDir),
             repository: storage.cronTasks,
             tasksRepository: storage.tasks,
+            usersRepository: storage.users,
             onTask: () => {
                 throw new Error("Task failed");
             },
@@ -229,6 +236,7 @@ async function cronTaskInsert(
         taskId?: string;
         name: string;
         schedule: string;
+        timezone?: string;
         code: string;
         userId?: string;
         enabled?: boolean;
@@ -252,6 +260,7 @@ async function cronTaskInsert(
         name: input.name,
         description: null,
         schedule: input.schedule,
+        timezone: input.timezone ?? "UTC",
         agentId: null,
         enabled: input.enabled !== false,
         deleteAfterRun: false,

@@ -4,6 +4,7 @@ import { getLogger } from "../../../log.js";
 import type { CronTasksRepository } from "../../../storage/cronTasksRepository.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import type { TasksRepository } from "../../../storage/tasksRepository.js";
+import type { UsersRepository } from "../../../storage/usersRepository.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
 import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
@@ -15,6 +16,7 @@ export type CronSchedulerOptions = {
     config: ConfigModule;
     repository: CronTasksRepository;
     tasksRepository: TasksRepository;
+    usersRepository: UsersRepository;
     onTask: (context: CronTaskContext, messageContext: MessageContext) => void | Promise<void>;
     onError?: (error: unknown, taskId: string) => void | Promise<void>;
     onTaskComplete?: (task: CronTaskDbRecord, runAt: Date) => void | Promise<void>;
@@ -27,6 +29,7 @@ export class CronScheduler {
     private config: ConfigModule;
     private repository: CronTasksRepository;
     private tasksRepository: TasksRepository;
+    private usersRepository: UsersRepository;
     private tasks = new Map<string, ScheduledTask>();
     private started = false;
     private stopped = false;
@@ -40,6 +43,7 @@ export class CronScheduler {
         this.config = options.config;
         this.repository = options.repository;
         this.tasksRepository = options.tasksRepository;
+        this.usersRepository = options.usersRepository;
         this.onTask = options.onTask;
         this.onError = options.onError;
         this.onTaskComplete = options.onTaskComplete;
@@ -137,6 +141,7 @@ export class CronScheduler {
             name: linkedTask.title,
             description: linkedTask.description,
             schedule: definition.schedule,
+            timezone: await this.timezoneResolve(userId, definition.timezone),
             agentId: definition.agentId ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
@@ -187,22 +192,30 @@ export class CronScheduler {
             triggerId: scheduled.task.id,
             taskId: scheduled.task.taskId,
             taskName: scheduled.task.name,
+            timezone: scheduled.task.timezone,
             agentId: scheduled.task.agentId,
             userId: scheduled.task.userId
         };
     }
 
     private scheduleTask(task: CronTaskDbRecord): void {
-        const nextRun = cronTimeGetNext(task.schedule);
+        const nextRun = cronTimeGetNext(task.schedule, undefined, task.timezone);
         if (!nextRun) {
-            logger.warn({ taskId: task.id, schedule: task.schedule }, "schedule: Invalid cron schedule");
-            void this.reportError(new Error(`Invalid cron schedule: ${task.schedule}`), task.id);
+            logger.warn(
+                { taskId: task.id, schedule: task.schedule, timezone: task.timezone },
+                "schedule: Invalid cron schedule"
+            );
+            void this.reportError(
+                new Error(`Invalid cron schedule: ${task.schedule} (timezone: ${task.timezone})`),
+                task.id
+            );
             return;
         }
         logger.debug(
             {
                 taskId: task.id,
                 schedule: task.schedule,
+                timezone: task.timezone,
                 nextRun: nextRun.toISOString()
             },
             "schedule: Scheduling task"
@@ -231,11 +244,12 @@ export class CronScheduler {
             taskId: runtimeTask.taskId,
             taskName: runtimeTask.taskTitle,
             code: runtimeTask.code,
+            timezone: task.timezone,
             agentId: task.agentId,
             userId: task.userId
         };
 
-        const messageContext: MessageContext = {};
+        const messageContext: MessageContext = { timezone: task.timezone };
 
         try {
             logger.info({ taskId: task.id, name: task.name }, "execute: Executing cron task");
@@ -292,14 +306,20 @@ export class CronScheduler {
         let nextDue: Date | null = null;
         for (const scheduled of this.tasks.values()) {
             if (now.getTime() >= scheduled.nextRun.getTime()) {
-                const nextRun = cronTimeGetNext(scheduled.task.schedule, now);
+                const nextRun = cronTimeGetNext(scheduled.task.schedule, now, scheduled.task.timezone);
                 if (!nextRun) {
                     logger.warn(
-                        { taskId: scheduled.task.id, schedule: scheduled.task.schedule },
+                        {
+                            taskId: scheduled.task.id,
+                            schedule: scheduled.task.schedule,
+                            timezone: scheduled.task.timezone
+                        },
                         "schedule: Invalid cron schedule"
                     );
                     void this.reportError(
-                        new Error(`Invalid cron schedule: ${scheduled.task.schedule}`),
+                        new Error(
+                            `Invalid cron schedule: ${scheduled.task.schedule} (timezone: ${scheduled.task.timezone})`
+                        ),
                         scheduled.task.id
                     );
                 } else {
@@ -353,8 +373,33 @@ export class CronScheduler {
             this.runTick();
         }, waitMs);
     }
+
+    private async timezoneResolve(userId: string, timezone?: string): Promise<string> {
+        const provided = timezone?.trim();
+        if (provided) {
+            if (!timezoneIsValid(provided)) {
+                throw new Error(`Invalid cron timezone: ${provided}`);
+            }
+            return provided;
+        }
+        const user = await this.usersRepository.findById(userId);
+        const fromProfile = user?.timezone?.trim() ?? "";
+        if (fromProfile && timezoneIsValid(fromProfile)) {
+            return fromProfile;
+        }
+        return "UTC";
+    }
 }
 
 function cronTaskClone(task: CronTaskDbRecord): CronTaskDbRecord {
     return { ...task };
+}
+
+function timezoneIsValid(timezone: string): boolean {
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+        return true;
+    } catch {
+        return false;
+    }
 }

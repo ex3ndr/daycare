@@ -113,6 +113,7 @@ describe("task tools", () => {
                 name: "Daily check",
                 description: null,
                 schedule: "0 9 * * *",
+                timezone: "UTC",
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
@@ -322,6 +323,45 @@ describe("task tools", () => {
             toolCall("task_trigger_remove")
         );
         expect(heartbeatRemoveResult.typedResult.removed).toBe(true);
+    });
+
+    it("defaults cron timezone from user profile and treats timezone as part of uniqueness", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const now = Date.now();
+        await runtime.storage.users.create({
+            id: "user-1",
+            nametag: "timezone-user",
+            timezone: "America/New_York"
+        });
+        await runtime.storage.tasks.create({
+            id: "task-timezone",
+            userId: "user-1",
+            title: "Timezone task",
+            description: null,
+            code: "print('timezone')",
+            createdAt: now,
+            updatedAt: now
+        });
+
+        const addTool = buildTaskTriggerAddTool();
+        await addTool.execute(
+            { taskId: "task-timezone", type: "cron", schedule: "0 9 * * *" },
+            runtime.context,
+            toolCall("task_trigger_add")
+        );
+        await addTool.execute(
+            { taskId: "task-timezone", type: "cron", schedule: "0 9 * * *", timezone: "UTC" },
+            runtime.context,
+            toolCall("task_trigger_add")
+        );
+
+        const triggers = await runtime.crons.listTriggersForTask(runtime.context.ctx, "task-timezone");
+        expect(triggers).toHaveLength(2);
+        expect(triggers.some((trigger) => trigger.timezone === "America/New_York")).toBe(true);
+        expect(triggers.some((trigger) => trigger.timezone === "UTC")).toBe(true);
     });
 });
 

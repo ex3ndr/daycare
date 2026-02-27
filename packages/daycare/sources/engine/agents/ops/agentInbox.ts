@@ -158,8 +158,10 @@ function messageContextMerge(
     right: AgentInboxMessage["context"]
 ): AgentInboxMessage["context"] {
     const messageId = right.messageId ?? left.messageId;
+    const timezone = right.timezone ?? left.timezone;
     return {
-        ...(messageId ? { messageId } : {})
+        ...(messageId ? { messageId } : {}),
+        ...(timezone ? { timezone } : {})
     };
 }
 

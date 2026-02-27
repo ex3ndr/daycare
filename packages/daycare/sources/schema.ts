@@ -32,6 +32,7 @@ export const usersTable = pgTable(
         firstName: text("first_name"),
         lastName: text("last_name"),
         country: text("country"),
+        timezone: text("timezone"),
         nametag: text("nametag").notNull()
     },
     (table) => [
@@ -151,6 +152,7 @@ export const tasksCronTable = pgTable(
         name: text("name").notNull(),
         description: text("description"),
         schedule: text("schedule").notNull(),
+        timezone: text("timezone").notNull().default("UTC"),
         agentId: text("agent_id"),
         enabled: integer("enabled").notNull().default(1),
         deleteAfterRun: integer("delete_after_run").notNull().default(0),

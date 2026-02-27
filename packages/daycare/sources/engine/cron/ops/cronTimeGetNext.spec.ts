@@ -70,6 +70,19 @@ describe("cronTimeGetNext", () => {
         expect(cronTimeGetNext("invalid")).toBeNull();
     });
 
+    it("calculates next run using explicit timezone", () => {
+        const from = new Date("2024-01-15T13:30:00Z"); // 08:30 in America/New_York
+        const next = cronTimeGetNext("0 9 * * *", from, "America/New_York");
+
+        expect(next).not.toBeNull();
+        expect(next?.toISOString()).toBe("2024-01-15T14:00:00.000Z");
+    });
+
+    it("returns null for invalid timezone", () => {
+        const from = new Date("2024-01-15T13:30:00Z");
+        expect(cronTimeGetNext("0 9 * * *", from, "Mars/Base")).toBeNull();
+    });
+
     it("uses current time when from is not provided", () => {
         const before = new Date();
         const next = cronTimeGetNext("* * * * *");

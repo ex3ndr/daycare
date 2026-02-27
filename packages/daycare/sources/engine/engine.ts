@@ -198,12 +198,18 @@ export class Engine {
             onMessage: async (message, context, descriptor) =>
                 this.runConnectorCallback("message", async () => {
                     const ctx = await this.descriptorContextResolve(descriptor);
+                    const messageContext = await this.messageContextWithTimezone(ctx, context);
                     const normalized = await this.messageFilesToDownloads(ctx, message);
-                    this.incomingMessages.post({ descriptor, message: normalized, context });
+                    this.incomingMessages.post({ descriptor, message: normalized, context: messageContext });
                 }),
             onCommand: async (command, context, descriptor) =>
                 this.runConnectorCallback("command", async () => {
                     const connector = descriptor.type === "user" ? descriptor.connector : "unknown";
+                    let messageContext = context;
+                    if (descriptor.type === "user" || descriptor.type === "subuser") {
+                        const ctx = await this.descriptorContextResolve(descriptor);
+                        messageContext = await this.messageContextWithTimezone(ctx, context);
+                    }
                     const parsed = parseCommand(command);
                     if (!parsed) {
                         return;
@@ -216,7 +222,7 @@ export class Engine {
                             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
                             "receive: Reset command received"
                         );
-                        await this.handleResetCommand(descriptor, context);
+                        await this.handleResetCommand(descriptor, messageContext);
                         return;
                     }
                     if (parsed.name === "context") {
@@ -227,7 +233,7 @@ export class Engine {
                             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
                             "receive: Context command received"
                         );
-                        await this.handleContextCommand(descriptor, context);
+                        await this.handleContextCommand(descriptor, messageContext);
                         return;
                     }
                     if (parsed.name === "compact") {
@@ -238,7 +244,7 @@ export class Engine {
                             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
                             "receive: Compact command received"
                         );
-                        await this.handleCompactCommand(descriptor, context);
+                        await this.handleCompactCommand(descriptor, messageContext);
                         return;
                     }
                     if (parsed.name === "abort") {
@@ -249,7 +255,7 @@ export class Engine {
                             { connector, channelId: descriptor.channelId, userId: descriptor.userId },
                             "stop: Abort command received"
                         );
-                        await this.handleStopCommand(descriptor, context);
+                        await this.handleStopCommand(descriptor, messageContext);
                         return;
                     }
                     if (descriptor.type !== "user") {
@@ -266,7 +272,7 @@ export class Engine {
                             },
                             "event: Dispatching plugin slash command"
                         );
-                        await pluginCommand.handler(command, context, descriptor);
+                        await pluginCommand.handler(command, messageContext, descriptor);
                         return;
                     }
                     logger.debug({ connector, command: parsed.name }, "event: Unknown command ignored");
@@ -641,6 +647,22 @@ export class Engine {
             return contextForUser({ userId: descriptor.id });
         }
         throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
+    }
+
+    /**
+     * Adds user profile timezone to message context when available.
+     * Expects: ctx belongs to the current runtime user.
+     */
+    private async messageContextWithTimezone(ctx: Context, context: MessageContext): Promise<MessageContext> {
+        const user = await this.storage.users.findById(ctx.userId);
+        const timezone = user?.timezone?.trim() ?? "";
+        if (!timezone || context.timezone === timezone) {
+            return context;
+        }
+        return {
+            ...context,
+            timezone
+        };
     }
 
     /**

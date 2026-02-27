@@ -85,10 +85,11 @@ describe("Crons", () => {
                                 taskId: string;
                                 taskName: string;
                                 code: string;
+                                timezone: string;
                                 agentId?: string;
                                 userId?: string;
                             },
-                            messageContext: { messageId?: string }
+                            messageContext: { messageId?: string; timezone?: string }
                         ) => Promise<void>;
                     };
                 }
@@ -102,6 +103,7 @@ describe("Crons", () => {
                     taskId: "task-1",
                     taskName: "Nightly sync",
                     code: "Run checks",
+                    timezone: "UTC",
                     userId: "user-1"
                 },
                 messageContext

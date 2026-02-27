@@ -22,11 +22,12 @@ cron/
 Cron triggers are stored in `tasks_cron` with key fields:
 - `id`: trigger id (`daily-report`)
 - `task_id`: foreign key to unified task (`tasks.id`)
-- `name`, `schedule`, `agent_id`
+- `name`, `schedule`, `timezone`, `agent_id`
 - `enabled`, `delete_after_run`
 - `last_run_at` (unix ms)
 
 `CronScheduler` always resolves runtime code from `tasks.code` using required `task_id`.
+Schedules are evaluated in each trigger's configured IANA timezone.
 
 ## Execution Flow
 

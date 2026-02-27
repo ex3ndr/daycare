@@ -28,7 +28,8 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
         nametag: profile?.nametag ?? null,
         firstName: profile?.firstName ?? null,
         lastName: profile?.lastName ?? null,
-        country: profile?.country ?? null
+        country: profile?.country ?? null,
+        timezone: profile?.timezone ?? null
     });
     return section.trim();
 }
@@ -39,6 +40,7 @@ async function profileResolve(context: AgentSystemPromptContext): Promise<{
     firstName: string | null;
     lastName: string | null;
     country: string | null;
+    timezone: string | null;
 } | null> {
     const storage = context.agentSystem?.storage;
     if (!storage) {
@@ -52,6 +54,7 @@ async function profileResolve(context: AgentSystemPromptContext): Promise<{
         nametag: user.nametag,
         firstName: user.firstName,
         lastName: user.lastName,
-        country: user.country
+        country: user.country,
+        timezone: user.timezone
     };
 }

@@ -7,6 +7,7 @@ export type CronTaskDefinition = {
     id: string;
     taskId: string;
     schedule: string;
+    timezone?: string;
     agentId?: string;
     userId: string;
     enabled?: boolean;
@@ -24,6 +25,7 @@ export type CronTaskContext = {
     taskId: string;
     taskName: string;
     code: string;
+    timezone: string;
     agentId: string | null;
     userId: string;
 };
@@ -35,6 +37,7 @@ export type CronTaskInfo = {
     triggerId: string;
     taskId: string;
     taskName: string;
+    timezone: string;
     agentId: string | null;
     userId: string;
 };

@@ -26,13 +26,13 @@ describe("IncomingMessages", () => {
             incoming.post({
                 descriptor: userDescriptor("channel-1"),
                 message: { text: "hello" },
-                context: { messageId: "1" }
+                context: { messageId: "1", timezone: "UTC" }
             });
             await vi.advanceTimersByTimeAsync(50);
             incoming.post({
                 descriptor: userDescriptor("channel-1"),
                 message: { text: "world" },
-                context: { messageId: "2" }
+                context: { messageId: "2", timezone: "America/New_York" }
             });
 
             await vi.advanceTimersByTimeAsync(99);
@@ -45,7 +45,8 @@ describe("IncomingMessages", () => {
             expect(batch[0]?.count).toBe(2);
             expect(batch[0]?.message.text).toBe("hello\nworld");
             expect(batch[0]?.context).toEqual({
-                messageId: "2"
+                messageId: "2",
+                timezone: "America/New_York"
             });
         } finally {
             await incoming.flush();

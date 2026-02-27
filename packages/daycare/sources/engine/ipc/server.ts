@@ -326,6 +326,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             firstName: user.firstName,
             lastName: user.lastName,
             country: user.country,
+            timezone: user.timezone,
             nametag: user.nametag,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
