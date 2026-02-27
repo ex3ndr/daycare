@@ -137,7 +137,7 @@ export class Engine {
             : this.config.current.path;
         const db = databaseOpen(dbTarget);
         if (this.config.current.dbAutoMigrate) {
-            databaseMigrate(db);
+            void databaseMigrate(db);
         } else {
             logger.info("skip: Auto migrations disabled by engine.autoMigrate=false");
         }

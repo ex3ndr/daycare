@@ -1,4 +1,4 @@
-import { access, mkdir, open } from "node:fs/promises";
+import { mkdir, open } from "node:fs/promises";
 import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
@@ -27,7 +27,6 @@ export async function rlmSnapshotSave(options: RlmSnapshotSaveOptions): Promise<
         snapshotId
     );
     await rlmSnapshotWrite(snapshotPath, Buffer.from(options.snapshotDump, "base64"));
-    await rlmSnapshotDatabaseFlush(options.config.path);
     return snapshotId;
 }
 
@@ -45,23 +44,6 @@ async function rlmSnapshotWrite(snapshotPath: string, dump: Uint8Array): Promise
         await handle.close();
     }
     await rlmSnapshotPathSync(path.dirname(snapshotPath));
-}
-
-async function rlmSnapshotDatabaseFlush(dbPath: string): Promise<void> {
-    if (dbPath === ":memory:") {
-        return;
-    }
-    await rlmSnapshotPathSyncIfExists(dbPath);
-    await rlmSnapshotPathSyncIfExists(`${dbPath}-wal`);
-}
-
-async function rlmSnapshotPathSyncIfExists(targetPath: string): Promise<void> {
-    try {
-        await access(targetPath);
-    } catch {
-        return;
-    }
-    await rlmSnapshotPathSync(targetPath);
 }
 
 async function rlmSnapshotPathSync(targetPath: string): Promise<void> {

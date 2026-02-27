@@ -5,9 +5,9 @@ import { migrations } from "./_migrations.js";
  * Applies bootstrap migrations for storage.
  * Expects: database connection is open.
  */
-export function migrationRun(db: StorageDatabase): string[] {
+export async function migrationRun(db: StorageDatabase): Promise<string[]> {
     for (const migration of migrations) {
-        migration.up(db);
+        await migration.up(db);
     }
 
     return migrations.map((migration) => migration.name);

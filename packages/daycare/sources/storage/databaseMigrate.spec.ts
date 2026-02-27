@@ -7,7 +7,7 @@ describe("databaseMigrate", () => {
     it("applies pending migrations", async () => {
         const db = databaseOpenTest();
         try {
-            const applied = databaseMigrate(db);
+            const applied = await databaseMigrate(db);
             expect(applied.length).toBeGreaterThan(0);
 
             const tables = await db

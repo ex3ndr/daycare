@@ -16,7 +16,7 @@
 - Runtime baseline: Node **22+**.
 - Install deps: `yarn install`
 - Run `yarn install` before tests.
-- Tests must run against in-memory SQLite only (`:memory:`); do not use file-backed SQLite, PGlite, or Postgres in tests unless explicitly requested.
+- Tests must run against in-memory PGlite only (`:memory:`); do not use file-backed PGlite or Postgres in tests unless explicitly requested.
 - Run CLI in dev: `yarn dev`.
 - Run named end-to-end env: `yarn env <name>` (uses `portless`, stores state in `.data/<name>`).
 - Generate auth link for an env: `yarn env:link <name> [userId]`.

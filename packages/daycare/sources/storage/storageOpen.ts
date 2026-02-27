@@ -15,7 +15,7 @@ export function storageOpen(path: string, options: StorageOpenOptions = {}): Sto
     const dbTarget = options.url ? { kind: "postgres" as const, url: options.url } : path;
     const db = databaseOpen(dbTarget);
     if (options.autoMigrate ?? true) {
-        databaseMigrate(db);
+        void databaseMigrate(db);
     }
     return Storage.fromDatabase(db);
 }

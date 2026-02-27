@@ -9,30 +9,40 @@ const OWNER_USER_NAMETAG = "owner";
 
 export const migration20260226Bootstrap: Migration = {
     name: "20260226_bootstrap",
-    up(db): void {
-        db.exec(`
+    up(db): Promise<void> {
+        const operations: Promise<unknown>[] = [];
+
+        operations.push(
+            db.exec(`
             CREATE TABLE IF NOT EXISTS _migrations (
                 name text PRIMARY KEY NOT NULL,
                 applied_at bigint NOT NULL
             );
-        `);
+        `)
+        );
 
         for (const statement of BOOTSTRAP_SQL) {
-            db.exec(statement);
+            operations.push(db.exec(statement));
         }
 
-        db.prepare(
+        operations.push(
+            db.prepare(
             `
             INSERT INTO users (id, is_owner, created_at, updated_at, parent_user_id, name, nametag)
             SELECT ?, 1, 0, 0, NULL, 'Owner', ?
             WHERE NOT EXISTS (SELECT 1 FROM users WHERE is_owner = 1)
             `
-        ).run(OWNER_USER_ID, OWNER_USER_NAMETAG);
-
-        db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?) ON CONFLICT(name) DO NOTHING").run(
-            this.name,
-            Date.now()
+        ).run(OWNER_USER_ID, OWNER_USER_NAMETAG)
         );
+
+        operations.push(
+            db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?) ON CONFLICT(name) DO NOTHING").run(
+                this.name,
+                Date.now()
+            )
+        );
+
+        return Promise.all(operations).then(() => undefined);
     }
 };
 

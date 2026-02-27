@@ -8,7 +8,7 @@ describe("databaseSchemaMatches", () => {
     it("returns match for a migrated database", async () => {
         const db = databaseOpenTest();
         try {
-            databaseMigrate(db);
+            await databaseMigrate(db);
 
             const result = await databaseSchemaMatches(db);
             expect(result.matches).toBe(true);
@@ -23,7 +23,7 @@ describe("databaseSchemaMatches", () => {
     it("reports mismatch details when schema deviates", async () => {
         const db = databaseOpenTest();
         try {
-            databaseMigrate(db);
+            await databaseMigrate(db);
             await db.exec("DROP INDEX idx_users_nametag");
             await db.exec("CREATE TABLE extra_table (id TEXT PRIMARY KEY)");
 

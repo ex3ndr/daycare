@@ -24,7 +24,7 @@ export async function storageUpgrade(config: Config): Promise<StorageUpgradeResu
         const appliedBefore = await migrationAppliedNamesRead(db);
         const pendingBefore = migrations.map((migration) => migration.name).filter((name) => !appliedBefore.has(name));
 
-        databaseMigrate(db);
+        await databaseMigrate(db);
 
         const appliedAfter = await migrationAppliedNamesRead(db);
         const applied = pendingBefore.filter((name) => appliedAfter.has(name));

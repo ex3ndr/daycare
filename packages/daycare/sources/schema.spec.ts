@@ -7,7 +7,7 @@ describe("schema", () => {
     it("keeps critical table and index invariants after migrations", async () => {
         const db = databaseOpenTest();
         try {
-            migrationRun(db);
+            await migrationRun(db);
 
             const tables = await db
                 .prepare(

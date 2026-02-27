@@ -426,7 +426,7 @@ export const schema = {
 export type DaycareDb = PgliteDatabase<typeof schema>;
 export type DaycareDatabaseClient = PGlite;
 
-export function schemaDrizzleBuild(client: DaycareDatabaseClient): DaycareDb {
+export function schemaDrizzle(client: DaycareDatabaseClient): DaycareDb {
     return drizzle(client, {
         schema
     });
