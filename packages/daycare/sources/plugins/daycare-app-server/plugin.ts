@@ -8,6 +8,7 @@ import { resolveEngineSocketPath } from "../../engine/ipc/socket.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 import { jwtVerify } from "../../util/jwt.js";
 import { APP_AUTH_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
+import { appEndpointNormalize } from "./appEndpointNormalize.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import { daycareAppProxyPathResolve } from "./daycareAppProxyPathResolve.js";
 
@@ -28,8 +29,8 @@ const settingsSchema = z
     .object({
         host: z.string().trim().min(1).default(APP_DEFAULT_HOST),
         port: z.coerce.number().int().min(1).max(65535).default(APP_DEFAULT_PORT),
-        appDomain: z.string().trim().min(1).optional(),
-        serverDomain: z.string().trim().min(1).optional(),
+        appDomain: appEndpointSettingSchema("appDomain"),
+        serverDomain: appEndpointSettingSchema("serverDomain"),
         jwtSecret: z.string().trim().min(32).optional()
     })
     .strict();
@@ -485,4 +486,23 @@ function appServerClose(server: http.Server): Promise<void> {
             resolve();
         });
     });
+}
+
+function appEndpointSettingSchema(fieldName: string): z.ZodEffects<z.ZodOptional<z.ZodString>, string | undefined> {
+    return z
+        .string()
+        .trim()
+        .min(1)
+        .optional()
+        .transform((value, context) => {
+            try {
+                return appEndpointNormalize(value, fieldName);
+            } catch (error) {
+                context.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: error instanceof Error ? error.message : `Invalid ${fieldName}.`
+                });
+                return z.NEVER;
+            }
+        });
 }

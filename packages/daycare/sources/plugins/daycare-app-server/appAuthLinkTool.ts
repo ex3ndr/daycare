@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { jwtSign } from "../../util/jwt.js";
+import { appEndpointNormalize } from "./appEndpointNormalize.js";
 
 export const APP_AUTH_EXPIRES_IN_SECONDS = 3600;
 
@@ -72,8 +73,10 @@ export function appAuthLinkUrlBuild(
     }
 
     const defaults = `http://${normalizedHost}:${port}`;
-    const appUrl = appAuthLinkDomainUrlResolve(appDomain ?? serverDomain, defaults, "appDomain");
-    const backendUrl = appAuthLinkDomainUrlResolve(serverDomain, appUrl, "serverDomain");
+    const resolvedAppEndpoint = appEndpointNormalize(appDomain, "appDomain");
+    const resolvedServerEndpoint = appEndpointNormalize(serverDomain, "serverDomain");
+    const appUrl = resolvedAppEndpoint ?? resolvedServerEndpoint ?? defaults;
+    const backendUrl = resolvedServerEndpoint ?? appUrl;
     const hashPayload = appAuthLinkHashPayloadEncode({
         backendUrl,
         token
@@ -83,23 +86,6 @@ export function appAuthLinkUrlBuild(
 
 function appAuthLinkHashPayloadEncode(payload: { backendUrl: string; token: string }): string {
     return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
-}
-
-function appAuthLinkDomainUrlResolve(value: string | undefined, fallback: string, fieldName: string): string {
-    const trimmed = value?.trim();
-    if (!trimmed) {
-        return fallback;
-    }
-
-    if (trimmed.includes("://")) {
-        const parsed = new URL(trimmed);
-        if (parsed.pathname !== "/" || parsed.search || parsed.hash) {
-            throw new Error(`${fieldName} must include only protocol, hostname, and optional port.`);
-        }
-        return `${parsed.protocol}//${parsed.host}`;
-    }
-
-    return `https://${trimmed}`;
 }
 
 export type AppAuthLinkToolOptions = {

@@ -16,8 +16,14 @@ describe("appAuthLinkUrlBuild", () => {
         });
     });
 
-    it("uses app and server domains independently", () => {
-        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", "app.example.com", "api.example.com");
+    it("uses app and server endpoints independently", () => {
+        const url = appAuthLinkUrlBuild(
+            "0.0.0.0",
+            7332,
+            "token-1",
+            "https://app.example.com/",
+            "https://api.example.com/"
+        );
         const parsed = new URL(url);
         expect(parsed.origin).toBe("https://app.example.com");
         expect(parsed.pathname).toBe("/auth");
@@ -27,14 +33,20 @@ describe("appAuthLinkUrlBuild", () => {
         });
     });
 
-    it("uses server domain for both URL and payload when app domain is missing", () => {
-        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", undefined, "api.example.com");
+    it("uses server endpoint for both URL and payload when app endpoint is missing", () => {
+        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", undefined, "https://api.example.com/");
         const parsed = new URL(url);
         expect(parsed.origin).toBe("https://api.example.com");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "https://api.example.com",
             token: "token-1"
         });
+    });
+
+    it("throws when endpoint values are bare domains", () => {
+        expect(() => appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", "app.example.com")).toThrow(
+            "appDomain must be an endpoint URL"
+        );
     });
 });
 

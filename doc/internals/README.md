@@ -12,6 +12,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `dashboard-plugin.md` - built-in dashboard plugin (static site + socket proxy + optional basic auth)
 - `dashboard-history.md` - dashboard conversation history view
 - `daycare-factory.md` - docker-based factory build flow for TASK.md + out mounts
+- `daycare-app-endpoint-normalization.md` - app/server endpoint URL normalization for app-link generation
 - `agent-list-tools.md` - tools for listing agent/session ids and metadata
 - `agent-session-control-tools.md` - `agent_reset` and `agent_compact` cross-agent session control tools
 - `session-history-tool.md` - cross-session history tool behavior and summary mode

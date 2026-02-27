@@ -128,17 +128,17 @@ describe("appLinkCommand", () => {
         );
     });
 
-    it("passes app and server domains to link generator", async () => {
+    it("passes normalized app and server endpoints to link generator", async () => {
         await appLinkCommand("user-1", {
-            appDomain: "app.example.com",
-            serverDomain: "api.example.com"
+            appDomain: "https://app.example.com/",
+            serverDomain: "https://api.example.com/"
         });
 
         expect(appAuthLinkGenerateMock).toHaveBeenCalledWith({
             host: "127.0.0.1",
             port: 7332,
-            appDomain: "app.example.com",
-            serverDomain: "api.example.com",
+            appDomain: "https://app.example.com",
+            serverDomain: "https://api.example.com",
             userId: "user-1",
             secret: "resolved-secret",
             expiresInSeconds: 3600

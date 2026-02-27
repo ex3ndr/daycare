@@ -1,4 +1,5 @@
 import { APP_AUTH_EXPIRES_IN_SECONDS } from "../plugins/daycare-app-server/appAuthLinkTool.js";
+import { appEndpointNormalize } from "../plugins/daycare-app-server/appEndpointNormalize.js";
 import type { PluginInstanceSettings } from "../settings.js";
 
 const APP_DEFAULT_HOST = "127.0.0.1";
@@ -35,8 +36,8 @@ export function appLinkOptionsResolve(
 
     const host = appLinkHostResolve(options.host, pluginSettings.host);
     const port = appLinkPortResolve(options.port, pluginSettings.port);
-    const appDomain = appLinkDomainResolve(options.appDomain, pluginSettings.appDomain);
-    const serverDomain = appLinkDomainResolve(options.serverDomain, pluginSettings.serverDomain);
+    const appDomain = appLinkEndpointResolve(options.appDomain, pluginSettings.appDomain, "appDomain");
+    const serverDomain = appLinkEndpointResolve(options.serverDomain, pluginSettings.serverDomain, "serverDomain");
     const expiresInSeconds = appLinkExpiresResolve(options.expiresInSeconds);
     const settingsJwtSecret = appLinkSecretResolve(pluginSettings.jwtSecret);
 
@@ -108,10 +109,14 @@ function appLinkPortResolve(portOption: string | undefined, portSetting: unknown
     return APP_DEFAULT_PORT;
 }
 
-function appLinkDomainResolve(optionValue: string | undefined, settingValue: unknown): string | undefined {
+function appLinkEndpointResolve(
+    optionValue: string | undefined,
+    settingValue: unknown,
+    fieldName: string
+): string | undefined {
     const fromOption = optionValue?.trim();
     if (fromOption) {
-        return fromOption;
+        return appEndpointNormalize(fromOption, fieldName);
     }
 
     if (typeof settingValue !== "string") {
@@ -119,7 +124,10 @@ function appLinkDomainResolve(optionValue: string | undefined, settingValue: unk
     }
 
     const normalized = settingValue.trim();
-    return normalized ? normalized : undefined;
+    if (!normalized) {
+        return undefined;
+    }
+    return appEndpointNormalize(normalized, fieldName);
 }
 
 function appLinkPortParse(value: string | undefined): number | null {

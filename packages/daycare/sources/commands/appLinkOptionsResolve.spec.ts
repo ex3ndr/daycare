@@ -10,8 +10,8 @@ describe("appLinkOptionsResolve", () => {
                 settings: {
                     host: "0.0.0.0",
                     port: 7444,
-                    appDomain: "app.example.com",
-                    serverDomain: "api.example.com",
+                    appDomain: "https://app.example.com/",
+                    serverDomain: "https://api.example.com/",
                     jwtSecret: "plugin-secret"
                 }
             }
@@ -20,8 +20,8 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved).toEqual({
             host: "0.0.0.0",
             port: 7444,
-            appDomain: "app.example.com",
-            serverDomain: "api.example.com",
+            appDomain: "https://app.example.com",
+            serverDomain: "https://api.example.com",
             expiresInSeconds: 3600,
             settingsJwtSecret: "plugin-secret"
         });
@@ -32,8 +32,8 @@ describe("appLinkOptionsResolve", () => {
             {
                 host: "localhost",
                 port: "9000",
-                appDomain: "https://public.example.com",
-                serverDomain: "https://api.public.example.com",
+                appDomain: "https://public.example.com/",
+                serverDomain: "https://api.public.example.com/",
                 expiresInSeconds: "120"
             },
             [
@@ -43,8 +43,8 @@ describe("appLinkOptionsResolve", () => {
                     settings: {
                         host: "127.0.0.1",
                         port: 7332,
-                        appDomain: "app.internal.example",
-                        serverDomain: "api.internal.example"
+                        appDomain: "https://app.internal.example",
+                        serverDomain: "https://api.internal.example"
                     }
                 }
             ]
@@ -76,5 +76,16 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved.appDomain).toBeUndefined();
         expect(resolved.serverDomain).toBeUndefined();
         expect(resolved.expiresInSeconds).toBe(3600);
+    });
+
+    it("throws when endpoint value is a bare domain", () => {
+        expect(() =>
+            appLinkOptionsResolve(
+                {
+                    appDomain: "app.example.com"
+                },
+                []
+            )
+        ).toThrow("appDomain must be an endpoint URL");
     });
 });
