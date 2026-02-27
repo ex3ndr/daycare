@@ -104,6 +104,16 @@ afterEach(async () => {
 });
 
 describe("daycare-app-server plugin auth endpoints", () => {
+    it("returns welcome text on root route", async () => {
+        const built = await pluginCreateForTests({ secret: "valid-secret-for-tests-1234567890" });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/`);
+
+        expect(response.status).toBe(200);
+        expect(await response.text()).toBe("Welcome to Daycare App API!");
+        expect(response.headers.get("content-type")).toContain("text/plain");
+    });
+
     it("returns ok for valid token", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await pluginCreateForTests({ secret });

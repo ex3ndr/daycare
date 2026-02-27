@@ -17,10 +17,11 @@ Notes:
 
 ## Routes
 
+- `GET /`: plain welcome message (`Welcome to Daycare App API!`)
 - `POST /auth/validate`: validate incoming magic link token
 - `POST /auth/refresh`: validate token and return a fresh 1-hour token
 - `/api/*`: proxied to local engine IPC socket
-- `/*`: static SPA assets from `packages/daycare-app/dist` or `packages/daycare-app/web-build`
+- `/<path>` (non-root): static SPA assets from `packages/daycare-app/dist` or `packages/daycare-app/web-build`
 
 ## Tool and command
 

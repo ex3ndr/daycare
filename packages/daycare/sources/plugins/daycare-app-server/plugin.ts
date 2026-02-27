@@ -86,6 +86,11 @@ export const plugin = definePlugin({
                 return;
             }
 
+            if (requestUrl.pathname === "/") {
+                appSendText(response, 200, "Welcome to Daycare App API!");
+                return;
+            }
+
             const siteDirectory = await appSiteDirectoryResolve();
             if (!siteDirectory) {
                 appSendJson(response, 503, {
@@ -451,6 +456,15 @@ function appSendJson(response: http.ServerResponse, statusCode: number, payload:
         "cache-control": "no-store"
     });
     response.end(`${JSON.stringify(payload)}\n`);
+}
+
+function appSendText(response: http.ServerResponse, statusCode: number, text: string): void {
+    appCorsApply(response);
+    response.writeHead(statusCode, {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-store"
+    });
+    response.end(text);
 }
 
 function appCorsApply(response: http.ServerResponse): void {
