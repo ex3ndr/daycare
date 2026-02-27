@@ -34,12 +34,7 @@ const styles = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
         backgroundColor: theme.colors.surface,
-        alignItems: "center",
-        justifyContent: {
-            xs: "flex-start",
-            sm: "flex-start",
-            md: "center"
-        }
+        alignItems: "center"
     },
     panel: {
         width: "100%",
@@ -48,10 +43,18 @@ const styles = StyleSheet.create((theme) => ({
             sm: "100%",
             md: 480
         },
-        height: {
+        paddingVertical: {
+            xs: 0,
+            sm: 0,
+            md: 64
+        },
+        minHeight: {
             xs: "100%",
             sm: "100%",
             md: 700
+        },
+        justifyContent: {
+            md: "center"
         }
     }
 }));

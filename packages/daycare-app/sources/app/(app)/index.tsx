@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { AppHeader, type AppMode } from "@/components/AppHeader";
 import { Item } from "@/components/Item";
@@ -33,44 +33,69 @@ function RightPlaceholder() {
 
     return (
         <View style={styles.centered}>
-            <Text style={[styles.centerTitle, { color: theme.colors.onSurface }]}>Select an item</Text>
-            <Text style={[styles.centerSubtitle, { color: theme.colors.onSurfaceVariant }]}>Context appears here.</Text>
+            <Text style={[styles.centerTitle, { color: theme.colors.onSurface }]}>Conversation Details</Text>
+            <Text style={[styles.centerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                Details and files for the conversation.
+            </Text>
         </View>
     );
 }
 
-function PanelOne({ mode }: { mode: AppMode }) {
+function PanelOne({
+    mode,
+    selectedChatId,
+    onSelectChat
+}: {
+    mode: AppMode;
+    selectedChatId: string | null;
+    onSelectChat: (id: string) => void;
+}) {
     return (
         <ItemListStatic>
             <ItemGroup>
                 {leftItems[mode].map((item) => (
-                    <Item key={item.id} title={item.title} subtitle={item.subtitle} />
+                    <Item
+                        key={item.id}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        selected={mode === "chat" && selectedChatId === item.id}
+                        onPress={mode === "chat" ? () => onSelectChat(item.id) : undefined}
+                    />
                 ))}
             </ItemGroup>
         </ItemListStatic>
     );
 }
 
-function PanelTwo({ mode }: { mode: AppMode }) {
+function PanelTwo({ mode, selectedChatId }: { mode: AppMode; selectedChatId: string | null }) {
     if (mode === "agents") {
         return <AgentsView />;
     }
     if (mode === "chat") {
-        return <ChatView />;
+        return selectedChatId ? <ChatView /> : <View />;
     }
     return <SettingsView />;
 }
 
+function PanelThree({ mode, selectedChatId }: { mode: AppMode; selectedChatId: string | null }) {
+    if (mode === "chat" && selectedChatId) {
+        return <RightPlaceholder />;
+    }
+    return undefined;
+}
+
 export default function DaycareHomeScreen() {
     const { theme } = useUnistyles();
-    const [mode, setMode] = React.useState<AppMode>("agents");
+    const [mode, setMode] = React.useState<AppMode>("chat");
+    const [selectedChatId, setSelectedChatId] = React.useState<string | null>("c1");
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
             <AppHeader selectedMode={mode} onModeChange={setMode} />
             <TreePanelLayout
-                panel1={<PanelOne mode={mode} />}
-                panel2={<PanelTwo mode={mode} />}
+                panel1={<PanelOne mode={mode} selectedChatId={selectedChatId} onSelectChat={setSelectedChatId} />}
+                panel2={<PanelTwo mode={mode} selectedChatId={selectedChatId} />}
+                panel3={PanelThree({ mode, selectedChatId })}
                 panel3Placeholder={<RightPlaceholder />}
             />
         </View>

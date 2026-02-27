@@ -1,11 +1,13 @@
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useAuthStore } from "@/modules/auth/authContext";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
 
 export function SettingsView() {
     const { theme } = useUnistyles();
+    const logout = useAuthStore((state) => state.logout);
 
     return (
         <View style={styles.root}>
@@ -15,6 +17,14 @@ export function SettingsView() {
                     <Item title="Account" icon={<View style={styles.dot} />} />
                     <Item title="Appearance" icon={<View style={styles.dot} />} />
                     <Item title="About" icon={<View style={styles.dot} />} showChevron={false} />
+                </ItemGroup>
+                <ItemGroup>
+                    <Item
+                        title="Sign Out"
+                        onPress={() => void logout()}
+                        icon={<View style={[styles.dot, { backgroundColor: theme.colors.error }]} />}
+                        showChevron={false}
+                    />
                 </ItemGroup>
             </ItemListStatic>
         </View>

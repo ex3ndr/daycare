@@ -52,11 +52,14 @@ export default function AuthMagicLinkScreen() {
     return (
         <SinglePanelLayout>
             <View style={styles.content}>
-                <Text style={[styles.title, { color: theme.colors.onSurface }]}>Welcome to Daycare</Text>
+                <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryContainer }]}>
+                    <Text style={{ fontSize: 48 }}>✨</Text>
+                </View>
+                <Text style={[styles.title, { color: theme.colors.onSurface }]}>You're almost in</Text>
                 {payload ? (
                     <>
                         <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            Server: <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
+                            Connecting to <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
                         </Text>
                         <Pressable
                             accessibilityRole="button"
@@ -92,12 +95,20 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        gap: 14,
+        gap: 16,
         paddingHorizontal: 24
     },
+    iconContainer: {
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 24 // Changed from 8 to 24 for improved spacing
+    },
     title: {
-        fontSize: 26,
-        fontWeight: "700",
+        fontSize: 32,
+        fontWeight: "bold",
         textAlign: "center"
     },
     message: {
