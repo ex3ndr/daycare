@@ -7,6 +7,7 @@ import { ArrowLeft, Bell, BellOff, Cable, Clock, Download, MessageSquare, Moon, 
 
 import { agentHistoryExportJsonl } from "@/lib/agentHistoryExportJsonl";
 import { agentHistoryExportMarkdown } from "@/lib/agentHistoryExportMarkdown";
+import { downloadTextFile } from "@/lib/downloadTextFile";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1066,16 +1067,4 @@ function filenameTokenNormalize(value: string) {
     .replace(/[^a-zA-Z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return token.length > 0 ? token : "unknown";
-}
-
-function downloadTextFile(fileName: string, content: string, contentType: string) {
-  const blob = new Blob([content], { type: contentType });
-  const href = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = href;
-  anchor.download = fileName;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(href);
 }
