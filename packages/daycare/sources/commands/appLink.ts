@@ -38,7 +38,7 @@ export async function appLinkCommand(userId: string, options: AppLinkOptions): P
             host: resolved.host,
             port: resolved.port,
             appEndpoint: resolved.appEndpoint,
-            ...(resolved.serverDomain ? { serverDomain: resolved.serverDomain } : {}),
+            ...(resolved.serverEndpoint ? { serverEndpoint: resolved.serverEndpoint } : {}),
             userId: trimmedUserId,
             secret,
             expiresInSeconds: resolved.expiresInSeconds

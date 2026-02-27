@@ -47,7 +47,7 @@ program
     .option("--host <host>", "Override host in the generated URL")
     .option("--port <port>", "Override port in the generated URL")
     .option("--app-endpoint <endpoint>", "Override app endpoint URL where the auth link opens")
-    .option("--server-domain <endpoint>", "Override backend endpoint URL embedded in the auth hash payload")
+    .option("--server-endpoint <endpoint>", "Override backend endpoint URL embedded in the auth hash payload")
     .option("--expires-in-seconds <seconds>", "Token expiration in seconds")
     .option("--json", "Print full json payload instead of plain URL")
     .action(appLinkCommand);

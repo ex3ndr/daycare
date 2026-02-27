@@ -12,7 +12,7 @@ export type AppLinkCommandOptions = {
     host?: string;
     port?: string;
     appEndpoint?: string;
-    serverDomain?: string;
+    serverEndpoint?: string;
     instance?: string;
     expiresInSeconds?: string;
 };
@@ -21,7 +21,7 @@ export type AppLinkResolvedOptions = {
     host: string;
     port: number;
     appEndpoint: string;
-    serverDomain?: string;
+    serverEndpoint?: string;
     expiresInSeconds: number;
     settingsJwtSecret?: string;
 };
@@ -42,7 +42,11 @@ export function appLinkOptionsResolve(
     const appEndpoint =
         appLinkEndpointResolve(options.appEndpoint, pluginSettings.appEndpoint, "appEndpoint") ??
         APP_AUTH_DEFAULT_ENDPOINT;
-    const serverDomain = appLinkEndpointResolve(options.serverDomain, pluginSettings.serverDomain, "serverDomain");
+    const serverEndpoint = appLinkEndpointResolve(
+        options.serverEndpoint,
+        pluginSettings.serverEndpoint,
+        "serverEndpoint"
+    );
     const expiresInSeconds = appLinkExpiresResolve(options.expiresInSeconds);
     const settingsJwtSecret = appLinkSecretResolve(pluginSettings.jwtSecret);
 
@@ -50,7 +54,7 @@ export function appLinkOptionsResolve(
         host,
         port,
         appEndpoint,
-        serverDomain,
+        serverEndpoint,
         expiresInSeconds,
         settingsJwtSecret
     };

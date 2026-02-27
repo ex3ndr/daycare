@@ -31,7 +31,7 @@ export type AppAuthLinkGenerateInput = {
     host: string;
     port: number;
     appEndpoint?: string;
-    serverDomain?: string;
+    serverEndpoint?: string;
     userId: string;
     secret: string;
     expiresInSeconds?: number;
@@ -50,7 +50,7 @@ export async function appAuthLinkGenerate(input: AppAuthLinkGenerateInput): Prom
         userId: input.userId,
         token,
         expiresAt,
-        url: appAuthLinkUrlBuild(input.host, input.port, token, input.appEndpoint, input.serverDomain)
+        url: appAuthLinkUrlBuild(input.host, input.port, token, input.appEndpoint, input.serverEndpoint)
     };
 }
 
@@ -63,7 +63,7 @@ export function appAuthLinkUrlBuild(
     port: number,
     token: string,
     appEndpoint?: string,
-    serverDomain?: string
+    serverEndpoint?: string
 ): string {
     const normalizedHost = host.trim();
     if (!normalizedHost) {
@@ -75,7 +75,7 @@ export function appAuthLinkUrlBuild(
 
     const defaults = APP_AUTH_DEFAULT_ENDPOINT;
     const resolvedAppEndpoint = appEndpointNormalize(appEndpoint, "appEndpoint");
-    const resolvedServerEndpoint = appEndpointNormalize(serverDomain, "serverDomain");
+    const resolvedServerEndpoint = appEndpointNormalize(serverEndpoint, "serverEndpoint");
     const appUrl = resolvedAppEndpoint ?? resolvedServerEndpoint ?? defaults;
     const backendUrl = resolvedServerEndpoint ?? appUrl;
     const hashPayload = appAuthLinkHashPayloadEncode({
@@ -93,7 +93,7 @@ export type AppAuthLinkToolOptions = {
     host: string;
     port: number;
     appEndpoint?: string;
-    serverDomain?: string;
+    serverEndpoint?: string;
     secretResolve: () => Promise<string>;
 };
 
@@ -116,7 +116,7 @@ export function appAuthLinkTool(options: AppAuthLinkToolOptions): ToolDefinition
                 host: options.host,
                 port: options.port,
                 appEndpoint: options.appEndpoint,
-                serverDomain: options.serverDomain,
+                serverEndpoint: options.serverEndpoint,
                 userId: context.ctx.userId,
                 secret
             });

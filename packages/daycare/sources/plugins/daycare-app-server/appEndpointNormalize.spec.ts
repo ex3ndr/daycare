@@ -9,7 +9,7 @@ describe("appEndpointNormalize", () => {
 
     it("normalizes endpoint and trims trailing slash", () => {
         expect(appEndpointNormalize("https://app.example.com/", "appEndpoint")).toBe("https://app.example.com");
-        expect(appEndpointNormalize("http://127.0.0.1:7332///", "serverDomain")).toBe("http://127.0.0.1:7332");
+        expect(appEndpointNormalize("http://127.0.0.1:7332///", "serverEndpoint")).toBe("http://127.0.0.1:7332");
     });
 
     it("throws for bare domains", () => {

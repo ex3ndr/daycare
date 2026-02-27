@@ -11,7 +11,7 @@ describe("appLinkOptionsResolve", () => {
                     host: "0.0.0.0",
                     port: 7444,
                     appEndpoint: "https://app.example.com/",
-                    serverDomain: "https://api.example.com/",
+                    serverEndpoint: "https://api.example.com/",
                     jwtSecret: "plugin-secret"
                 }
             }
@@ -21,7 +21,7 @@ describe("appLinkOptionsResolve", () => {
             host: "0.0.0.0",
             port: 7444,
             appEndpoint: "https://app.example.com",
-            serverDomain: "https://api.example.com",
+            serverEndpoint: "https://api.example.com",
             expiresInSeconds: 3600,
             settingsJwtSecret: "plugin-secret"
         });
@@ -33,7 +33,7 @@ describe("appLinkOptionsResolve", () => {
                 host: "localhost",
                 port: "9000",
                 appEndpoint: "https://public.example.com/",
-                serverDomain: "https://api.public.example.com/",
+                serverEndpoint: "https://api.public.example.com/",
                 expiresInSeconds: "120"
             },
             [
@@ -44,7 +44,7 @@ describe("appLinkOptionsResolve", () => {
                         host: "127.0.0.1",
                         port: 7332,
                         appEndpoint: "https://app.internal.example",
-                        serverDomain: "https://api.internal.example"
+                        serverEndpoint: "https://api.internal.example"
                     }
                 }
             ]
@@ -53,7 +53,7 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved.host).toBe("localhost");
         expect(resolved.port).toBe(9000);
         expect(resolved.appEndpoint).toBe("https://public.example.com");
-        expect(resolved.serverDomain).toBe("https://api.public.example.com");
+        expect(resolved.serverEndpoint).toBe("https://api.public.example.com");
         expect(resolved.expiresInSeconds).toBe(120);
     });
 
@@ -74,7 +74,7 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved.host).toBe("127.0.0.1");
         expect(resolved.port).toBe(7332);
         expect(resolved.appEndpoint).toBe("https://daycare.dev");
-        expect(resolved.serverDomain).toBeUndefined();
+        expect(resolved.serverEndpoint).toBeUndefined();
         expect(resolved.expiresInSeconds).toBe(3600);
     });
 

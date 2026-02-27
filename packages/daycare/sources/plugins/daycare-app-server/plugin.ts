@@ -30,7 +30,7 @@ const settingsSchema = z
         host: z.string().trim().min(1).default(APP_DEFAULT_HOST),
         port: z.coerce.number().int().min(1).max(65535).default(APP_DEFAULT_PORT),
         appEndpoint: appEndpointSettingSchema("appEndpoint"),
-        serverDomain: appEndpointSettingSchema("serverDomain"),
+        serverEndpoint: appEndpointSettingSchema("serverEndpoint"),
         jwtSecret: z.string().trim().min(32).optional()
     })
     .strict();
@@ -76,7 +76,7 @@ export const plugin = definePlugin({
                     settings.host,
                     settings.port,
                     settings.appEndpoint,
-                    settings.serverDomain
+                    settings.serverEndpoint
                 );
                 return;
             }
@@ -117,7 +117,7 @@ export const plugin = definePlugin({
                     host: settings.host,
                     port: settings.port,
                     appEndpoint: settings.appEndpoint,
-                    serverDomain: settings.serverDomain,
+                    serverEndpoint: settings.serverEndpoint,
                     secretResolve
                 });
 
@@ -134,7 +134,7 @@ export const plugin = definePlugin({
                         host: settings.host,
                         port: settings.port,
                         appEndpoint: settings.appEndpoint,
-                        serverDomain: settings.serverDomain,
+                        serverEndpoint: settings.serverEndpoint,
                         userId: descriptor.userId,
                         secret: await secretResolve(),
                         expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS
@@ -220,7 +220,7 @@ async function appAuthRefreshRoute(
     host: string,
     port: number,
     appEndpoint: string | undefined,
-    serverDomain: string | undefined
+    serverEndpoint: string | undefined
 ): Promise<void> {
     const body = await appReadJsonBody(request);
     const token = typeof body.token === "string" ? body.token.trim() : "";
@@ -236,7 +236,7 @@ async function appAuthRefreshRoute(
             host,
             port,
             appEndpoint,
-            serverDomain,
+            serverEndpoint,
             userId: payload.userId,
             secret,
             expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS

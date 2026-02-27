@@ -74,7 +74,7 @@ The `daycare-app-server` plugin exposes app authentication and static app hostin
 
 - Registers `app_auth_link` tool for user-scoped magic links.
 - Registers `/app` slash command to send a direct launch URL.
-- Supports `appEndpoint` (default `https://daycare.dev`) and optional `serverDomain` endpoint settings for split app/backend link targets.
+- Supports `appEndpoint` (default `https://daycare.dev`) and optional `serverEndpoint` endpoint settings for split app/backend link targets.
 - Verifies JWTs through `POST /auth/validate`.
 - Proxies `/api/*` requests to the engine unix socket.
 - Serves static SPA assets from `packages/daycare-app/dist` (or `web-build`) with path traversal guards.

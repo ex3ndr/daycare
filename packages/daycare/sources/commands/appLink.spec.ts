@@ -133,14 +133,14 @@ describe("appLinkCommand", () => {
     it("passes normalized app and server endpoints to link generator", async () => {
         await appLinkCommand("user-1", {
             appEndpoint: "https://app.example.com/",
-            serverDomain: "https://api.example.com/"
+            serverEndpoint: "https://api.example.com/"
         });
 
         expect(appAuthLinkGenerateMock).toHaveBeenCalledWith({
             host: "127.0.0.1",
             port: 7332,
             appEndpoint: "https://app.example.com",
-            serverDomain: "https://api.example.com",
+            serverEndpoint: "https://api.example.com",
             userId: "user-1",
             secret: "resolved-secret",
             expiresInSeconds: 3600

@@ -1,6 +1,6 @@
 # Daycare App Endpoint Normalization
 
-`appEndpoint` and `serverDomain` are treated as endpoint URLs (not bare domains).
+`appEndpoint` and `serverEndpoint` are treated as endpoint URLs (not bare domains).
 
 - Accepts only absolute `http://` or `https://` endpoints.
 - Removes trailing slash when provided.
@@ -11,7 +11,7 @@ This normalization is applied in both app-link CLI option resolution and app aut
 
 ```mermaid
 flowchart TD
-  Input[appEndpoint/serverDomain input] --> Trim[trim whitespace]
+  Input[appEndpoint/serverEndpoint input] --> Trim[trim whitespace]
   Trim --> Parse{valid absolute URL?}
   Parse -->|no| Error[throw validation error]
   Parse -->|yes| Scheme{http or https?}

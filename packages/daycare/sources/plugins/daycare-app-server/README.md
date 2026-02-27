@@ -7,11 +7,11 @@ Serves the Daycare Expo web build, exposes token auth endpoints, and provides `/
 - `host`: bind host, default `127.0.0.1`
 - `port`: bind port, default `7332`
 - `appEndpoint`: app endpoint URL where generated links open, default `https://daycare.dev`
-- `serverDomain` (optional): backend endpoint URL embedded in hash payload (for example `https://api.example.com`)
+- `serverEndpoint` (optional): backend endpoint URL embedded in hash payload (for example `https://api.example.com`)
 - `jwtSecret` (optional): HS256 JWT signing secret; when omitted, plugin uses auth store key `app-auth.jwtSecret`
 
 Notes:
-- `appEndpoint` and `serverDomain` must be full `http(s)` endpoint URLs.
+- `appEndpoint` and `serverEndpoint` must be full `http(s)` endpoint URLs.
 - Trailing slashes are removed automatically.
 - Paths/query/hash are not allowed.
 
@@ -29,17 +29,17 @@ Notes:
 - Slash command: `/app`
 
 Both generate a short-lived app URL in the form:
-`<appEndpoint-or-serverDomain>/auth#<base64url-json>`
+`<appEndpoint-or-serverEndpoint>/auth#<base64url-json>`
 
 When `appEndpoint` is configured, links open on that app endpoint.
-When `serverDomain` is configured, the payload `backendUrl` points to that server endpoint.
-If only `serverDomain` is set, links also open on `serverDomain`.
+When `serverEndpoint` is configured, the payload `backendUrl` points to that server endpoint.
+If only `serverEndpoint` is set, links also open on `serverEndpoint`.
 
 Hash payload JSON shape:
 
 ```json
 {
-    "backendUrl": "<serverDomain-or-link-origin>",
+    "backendUrl": "<serverEndpoint-or-link-origin>",
     "token": "<jwt>"
 }
 ```
