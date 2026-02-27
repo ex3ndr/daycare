@@ -87,6 +87,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         protobuf-compiler=3.21.* \
         ripgrep=14.1.* \
         rsync=3.2.* \
+        shellcheck=0.9.* \
         socat \
         software-properties-common=0.99.* \
         sqlite3=3.45.* \
