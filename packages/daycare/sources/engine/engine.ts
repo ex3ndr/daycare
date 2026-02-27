@@ -16,6 +16,7 @@ import { databaseOpen } from "../storage/databaseOpen.js";
 import { Storage } from "../storage/storage.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { InvalidateSync } from "../util/sync.js";
+import { timezoneIsValid } from "../util/timezoneIsValid.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
@@ -198,8 +199,15 @@ export class Engine {
             onMessage: async (message, context, descriptor) =>
                 this.runConnectorCallback("message", async () => {
                     const ctx = await this.descriptorContextResolve(descriptor);
-                    const messageContext = await this.messageContextWithTimezone(ctx, context);
-                    const normalized = await this.messageFilesToDownloads(ctx, message);
+                    const timezoneResolution = await this.messageContextWithTimezone(ctx, context);
+                    let normalized = await this.messageFilesToDownloads(ctx, message);
+                    if (timezoneResolution.timezoneChangedNotification) {
+                        normalized = connectorMessageTextPrepend(
+                            normalized,
+                            timezoneResolution.timezoneChangedNotification
+                        );
+                    }
+                    const messageContext = timezoneResolution.context;
                     this.incomingMessages.post({ descriptor, message: normalized, context: messageContext });
                 }),
             onCommand: async (command, context, descriptor) =>
@@ -208,7 +216,7 @@ export class Engine {
                     let messageContext = context;
                     if (descriptor.type === "user" || descriptor.type === "subuser") {
                         const ctx = await this.descriptorContextResolve(descriptor);
-                        messageContext = await this.messageContextWithTimezone(ctx, context);
+                        messageContext = (await this.messageContextWithTimezone(ctx, context)).context;
                     }
                     const parsed = parseCommand(command);
                     if (!parsed) {
@@ -650,18 +658,46 @@ export class Engine {
     }
 
     /**
-     * Adds user profile timezone to message context when available.
+     * Resolves effective message timezone and syncs profile timezone from connector metadata.
      * Expects: ctx belongs to the current runtime user.
      */
-    private async messageContextWithTimezone(ctx: Context, context: MessageContext): Promise<MessageContext> {
+    private async messageContextWithTimezone(
+        ctx: Context,
+        context: MessageContext
+    ): Promise<{ context: MessageContext; timezoneChangedNotification: string | null }> {
         const user = await this.storage.users.findById(ctx.userId);
-        const timezone = user?.timezone?.trim() ?? "";
-        if (!timezone || context.timezone === timezone) {
-            return context;
+
+        const profileTimezoneRaw = user?.timezone?.trim() ?? "";
+        const profileTimezone = profileTimezoneRaw && timezoneIsValid(profileTimezoneRaw) ? profileTimezoneRaw : "";
+
+        const incomingTimezoneRaw = context.timezone?.trim() ?? "";
+        const incomingTimezone = incomingTimezoneRaw && timezoneIsValid(incomingTimezoneRaw) ? incomingTimezoneRaw : "";
+        if (incomingTimezoneRaw && !incomingTimezone) {
+            logger.warn({ userId: ctx.userId, timezone: incomingTimezoneRaw }, "warn: Ignoring invalid incoming timezone");
         }
+        if (profileTimezoneRaw && !profileTimezone) {
+            logger.warn({ userId: ctx.userId, timezone: profileTimezoneRaw }, "warn: Ignoring invalid profile timezone");
+        }
+
+        let timezoneChangedNotification: string | null = null;
+        if (incomingTimezone && incomingTimezone !== profileTimezoneRaw) {
+            await this.storage.users.update(ctx.userId, {
+                timezone: incomingTimezone,
+                updatedAt: Date.now()
+            });
+            const previous = profileTimezoneRaw || "unset";
+            timezoneChangedNotification = `[system] Timezone updated from ${previous} to ${incomingTimezone}.`;
+        }
+
+        const effectiveTimezone = incomingTimezone || profileTimezone;
+        const messageContext: MessageContext = {
+            ...(context.messageId ? { messageId: context.messageId } : {}),
+            ...(effectiveTimezone ? { timezone: effectiveTimezone } : {})
+        };
+
         return {
-            ...context,
-            timezone
+            context: messageContext,
+            timezoneChangedNotification
         };
     }
 
@@ -749,6 +785,17 @@ export class Engine {
             logger.info("reload: Runtime configuration reloaded");
         });
     }
+}
+
+function connectorMessageTextPrepend(message: ConnectorMessage, prefix: string): ConnectorMessage {
+    const text = message.text ? `${prefix}\n${message.text}` : prefix;
+    const rawTextSource = message.rawText ?? message.text ?? "";
+    const rawText = rawTextSource ? `${prefix}\n${rawTextSource}` : prefix;
+    return {
+        ...message,
+        text,
+        rawText
+    };
 }
 
 function parseCommand(command: string): { name: string; args: string[] } | null {

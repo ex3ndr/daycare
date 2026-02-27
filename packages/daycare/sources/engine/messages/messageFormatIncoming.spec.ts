@@ -22,4 +22,13 @@ describe("messageFormatIncoming", () => {
 
         expect(result).toEqual(message);
     });
+
+    it("defaults formatted time to UTC when timezone context is missing", () => {
+        const message = { text: "hello" };
+        const context = {};
+        const result = messageFormatIncoming(message, context, new Date("2024-01-01T00:00:00Z"));
+
+        expect(result.text).toContain("(UTC)");
+        expect(result.text).not.toContain("<timezone>");
+    });
 });

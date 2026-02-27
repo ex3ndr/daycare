@@ -47,6 +47,7 @@ describe("task tools", () => {
                 code: "print('ok')",
                 description: "Daily checks",
                 cron: "0 9 * * *",
+                cronTimezone: "UTC",
                 heartbeat: true
             },
             runtime.context,
@@ -142,6 +143,7 @@ describe("task tools", () => {
                 title: "Daily check",
                 code: "print('ok')",
                 cron: "0 9 * * *",
+                cronTimezone: "UTC",
                 heartbeat: true
             },
             runtime.context,
@@ -270,7 +272,7 @@ describe("task tools", () => {
 
         const addTool = buildTaskTriggerAddTool();
         const cronAddResult = await addTool.execute(
-            { taskId: "task-one", type: "cron", schedule: "*/15 * * * *" },
+            { taskId: "task-one", type: "cron", schedule: "*/15 * * * *", timezone: "UTC" },
             runtime.context,
             toolCall("task_trigger_add")
         );
@@ -279,7 +281,7 @@ describe("task tools", () => {
 
         // Duplicate cron schedule should be ignored and return the existing trigger.
         const duplicateCronAddResult = await addTool.execute(
-            { taskId: "task-one", type: "cron", schedule: "*/15 * * * *" },
+            { taskId: "task-one", type: "cron", schedule: "*/15 * * * *", timezone: "UTC" },
             runtime.context,
             toolCall("task_trigger_add")
         );
@@ -287,7 +289,7 @@ describe("task tools", () => {
 
         // Different cron schedules should create additional triggers.
         await addTool.execute(
-            { taskId: "task-one", type: "cron", schedule: "0 * * * *" },
+            { taskId: "task-one", type: "cron", schedule: "0 * * * *", timezone: "UTC" },
             runtime.context,
             toolCall("task_trigger_add")
         );
@@ -362,6 +364,45 @@ describe("task tools", () => {
         expect(triggers).toHaveLength(2);
         expect(triggers.some((trigger) => trigger.timezone === "America/New_York")).toBe(true);
         expect(triggers.some((trigger) => trigger.timezone === "UTC")).toBe(true);
+    });
+
+    it("requires timezone when profile timezone is missing", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const now = Date.now();
+        await runtime.storage.tasks.create({
+            id: "task-no-timezone",
+            userId: "user-1",
+            title: "Timezone required",
+            description: null,
+            code: "print('timezone')",
+            createdAt: now,
+            updatedAt: now
+        });
+
+        const addTool = buildTaskTriggerAddTool();
+        await expect(
+            addTool.execute(
+                { taskId: "task-no-timezone", type: "cron", schedule: "0 9 * * *" },
+                runtime.context,
+                toolCall("task_trigger_add")
+            )
+        ).rejects.toThrow("Timezone is required.");
+
+        const createTool = buildTaskCreateTool();
+        await expect(
+            createTool.execute(
+                {
+                    title: "Needs timezone",
+                    code: "print('x')",
+                    cron: "0 9 * * *"
+                },
+                runtime.context,
+                toolCall("task_create")
+            )
+        ).rejects.toThrow("Timezone is required.");
     });
 });
 

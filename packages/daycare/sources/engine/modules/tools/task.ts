@@ -606,5 +606,9 @@ async function taskCronTimezoneResolve(
     timezone?: string
 ): Promise<string> {
     const user = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
-    return cronTimezoneResolve({ timezone, profileTimezone: user?.timezone });
+    return cronTimezoneResolve({
+        timezone,
+        profileTimezone: user?.timezone,
+        requireResolved: true
+    });
 }

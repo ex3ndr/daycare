@@ -45,3 +45,26 @@ flowchart LR
     C --> D[timezoneIsValid]
     C --> E[Resolved timezone]
 ```
+
+## Connector timezone sync
+
+- Incoming connector timezone now updates `users.timezone` automatically when it differs.
+- The incoming message is prepended with a system notice when timezone changes.
+- Invalid incoming/profile timezone strings are ignored.
+
+```mermaid
+flowchart TD
+    A[Incoming connector message] --> B{context.timezone valid?}
+    B -- yes --> C[Update users.timezone if changed]
+    C --> D[Prepend system notice to message text]
+    B -- no --> E[Keep existing valid profile timezone]
+    D --> F[Post message to agent]
+    E --> F
+```
+
+## Strict timezone requirement for cron tool calls
+
+- `task_create` and `task_trigger_add` now require resolvable timezone:
+  - explicit timezone argument, or
+  - valid profile timezone.
+- If neither exists, tool call throws and the model must ask user for timezone.

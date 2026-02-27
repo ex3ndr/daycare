@@ -17,4 +17,8 @@ describe("cronTimezoneResolve", () => {
     it("falls back to UTC when profile timezone is invalid", () => {
         expect(cronTimezoneResolve({ profileTimezone: "Mars/Base" })).toBe("UTC");
     });
+
+    it("throws when timezone cannot be resolved and resolution is required", () => {
+        expect(() => cronTimezoneResolve({ requireResolved: true })).toThrow("Timezone is required.");
+    });
 });
