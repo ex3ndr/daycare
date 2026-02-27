@@ -1,3 +1,5 @@
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import type { BodyTextToSpeechFull, TextToSpeechConvertRequestOutputFormat } from "@elevenlabs/elevenlabs-js/api";
 import { z } from "zod";
 import type {
     SpeechGenerationContext,
@@ -11,7 +13,6 @@ import { type ElevenLabsVoiceCatalogEntry, elevenLabsVoiceCatalogDefault } from 
 const DEFAULT_MODEL = "eleven_multilingual_v2";
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_OUTPUT_FORMAT = "mp3_44100_128";
-const DEFAULT_BASE_URL = "https://api.elevenlabs.io";
 
 const settingsSchema = z
     .object({
@@ -98,37 +99,27 @@ async function speechGenerate(
     const voice = request.voice ?? settings.voice ?? DEFAULT_VOICE_ID;
     const outputFormat = request.outputFormat ?? settings.outputFormat ?? DEFAULT_OUTPUT_FORMAT;
     const voiceId = speechVoiceIdResolve(voice, voiceCatalog);
+    const client = new ElevenLabsClient({ apiKey });
 
-    const payload: Record<string, unknown> = {
+    const payload: BodyTextToSpeechFull = {
         text: request.text,
-        model_id: model
+        modelId: model,
+        outputFormat: outputFormat as TextToSpeechConvertRequestOutputFormat,
+        languageCode: request.language,
+        voiceSettings: request.speed !== undefined ? { speed: request.speed } : undefined
     };
-    if (request.language) {
-        payload.language_code = request.language;
-    }
-    if (request.speed !== undefined) {
-        payload.voice_settings = {
-            speed: request.speed
-        };
-    }
 
-    const endpoint = `${DEFAULT_BASE_URL}/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=${encodeURIComponent(outputFormat)}`;
-    const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "xi-api-key": apiKey
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`ElevenLabs speech generation failed: ${response.status} - ${errorText}`);
+    let data: Buffer;
+    let contentType: string | null = null;
+    try {
+        const response = await client.textToSpeech.convert(voiceId, payload).withRawResponse();
+        data = await speechBufferFromReadable(response.data);
+        contentType = speechContentTypeResolve(response.rawResponse.headers);
+    } catch (error) {
+        throw new Error(`ElevenLabs speech generation failed: ${speechErrorMessageResolve(error)}`);
     }
 
-    const data = Buffer.from(await response.arrayBuffer());
-    const mimeType = speechMimeTypeResolve(outputFormat, response.headers.get("content-type"));
+    const mimeType = speechMimeTypeResolve(outputFormat, contentType);
     const extension = speechExtensionResolve(mimeType);
     const stored = await context.fileStore.saveBuffer({
         name: `elevenlabs-${Date.now()}${extension}`,
@@ -242,4 +233,34 @@ function speechExtensionResolve(mimeType: string): string {
         return ".m4a";
     }
     return ".mp3";
+}
+
+function speechContentTypeResolve(headers: unknown): string | null {
+    if (headers && typeof headers === "object" && "get" in headers && typeof headers.get === "function") {
+        const value = headers.get("content-type");
+        return typeof value === "string" ? value : null;
+    }
+    return null;
+}
+
+async function speechBufferFromReadable(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+    const reader = stream.getReader();
+    const chunks: Buffer[] = [];
+    while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) {
+            break;
+        }
+        if (chunk.value) {
+            chunks.push(Buffer.from(chunk.value));
+        }
+    }
+    return Buffer.concat(chunks);
+}
+
+function speechErrorMessageResolve(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    return String(error);
 }

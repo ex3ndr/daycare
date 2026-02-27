@@ -12,11 +12,30 @@ import { getLogger } from "../../log.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { plugin as elevenLabs } from "./plugin.js";
 
+const { convertMock, elevenLabsClientMock } = vi.hoisted(() => {
+    const convert = vi.fn();
+    const client = vi.fn(() => ({
+        textToSpeech: {
+            convert
+        }
+    }));
+    return {
+        convertMock: convert,
+        elevenLabsClientMock: client
+    };
+});
+
+vi.mock("@elevenlabs/elevenlabs-js", () => ({
+    ElevenLabsClient: elevenLabsClientMock
+}));
+
 describe("elevenlabs plugin", () => {
     const tempDirs: string[] = [];
 
     afterEach(async () => {
         vi.restoreAllMocks();
+        convertMock.mockReset();
+        elevenLabsClientMock.mockReset();
         vi.unstubAllGlobals();
         for (const dir of tempDirs.splice(0, tempDirs.length)) {
             await fs.rm(dir, { recursive: true, force: true });
@@ -59,18 +78,17 @@ describe("elevenlabs plugin", () => {
             unregisterConnector: async () => undefined
         } as unknown as PluginRegistrar;
 
-        const fetchMock = vi.fn(async (input: unknown, init?: RequestInit) => {
-            const url = String(input);
-            if (url.includes("/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM")) {
-                expect(init?.method).toBe("POST");
-                return new Response(Buffer.from("audio-bytes"), {
-                    status: 200,
-                    headers: { "Content-Type": "audio/mpeg" }
-                });
+        const withRawResponseMock = vi.fn(async () => ({
+            data: speechReadableFromText("audio-bytes"),
+            rawResponse: {
+                headers: new Headers({
+                    "content-type": "audio/mpeg"
+                })
             }
-            throw new Error(`Unexpected URL: ${url}`);
+        }));
+        convertMock.mockReturnValue({
+            withRawResponse: withRawResponseMock
         });
-        vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
 
         const settings = elevenLabs.settingsSchema.parse({});
         const api: PluginApi<typeof settings> = {
@@ -150,9 +168,26 @@ describe("elevenlabs plugin", () => {
         const audioData = await fs.readFile(generated.path, "utf8");
         expect(audioData).toBe("audio-bytes");
         expect(generated.mimeType).toBe("audio/mpeg");
+        expect(elevenLabsClientMock).toHaveBeenCalledWith({ apiKey: "test-elevenlabs-key" });
+        expect(convertMock).toHaveBeenCalledWith(
+            "21m00Tcm4TlvDq8ikWAM",
+            expect.objectContaining({
+                text: "Hello from ElevenLabs",
+                modelId: "eleven_multilingual_v2",
+                outputFormat: "mp3_44100_128"
+            })
+        );
 
         await instance.unload?.();
         expect(registrationState.unregisteredProviderId).toBe("elevenlabs");
-        expect(fetchMock).toHaveBeenCalled();
     });
 });
+
+function speechReadableFromText(value: string): ReadableStream<Uint8Array> {
+    return new ReadableStream<Uint8Array>({
+        start(controller) {
+            controller.enqueue(Buffer.from(value));
+            controller.close();
+        }
+    });
+}
