@@ -12,7 +12,7 @@ const permissions: SessionPermissions = {
 
 describe("AgentsRepository", () => {
     it("supports create, find and update", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const users = await storage.users.findMany();
             const ownerUser = users[0];
@@ -55,7 +55,7 @@ describe("AgentsRepository", () => {
     });
 
     it("returns cached agent on repeated read", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const ownerUser = (await storage.users.findMany())[0];
             if (!ownerUser) {
@@ -88,7 +88,7 @@ describe("AgentsRepository", () => {
     });
 
     it("loads from db on cache miss", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const ownerUser = (await storage.users.findMany())[0];
             if (!ownerUser) {
@@ -136,7 +136,7 @@ describe("AgentsRepository", () => {
     });
 
     it("finds agents by user id", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const users = await storage.users.findMany();
             const ownerUser = users[0];

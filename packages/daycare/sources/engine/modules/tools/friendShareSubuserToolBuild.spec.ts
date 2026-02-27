@@ -9,7 +9,7 @@ const toolCall = { id: "tool-1", name: "friend_share_subuser" };
 
 describe("friendShareSubuserToolBuild", () => {
     it("shares a subuser with an existing friend", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -52,7 +52,7 @@ describe("friendShareSubuserToolBuild", () => {
     });
 
     it("fails when owner and friend are not connected", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -81,7 +81,7 @@ describe("friendShareSubuserToolBuild", () => {
     });
 
     it("fails when caller does not own the subuser", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -113,7 +113,7 @@ describe("friendShareSubuserToolBuild", () => {
     });
 
     it("fails when share is already active", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });

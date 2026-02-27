@@ -15,7 +15,7 @@ import type { ExposeTunnelProvider } from "./exposeTypes.js";
 describe("Exposes", () => {
     it("supports create/update/remove/list lifecycle", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const exposes = createExposes(dir, storage);
             const provider = providerBuild({
@@ -73,7 +73,7 @@ describe("Exposes", () => {
 
     it("selects providers and errors when ambiguous", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const exposes = createExposes(dir, storage);
             await exposes.start();
@@ -145,7 +145,7 @@ describe("Exposes", () => {
 
     it("restores endpoints from disk on restart", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const first = createExposes(dir, storage);
             const provider = providerBuild({
@@ -185,7 +185,7 @@ describe("Exposes", () => {
 
     it("updates endpoints even when provider is unavailable", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const first = createExposes(dir, storage);
             const provider = providerBuild({
@@ -224,7 +224,7 @@ describe("Exposes", () => {
 
     it("rolls back tunnels when domain normalization fails", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const expose = createExposes(dir, storage);
             const createFailProvider = providerBuild({
@@ -284,7 +284,7 @@ describe("Exposes", () => {
 
     it("keeps the reactivated domain when update triggers tunnel activation", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const exposes = createExposes(dir, storage);
             const provider = providerBuild({
@@ -330,7 +330,7 @@ describe("Exposes", () => {
 
     it("applies new auth hash when update reactivates a dormant endpoint", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-exposes-"));
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const exposes = createExposes(dir, storage);
             const provider = providerBuild({

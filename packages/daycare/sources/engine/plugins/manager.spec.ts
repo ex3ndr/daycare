@@ -31,13 +31,13 @@ async function writePluginFile(dir: string, source: string): Promise<string> {
     return pluginPath;
 }
 
-function createManager(
+async function createManager(
     entryPath: string,
     pluginId: string,
     rootDir: string,
     onEvent?: (event: PluginEvent) => void,
     processes?: Processes
-): { manager: PluginManager; modules: ModuleRegistry; config: ConfigModule } {
+): Promise<{ manager: PluginManager; modules: ModuleRegistry; config: ConfigModule }> {
     const modules = new ModuleRegistry({ onMessage: () => {} });
     const pluginRegistry = new PluginRegistry(modules);
     const config = configResolve({ engine: { dataDir: rootDir } }, path.join(rootDir, "settings.json"));
@@ -65,7 +65,7 @@ function createManager(
             }
         ]
     ]);
-    const storage = storageOpenTest();
+    const storage = await storageOpenTest();
     const processesRuntime =
         processes ??
         new Processes(rootDir, getLogger("test.processes"), {
@@ -125,7 +125,7 @@ export const plugin = {
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
         const events: PluginEvent[] = [];
-        const { manager } = createManager(entryPath, "isolated", dir, (event) => {
+        const { manager } = await createManager(entryPath, "isolated", dir, (event) => {
             events.push(event);
         });
 
@@ -163,7 +163,7 @@ export const plugin = {
 };
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
-        const { manager, config } = createManager(entryPath, "sync", dir);
+        const { manager, config } = await createManager(entryPath, "sync", dir);
 
         config.configSet(
             configResolve(
@@ -226,7 +226,7 @@ export const plugin = {
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
         const events: PluginEvent[] = [];
-        const { manager, config } = createManager(entryPath, "equal", dir, (event) => {
+        const { manager, config } = await createManager(entryPath, "equal", dir, (event) => {
             events.push(event);
         });
 
@@ -335,7 +335,7 @@ export const plugin = {
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
         const events: PluginEvent[] = [];
-        const { manager, modules } = createManager(entryPath, "probe", dir, (event) => {
+        const { manager, modules } = await createManager(entryPath, "probe", dir, (event) => {
             events.push(event);
         });
 
@@ -400,7 +400,7 @@ export const plugin = {
 };
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
-        const { manager, modules } = createManager(entryPath, "reload", dir);
+        const { manager, modules } = await createManager(entryPath, "reload", dir);
 
         await manager.load({
             instanceId: "reload-one",
@@ -456,7 +456,7 @@ export const plugin = {
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
         const events: PluginEvent[] = [];
-        const { manager } = createManager(entryPath, "hooks", dir, (event) => {
+        const { manager } = await createManager(entryPath, "hooks", dir, (event) => {
             events.push(event);
         });
 
@@ -503,7 +503,7 @@ export const plugin = {
         const processes = {
             removeByOwner: removeByOwnerSpy
         } as unknown as Processes;
-        const { manager } = createManager(entryPath, "cleanup", dir, undefined, processes);
+        const { manager } = await createManager(entryPath, "cleanup", dir, undefined, processes);
 
         await manager.load({
             instanceId: "cleanup-one",
@@ -542,7 +542,7 @@ export const plugin = {
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
         const events: PluginEvent[] = [];
-        const { manager } = createManager(entryPath, "tmp-dir", dir, (event) => {
+        const { manager } = await createManager(entryPath, "tmp-dir", dir, (event) => {
             events.push(event);
         });
 
@@ -593,7 +593,7 @@ export const plugin = {
 };
 `;
         const entryPath = await writePluginFile(dir, pluginSource);
-        const { manager } = createManager(entryPath, "prompt-types", dir);
+        const { manager } = await createManager(entryPath, "prompt-types", dir);
 
         await manager.load({
             instanceId: "prompt-literal",

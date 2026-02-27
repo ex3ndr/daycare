@@ -14,7 +14,7 @@ describe("Signals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
             const eventBus = new EngineEventBus();
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus,
                 signalEvents: storage.signalEvents,
@@ -61,7 +61,7 @@ describe("Signals", () => {
     it("returns all persisted events without recent-limit truncation", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,
@@ -85,7 +85,7 @@ describe("Signals", () => {
     it("throws a validation error when source userId is missing at runtime", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
                 signalEvents: storage.signalEvents,
@@ -105,7 +105,7 @@ describe("Signals", () => {
     it("delivers only matching subscriptions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const delivered: Array<{
                 signalType: string;
                 subscriptions: Array<{ userId: string; agentId: string; pattern: string; silent: boolean }>;
@@ -158,7 +158,7 @@ describe("Signals", () => {
     it("stops delivering after unsubscribe", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const delivered: string[] = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
@@ -197,7 +197,7 @@ describe("Signals", () => {
     it("filters matched subscriptions by signal source userId when present", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-signals-"));
         try {
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const delivered: Array<{ userId: string; agentId: string }> = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),

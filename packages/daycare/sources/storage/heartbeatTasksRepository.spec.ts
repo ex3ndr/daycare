@@ -5,7 +5,7 @@ import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("HeartbeatTasksRepository", () => {
     it("supports create, find, update, delete, and recordRun", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
             await storage.tasks.create({
@@ -75,7 +75,7 @@ describe("HeartbeatTasksRepository", () => {
     });
 
     it("returns cached task on repeated read", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const repo = new HeartbeatTasksRepository(storage.db);
             await storage.tasks.create({

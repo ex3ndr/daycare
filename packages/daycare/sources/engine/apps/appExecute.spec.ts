@@ -28,7 +28,7 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
         );
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         const agentId = "agent-app-1";
         const now = Date.now();
         await storage.agents.create({
@@ -183,7 +183,7 @@ describe("appExecute", () => {
             { engine: { dataDir: path.join(rootDir, "data") } },
             path.join(rootDir, "settings.json")
         );
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         const agentId = "agent-app-2";
         const now = Date.now();
         await storage.agents.create({

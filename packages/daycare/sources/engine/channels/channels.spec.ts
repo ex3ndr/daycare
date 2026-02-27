@@ -12,7 +12,7 @@ describe("Channels", () => {
         try {
             const subscribe = vi.fn();
             const unsubscribe = vi.fn();
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const channels = new Channels({
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,
@@ -56,7 +56,7 @@ describe("Channels", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-channels-"));
         try {
             const post = vi.fn(async () => undefined);
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const channels = new Channels({
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,
@@ -128,7 +128,7 @@ describe("Channels", () => {
     it("restores channels from disk and replays member subscriptions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-channels-"));
         try {
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const first = new Channels({
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,

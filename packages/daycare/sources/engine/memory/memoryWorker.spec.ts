@@ -18,7 +18,7 @@ function mockConfig(): ConfigModule {
 }
 
 async function createTestStorage() {
-    const storage = storageOpenTest();
+    const storage = await storageOpenTest();
     const owner = (await storage.users.findMany())[0];
     if (!owner) {
         throw new Error("Owner user missing");

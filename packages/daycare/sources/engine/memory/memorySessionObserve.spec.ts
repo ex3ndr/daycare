@@ -40,7 +40,7 @@ function mockInferenceRouter(responseText: string): InferenceRouter {
 
 describe("memorySessionObserve", () => {
     it("returns observations from inference", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const owner = (await storage.users.findMany())[0];
             if (!owner) {
@@ -96,7 +96,7 @@ describe("memorySessionObserve", () => {
     });
 
     it("passes isForeground to inferObservations and uses background labels", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const owner = (await storage.users.findMany())[0];
             if (!owner) {
@@ -153,7 +153,7 @@ describe("memorySessionObserve", () => {
     });
 
     it("returns empty array when no records", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const owner = (await storage.users.findMany())[0];
             if (!owner) {

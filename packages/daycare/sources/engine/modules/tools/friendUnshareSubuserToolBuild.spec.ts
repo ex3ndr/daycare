@@ -9,7 +9,7 @@ const toolCall = { id: "tool-1", name: "friend_unshare_subuser" };
 
 describe("friendUnshareSubuserToolBuild", () => {
     it("revokes an active share and notifies the friend", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -50,7 +50,7 @@ describe("friendUnshareSubuserToolBuild", () => {
     });
 
     it("revokes a pending share offer and removes the empty row", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -85,7 +85,7 @@ describe("friendUnshareSubuserToolBuild", () => {
     });
 
     it("fails when no share exists", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });

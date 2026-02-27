@@ -25,7 +25,7 @@ describe("Heartbeats", () => {
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
             postAndAwait: vi.fn(async () => ({ status: "completed" }))
         } as unknown as HeartbeatsOptions["agentSystem"];
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const heartbeats = new Heartbeats({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
@@ -63,7 +63,7 @@ describe("Heartbeats", () => {
             postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
         };
         const agentSystem = agentSystemMock as unknown as HeartbeatsOptions["agentSystem"];
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const heartbeats = new Heartbeats({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),

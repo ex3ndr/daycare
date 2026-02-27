@@ -34,7 +34,7 @@ describe("Storage", () => {
     });
 
     it("opens with migrations and closes connection", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         const tables = await storage.db
             .prepare(
                 "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
@@ -48,7 +48,7 @@ describe("Storage", () => {
     });
 
     it("resolves user by connector key under concurrent requests", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const results = await Promise.all(
                 Array.from({ length: 12 }).map(() => storage.resolveUserByConnectorKey("telegram:alice"))
@@ -71,7 +71,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -115,7 +115,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();
@@ -155,7 +155,7 @@ describe("Storage", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             try {
                 const user = await storage.createUser({});
                 const agentId = createId();

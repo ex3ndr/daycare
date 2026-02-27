@@ -334,7 +334,7 @@ async function runtimeBuild(): Promise<{
     postAndAwait: (...args: unknown[]) => Promise<unknown>;
 }> {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-task-tools-"));
-    const storage = storageOpenTest();
+    const storage = await storageOpenTest();
     const postAndAwait = vi.fn(async () => ({ status: "completed" }));
     const eventBus = { emit: vi.fn() };
     const config = new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json")));

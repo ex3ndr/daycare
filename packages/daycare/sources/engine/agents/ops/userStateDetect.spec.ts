@@ -7,13 +7,13 @@ import { userStateDetect } from "./userStateDetect.js";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-function createStorage(): Storage {
-    return storageOpenTest();
+async function createStorage(): Promise<Storage> {
+    return await storageOpenTest();
 }
 
 describe("userStateDetect", () => {
     it("returns new_user for non-existent user", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const state = await userStateDetect(storage, "nonexistent");
             expect(state).toBe("new_user");
@@ -23,7 +23,7 @@ describe("userStateDetect", () => {
     });
 
     it("returns new_user for user with no agents", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const now = Date.now();
             await storage.createUser({ id: "u1", nametag: "alice", createdAt: now, updatedAt: now });
@@ -36,7 +36,7 @@ describe("userStateDetect", () => {
     });
 
     it("returns new_user for recent user with agent but no compaction", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const now = Date.now();
             await storage.createUser({ id: "u1", nametag: "alice", createdAt: now - 1000, updatedAt: now });
@@ -65,7 +65,7 @@ describe("userStateDetect", () => {
     });
 
     it("returns active_user for old user with no compaction and recent activity", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const now = Date.now();
             const oldCreatedAt = now - SEVEN_DAYS_MS - 1000;
@@ -96,7 +96,7 @@ describe("userStateDetect", () => {
     });
 
     it("returns returning_user when last activity was more than 3 days ago", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const now = Date.now();
             const oldUpdatedAt = now - THREE_DAYS_MS - 1000;
@@ -133,7 +133,7 @@ describe("userStateDetect", () => {
     });
 
     it("returns active_user for user with compaction and recent activity", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const now = Date.now();
             const recentCreatedAt = now - 1000;

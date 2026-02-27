@@ -20,7 +20,7 @@ describe("subuserConfigureToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
             const updateAgentDescriptor = vi.fn();
@@ -73,7 +73,7 @@ describe("subuserConfigureToolBuild", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-subuser-configure-reject-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             await storage.users.create({ id: "regular-user" });
 
             const tool = subuserConfigureToolBuild();

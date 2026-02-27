@@ -3,7 +3,7 @@ import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("ConnectionsRepository", () => {
     it("upserts requests with canonical pair ordering", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -27,7 +27,7 @@ describe("ConnectionsRepository", () => {
     });
 
     it("clears the selected side and preserves timestamps for cooldown checks", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -46,7 +46,7 @@ describe("ConnectionsRepository", () => {
     });
 
     it("finds friendships scoped to a user and deletes connection rows", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -70,7 +70,7 @@ describe("ConnectionsRepository", () => {
     });
 
     it("finds all connections that involve subusers of an owner", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
@@ -97,7 +97,7 @@ describe("ConnectionsRepository", () => {
     });
 
     it("finds connections between a friend and another owner's subusers", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });

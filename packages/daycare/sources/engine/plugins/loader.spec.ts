@@ -54,7 +54,7 @@ export const plugin = {
         const loader = new PluginModuleLoader("test-plugin");
         const { module } = await loader.load(pluginPath);
         const settings = module.settingsSchema.parse({ name: "demo" });
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         const instance = await module.create({
             instance: { instanceId: "demo", pluginId: "demo" },
             settings,

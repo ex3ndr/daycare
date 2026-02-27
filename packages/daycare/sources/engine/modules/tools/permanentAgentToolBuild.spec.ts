@@ -26,7 +26,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const updateAgentDescriptor = vi.fn();
             const updateAgentPermissions = vi.fn();
             const context = contextBuild({
@@ -74,7 +74,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const tool = permanentAgentToolBuild();
             const context = contextBuild({
                 config: { current: config },
@@ -112,7 +112,7 @@ describe("permanentAgentToolBuild", () => {
                 },
                 path.join(dir, "settings.json")
             );
-            const storage = storageOpenTest();
+            const storage = await storageOpenTest();
             const tool = permanentAgentToolBuild();
             const context = {
                 ...contextBuild({

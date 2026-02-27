@@ -36,7 +36,7 @@ describe("Processes", () => {
         };
         vi.mocked(sandboxDockerEnvironmentIs).mockResolvedValue(false);
         managers = [];
-        storage = storageOpenTest();
+        storage = await storageOpenTest();
     });
 
     afterEach(async () => {

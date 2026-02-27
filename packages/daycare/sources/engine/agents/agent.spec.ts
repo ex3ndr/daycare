@@ -55,7 +55,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
-                storage: storageOpenTest(),
+                storage: await storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -163,7 +163,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
-                storage: storageOpenTest(),
+                storage: await storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -539,7 +539,7 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = signalsBuild(config, eventBus, async (signal, subscriptions) => {
+            const signals = await signalsBuild(config, eventBus, async (signal, subscriptions) => {
                 await agentSystem.signalDeliver(signal, subscriptions);
             });
             agentSystem.setSignals(signals);
@@ -589,7 +589,7 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = signalsBuild(config, eventBus, async (signal, subscriptions) => {
+            const signals = await signalsBuild(config, eventBus, async (signal, subscriptions) => {
                 await agentSystem.signalDeliver(signal, subscriptions);
             });
             agentSystem.setSignals(signals);
@@ -644,7 +644,7 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = signalsBuild(config, eventBus, async (signal, subscriptions) => {
+            const signals = await signalsBuild(config, eventBus, async (signal, subscriptions) => {
                 await agentSystem.signalDeliver(signal, subscriptions);
             });
             agentSystem.setSignals(signals);
@@ -730,7 +730,7 @@ describe("Agent", () => {
                 authStore: new AuthStore(config)
             });
             agentSystem.setCrons({} as unknown as Crons);
-            const signals = signalsBuild(config, eventBus);
+            const signals = await signalsBuild(config, eventBus);
             agentSystem.setSignals(signals);
             await agentSystem.load();
             await agentSystem.start();
@@ -770,8 +770,8 @@ describe("Agent", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const eventBus = new EngineEventBus();
             const configModule = new ConfigModule(config);
-            const signals = signalsBuild(config, eventBus);
-            delayedSignals = delayedSignalsBuild(configModule, eventBus, signals);
+            const signals = await signalsBuild(config, eventBus);
+            delayedSignals = await delayedSignalsBuild(configModule, eventBus, signals);
             const agentSystem = new AgentSystem({
                 config: configModule,
                 eventBus,
@@ -830,8 +830,8 @@ describe("Agent", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const eventBus = new EngineEventBus();
             const configModule = new ConfigModule(config);
-            const signals = signalsBuild(config, eventBus);
-            delayedSignals = delayedSignalsBuild(configModule, eventBus, signals);
+            const signals = await signalsBuild(config, eventBus);
+            delayedSignals = await delayedSignalsBuild(configModule, eventBus, signals);
             const agentSystem = new AgentSystem({
                 config: configModule,
                 eventBus,
@@ -955,7 +955,7 @@ describe("Agent", () => {
             agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
-                storage: storageOpenTest(),
+                storage: await storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -1142,7 +1142,7 @@ describe("Agent", () => {
             agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
-                storage: storageOpenTest(),
+                storage: await storageOpenTest(),
                 connectorRegistry,
                 imageRegistry: new ImageGenerationRegistry(),
                 mediaRegistry: new MediaAnalysisRegistry(),
@@ -1260,7 +1260,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
-                storage: storageOpenTest(),
+                storage: await storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -1406,7 +1406,7 @@ describe("Agent", () => {
             const agentSystem = new AgentSystem({
                 config: new ConfigModule(config),
                 eventBus: new EngineEventBus(),
-                storage: storageOpenTest(),
+                storage: await storageOpenTest(),
                 connectorRegistry: new ConnectorRegistry({
                     onMessage: async () => undefined
                 }),
@@ -1608,12 +1608,12 @@ async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: strin
     return ctx;
 }
 
-function signalsBuild(
+async function signalsBuild(
     config: { path: string },
     eventBus: EngineEventBus,
     onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void>
-): Signals {
-    const storage = storageOpenTest();
+): Promise<Signals> {
+    const storage = await storageOpenTest();
     return new Signals({
         eventBus,
         signalEvents: storage.signalEvents,
@@ -1622,8 +1622,8 @@ function signalsBuild(
     });
 }
 
-function delayedSignalsBuild(config: ConfigModule, eventBus: EngineEventBus, signals: Signals): DelayedSignals {
-    const storage = storageOpenTest();
+async function delayedSignalsBuild(config: ConfigModule, eventBus: EngineEventBus, signals: Signals): Promise<DelayedSignals> {
+    const storage = await storageOpenTest();
     return new DelayedSignals({
         config,
         eventBus,

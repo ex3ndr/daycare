@@ -1,6 +1,7 @@
 import type { Config } from "@/types";
+import { databaseMigrate } from "./databaseMigrate.js";
+import { databaseOpen } from "./databaseOpen.js";
 import { Storage } from "./storage.js";
-import { storageOpen } from "./storageOpen.js";
 
 const sharedStorageByKey = new Map<string, Storage>();
 
@@ -18,10 +19,12 @@ export function storageResolve(input: Storage | Config): Storage {
     if (cached) {
         return cached;
     }
-    const storage = storageOpen(input.path, {
-        url: input.url,
-        autoMigrate: input.dbAutoMigrate
-    });
+    const dbTarget = input.url ? { kind: "postgres" as const, url: input.url } : input.path;
+    const db = databaseOpen(dbTarget);
+    if (input.dbAutoMigrate) {
+        void databaseMigrate(db);
+    }
+    const storage = Storage.fromDatabase(db);
     sharedStorageByKey.set(key, storage);
     return storage;
 }

@@ -87,7 +87,7 @@ describe("AgentSystem durable inboxes", () => {
 
     it("replays persisted rows after restart and then cleans them up", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
-        const sharedStorage = storageOpenTest();
+        const sharedStorage = await storageOpenTest();
         try {
             const first = await harnessCreate(dir, { storage: sharedStorage });
             await first.agentSystem.load();
@@ -119,7 +119,7 @@ describe("AgentSystem durable inboxes", () => {
 
     it("drops stale in-flight durable row and continues inference after pending rlm recovery", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
-        const sharedStorage = storageOpenTest();
+        const sharedStorage = await storageOpenTest();
         try {
             const first = await harnessCreate(dir, {
                 storage: sharedStorage,
@@ -250,7 +250,7 @@ describe("AgentSystem durable inboxes", () => {
 
     it("clears durable rows when an unloaded sleeping subagent is killed by poison-pill", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-inbox-"));
-        const sharedStorage = storageOpenTest();
+        const sharedStorage = await storageOpenTest();
         try {
             const first = await harnessCreate(dir, { storage: sharedStorage });
             await first.agentSystem.load();
@@ -307,7 +307,7 @@ async function harnessCreate(
         path.join(dir, "settings.json")
     );
     const configModule = new ConfigModule(config);
-    const storage = options?.storage ?? storageOpenTest();
+    const storage = options?.storage ?? await storageOpenTest();
     const eventBus = new EngineEventBus();
     const signals = new Signals({
         eventBus,

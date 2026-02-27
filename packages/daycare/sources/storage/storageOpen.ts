@@ -11,11 +11,11 @@ export type StorageOpenOptions = {
  * Opens storage for pglite or postgres and optionally applies migrations.
  * Expects: path points to pglite path; url overrides with server postgres target.
  */
-export function storageOpen(path: string, options: StorageOpenOptions = {}): Storage {
+export async function storageOpen(path: string, options: StorageOpenOptions = {}): Promise<Storage> {
     const dbTarget = options.url ? { kind: "postgres" as const, url: options.url } : path;
     const db = databaseOpen(dbTarget);
     if (options.autoMigrate ?? true) {
-        void databaseMigrate(db);
+        await databaseMigrate(db);
     }
     return Storage.fromDatabase(db);
 }

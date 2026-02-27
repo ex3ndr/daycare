@@ -8,8 +8,8 @@ import { systemPromptResolve } from "./systemPromptResolve.js";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-function createStorage(): Storage {
-    return storageOpenTest();
+async function createStorage(): Promise<Storage> {
+    return await storageOpenTest();
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {
@@ -66,7 +66,7 @@ async function setupUserWithAgent(
 
 describe("systemPromptResolve", () => {
     it("returns empty when no prompts configured", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             const result = await systemPromptResolve(storage, "u1", false);
@@ -78,7 +78,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("includes global prompt with no condition for all users", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             await storage.systemPrompts.create(makePrompt({ id: "g1", scope: "global", prompt: "Be concise." }));
@@ -91,7 +91,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("includes per-user prompt only for matching userId", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             await setupUser(storage, "u2");
@@ -110,7 +110,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("excludes disabled prompts", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             await storage.systemPrompts.create(
@@ -128,7 +128,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("applies new_user condition for new users", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             // New user: created recently, no agents
             await setupUser(storage, "u1");
@@ -147,7 +147,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("applies returning_user condition for returning users", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const now = Date.now();
             const oldTime = now - SEVEN_DAYS_MS - 1000;
@@ -169,7 +169,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("returns first message prompt only when isFirstMessage is true", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             await storage.systemPrompts.create(
@@ -188,7 +188,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("concatenates multiple first message prompts with newline", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             await storage.systemPrompts.create(
@@ -206,7 +206,7 @@ describe("systemPromptResolve", () => {
     });
 
     it("combines global system prompt with per-user system prompt", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await setupUser(storage, "u1");
             await storage.systemPrompts.create(

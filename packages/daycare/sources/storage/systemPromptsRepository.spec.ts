@@ -3,8 +3,8 @@ import type { SystemPromptDbRecord } from "./databaseTypes.js";
 import type { Storage } from "./storage.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
-function createStorage(): Storage {
-    return storageOpenTest();
+async function createStorage(): Promise<Storage> {
+    return await storageOpenTest();
 }
 
 function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPromptDbRecord {
@@ -25,7 +25,7 @@ function makePrompt(overrides: Partial<SystemPromptDbRecord> = {}): SystemPrompt
 
 describe("SystemPromptsRepository", () => {
     it("creates and finds a prompt by id", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const record = makePrompt({ id: "p1" });
             await storage.systemPrompts.create(record);
@@ -42,7 +42,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("returns null for non-existent prompt", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const found = await storage.systemPrompts.findById("nonexistent");
             expect(found).toBeNull();
@@ -52,7 +52,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("lists all prompts", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "p1", createdAt: 1000 }));
             await storage.systemPrompts.create(makePrompt({ id: "p2", createdAt: 2000 }));
@@ -67,7 +67,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("finds prompts by scope", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "g1", scope: "global" }));
             await storage.systemPrompts.create(makePrompt({ id: "u1", scope: "user", userId: "user-abc" }));
@@ -85,7 +85,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("finds enabled prompts for a user (global + per-user)", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "g1", scope: "global", enabled: true }));
             await storage.systemPrompts.create(makePrompt({ id: "g2", scope: "global", enabled: false }));
@@ -109,7 +109,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("updates a prompt", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "p1", prompt: "original" }));
 
@@ -126,7 +126,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("deletes a prompt", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "p1" }));
             const deleted = await storage.systemPrompts.deleteById("p1");
@@ -140,7 +140,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("returns false when deleting non-existent prompt", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             const deleted = await storage.systemPrompts.deleteById("nonexistent");
             expect(deleted).toBe(false);
@@ -150,7 +150,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("stores and retrieves condition field", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "p1", condition: "new_user" }));
             await storage.systemPrompts.create(makePrompt({ id: "p2", condition: "returning_user" }));
@@ -170,7 +170,7 @@ describe("SystemPromptsRepository", () => {
     });
 
     it("stores first_message kind", async () => {
-        const storage = createStorage();
+        const storage = await createStorage();
         try {
             await storage.systemPrompts.create(makePrompt({ id: "fm1", kind: "first_message", prompt: "Welcome!" }));
 

@@ -9,7 +9,7 @@ const toolCall = { id: "tool-1", name: "friend_remove" };
 
 describe("friendRemoveToolBuild", () => {
     it("unfriends and notifies the other user", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -39,7 +39,7 @@ describe("friendRemoveToolBuild", () => {
     });
 
     it("rejects a pending incoming request without notification", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -65,7 +65,7 @@ describe("friendRemoveToolBuild", () => {
     });
 
     it("cancels an outgoing pending request", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -91,7 +91,7 @@ describe("friendRemoveToolBuild", () => {
     });
 
     it("removes an active shared subuser and notifies the owner", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const owner = await storage.users.create({ id: "owner", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -132,7 +132,7 @@ describe("friendRemoveToolBuild", () => {
     });
 
     it("rejects an incoming shared subuser offer without notification", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const owner = await storage.users.create({ id: "owner", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -161,7 +161,7 @@ describe("friendRemoveToolBuild", () => {
     });
 
     it("cascades subuser-share cleanup when unfriending a user", async () => {
-        const storage = storageOpenTest();
+        const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
