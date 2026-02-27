@@ -9,7 +9,6 @@ const bundleId = {
     preview: "build.daycare.app.preview",
     production: "build.daycare.app"
 }[variant];
-const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
 
 export default {
     expo: {
@@ -64,8 +63,7 @@ export default {
             ]
         ],
         experiments: {
-            typedRoutes: true,
-            ...(baseUrl ? { baseUrl } : {})
+            typedRoutes: true
         },
         extra: {
             router: {
