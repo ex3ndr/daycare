@@ -42,8 +42,8 @@ jobs:
       - name: Export app (web)
         working-directory: packages/daycare-app
         run: |
-          REPOSITORY_NAME="${GITHUB_REPOSITORY#*/}"
-          EXPO_PUBLIC_BASE_URL="/${REPOSITORY_NAME}" yarn export:web
+          EXPO_PUBLIC_BASE_URL="/" yarn export:web
+          echo "daycare.dev" > dist/CNAME
           touch dist/.nojekyll
 
       - name: Upload Pages artifact
