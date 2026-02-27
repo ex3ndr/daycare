@@ -12,7 +12,7 @@ flowchart LR
     EXTRACT -->|no media| TEXT[ConnectorMessage.text/rawText]
     FILES --> QUEUE[incomingMessages.post]
     TEXT --> QUEUE
-    QUEUE --> CHECK{messageEmptyIs}
+    QUEUE --> CHECK{messageIsEmpty}
     CHECK -->|true| DROP[drop message]
     CHECK -->|false| FLUSH[batch + flush to agentSystem.post]
 ```
