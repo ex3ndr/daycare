@@ -66,6 +66,29 @@ describe("skillAddToolBuild", () => {
         }
     });
 
+    it("installs a skill from a direct skill file path", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const sourceDir = path.join(dirs.homeDir, "skills", "file-source");
+            await fs.mkdir(sourceDir, { recursive: true });
+            await fs.writeFile(path.join(sourceDir, "skill.md"), "---\nname: direct-skill\n---\nBody content");
+
+            const tool = skillAddToolBuild();
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            const result = await tool.execute({ path: "~/skills/file-source/skill.md" }, context, toolCall);
+
+            expect(result.typedResult.status).toBe("installed");
+            expect(result.typedResult.skillName).toBe("direct-skill");
+            const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "direct-skill", "skill.md"), "utf8");
+            expect(targetSkill).toContain("name: direct-skill");
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
     it("replaces an existing skill with the same name", async () => {
         const dirs = await testDirsCreate();
         try {
@@ -104,7 +127,13 @@ describe("skillAddToolBuild", () => {
                 homeDir: dirs.homeDir
             });
             await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
-                "not a valid skill directory"
+                'Expected a readable "skill.md" or "SKILL.md" file'
+            );
+            await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
+                "nonexistent/skill.md (not found)"
+            );
+            await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
+                "nonexistent/SKILL.md (not found)"
             );
         } finally {
             await dirs.cleanup();
@@ -176,6 +205,20 @@ describe("skillAddToolBuild", () => {
             await expect(tool.execute({ path: "/some/path" }, context, toolCall)).rejects.toThrow(
                 "Personal skills directory is not configured"
             );
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
+    it("throws when source path is blank", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const tool = skillAddToolBuild();
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            await expect(tool.execute({ path: "   " }, context, toolCall)).rejects.toThrow("Source path is required.");
         } finally {
             await dirs.cleanup();
         }
