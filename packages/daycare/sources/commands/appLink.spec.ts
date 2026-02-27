@@ -9,6 +9,7 @@ vi.mock("../config/configLoad.js", () => ({
 }));
 
 vi.mock("../plugins/daycare-app-server/appAuthLinkTool.js", () => ({
+    APP_AUTH_DEFAULT_ENDPOINT: "https://daycare.dev",
     APP_AUTH_EXPIRES_IN_SECONDS: 3600,
     appAuthLinkGenerate: vi.fn()
 }));
@@ -101,6 +102,7 @@ describe("appLinkCommand", () => {
         expect(appAuthLinkGenerateMock).toHaveBeenCalledWith({
             host: "127.0.0.1",
             port: 7332,
+            appEndpoint: "https://daycare.dev",
             userId: "user-1",
             secret: "resolved-secret",
             expiresInSeconds: 3600
@@ -130,14 +132,14 @@ describe("appLinkCommand", () => {
 
     it("passes normalized app and server endpoints to link generator", async () => {
         await appLinkCommand("user-1", {
-            appDomain: "https://app.example.com/",
+            appEndpoint: "https://app.example.com/",
             serverDomain: "https://api.example.com/"
         });
 
         expect(appAuthLinkGenerateMock).toHaveBeenCalledWith({
             host: "127.0.0.1",
             port: 7332,
-            appDomain: "https://app.example.com",
+            appEndpoint: "https://app.example.com",
             serverDomain: "https://api.example.com",
             userId: "user-1",
             secret: "resolved-secret",

@@ -1,4 +1,7 @@
-import { APP_AUTH_EXPIRES_IN_SECONDS } from "../plugins/daycare-app-server/appAuthLinkTool.js";
+import {
+    APP_AUTH_DEFAULT_ENDPOINT,
+    APP_AUTH_EXPIRES_IN_SECONDS
+} from "../plugins/daycare-app-server/appAuthLinkTool.js";
 import { appEndpointNormalize } from "../plugins/daycare-app-server/appEndpointNormalize.js";
 import type { PluginInstanceSettings } from "../settings.js";
 
@@ -8,7 +11,7 @@ const APP_DEFAULT_PORT = 7332;
 export type AppLinkCommandOptions = {
     host?: string;
     port?: string;
-    appDomain?: string;
+    appEndpoint?: string;
     serverDomain?: string;
     instance?: string;
     expiresInSeconds?: string;
@@ -17,7 +20,7 @@ export type AppLinkCommandOptions = {
 export type AppLinkResolvedOptions = {
     host: string;
     port: number;
-    appDomain?: string;
+    appEndpoint: string;
     serverDomain?: string;
     expiresInSeconds: number;
     settingsJwtSecret?: string;
@@ -36,7 +39,9 @@ export function appLinkOptionsResolve(
 
     const host = appLinkHostResolve(options.host, pluginSettings.host);
     const port = appLinkPortResolve(options.port, pluginSettings.port);
-    const appDomain = appLinkEndpointResolve(options.appDomain, pluginSettings.appDomain, "appDomain");
+    const appEndpoint =
+        appLinkEndpointResolve(options.appEndpoint, pluginSettings.appEndpoint, "appEndpoint") ??
+        APP_AUTH_DEFAULT_ENDPOINT;
     const serverDomain = appLinkEndpointResolve(options.serverDomain, pluginSettings.serverDomain, "serverDomain");
     const expiresInSeconds = appLinkExpiresResolve(options.expiresInSeconds);
     const settingsJwtSecret = appLinkSecretResolve(pluginSettings.jwtSecret);
@@ -44,7 +49,7 @@ export function appLinkOptionsResolve(
     return {
         host,
         port,
-        appDomain,
+        appEndpoint,
         serverDomain,
         expiresInSeconds,
         settingsJwtSecret

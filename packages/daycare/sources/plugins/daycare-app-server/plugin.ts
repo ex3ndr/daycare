@@ -29,7 +29,7 @@ const settingsSchema = z
     .object({
         host: z.string().trim().min(1).default(APP_DEFAULT_HOST),
         port: z.coerce.number().int().min(1).max(65535).default(APP_DEFAULT_PORT),
-        appDomain: appEndpointSettingSchema("appDomain"),
+        appEndpoint: appEndpointSettingSchema("appEndpoint"),
         serverDomain: appEndpointSettingSchema("serverDomain"),
         jwtSecret: z.string().trim().min(32).optional()
     })
@@ -75,7 +75,7 @@ export const plugin = definePlugin({
                     secretResolve,
                     settings.host,
                     settings.port,
-                    settings.appDomain,
+                    settings.appEndpoint,
                     settings.serverDomain
                 );
                 return;
@@ -116,7 +116,7 @@ export const plugin = definePlugin({
                 const linkTool = appAuthLinkTool({
                     host: settings.host,
                     port: settings.port,
-                    appDomain: settings.appDomain,
+                    appEndpoint: settings.appEndpoint,
                     serverDomain: settings.serverDomain,
                     secretResolve
                 });
@@ -133,7 +133,7 @@ export const plugin = definePlugin({
                     const link = await appAuthLinkGenerate({
                         host: settings.host,
                         port: settings.port,
-                        appDomain: settings.appDomain,
+                        appEndpoint: settings.appEndpoint,
                         serverDomain: settings.serverDomain,
                         userId: descriptor.userId,
                         secret: await secretResolve(),
@@ -219,7 +219,7 @@ async function appAuthRefreshRoute(
     secretResolve: () => Promise<string>,
     host: string,
     port: number,
-    appDomain: string | undefined,
+    appEndpoint: string | undefined,
     serverDomain: string | undefined
 ): Promise<void> {
     const body = await appReadJsonBody(request);
@@ -235,7 +235,7 @@ async function appAuthRefreshRoute(
         const refreshed = await appAuthLinkGenerate({
             host,
             port,
-            appDomain,
+            appEndpoint,
             serverDomain,
             userId: payload.userId,
             secret,

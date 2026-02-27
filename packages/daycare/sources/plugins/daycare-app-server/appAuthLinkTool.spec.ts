@@ -5,13 +5,13 @@ import { jwtVerify } from "../../util/jwt.js";
 import { appAuthLinkGenerate, appAuthLinkTool, appAuthLinkUrlBuild } from "./appAuthLinkTool.js";
 
 describe("appAuthLinkUrlBuild", () => {
-    it("builds auth URL", () => {
+    it("builds auth URL using default app endpoint", () => {
         const url = appAuthLinkUrlBuild("127.0.0.1", 7332, "token-1");
         const parsed = new URL(url);
-        expect(parsed.origin).toBe("http://127.0.0.1:7332");
+        expect(parsed.origin).toBe("https://daycare.dev");
         expect(parsed.pathname).toBe("/auth");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
-            backendUrl: "http://127.0.0.1:7332",
+            backendUrl: "https://daycare.dev",
             token: "token-1"
         });
     });
@@ -45,7 +45,7 @@ describe("appAuthLinkUrlBuild", () => {
 
     it("throws when endpoint values are bare domains", () => {
         expect(() => appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", "app.example.com")).toThrow(
-            "appDomain must be an endpoint URL"
+            "appEndpoint must be an endpoint URL"
         );
     });
 });
@@ -59,7 +59,7 @@ describe("appAuthLinkGenerate", () => {
             secret: "test-secret"
         });
 
-        expect(result.url.startsWith("http://127.0.0.1:7332/auth#")).toBe(true);
+        expect(result.url.startsWith("https://daycare.dev/auth#")).toBe(true);
         const payload = await jwtVerify(result.token, "test-secret");
         expect(payload.userId).toBe("user-7");
     });

@@ -5,6 +5,7 @@ import { jwtSign } from "../../util/jwt.js";
 import { appEndpointNormalize } from "./appEndpointNormalize.js";
 
 export const APP_AUTH_EXPIRES_IN_SECONDS = 3600;
+export const APP_AUTH_DEFAULT_ENDPOINT = "https://daycare.dev";
 
 const appAuthLinkToolSchema = Type.Object({}, { additionalProperties: false });
 type AppAuthLinkArgs = Static<typeof appAuthLinkToolSchema>;
@@ -29,7 +30,7 @@ const appAuthLinkReturns: ToolResultContract<AppAuthLinkResult> = {
 export type AppAuthLinkGenerateInput = {
     host: string;
     port: number;
-    appDomain?: string;
+    appEndpoint?: string;
     serverDomain?: string;
     userId: string;
     secret: string;
@@ -49,7 +50,7 @@ export async function appAuthLinkGenerate(input: AppAuthLinkGenerateInput): Prom
         userId: input.userId,
         token,
         expiresAt,
-        url: appAuthLinkUrlBuild(input.host, input.port, token, input.appDomain, input.serverDomain)
+        url: appAuthLinkUrlBuild(input.host, input.port, token, input.appEndpoint, input.serverDomain)
     };
 }
 
@@ -61,7 +62,7 @@ export function appAuthLinkUrlBuild(
     host: string,
     port: number,
     token: string,
-    appDomain?: string,
+    appEndpoint?: string,
     serverDomain?: string
 ): string {
     const normalizedHost = host.trim();
@@ -72,8 +73,8 @@ export function appAuthLinkUrlBuild(
         throw new Error("App port must be an integer between 1 and 65535.");
     }
 
-    const defaults = `http://${normalizedHost}:${port}`;
-    const resolvedAppEndpoint = appEndpointNormalize(appDomain, "appDomain");
+    const defaults = APP_AUTH_DEFAULT_ENDPOINT;
+    const resolvedAppEndpoint = appEndpointNormalize(appEndpoint, "appEndpoint");
     const resolvedServerEndpoint = appEndpointNormalize(serverDomain, "serverDomain");
     const appUrl = resolvedAppEndpoint ?? resolvedServerEndpoint ?? defaults;
     const backendUrl = resolvedServerEndpoint ?? appUrl;
@@ -91,7 +92,7 @@ function appAuthLinkHashPayloadEncode(payload: { backendUrl: string; token: stri
 export type AppAuthLinkToolOptions = {
     host: string;
     port: number;
-    appDomain?: string;
+    appEndpoint?: string;
     serverDomain?: string;
     secretResolve: () => Promise<string>;
 };
@@ -114,7 +115,7 @@ export function appAuthLinkTool(options: AppAuthLinkToolOptions): ToolDefinition
             const link = await appAuthLinkGenerate({
                 host: options.host,
                 port: options.port,
-                appDomain: options.appDomain,
+                appEndpoint: options.appEndpoint,
                 serverDomain: options.serverDomain,
                 userId: context.ctx.userId,
                 secret
