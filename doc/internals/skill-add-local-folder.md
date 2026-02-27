@@ -2,17 +2,17 @@
 
 ## Summary
 - `skill_add` accepts either a directory path or a direct skill file path.
-- The resolver probes both `skill.md` and `SKILL.md` via `sandbox.read`.
-- Failures now return a detailed summary that includes each attempted path and reason.
+- The resolver probes `skill.md` case-insensitively (`skill.md`, `SKILL.md`, `sKiLl.Md`, etc.) via `sandbox.read`.
+- Failures summarize probe behavior; when all variants are missing it returns a concise "tried N variants" message.
 
 ## Resolution flow
 ```mermaid
 flowchart TD
     A[skill_add path] --> B{Path ends with skill.md or SKILL.md?}
-    B -->|yes| C[Probe file path then case-variant fallback]
-    B -->|no| D[Probe path/skill.md then path/SKILL.md]
+    B -->|yes| C[Probe direct file then all case variants]
+    B -->|no| D[Probe path with all case variants of skill.md]
     C --> E{Readable text file found?}
     D --> E
     E -->|yes| F[Parse frontmatter name and install]
-    E -->|no| G[Throw detailed validation error with attempted paths and reasons]
+    E -->|no| G[Throw concise validation error with variant probe summary]
 ```
