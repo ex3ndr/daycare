@@ -82,7 +82,7 @@ export function skillRemoveToolBuild(): ToolDefinition {
 }
 
 /**
- * Scans the personal skills root for a folder whose skill.md has a matching name.
+ * Scans the personal skills root for a folder whose SKILL.md has a matching name.
  * Returns the matched folder path, or null if not found.
  */
 async function skillFolderFind(personalRoot: string, targetName: string): Promise<string | null> {

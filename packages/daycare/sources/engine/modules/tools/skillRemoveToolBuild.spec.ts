@@ -14,7 +14,7 @@ describe("skillRemoveToolBuild", () => {
             const personalRoot = path.join(tmpDir, "personal");
             const skillDir = path.join(personalRoot, "my-skill");
             await fs.mkdir(skillDir, { recursive: true });
-            await fs.writeFile(path.join(skillDir, "skill.md"), "---\nname: my-skill\n---\nBody");
+            await fs.writeFile(path.join(skillDir, "SKILL.md"), "---\nname: my-skill\n---\nBody");
             await fs.writeFile(path.join(skillDir, "helper.txt"), "extra");
 
             const tool = skillRemoveToolBuild();
@@ -41,7 +41,7 @@ describe("skillRemoveToolBuild", () => {
             const personalRoot = path.join(tmpDir, "personal");
             const skillDir = path.join(personalRoot, "My-Skill");
             await fs.mkdir(skillDir, { recursive: true });
-            await fs.writeFile(path.join(skillDir, "skill.md"), "---\nname: My-Skill\n---\nBody");
+            await fs.writeFile(path.join(skillDir, "SKILL.md"), "---\nname: My-Skill\n---\nBody");
 
             const tool = skillRemoveToolBuild();
             const context = contextBuild({ skillsPersonalRoot: personalRoot });

@@ -15,7 +15,7 @@ describe("skillAddToolBuild", () => {
             const sourceDir = path.join(dirs.homeDir, "source-skill");
             await fs.mkdir(sourceDir, { recursive: true });
             await fs.writeFile(
-                path.join(sourceDir, "skill.md"),
+                path.join(sourceDir, "SKILL.md"),
                 "---\nname: test-skill\ndescription: A test skill\n---\nBody content"
             );
             await fs.writeFile(path.join(sourceDir, "helper.txt"), "extra file");
@@ -31,7 +31,7 @@ describe("skillAddToolBuild", () => {
             expect(result.typedResult.skillName).toBe("test-skill");
 
             // Verify files were copied
-            const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "skill.md"), "utf8");
+            const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "SKILL.md"), "utf8");
             expect(targetSkill).toContain("name: test-skill");
             const targetHelper = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "helper.txt"), "utf8");
             expect(targetHelper).toBe("extra file");
@@ -45,12 +45,12 @@ describe("skillAddToolBuild", () => {
         try {
             const sourceDir = path.join(dirs.homeDir, "source-skill");
             await fs.mkdir(sourceDir, { recursive: true });
-            await fs.writeFile(path.join(sourceDir, "skill.md"), "---\nname: test-skill\n---\nUpdated body");
+            await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\nname: test-skill\n---\nUpdated body");
 
             // Pre-create existing skill
             const existingDir = path.join(dirs.personalRoot, "test-skill");
             await fs.mkdir(existingDir, { recursive: true });
-            await fs.writeFile(path.join(existingDir, "skill.md"), "---\nname: test-skill\n---\nOld body");
+            await fs.writeFile(path.join(existingDir, "SKILL.md"), "---\nname: test-skill\n---\nOld body");
 
             const tool = skillAddToolBuild();
             const context = contextBuild({
@@ -62,7 +62,7 @@ describe("skillAddToolBuild", () => {
             expect(result.typedResult.status).toBe("replaced");
             expect(result.typedResult.skillName).toBe("test-skill");
 
-            const content = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "skill.md"), "utf8");
+            const content = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "SKILL.md"), "utf8");
             expect(content).toContain("Updated body");
         } finally {
             await dirs.cleanup();
@@ -85,7 +85,7 @@ describe("skillAddToolBuild", () => {
         }
     });
 
-    it("throws when skill.md is missing", async () => {
+    it("throws when SKILL.md is missing", async () => {
         const dirs = await testDirsCreate();
         try {
             const sourceDir = path.join(dirs.homeDir, "empty-skill");
@@ -104,12 +104,12 @@ describe("skillAddToolBuild", () => {
         }
     });
 
-    it("throws when skill.md has no name in frontmatter", async () => {
+    it("throws when SKILL.md has no name in frontmatter", async () => {
         const dirs = await testDirsCreate();
         try {
             const sourceDir = path.join(dirs.homeDir, "bad-skill");
             await fs.mkdir(sourceDir, { recursive: true });
-            await fs.writeFile(path.join(sourceDir, "skill.md"), "---\ndescription: no name\n---\nBody");
+            await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\ndescription: no name\n---\nBody");
 
             const tool = skillAddToolBuild();
             const context = contextBuild({
@@ -117,7 +117,7 @@ describe("skillAddToolBuild", () => {
                 homeDir: dirs.homeDir
             });
             await expect(tool.execute({ path: "bad-skill" }, context, toolCall)).rejects.toThrow(
-                'No valid skill.md with "name" frontmatter'
+                'No valid SKILL.md with "name" frontmatter'
             );
         } finally {
             await dirs.cleanup();
@@ -129,7 +129,7 @@ describe("skillAddToolBuild", () => {
         try {
             const sourceDir = path.join(dirs.homeDir, "evil-skill");
             await fs.mkdir(sourceDir, { recursive: true });
-            await fs.writeFile(path.join(sourceDir, "skill.md"), "---\nname: ../../../etc\n---\nBody");
+            await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\nname: ../../../etc\n---\nBody");
 
             const tool = skillAddToolBuild();
             const context = contextBuild({

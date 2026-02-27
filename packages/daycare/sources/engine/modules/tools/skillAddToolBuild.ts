@@ -37,7 +37,7 @@ const returns: ToolResultContract<SkillAddResult> = {
  * Replaces any existing personal skill with the same name.
  * Uses sandbox.read to resolve and validate the source path.
  *
- * Expects: path points to a folder containing a valid skill.md with a name in frontmatter.
+ * Expects: path points to a folder containing a valid SKILL.md with a name in frontmatter.
  */
 export function skillAddToolBuild(): ToolDefinition {
     return {
@@ -59,7 +59,7 @@ export function skillAddToolBuild(): ToolDefinition {
             const sourcePath = payload.path.trim();
             const skillFileSandboxPath = path.posix.join(sourcePath, SKILL_FILENAME);
 
-            // Read skill.md through sandbox to resolve path and validate permissions
+            // Read SKILL.md through sandbox to resolve path and validate permissions
             const readResult = await skillFileRead(skillFileSandboxPath, sourcePath, toolContext);
             const skillName = skillNameParse(readResult.content);
             if (!skillName) {

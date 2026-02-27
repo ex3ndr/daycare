@@ -14,6 +14,7 @@ type SkillFrontmatter = {
 };
 
 const logger = getLogger("engine.skills");
+const SKILL_FILENAME_NORMALIZED = SKILL_FILENAME.toLowerCase();
 
 /**
  * Loads a skill file, parses its frontmatter, and builds a normalized skill record.
@@ -120,7 +121,7 @@ function skillIdBuild(filePath: string, source: SkillSource, root?: string): str
     const fileName = path.basename(filePath).toLowerCase();
     let slug = "";
 
-    if (fileName === SKILL_FILENAME) {
+    if (fileName === SKILL_FILENAME_NORMALIZED) {
         if (root) {
             slug = path.relative(root, path.dirname(filePath));
         } else {
@@ -148,7 +149,7 @@ function skillIdBuild(filePath: string, source: SkillSource, root?: string): str
 
 function skillNameFormat(filePath: string): string {
     const fileName = path.basename(filePath).toLowerCase();
-    if (fileName === SKILL_FILENAME) {
+    if (fileName === SKILL_FILENAME_NORMALIZED) {
         return skillNameNormalize(path.basename(path.dirname(filePath)));
     }
     return skillNameNormalize(path.basename(filePath, path.extname(filePath)));

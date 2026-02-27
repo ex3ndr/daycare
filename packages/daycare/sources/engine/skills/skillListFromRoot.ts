@@ -8,6 +8,7 @@ import { skillSort } from "./skillSort.js";
 import type { AgentSkill, SkillSource } from "./skillTypes.js";
 
 const logger = getLogger("engine.skills");
+const SKILL_FILENAME_NORMALIZED = SKILL_FILENAME.toLowerCase();
 
 /**
  * Lists skills found under the given root directory.
@@ -53,7 +54,7 @@ async function collectSkillFiles(root: string): Promise<string[]> {
         if (!entry.isFile()) {
             continue;
         }
-        if (entry.name.toLowerCase() === SKILL_FILENAME) {
+        if (entry.name.toLowerCase() === SKILL_FILENAME_NORMALIZED) {
             results.push(fullPath);
         }
     }
