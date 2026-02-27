@@ -1,0 +1,6 @@
+{
+  "id": "elevenlabs",
+  "name": "ElevenLabs",
+  "description": "ElevenLabs speech provider.",
+  "entry": "./plugin.js"
+}

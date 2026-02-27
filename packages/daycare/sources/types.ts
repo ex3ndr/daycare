@@ -82,6 +82,8 @@ export type {
     InferenceProviderOptions
 } from "./engine/modules/inference/types.js";
 export type { MediaAnalysisProvider, MediaType } from "./engine/modules/media-analysis/types.js";
+// Speech
+export type { SpeechGenerationProvider } from "./engine/modules/speech/types.js";
 // Tools
 export type {
     ToolDefinition,

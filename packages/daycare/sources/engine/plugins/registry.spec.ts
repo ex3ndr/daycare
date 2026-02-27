@@ -108,4 +108,27 @@ describe("PluginRegistrar command registration", () => {
         await registrar.unregisterAll();
         expect(modules.mediaAnalysis.get("media-provider")).toBeNull();
     });
+
+    it("registers and unregisters speech providers", async () => {
+        const modules = new ModuleRegistry({
+            onMessage: async () => undefined
+        });
+        const registry = new PluginRegistry(modules);
+        const registrar = registry.createRegistrar("speech-instance");
+
+        registrar.registerSpeechProvider({
+            id: "speech-provider",
+            label: "Speech Provider",
+            generate: async () => ({ files: [] })
+        });
+        expect(modules.speech.get("speech-provider")).toEqual(
+            expect.objectContaining({
+                id: "speech-provider",
+                label: "Speech Provider"
+            })
+        );
+
+        await registrar.unregisterAll();
+        expect(modules.speech.get("speech-provider")).toBeNull();
+    });
 });

@@ -23,6 +23,21 @@ flowchart LR
     A --> D[/shared/skills mount ro]
 ```
 
+## Plugin Speech Registration
+
+Plugins can register speech providers via `registerSpeechProvider(provider)` and remove them with `unregisterSpeechProvider(id)`.
+
+`generate_speech` resolves providers from `SpeechGenerationRegistry`, and `list_voices` queries optional voice discovery support.
+
+```mermaid
+flowchart LR
+    Plugin[Plugin load] --> Registrar[PluginRegistrar]
+    Registrar --> SpeechRegistry[SpeechGenerationRegistry]
+    GenerateTool[generate_speech tool] --> SpeechRegistry
+    VoiceTool[list_voices tool] --> SpeechRegistry
+    SpeechRegistry --> Provider[SpeechGenerationProvider]
+```
+
 ## Plugin Media Analysis Registration
 
 Plugins can register multi-modal file analyzers via `registerMediaAnalysisProvider(provider)`.

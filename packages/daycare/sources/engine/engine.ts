@@ -76,6 +76,7 @@ import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToo
 import { skillAddToolBuild } from "./modules/tools/skillAddToolBuild.js";
 import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
+import { buildSpeechGenerationTool } from "./modules/tools/speech-generation.js";
 import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./modules/tools/subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./modules/tools/subuserListToolBuild.js";
@@ -90,6 +91,7 @@ import {
 } from "./modules/tools/task.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
+import { buildVoiceListTool } from "./modules/tools/voice-list.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -444,6 +446,8 @@ export class Engine {
         this.modules.tools.register("core", friendShareSubuserToolBuild());
         this.modules.tools.register("core", friendUnshareSubuserToolBuild());
         this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
+        this.modules.tools.register("core", buildSpeechGenerationTool(this.modules.speech));
+        this.modules.tools.register("core", buildVoiceListTool(this.modules.speech));
         this.modules.tools.register("core", buildMediaAnalysisTool(this.modules.mediaAnalysis));
         this.modules.tools.register("core", buildMermaidPngTool());
         this.modules.tools.register("core", buildReactionTool());
@@ -465,7 +469,7 @@ export class Engine {
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(
-            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
         );
 
         await this.pluginManager.preStartAll();

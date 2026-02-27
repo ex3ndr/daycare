@@ -9,6 +9,7 @@ import type {
     MediaAnalysisProvider,
     MessageContext,
     PluginCommandDefinition,
+    SpeechGenerationProvider,
     ToolDefinition
 } from "@/types";
 import { agentDescriptorTargetResolve } from "../agents/ops/agentDescriptorTargetResolve.js";
@@ -18,6 +19,7 @@ import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry
 import type { InferenceRegistry } from "../modules/inferenceRegistry.js";
 import type { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import type { ModuleRegistry } from "../modules/moduleRegistry.js";
+import type { SpeechGenerationRegistry } from "../modules/speechGenerationRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
 
 type PluginRegistrations = {
@@ -25,6 +27,7 @@ type PluginRegistrations = {
     providers: Set<string>;
     tools: Set<string>;
     images: Set<string>;
+    speech: Set<string>;
     mediaAnalysis: Set<string>;
     commands: Set<string>;
     skills: Set<string>;
@@ -36,6 +39,7 @@ export class PluginRegistrar {
     private connectorRegistry: ConnectorRegistry;
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
+    private speechRegistry: SpeechGenerationRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
     private registrations: PluginRegistrations;
@@ -46,6 +50,7 @@ export class PluginRegistrar {
         connectorRegistry: ConnectorRegistry,
         inferenceRegistry: InferenceRegistry,
         imageRegistry: ImageGenerationRegistry,
+        speechRegistry: SpeechGenerationRegistry,
         mediaAnalysisRegistry: MediaAnalysisRegistry,
         toolResolver: ToolResolver
     ) {
@@ -54,6 +59,7 @@ export class PluginRegistrar {
         this.connectorRegistry = connectorRegistry;
         this.inferenceRegistry = inferenceRegistry;
         this.imageRegistry = imageRegistry;
+        this.speechRegistry = speechRegistry;
         this.mediaAnalysisRegistry = mediaAnalysisRegistry;
         this.toolResolver = toolResolver;
         this.registrations = {
@@ -61,6 +67,7 @@ export class PluginRegistrar {
             providers: new Set(),
             tools: new Set(),
             images: new Set(),
+            speech: new Set(),
             mediaAnalysis: new Set(),
             commands: new Set(),
             skills: new Set()
@@ -132,6 +139,16 @@ export class PluginRegistrar {
         this.registrations.images.delete(id);
     }
 
+    registerSpeechProvider(provider: SpeechGenerationProvider): void {
+        this.speechRegistry.register(this.pluginId, provider);
+        this.registrations.speech.add(provider.id);
+    }
+
+    unregisterSpeechProvider(id: string): void {
+        this.speechRegistry.unregister(id);
+        this.registrations.speech.delete(id);
+    }
+
     registerMediaAnalysisProvider(provider: MediaAnalysisProvider): void {
         this.mediaAnalysisRegistry.register(this.pluginId, provider);
         this.registrations.mediaAnalysis.add(provider.id);
@@ -166,6 +183,9 @@ export class PluginRegistrar {
         for (const id of this.registrations.images) {
             this.imageRegistry.unregister(id);
         }
+        for (const id of this.registrations.speech) {
+            this.speechRegistry.unregister(id);
+        }
         for (const id of this.registrations.mediaAnalysis) {
             this.mediaAnalysisRegistry.unregister(id);
         }
@@ -178,6 +198,7 @@ export class PluginRegistrar {
         this.registrations.connectors.clear();
         this.registrations.providers.clear();
         this.registrations.images.clear();
+        this.registrations.speech.clear();
         this.registrations.mediaAnalysis.clear();
         this.registrations.tools.clear();
         this.registrations.commands.clear();
@@ -190,6 +211,7 @@ export class PluginRegistry {
     private connectorRegistry: ConnectorRegistry;
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
+    private speechRegistry: SpeechGenerationRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
 
@@ -198,6 +220,7 @@ export class PluginRegistry {
         this.connectorRegistry = modules.connectors;
         this.inferenceRegistry = modules.inference;
         this.imageRegistry = modules.images;
+        this.speechRegistry = modules.speech;
         this.mediaAnalysisRegistry = modules.mediaAnalysis;
         this.toolResolver = modules.tools;
     }
@@ -209,6 +232,7 @@ export class PluginRegistry {
             this.connectorRegistry,
             this.inferenceRegistry,
             this.imageRegistry,
+            this.speechRegistry,
             this.mediaAnalysisRegistry,
             this.toolResolver
         );
