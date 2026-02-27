@@ -129,6 +129,7 @@ export class Engine {
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
     private readonly incomingMessages: IncomingMessages;
+    private readonly migrationReady: Promise<void>;
 
     constructor(options: EngineOptions) {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
@@ -138,10 +139,9 @@ export class Engine {
             : this.config.current.db.path;
         const db = databaseOpen(dbTarget);
         if (this.config.current.db.autoMigrate) {
-            void databaseMigrate(db).catch((error) => {
-                logger.warn({ error }, "migrate: Failed to apply storage migrations");
-            });
+            this.migrationReady = databaseMigrate(db).then(() => undefined);
         } else {
+            this.migrationReady = Promise.resolve();
             logger.info("skip: Auto migrations disabled by engine.db.autoMigrate=false");
         }
         this.storage = Storage.fromDatabase(db);
@@ -365,6 +365,7 @@ export class Engine {
 
     async start(): Promise<void> {
         logger.debug("start: Engine.start() beginning");
+        await this.migrationReady;
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
         const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
         await userHomeEnsure(ownerUserHome);
@@ -479,6 +480,9 @@ export class Engine {
     }
 
     async shutdown(): Promise<void> {
+        await this.migrationReady.catch((error) => {
+            logger.warn({ error }, "migrate: Migration check failed during shutdown");
+        });
         this.memoryWorker.stop();
         this.reloadSync.stop();
         await this.modules.connectors.unregisterAll("shutdown");
@@ -620,6 +624,7 @@ export class Engine {
      * Expects: user descriptors map connector identity to an internal user id.
      */
     private async descriptorContextResolve(descriptor: AgentDescriptor) {
+        await this.migrationReady;
         if (descriptor.type === "user") {
             const connectorKey = userConnectorKeyCreate(descriptor.connector, descriptor.userId);
             try {
