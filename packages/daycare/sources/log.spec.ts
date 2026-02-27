@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPrettyMessage, initLogging, resetLogging } from "./log.js";
+import { formatPrettyMessage, initLogging, resetLogging, resolveLogConfig } from "./log.js";
 
 describe("initLogging", () => {
     it("defaults to silent level when running in vitest", () => {
@@ -34,6 +34,55 @@ describe("initLogging", () => {
             } else {
                 process.env.LOG_LEVEL = previousLogLevel;
             }
+        }
+    });
+});
+
+describe("resolveLogConfig", () => {
+    it("defaults to pretty format", () => {
+        const previousDaycareLogFormat = process.env.DAYCARE_LOG_FORMAT;
+        const previousLogFormat = process.env.LOG_FORMAT;
+        const previousDaycareLogJson = process.env.DAYCARE_LOG_JSON;
+        const previousLogJson = process.env.LOG_JSON;
+        const previousDaycareLogDest = process.env.DAYCARE_LOG_DEST;
+        const previousLogDest = process.env.LOG_DEST;
+
+        try {
+            delete process.env.DAYCARE_LOG_FORMAT;
+            delete process.env.LOG_FORMAT;
+            delete process.env.DAYCARE_LOG_JSON;
+            delete process.env.LOG_JSON;
+            delete process.env.DAYCARE_LOG_DEST;
+            delete process.env.LOG_DEST;
+
+            const config = resolveLogConfig({ destination: "stdout" });
+            expect(config.format).toBe("pretty");
+        } finally {
+            restoreEnv("DAYCARE_LOG_FORMAT", previousDaycareLogFormat);
+            restoreEnv("LOG_FORMAT", previousLogFormat);
+            restoreEnv("DAYCARE_LOG_JSON", previousDaycareLogJson);
+            restoreEnv("LOG_JSON", previousLogJson);
+            restoreEnv("DAYCARE_LOG_DEST", previousDaycareLogDest);
+            restoreEnv("LOG_DEST", previousLogDest);
+        }
+    });
+
+    it("uses json format when DAYCARE_LOG_JSON is enabled", () => {
+        const previousDaycareLogFormat = process.env.DAYCARE_LOG_FORMAT;
+        const previousLogFormat = process.env.LOG_FORMAT;
+        const previousDaycareLogJson = process.env.DAYCARE_LOG_JSON;
+
+        try {
+            delete process.env.DAYCARE_LOG_FORMAT;
+            delete process.env.LOG_FORMAT;
+            process.env.DAYCARE_LOG_JSON = "1";
+
+            const config = resolveLogConfig({ destination: "stdout" });
+            expect(config.format).toBe("json");
+        } finally {
+            restoreEnv("DAYCARE_LOG_FORMAT", previousDaycareLogFormat);
+            restoreEnv("LOG_FORMAT", previousLogFormat);
+            restoreEnv("DAYCARE_LOG_JSON", previousDaycareLogJson);
         }
     });
 });
@@ -122,4 +171,12 @@ function stripAnsi(value: string): string {
     // biome-ignore lint/complexity/useRegexLiterals: Literal form triggers noControlCharactersInRegex for ESC.
     const ansiPattern = new RegExp("\\u001B\\[[0-9;]*m", "g");
     return value.replace(ansiPattern, "");
+}
+
+function restoreEnv(key: string, value: string | undefined): void {
+    if (value === undefined) {
+        delete process.env[key];
+        return;
+    }
+    process.env[key] = value;
 }

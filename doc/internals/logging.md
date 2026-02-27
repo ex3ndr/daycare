@@ -6,13 +6,14 @@ Logging is centralized in `sources/log.ts` and uses Pino.
 Environment variables:
 - `DAYCARE_LOG_LEVEL` / `LOG_LEVEL`
 - `DAYCARE_LOG_FORMAT` / `LOG_FORMAT` (`pretty` or `json`)
+- `DAYCARE_LOG_JSON` / `LOG_JSON` (`1|true|yes|on` forces `json`)
 - `DAYCARE_LOG_DEST` / `LOG_DEST` (`stdout`, `stderr`, or file path)
 - `DAYCARE_LOG_REDACT` (comma-separated paths)
 
 Defaults:
 - `debug` level in development, `info` in production
-- `pretty` format in TTY + non-production
-- `json` otherwise
+- `pretty` format by default
+- `json` when `DAYCARE_LOG_JSON`/`LOG_JSON` is enabled, `DAYCARE_LOG_FORMAT=json`, or destination is a file path
 - redaction for `token`, `password`, `secret`, `apiKey` and dotted variants
 
 ## Pretty Output
@@ -36,6 +37,15 @@ flowchart TD
   Resolve --> Build[buildLogger]
   Build --> Pretty[pretty transport]
   Build --> Json[json output]
+```
+
+```mermaid
+flowchart TD
+  Start[resolveLogConfig] --> FormatEnv{DAYCARE_LOG_FORMAT / LOG_FORMAT?}
+  FormatEnv -->|set| Explicit[Use explicit format]
+  FormatEnv -->|unset| JsonFlag{DAYCARE_LOG_JSON / LOG_JSON truthy?}
+  JsonFlag -->|yes| JsonDefault[json]
+  JsonFlag -->|no| PrettyDefault[pretty]
 ```
 
 ### Structured Field Projection
@@ -77,6 +87,11 @@ The codebase includes extensive verbose logging at the `debug` level. Debug logg
 To disable verbose logging in dev mode:
 ```bash
 DAYCARE_LOG_LEVEL=info yarn dev
+```
+
+To force structured JSON output:
+```bash
+DAYCARE_LOG_JSON=1 yarn dev
 ```
 
 ## Unit Test Logging

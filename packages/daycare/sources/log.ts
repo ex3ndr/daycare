@@ -64,7 +64,7 @@ export function resetLogging(): void {
     rootLogger = null;
 }
 
-function resolveLogConfig(overrides: Partial<LogConfig>): LogConfig {
+export function resolveLogConfig(overrides: Partial<LogConfig> = {}): LogConfig {
     const isDev = process.env.NODE_ENV !== "production";
     const isUnitTest = isUnitTestRun();
     const level =
@@ -77,11 +77,12 @@ function resolveLogConfig(overrides: Partial<LogConfig>): LogConfig {
         envValue("DAYCARE_LOG_DEST") ??
         envValue("LOG_DEST") ??
         (process.stdout.isTTY ? "stderr" : "stdout");
+    const forceJson = parseBooleanFlag(envValue("DAYCARE_LOG_JSON")) ?? parseBooleanFlag(envValue("LOG_JSON")) ?? false;
     let format =
         overrides.format ??
         parseFormat(envValue("DAYCARE_LOG_FORMAT")) ??
         parseFormat(envValue("LOG_FORMAT")) ??
-        (process.stdout.isTTY && process.env.NODE_ENV !== "production" ? "pretty" : "json");
+        (forceJson ? "json" : "pretty");
     const service = overrides.service ?? envValue("DAYCARE_LOG_SERVICE") ?? "daycare";
     const environment = overrides.environment ?? envValue("NODE_ENV") ?? "development";
 
@@ -430,6 +431,20 @@ function parseFormat(value?: string | null): LogFormat | null {
     const normalized = value.toLowerCase().trim();
     if (VALID_FORMATS.has(normalized as LogFormat)) {
         return normalized as LogFormat;
+    }
+    return null;
+}
+
+function parseBooleanFlag(value?: string | null): boolean | null {
+    if (!value) {
+        return null;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") {
+        return true;
+    }
+    if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") {
+        return false;
     }
     return null;
 }
