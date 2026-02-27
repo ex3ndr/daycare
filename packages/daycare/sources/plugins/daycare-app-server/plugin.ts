@@ -9,6 +9,7 @@ import { appEndpointNormalize } from "./appEndpointNormalize.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import { routeAuthRefresh } from "./routes/routeAuthRefresh.js";
+import { routeAuthTelegram } from "./routes/routeAuthTelegram.js";
 import { routeAuthValidate } from "./routes/routeAuthValidate.js";
 
 const APP_DEFAULT_HOST = "127.0.0.1";
@@ -20,7 +21,8 @@ const settingsSchema = z
         port: z.coerce.number().int().min(1).max(65535).default(APP_DEFAULT_PORT),
         appEndpoint: appEndpointSettingSchema("appEndpoint"),
         serverEndpoint: appEndpointSettingSchema("serverEndpoint"),
-        jwtSecret: z.string().trim().min(32).optional()
+        jwtSecret: z.string().trim().min(32).optional(),
+        telegramInstanceId: z.string().trim().min(1).optional()
     })
     .strict();
 
@@ -40,6 +42,34 @@ export const plugin = definePlugin({
                 secretPromise = appJwtSecretResolve(settings.jwtSecret, api.auth);
             }
             return secretPromise;
+        };
+
+        const telegramTokenResolve = async (requestedInstanceId?: string): Promise<string> => {
+            const configuredInstanceId = settings.telegramInstanceId?.trim();
+            const enabledTelegramInstances = (api.engineSettings.plugins ?? [])
+                .filter((entry) => entry.pluginId === "telegram" && entry.enabled !== false)
+                .map((entry) => entry.instanceId);
+            const requested = requestedInstanceId?.trim();
+            const preferred =
+                requested ??
+                configuredInstanceId ??
+                enabledTelegramInstances[0] ??
+                (requested === undefined ? "telegram" : "");
+
+            if (!preferred) {
+                throw new Error("Telegram plugin instance id is required.");
+            }
+
+            if (requested && enabledTelegramInstances.length > 0 && !enabledTelegramInstances.includes(requested)) {
+                throw new Error(`Telegram plugin instance "${requested}" is not enabled.`);
+            }
+
+            const token = await api.auth.getToken(preferred);
+            if (!token) {
+                throw new Error(`Missing Telegram bot token for plugin instance "${preferred}".`);
+            }
+
+            return token;
         };
 
         const handleRequest = async (request: http.IncomingMessage, response: http.ServerResponse): Promise<void> => {
@@ -65,6 +95,13 @@ export const plugin = definePlugin({
                     port: settings.port,
                     appEndpoint: settings.appEndpoint,
                     serverEndpoint: settings.serverEndpoint
+                });
+                return;
+            }
+            if (pathname === "/auth/telegram" && request.method === "POST") {
+                await routeAuthTelegram(request, response, {
+                    secretResolve,
+                    telegramTokenResolve
                 });
                 return;
             }

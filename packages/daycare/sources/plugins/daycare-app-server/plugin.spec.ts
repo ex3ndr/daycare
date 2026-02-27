@@ -1,9 +1,10 @@
+import { createHmac } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jwtSign } from "../../util/jwt.js";
+import { jwtSign, jwtVerify } from "../../util/jwt.js";
 import { plugin } from "./plugin.js";
 
 const APP_AUTH_SECRET_KEY = "app-auth.jwtSecret";
@@ -30,13 +31,49 @@ async function portAvailableResolve(): Promise<number> {
     });
 }
 
-async function pluginCreateForTests(options?: { secret?: string }) {
+type PluginCreateTestOptions = {
+    secret?: string;
+    telegram?: {
+        instanceId?: string;
+        botToken: string;
+    };
+};
+
+function telegramInitDataBuild(options: { botToken: string; userId: string; authDateSeconds: number }): string {
+    const params = new URLSearchParams();
+    params.set("auth_date", String(options.authDateSeconds));
+    params.set("query_id", "AAEAAQ");
+    params.set(
+        "user",
+        JSON.stringify({
+            id: Number(options.userId),
+            first_name: "Test"
+        })
+    );
+
+    const dataCheckString = Array.from(params.entries())
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, value]) => `${key}=${value}`)
+        .join("\n");
+    const secretKey = createHmac("sha256", "WebAppData").update(options.botToken).digest();
+    const hash = createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+    params.set("hash", hash);
+    return params.toString();
+}
+
+async function pluginCreateForTests(options?: PluginCreateTestOptions) {
     const entries = new Map<string, Record<string, unknown>>();
     if (options?.secret) {
         entries.set(APP_AUTH_SECRET_KEY, {
             type: "token",
             token: options.secret,
             secret: options.secret
+        });
+    }
+    if (options?.telegram?.botToken) {
+        entries.set(options.telegram.instanceId ?? "telegram", {
+            type: "token",
+            token: options.telegram.botToken
         });
     }
 
@@ -55,13 +92,27 @@ async function pluginCreateForTests(options?: { secret?: string }) {
             host: "127.0.0.1",
             port
         },
-        engineSettings: {},
+        engineSettings: options?.telegram
+            ? {
+                  plugins: [
+                      {
+                          instanceId: options.telegram.instanceId ?? "telegram",
+                          pluginId: "telegram",
+                          enabled: true
+                      }
+                  ]
+              }
+            : {},
         logger: {
             info: vi.fn(),
             warn: vi.fn()
         },
         auth: {
             getEntry: vi.fn(async (id: string) => entries.get(id) ?? null),
+            getToken: vi.fn(async (id: string) => {
+                const entry = entries.get(id);
+                return typeof entry?.token === "string" ? entry.token : null;
+            }),
             setEntry: vi.fn(async (id: string, entry: Record<string, unknown>) => {
                 entries.set(id, entry);
             })
@@ -180,6 +231,72 @@ describe("daycare-app-server plugin auth endpoints", () => {
         });
 
         await expect(response.json()).resolves.toEqual({ ok: false, error: "Token is required." });
+    });
+
+    it("returns token for valid Telegram WebApp initData", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const telegramToken = "telegram-token-1";
+        const built = await pluginCreateForTests({
+            secret,
+            telegram: {
+                botToken: telegramToken
+            }
+        });
+        const initData = telegramInitDataBuild({
+            botToken: telegramToken,
+            userId: "123",
+            authDateSeconds: Math.floor(Date.now() / 1000) - 10
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/auth/telegram`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                initData
+            })
+        });
+
+        const payload = (await response.json()) as {
+            ok: boolean;
+            userId?: string;
+            token?: string;
+            expiresAt?: number;
+            error?: string;
+        };
+        expect(payload.ok).toBe(true);
+        expect(payload.userId).toBe("123");
+        expect(typeof payload.token).toBe("string");
+        expect(typeof payload.expiresAt).toBe("number");
+
+        const verified = await jwtVerify(payload.token!, secret);
+        expect(verified.userId).toBe("123");
+    });
+
+    it("returns error for invalid Telegram WebApp initData", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({
+            secret,
+            telegram: {
+                botToken: "telegram-token-1"
+            }
+        });
+        const initData = telegramInitDataBuild({
+            botToken: "different-token",
+            userId: "123",
+            authDateSeconds: Math.floor(Date.now() / 1000) - 10
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/auth/telegram`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                initData
+            })
+        });
+
+        const payload = (await response.json()) as { ok: boolean; error?: string };
+        expect(payload.ok).toBe(false);
+        expect(typeof payload.error).toBe("string");
     });
 
     it("returns 401 for unauthenticated unknown routes", async () => {

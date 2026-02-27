@@ -9,6 +9,7 @@ Pure API server for the Daycare app. Handles authentication, prompt file managem
 - `appEndpoint`: app endpoint URL where generated links open, default `https://daycare.dev`
 - `serverEndpoint` (optional): backend endpoint URL embedded in hash payload (for example `https://api.example.com`)
 - `jwtSecret` (optional): HS256 JWT signing secret; when omitted, plugin uses auth store key `app-auth.jwtSecret`
+- `telegramInstanceId` (optional): preferred Telegram plugin instance id for WebApp auth (defaults to first enabled `telegram` plugin, or `telegram`)
 
 Notes:
 - `appEndpoint` and `serverEndpoint` must be full `http(s)` endpoint URLs.
@@ -20,6 +21,7 @@ Notes:
 ### Auth
 - `POST /auth/validate`: validate incoming magic link token
 - `POST /auth/refresh`: validate token and return a fresh 1-hour token
+- `POST /auth/telegram`: verify Telegram WebApp `initData` and exchange it for a Daycare auth token
 
 ### Prompts (authenticated via `Authorization: Bearer <token>`)
 - `GET /prompts`: list available prompt files
@@ -46,11 +48,13 @@ plugin.ts           — server lifecycle and route wiring
 appHttp.ts          — HTTP utilities (CORS, JSON, body parsing, listen/close)
 appAuthExtract.ts   — JWT Bearer token extraction
 appAuthLinkTool.ts  — magic link generation tool
+appTelegramInitDataValidate.ts — Telegram WebApp initData signature validation
 appJwtSecretResolve.ts — JWT secret resolution
 appEndpointNormalize.ts — endpoint URL validation
 routes/
   routeAuthValidate.ts  — POST /auth/validate
   routeAuthRefresh.ts   — POST /auth/refresh
+  routeAuthTelegram.ts  — POST /auth/telegram
 ```
 
 Prompt API handlers live in `sources/api/prompts/` (shared across the codebase).

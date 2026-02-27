@@ -8,6 +8,7 @@ type TelegramBotMock = {
     handlers: Map<string, Handler[]>;
     sendMessage: MockFn;
     setMyCommands: MockFn;
+    setChatMenuButton: MockFn;
     sendPhoto: MockFn;
     sendVideo: MockFn;
     sendDocument: MockFn;
@@ -25,6 +26,7 @@ vi.mock("node-telegram-bot-api", () => {
         handlers = new Map<string, Handler[]>();
         sendMessage = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
         setMyCommands = vi.fn(async () => true);
+        setChatMenuButton = vi.fn(async () => true);
         sendPhoto = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
         sendVideo = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
         sendDocument = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
@@ -367,6 +369,51 @@ describe("TelegramConnector command updates", () => {
                     }
                 }
             );
+            expect(bot!.setChatMenuButton).toHaveBeenCalledTimes(1);
+            expect(bot!.setChatMenuButton).toHaveBeenCalledWith({
+                menu_button: {
+                    type: "commands"
+                }
+            });
+
+            await connector.shutdown("test");
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("sets a WebApp menu button when webAppUrl is configured", async () => {
+        vi.useFakeTimers();
+        try {
+            const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+            const connector = new TelegramConnector({
+                token: "token",
+                allowedUids: ["123"],
+                polling: false,
+                clearWebhook: false,
+                statePath: null,
+                webAppUrl: "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com",
+                fileStore,
+                dataDir: "/tmp",
+                enableGracefulShutdown: false
+            });
+            const bot = telegramInstances[0];
+            expect(bot).toBeTruthy();
+
+            connector.commandSyncStart();
+            connector.updateCommands([{ command: "app", description: "Open app" }]);
+
+            await vi.advanceTimersByTimeAsync(1000);
+            expect(bot!.setChatMenuButton).toHaveBeenCalledTimes(1);
+            expect(bot!.setChatMenuButton).toHaveBeenCalledWith({
+                menu_button: {
+                    type: "web_app",
+                    text: "Open Daycare",
+                    web_app: {
+                        url: "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com"
+                    }
+                }
+            });
 
             await connector.shutdown("test");
         } finally {

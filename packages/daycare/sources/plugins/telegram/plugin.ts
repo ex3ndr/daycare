@@ -10,6 +10,7 @@ import { profileCacheDir, profileCacheFresh, profileCacheRead, profileCacheWrite
 import { profileFetch } from "./profileFetch.js";
 import { profileRender } from "./profileRender.js";
 import type { TelegramProfile } from "./profileTypes.js";
+import { telegramWebAppUrlResolve } from "./telegramWebAppUrlResolve.js";
 
 const allowedUidSchema = z.union([z.string().trim().min(1), z.number().int()]);
 
@@ -142,9 +143,11 @@ export const plugin = definePlugin({
                         : config.statePath === null
                           ? null
                           : resolvePluginPath(api.dataDir, config.statePath);
+                const webAppUrl = telegramWebAppUrlResolve(api.engineSettings, connectorId) ?? undefined;
                 connector = new TelegramConnector({
                     ...config,
                     statePath,
+                    webAppUrl,
                     token,
                     fileStore: api.fileStore,
                     dataDir: api.dataDir,

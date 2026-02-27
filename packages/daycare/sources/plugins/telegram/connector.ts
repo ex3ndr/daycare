@@ -27,6 +27,7 @@ export type TelegramConnectorOptions = {
     polling?: boolean;
     clearWebhook?: boolean;
     statePath?: string | null;
+    webAppUrl?: string;
     fileStore: FileFolder;
     dataDir: string;
     enableGracefulShutdown?: boolean;
@@ -75,6 +76,7 @@ export class TelegramConnector implements Connector {
     private commandSyncEnabled = false;
     private pendingCommands: SlashCommandEntry[] = [];
     private commandSyncTimer: NodeJS.Timeout | null = null;
+    private webAppUrl: string | null = null;
     private allowedUids: Set<string>;
     private mode: "public" | "private";
     private shuttingDown = false;
@@ -87,6 +89,7 @@ export class TelegramConnector implements Connector {
         );
         this.pollingEnabled = options.polling ?? true;
         this.clearWebhookOnStart = options.clearWebhook ?? true;
+        this.webAppUrl = options.webAppUrl?.trim() ? options.webAppUrl.trim() : null;
         this.fileStore = options.fileStore;
         this.dataDir = options.dataDir;
         this.mode = options.mode ?? "private";
@@ -753,6 +756,45 @@ export class TelegramConnector implements Connector {
         } catch (error) {
             logger.warn({ error }, "error: Failed to update Telegram slash commands");
         }
+
+        try {
+            await this.menuButtonSync();
+        } catch (error) {
+            logger.warn({ error }, "error: Failed to update Telegram chat menu button");
+        }
+    }
+
+    private async menuButtonSync(): Promise<void> {
+        const botWithMenu = this.bot as TelegramBot & {
+            setChatMenuButton?: (options: {
+                menu_button: { type: "commands" } | { type: "web_app"; text: string; web_app: { url: string } };
+            }) => Promise<unknown>;
+        };
+        if (typeof botWithMenu.setChatMenuButton !== "function") {
+            logger.debug("skip: Telegram API does not expose setChatMenuButton");
+            return;
+        }
+
+        if (!this.webAppUrl) {
+            await botWithMenu.setChatMenuButton({
+                menu_button: {
+                    type: "commands"
+                }
+            });
+            logger.debug("register: Telegram chat menu button set to commands");
+            return;
+        }
+
+        await botWithMenu.setChatMenuButton({
+            menu_button: {
+                type: "web_app",
+                text: "Open Daycare",
+                web_app: {
+                    url: this.webAppUrl
+                }
+            }
+        });
+        logger.debug({ webAppUrl: this.webAppUrl }, "register: Telegram chat menu button set to web app");
     }
 }
 

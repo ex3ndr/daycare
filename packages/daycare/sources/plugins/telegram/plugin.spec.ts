@@ -54,7 +54,7 @@ async function tempDirCreate(): Promise<string> {
     return dir;
 }
 
-function pluginApiBuild(dataDir: string) {
+function pluginApiBuild(dataDir: string, options?: { engineSettings?: Record<string, unknown> }) {
     const registerConnector = vi.fn();
     const unregisterConnector = vi.fn(async () => undefined);
     return {
@@ -72,7 +72,7 @@ function pluginApiBuild(dataDir: string) {
                 clearWebhook: false,
                 statePath: null
             },
-            engineSettings: {} as never,
+            engineSettings: (options?.engineSettings ?? {}) as never,
             logger: {
                 debug: vi.fn(),
                 info: vi.fn(),
@@ -470,5 +470,41 @@ describe("telegram plugin system prompt", () => {
             userDownloadsDir
         });
         expect(systemPromptResultRequire(fresh).images).toBeUndefined();
+    });
+});
+
+describe("telegram plugin web app menu", () => {
+    afterEach(async () => {
+        connectorInstances.length = 0;
+        for (const dir of tempRoots.splice(0, tempRoots.length)) {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("passes app web app URL to connector when daycare-app-server is enabled", async () => {
+        const dataDir = await tempDirCreate();
+        const built = pluginApiBuild(dataDir, {
+            engineSettings: {
+                plugins: [
+                    {
+                        instanceId: "daycare-app-server",
+                        pluginId: "daycare-app-server",
+                        enabled: true,
+                        settings: {
+                            appEndpoint: "https://app.example.com",
+                            serverEndpoint: "https://api.example.com"
+                        }
+                    }
+                ]
+            }
+        });
+
+        const instance = await plugin.create(built.api as never);
+        await instance.load?.();
+        const connector = connectorInstances[0];
+        expect(connector).toBeDefined();
+        expect(connector?.options).toMatchObject({
+            webAppUrl: "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram"
+        });
     });
 });

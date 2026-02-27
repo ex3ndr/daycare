@@ -11,6 +11,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - `profileCache.ts` - disk cache helpers (`dataDir/profiles/<telegramUserId>/profile.json`).
 - `profileAvatarEnsure.ts` - keeps per-avatar copies in user downloads and removes stale copies.
 - `profileRender.ts` - renders markdown + image paths for plugin system prompt output.
+- `telegramWebAppUrlResolve.ts` - resolves Telegram WebApp auth URL from enabled app-server settings.
 
 ## Settings
 - `mode` (optional): `"private"` (default) or `"public"`.
@@ -40,6 +41,8 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Debounces Telegram `setMyCommands` updates by 1 second.
 - Initial command sync is triggered from plugin `postStart()` so command registration happens after startup plugin loading.
 - Core commands currently include: `/reset`, `/context`, `/compact`, and `/abort`.
+- When `daycare-app-server` is enabled, chat menu button is switched to a Telegram WebApp button that opens Daycare app auth (`/auth?backend=...&telegramInstanceId=...`).
+- Without `daycare-app-server`, menu button is kept on default commands mode.
 
 ## Persistence
 - Tracks the last processed Telegram `update_id` and persists it to the configured state file.
