@@ -34,7 +34,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "yarn --cwd ../daycare-dashboard build:export && tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/examples dist/examples && cp -r sources/skills dist/skills && find sources/plugins -name 'plugin.json' -exec sh -c 'mkdir -p dist/plugins/$(basename $(dirname \"$1\")) && cp \"$1\" dist/plugins/$(basename $(dirname \"$1\"))/' _ {} \\; && rm -rf dist/plugins/dashboard/site && mkdir -p dist/plugins/dashboard/site && cp -r ../daycare-dashboard/out/* dist/plugins/dashboard/site/",
+    "build": "yarn --cwd ../daycare-dashboard build:export && tsc -p tsconfig.json && cp -r sources/prompts dist/ && cp -r sources/examples dist/examples && cp -r sources/skills dist/skills && mkdir -p dist/storage/migrations && cp sources/storage/migrations/*.sql dist/storage/migrations/ && find sources/plugins -name 'plugin.json' -exec sh -c 'mkdir -p dist/plugins/$(basename $(dirname \"$1\")) && cp \"$1\" dist/plugins/$(basename $(dirname \"$1\"))/' _ {} \\; && rm -rf dist/plugins/dashboard/site && mkdir -p dist/plugins/dashboard/site && cp -r ../daycare-dashboard/out/* dist/plugins/dashboard/site/",
     "dev": "tsx sources/main.ts",
     "release": "tsx sources/release/releaseRun.ts",
     "recipe": "tsx sources/recipe/recipeRun.ts",
