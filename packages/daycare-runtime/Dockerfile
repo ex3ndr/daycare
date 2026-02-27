@@ -46,10 +46,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         default-libmysqlclient-dev=1.1.* \
         dnsutils=1:9.18.* \
         fd-find=9.0.* \
+        ffmpeg \
         gettext=0.21-* \
         git=1:2.43.* \
         git-lfs=3.4.* \
         gnupg=2.4.* \
+        imagemagick \
         inotify-tools=3.22.* \
         iputils-ping=3:20240117-* \
         jq=1.7.* \
@@ -65,6 +67,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libgdbm-dev=1.23-* \
         libgdiplus=6.1+dfsg-* \
         libgssapi-krb5-2=1.20.* \
+        libimage-exiftool-perl \
         liblzma-dev=5.6.* \
         libncurses-dev=6.4+20240113-* \
         libnss3-dev=2:3.98-* \
@@ -77,12 +80,16 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libstdc++-13-dev=13.3.* \
         libunwind8=1.6.* \
         libuuid1=2.39.* \
+        libvips-tools \
         libxml2-dev=2.9.* \
         libz3-dev=4.8.* \
+        lsof \
         make=4.3-* \
+        mediainfo \
         moreutils=0.69-* \
         netcat-openbsd=1.226-* \
         openssh-client=1:9.6p1-* \
+        p7zip-full \
         pkg-config=1.8.* \
         protobuf-compiler=3.21.* \
         ripgrep=14.1.* \
@@ -91,8 +98,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         socat \
         software-properties-common=0.99.* \
         sqlite3=3.45.* \
+        strace \
         swig3.0=3.0.* \
         tk-dev=8.6.* \
+        tree \
         tzdata=2025b-* \
         universal-ctags=5.9.* \
         unixodbc-dev=2.3.* \
@@ -103,6 +112,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         zip=3.0-* \
         zlib1g=1:1.3.* \
         zlib1g-dev=1:1.3.* \
+        zstd \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
