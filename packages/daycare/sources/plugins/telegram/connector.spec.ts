@@ -370,6 +370,69 @@ describe("TelegramConnector incoming stickers", () => {
             })
         );
     });
+
+    it("does not redownload stickers when Telegram file_id is already cached", async () => {
+        const fileStore = {
+            saveFromPath: vi.fn(async (input: { name: string; mimeType: string; path: string }) => ({
+                id: "f-sticker-cached",
+                name: input.name,
+                mimeType: input.mimeType,
+                path: "/tmp/stored-sticker-cached.webp",
+                size: 777
+            }))
+        } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandlerMock = vi.fn(async (_message, _context, _descriptor) => undefined);
+        connector.onMessage(messageHandlerMock);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        bot!.downloadFile.mockResolvedValue("/tmp/downloaded-sticker-cached");
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        const sticker = { file_id: "sticker-cached", is_animated: false, is_video: false };
+
+        await botMessageHandler?.({
+            message_id: 59,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            sticker
+        });
+        await botMessageHandler?.({
+            message_id: 60,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            sticker
+        });
+
+        expect(messageHandlerMock).toHaveBeenCalledTimes(2);
+        const firstMessage = messageHandlerMock.mock.calls[0]?.[0] as {
+            files?: Array<{ id: string; name: string; mimeType: string; path: string; size: number }>;
+        };
+        const secondMessage = messageHandlerMock.mock.calls[1]?.[0] as {
+            files?: Array<{ id: string; name: string; mimeType: string; path: string; size: number }>;
+        };
+        expect(firstMessage.files).toEqual([
+            {
+                id: "f-sticker-cached",
+                name: "sticker-sticker-cached.webp",
+                mimeType: "image/webp",
+                path: "/tmp/stored-sticker-cached.webp",
+                size: 777
+            }
+        ]);
+        expect(secondMessage.files).toEqual(firstMessage.files);
+        expect(bot!.downloadFile).toHaveBeenCalledTimes(1);
+        expect(fileStore.saveFromPath).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe("TelegramConnector access mode", () => {

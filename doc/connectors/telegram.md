@@ -112,6 +112,11 @@ Large responses are split to respect Telegram API limits:
 - Captions: 1024 character limit
 - Files with captions are handled separately
 
+## Incoming file dedupe
+
+- Incoming Telegram file attachments are cached by Telegram `file_id` in connector memory.
+- When the same `file_id` appears again, the connector reuses the existing stored file reference and skips re-download.
+
 ## Polling behavior
 
 - Persists `lastUpdateId` to avoid reprocessing messages after restart

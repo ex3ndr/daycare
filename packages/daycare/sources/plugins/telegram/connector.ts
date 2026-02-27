@@ -82,6 +82,8 @@ export class TelegramConnector implements Connector {
     private shuttingDown = false;
     private clearWebhookOnStart: boolean;
     private clearedWebhook = false;
+    private cachedFilesByTelegramId = new Map<string, FileReference>();
+    private pendingFileDownloads = new Map<string, Promise<FileReference | null>>();
 
     constructor(options: TelegramConnectorOptions) {
         logger.debug(
@@ -751,6 +753,31 @@ export class TelegramConnector implements Connector {
     }
 
     private async downloadFile(fileId: string, name: string, mimeType: string): Promise<FileReference | null> {
+        const cached = this.cachedFilesByTelegramId.get(fileId);
+        if (cached) {
+            logger.debug({ fileId, path: cached.path }, "event: Reusing cached Telegram file by file_id");
+            return cached;
+        }
+
+        const pending = this.pendingFileDownloads.get(fileId);
+        if (pending) {
+            return pending;
+        }
+
+        const downloadPromise = this.downloadFileFromTelegram(fileId, name, mimeType);
+        this.pendingFileDownloads.set(fileId, downloadPromise);
+        try {
+            const stored = await downloadPromise;
+            if (stored) {
+                this.cachedFilesByTelegramId.set(fileId, stored);
+            }
+            return stored;
+        } finally {
+            this.pendingFileDownloads.delete(fileId);
+        }
+    }
+
+    private async downloadFileFromTelegram(fileId: string, name: string, mimeType: string): Promise<FileReference | null> {
         const downloadDir = path.join(this.dataDir, "downloads");
         await fs.mkdir(downloadDir, { recursive: true });
         try {
