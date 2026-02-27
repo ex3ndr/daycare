@@ -28,10 +28,6 @@ const resultSchema = Type.Object(
 );
 
 type SkillAddResult = Static<typeof resultSchema>;
-type SkillFileProbeFailure = {
-    path: string;
-    reason: string;
-};
 
 const returns: ToolResultContract<SkillAddResult> = {
     schema: resultSchema,
@@ -39,18 +35,18 @@ const returns: ToolResultContract<SkillAddResult> = {
 };
 
 /**
- * Installs a skill from a local path into the user's personal skills directory.
+ * Installs a skill from a local folder path into the user's personal skills directory.
  * Replaces any existing personal skill with the same name.
  * Uses sandbox.read to resolve and validate the source path.
  *
- * Expects: path points to a folder (or direct skill file) with a valid skill file name and frontmatter name.
+ * Expects: path points to a folder containing a valid skill.md with a name in frontmatter.
  */
 export function skillAddToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "skill_add",
             description:
-                "Install a skill from a local folder or skill file path. Copies the skill folder to the personal skills directory, replacing any existing skill with the same name.",
+                "Install a skill from a local folder path. Copies the skill folder to the personal skills directory, replacing any existing skill with the same name.",
             parameters: schema
         },
         returns,
@@ -63,9 +59,6 @@ export function skillAddToolBuild(): ToolDefinition {
             }
 
             const sourcePath = payload.path.trim();
-            if (!sourcePath) {
-                throw new Error("Source path is required.");
-            }
 
             // Read skill file through sandbox to resolve path and validate permissions.
             // Accept both canonical "skill.md" and legacy "SKILL.md" naming.
@@ -115,79 +108,43 @@ async function skillFileRead(
     sourcePath: string,
     toolContext: ToolExecutionContext
 ): Promise<{ content: string; resolvedPath: string }> {
-    const failures: SkillFileProbeFailure[] = [];
     for (const skillFileSandboxPath of skillFileSandboxPathsBuild(sourcePath)) {
         try {
             const result = await toolContext.sandbox.read({ path: skillFileSandboxPath });
             if (result.type !== "text") {
-                failures.push({ path: skillFileSandboxPath, reason: `expected text file, got ${result.type}` });
-                continue;
+                throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
             }
             return { content: result.content, resolvedPath: result.resolvedPath };
         } catch (error) {
-            const failure = skillFileProbeFailureBuild(skillFileSandboxPath, error);
-            if (failure) {
-                failures.push(failure);
+            if (skillFileMissingErrorIs(error)) {
                 continue;
             }
             throw error;
         }
     }
-    throw new Error(skillFileProbeSummaryFormat(sourcePath, failures));
+    throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
 }
 
 function skillFileSandboxPathsBuild(sourcePath: string): string[] {
-    const normalizedSourcePath = path.posix.normalize(sourcePath);
-    const fileName = path.posix.basename(normalizedSourcePath).toLowerCase();
-    if (fileName === SKILL_FILENAME) {
-        const sourceDir = path.posix.dirname(normalizedSourcePath);
-        const preferred = path.posix.join(sourceDir, SKILL_FILENAME);
-        const legacy = path.posix.join(sourceDir, SKILL_FILENAME_LEGACY);
-        return Array.from(new Set([preferred, legacy]));
-    }
     const candidates = [
-        path.posix.join(normalizedSourcePath, SKILL_FILENAME),
-        path.posix.join(normalizedSourcePath, SKILL_FILENAME_LEGACY)
+        path.posix.join(sourcePath, SKILL_FILENAME),
+        path.posix.join(sourcePath, SKILL_FILENAME_LEGACY)
     ];
     return Array.from(new Set(candidates));
 }
 
-function skillFileProbeFailureBuild(probePath: string, error: unknown): SkillFileProbeFailure | null {
+function skillFileMissingErrorIs(error: unknown): boolean {
     if (!(error instanceof Error)) {
-        return null;
+        return false;
     }
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR") {
-        return { path: probePath, reason: "not found" };
-    }
-    if (code === "EACCES" || code === "EPERM") {
-        return { path: probePath, reason: "permission denied" };
+        return true;
     }
     if (error.message === "Path is not a file.") {
-        return { path: probePath, reason: "not a file" };
+        return true;
     }
-    if (error.message === "Cannot read symbolic link directly.") {
-        return { path: probePath, reason: "symbolic links are not supported" };
-    }
-    if (error.message.startsWith("Read permission denied:")) {
-        return { path: probePath, reason: "read permission denied by sandbox" };
-    }
-    if (error.message.startsWith("Path is not mapped to host filesystem:")) {
-        return { path: probePath, reason: "path is outside sandbox mounts" };
-    }
-    return null;
-}
-
-function skillFileProbeSummaryFormat(sourcePath: string, failures: SkillFileProbeFailure[]): string {
-    if (failures.length === 0) {
-        return `Source path is not a valid skill directory: ${sourcePath}.`;
-    }
-    const attempts = failures.map((failure) => `${failure.path} (${failure.reason})`).join("; ");
-    return (
-        `Source path is not a valid skill directory: ${sourcePath}. ` +
-        `Expected a readable "${SKILL_FILENAME}" or "${SKILL_FILENAME_LEGACY}" file with "name" frontmatter. ` +
-        `Tried: ${attempts}`
-    );
+    return false;
 }
 
 function skillNameParse(content: string): string | null {
