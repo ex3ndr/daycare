@@ -9,7 +9,7 @@
         "web": "expo start --web",
         "ios": "expo run:ios",
         "android": "expo run:android",
-        "test": "vitest",
+        "test": "vitest --run",
         "typecheck": "tsc --noEmit",
         "prebuild": "rm -rf android ios && expo prebuild"
     },
