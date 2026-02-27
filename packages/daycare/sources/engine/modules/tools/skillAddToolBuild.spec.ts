@@ -40,6 +40,32 @@ describe("skillAddToolBuild", () => {
         }
     });
 
+    it("installs a skill from ~/ path when source uses SKILL.md", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const sourceDir = path.join(dirs.homeDir, "skills", "source-skill");
+            await fs.mkdir(sourceDir, { recursive: true });
+            await fs.writeFile(
+                path.join(sourceDir, "SKILL.md"),
+                "---\nname: upper-skill\ndescription: Uses uppercase filename\n---\nBody content"
+            );
+
+            const tool = skillAddToolBuild();
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir
+            });
+            const result = await tool.execute({ path: "~/skills/source-skill" }, context, toolCall);
+
+            expect(result.typedResult.status).toBe("installed");
+            expect(result.typedResult.skillName).toBe("upper-skill");
+            const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "upper-skill", "SKILL.md"), "utf8");
+            expect(targetSkill).toContain("name: upper-skill");
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
     it("replaces an existing skill with the same name", async () => {
         const dirs = await testDirsCreate();
         try {

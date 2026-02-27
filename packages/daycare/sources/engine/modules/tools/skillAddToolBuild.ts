@@ -7,6 +7,8 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { SKILL_FILENAME } from "../../skills/skillConstants.js";
 import type { ToolExecutionContext } from "./types.js";
 
+const SKILL_FILENAME_LEGACY = "SKILL.md";
+
 const schema = Type.Object(
     {
         path: Type.String({ minLength: 1 })
@@ -57,10 +59,10 @@ export function skillAddToolBuild(): ToolDefinition {
             }
 
             const sourcePath = payload.path.trim();
-            const skillFileSandboxPath = path.posix.join(sourcePath, SKILL_FILENAME);
 
-            // Read skill.md through sandbox to resolve path and validate permissions
-            const readResult = await skillFileRead(skillFileSandboxPath, sourcePath, toolContext);
+            // Read skill file through sandbox to resolve path and validate permissions.
+            // Accept both canonical "skill.md" and legacy "SKILL.md" naming.
+            const readResult = await skillFileRead(sourcePath, toolContext);
             const skillName = skillNameParse(readResult.content);
             if (!skillName) {
                 throw new Error(`No valid ${SKILL_FILENAME} with "name" frontmatter found in: ${sourcePath}`);
@@ -103,28 +105,46 @@ export function skillAddToolBuild(): ToolDefinition {
 
 /** Reads a skill file through sandbox.read. Wraps errors with model-facing paths. */
 async function skillFileRead(
-    skillFileSandboxPath: string,
     sourcePath: string,
     toolContext: ToolExecutionContext
 ): Promise<{ content: string; resolvedPath: string }> {
-    try {
-        const result = await toolContext.sandbox.read({ path: skillFileSandboxPath });
-        if (result.type !== "text") {
-            throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
-        }
-        return { content: result.content, resolvedPath: result.resolvedPath };
-    } catch (error) {
-        if (error instanceof Error) {
-            const code = (error as NodeJS.ErrnoException).code;
-            if (code === "ENOENT" || code === "ENOTDIR") {
+    for (const skillFileSandboxPath of skillFileSandboxPathsBuild(sourcePath)) {
+        try {
+            const result = await toolContext.sandbox.read({ path: skillFileSandboxPath });
+            if (result.type !== "text") {
                 throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
             }
-            if (error.message === "Path is not a file.") {
-                throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
+            return { content: result.content, resolvedPath: result.resolvedPath };
+        } catch (error) {
+            if (skillFileMissingErrorIs(error)) {
+                continue;
             }
+            throw error;
         }
-        throw error;
     }
+    throw new Error(`Source path is not a valid skill directory: ${sourcePath}`);
+}
+
+function skillFileSandboxPathsBuild(sourcePath: string): string[] {
+    const candidates = [
+        path.posix.join(sourcePath, SKILL_FILENAME),
+        path.posix.join(sourcePath, SKILL_FILENAME_LEGACY)
+    ];
+    return Array.from(new Set(candidates));
+}
+
+function skillFileMissingErrorIs(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+        return false;
+    }
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+        return true;
+    }
+    if (error.message === "Path is not a file.") {
+        return true;
+    }
+    return false;
 }
 
 function skillNameParse(content: string): string | null {
