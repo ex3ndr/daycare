@@ -1,4 +1,7 @@
+import { promises as fs } from "node:fs";
 import { createServer } from "node:net";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jwtSign } from "../../util/jwt.js";
 import { plugin } from "./plugin.js";
@@ -8,6 +11,7 @@ const APP_AUTH_SECRET_KEY = "app-auth.jwtSecret";
 type PluginInstance = Awaited<ReturnType<typeof plugin.create>>;
 
 const activeInstances: PluginInstance[] = [];
+const tmpDirs: string[] = [];
 
 async function portAvailableResolve(): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -37,6 +41,9 @@ async function pluginCreateForTests(options?: { secret?: string }) {
     }
 
     const port = await portAvailableResolve();
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-app-server-test-"));
+    tmpDirs.push(tmpDir);
+    const usersDir = path.join(tmpDir, "users");
 
     const api = {
         instance: {
@@ -59,8 +66,9 @@ async function pluginCreateForTests(options?: { secret?: string }) {
                 entries.set(id, entry);
             })
         },
-        dataDir: "/tmp/daycare-test/daycare-app-server",
-        tmpDir: "/tmp/daycare-test/tmp",
+        dataDir: path.join(tmpDir, "data"),
+        tmpDir: path.join(tmpDir, "tmp"),
+        usersDir,
         registrar: {
             registerTool: vi.fn(),
             unregisterTool: vi.fn(),
@@ -93,13 +101,17 @@ async function pluginCreateForTests(options?: { secret?: string }) {
     return {
         api,
         entries,
-        port
+        port,
+        usersDir
     };
 }
 
 afterEach(async () => {
     for (const instance of activeInstances.splice(0, activeInstances.length)) {
         await instance.unload?.();
+    }
+    for (const dir of tmpDirs.splice(0, tmpDirs.length)) {
+        await fs.rm(dir, { recursive: true, force: true });
     }
 });
 
@@ -168,5 +180,109 @@ describe("daycare-app-server plugin auth endpoints", () => {
         });
 
         await expect(response.json()).resolves.toEqual({ ok: false, error: "Token is required." });
+    });
+
+    it("returns 401 for unauthenticated unknown routes", async () => {
+        const built = await pluginCreateForTests({ secret: "valid-secret-for-tests-1234567890" });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/unknown`);
+
+        expect(response.status).toBe(401);
+        await expect(response.json()).resolves.toEqual({ ok: false, error: "Authentication required." });
+    });
+
+    it("returns 404 for authenticated unknown routes", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/unknown`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toEqual({ ok: false, error: "Not found." });
+    });
+});
+
+describe("daycare-app-server plugin prompts endpoints", () => {
+    it("returns 401 for unauthenticated prompts request", async () => {
+        const built = await pluginCreateForTests({ secret: "valid-secret-for-tests-1234567890" });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/prompts`);
+
+        expect(response.status).toBe(401);
+    });
+
+    it("lists prompt files", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/prompts`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+
+        expect(response.status).toBe(200);
+        const body = (await response.json()) as { ok: boolean; files: string[] };
+        expect(body.ok).toBe(true);
+        expect(body.files).toEqual(["SOUL.md", "USER.md", "AGENTS.md", "TOOLS.md"]);
+    });
+
+    it("reads a prompt file falling back to bundled default", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/prompts/SOUL.md`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+
+        expect(response.status).toBe(200);
+        const body = (await response.json()) as { ok: boolean; filename: string; content: string };
+        expect(body.ok).toBe(true);
+        expect(body.filename).toBe("SOUL.md");
+        expect(body.content).toContain("SOUL.md");
+    });
+
+    it("writes and reads back a prompt file", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const writeResponse = await fetch(`http://127.0.0.1:${built.port}/prompts/USER.md`, {
+            method: "PUT",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({ content: "# Custom User\n\n- Name: Test" })
+        });
+
+        expect(writeResponse.status).toBe(200);
+        await expect(writeResponse.json()).resolves.toEqual({ ok: true, filename: "USER.md" });
+
+        const readResponse = await fetch(`http://127.0.0.1:${built.port}/prompts/USER.md`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+
+        const body = (await readResponse.json()) as { ok: boolean; filename: string; content: string };
+        expect(body.ok).toBe(true);
+        expect(body.content).toBe("# Custom User\n\n- Name: Test");
+    });
+
+    it("rejects unknown prompt filenames", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/prompts/EVIL.md`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+
+        expect(response.status).toBe(400);
+        const body = (await response.json()) as { ok: boolean; error: string };
+        expect(body.ok).toBe(false);
+        expect(body.error).toContain("Unknown prompt file");
     });
 });

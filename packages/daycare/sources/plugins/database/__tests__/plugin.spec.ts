@@ -75,6 +75,7 @@ describe("database plugin", () => {
             auth,
             dataDir: baseDir,
             tmpDir: path.join(baseDir, "tmp"),
+            usersDir: path.join(baseDir, "users"),
             registrar,
             exposes: {
                 registerProvider: async () => undefined,

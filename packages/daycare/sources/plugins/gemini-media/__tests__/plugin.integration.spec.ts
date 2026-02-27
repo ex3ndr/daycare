@@ -94,6 +94,7 @@ describe("gemini-media plugin", () => {
             auth,
             dataDir: dir,
             tmpDir: path.join(dir, "tmp"),
+            usersDir: path.join(dir, "users"),
             registrar,
             exposes: {
                 registerProvider: async () => undefined,
@@ -263,6 +264,7 @@ describe("gemini-media plugin", () => {
             auth,
             dataDir: dir,
             tmpDir: path.join(dir, "tmp"),
+            usersDir: path.join(dir, "users"),
             registrar,
             exposes: {
                 registerProvider: async () => undefined,

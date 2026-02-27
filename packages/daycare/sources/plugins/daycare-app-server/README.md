@@ -1,6 +1,6 @@
 # Daycare App Server Plugin
 
-Serves the Daycare Expo web build, exposes token auth endpoints, and provides `/app` access links.
+Pure API server for the Daycare app. Handles authentication, prompt file management, and provides `/app` access links.
 
 ## Settings
 
@@ -17,11 +17,19 @@ Notes:
 
 ## Routes
 
-- `GET /`: plain welcome message (`Welcome to Daycare App API!`)
+### Auth
 - `POST /auth/validate`: validate incoming magic link token
 - `POST /auth/refresh`: validate token and return a fresh 1-hour token
-- `/api/*`: proxied to local engine IPC socket
-- `/<path>` (non-root): static SPA assets from `packages/daycare-app/dist` or `packages/daycare-app/web-build`
+
+### Prompts (authenticated via `Authorization: Bearer <token>`)
+- `GET /prompts`: list available prompt files
+- `GET /prompts/:filename`: read prompt file content (falls back to bundled default)
+- `PUT /prompts/:filename`: update prompt file content (`{ "content": "..." }`)
+
+Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
+
+### Other
+- `GET /`: welcome message
 
 ## Tool and command
 
@@ -31,25 +39,18 @@ Notes:
 Both generate a short-lived app URL in the form:
 `<appEndpoint-or-serverEndpoint>/auth#<base64url-json>`
 
-When `appEndpoint` is configured, links open on that app endpoint.
-When `serverEndpoint` is configured, the payload `backendUrl` points to that server endpoint.
-If only `serverEndpoint` is set, links also open on `serverEndpoint`.
+## Structure
 
-Hash payload JSON shape:
-
-```json
-{
-    "backendUrl": "<serverEndpoint-or-link-origin>",
-    "token": "<jwt>"
-}
+```
+plugin.ts           — server lifecycle and route wiring
+appHttp.ts          — HTTP utilities (CORS, JSON, body parsing, listen/close)
+appAuthExtract.ts   — JWT Bearer token extraction
+appAuthLinkTool.ts  — magic link generation tool
+appJwtSecretResolve.ts — JWT secret resolution
+appEndpointNormalize.ts — endpoint URL validation
+routes/
+  routeAuthValidate.ts  — POST /auth/validate
+  routeAuthRefresh.ts   — POST /auth/refresh
 ```
 
-Token signing/verifying is implemented with `privacy-kit` ephemeral tokens.
-
-## Terminal generation
-
-You can also generate links directly from CLI:
-
-```bash
-daycare app-link <userId>
-```
+Prompt API handlers live in `sources/api/prompts/` (shared across the codebase).

@@ -277,6 +277,7 @@ export class PluginManager {
             auth: this.auth,
             dataDir,
             tmpDir,
+            usersDir: this.config.current.usersDir,
             registrar,
             exposes: this.exposes,
             fileStore: this.fileStore,

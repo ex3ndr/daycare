@@ -63,6 +63,7 @@ export const plugin = {
             auth: {} as never,
             dataDir: dir,
             tmpDir: path.join(dir, "tmp"),
+            usersDir: path.join(dir, "users"),
             registrar: {} as never,
             exposes: {
                 registerProvider: async () => undefined,

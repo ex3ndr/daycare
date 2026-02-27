@@ -20,6 +20,7 @@ export type PluginApi<TSettings = unknown> = {
     auth: AuthStore;
     dataDir: string;
     tmpDir: string;
+    usersDir: string;
     registrar: PluginRegistrar;
     exposes: ExposeProviderRegistrationApi;
     fileStore: FileFolder;

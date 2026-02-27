@@ -60,6 +60,7 @@ async function createApi<TSettings>(
         auth,
         dataDir: dir,
         tmpDir: path.join(dir, "tmp"),
+        usersDir: path.join(dir, "users"),
         registrar,
         exposes: {
             registerProvider: async () => undefined,
