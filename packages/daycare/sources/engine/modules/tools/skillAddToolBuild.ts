@@ -7,8 +7,7 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { SKILL_FILENAME } from "../../skills/skillConstants.js";
 import type { ToolExecutionContext } from "./types.js";
 
-const SKILL_FILENAME_PATTERN = /^skill\.md$/i;
-const MAX_SKILL_FILE_DIAGNOSTICS = 6;
+const SKILL_FILENAME_LEGACY = "SKILL.md";
 
 const schema = Type.Object(
     {
@@ -139,12 +138,18 @@ async function skillFileRead(
 
 function skillFileSandboxPathsBuild(sourcePath: string): string[] {
     const normalizedSourcePath = path.posix.normalize(sourcePath);
-    const fileName = path.posix.basename(normalizedSourcePath);
-    if (SKILL_FILENAME_PATTERN.test(fileName)) {
+    const fileName = path.posix.basename(normalizedSourcePath).toLowerCase();
+    if (fileName === SKILL_FILENAME) {
         const sourceDir = path.posix.dirname(normalizedSourcePath);
-        return skillFileCandidatePathsBuild(sourceDir, fileName);
+        const preferred = path.posix.join(sourceDir, SKILL_FILENAME);
+        const legacy = path.posix.join(sourceDir, SKILL_FILENAME_LEGACY);
+        return Array.from(new Set([preferred, legacy]));
     }
-    return skillFileCandidatePathsBuild(normalizedSourcePath);
+    const candidates = [
+        path.posix.join(normalizedSourcePath, SKILL_FILENAME),
+        path.posix.join(normalizedSourcePath, SKILL_FILENAME_LEGACY)
+    ];
+    return Array.from(new Set(candidates));
 }
 
 function skillFileProbeFailureBuild(probePath: string, error: unknown): SkillFileProbeFailure | null {
@@ -177,71 +182,12 @@ function skillFileProbeSummaryFormat(sourcePath: string, failures: SkillFileProb
     if (failures.length === 0) {
         return `Source path is not a valid skill directory: ${sourcePath}.`;
     }
-    const uniqueReasons = Array.from(new Set(failures.map((failure) => failure.reason)));
-    if (uniqueReasons.length === 1 && uniqueReasons[0] === "not found") {
-        return (
-            `Source path is not a valid skill directory: ${sourcePath}. ` +
-            `Expected a readable file named "${SKILL_FILENAME}" (case-insensitive) with "name" frontmatter. ` +
-            `Tried ${failures.length} filename case variants and none were found.`
-        );
-    }
-
-    const visibleAttempts = failures.slice(0, MAX_SKILL_FILE_DIAGNOSTICS);
-    const hiddenCount = failures.length - visibleAttempts.length;
-    const attempts = visibleAttempts.map((failure) => `${failure.path} (${failure.reason})`).join("; ");
-    const extra = hiddenCount > 0 ? `; +${hiddenCount} more attempts` : "";
+    const attempts = failures.map((failure) => `${failure.path} (${failure.reason})`).join("; ");
     return (
         `Source path is not a valid skill directory: ${sourcePath}. ` +
-        `Expected a readable file named "${SKILL_FILENAME}" (case-insensitive) with "name" frontmatter. ` +
-        `Tried: ${attempts}${extra}`
+        `Expected a readable "${SKILL_FILENAME}" or "${SKILL_FILENAME_LEGACY}" file with "name" frontmatter. ` +
+        `Tried: ${attempts}`
     );
-}
-
-function skillFileCandidatePathsBuild(sourceDir: string, preferredFileName?: string): string[] {
-    const fileNames = skillFileNameCandidatesBuild(preferredFileName);
-    return fileNames.map((fileName) => path.posix.join(sourceDir, fileName));
-}
-
-function skillFileNameCandidatesBuild(preferredFileName?: string): string[] {
-    const variants = skillFileNameVariantsBuild(SKILL_FILENAME);
-    if (preferredFileName) {
-        return Array.from(new Set([preferredFileName, ...variants]));
-    }
-    return variants;
-}
-
-function skillFileNameVariantsBuild(value: string): string[] {
-    const variants = new Set<string>();
-    for (const bitmask of letterBitmaskBuild(value)) {
-        let output = "";
-        let letterIndex = 0;
-        for (const char of value) {
-            if (!/[a-z]/i.test(char)) {
-                output += char;
-                continue;
-            }
-            const shouldUppercase = (bitmask & (1 << letterIndex)) !== 0;
-            output += shouldUppercase ? char.toUpperCase() : char.toLowerCase();
-            letterIndex += 1;
-        }
-        variants.add(output);
-    }
-    return Array.from(variants);
-}
-
-function letterBitmaskBuild(value: string): number[] {
-    let letterCount = 0;
-    for (const char of value) {
-        if (/[a-z]/i.test(char)) {
-            letterCount += 1;
-        }
-    }
-    const totalVariants = 1 << letterCount;
-    const masks: number[] = [];
-    for (let bitmask = 0; bitmask < totalVariants; bitmask += 1) {
-        masks.push(bitmask);
-    }
-    return masks;
 }
 
 function skillNameParse(content: string): string | null {

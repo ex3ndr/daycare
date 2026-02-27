@@ -66,32 +66,6 @@ describe("skillAddToolBuild", () => {
         }
     });
 
-    it("installs a skill when source uses mixed-case sKiLl.Md", async () => {
-        const dirs = await testDirsCreate();
-        try {
-            const sourceDir = path.join(dirs.homeDir, "skills", "mixed-case-skill");
-            await fs.mkdir(sourceDir, { recursive: true });
-            await fs.writeFile(
-                path.join(sourceDir, "sKiLl.Md"),
-                "---\nname: mixed-case\ndescription: mixed\n---\nBody"
-            );
-
-            const tool = skillAddToolBuild();
-            const context = contextBuild({
-                skillsPersonalRoot: dirs.personalRoot,
-                homeDir: dirs.homeDir
-            });
-            const result = await tool.execute({ path: "~/skills/mixed-case-skill" }, context, toolCall);
-
-            expect(result.typedResult.status).toBe("installed");
-            expect(result.typedResult.skillName).toBe("mixed-case");
-            const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "mixed-case", "sKiLl.Md"), "utf8");
-            expect(targetSkill).toContain("name: mixed-case");
-        } finally {
-            await dirs.cleanup();
-        }
-    });
-
     it("installs a skill from a direct skill file path", async () => {
         const dirs = await testDirsCreate();
         try {
@@ -153,11 +127,13 @@ describe("skillAddToolBuild", () => {
                 homeDir: dirs.homeDir
             });
             await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
-                'Expected a readable file named "skill.md" (case-insensitive)'
+                'Expected a readable "skill.md" or "SKILL.md" file'
             );
-            await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow("none were found");
             await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
-                "Tried 128 filename case variants"
+                "nonexistent/skill.md (not found)"
+            );
+            await expect(tool.execute({ path: "nonexistent" }, context, toolCall)).rejects.toThrow(
+                "nonexistent/SKILL.md (not found)"
             );
         } finally {
             await dirs.cleanup();
