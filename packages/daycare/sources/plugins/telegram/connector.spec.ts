@@ -1,3 +1,7 @@
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentDescriptor, MessageContext } from "@/types";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
@@ -432,6 +436,101 @@ describe("TelegramConnector incoming stickers", () => {
         expect(secondMessage.files).toEqual(firstMessage.files);
         expect(bot!.downloadFile).toHaveBeenCalledTimes(1);
         expect(fileStore.saveFromPath).toHaveBeenCalledTimes(1);
+    });
+
+    it("reloads cached file_id entries from state and skips redownload after restart", async () => {
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-telegram-sticker-cache-"));
+        const statePath = path.join(tempDir, "telegram-offset.json");
+
+        const firstFileStore = {
+            saveFromPath: vi.fn(async (input: { name: string; mimeType: string; path: string }) => ({
+                id: "f-sticker-persisted",
+                name: input.name,
+                mimeType: input.mimeType,
+                path: "/tmp/stored-sticker-persisted.webp",
+                size: 901
+            }))
+        } as unknown as FileFolder;
+        const firstConnector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath,
+            fileStore: firstFileStore,
+            dataDir: tempDir,
+            enableGracefulShutdown: false
+        });
+        const firstMessageHandler = vi.fn(async (_message, _context, _descriptor) => undefined);
+        firstConnector.onMessage(firstMessageHandler);
+
+        const firstBot = telegramInstances[0];
+        expect(firstBot).toBeTruthy();
+        firstBot!.downloadFile.mockResolvedValue("/tmp/downloaded-sticker-persisted");
+        const firstBotMessageHandler = firstBot!.handlers.get("message")?.[0];
+        const sticker = { file_id: "sticker-persisted", is_animated: false, is_video: false };
+        await firstBotMessageHandler?.({
+            message_id: 61,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            sticker
+        });
+        await firstConnector.shutdown("test");
+
+        const secondFileStore = {
+            saveFromPath: vi.fn(async (input: { name: string; mimeType: string; path: string }) => ({
+                id: "f-sticker-second",
+                name: input.name,
+                mimeType: input.mimeType,
+                path: "/tmp/stored-sticker-second.webp",
+                size: 902
+            }))
+        } as unknown as FileFolder;
+        const secondConnector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath,
+            fileStore: secondFileStore,
+            dataDir: tempDir,
+            enableGracefulShutdown: false
+        });
+        const secondMessageHandler = vi.fn(async (_message, _context, _descriptor) => undefined);
+        secondConnector.onMessage(secondMessageHandler);
+        await (secondConnector as unknown as { loadState: () => Promise<void> }).loadState();
+
+        const secondBot = telegramInstances[1];
+        expect(secondBot).toBeTruthy();
+        secondBot!.downloadFile.mockResolvedValue("/tmp/downloaded-sticker-should-not-happen");
+        const secondBotMessageHandler = secondBot!.handlers.get("message")?.[0];
+        await secondBotMessageHandler?.({
+            message_id: 62,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            sticker
+        });
+
+        expect(secondMessageHandler).toHaveBeenCalledTimes(1);
+        const [message] = secondMessageHandler.mock.calls[0] as [
+            { files?: Array<{ id: string; name: string; mimeType: string; path: string; size: number }> },
+            MessageContext,
+            AgentDescriptor
+        ];
+        expect(message.files).toEqual([
+            {
+                id: "f-sticker-persisted",
+                name: "sticker-sticker-persisted.webp",
+                mimeType: "image/webp",
+                path: "/tmp/stored-sticker-persisted.webp",
+                size: 901
+            }
+        ]);
+        expect(secondBot!.downloadFile).not.toHaveBeenCalled();
+        expect(secondFileStore.saveFromPath).not.toHaveBeenCalled();
+
+        await secondConnector.shutdown("test");
+        await fs.rm(tempDir, { recursive: true, force: true });
     });
 });
 

@@ -52,6 +52,11 @@ const TELEGRAM_COMMAND_UPDATE_DEBOUNCE_MS = 1000;
 const TELEGRAM_UNAUTHORIZED_MESSAGE =
     "🚫 You are not authorized to use this bot. Please contact the system administrator to request access.";
 
+type TelegramConnectorState = {
+    lastUpdateId?: number;
+    filesByTelegramId?: Record<string, FileReference>;
+};
+
 export class TelegramConnector implements Connector {
     capabilities: ConnectorCapabilities = {
         sendText: true,
@@ -428,9 +433,18 @@ export class TelegramConnector implements Connector {
                 return;
             }
             try {
-                const parsed = JSON.parse(trimmed) as { lastUpdateId?: number };
-                if (typeof parsed.lastUpdateId === "number") {
-                    this.lastUpdateId = parsed.lastUpdateId;
+                const parsed = JSON.parse(trimmed) as unknown;
+                const state = connectorStateParse(parsed);
+                if (!state) {
+                    throw new Error("invalid connector state schema");
+                }
+                if (typeof state.lastUpdateId === "number") {
+                    this.lastUpdateId = state.lastUpdateId;
+                }
+                if (state.filesByTelegramId && typeof state.filesByTelegramId === "object") {
+                    for (const [fileId, reference] of Object.entries(state.filesByTelegramId)) {
+                        this.cachedFilesByTelegramId.set(fileId, reference);
+                    }
                 }
                 return;
             } catch (error) {
@@ -465,7 +479,7 @@ export class TelegramConnector implements Connector {
     }
 
     private async persistState(): Promise<void> {
-        if (!this.statePath || this.lastUpdateId === null) {
+        if (!this.statePath || (this.lastUpdateId === null && this.cachedFilesByTelegramId.size === 0)) {
             return;
         }
 
@@ -476,7 +490,14 @@ export class TelegramConnector implements Connector {
 
         try {
             await fs.mkdir(path.dirname(this.statePath), { recursive: true });
-            const payload = JSON.stringify({ lastUpdateId: this.lastUpdateId });
+            const state: TelegramConnectorState = {};
+            if (this.lastUpdateId !== null) {
+                state.lastUpdateId = this.lastUpdateId;
+            }
+            if (this.cachedFilesByTelegramId.size > 0) {
+                state.filesByTelegramId = Object.fromEntries(this.cachedFilesByTelegramId.entries());
+            }
+            const payload = JSON.stringify(state);
             const tmpPath = `${this.statePath}.tmp-${process.pid}-${Date.now()}`;
             await fs.writeFile(tmpPath, payload, "utf8");
             await fs.rename(tmpPath, this.statePath);
@@ -770,6 +791,7 @@ export class TelegramConnector implements Connector {
             const stored = await downloadPromise;
             if (stored) {
                 this.cachedFilesByTelegramId.set(fileId, stored);
+                this.schedulePersist();
             }
             return stored;
         } finally {
@@ -878,6 +900,73 @@ function recoverLastUpdateId(content: string): number | null {
         return Number.isFinite(value) ? value : null;
     }
     return null;
+}
+
+function connectorStateParse(value: unknown): TelegramConnectorState | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const state: TelegramConnectorState = {};
+
+    if (record.lastUpdateId !== undefined) {
+        if (typeof record.lastUpdateId !== "number") {
+            return null;
+        }
+        state.lastUpdateId = record.lastUpdateId;
+    }
+
+    if (record.filesByTelegramId !== undefined) {
+        const parsedFiles = connectorStateFilesParse(record.filesByTelegramId);
+        if (!parsedFiles) {
+            return null;
+        }
+        state.filesByTelegramId = parsedFiles;
+    }
+
+    return state;
+}
+
+function connectorStateFilesParse(value: unknown): Record<string, FileReference> | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    const parsed: Record<string, FileReference> = {};
+    for (const [fileId, entry] of Object.entries(value as Record<string, unknown>)) {
+        const reference = fileReferenceParse(entry);
+        if (!reference) {
+            return null;
+        }
+        parsed[fileId] = reference;
+    }
+    return parsed;
+}
+
+function fileReferenceParse(value: unknown): FileReference | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    if (
+        typeof record.id !== "string" ||
+        typeof record.name !== "string" ||
+        typeof record.path !== "string" ||
+        typeof record.mimeType !== "string" ||
+        typeof record.size !== "number"
+    ) {
+        return null;
+    }
+
+    return {
+        id: record.id,
+        name: record.name,
+        path: record.path,
+        mimeType: record.mimeType,
+        size: record.size
+    };
 }
 
 function isTelegramParseError(error: unknown): boolean {

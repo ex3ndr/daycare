@@ -115,6 +115,7 @@ Large responses are split to respect Telegram API limits:
 ## Incoming file dedupe
 
 - Incoming Telegram file attachments are cached by Telegram `file_id` in connector memory.
+- The cache is persisted in connector `statePath`, so restarts keep the same `file_id` dedupe behavior.
 - When the same `file_id` appears again, the connector reuses the existing stored file reference and skips re-download.
 
 ## Polling behavior
