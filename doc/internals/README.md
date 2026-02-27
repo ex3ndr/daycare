@@ -62,6 +62,7 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `docker-security-unconfined.md` - docker `SecurityOpt` unconfined mode for sandbox containers
 - `docker-capabilities.md` - docker `CapAdd`/`CapDrop` support for sandbox containers
 - `docker-readonly-rootfs.md` - docker read-only rootfs mode for sandbox containers with writable `/home`
+- `docker-tmpfs-tmp.md` - docker `/tmp` tmpfs mount policy for sandbox containers
 - `docker-examples-mount-stale-check.md` - stale detection for required `/shared/examples` Docker bind mount
 - `docker-path-remap-idempotence.md` - docker-aware `~` expansion for `read`/`read_json` path normalization
 - `write-output-sandbox-collision-loop.md` - `write_output` now writes via sandbox exclusive retry loop instead of host preflight listing

@@ -65,6 +65,10 @@ When `readOnly` is `true`, sandbox containers are created with:
 The `/home` bind mount remains writable, so only mounted home content is writable while the rest of the root filesystem
 is read-only.
 
+All sandbox containers mount `/tmp` as writable tmpfs:
+
+- `HostConfig.Tmpfs["/tmp"] = "rw"`
+
 When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
 
 - `enableWeakerNestedSandbox: true`
@@ -107,6 +111,7 @@ Each sandbox container is stamped at creation time with:
 - `daycare.network` from selected Docker network (`daycare-isolated` or `daycare-local`)
 - `daycare.dns.profile` from DNS policy (`public`, `private`, or `default`)
 - `daycare.dns.servers` from configured DNS servers (`default` when Docker DNS is used)
+- `daycare.tmpfs.tmp` fixed to `"1"` when `/tmp` tmpfs mount is enabled
 
 `dockerContainerEnsure` compares these labels against current values. If any label is missing or mismatched, the
 container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure
