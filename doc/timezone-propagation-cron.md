@@ -31,3 +31,17 @@ flowchart TD
 - If a cron timezone is provided explicitly, it must be a valid IANA timezone.
 - If omitted, cron defaults to the user profile timezone when present and valid.
 - If no profile timezone exists, cron falls back to `UTC`.
+
+## Shared timezone helpers
+
+- Extracted `timezoneIsValid()` to `sources/util/timezoneIsValid.ts`.
+- Extracted cron fallback logic to `sources/engine/cron/ops/cronTimezoneResolve.ts`.
+- `CronScheduler` and task tools now use the same resolver to avoid drift.
+
+```mermaid
+flowchart LR
+    A[task.ts] --> C[cronTimezoneResolve]
+    B[cronScheduler.ts] --> C
+    C --> D[timezoneIsValid]
+    C --> E[Resolved timezone]
+```

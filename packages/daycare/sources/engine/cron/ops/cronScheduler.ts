@@ -9,6 +9,7 @@ import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
 import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
+import { cronTimezoneResolve } from "./cronTimezoneResolve.js";
 
 const logger = getLogger("cron.scheduler");
 
@@ -375,31 +376,11 @@ export class CronScheduler {
     }
 
     private async timezoneResolve(userId: string, timezone?: string): Promise<string> {
-        const provided = timezone?.trim();
-        if (provided) {
-            if (!timezoneIsValid(provided)) {
-                throw new Error(`Invalid cron timezone: ${provided}`);
-            }
-            return provided;
-        }
         const user = await this.usersRepository.findById(userId);
-        const fromProfile = user?.timezone?.trim() ?? "";
-        if (fromProfile && timezoneIsValid(fromProfile)) {
-            return fromProfile;
-        }
-        return "UTC";
+        return cronTimezoneResolve({ timezone, profileTimezone: user?.timezone });
     }
 }
 
 function cronTaskClone(task: CronTaskDbRecord): CronTaskDbRecord {
     return { ...task };
-}
-
-function timezoneIsValid(timezone: string): boolean {
-    try {
-        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-        return true;
-    } catch {
-        return false;
-    }
 }

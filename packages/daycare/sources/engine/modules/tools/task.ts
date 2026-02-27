@@ -5,6 +5,7 @@ import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
+import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 
 const taskCreateSchema = Type.Object(
     {
@@ -604,26 +605,6 @@ async function taskCronTimezoneResolve(
     toolContext: Parameters<ToolDefinition["execute"]>[1],
     timezone?: string
 ): Promise<string> {
-    const provided = timezone?.trim() ?? "";
-    if (provided) {
-        if (!timezoneIsValid(provided)) {
-            throw new Error(`Invalid cron timezone: ${provided}`);
-        }
-        return provided;
-    }
     const user = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
-    const profileTimezone = user?.timezone?.trim() ?? "";
-    if (profileTimezone && timezoneIsValid(profileTimezone)) {
-        return profileTimezone;
-    }
-    return "UTC";
-}
-
-function timezoneIsValid(timezone: string): boolean {
-    try {
-        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-        return true;
-    } catch {
-        return false;
-    }
+    return cronTimezoneResolve({ timezone, profileTimezone: user?.timezone });
 }

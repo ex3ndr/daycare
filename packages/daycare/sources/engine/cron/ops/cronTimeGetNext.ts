@@ -16,7 +16,7 @@ export function cronTimeGetNext(expression: string, from?: Date, timezone?: stri
     const start = from?.getTime() ?? Date.now();
     let candidateMs = Math.floor(start / 60_000) * 60_000 + 60_000;
     const normalizedTimezone = timezone?.trim() ?? "";
-    const formatter = timezoneFormatterBuild(normalizedTimezone);
+    const formatter = timezoneFormatterCreate(normalizedTimezone);
     if (normalizedTimezone && !formatter) {
         return null;
     }
@@ -72,7 +72,7 @@ function datePartsInLocalTimezone(date: Date): CronDateParts {
     };
 }
 
-function timezoneFormatterBuild(timezone: string): Intl.DateTimeFormat | null {
+function timezoneFormatterCreate(timezone: string): Intl.DateTimeFormat | null {
     if (!timezone) {
         return null;
     }
