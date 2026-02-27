@@ -63,7 +63,7 @@ Credentials are stored in `.daycare/auth.json`:
 | Feature | Supported |
 |---------|-----------|
 | Send/receive text | Yes |
-| Send/receive files | Yes (photos, documents) |
+| Send/receive files | Yes (photos, documents, voice, audio, stickers) |
 | Typing indicators | Yes |
 | Emoji reactions | Yes |
 | Inline permission buttons | Yes |

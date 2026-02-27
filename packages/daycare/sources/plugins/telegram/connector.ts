@@ -129,7 +129,7 @@ export class TelegramConnector implements Connector {
                 return;
             }
             logger.debug(
-                `receive: Received Telegram message chatId=${message.chat.id} fromId=${message.from?.id} messageId=${message.message_id} hasText=${!!message.text} hasCaption=${!!message.caption} hasPhoto=${!!message.photo} hasDocument=${!!message.document} hasVoice=${!!message.voice} hasAudio=${!!message.audio}`
+                `receive: Received Telegram message chatId=${message.chat.id} fromId=${message.from?.id} messageId=${message.message_id} hasText=${!!message.text} hasCaption=${!!message.caption} hasPhoto=${!!message.photo} hasDocument=${!!message.document} hasVoice=${!!message.voice} hasAudio=${!!message.audio} hasSticker=${!!message.sticker}`
             );
             const rawText = typeof message.text === "string" ? message.text : null;
             const trimmedText = rawText?.trim() ?? "";
@@ -708,7 +708,29 @@ export class TelegramConnector implements Connector {
             }
         }
 
+        if (message.sticker?.file_id) {
+            const stickerType = this.stickerTypeResolve(message.sticker);
+            const stored = await this.downloadFile(
+                message.sticker.file_id,
+                `sticker-${message.sticker.file_id}.${stickerType.extension}`,
+                stickerType.mimeType
+            );
+            if (stored) {
+                files.push(stored);
+            }
+        }
+
         return files;
+    }
+
+    private stickerTypeResolve(sticker: TelegramBot.Sticker): { extension: string; mimeType: string } {
+        if (sticker.is_video) {
+            return { extension: "webm", mimeType: "video/webm" };
+        }
+        if (sticker.is_animated) {
+            return { extension: "tgs", mimeType: "application/x-tgsticker" };
+        }
+        return { extension: "webp", mimeType: "image/webp" };
     }
 
     private documentNoticeText(message: TelegramBot.Message, files: FileReference[]): string | null {

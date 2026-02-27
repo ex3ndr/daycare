@@ -286,6 +286,92 @@ describe("TelegramConnector incoming voice", () => {
     });
 });
 
+describe("TelegramConnector incoming stickers", () => {
+    beforeEach(() => {
+        telegramInstances.length = 0;
+    });
+
+    it.each([
+        {
+            caseName: "static stickers as webp image files",
+            sticker: { file_id: "sticker-static", is_animated: false, is_video: false },
+            expectedName: "sticker-sticker-static.webp",
+            expectedMimeType: "image/webp",
+            storedPath: "/tmp/stored-sticker.webp"
+        },
+        {
+            caseName: "animated stickers as tgs files",
+            sticker: { file_id: "sticker-animated", is_animated: true, is_video: false },
+            expectedName: "sticker-sticker-animated.tgs",
+            expectedMimeType: "application/x-tgsticker",
+            storedPath: "/tmp/stored-sticker.tgs"
+        },
+        {
+            caseName: "video stickers as webm files",
+            sticker: { file_id: "sticker-video", is_animated: false, is_video: true },
+            expectedName: "sticker-sticker-video.webm",
+            expectedMimeType: "video/webm",
+            storedPath: "/tmp/stored-sticker.webm"
+        }
+    ])("routes incoming $caseName to message handlers", async (entry) => {
+        const fileStore = {
+            saveFromPath: vi.fn(async (input: { name: string; mimeType: string; path: string }) => ({
+                id: "f-sticker",
+                name: input.name,
+                mimeType: input.mimeType,
+                path: entry.storedPath,
+                size: 512
+            }))
+        } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandlerMock = vi.fn(async (_message, _context, _descriptor) => undefined);
+        connector.onMessage(messageHandlerMock);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        bot!.downloadFile.mockResolvedValueOnce(`/tmp/downloaded-${entry.sticker.file_id}`);
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        await botMessageHandler?.({
+            message_id: 58,
+            chat: { id: 123, type: "private" },
+            from: { id: 123 },
+            sticker: entry.sticker
+        });
+
+        expect(messageHandlerMock).toHaveBeenCalledTimes(1);
+        const [message] = messageHandlerMock.mock.calls[0] as [
+            { text: string | null; files?: Array<{ name: string; mimeType: string; path: string; size: number }> },
+            MessageContext,
+            AgentDescriptor
+        ];
+        expect(message.text).toBeNull();
+        expect(message.files).toEqual([
+            {
+                id: "f-sticker",
+                name: entry.expectedName,
+                mimeType: entry.expectedMimeType,
+                path: entry.storedPath,
+                size: 512
+            }
+        ]);
+        expect(fileStore.saveFromPath).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: entry.expectedName,
+                mimeType: entry.expectedMimeType
+            })
+        );
+    });
+});
+
 describe("TelegramConnector access mode", () => {
     beforeEach(() => {
         telegramInstances.length = 0;

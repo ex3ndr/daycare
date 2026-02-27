@@ -81,5 +81,6 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `telegram-restart-command.md` - telegram `/restart` server restart flow
 - `telegram-stop-command.md` - telegram `/abort` inference abort flow
 - `telegram-slash-commands.md` - telegram startup slash command registration
+- `telegram-sticker-forwarding.md` - telegram sticker download + file forwarding to handlers
 - `network-permission-rename.md` - @web to @network rename notes
 - `rebrand-daycare.md` - otterbot to daycare rebrand notes

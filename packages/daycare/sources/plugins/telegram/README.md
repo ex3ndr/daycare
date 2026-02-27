@@ -27,7 +27,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Only accepts `message.chat.type === "private"`.
 - In `"private"` mode, rejects users not listed in `allowedUids` with an explicit unauthorized message.
 - In `"public"` mode, skips allowlist checks and allows all Telegram users.
-- Extracts text or caption and downloads attached photos/documents into the file store.
+- Extracts text or caption and downloads attached photos/documents/voice/audio/stickers into the file store.
 - Builds `MessageContext` with `messageId` only and emits a user descriptor for targeting.
 - Emits normalized payloads to agent handling.
 
