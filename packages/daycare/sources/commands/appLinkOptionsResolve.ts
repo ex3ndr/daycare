@@ -7,7 +7,8 @@ const APP_DEFAULT_PORT = 7332;
 export type AppLinkCommandOptions = {
     host?: string;
     port?: string;
-    publicDomain?: string;
+    appDomain?: string;
+    serverDomain?: string;
     instance?: string;
     expiresInSeconds?: string;
 };
@@ -15,7 +16,8 @@ export type AppLinkCommandOptions = {
 export type AppLinkResolvedOptions = {
     host: string;
     port: number;
-    publicDomain?: string;
+    appDomain?: string;
+    serverDomain?: string;
     expiresInSeconds: number;
     settingsJwtSecret?: string;
 };
@@ -33,14 +35,16 @@ export function appLinkOptionsResolve(
 
     const host = appLinkHostResolve(options.host, pluginSettings.host);
     const port = appLinkPortResolve(options.port, pluginSettings.port);
-    const publicDomain = appLinkPublicDomainResolve(options.publicDomain, pluginSettings.publicDomain);
+    const appDomain = appLinkDomainResolve(options.appDomain, pluginSettings.appDomain);
+    const serverDomain = appLinkDomainResolve(options.serverDomain, pluginSettings.serverDomain);
     const expiresInSeconds = appLinkExpiresResolve(options.expiresInSeconds);
     const settingsJwtSecret = appLinkSecretResolve(pluginSettings.jwtSecret);
 
     return {
         host,
         port,
-        publicDomain,
+        appDomain,
+        serverDomain,
         expiresInSeconds,
         settingsJwtSecret
     };
@@ -104,20 +108,17 @@ function appLinkPortResolve(portOption: string | undefined, portSetting: unknown
     return APP_DEFAULT_PORT;
 }
 
-function appLinkPublicDomainResolve(
-    publicDomainOption: string | undefined,
-    publicDomainSetting: unknown
-): string | undefined {
-    const fromOption = publicDomainOption?.trim();
+function appLinkDomainResolve(optionValue: string | undefined, settingValue: unknown): string | undefined {
+    const fromOption = optionValue?.trim();
     if (fromOption) {
         return fromOption;
     }
 
-    if (typeof publicDomainSetting !== "string") {
+    if (typeof settingValue !== "string") {
         return undefined;
     }
 
-    const normalized = publicDomainSetting.trim();
+    const normalized = settingValue.trim();
     return normalized ? normalized : undefined;
 }
 

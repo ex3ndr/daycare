@@ -28,7 +28,8 @@ const settingsSchema = z
     .object({
         host: z.string().trim().min(1).default(APP_DEFAULT_HOST),
         port: z.coerce.number().int().min(1).max(65535).default(APP_DEFAULT_PORT),
-        publicDomain: z.string().trim().min(1).optional(),
+        appDomain: z.string().trim().min(1).optional(),
+        serverDomain: z.string().trim().min(1).optional(),
         jwtSecret: z.string().trim().min(32).optional()
     })
     .strict();
@@ -73,7 +74,8 @@ export const plugin = definePlugin({
                     secretResolve,
                     settings.host,
                     settings.port,
-                    settings.publicDomain
+                    settings.appDomain,
+                    settings.serverDomain
                 );
                 return;
             }
@@ -108,7 +110,8 @@ export const plugin = definePlugin({
                 const linkTool = appAuthLinkTool({
                     host: settings.host,
                     port: settings.port,
-                    publicDomain: settings.publicDomain,
+                    appDomain: settings.appDomain,
+                    serverDomain: settings.serverDomain,
                     secretResolve
                 });
 
@@ -124,7 +127,8 @@ export const plugin = definePlugin({
                     const link = await appAuthLinkGenerate({
                         host: settings.host,
                         port: settings.port,
-                        publicDomain: settings.publicDomain,
+                        appDomain: settings.appDomain,
+                        serverDomain: settings.serverDomain,
                         userId: descriptor.userId,
                         secret: await secretResolve(),
                         expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS
@@ -209,7 +213,8 @@ async function appAuthRefreshRoute(
     secretResolve: () => Promise<string>,
     host: string,
     port: number,
-    publicDomain: string | undefined
+    appDomain: string | undefined,
+    serverDomain: string | undefined
 ): Promise<void> {
     const body = await appReadJsonBody(request);
     const token = typeof body.token === "string" ? body.token.trim() : "";
@@ -224,7 +229,8 @@ async function appAuthRefreshRoute(
         const refreshed = await appAuthLinkGenerate({
             host,
             port,
-            publicDomain,
+            appDomain,
+            serverDomain,
             userId: payload.userId,
             secret,
             expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS

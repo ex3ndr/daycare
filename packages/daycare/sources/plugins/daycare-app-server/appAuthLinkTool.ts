@@ -28,7 +28,8 @@ const appAuthLinkReturns: ToolResultContract<AppAuthLinkResult> = {
 export type AppAuthLinkGenerateInput = {
     host: string;
     port: number;
-    publicDomain?: string;
+    appDomain?: string;
+    serverDomain?: string;
     userId: string;
     secret: string;
     expiresInSeconds?: number;
@@ -47,7 +48,7 @@ export async function appAuthLinkGenerate(input: AppAuthLinkGenerateInput): Prom
         userId: input.userId,
         token,
         expiresAt,
-        url: appAuthLinkUrlBuild(input.host, input.port, token, input.publicDomain)
+        url: appAuthLinkUrlBuild(input.host, input.port, token, input.appDomain, input.serverDomain)
     };
 }
 
@@ -55,7 +56,13 @@ export async function appAuthLinkGenerate(input: AppAuthLinkGenerateInput): Prom
  * Builds app auth URL from host/port and token.
  * Expects: host is non-empty, port is valid network port.
  */
-export function appAuthLinkUrlBuild(host: string, port: number, token: string, publicDomain?: string): string {
+export function appAuthLinkUrlBuild(
+    host: string,
+    port: number,
+    token: string,
+    appDomain?: string,
+    serverDomain?: string
+): string {
     const normalizedHost = host.trim();
     if (!normalizedHost) {
         throw new Error("App host is required.");
@@ -64,39 +71,42 @@ export function appAuthLinkUrlBuild(host: string, port: number, token: string, p
         throw new Error("App port must be an integer between 1 and 65535.");
     }
 
-    const backendUrl = appAuthLinkBaseUrlResolve(normalizedHost, port, publicDomain);
+    const defaults = `http://${normalizedHost}:${port}`;
+    const appUrl = appAuthLinkDomainUrlResolve(appDomain ?? serverDomain, defaults, "appDomain");
+    const backendUrl = appAuthLinkDomainUrlResolve(serverDomain, appUrl, "serverDomain");
     const hashPayload = appAuthLinkHashPayloadEncode({
         backendUrl,
         token
     });
-    return `${backendUrl}/auth#${hashPayload}`;
+    return `${appUrl}/auth#${hashPayload}`;
 }
 
 function appAuthLinkHashPayloadEncode(payload: { backendUrl: string; token: string }): string {
     return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
 
-function appAuthLinkBaseUrlResolve(host: string, port: number, publicDomain: string | undefined): string {
-    const trimmedPublicDomain = publicDomain?.trim();
-    if (!trimmedPublicDomain) {
-        return `http://${host}:${port}`;
+function appAuthLinkDomainUrlResolve(value: string | undefined, fallback: string, fieldName: string): string {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+        return fallback;
     }
 
-    if (trimmedPublicDomain.includes("://")) {
-        const parsed = new URL(trimmedPublicDomain);
+    if (trimmed.includes("://")) {
+        const parsed = new URL(trimmed);
         if (parsed.pathname !== "/" || parsed.search || parsed.hash) {
-            throw new Error("publicDomain must include only protocol, hostname, and optional port.");
+            throw new Error(`${fieldName} must include only protocol, hostname, and optional port.`);
         }
         return `${parsed.protocol}//${parsed.host}`;
     }
 
-    return `https://${trimmedPublicDomain}`;
+    return `https://${trimmed}`;
 }
 
 export type AppAuthLinkToolOptions = {
     host: string;
     port: number;
-    publicDomain?: string;
+    appDomain?: string;
+    serverDomain?: string;
     secretResolve: () => Promise<string>;
 };
 
@@ -118,7 +128,8 @@ export function appAuthLinkTool(options: AppAuthLinkToolOptions): ToolDefinition
             const link = await appAuthLinkGenerate({
                 host: options.host,
                 port: options.port,
-                publicDomain: options.publicDomain,
+                appDomain: options.appDomain,
+                serverDomain: options.serverDomain,
                 userId: context.ctx.userId,
                 secret
             });

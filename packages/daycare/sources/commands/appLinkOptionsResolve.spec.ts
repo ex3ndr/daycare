@@ -10,7 +10,8 @@ describe("appLinkOptionsResolve", () => {
                 settings: {
                     host: "0.0.0.0",
                     port: 7444,
-                    publicDomain: "app.example.com",
+                    appDomain: "app.example.com",
+                    serverDomain: "api.example.com",
                     jwtSecret: "plugin-secret"
                 }
             }
@@ -19,7 +20,8 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved).toEqual({
             host: "0.0.0.0",
             port: 7444,
-            publicDomain: "app.example.com",
+            appDomain: "app.example.com",
+            serverDomain: "api.example.com",
             expiresInSeconds: 3600,
             settingsJwtSecret: "plugin-secret"
         });
@@ -30,7 +32,8 @@ describe("appLinkOptionsResolve", () => {
             {
                 host: "localhost",
                 port: "9000",
-                publicDomain: "https://public.example.com",
+                appDomain: "https://public.example.com",
+                serverDomain: "https://api.public.example.com",
                 expiresInSeconds: "120"
             },
             [
@@ -40,7 +43,8 @@ describe("appLinkOptionsResolve", () => {
                     settings: {
                         host: "127.0.0.1",
                         port: 7332,
-                        publicDomain: "app.internal.example"
+                        appDomain: "app.internal.example",
+                        serverDomain: "api.internal.example"
                     }
                 }
             ]
@@ -48,7 +52,8 @@ describe("appLinkOptionsResolve", () => {
 
         expect(resolved.host).toBe("localhost");
         expect(resolved.port).toBe(9000);
-        expect(resolved.publicDomain).toBe("https://public.example.com");
+        expect(resolved.appDomain).toBe("https://public.example.com");
+        expect(resolved.serverDomain).toBe("https://api.public.example.com");
         expect(resolved.expiresInSeconds).toBe(120);
     });
 
@@ -68,7 +73,8 @@ describe("appLinkOptionsResolve", () => {
 
         expect(resolved.host).toBe("127.0.0.1");
         expect(resolved.port).toBe(7332);
-        expect(resolved.publicDomain).toBeUndefined();
+        expect(resolved.appDomain).toBeUndefined();
+        expect(resolved.serverDomain).toBeUndefined();
         expect(resolved.expiresInSeconds).toBe(3600);
     });
 });

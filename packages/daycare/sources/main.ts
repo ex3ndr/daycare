@@ -46,7 +46,8 @@ program
     .option("--instance <instanceId>", "daycare-app-server plugin instance id")
     .option("--host <host>", "Override host in the generated URL")
     .option("--port <port>", "Override port in the generated URL")
-    .option("--public-domain <domain>", "Override public domain (or URL) in the generated URL")
+    .option("--app-domain <domain>", "Override app domain (or URL) where the auth link opens")
+    .option("--server-domain <domain>", "Override backend domain (or URL) embedded in the auth hash payload")
     .option("--expires-in-seconds <seconds>", "Token expiration in seconds")
     .option("--json", "Print full json payload instead of plain URL")
     .action(appLinkCommand);

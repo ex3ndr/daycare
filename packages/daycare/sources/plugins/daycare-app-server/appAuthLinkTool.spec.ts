@@ -16,13 +16,23 @@ describe("appAuthLinkUrlBuild", () => {
         });
     });
 
-    it("uses public domain in generated URL and payload backend", () => {
-        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", "app.example.com");
+    it("uses app and server domains independently", () => {
+        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", "app.example.com", "api.example.com");
         const parsed = new URL(url);
         expect(parsed.origin).toBe("https://app.example.com");
         expect(parsed.pathname).toBe("/auth");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
-            backendUrl: "https://app.example.com",
+            backendUrl: "https://api.example.com",
+            token: "token-1"
+        });
+    });
+
+    it("uses server domain for both URL and payload when app domain is missing", () => {
+        const url = appAuthLinkUrlBuild("0.0.0.0", 7332, "token-1", undefined, "api.example.com");
+        const parsed = new URL(url);
+        expect(parsed.origin).toBe("https://api.example.com");
+        expect(appAuthLinkPayloadDecode(url)).toEqual({
+            backendUrl: "https://api.example.com",
             token: "token-1"
         });
     });
