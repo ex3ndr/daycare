@@ -20,6 +20,7 @@ import type { FileFolder } from "../files/fileFolder.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import type { Processes } from "../processes/processes.js";
+import type { Webhooks } from "../webhook/webhooks.js";
 import type { PluginDefinition } from "./catalog.js";
 import type { PluginEvent, PluginEventInput } from "./events.js";
 import { resolveExclusivePlugins } from "./exclusive.js";
@@ -38,6 +39,7 @@ export type PluginManagerOptions = {
     exposes: ExposeProviderRegistrationApi;
     mode?: "runtime" | "validate";
     engineEvents?: EngineEventBus;
+    webhooks?: Webhooks;
     onEvent?: (event: PluginEvent) => void;
 };
 
@@ -62,6 +64,7 @@ export class PluginManager {
     private inference: PluginInferenceService;
     private processes: Processes;
     private exposes: ExposeProviderRegistrationApi;
+    private webhooks: Webhooks | null = null;
     private loaded = new Map<string, LoadedPlugin>();
     private logger = getLogger("plugins.manager");
 
@@ -76,6 +79,7 @@ export class PluginManager {
         this.onEvent = options.onEvent ?? null;
         this.processes = options.processes;
         this.exposes = options.exposes;
+        this.webhooks = options.webhooks ?? null;
         this.inference = new PluginInferenceService({
             router: options.inferenceRouter,
             config: this.config
@@ -103,6 +107,10 @@ export class PluginManager {
 
     listAvailable(): string[] {
         return Array.from(this.pluginCatalog.keys());
+    }
+
+    setWebhooks(webhooks: Webhooks): void {
+        this.webhooks = webhooks;
     }
 
     listRegisteredSkills(): Array<{ pluginId: string; path: string }> {
@@ -269,6 +277,7 @@ export class PluginManager {
         this.logger.debug(`ready: Plugin tmp directory ready tmpDir=${tmpDir}`);
 
         this.logger.debug("event: Building plugin API");
+        const webhooks = this.webhooks;
         const api: PluginApi = {
             instance: pluginConfig,
             settings: parsedSettings,
@@ -285,6 +294,11 @@ export class PluginManager {
             processes: this.processes,
             mode: this.mode,
             engineEvents: this.engineEvents,
+            webhooks: webhooks
+                ? {
+                      trigger: async (webhookId: string, data?: unknown) => webhooks.trigger(webhookId, data)
+                  }
+                : undefined,
             events: {
                 emit: (event) => {
                     this.logger.debug(`event: Plugin emitting event instanceId=${instanceId} eventType=${event.type}`);

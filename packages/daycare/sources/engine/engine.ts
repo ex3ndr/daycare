@@ -368,6 +368,7 @@ export class Engine {
             agentSystem: this.agentSystem
         });
         this.agentSystem.setWebhooks(this.webhooks);
+        this.pluginManager.setWebhooks(this.webhooks);
         this.channels = new Channels({
             channels: this.storage.channels,
             channelMessages: this.storage.channelMessages,

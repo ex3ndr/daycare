@@ -139,22 +139,6 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         return reply.type("text/plain; charset=utf-8").send("Welcome to Daycare API!");
     });
 
-    app.post("/v1/webhooks/:id", async (request, reply) => {
-        const webhookId = (request.params as { id: string }).id;
-        logger.debug(`event: POST /v1/webhooks/:id id=${webhookId}`);
-        try {
-            await options.runtime.webhooks.trigger(webhookId, request.body);
-            return reply.send({ ok: true });
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "Webhook trigger failed";
-            if (message.startsWith("Webhook trigger not found:")) {
-                return reply.status(404).send({ ok: false, error: message });
-            }
-            logger.warn({ webhookId, error }, "error: Webhook trigger failed");
-            return reply.status(500).send({ ok: false, error: message });
-        }
-    });
-
     app.get("/v1/engine/status", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/status");
         const status = options.runtime.getStatus();
@@ -178,13 +162,6 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         logger.debug("event: GET /v1/engine/heartbeat/tasks");
         const tasks = await options.runtime.heartbeats.listTasks();
         logger.debug(`event: Heartbeat tasks retrieved taskCount=${tasks.length}`);
-        return reply.send({ ok: true, tasks });
-    });
-
-    app.get("/v1/engine/webhook/tasks", async (_request, reply) => {
-        logger.debug("event: GET /v1/engine/webhook/tasks");
-        const tasks = await options.runtime.webhooks.listTasks();
-        logger.debug(`event: Webhook tasks retrieved taskCount=${tasks.length}`);
         return reply.send({ ok: true, tasks });
     });
 

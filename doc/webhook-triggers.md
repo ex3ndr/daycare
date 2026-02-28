@@ -12,9 +12,8 @@ Each webhook trigger is a cuid2 id used as both identifier and secret.
 - `task_read` output now includes webhook trigger URLs
 - `task_create` supports `webhook: true`
 - `task_delete` removes webhook triggers
-- IPC routes:
+- App server route:
   - `POST /v1/webhooks/:id`
-  - `GET /v1/engine/webhook/tasks`
 
 ## Data Model
 

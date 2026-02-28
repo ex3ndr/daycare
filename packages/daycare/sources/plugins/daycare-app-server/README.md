@@ -32,6 +32,7 @@ Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
 
 ### Other
 - `GET /`: welcome message
+- `POST /v1/webhooks/:id`: trigger a task webhook by id (unauthenticated; id acts as secret)
 
 ## Tool and command
 

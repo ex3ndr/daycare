@@ -28,6 +28,9 @@ export type PluginApi<TSettings = unknown> = {
     processes: Processes;
     mode: "runtime" | "validate";
     engineEvents?: EngineEventBus;
+    webhooks?: {
+        trigger: (webhookId: string, data?: unknown) => Promise<void>;
+    };
     events: {
         emit: (event: PluginEventInput) => void;
     };

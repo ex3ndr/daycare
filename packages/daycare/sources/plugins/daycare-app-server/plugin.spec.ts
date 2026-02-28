@@ -37,6 +37,9 @@ type PluginCreateTestOptions = {
         instanceId?: string;
         botToken: string;
     };
+    webhooks?: {
+        trigger?: (webhookId: string, data?: unknown) => Promise<void>;
+    };
 };
 
 function telegramInitDataBuild(options: { botToken: string; userId: string; authDateSeconds: number }): string {
@@ -140,6 +143,11 @@ async function pluginCreateForTests(options?: PluginCreateTestOptions) {
         },
         processes: {},
         mode: "runtime" as const,
+        webhooks: options?.webhooks
+            ? {
+                  trigger: options.webhooks.trigger ?? (async () => undefined)
+              }
+            : undefined,
         events: {
             emit: vi.fn()
         }
@@ -175,6 +183,85 @@ describe("daycare-app-server plugin auth endpoints", () => {
         expect(response.status).toBe(200);
         expect(await response.text()).toBe("Welcome to Daycare App API!");
         expect(response.headers.get("content-type")).toContain("text/plain");
+    });
+
+    it("routes POST /v1/webhooks/:id to webhook runtime", async () => {
+        const trigger = vi.fn(async () => undefined);
+        const built = await pluginCreateForTests({
+            webhooks: {
+                trigger
+            }
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-1`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ event: "deploy" })
+        });
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({ ok: true });
+        expect(trigger).toHaveBeenCalledWith("hook-1", { event: "deploy" });
+    });
+
+    it("returns 404 when webhook trigger does not exist", async () => {
+        const built = await pluginCreateForTests({
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook trigger not found: missing");
+                }
+            }
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/missing`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({})
+        });
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toEqual({
+            ok: false,
+            error: "Webhook trigger not found: missing"
+        });
+    });
+
+    it("returns 500 when webhook execution fails", async () => {
+        const built = await pluginCreateForTests({
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook execution failed");
+                }
+            }
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-err`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({})
+        });
+
+        expect(response.status).toBe(500);
+        await expect(response.json()).resolves.toEqual({
+            ok: false,
+            error: "Webhook execution failed"
+        });
+    });
+
+    it("returns 503 when webhook runtime is unavailable", async () => {
+        const built = await pluginCreateForTests();
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-1`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({})
+        });
+
+        expect(response.status).toBe(503);
+        await expect(response.json()).resolves.toEqual({
+            ok: false,
+            error: "Webhook runtime unavailable."
+        });
     });
 
     it("returns ok for valid token", async () => {

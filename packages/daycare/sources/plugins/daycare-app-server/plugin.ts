@@ -11,6 +11,7 @@ import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import { routeAuthRefresh } from "./routes/routeAuthRefresh.js";
 import { routeAuthTelegram } from "./routes/routeAuthTelegram.js";
 import { routeAuthValidate } from "./routes/routeAuthValidate.js";
+import { routeWebhookTrigger } from "./routes/routeWebhookTrigger.js";
 
 const APP_DEFAULT_HOST = "127.0.0.1";
 const APP_DEFAULT_PORT = 7332;
@@ -102,6 +103,17 @@ export const plugin = definePlugin({
                 await routeAuthTelegram(request, response, {
                     secretResolve,
                     telegramTokenResolve
+                });
+                return;
+            }
+            const webhookId = webhookIdResolve(pathname);
+            if (request.method === "POST" && webhookId) {
+                if (!api.webhooks) {
+                    appSendJson(response, 503, { ok: false, error: "Webhook runtime unavailable." });
+                    return;
+                }
+                await routeWebhookTrigger(request, response, webhookId, {
+                    trigger: api.webhooks.trigger
                 });
                 return;
             }
@@ -229,4 +241,14 @@ function appEndpointSettingSchema(fieldName: string): z.ZodEffects<z.ZodOptional
                 return z.NEVER;
             }
         });
+}
+
+function webhookIdResolve(pathname: string): string | null {
+    const parts = pathname.split("/").filter((part) => part.length > 0);
+    if (parts.length !== 3 || parts[0] !== "v1" || parts[1] !== "webhooks") {
+        return null;
+    }
+    const webhookId = parts[2] ?? "";
+    const normalized = webhookId.trim();
+    return normalized.length > 0 ? normalized : null;
 }
