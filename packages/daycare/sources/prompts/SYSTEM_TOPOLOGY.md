@@ -19,8 +19,8 @@ Start with `topology` before making scheduling changes. It gives a full snapshot
 
 Tasks are unified: metadata and code live in `tasks`, cron and heartbeat are triggers linked to a task.
 
-Use `task_create` to create a task and optionally attach triggers.
-Use `task_trigger_add` / `task_trigger_remove` to manage cron or heartbeat triggers later.
+Use `task_create` to create a task with code and optional parameters.
+Use `task_trigger_add` / `task_trigger_remove` to attach or manage cron, heartbeat, or webhook triggers.
 Use `task_run` to execute a task immediately.
 
 **Task code is Python.** When a trigger fires, `code` runs as a Python script with full tool access. Two patterns:

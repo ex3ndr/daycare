@@ -264,7 +264,7 @@ function taskParse(row: typeof tasksTable.$inferSelect): TaskDbRecord {
 }
 
 function taskClone(record: TaskDbRecord): TaskDbRecord {
-    return { ...record };
+    return { ...record, parameters: record.parameters ? structuredClone(record.parameters) : record.parameters };
 }
 
 function taskKey(userId: string, id: string): string {

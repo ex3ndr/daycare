@@ -1,17 +1,20 @@
+import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { HeartbeatRunTask } from "../heartbeatTypes.js";
 
 /**
  * Builds batch context for running heartbeat tasks.
  *
  * Expects: array of HeartbeatRunTask tasks.
- * Returns: { title, text, code, inputs } where text is the prefix context,
- * code is the array of Python code blocks, and inputs is the per-block input values.
+ * Returns: { title, text, code, inputs, inputSchemas } where text is the prefix context,
+ * code is the array of Python code blocks, inputs is the per-block input values,
+ * and inputSchemas is the per-block parameter schema for type annotations.
  */
 export function heartbeatPromptBuildBatch(tasks: HeartbeatRunTask[]): {
     title: string;
     text: string;
     code: string[];
     inputs?: Array<Record<string, unknown> | null>;
+    inputSchemas?: Array<TaskParameter[] | null>;
 } {
     const sorted = [...tasks].sort((a, b) => {
         const titleCompare = a.title.localeCompare(b.title);
@@ -22,7 +25,8 @@ export function heartbeatPromptBuildBatch(tasks: HeartbeatRunTask[]): {
             title: `Heartbeat: ${sorted[0]!.title}`,
             text: `Heartbeat: ${sorted[0]!.title} (id: ${sorted[0]!.id})`,
             code: [sorted[0]!.code],
-            inputs: heartbeatInputsBuild(sorted)
+            inputs: heartbeatInputsBuild(sorted),
+            inputSchemas: heartbeatInputSchemasBuild(sorted)
         };
     }
     const title = `Heartbeat batch (${sorted.length})`;
@@ -33,7 +37,13 @@ export function heartbeatPromptBuildBatch(tasks: HeartbeatRunTask[]): {
         "\n"
     );
     const code = sorted.map((task) => task.code);
-    return { title, text, code, inputs: heartbeatInputsBuild(sorted) };
+    return {
+        title,
+        text,
+        code,
+        inputs: heartbeatInputsBuild(sorted),
+        inputSchemas: heartbeatInputSchemasBuild(sorted)
+    };
 }
 
 /** Returns inputs array only if at least one task has inputs. */
@@ -43,4 +53,13 @@ function heartbeatInputsBuild(tasks: HeartbeatRunTask[]): Array<Record<string, u
         return undefined;
     }
     return tasks.map((task) => task.inputs ?? null);
+}
+
+/** Returns inputSchemas array only if at least one task has an inputSchema. */
+function heartbeatInputSchemasBuild(tasks: HeartbeatRunTask[]): Array<TaskParameter[] | null> | undefined {
+    const hasAny = tasks.some((task) => task.inputSchema !== undefined);
+    if (!hasAny) {
+        return undefined;
+    }
+    return tasks.map((task) => task.inputSchema ?? null);
 }

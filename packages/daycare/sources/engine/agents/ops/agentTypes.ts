@@ -8,6 +8,7 @@ import type {
     SessionPermissions,
     Signal
 } from "@/types";
+import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 
 export type AgentMessage = {
@@ -142,6 +143,8 @@ export type AgentInboxItem =
           code?: string[];
           /** Per-code-block input variables injected natively into Monty VM. */
           inputs?: Array<Record<string, unknown> | null>;
+          /** Per-code-block parameter schemas for input variable type annotations. */
+          inputSchemas?: Array<TaskParameter[] | null>;
           context?: MessageContext;
           /** When true, return code execution output directly without LLM inference. */
           sync?: boolean;

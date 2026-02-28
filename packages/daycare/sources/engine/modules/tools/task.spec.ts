@@ -39,7 +39,7 @@ describe("task tools", () => {
         storages.length = 0;
     });
 
-    it("creates, reads, updates, runs, and deletes a task with triggers", async () => {
+    it("creates, reads, updates, runs, and deletes a task", async () => {
         const runtime = await runtimeBuild();
         tempDirs.push(runtime.dir);
         storages.push(runtime.storage);
@@ -49,11 +49,7 @@ describe("task tools", () => {
             {
                 title: "Daily check",
                 code: "print('ok')",
-                description: "Daily checks",
-                cron: "0 9 * * *",
-                cronTimezone: "UTC",
-                heartbeat: true,
-                webhook: true
+                description: "Daily checks"
             },
             runtime.context,
             toolCall("task_create")
@@ -66,9 +62,7 @@ describe("task tools", () => {
 
         const readTool = buildTaskReadTool();
         const readResult = await readTool.execute({ taskId }, runtime.context, toolCall("task_read"));
-        expect(readResult.typedResult.summary).toContain("Cron triggers: 1");
-        expect(readResult.typedResult.summary).toContain("Heartbeat triggers: 1");
-        expect(readResult.typedResult.summary).toContain("Webhook triggers: 1");
+        expect(readResult.typedResult.summary).toContain("Daily check");
 
         const updateTool = buildTaskUpdateTool();
         await updateTool.execute(
@@ -102,67 +96,6 @@ describe("task tools", () => {
         const deleteResult = await deleteTool.execute({ taskId }, runtime.context, toolCall("task_delete"));
         expect(deleteResult.typedResult.deleted).toBe(true);
         expect(await runtime.storage.tasks.findById(runtime.context.ctx, taskId)).toBeNull();
-        expect((await runtime.crons.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
-        expect((await runtime.heartbeats.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
-        expect((await runtime.webhooks.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
-    });
-
-    it("reuses existing matching triggers during task_create", async () => {
-        const runtime = await runtimeBuild();
-        tempDirs.push(runtime.dir);
-        storages.push(runtime.storage);
-
-        const now = Date.now();
-        vi.spyOn(runtime.crons, "listTriggersForTask").mockResolvedValue([
-            {
-                id: "cron-existing",
-                taskId: "daily-check",
-                userId: "user-1",
-                name: "Daily check",
-                description: null,
-                schedule: "0 9 * * *",
-                timezone: "UTC",
-                agentId: null,
-                enabled: true,
-                deleteAfterRun: false,
-                parameters: null,
-                lastRunAt: null,
-                createdAt: now,
-                updatedAt: now
-            }
-        ]);
-        vi.spyOn(runtime.heartbeats, "listTriggersForTask").mockResolvedValue([
-            {
-                id: "heartbeat-existing",
-                taskId: "daily-check",
-                userId: "user-1",
-                title: "Daily check",
-                parameters: null,
-                lastRunAt: null,
-                createdAt: now,
-                updatedAt: now
-            }
-        ]);
-        const cronAddSpy = vi.spyOn(runtime.crons, "addTrigger");
-        const heartbeatAddSpy = vi.spyOn(runtime.heartbeats, "addTrigger");
-
-        const createTool = buildTaskCreateTool();
-        const createResult = await createTool.execute(
-            {
-                title: "Daily check",
-                code: "print('ok')",
-                cron: "0 9 * * *",
-                cronTimezone: "UTC",
-                heartbeat: true
-            },
-            runtime.context,
-            toolCall("task_create")
-        );
-
-        expect(String(createResult.typedResult.cronTriggerId ?? "")).toBe("cron-existing");
-        expect(String(createResult.typedResult.heartbeatTriggerId ?? "")).toBe("heartbeat-existing");
-        expect(cronAddSpy).not.toHaveBeenCalled();
-        expect(heartbeatAddSpy).not.toHaveBeenCalled();
     });
 
     it("uses slug task ids from title and appends numeric suffix on collisions", async () => {
@@ -475,19 +408,6 @@ describe("task tools", () => {
                 toolCall("task_trigger_add")
             )
         ).rejects.toThrow("Timezone is required.");
-
-        const createTool = buildTaskCreateTool();
-        await expect(
-            createTool.execute(
-                {
-                    title: "Needs timezone",
-                    code: "print('x')",
-                    cron: "0 9 * * *"
-                },
-                runtime.context,
-                toolCall("task_create")
-            )
-        ).rejects.toThrow("Timezone is required.");
     });
 
     it("validates python code at task creation", async () => {
@@ -510,23 +430,115 @@ describe("task tools", () => {
         expect(await runtime.storage.tasks.findById(runtime.context.ctx, "broken-task")).toBeNull();
     });
 
-    it("validates against target agent context when agentId is provided", async () => {
+    it("rejects task_update when existing trigger parameters are incompatible", async () => {
         const runtime = await runtimeBuild();
         tempDirs.push(runtime.dir);
         storages.push(runtime.storage);
 
-        const createTool = buildTaskCreateTool();
+        const now = Date.now();
+        await runtime.storage.tasks.create({
+            id: "task-params",
+            userId: "user-1",
+            title: "Param task",
+            description: null,
+            code: "print('ok')",
+            parameters: [{ name: "city", type: "string", nullable: false }],
+            createdAt: now,
+            updatedAt: now
+        });
+
+        // Add a cron trigger with stored parameter values
+        await runtime.crons.addTrigger(runtime.context.ctx, {
+            taskId: "task-params",
+            schedule: "0 9 * * *",
+            timezone: "UTC",
+            parameters: { city: "Seoul" }
+        });
+
+        const updateTool = buildTaskUpdateTool();
+        // Change parameter schema so the existing trigger's "city" becomes unknown
         await expect(
-            createTool.execute(
+            updateTool.execute(
                 {
-                    title: "Targeted task",
-                    code: "print('x')",
-                    agentId: "missing-agent"
+                    taskId: "task-params",
+                    parameters: [{ name: "country", type: "string", nullable: false }]
                 },
                 runtime.context,
-                toolCall("task_create")
+                toolCall("task_update")
             )
-        ).rejects.toThrow("Target agent not found: missing-agent");
+        ).rejects.toThrow(/incompatible parameters/);
+    });
+
+    it("rejects task_update when existing cron trigger has null parameters and new schema requires values", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const now = Date.now();
+        await runtime.storage.tasks.create({
+            id: "task-null-cron-params",
+            userId: "user-1",
+            title: "Task with null cron params",
+            description: null,
+            code: "print('ok')",
+            parameters: null,
+            createdAt: now,
+            updatedAt: now
+        });
+
+        // Existing trigger from old schema migration path with null stored parameters.
+        await runtime.crons.addTrigger(runtime.context.ctx, {
+            taskId: "task-null-cron-params",
+            schedule: "0 9 * * *",
+            timezone: "UTC"
+        });
+
+        const updateTool = buildTaskUpdateTool();
+        await expect(
+            updateTool.execute(
+                {
+                    taskId: "task-null-cron-params",
+                    parameters: [{ name: "city", type: "string", nullable: false }]
+                },
+                runtime.context,
+                toolCall("task_update")
+            )
+        ).rejects.toThrow(/Cron trigger .*incompatible parameters: Required parameter "city" is missing\./);
+    });
+
+    it("rejects task_update when existing heartbeat trigger has null parameters and new schema requires values", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const now = Date.now();
+        await runtime.storage.tasks.create({
+            id: "task-null-heartbeat-params",
+            userId: "user-1",
+            title: "Task with null heartbeat params",
+            description: null,
+            code: "print('ok')",
+            parameters: null,
+            createdAt: now,
+            updatedAt: now
+        });
+
+        // Existing trigger from old schema migration path with null stored parameters.
+        await runtime.heartbeats.addTrigger(runtime.context.ctx, {
+            taskId: "task-null-heartbeat-params"
+        });
+
+        const updateTool = buildTaskUpdateTool();
+        await expect(
+            updateTool.execute(
+                {
+                    taskId: "task-null-heartbeat-params",
+                    parameters: [{ name: "city", type: "string", nullable: false }]
+                },
+                runtime.context,
+                toolCall("task_update")
+            )
+        ).rejects.toThrow(/Heartbeat trigger .*incompatible parameters: Required parameter "city" is missing\./);
     });
 });
 

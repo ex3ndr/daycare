@@ -1,4 +1,6 @@
 import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
+import { taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
+import type { TaskParameter } from "../tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
@@ -50,7 +52,8 @@ export async function rlmExecute(
     toolCallId: string,
     historyCallback?: RlmHistoryCallback,
     checkSteering?: RlmCheckSteeringCallback,
-    inputs?: Record<string, unknown>
+    inputs?: Record<string, unknown>,
+    inputSchema?: TaskParameter[]
 ): Promise<RlmExecuteResult> {
     const availableTools = rlmToolsForContextResolve(toolResolver, context).filter(
         (tool) => tool.name !== RLM_TOOL_NAME
@@ -87,12 +90,19 @@ export async function rlmExecute(
         ...context,
         print: toolPrintCallback
     };
+    // Append typed stubs for input variables so the runtime type checker sees them
+    let effectivePreamble = preamble;
+    if (inputSchema?.length) {
+        const inputPreamble = taskParameterPreambleStubs(inputSchema);
+        effectivePreamble = preamble.length > 0 ? `${preamble}\n${inputPreamble}` : inputPreamble;
+    }
+
     let toolCallCount = 0;
     let progress = (
         await rlmStepStart({
             workerKey,
             code,
-            preamble,
+            preamble: effectivePreamble,
             externalFunctions,
             limits: RLM_LIMITS,
             inputs,

@@ -50,6 +50,7 @@ export class Crons {
                     text: built.text,
                     code: built.code,
                     inputs: task.inputs ? [task.inputs] : undefined,
+                    inputSchemas: task.inputSchema ? [task.inputSchema] : undefined,
                     origin: "cron",
                     execute: true,
                     context: messageContext

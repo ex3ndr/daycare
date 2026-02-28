@@ -19,8 +19,8 @@ Use cron triggers when:
 
 ### Cron Routing
 
-Cron triggers run through `system:cron` by default. You can set `agentId` during
-`task_create` when adding an initial cron schedule.
+Cron triggers run through `system:cron` by default. Use `task_trigger_add` with
+`type: "cron"` to attach a cron schedule after creating the task.
 
 ## When to Use Heartbeats
 
@@ -36,12 +36,9 @@ Use heartbeat triggers when:
 
 **Task with cron trigger:**
 
-```yaml
-title: API health
-cron: "*/10 * * * *"
-agentId: cu3ql2p5q0000x5p3g7q1l8a9
-code: |
-  print("check API health")
+```
+1. task_create: title="API health", code='print("check API health")' → returns taskId
+2. task_trigger_add: taskId=<returned taskId>, type="cron", schedule="*/10 * * * *", timezone="UTC"
 ```
 
 ## Selection Examples
@@ -84,8 +81,8 @@ code: |
 ## Workflow
 
 **For cron triggers:**
-1. Determine the schedule (cron expression: `minute hour day month weekday`)
-2. Use `task_create` with `cron` (or `task_trigger_add` on an existing task)
+1. Create the task with `task_create`
+2. Attach a cron schedule with `task_trigger_add` (type: "cron", schedule, timezone)
 3. Use `task_read` or `topology` to verify triggers
 
 **For heartbeat triggers:**

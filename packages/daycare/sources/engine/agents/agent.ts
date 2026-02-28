@@ -672,6 +672,7 @@ export class Agent {
                 for (let codeIdx = 0; codeIdx < item.code.length; codeIdx++) {
                     const code = item.code[codeIdx]!;
                     const codeInputs = item.inputs?.[codeIdx] ?? undefined;
+                    const codeInputSchema = item.inputSchemas?.[codeIdx] ?? undefined;
                     try {
                         const result = await rlmExecute(
                             code,
@@ -681,7 +682,8 @@ export class Agent {
                             createId(),
                             context.appendHistoryRecord,
                             undefined,
-                            codeInputs
+                            codeInputs,
+                            codeInputSchema
                         );
                         if (result.skipTurn) {
                             skipTurn = true;

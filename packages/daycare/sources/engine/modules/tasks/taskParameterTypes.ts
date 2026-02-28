@@ -1,8 +1,8 @@
 /**
  * Supported parameter types for task definitions.
- * Maps to Python (int|float, str, bool, Any) and TypeScript (number, string, boolean, unknown).
+ * Maps to Python (int, float, str, bool, Any) and TypeScript (number, number, string, boolean, unknown).
  */
-export type TaskParameterType = "number" | "string" | "boolean" | "any";
+export type TaskParameterType = "integer" | "float" | "string" | "boolean" | "any";
 
 /**
  * A single parameter definition in a task's parameter schema.

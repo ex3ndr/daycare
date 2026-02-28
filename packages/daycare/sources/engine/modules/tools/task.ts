@@ -5,11 +5,12 @@ import { appJwtSecretResolve } from "../../../api/app-server/appJwtSecretResolve
 import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { contextForAgent, contextForUser } from "../../agents/context.js";
+import { contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { rlmVerify } from "../rlm/rlmVerify.js";
 import { taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
+import { taskParameterInputsNormalize } from "../tasks/taskParameterInputsNormalize.js";
 import type { TaskParameter } from "../tasks/taskParameterTypes.js";
 import { taskParameterValidate } from "../tasks/taskParameterValidate.js";
 
@@ -17,7 +18,8 @@ const taskParameterSchema = Type.Object(
     {
         name: Type.String({ minLength: 1 }),
         type: Type.Union([
-            Type.Literal("number"),
+            Type.Literal("integer"),
+            Type.Literal("float"),
             Type.Literal("string"),
             Type.Literal("boolean"),
             Type.Literal("any")
@@ -42,23 +44,6 @@ const taskCreateSchema = Type.Object(
             Type.Array(taskParameterSchema, {
                 description:
                     "Typed parameter schema. Each parameter becomes a Python variable injected into the code at runtime."
-            })
-        ),
-        cron: Type.Optional(Type.String({ minLength: 1, description: "Cron expression (e.g. '0 * * * *')." })),
-        cronTimezone: Type.Optional(
-            Type.String({
-                minLength: 1,
-                description: "IANA timezone for cron (for example America/New_York). Defaults to profile timezone."
-            })
-        ),
-        heartbeat: Type.Optional(Type.Boolean({ description: "Attach a heartbeat trigger (~30 min interval)." })),
-        webhook: Type.Optional(
-            Type.Boolean({ description: "Attach a webhook trigger that runs on POST /v1/webhooks/<token>." })
-        ),
-        agentId: Type.Optional(
-            Type.String({
-                minLength: 1,
-                description: "Route to a specific agent instead of the default system agent."
             })
         )
     },
@@ -189,7 +174,7 @@ export function buildTaskCreateTool(): ToolDefinition {
         tool: {
             name: "task_create",
             description:
-                "Create a reusable task with Python code and optionally attach cron/heartbeat/webhook triggers. " +
+                "Create a reusable task with Python code. Use task_trigger_add to attach triggers afterwards. " +
                 "Code runs as Python with full tool access. Print/return text to produce an LLM prompt, " +
                 "or call tools and skip() to do work without LLM inference.",
             parameters: taskCreateSchema
@@ -206,114 +191,36 @@ export function buildTaskCreateTool(): ToolDefinition {
             const paramPreamble = payload.parameters?.length
                 ? taskParameterPreambleStubs(payload.parameters as TaskParameter[])
                 : undefined;
-            const verifyContexts = await taskVerifyContextsResolve(toolContext, payload);
-            for (const verifyContext of verifyContexts) {
-                rlmVerify(payload.code, verifyContext, paramPreamble);
-            }
-
-            if (payload.cron && !cronExpressionParse(payload.cron)) {
-                throw new Error(`Invalid cron schedule: ${payload.cron}`);
-            }
+            const verifyContext: Parameters<ToolDefinition["execute"]>[1] = {
+                ...toolContext,
+                agent: {
+                    descriptor: { type: "system", tag: "task" }
+                } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
+            };
+            rlmVerify(payload.code, verifyContext, paramPreamble);
 
             const taskId = await taskIdGenerateFromTitle(storage, toolContext.ctx, payload.title);
             const now = Date.now();
 
-            let cronTrigger: { id: string; duplicate: boolean } | null = null;
-            let heartbeatTrigger: { id: string; duplicate: boolean } | null = null;
-            let webhookTrigger: { id: string; duplicate: boolean; webhookPath: string } | null = null;
+            await storage.tasks.create({
+                id: taskId,
+                userId,
+                title: payload.title,
+                description: payload.description ?? null,
+                code: payload.code,
+                parameters: (payload.parameters as TaskParameter[]) ?? null,
+                createdAt: now,
+                updatedAt: now
+            });
 
-            try {
-                await storage.tasks.create({
-                    id: taskId,
-                    userId,
-                    title: payload.title,
-                    description: payload.description ?? null,
-                    code: payload.code,
-                    parameters: (payload.parameters as TaskParameter[]) ?? null,
-                    createdAt: now,
-                    updatedAt: now
-                });
-
-                if (payload.cron) {
-                    cronTrigger = await taskCronTriggerEnsure(
-                        toolContext,
-                        taskId,
-                        payload.cron,
-                        payload.agentId,
-                        payload.cronTimezone
-                    );
-                }
-
-                if (payload.heartbeat === true) {
-                    heartbeatTrigger = await taskHeartbeatTriggerEnsure(toolContext, taskId);
-                }
-
-                if (payload.webhook === true) {
-                    webhookTrigger = await taskWebhookTriggerEnsure(toolContext, taskId, payload.agentId);
-                }
-            } catch (error) {
-                if (cronTrigger && !cronTrigger.duplicate) {
-                    await toolContext.agentSystem.crons.deleteTask(toolContext.ctx, cronTrigger.id).catch(() => {});
-                }
-                if (heartbeatTrigger && !heartbeatTrigger.duplicate) {
-                    await toolContext.heartbeats.removeTask(toolContext.ctx, heartbeatTrigger.id).catch(() => {});
-                }
-                if (webhookTrigger && !webhookTrigger.duplicate) {
-                    await taskWebhooksResolve(toolContext)
-                        .deleteTrigger(toolContext.ctx, webhookTrigger.id)
-                        .catch(() => {});
-                }
-                await storage.tasks.delete(toolContext.ctx, taskId).catch(() => {});
-                throw error;
-            }
-
-            const summaryParts = [`Created task ${taskId}.`];
-            if (cronTrigger) {
-                summaryParts.push(
-                    cronTrigger.duplicate
-                        ? `Using existing cron trigger ${cronTrigger.id}.`
-                        : `Added cron trigger ${cronTrigger.id}.`
-                );
-            }
-            if (heartbeatTrigger) {
-                summaryParts.push(
-                    heartbeatTrigger.duplicate
-                        ? `Using existing heartbeat trigger ${heartbeatTrigger.id}.`
-                        : `Added heartbeat trigger ${heartbeatTrigger.id}.`
-                );
-            }
-            if (webhookTrigger) {
-                summaryParts.push(
-                    webhookTrigger.duplicate
-                        ? `Using existing webhook trigger ${webhookTrigger.id} (${webhookTrigger.webhookPath}).`
-                        : `Added webhook trigger ${webhookTrigger.id} (${webhookTrigger.webhookPath}).`
-                );
-            }
-            const summary = summaryParts.join(" ");
+            const summary = `Created task ${taskId}.`;
             const typedResult: TaskResult = {
                 summary,
-                taskId,
-                ...(cronTrigger ? { cronTriggerId: cronTrigger.id } : {}),
-                ...(heartbeatTrigger ? { heartbeatTriggerId: heartbeatTrigger.id } : {}),
-                ...(webhookTrigger
-                    ? {
-                          webhookTriggerId: webhookTrigger.id,
-                          webhookPath: webhookTrigger.webhookPath
-                      }
-                    : {})
+                taskId
             };
 
             return {
-                toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
-                    taskId,
-                    cronTriggerId: cronTrigger?.id ?? null,
-                    cronTriggerDuplicate: cronTrigger?.duplicate ?? false,
-                    heartbeatTriggerId: heartbeatTrigger?.id ?? null,
-                    heartbeatTriggerDuplicate: heartbeatTrigger?.duplicate ?? false,
-                    webhookTriggerId: webhookTrigger?.id ?? null,
-                    webhookTriggerDuplicate: webhookTrigger?.duplicate ?? false,
-                    webhookPath: webhookTrigger?.webhookPath ?? null
-                }),
+                toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, { taskId }),
                 typedResult
             };
         }
@@ -386,7 +293,7 @@ export function buildTaskUpdateTool(): ToolDefinition {
     return {
         tool: {
             name: "task_update",
-            description: "Update task title, Python code, or description.",
+            description: "Update task title, Python code, description, or parameters.",
             parameters: taskUpdateSchema
         },
         returns: taskReturns,
@@ -404,21 +311,45 @@ export function buildTaskUpdateTool(): ToolDefinition {
 
             const nextParams =
                 payload.parameters !== undefined ? ((payload.parameters as TaskParameter[]) ?? null) : task.parameters;
-            if (payload.code) {
+            const nextCode = payload.code ?? task.code;
+
+            // Re-verify code when code or parameters change
+            if (payload.code || payload.parameters !== undefined) {
                 const paramPreamble = nextParams?.length ? taskParameterPreambleStubs(nextParams) : undefined;
-                // Verify against the default "task" context
+
+                // Verify against "task" context (always)
                 const verifyContext: Parameters<ToolDefinition["execute"]>[1] = {
                     ...toolContext,
                     agent: {
                         descriptor: { type: "system", tag: "task" }
                     } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
                 };
-                rlmVerify(payload.code, verifyContext, paramPreamble);
+                rlmVerify(nextCode, verifyContext, paramPreamble);
+
+                // Validate existing trigger parameter values against the new schema
+                if (nextParams?.length) {
+                    const [cronTriggers, heartbeatTriggers] = await Promise.all([
+                        toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, task.id),
+                        toolContext.heartbeats.listTriggersForTask(toolContext.ctx, task.id)
+                    ]);
+                    for (const trigger of cronTriggers) {
+                        const error = taskParameterValidate(nextParams, trigger.parameters ?? {});
+                        if (error) {
+                            throw new Error(`Cron trigger ${trigger.id} has incompatible parameters: ${error}`);
+                        }
+                    }
+                    for (const trigger of heartbeatTriggers) {
+                        const error = taskParameterValidate(nextParams, trigger.parameters ?? {});
+                        if (error) {
+                            throw new Error(`Heartbeat trigger ${trigger.id} has incompatible parameters: ${error}`);
+                        }
+                    }
+                }
             }
 
             await toolContext.agentSystem.storage.tasks.update(toolContext.ctx, task.id, {
                 title: payload.title ?? task.title,
-                code: payload.code ?? task.code,
+                code: nextCode,
                 description: payload.description === undefined ? task.description : payload.description,
                 parameters: nextParams,
                 updatedAt: Date.now()
@@ -496,13 +427,16 @@ export function buildTaskRunTool(): ToolDefinition {
 
             // Validate parameters and pass as native inputs
             let inputValues: Record<string, unknown> | undefined;
+            if (payload.parameters && !task.parameters?.length) {
+                throw new Error("Task has no parameter schema. Remove parameters or define a schema on the task.");
+            }
             if (task.parameters?.length) {
                 const values = payload.parameters ?? {};
                 const error = taskParameterValidate(task.parameters, values);
                 if (error) {
                     throw new Error(error);
                 }
-                inputValues = values;
+                inputValues = taskParameterInputsNormalize(task.parameters, values);
             }
 
             const text = ["[task]", `taskId: ${task.id}`, `taskTitle: ${task.title}`].join("\n");
@@ -511,6 +445,7 @@ export function buildTaskRunTool(): ToolDefinition {
                 text,
                 code: [task.code],
                 inputs: inputValues ? [inputValues] : undefined,
+                inputSchemas: task.parameters?.length ? [task.parameters] : undefined,
                 origin: "task",
                 execute: true,
                 sync: payload.sync === true,
@@ -572,8 +507,14 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
                     throw new Error("schedule is required when type is cron.");
                 }
                 // Validate trigger parameters against task schema
-                if (task.parameters?.length && payload.parameters) {
-                    const error = taskParameterValidate(task.parameters, payload.parameters as Record<string, unknown>);
+                if (payload.parameters && !task.parameters?.length) {
+                    throw new Error("Task has no parameter schema. Remove parameters or define a schema on the task.");
+                }
+                if (task.parameters?.length) {
+                    const error = taskParameterValidate(
+                        task.parameters,
+                        (payload.parameters as Record<string, unknown>) ?? {}
+                    );
                     if (error) {
                         throw new Error(error);
                     }
@@ -628,8 +569,14 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
             }
 
             // Validate trigger parameters against task schema
-            if (task.parameters?.length && payload.parameters) {
-                const error = taskParameterValidate(task.parameters, payload.parameters as Record<string, unknown>);
+            if (payload.parameters && !task.parameters?.length) {
+                throw new Error("Task has no parameter schema. Remove parameters or define a schema on the task.");
+            }
+            if (task.parameters?.length) {
+                const error = taskParameterValidate(
+                    task.parameters,
+                    (payload.parameters as Record<string, unknown>) ?? {}
+                );
                 if (error) {
                     throw new Error(error);
                 }
@@ -761,67 +708,6 @@ async function taskResolveForUser(
         throw new Error(`Task not found: ${normalizedTaskId}`);
     }
     return task;
-}
-
-async function taskVerifyContextsResolve(
-    toolContext: Parameters<ToolDefinition["execute"]>[1],
-    payload: TaskCreateArgs
-): Promise<Array<Parameters<ToolDefinition["execute"]>[1]>> {
-    if (payload.agentId) {
-        return [await taskVerifyContextForAgentResolve(toolContext, payload.agentId)];
-    }
-
-    const tags = new Set<"task" | "cron" | "heartbeat" | "webhook">();
-    if (!payload.cron && payload.heartbeat !== true && payload.webhook !== true) {
-        tags.add("task");
-    }
-    if (payload.cron) {
-        tags.add("cron");
-    }
-    if (payload.heartbeat === true) {
-        tags.add("heartbeat");
-    }
-    if (payload.webhook === true) {
-        tags.add("webhook");
-    }
-
-    return [...tags].map((tag) => {
-        return {
-            ...toolContext,
-            agent: {
-                descriptor: { type: "system", tag }
-            } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
-        };
-    });
-}
-
-async function taskVerifyContextForAgentResolve(
-    toolContext: Parameters<ToolDefinition["execute"]>[1],
-    agentId: string
-): Promise<Parameters<ToolDefinition["execute"]>[1]> {
-    const normalizedAgentId = agentId.trim();
-    if (!normalizedAgentId) {
-        throw new Error("agentId is required when routing task verification.");
-    }
-    if (toolContext.ctx.hasAgentId && toolContext.ctx.agentId === normalizedAgentId) {
-        return toolContext;
-    }
-
-    const targetAgent = await toolContext.agentSystem.storage.agents.findById(normalizedAgentId);
-    if (!targetAgent || targetAgent.userId !== toolContext.ctx.userId) {
-        throw new Error(`Target agent not found: ${normalizedAgentId}`);
-    }
-
-    return {
-        ...toolContext,
-        ctx: contextForAgent({
-            userId: toolContext.ctx.userId,
-            agentId: normalizedAgentId
-        }),
-        agent: {
-            descriptor: targetAgent.descriptor
-        } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
-    };
 }
 
 function toolMessageBuild(

@@ -1,4 +1,5 @@
 import type { CronTaskDbRecord } from "../../storage/databaseTypes.js";
+import type { TaskParameter } from "../modules/tasks/taskParameterTypes.js";
 
 /**
  * Cron task definition as stored/provided by the user.
@@ -16,9 +17,6 @@ export type CronTaskDefinition = {
 };
 
 /**
- * Cron task with computed paths for file storage.
- */
-/**
  * Context passed to task handlers when a cron task executes.
  */
 export type CronTaskContext = {
@@ -31,6 +29,7 @@ export type CronTaskContext = {
     userId: string;
     parameters?: Record<string, unknown>;
     inputs?: Record<string, unknown>;
+    inputSchema?: TaskParameter[];
 };
 
 /**

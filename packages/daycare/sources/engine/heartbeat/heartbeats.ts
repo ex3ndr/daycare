@@ -53,6 +53,7 @@ export class Heartbeats {
                         text: batch.text,
                         code: batch.code,
                         inputs: batch.inputs,
+                        inputSchemas: batch.inputSchemas,
                         origin: "heartbeat",
                         execute: true
                     });

@@ -235,7 +235,7 @@ function heartbeatTaskParse(row: typeof tasksHeartbeatTable.$inferSelect): Heart
 }
 
 function heartbeatTaskClone(record: HeartbeatTaskDbRecord): HeartbeatTaskDbRecord {
-    return { ...record };
+    return { ...record, parameters: record.parameters ? structuredClone(record.parameters) : record.parameters };
 }
 
 function heartbeatTasksSort(records: HeartbeatTaskDbRecord[]): HeartbeatTaskDbRecord[] {

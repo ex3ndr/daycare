@@ -8,9 +8,24 @@ describe("taskParameterValidate", () => {
         expect(taskParameterValidate(params, { city: "Seoul" })).toBeNull();
     });
 
-    it("returns null for valid required number", () => {
-        const params: TaskParameter[] = [{ name: "count", type: "number", nullable: false }];
+    it("returns null for valid required integer", () => {
+        const params: TaskParameter[] = [{ name: "count", type: "integer", nullable: false }];
         expect(taskParameterValidate(params, { count: 42 })).toBeNull();
+    });
+
+    it("returns null for valid required float", () => {
+        const params: TaskParameter[] = [{ name: "rate", type: "float", nullable: false }];
+        expect(taskParameterValidate(params, { rate: 3.14 })).toBeNull();
+    });
+
+    it("accepts integer values for float type", () => {
+        const params: TaskParameter[] = [{ name: "rate", type: "float", nullable: false }];
+        expect(taskParameterValidate(params, { rate: 5 })).toBeNull();
+    });
+
+    it("rejects float values for integer type", () => {
+        const params: TaskParameter[] = [{ name: "count", type: "integer", nullable: false }];
+        expect(taskParameterValidate(params, { count: 3.14 })).toBe('Parameter "count" expects integer, got float.');
     });
 
     it("returns null for valid required boolean", () => {
@@ -43,9 +58,14 @@ describe("taskParameterValidate", () => {
         expect(taskParameterValidate(params, { city: null })).toBeNull();
     });
 
-    it("returns error for wrong type (number expected, string given)", () => {
-        const params: TaskParameter[] = [{ name: "count", type: "number", nullable: false }];
-        expect(taskParameterValidate(params, { count: "five" })).toBe('Parameter "count" expects number, got string.');
+    it("returns error for wrong type (integer expected, string given)", () => {
+        const params: TaskParameter[] = [{ name: "count", type: "integer", nullable: false }];
+        expect(taskParameterValidate(params, { count: "five" })).toBe('Parameter "count" expects integer, got string.');
+    });
+
+    it("returns error for wrong type (float expected, string given)", () => {
+        const params: TaskParameter[] = [{ name: "rate", type: "float", nullable: false }];
+        expect(taskParameterValidate(params, { rate: "fast" })).toBe('Parameter "rate" expects float, got string.');
     });
 
     it("returns error for wrong type (string expected, number given)", () => {
@@ -69,15 +89,23 @@ describe("taskParameterValidate", () => {
     it("validates multiple parameters", () => {
         const params: TaskParameter[] = [
             { name: "city", type: "string", nullable: false },
-            { name: "count", type: "number", nullable: true }
+            { name: "count", type: "integer", nullable: true }
         ];
         expect(taskParameterValidate(params, { city: "Seoul", count: 5 })).toBeNull();
         expect(taskParameterValidate(params, { city: "Seoul" })).toBeNull();
         expect(taskParameterValidate(params, { count: 5 })).toBe('Required parameter "city" is missing.');
     });
 
-    it("returns null for empty schema", () => {
+    it("rejects unknown parameter keys", () => {
+        const params: TaskParameter[] = [{ name: "city", type: "string", nullable: false }];
+        expect(taskParameterValidate(params, { city: "Seoul", typo: "oops" })).toBe('Unknown parameter "typo".');
+    });
+
+    it("returns null for empty schema with empty values", () => {
         expect(taskParameterValidate([], {})).toBeNull();
-        expect(taskParameterValidate([], { extra: "value" })).toBeNull();
+    });
+
+    it("rejects extra keys even with empty schema", () => {
+        expect(taskParameterValidate([], { extra: "value" })).toBe('Unknown parameter "extra".');
     });
 });

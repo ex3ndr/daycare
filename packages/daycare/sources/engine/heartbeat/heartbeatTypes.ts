@@ -6,9 +6,14 @@ import type { HeartbeatTaskDbRecord } from "../../storage/databaseTypes.js";
 import type { HeartbeatTasksRepository } from "../../storage/heartbeatTasksRepository.js";
 import type { TasksRepository } from "../../storage/tasksRepository.js";
 import type { ConfigModule } from "../config/configModule.js";
+import type { TaskParameter } from "../modules/tasks/taskParameterTypes.js";
 
 export type HeartbeatDefinition = HeartbeatTaskDbRecord;
-export type HeartbeatRunTask = HeartbeatDefinition & { code: string; inputs?: Record<string, unknown> };
+export type HeartbeatRunTask = HeartbeatDefinition & {
+    code: string;
+    inputs?: Record<string, unknown>;
+    inputSchema?: TaskParameter[];
+};
 
 export type HeartbeatSchedulerOptions = {
     config: ConfigModule;

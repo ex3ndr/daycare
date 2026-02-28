@@ -7,6 +7,7 @@ import type { TasksRepository } from "../../../storage/tasksRepository.js";
 import type { UsersRepository } from "../../../storage/usersRepository.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
+import { taskParameterInputsNormalize } from "../../modules/tasks/taskParameterInputsNormalize.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
 import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
@@ -241,34 +242,39 @@ export class CronScheduler {
 
         const runAt = new Date();
         const runAtMs = runAt.getTime();
-        const runtimeTask = await this.taskRuntimeResolve(task);
-
-        // Validate trigger parameters
-        let inputValues: Record<string, unknown> | undefined;
-        if (runtimeTask.parameterSchema?.length && task.parameters) {
-            const error = taskParameterValidate(runtimeTask.parameterSchema, task.parameters);
-            if (error) {
-                logger.warn({ taskId: task.id, error }, "error: Cron trigger parameter validation failed");
-                throw new Error(`Parameter validation failed for cron trigger ${task.id}: ${error}`);
-            }
-            inputValues = task.parameters;
-        }
-
-        const taskContext: CronTaskContext = {
-            triggerId: task.id,
-            taskId: runtimeTask.taskId,
-            taskName: runtimeTask.taskTitle,
-            code: runtimeTask.code,
-            timezone: task.timezone,
-            agentId: task.agentId,
-            userId: task.userId,
-            parameters: task.parameters ?? undefined,
-            inputs: inputValues
-        };
-
-        const messageContext: MessageContext = { timezone: task.timezone };
 
         try {
+            const runtimeTask = await this.taskRuntimeResolve(task);
+
+            // Validate trigger parameters
+            let inputValues: Record<string, unknown> | undefined;
+            let inputSchema: TaskParameter[] | undefined;
+            if (runtimeTask.parameterSchema?.length) {
+                const values = task.parameters ?? {};
+                const error = taskParameterValidate(runtimeTask.parameterSchema, values);
+                if (error) {
+                    logger.warn({ taskId: task.id, error }, "error: Cron trigger parameter validation failed");
+                    throw new Error(`Parameter validation failed for cron trigger ${task.id}: ${error}`);
+                }
+                inputValues = taskParameterInputsNormalize(runtimeTask.parameterSchema, values);
+                inputSchema = runtimeTask.parameterSchema;
+            }
+
+            const taskContext: CronTaskContext = {
+                triggerId: task.id,
+                taskId: runtimeTask.taskId,
+                taskName: runtimeTask.taskTitle,
+                code: runtimeTask.code,
+                timezone: task.timezone,
+                agentId: task.agentId,
+                userId: task.userId,
+                parameters: task.parameters ?? undefined,
+                inputs: inputValues,
+                inputSchema
+            };
+
+            const messageContext: MessageContext = { timezone: task.timezone };
+
             logger.info({ taskId: task.id, name: task.name }, "execute: Executing cron task");
             await this.onTask(taskContext, messageContext);
             logger.debug(`event: Task execution completed taskId=${task.id}`);
@@ -403,5 +409,5 @@ export class CronScheduler {
 }
 
 function cronTaskClone(task: CronTaskDbRecord): CronTaskDbRecord {
-    return { ...task };
+    return { ...task, parameters: task.parameters ? structuredClone(task.parameters) : task.parameters };
 }

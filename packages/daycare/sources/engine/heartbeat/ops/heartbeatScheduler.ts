@@ -3,6 +3,7 @@ import type { Context } from "@/types";
 import { getLogger } from "../../../log.js";
 import type { HeartbeatTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
+import { taskParameterInputsNormalize } from "../../modules/tasks/taskParameterInputsNormalize.js";
 import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
 import type {
     HeartbeatCreateTaskArgs,
@@ -244,8 +245,9 @@ export class HeartbeatScheduler {
 
             // Validate trigger parameters and pass as native inputs
             let inputValues: Record<string, unknown> | undefined;
-            if (linked.parameters?.length && trigger.parameters) {
-                const error = taskParameterValidate(linked.parameters, trigger.parameters);
+            if (linked.parameters?.length) {
+                const values = trigger.parameters ?? {};
+                const error = taskParameterValidate(linked.parameters, values);
                 if (error) {
                     logger.warn(
                         { triggerId: trigger.id, error },
@@ -253,7 +255,7 @@ export class HeartbeatScheduler {
                     );
                     throw new Error(`Parameter validation failed for heartbeat trigger ${trigger.id}: ${error}`);
                 }
-                inputValues = trigger.parameters;
+                inputValues = taskParameterInputsNormalize(linked.parameters, values);
             }
 
             resolved.push({
@@ -261,7 +263,8 @@ export class HeartbeatScheduler {
                 taskId: linked.id,
                 title: linked.title,
                 code: linked.code,
-                inputs: inputValues
+                inputs: inputValues,
+                inputSchema: linked.parameters?.length ? linked.parameters : undefined
             });
         }
         return resolved;

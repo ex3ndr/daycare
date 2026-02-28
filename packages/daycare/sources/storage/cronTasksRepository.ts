@@ -268,7 +268,7 @@ function cronTaskParse(row: typeof tasksCronTable.$inferSelect): CronTaskDbRecor
 }
 
 function cronTaskClone(record: CronTaskDbRecord): CronTaskDbRecord {
-    return { ...record };
+    return { ...record, parameters: record.parameters ? structuredClone(record.parameters) : record.parameters };
 }
 
 function cronTasksSort(records: CronTaskDbRecord[]): CronTaskDbRecord[] {

@@ -7,6 +7,13 @@ import type { TaskParameter } from "./taskParameterTypes.js";
  * Expects: params is a non-empty array, values is a plain object.
  */
 export function taskParameterValidate(params: TaskParameter[], values: Record<string, unknown>): string | null {
+    const schemaNames = new Set(params.map((p) => p.name));
+    for (const key of Object.keys(values)) {
+        if (!schemaNames.has(key)) {
+            return `Unknown parameter "${key}".`;
+        }
+    }
+
     for (const param of params) {
         const value = values[param.name];
 
@@ -32,9 +39,14 @@ export function taskParameterValidate(params: TaskParameter[], values: Record<st
 
 function taskParameterTypeCheck(name: string, type: TaskParameter["type"], value: unknown): string | null {
     switch (type) {
-        case "number":
+        case "integer":
+            if (typeof value !== "number" || !Number.isInteger(value)) {
+                return `Parameter "${name}" expects integer, got ${typeof value === "number" ? "float" : typeof value}.`;
+            }
+            break;
+        case "float":
             if (typeof value !== "number") {
-                return `Parameter "${name}" expects number, got ${typeof value}.`;
+                return `Parameter "${name}" expects float, got ${typeof value}.`;
             }
             break;
         case "string":
