@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../util/jwt.js";
+import { APP_AUTH_LINK_SERVICE, APP_AUTH_SESSION_EXPIRES_IN_SECONDS } from "./appAuthLinkTool.js";
 import { plugin } from "./plugin.js";
 
 const APP_AUTH_SEED_KEY = "seed";
@@ -296,7 +297,7 @@ describe("daycare-app-server plugin auth endpoints", () => {
         expect(trigger).not.toHaveBeenCalled();
     });
 
-    it("returns ok for valid token", async () => {
+    it("returns ok for valid session token", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await pluginCreateForTests({ secret });
         const token = await jwtSign({ userId: "user-1" }, secret, 3600);
@@ -307,7 +308,40 @@ describe("daycare-app-server plugin auth endpoints", () => {
             body: JSON.stringify({ token })
         });
 
-        await expect(response.json()).resolves.toEqual({ ok: true, userId: "user-1" });
+        await expect(response.json()).resolves.toEqual({
+            ok: true,
+            userId: "user-1",
+            token,
+            expiresAt: expect.any(Number)
+        });
+    });
+
+    it("exchanges valid link token into a long-lived session token", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const linkToken = await jwtSign({ userId: "user-1" }, secret, 3600, {
+            service: APP_AUTH_LINK_SERVICE
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/auth/validate`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ token: linkToken })
+        });
+
+        const payload = (await response.json()) as {
+            ok: boolean;
+            userId?: string;
+            token?: string;
+            expiresAt?: number;
+        };
+        expect(payload.ok).toBe(true);
+        expect(payload.userId).toBe("user-1");
+        expect(typeof payload.token).toBe("string");
+        expect(payload.token).not.toBe(linkToken);
+        expect(typeof payload.expiresAt).toBe("number");
+        const verified = await jwtVerify(payload.token!, secret);
+        expect(verified.userId).toBe("user-1");
     });
 
     it("returns error for expired token", async () => {
@@ -389,6 +423,7 @@ describe("daycare-app-server plugin auth endpoints", () => {
 
         const verified = await jwtVerify(payload.token!, secret);
         expect(verified.userId).toBe("123");
+        expect(verified.exp - verified.iat).toBe(APP_AUTH_SESSION_EXPIRES_IN_SECONDS);
     });
 
     it("returns error for invalid Telegram WebApp initData", async () => {

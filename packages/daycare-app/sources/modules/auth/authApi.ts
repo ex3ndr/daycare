@@ -2,6 +2,7 @@ export type AuthValidateResult =
     | {
           ok: true;
           userId: string;
+          token?: string;
       }
     | {
           ok: false;
@@ -20,7 +21,7 @@ export type AuthTelegramExchangeResult =
       };
 
 /**
- * Validates a magic link token with the Daycare app server.
+ * Validates an auth token and exchanges link tokens to session tokens when needed.
  * Expects: baseUrl points to daycare-app-server and token is non-empty.
  */
 export async function authValidateToken(baseUrl: string, token: string): Promise<AuthValidateResult> {
@@ -35,11 +36,17 @@ export async function authValidateToken(baseUrl: string, token: string): Promise
     const payload = (await response.json()) as {
         ok?: boolean;
         userId?: string;
+        token?: string;
         error?: string;
     };
 
     if (payload.ok === true && typeof payload.userId === "string") {
-        return { ok: true, userId: payload.userId };
+        const exchangedToken = typeof payload.token === "string" ? payload.token : undefined;
+        return {
+            ok: true,
+            userId: payload.userId,
+            ...(exchangedToken ? { token: exchangedToken } : {})
+        };
     }
 
     return {
@@ -49,7 +56,7 @@ export async function authValidateToken(baseUrl: string, token: string): Promise
 }
 
 /**
- * Exchanges Telegram WebApp initData for a short-lived app token.
+ * Exchanges Telegram WebApp initData for an app session token.
  * Expects: baseUrl points to daycare-app-server and initData is raw Telegram initData string.
  */
 export async function authTelegramExchange(

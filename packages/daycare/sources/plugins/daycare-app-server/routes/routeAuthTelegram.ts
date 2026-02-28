@@ -1,6 +1,6 @@
 import type http from "node:http";
 import { jwtSign } from "../../../util/jwt.js";
-import { APP_AUTH_EXPIRES_IN_SECONDS } from "../appAuthLinkTool.js";
+import { APP_AUTH_SESSION_EXPIRES_IN_SECONDS } from "../appAuthLinkTool.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 import { appTelegramInitDataValidate } from "../appTelegramInitDataValidate.js";
 
@@ -10,7 +10,7 @@ export type RouteAuthTelegramOptions = {
 };
 
 /**
- * Handles POST /auth/telegram — validates Telegram WebApp initData and issues an app token.
+ * Handles POST /auth/telegram — validates Telegram WebApp initData and issues a session token.
  * Expects: options resolves the app JWT secret and Telegram bot token for signature verification.
  */
 export async function routeAuthTelegram(
@@ -32,8 +32,8 @@ export async function routeAuthTelegram(
         const botToken = await options.telegramTokenResolve(telegramInstanceId);
         const verified = appTelegramInitDataValidate(initData, botToken);
         const secret = await options.secretResolve();
-        const token = await jwtSign({ userId: verified.userId }, secret, APP_AUTH_EXPIRES_IN_SECONDS);
-        const expiresAt = Date.now() + APP_AUTH_EXPIRES_IN_SECONDS * 1000;
+        const token = await jwtSign({ userId: verified.userId }, secret, APP_AUTH_SESSION_EXPIRES_IN_SECONDS);
+        const expiresAt = Date.now() + APP_AUTH_SESSION_EXPIRES_IN_SECONDS * 1000;
 
         appSendJson(response, 200, {
             ok: true,

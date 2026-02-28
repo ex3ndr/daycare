@@ -33,6 +33,21 @@ describe("authValidateToken", () => {
             error: "expired"
         });
     });
+
+    it("returns exchanged token when validate response includes it", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, userId: "user-1", token: "session-token" })
+            }))
+        );
+
+        await expect(authValidateToken("http://localhost:7332", "token-1")).resolves.toEqual({
+            ok: true,
+            userId: "user-1",
+            token: "session-token"
+        });
+    });
 });
 
 describe("authTelegramExchange", () => {

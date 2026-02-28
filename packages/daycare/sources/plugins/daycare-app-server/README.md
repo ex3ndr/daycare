@@ -19,9 +19,9 @@ Notes:
 ## Routes
 
 ### Auth
-- `POST /auth/validate`: validate incoming magic link token
-- `POST /auth/refresh`: validate token and return a fresh 1-hour token
-- `POST /auth/telegram`: verify Telegram WebApp `initData` and exchange it for a Daycare auth token
+- `POST /auth/validate`: validate session tokens and exchange link tokens to 1-year session tokens
+- `POST /auth/refresh`: validate token and return a fresh 1-year session token
+- `POST /auth/telegram`: verify Telegram WebApp `initData` and issue a 1-year session token
 
 ### Prompts (authenticated via `Authorization: Bearer <token>`)
 - `GET /prompts`: list available prompt files
@@ -41,6 +41,10 @@ Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
 
 Both generate a short-lived app URL in the form:
 `<appEndpoint-or-serverEndpoint>/auth#<base64url-json>`
+
+Token lifecycle:
+- Link token (ephemeral): embedded in `/auth#...` URL payload, default TTL is 1 hour.
+- Session token (long-term): returned by `/auth/validate`, `/auth/refresh`, and `/auth/telegram`, TTL is 1 year.
 
 ## Structure
 

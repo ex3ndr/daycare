@@ -1,6 +1,6 @@
 import {
     APP_AUTH_DEFAULT_ENDPOINT,
-    APP_AUTH_EXPIRES_IN_SECONDS
+    APP_AUTH_LINK_EXPIRES_IN_SECONDS
 } from "../plugins/daycare-app-server/appAuthLinkTool.js";
 import { appEndpointNormalize } from "../plugins/daycare-app-server/appEndpointNormalize.js";
 import type { PluginInstanceSettings } from "../settings.js";
@@ -153,7 +153,7 @@ function appLinkPortParse(value: string | undefined): number | null {
 
 function appLinkExpiresResolve(value: string | undefined): number {
     if (!value || !value.trim()) {
-        return APP_AUTH_EXPIRES_IN_SECONDS;
+        return APP_AUTH_LINK_EXPIRES_IN_SECONDS;
     }
 
     const parsed = Number.parseInt(value, 10);

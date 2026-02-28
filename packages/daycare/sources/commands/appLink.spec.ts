@@ -10,7 +10,7 @@ vi.mock("../config/configLoad.js", () => ({
 
 vi.mock("../plugins/daycare-app-server/appAuthLinkTool.js", () => ({
     APP_AUTH_DEFAULT_ENDPOINT: "https://daycare.dev",
-    APP_AUTH_EXPIRES_IN_SECONDS: 3600,
+    APP_AUTH_LINK_EXPIRES_IN_SECONDS: 3600,
     appAuthLinkGenerate: vi.fn()
 }));
 

@@ -76,4 +76,25 @@ describe("authStoreCreate", () => {
         });
         expect(storage.read).not.toHaveBeenCalled();
     });
+
+    it("stores replacement token returned by validateToken", async () => {
+        const storage = {
+            read: vi.fn(async () => null),
+            write: vi.fn(async () => undefined),
+            clear: vi.fn(async () => undefined)
+        };
+
+        const store = authStoreCreate({
+            storage,
+            validateToken: vi.fn(async () => ({ ok: true, userId: "user-4", token: "session-token" }))
+        });
+
+        await store.getState().login("http://localhost:7332", "ephemeral-token");
+
+        expect(store.getState().token).toBe("session-token");
+        expect(storage.write).toHaveBeenCalledWith({
+            baseUrl: "http://localhost:7332",
+            token: "session-token"
+        });
+    });
 });

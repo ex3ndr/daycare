@@ -15,7 +15,7 @@ export type AuthSessionStorage = {
 
 export type AuthStoreDependencies = {
     storage: AuthSessionStorage;
-    validateToken: (baseUrl: string, token: string) => Promise<{ ok: boolean; userId?: string }>;
+    validateToken: (baseUrl: string, token: string) => Promise<{ ok: boolean; userId?: string; token?: string }>;
     sessionResolve?: () => Promise<AuthSession | null>;
 };
 
@@ -46,15 +46,19 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
             if (resolvedSession) {
                 const result = await dependencies.validateToken(resolvedSession.baseUrl, resolvedSession.token);
                 if (result.ok === true && typeof result.userId === "string") {
+                    const resolvedToken =
+                        typeof result.token === "string" && result.token.trim().length > 0
+                            ? result.token.trim()
+                            : resolvedSession.token;
                     await dependencies.storage.write({
                         baseUrl: resolvedSession.baseUrl,
-                        token: resolvedSession.token
+                        token: resolvedToken
                     });
                     set({
                         ready: true,
                         state: "authenticated",
                         baseUrl: resolvedSession.baseUrl,
-                        token: resolvedSession.token,
+                        token: resolvedToken,
                         userId: result.userId
                     });
                     return;
@@ -73,12 +77,22 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
                 set({ ready: true, state: "unauthenticated", baseUrl: null, token: null, userId: null });
                 return;
             }
+            const resolvedToken =
+                typeof result.token === "string" && result.token.trim().length > 0
+                    ? result.token.trim()
+                    : storedSession.token;
+            if (resolvedToken !== storedSession.token) {
+                await dependencies.storage.write({
+                    baseUrl: storedSession.baseUrl,
+                    token: resolvedToken
+                });
+            }
 
             set({
                 ready: true,
                 state: "authenticated",
                 baseUrl: storedSession.baseUrl,
-                token: storedSession.token,
+                token: resolvedToken,
                 userId: result.userId
             });
         },
@@ -89,16 +103,18 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
             if (result.ok !== true || typeof result.userId !== "string") {
                 throw new Error("Invalid or expired token.");
             }
+            const resolvedToken =
+                typeof result.token === "string" && result.token.trim().length > 0 ? result.token.trim() : trimmedToken;
 
             await dependencies.storage.write({
                 baseUrl: trimmedBaseUrl,
-                token: trimmedToken
+                token: resolvedToken
             });
             set({
                 ready: true,
                 state: "authenticated",
                 baseUrl: trimmedBaseUrl,
-                token: trimmedToken,
+                token: resolvedToken,
                 userId: result.userId
             });
         },

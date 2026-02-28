@@ -4,7 +4,7 @@ import { apiRouteHandle } from "../../api/routes.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 import { appAuthExtract } from "./appAuthExtract.js";
-import { APP_AUTH_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
+import { APP_AUTH_LINK_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
 import { appEndpointNormalize } from "./appEndpointNormalize.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
@@ -91,11 +91,7 @@ export const plugin = definePlugin({
             }
             if (pathname === "/auth/refresh" && request.method === "POST") {
                 await routeAuthRefresh(request, response, {
-                    secretResolve,
-                    host: settings.host,
-                    port: settings.port,
-                    appEndpoint: settings.appEndpoint,
-                    serverEndpoint: settings.serverEndpoint
+                    secretResolve
                 });
                 return;
             }
@@ -170,7 +166,7 @@ export const plugin = definePlugin({
                         serverEndpoint: settings.serverEndpoint,
                         userId: descriptor.userId,
                         secret: await secretResolve(),
-                        expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS
+                        expiresInSeconds: APP_AUTH_LINK_EXPIRES_IN_SECONDS
                     });
 
                     await api.registrar.sendMessage(descriptor as never, context, {

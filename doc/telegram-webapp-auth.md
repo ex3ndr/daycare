@@ -16,7 +16,7 @@ This change adds Telegram WebApp authentication support across:
   - Reads `backend` and `telegramInstanceId` from URL query params.
   - Reads `Telegram.WebApp.initData` from WebApp runtime.
   - Resolves Telegram session during auth bootstrap on every page.
-  - Exchanges `initData` via `/auth/telegram`, then logs in with returned token.
+  - Exchanges `initData` via `/auth/telegram`, then logs in with returned 1-year session token.
 - Added Telegram bot menu WebApp integration:
   - When `daycare-app-server` is enabled, Telegram connector sets chat menu button to `web_app`.
   - URL points to app root with query params needed by Telegram auth (`backend`, `telegramInstanceId`).
@@ -36,7 +36,7 @@ sequenceDiagram
     A->>S: POST /auth/telegram { initData, telegramInstanceId }
     S->>S: Resolve telegram bot token
     S->>S: Verify initData HMAC + auth_date
-    S->>S: Sign Daycare JWT for telegram user id
+    S->>S: Sign 1-year Daycare session token for telegram user id
     S-->>A: { ok: true, token, userId, expiresAt }
     A->>S: POST /auth/validate { token }
     S-->>A: { ok: true, userId }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { contextForUser } from "../../engine/agents/context.js";
 import { jwtVerify } from "../../util/jwt.js";
-import { appAuthLinkGenerate, appAuthLinkTool, appAuthLinkUrlBuild } from "./appAuthLinkTool.js";
+import { APP_AUTH_LINK_SERVICE, appAuthLinkGenerate, appAuthLinkTool, appAuthLinkUrlBuild } from "./appAuthLinkTool.js";
 
 describe("appAuthLinkUrlBuild", () => {
     it("builds auth URL using default app endpoint", () => {
@@ -60,7 +60,7 @@ describe("appAuthLinkGenerate", () => {
         });
 
         expect(result.url.startsWith("https://daycare.dev/auth#")).toBe(true);
-        const payload = await jwtVerify(result.token, "test-secret");
+        const payload = await jwtVerify(result.token, "test-secret", { service: APP_AUTH_LINK_SERVICE });
         expect(payload.userId).toBe("user-7");
     });
 });
@@ -89,7 +89,7 @@ describe("appAuthLinkTool", () => {
         if (typeof token !== "string") {
             throw new Error("Expected tool token to be a string.");
         }
-        const payload = await jwtVerify(token, "test-secret");
+        const payload = await jwtVerify(token, "test-secret", { service: APP_AUTH_LINK_SERVICE });
         expect(payload.userId).toBe("user-11");
     });
 });

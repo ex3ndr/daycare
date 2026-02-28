@@ -1,19 +1,15 @@
 import type http from "node:http";
-import { jwtVerify } from "../../../util/jwt.js";
-import { APP_AUTH_EXPIRES_IN_SECONDS, appAuthLinkGenerate } from "../appAuthLinkTool.js";
+import { jwtSign, jwtVerify } from "../../../util/jwt.js";
+import { APP_AUTH_LINK_SERVICE, APP_AUTH_SESSION_EXPIRES_IN_SECONDS } from "../appAuthLinkTool.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 
 export type RouteAuthRefreshOptions = {
     secretResolve: () => Promise<string>;
-    host: string;
-    port: number;
-    appEndpoint?: string;
-    serverEndpoint?: string;
 };
 
 /**
- * Handles POST /auth/refresh — validates a token and returns a fresh one.
- * Expects: options contains host/port and secretResolve for JWT signing.
+ * Handles POST /auth/refresh — validates a token and returns a fresh session token.
+ * Expects: options contains secretResolve for JWT verification/signing.
  */
 export async function routeAuthRefresh(
     request: http.IncomingMessage,
@@ -29,21 +25,22 @@ export async function routeAuthRefresh(
 
     try {
         const secret = await options.secretResolve();
-        const payload = await jwtVerify(token, secret);
-        const refreshed = await appAuthLinkGenerate({
-            host: options.host,
-            port: options.port,
-            appEndpoint: options.appEndpoint,
-            serverEndpoint: options.serverEndpoint,
-            userId: payload.userId,
-            secret,
-            expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS
-        });
+        let userId: string;
+
+        try {
+            const sessionPayload = await jwtVerify(token, secret);
+            userId = sessionPayload.userId;
+        } catch {
+            const linkPayload = await jwtVerify(token, secret, { service: APP_AUTH_LINK_SERVICE });
+            userId = linkPayload.userId;
+        }
+
+        const refreshedToken = await jwtSign({ userId }, secret, APP_AUTH_SESSION_EXPIRES_IN_SECONDS);
         appSendJson(response, 200, {
             ok: true,
-            token: refreshed.token,
-            userId: payload.userId,
-            url: refreshed.url
+            token: refreshedToken,
+            userId,
+            expiresAt: Date.now() + APP_AUTH_SESSION_EXPIRES_IN_SECONDS * 1000
         });
     } catch (error) {
         appSendJson(response, 200, {

@@ -4,7 +4,9 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { jwtSign } from "../../util/jwt.js";
 import { appEndpointNormalize } from "./appEndpointNormalize.js";
 
-export const APP_AUTH_EXPIRES_IN_SECONDS = 3600;
+export const APP_AUTH_LINK_EXPIRES_IN_SECONDS = 3600;
+export const APP_AUTH_SESSION_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
+export const APP_AUTH_LINK_SERVICE = "daycare.app-auth.link";
 export const APP_AUTH_DEFAULT_ENDPOINT = "https://daycare.dev";
 
 const appAuthLinkToolSchema = Type.Object({}, { additionalProperties: false });
@@ -42,8 +44,10 @@ export type AppAuthLinkGenerateInput = {
  * Expects: host and userId are non-empty strings and secret is valid.
  */
 export async function appAuthLinkGenerate(input: AppAuthLinkGenerateInput): Promise<AppAuthLinkResult> {
-    const expiresInSeconds = input.expiresInSeconds ?? APP_AUTH_EXPIRES_IN_SECONDS;
-    const token = await jwtSign({ userId: input.userId }, input.secret, expiresInSeconds);
+    const expiresInSeconds = input.expiresInSeconds ?? APP_AUTH_LINK_EXPIRES_IN_SECONDS;
+    const token = await jwtSign({ userId: input.userId }, input.secret, expiresInSeconds, {
+        service: APP_AUTH_LINK_SERVICE
+    });
     const expiresAt = Date.now() + expiresInSeconds * 1000;
 
     return {
