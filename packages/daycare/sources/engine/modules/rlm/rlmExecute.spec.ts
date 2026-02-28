@@ -221,6 +221,18 @@ describe("rlmExecute", () => {
         expect(resolver.execute).not.toHaveBeenCalled();
     });
 
+    it("fails fast when python calls an undefined function", async () => {
+        const resolver = createResolver(async (name) => {
+            throw new Error(`Unexpected tool ${name}`);
+        });
+
+        await expect(
+            rlmExecute("not_existing()", montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-typing")
+        ).rejects.toThrow("unresolved-reference");
+
+        expect(resolver.execute).not.toHaveBeenCalled();
+    });
+
     it("fails fast when Monty type checking finds invalid tool argument types", async () => {
         const resolver = createResolver(async (name) => {
             throw new Error(`Unexpected tool ${name}`);

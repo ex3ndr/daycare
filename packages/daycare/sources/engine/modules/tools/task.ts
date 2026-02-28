@@ -3,9 +3,10 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { contextForUser } from "../../agents/context.js";
+import { contextForAgent, contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
+import { rlmVerify } from "../rlm/rlmVerify.js";
 
 const taskCreateSchema = Type.Object(
     {
@@ -136,6 +137,11 @@ export function buildTaskCreateTool(): ToolDefinition {
             const userId = toolContext.ctx.userId.trim();
             if (!userId) {
                 throw new Error("Task userId is required.");
+            }
+
+            const verifyContexts = await taskVerifyContextsResolve(toolContext, payload);
+            for (const verifyContext of verifyContexts) {
+                rlmVerify(payload.code, verifyContext);
             }
 
             if (payload.cron && !cronExpressionParse(payload.cron)) {
@@ -522,6 +528,64 @@ async function taskResolveForUser(
         throw new Error(`Task not found: ${normalizedTaskId}`);
     }
     return task;
+}
+
+async function taskVerifyContextsResolve(
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    payload: TaskCreateArgs
+): Promise<Array<Parameters<ToolDefinition["execute"]>[1]>> {
+    if (payload.agentId) {
+        return [await taskVerifyContextForAgentResolve(toolContext, payload.agentId)];
+    }
+
+    const tags = new Set<"task" | "cron" | "heartbeat">();
+    if (!payload.cron && payload.heartbeat !== true) {
+        tags.add("task");
+    }
+    if (payload.cron) {
+        tags.add("cron");
+    }
+    if (payload.heartbeat === true) {
+        tags.add("heartbeat");
+    }
+
+    return [...tags].map((tag) => {
+        return {
+            ...toolContext,
+            agent: {
+                descriptor: { type: "system", tag }
+            } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
+        };
+    });
+}
+
+async function taskVerifyContextForAgentResolve(
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    agentId: string
+): Promise<Parameters<ToolDefinition["execute"]>[1]> {
+    const normalizedAgentId = agentId.trim();
+    if (!normalizedAgentId) {
+        throw new Error("agentId is required when routing task verification.");
+    }
+    if (toolContext.ctx.hasAgentId && toolContext.ctx.agentId === normalizedAgentId) {
+        return toolContext;
+    }
+
+    const targetAgent = await toolContext.agentSystem.storage.agents.findById(normalizedAgentId);
+    if (!targetAgent || targetAgent.userId !== toolContext.ctx.userId) {
+        throw new Error(`Target agent not found: ${normalizedAgentId}`);
+    }
+
+    return {
+        ...toolContext,
+        ctx: contextForAgent({
+            userId: toolContext.ctx.userId,
+            agentId: normalizedAgentId
+        }),
+        agent: {
+            descriptor: targetAgent.descriptor
+        } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
+    };
 }
 
 function toolMessageBuild(

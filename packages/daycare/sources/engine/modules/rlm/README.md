@@ -31,6 +31,7 @@ Shared Python execution instructions (calling conventions, error handling, print
 Execution uses `montyPreambleBuild()` output as Monty `typeCheckPrefixCode`.
 Tool stubs and `TypedDict` types are used for type checking only; runtime executes
 only user code (plus minimal runtime aliases like `ToolError`).
+`rlmVerify()` performs Monty type checking without execution for `task_create` validation.
 
 RLM prompt builders no longer embed skill lists. Skills are injected once via
 `skillPromptFormat()` into the dedicated skills section during system-prompt section rendering.

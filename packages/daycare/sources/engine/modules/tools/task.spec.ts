@@ -404,6 +404,45 @@ describe("task tools", () => {
             )
         ).rejects.toThrow("Timezone is required.");
     });
+
+    it("validates python code at task creation", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const createTool = buildTaskCreateTool();
+        await expect(
+            createTool.execute(
+                {
+                    title: "Broken task",
+                    code: "not_existing()"
+                },
+                runtime.context,
+                toolCall("task_create")
+            )
+        ).rejects.toThrow("unresolved-reference");
+
+        expect(await runtime.storage.tasks.findById(runtime.context.ctx, "broken-task")).toBeNull();
+    });
+
+    it("validates against target agent context when agentId is provided", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const createTool = buildTaskCreateTool();
+        await expect(
+            createTool.execute(
+                {
+                    title: "Targeted task",
+                    code: "print('x')",
+                    agentId: "missing-agent"
+                },
+                runtime.context,
+                toolCall("task_create")
+            )
+        ).rejects.toThrow("Target agent not found: missing-agent");
+    });
 });
 
 async function runtimeBuild(): Promise<{
@@ -425,6 +464,14 @@ async function runtimeBuild(): Promise<{
         postAndAwait
     } as unknown as ToolExecutionContext["agentSystem"] & { crons: Crons; heartbeats: Heartbeats };
 
+    const toolResolver = {
+        listTools: () => [],
+        listToolsForAgent: () => [],
+        execute: vi.fn(async () => {
+            throw new Error("not used");
+        })
+    };
+
     const crons = new Crons({
         config,
         storage,
@@ -439,7 +486,7 @@ async function runtimeBuild(): Promise<{
         agentSystem: agentSystem as never
     });
 
-    Object.assign(agentSystem, { crons, heartbeats });
+    Object.assign(agentSystem, { crons, heartbeats, toolResolver });
 
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -452,7 +499,8 @@ async function runtimeBuild(): Promise<{
         source: "test",
         messageContext: { messageId: "msg-1" },
         agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats
+        heartbeats,
+        toolResolver: toolResolver as ToolExecutionContext["toolResolver"]
     };
 
     return { dir, storage, crons, heartbeats, context, postAndAwait };
