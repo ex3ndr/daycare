@@ -47,6 +47,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         dnsutils=1:9.18.* \
         fd-find=9.0.* \
         ffmpeg \
+        fonts-liberation \
         mencoder \
         gettext=0.21-* \
         git=1:2.43.* \
@@ -57,21 +58,36 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         iputils-ping=3:20240117-* \
         jq=1.7.* \
         libbz2-dev=1.0.* \
+        libasound2t64 \
+        libatk-bridge2.0-0t64 \
+        libatk1.0-0t64 \
+        libatspi2.0-0t64 \
+        libcairo2 \
         libc6=2.39-* \
         libc6-dev=2.39-* \
+        libcups2t64 \
         libcurl4-openssl-dev=8.5.* \
         libdb-dev=1:5.3.* \
+        libdbus-1-3 \
+        libdrm2 \
         libedit2=3.1-* \
         libffi-dev=3.4.* \
         libgcc-13-dev=13.3.* \
         libgdbm-compat-dev=1.23-* \
         libgdbm-dev=1.23-* \
         libgdiplus=6.1+dfsg-* \
+        libgbm1 \
+        libglib2.0-0t64 \
         libgssapi-krb5-2=1.20.* \
+        libgtk-3-0t64 \
         libimage-exiftool-perl \
         liblzma-dev=5.6.* \
         libncurses-dev=6.4+20240113-* \
+        libnspr4 \
         libnss3-dev=2:3.98-* \
+        libnss3 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
         libpq-dev=16.* \
         libpsl-dev=0.21.* \
         libpython3-dev=3.12.* \
@@ -79,6 +95,15 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libsqlite3-dev=3.45.* \
         libssl-dev=3.0.* \
         libstdc++-13-dev=13.3.* \
+        libx11-xcb1 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxkbcommon0 \
+        libxrandr2 \
+        libxshmfence1 \
+        libxss1 \
+        libxtst6 \
         libunwind8=1.6.* \
         libuuid1=2.39.* \
         libvips-tools \
@@ -109,6 +134,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         unzip=6.0-* \
         uuid-dev=2.39.* \
         wget=1.21.* \
+        xdg-utils \
         xz-utils=5.6.* \
         zip=3.0-* \
         zlib1g=1:1.3.* \
