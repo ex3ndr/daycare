@@ -3,7 +3,9 @@
 The `exec` tool can optionally allow outbound network access for specific domains.
 The list is explicit: exact domains are allowed, and subdomain wildcards like
 `*.example.com` are supported. A global wildcard (`*`) disables domain
-restrictions entirely, allowing all outbound network access.
+restrictions entirely, allowing all outbound network access. When
+`allowedDomains` is omitted, Daycare resolves to an empty allowlist and keeps
+network access blocked.
 
 `exec` now runs with **zero additional permissions by default**:
 - no network access
@@ -27,24 +29,19 @@ as a subset of the caller's existing permissions.
 
 Presets are merged with explicit `allowedDomains`, deduped, then validated.
 If network permission is enabled but the resolved allowlist is empty, execution is rejected.
+Sandbox execution is routed through the Daycare `sandbox` wrapper with argument split
+via `--` (`sandbox --settings <path> -- <command>`), avoiding command-option parsing
+collisions in upstream CLI argument handling.
 
 ```mermaid
 flowchart TD
-  A[exec args] --> P{permissions provided?}
-  P -- no --> Z[use zero-permission sandbox]
-  P -- yes --> V[validate permission tags against caller]
-  V --> S[build sandbox permissions from tags]
-  Z --> B
-  S --> B
   A[exec args] --> B[resolve allowedDomains]
   A --> C[expand packageManagers presets]
   B --> D[merge + dedupe]
   C --> D
   D --> E{contains "*"?}
   E -- yes --> I[build sandbox config with unrestricted network]
-  E -- no --> G{network permission enabled?}
-  G -- no --> H[error: network permission required]
-  G -- yes --> J{resolved domains empty?}
-  J -- yes --> K[error: network cannot be enabled without allowedDomains]
-  J -- no --> I[build sandbox config with resolved allowedDomains]
+  E -- no --> J{resolved domains empty?}
+  J -- yes --> K[build sandbox config with empty allowlist (network blocked)]
+  J -- no --> L[build sandbox config with resolved allowedDomains]
 ```

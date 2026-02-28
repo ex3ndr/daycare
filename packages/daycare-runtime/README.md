@@ -11,7 +11,7 @@ The full image now tracks the minimal image baseline and adds:
 
 - naming switched from `codex` to `daycare`
 - runtime selector variables use `DAYCARE_ENV_*`
-- sandbox runtime is a bun-compiled `srt` binary at `/usr/local/bin/srt` with vendored seccomp assets under `/usr/local/lib/srt/vendor`
+- sandbox runtime is a bun-compiled `sandbox` wrapper binary at `/usr/local/bin/sandbox` (aliased as `srt`) with vendored seccomp assets under `/usr/local/lib/sandbox/vendor`
 - container entrypoint is `sleep infinity`
 
 ## Build

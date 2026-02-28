@@ -32,7 +32,7 @@ describe("dockerRunInSandbox", () => {
         let capturedLocalDnsServers: string[] | undefined;
 
         dockerExecSpy.mockImplementationOnce(async (dockerConfig, args) => {
-            // Command is wrapped as: ["bash", "-lc", "/usr/local/bin/srt --settings <path> -c <cmd>"]
+            // Command is wrapped as: ["bash", "-lc", "/usr/local/bin/sandbox --settings <path> -- <cmd>"]
             const bashCmd = args.command[2] ?? "";
             const settingsMatch = bashCmd.match(/--settings\s+(\S+)/);
             const settingsContainerPath = settingsMatch?.[1];
@@ -131,7 +131,9 @@ describe("dockerRunInSandbox", () => {
         expect(capturedLocalNetworkAllowlist).toEqual(["u123"]);
         expect(capturedIsolatedDnsServers).toEqual(["9.9.9.9"]);
         expect(capturedLocalDnsServers).toEqual(["192.168.1.1"]);
-        expect(capturedCommand).toContain("/usr/local/bin/srt --settings ");
+        expect(capturedCommand).toContain("/usr/local/bin/sandbox --settings ");
+        expect(capturedCommand).toContain(" -- ");
+        expect(capturedCommand).not.toContain(" -c ");
         await expect(fs.access(capturedSettingsHostPath ?? "")).rejects.toThrow();
         dockerExecSpy.mockRestore();
         await fs.rm(workspace, { recursive: true, force: true });

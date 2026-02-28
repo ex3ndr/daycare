@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1.7
-FROM oven/bun:1 AS srt-builder
+FROM oven/bun:1 AS sandbox-builder
 
 WORKDIR /build
+
+COPY sandbox.ts /build/sandbox.ts
 
 RUN bun init -y \
     && bun add @anthropic-ai/sandbox-runtime@0.0.34
 
-RUN bun build --compile node_modules/@anthropic-ai/sandbox-runtime/dist/cli.js --outfile srt
+RUN bun build --compile sandbox.ts --outfile sandbox
 
 FROM ubuntu:24.04
 
@@ -136,12 +138,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && ln -sf /usr/bin/ffprobe /usr/local/bin/ffprobe \
     && ln -sf /usr/bin/ffmpeg /usr/local/bin/avconv
 
-### SRT ###
+### SANDBOX ###
 
-COPY --from=srt-builder /build/srt /usr/local/lib/srt/srt
-COPY --from=srt-builder /build/node_modules/@anthropic-ai/sandbox-runtime/vendor /usr/local/lib/srt/vendor
-RUN chmod +x /usr/local/lib/srt/srt \
-    && ln -s /usr/local/lib/srt/srt /usr/local/bin/srt
+COPY --from=sandbox-builder /build/sandbox /usr/local/lib/sandbox/sandbox
+COPY --from=sandbox-builder /build/node_modules/@anthropic-ai/sandbox-runtime/vendor /usr/local/lib/sandbox/vendor
+RUN chmod +x /usr/local/lib/sandbox/sandbox \
+    && ln -s /usr/local/lib/sandbox/sandbox /usr/local/bin/sandbox \
+    && ln -s /usr/local/lib/sandbox/sandbox /usr/local/bin/srt
 
 ### NODE ###
 

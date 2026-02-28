@@ -239,13 +239,22 @@ describe("Sandbox", () => {
         expect(read.content.equals(Buffer.from([0, 1, 2, 3]))).toBe(true);
     });
 
-    it("rejects wildcard domains", async () => {
-        await expect(
-            sandbox.exec({
-                command: "echo ok",
-                allowedDomains: ["*"]
-            })
-        ).rejects.toThrow("Wildcard");
+    itIfSandbox("keeps network blocked when allowedDomains are omitted", async () => {
+        const result = await sandbox.exec({
+            command: `curl -s -I --max-time 10 "https://microsoft.com"`
+        });
+        expect(result.failed).toBe(true);
+        expect(result.stdout).toContain("X-Proxy-Error: blocked-by-allowlist");
+    });
+
+    itIfSandbox('allows unrestricted network when allowedDomains includes "*"', async () => {
+        const result = await sandbox.exec({
+            command: `curl -s -I --max-time 10 "https://microsoft.com"`,
+            allowedDomains: ["*"]
+        });
+        expect(result.failed).toBe(false);
+        expect(result.stdout).toContain("HTTP/");
+        expect(result.stdout).not.toContain("X-Proxy-Error: blocked-by-allowlist");
     });
 
     itIfSandbox("executes command with explicit domains", async () => {

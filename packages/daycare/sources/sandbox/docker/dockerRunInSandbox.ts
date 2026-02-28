@@ -14,7 +14,7 @@ import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerT
 const logger = getLogger("sandbox.docker");
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_BUFFER_BYTES = 1_000_000;
-const SRT_CONTAINER_PATH = "/usr/local/bin/srt";
+const SANDBOX_CONTAINER_PATH = "/usr/local/bin/sandbox";
 
 export type DockerRunInSandboxOptions = {
     cwd?: string;
@@ -28,13 +28,19 @@ export type DockerRunInSandboxOptions = {
     };
 };
 
+type SandboxRuntimeConfigWithOptionalGlobalNetwork = Omit<SandboxRuntimeConfig, "network"> & {
+    network: Omit<SandboxRuntimeConfig["network"], "allowedDomains"> & {
+        allowedDomains?: string[];
+    };
+};
+
 /**
  * Runs sandbox-runtime inside a per-user Docker container.
  * Expects: docker image is local and options.home is mounted to /home.
  */
 export async function dockerRunInSandbox(
     command: string,
-    config: SandboxRuntimeConfig,
+    config: SandboxRuntimeConfigWithOptionalGlobalNetwork,
     options: DockerRunInSandboxOptions
 ): Promise<{ stdout: string; stderr: string }> {
     const hostHomeDir = path.resolve(options.home);
@@ -67,14 +73,14 @@ export async function dockerRunInSandbox(
 
     try {
         logger.debug(
-            `exec: running srt path=${SRT_CONTAINER_PATH} cwd=${containerCwd} command=${JSON.stringify(command)}`
+            `exec: running sandbox path=${SANDBOX_CONTAINER_PATH} cwd=${containerCwd} command=${JSON.stringify(command)}`
         );
 
         const result = await dockerContainersShared.exec(dockerConfig, {
             command: [
                 "bash",
                 "-lc",
-                `${SRT_CONTAINER_PATH} --settings ${settingsContainerPath} -c ${shellQuote(command)}`
+                `${SANDBOX_CONTAINER_PATH} --settings ${settingsContainerPath} -- ${shellQuote(command)}`
             ],
             cwd: containerCwd,
             env: containerEnv,
@@ -101,7 +107,10 @@ export async function dockerRunInSandbox(
     }
 }
 
-function runtimeConfigPathRewrite(config: SandboxRuntimeConfig, mounts: PathMountPoint[]): SandboxRuntimeConfig {
+function runtimeConfigPathRewrite(
+    config: SandboxRuntimeConfigWithOptionalGlobalNetwork,
+    mounts: PathMountPoint[]
+): SandboxRuntimeConfigWithOptionalGlobalNetwork {
     if (!config.filesystem) {
         return config;
     }

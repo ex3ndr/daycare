@@ -1,6 +1,6 @@
 # Sandbox Docker Runtime
 
-The sandbox Docker runtime adds a container layer around `sandbox-runtime` (`srt`) command execution.
+The sandbox Docker runtime adds a container layer around a thin `sandbox` wrapper binary for `sandbox-runtime` execution.
 
 ## What Runs Where
 
@@ -71,7 +71,7 @@ All sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/run` as writa
 - `HostConfig.Tmpfs["/run"] = "rw"`
 - `HostConfig.Tmpfs["/var/tmp"] = "rw"`
 - `HostConfig.Tmpfs["/var/run"] = "rw"`
-- Docker `Sandbox.exec()` always includes `/tmp`, `/run`, `/var/tmp`, and `/var/run` in `srt` `allowWrite`.
+- Docker `Sandbox.exec()` always includes `/tmp`, `/run`, `/var/tmp`, and `/var/run` in `sandbox-runtime` `allowWrite`.
 
 When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
 
@@ -89,9 +89,9 @@ graph TD
     E1 --> E2{userId in docker.allowLocalNetworkingForUsers}
     E2 -->|yes| E3[network daycare-local]
     E2 -->|no| E4[network daycare-isolated]
-    E3 --> F[docker exec /usr/local/bin/srt]
+    E3 --> F[docker exec /usr/local/bin/sandbox]
     E4 --> F
-    F --> G[srt policy inside container]
+    F --> G[sandbox-runtime policy inside container]
 ```
 
 ## Docker Network Isolation
@@ -162,6 +162,6 @@ Examples:
 
 The runtime rewrites:
 
-- srt filesystem policy paths (`allowWrite`, `denyRead`, `denyWrite`)
+- sandbox-runtime filesystem policy paths (`allowWrite`, `denyRead`, `denyWrite`)
 - `cwd`
 - HOME-related environment variables

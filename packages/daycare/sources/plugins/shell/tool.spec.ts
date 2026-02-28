@@ -315,13 +315,24 @@ describe("exec tool allowedDomains", () => {
         expect(firstCall?.signal).toBe(abortController.signal);
     });
 
-    it("rejects wildcard allowedDomains", async () => {
+    it("forwards wildcard allowedDomains", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
+        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => ({
+            stdout: "ok",
+            stderr: "",
+            failed: false,
+            exitCode: 0,
+            signal: null,
+            cwd: workingDir
+        }));
+        context.sandbox.exec = exec;
 
-        await expect(
-            tool.execute({ command: "echo ok", allowedDomains: ["*"] }, context, execToolCall)
-        ).rejects.toThrow("Wildcard");
+        const result = await tool.execute({ command: "echo ok", allowedDomains: ["*"] }, context, execToolCall);
+        expect(result.toolMessage.isError).toBe(false);
+        expect(exec).toHaveBeenCalledOnce();
+        const firstCall = exec.mock.calls[0]?.[0];
+        expect(firstCall?.allowedDomains).toEqual(["*"]);
     });
 
     itIfSandbox("executes command with explicit domains", async () => {

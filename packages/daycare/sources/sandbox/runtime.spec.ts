@@ -21,15 +21,15 @@ type ExecResult = {
     exitCode: number | null;
 };
 
-async function runCurlWithDomains(url: string, allowedDomains: string[]): Promise<ExecResult> {
+async function runCurlWithDomains(url: string, allowedDomains?: string[]): Promise<ExecResult> {
     try {
         const result = await runInSandbox(
             `curl -s -I --max-time 10 "${url}"`,
             {
                 filesystem: baseFilesystem,
                 network: {
-                    allowedDomains,
-                    deniedDomains: []
+                    deniedDomains: [],
+                    ...(allowedDomains === undefined ? {} : { allowedDomains })
                 }
             },
             {
@@ -90,6 +90,14 @@ describeIf("runInSandbox integration", () => {
         const result = await runCurlWithDomains("http://microsoft.com", ["google.com"]);
 
         expect(result.stdout).toContain("X-Proxy-Error: blocked-by-allowlist");
+    });
+
+    it("allows https requests when allowedDomains is undefined", async () => {
+        const result = await runCurlWithDomains("https://microsoft.com");
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toContain("HTTP/");
+        expect(result.stdout).not.toContain("X-Proxy-Error: blocked-by-allowlist");
     });
 
     it("maps HOME when home option is provided", async () => {

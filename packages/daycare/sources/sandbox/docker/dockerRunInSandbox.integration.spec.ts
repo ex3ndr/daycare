@@ -112,9 +112,9 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
         expect(parsed.v).toMatch(/^v\d+/);
     });
 
-    it("has runnable srt binary", async () => {
+    it("has runnable sandbox binary", async () => {
         const result = await containers.exec(config, {
-            command: ["bash", "-lc", "srt --help >/dev/null"],
+            command: ["bash", "-lc", "sandbox --help >/dev/null"],
             timeoutMs: 30_000
         });
 

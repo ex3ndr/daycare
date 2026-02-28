@@ -204,16 +204,17 @@ export class Sandbox {
 
     /**
      * Execute a shell command inside sandbox-runtime.
-     * Expects: args.command is non-empty and network allowlist is wildcard-free.
+     * Expects: args.command is non-empty.
      */
     async exec(args: SandboxExecArgs): Promise<SandboxExecResult> {
         const permissions = this.permissionsEffectiveResolve();
         const cwd = sandboxExecCwdResolve(this.workingDir, args.cwd);
-        const allowedDomains = sandboxAllowedDomainsResolve(args.allowedDomains, args.packageManagers);
-        const domainIssues = sandboxAllowedDomainsValidate(allowedDomains);
+        const resolvedAllowedDomains = sandboxAllowedDomainsResolve(args.allowedDomains, args.packageManagers);
+        const domainIssues = sandboxAllowedDomainsValidate(resolvedAllowedDomains);
         if (domainIssues.length > 0) {
             throw new Error(domainIssues.join(" "));
         }
+        const allowedDomains = resolvedAllowedDomains.includes("*") ? undefined : resolvedAllowedDomains;
         const dotenvEnv = await sandboxExecDotenvLoad(cwd, args.dotenv);
         const envOverrides = envNormalize(args.env);
         const secretEnv = envNormalize(args.secrets);
@@ -236,8 +237,8 @@ export class Sandbox {
             const runtimeConfig = {
                 filesystem,
                 network: {
-                    allowedDomains,
-                    deniedDomains: []
+                    deniedDomains: [],
+                    ...(allowedDomains === undefined ? {} : { allowedDomains })
                 },
                 ...(this.docker?.enableWeakerNestedSandbox ? { enableWeakerNestedSandbox: true } : {})
             };
