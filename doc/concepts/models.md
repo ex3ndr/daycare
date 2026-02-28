@@ -1,13 +1,14 @@
-# Role And Selector Model Configuration
+# Role And Flavor Model Configuration
 
 ## Overview
 
 Daycare supports two persistent model configuration layers in `settings.json`:
 
 - `models`: role-specific overrides (`user`, `memory`, `memorySearch`, `subagent`, `heartbeat`)
-- `modelSizes`: selector-specific overrides (`small`, `normal`, `large`) used by `set_agent_model`
+- `modelFlavors`: flavor mappings used by `set_agent_model`
 
-Both use `<providerId>/<modelName>` values.
+Role overrides use `<providerId>/<modelName>` values.
+Flavor mappings use `{ model, description }`.
 
 ## Settings Format
 
@@ -20,15 +21,21 @@ Both use `<providerId>/<modelName>` values.
         "subagent": "anthropic/claude-haiku-4-5",
         "heartbeat": "openai/gpt-5-mini"
     },
-    "modelSizes": {
-        "small": "openai/gpt-5-mini",
-        "normal": "anthropic/claude-sonnet-4-5",
-        "large": "anthropic/claude-opus-4-5"
+    "modelFlavors": {
+        "coding": {
+            "model": "openai/codex-mini",
+            "description": "Optimized for code generation"
+        },
+        "research": {
+            "model": "google/gemini-2.5-pro",
+            "description": "Best for search and extraction work"
+        }
     }
 }
 ```
 
-If `modelSizes` is omitted, selectors resolve from provider model catalogs by size.
+Built-in flavors (`small`, `normal`, `large`) always exist and include hardcoded descriptions.
+If a built-in flavor is not mapped in `modelFlavors`, Daycare resolves it from provider catalogs by size.
 
 ## Roles
 
@@ -49,28 +56,30 @@ flowchart TD
     A[Provider default model] --> B{Role config in settings.models?}
     B -- yes --> C[Apply role config: override provider + model]
     B -- no --> D[Use provider default]
-    C --> E{Runtime selector via set_agent_model?}
+    C --> E{Runtime flavor via set_agent_model?}
     D --> E
     E -- no --> H[Use resolved model]
-    E -- yes --> F{settings.modelSizes has selector override?}
-    F -- yes --> G[Apply selector override provider/model]
-    F -- no --> I[Select by provider catalog size]
+    E -- yes --> F{settings.modelFlavors has mapping?}
+    F -- yes --> G[Apply flavor mapping provider/model]
+    F -- no --> I{Built-in flavor?}
+    I -- yes --> J[Select by provider catalog size]
+    I -- no --> H
     G --> H
-    I --> H
+    J --> H
 ```
 
-1. **Runtime selector override** (`set_agent_model` with `small|normal|large`) — highest priority, ephemeral per-agent session
-2. **Selector mapping config** (`settings.modelSizes`) — persistent mapping for selector values
+1. **Runtime flavor override** (`set_agent_model` with built-in or custom flavor name) — highest priority, ephemeral per-agent session
+2. **Flavor mapping config** (`settings.modelFlavors`) — persistent mapping for flavor values
 3. **Settings role config** (`settings.models[role]`) — persistent role defaults
 4. **Provider default** — the model configured on the provider entry
 
 ## CLI
 
 ```bash
-# View current role + selector assignments
+# View current role + flavor assignments
 daycare models --list
 
-# Interactive: configure a role assignment or selector assignment
+# Interactive: configure a role assignment or flavor assignment
 daycare models
 
 # With custom settings path
@@ -85,7 +94,7 @@ The interactive mode validates selected provider/model values before saving.
 flowchart LR
     subgraph Settings
         S1[settings.models]
-        S2[settings.modelSizes]
+        S2[settings.modelFlavors]
     end
 
     subgraph Resolution
@@ -104,8 +113,8 @@ flowchart LR
 
 | Component | File | Role |
 |---|---|---|
-| `ModelRoleConfig` / `ModelSizeConfig` | `packages/daycare/sources/settings.ts` | Settings types for role and selector overrides |
+| `ModelRoleConfig` / `ModelFlavorConfig` | `packages/daycare/sources/settings.ts` | Settings types for role and flavor overrides |
 | `modelRoleApply` | `packages/daycare/sources/providers/modelRoleApply.ts` | Applies configured `provider/model` override |
-| `agentModelOverrideApply` | `packages/daycare/sources/engine/agents/ops/agentModelOverrideApply.ts` | Applies runtime selector and `modelSizes` mapping |
-| `set_agent_model` tool | `packages/daycare/sources/engine/modules/tools/agentModelSetToolBuild.ts` | Runtime selector override (`small|normal|large`) |
-| `modelsCommand` | `packages/daycare/sources/commands/models.ts` | CLI for role + selector assignments |
+| `agentModelOverrideApply` | `packages/daycare/sources/engine/agents/ops/agentModelOverrideApply.ts` | Applies runtime flavor and `modelFlavors` mapping |
+| `set_agent_model` tool | `packages/daycare/sources/engine/modules/tools/agentModelSetToolBuild.ts` | Runtime flavor override (`small|normal|large` + custom) |
+| `modelsCommand` | `packages/daycare/sources/commands/models.ts` | CLI for role + flavor assignments |

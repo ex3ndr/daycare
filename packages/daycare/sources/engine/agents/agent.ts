@@ -1183,7 +1183,7 @@ export class Agent {
             roleProviders,
             this.state.modelOverride,
             providerId,
-            this.agentSystem.config.current.settings.modelSizes
+            this.agentSystem.config.current.settings.modelFlavors
         );
         return { providers, providerId };
     }

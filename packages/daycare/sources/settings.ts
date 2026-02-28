@@ -36,7 +36,15 @@ export type ProviderSettings = {
 };
 
 export type ModelRoleKey = "user" | "memory" | "memorySearch" | "subagent" | "heartbeat";
-export type ModelSizeKey = "small" | "normal" | "large";
+export type ModelFlavorKey = string;
+
+export type BuiltinModelFlavor = "small" | "normal" | "large";
+
+export const BUILTIN_MODEL_FLAVORS: Record<BuiltinModelFlavor, { description: string }> = {
+    small: { description: "Fastest and lowest-cost path for lightweight tasks." },
+    normal: { description: "Balanced default for most work." },
+    large: { description: "Highest-capability path for difficult reasoning and coding." }
+};
 
 /**
  * Per-role model overrides. Each value uses "<providerId>/<modelName>" format.
@@ -45,10 +53,15 @@ export type ModelSizeKey = "small" | "normal" | "large";
 export type ModelRoleConfig = Partial<Record<ModelRoleKey, string>>;
 
 /**
- * Optional per-size model overrides. Values use "<providerId>/<modelName>" format.
- * When unset, size selectors resolve from the active provider model catalog.
+ * Optional per-flavor model overrides. Values use "<providerId>/<modelName>" format
+ * plus a human-readable description shown to agents in system prompts.
  */
-export type ModelSizeConfig = Partial<Record<ModelSizeKey, string>>;
+export type ModelFlavorEntry = {
+    model: string;
+    description: string;
+};
+
+export type ModelFlavorConfig = Record<ModelFlavorKey, ModelFlavorEntry>;
 
 export type AgentSettings = {
     emergencyContextLimit?: number;
@@ -119,7 +132,7 @@ export type SettingsConfig = {
         tasks?: CronTaskConfig[];
     };
     models?: ModelRoleConfig;
-    modelSizes?: ModelSizeConfig;
+    modelFlavors?: ModelFlavorConfig;
     memory?: {
         enabled?: boolean;
         maxEntries?: number;

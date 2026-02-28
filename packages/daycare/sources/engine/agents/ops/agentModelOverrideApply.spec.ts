@@ -57,7 +57,12 @@ describe("agentModelOverrideApply", () => {
             { id: "openai", enabled: true, model: "gpt-5" }
         ];
 
-        const result = agentModelOverrideApply(providers, override, "anthropic", { small: "openai/gpt-5-mini" });
+        const result = agentModelOverrideApply(providers, override, "anthropic", {
+            small: {
+                model: "openai/gpt-5-mini",
+                description: "Fast coding model"
+            }
+        });
 
         expect(result[0]).toMatchObject({ id: "openai", model: "gpt-5-mini" });
     });
@@ -65,8 +70,36 @@ describe("agentModelOverrideApply", () => {
     it("ignores configured selector override when provider is not active", () => {
         const override: AgentModelOverride = { type: "selector", value: "small" };
 
-        const result = agentModelOverrideApply(baseProviders, override, "anthropic", { small: "openai/gpt-5-mini" });
+        const result = agentModelOverrideApply(baseProviders, override, "anthropic", {
+            small: {
+                model: "openai/gpt-5-mini",
+                description: "Fast coding model"
+            }
+        });
 
         expect(result[0]).toMatchObject({ id: "anthropic", model: "claude-haiku-4-5" });
+    });
+
+    it("applies configured custom flavor mapping", () => {
+        const override: AgentModelOverride = { type: "selector", value: "coding" };
+        const providers: ProviderSettings[] = [
+            { id: "openai", enabled: true, model: "gpt-5" },
+            { id: "anthropic", enabled: true, model: "claude-sonnet-4-5" }
+        ];
+
+        const result = agentModelOverrideApply(providers, override, "openai", {
+            coding: {
+                model: "anthropic/claude-sonnet-4-5",
+                description: "Use for code review"
+            }
+        });
+
+        expect(result[0]).toMatchObject({ id: "anthropic", model: "claude-sonnet-4-5" });
+    });
+
+    it("passes through unknown custom flavor when no mapping exists", () => {
+        const override: AgentModelOverride = { type: "selector", value: "experimental" };
+        const result = agentModelOverrideApply(baseProviders, override, "anthropic", undefined);
+        expect(result).toEqual(baseProviders);
     });
 });

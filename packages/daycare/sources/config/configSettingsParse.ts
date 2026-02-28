@@ -123,13 +123,13 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 })
                 .partial()
                 .optional(),
-            modelSizes: z
-                .object({
-                    small: z.string().min(1).optional(),
-                    normal: z.string().min(1).optional(),
-                    large: z.string().min(1).optional()
-                })
-                .partial()
+            modelFlavors: z
+                .record(
+                    z.object({
+                        model: z.string().min(1),
+                        description: z.string().min(1)
+                    })
+                )
                 .optional(),
             memory: z
                 .object({

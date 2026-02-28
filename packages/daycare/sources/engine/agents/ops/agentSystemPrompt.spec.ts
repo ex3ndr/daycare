@@ -118,7 +118,13 @@ describe("agentSystemPrompt", () => {
                         configDir: path.join(dir, ".daycare"),
                         agentsDir: path.join(dir, "agents"),
                         settings: {
-                            providers: [{ id: "openai", enabled: true }]
+                            providers: [{ id: "openai", enabled: true }],
+                            modelFlavors: {
+                                coding: {
+                                    model: "openai/codex-mini",
+                                    description: "Use for code generation"
+                                }
+                            }
                         }
                     }
                 },
@@ -153,6 +159,8 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("## Model Awareness");
             expect(rendered).toContain("**OpenAI**:");
             expect(rendered).toContain("set_agent_model");
+            expect(rendered).toContain('- "small": Fastest and lowest-cost path for lightweight tasks.');
+            expect(rendered).toContain('- "coding": Use for code generation');
             expect(rendered).toContain(bundledExamplesDirResolve());
         } finally {
             await rm(dir, { recursive: true, force: true });

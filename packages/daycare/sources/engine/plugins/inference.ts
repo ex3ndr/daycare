@@ -3,12 +3,18 @@ import { createId } from "@paralleldrive/cuid2";
 
 import { getLogger } from "../../log.js";
 import { getProviderDefinition, listActiveInferenceProviders } from "../../providers/catalog.js";
+import { modelRoleApply } from "../../providers/modelRoleApply.js";
 import { providerModelSelectBySize } from "../../providers/providerModelSelectBySize.js";
-import type { ProviderSettings } from "../../settings.js";
+import {
+    BUILTIN_MODEL_FLAVORS,
+    type BuiltinModelFlavor,
+    type ModelFlavorConfig,
+    type ProviderSettings
+} from "../../settings.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 
-export type PluginInferenceStrategy = "default" | "small" | "normal" | "large";
+export type PluginInferenceStrategy = "default" | string;
 
 export type PluginInferenceRequest = {
     systemPrompt?: string;
@@ -70,16 +76,14 @@ export class PluginInferenceService {
             });
         }
 
-        const provider = resolveSelectedProvider(providers, request.providerId);
-        const resolvedModel = resolveModelForStrategy(provider.id, provider.model, strategy);
-        const providersOverride = [
-            {
-                ...provider,
-                model: resolvedModel ?? provider.model
-            }
-        ];
+        const providersOverride = resolveProvidersForStrategy(
+            providers,
+            request.providerId,
+            strategy,
+            settings.modelFlavors
+        );
         logger.debug(
-            `event: Plugin inference selection providerId=${provider.id} strategy=${strategy} model=${providersOverride[0]?.model ?? "default"}`
+            `event: Plugin inference selection providerId=${providersOverride[0]?.id ?? "unknown"} strategy=${strategy} model=${providersOverride[0]?.model ?? "default"}`
         );
         return this.router.complete(context, agentId, {
             providersOverride
@@ -112,7 +116,7 @@ function resolveSelectedProvider(providers: ProviderSettings[], providerId?: str
 function resolveModelForStrategy(
     providerId: string,
     defaultModel: string | undefined,
-    strategy: Exclude<PluginInferenceStrategy, "default">
+    strategy: BuiltinModelFlavor
 ): string | undefined {
     const definition = getProviderDefinition(providerId);
     const models = definition?.models ?? [];
@@ -125,4 +129,66 @@ function resolveModelForStrategy(
         return match;
     }
     return defaultModel ?? models[0]?.id;
+}
+
+function resolveProvidersForStrategy(
+    providers: ProviderSettings[],
+    providerId: string | undefined,
+    strategy: Exclude<PluginInferenceStrategy, "default">,
+    modelFlavors: ModelFlavorConfig | undefined
+): ProviderSettings[] {
+    const builtinFlavor = builtinModelFlavorParse(strategy);
+    if (builtinFlavor) {
+        const provider = resolveSelectedProvider(providers, providerId);
+        const resolvedModel = resolveModelForStrategy(provider.id, provider.model, builtinFlavor);
+        return [
+            {
+                ...provider,
+                model: resolvedModel ?? provider.model
+            }
+        ];
+    }
+
+    const customFlavor = customFlavorResolve(strategy, modelFlavors);
+    if (!customFlavor) {
+        throw new Error(`Unknown inference strategy: ${strategy}`);
+    }
+
+    const candidates = providerId ? [resolveSelectedProvider(providers, providerId)] : providers;
+    const applied = modelRoleApply(candidates, customFlavor.model);
+    if (applied.providerId) {
+        const selected = applied.providers.find((entry) => entry.id === applied.providerId);
+        if (selected) {
+            return [selected];
+        }
+    }
+
+    return [resolveSelectedProvider(providers, providerId)];
+}
+
+function builtinModelFlavorParse(value: string): BuiltinModelFlavor | null {
+    const normalized = value.trim().toLowerCase();
+    if (normalized in BUILTIN_MODEL_FLAVORS) {
+        return normalized as BuiltinModelFlavor;
+    }
+    return null;
+}
+
+function customFlavorResolve(strategy: string, modelFlavors: ModelFlavorConfig | undefined): { model: string } | null {
+    if (!modelFlavors) {
+        return null;
+    }
+
+    const trimmed = strategy.trim();
+    const exact = modelFlavors[trimmed];
+    if (exact) {
+        return { model: exact.model };
+    }
+
+    const normalized = trimmed.toLowerCase();
+    const flavorKey = Object.keys(modelFlavors).find((key) => key.toLowerCase() === normalized);
+    if (!flavorKey) {
+        return null;
+    }
+    return { model: modelFlavors[flavorKey]!.model };
 }

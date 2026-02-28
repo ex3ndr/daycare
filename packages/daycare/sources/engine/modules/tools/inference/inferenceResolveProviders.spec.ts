@@ -51,13 +51,48 @@ describe("inferenceResolveProviders", () => {
 
         expect(result).toEqual([{ ...input[0], model: "custom-model-id" }, { ...input[1] }]);
     });
+
+    it("resolves configured custom flavor to provider/model mapping", () => {
+        const input: ProviderSettings[] = [
+            { id: "openai", enabled: true, model: "gpt-4o-mini" },
+            { id: "anthropic", enabled: true, model: "claude-sonnet-4-5" }
+        ];
+        const config = configModuleBuild(input, {
+            coding: {
+                model: "anthropic/claude-opus-4-5",
+                description: "High reasoning for difficult code work"
+            }
+        });
+
+        const result = inferenceResolveProviders(config, "coding");
+
+        expect(result).toEqual([{ ...input[1], model: "claude-opus-4-5" }, { ...input[0] }]);
+    });
+
+    it("keeps defaults for custom flavor mapped to inactive provider", () => {
+        const input: ProviderSettings[] = [{ id: "anthropic", enabled: true, model: "claude-sonnet-4-5" }];
+        const config = configModuleBuild(input, {
+            coding: {
+                model: "openai/gpt-5-mini",
+                description: "Fast coding model"
+            }
+        });
+
+        const result = inferenceResolveProviders(config, "coding");
+
+        expect(result).toEqual([{ ...input[0] }]);
+    });
 });
 
-function configModuleBuild(providers: ProviderSettings[]): ConfigModule {
+function configModuleBuild(
+    providers: ProviderSettings[],
+    modelFlavors?: Record<string, { model: string; description: string }>
+): ConfigModule {
     const config = configResolve(
         {
             engine: { dataDir: "/tmp/daycare-tests" },
-            providers
+            providers,
+            modelFlavors
         },
         "/tmp/daycare-tests/settings.json"
     );

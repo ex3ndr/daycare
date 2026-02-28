@@ -116,25 +116,35 @@ describe("configSettingsParse", () => {
         expect(parsed.docker?.localDnsServers).toEqual(["192.168.1.1"]);
     });
 
-    it("accepts model role and size overrides", () => {
+    it("accepts model role and flavor overrides", () => {
         const parsed = configSettingsParse({
             models: {
                 user: "anthropic/claude-sonnet-4-5"
             },
-            modelSizes: {
-                small: "openai/gpt-5-mini",
-                normal: "anthropic/claude-sonnet-4-5",
-                large: "anthropic/claude-opus-4-5"
+            modelFlavors: {
+                coding: {
+                    model: "openai/gpt-5-mini",
+                    description: "Optimized for coding work"
+                },
+                research: {
+                    model: "google/gemini-2.5-pro",
+                    description: "Search and extraction tasks"
+                }
             }
         });
 
         expect(parsed.models).toEqual({
             user: "anthropic/claude-sonnet-4-5"
         });
-        expect(parsed.modelSizes).toEqual({
-            small: "openai/gpt-5-mini",
-            normal: "anthropic/claude-sonnet-4-5",
-            large: "anthropic/claude-opus-4-5"
+        expect(parsed.modelFlavors).toEqual({
+            coding: {
+                model: "openai/gpt-5-mini",
+                description: "Optimized for coding work"
+            },
+            research: {
+                model: "google/gemini-2.5-pro",
+                description: "Search and extraction tasks"
+            }
         });
     });
 });

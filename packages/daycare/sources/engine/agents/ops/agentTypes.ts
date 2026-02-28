@@ -37,7 +37,7 @@ export type AgentAssistantContent = AssistantMessage["content"];
 
 export type AgentTokenStats = Record<string, Record<string, AgentTokenSize>>;
 
-export type AgentModelOverride = { type: "selector"; value: "small" | "normal" | "large" };
+export type AgentModelOverride = { type: "selector"; value: string };
 
 export type AgentState = {
     context: Context;

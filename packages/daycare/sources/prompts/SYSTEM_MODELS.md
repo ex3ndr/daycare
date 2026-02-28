@@ -17,11 +17,8 @@ You are running on **{{currentModel}}** via **{{currentProvider}}**.
 
 Use `set_agent_model` when task requirements change materially (speed, cost, context depth, reasoning quality, or vendor-specific capability). You can only change agents in your current user scope.
 
-- Use selector shortcuts for quick tier changes:
-- `"small"`: fastest/lowest-cost path for lightweight tasks.
-- `"normal"`: default balanced path for most work.
-- `"large"`: highest-capability path for complex reasoning or difficult coding.
-- Selector mappings can be configured by operators in `settings.modelSizes`.
+Available flavors:
+{{{availableFlavors}}}
 
 #### When to pick what
 

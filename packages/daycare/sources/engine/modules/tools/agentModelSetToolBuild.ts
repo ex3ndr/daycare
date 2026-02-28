@@ -2,16 +2,14 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { BUILTIN_MODEL_FLAVORS } from "../../../settings.js";
 import type { AgentModelOverride } from "../../agents/ops/agentTypes.js";
-
-const MODEL_SELECTORS = ["small", "normal", "large"] as const;
-
-type AgentModelSelector = (typeof MODEL_SELECTORS)[number];
+import type { ConfigModule } from "../../config/configModule.js";
 
 const schema = Type.Object(
     {
         agentId: Type.String({ minLength: 1 }),
-        model: Type.Union([Type.Literal("small"), Type.Literal("normal"), Type.Literal("large")])
+        model: Type.String({ minLength: 1 })
     },
     { additionalProperties: false }
 );
@@ -41,7 +39,7 @@ export function agentModelSetToolBuild(): ToolDefinition {
         tool: {
             name: "set_agent_model",
             description:
-                'Set the inference selector for an agent in the same user scope. Allowed values: "small", "normal", "large".',
+                "Set the inference model flavor for an agent in the same user scope. Built-ins: small, normal, large. Custom flavors from settings.modelFlavors are also allowed.",
             parameters: schema
         },
         returns,
@@ -49,10 +47,12 @@ export function agentModelSetToolBuild(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as AgentModelSetArgs;
             const targetAgentId = payload.agentId;
-            const selector = agentModelSelectorParse(payload.model);
+            const selector = agentModelSelectorParse(payload.model, toolContext.agentSystem.config);
 
             if (!selector) {
-                throw new Error('Model selector must be one of "small", "normal", "large".');
+                throw new Error(
+                    'Model flavor must be one of built-ins ("small", "normal", "large") or a configured custom flavor.'
+                );
             }
 
             const targetCtx = await toolContext.agentSystem.contextForAgentId(targetAgentId);
@@ -88,7 +88,22 @@ export function agentModelSetToolBuild(): ToolDefinition {
     };
 }
 
-function agentModelSelectorParse(value: string): AgentModelSelector | null {
-    const normalized = value.trim().toLowerCase();
-    return MODEL_SELECTORS.includes(normalized as AgentModelSelector) ? (normalized as AgentModelSelector) : null;
+function agentModelSelectorParse(value: string, config: ConfigModule): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const normalized = trimmed.toLowerCase();
+    if (normalized in BUILTIN_MODEL_FLAVORS) {
+        return normalized;
+    }
+
+    const modelFlavors = config.current.settings.modelFlavors ?? {};
+    if (trimmed in modelFlavors) {
+        return trimmed;
+    }
+
+    const flavorKey = Object.keys(modelFlavors).find((key) => key.toLowerCase() === normalized);
+    return flavorKey ?? null;
 }

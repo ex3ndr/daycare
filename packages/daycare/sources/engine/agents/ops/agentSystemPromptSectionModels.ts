@@ -3,7 +3,7 @@ import Handlebars from "handlebars";
 import { getProviderDefinition, listActiveInferenceProviders } from "../../../providers/catalog.js";
 import { listProviderModels } from "../../../providers/models.js";
 import type { ProviderModelInfo } from "../../../providers/types.js";
-import type { ProviderSettings } from "../../../settings.js";
+import { BUILTIN_MODEL_FLAVORS, type ProviderSettings, type SettingsConfig } from "../../../settings.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
@@ -21,7 +21,8 @@ export async function agentSystemPromptSectionModels(context: AgentSystemPromptC
     const section = Handlebars.compile(template)({
         currentModel: context.model ?? "unknown",
         currentProvider: context.provider ?? "unknown",
-        availableModels: availableModelsPromptBuild(activeProviders)
+        availableModels: availableModelsPromptBuild(activeProviders),
+        availableFlavors: availableFlavorsPromptBuild(settings)
     });
     return section.trim();
 }
@@ -46,4 +47,20 @@ function availableModelsLineBuild(provider: ProviderSettings): string {
 
 function modelLabelBuild(model: ProviderModelInfo): string {
     return `\`${model.id}\` (${model.size})`;
+}
+
+function availableFlavorsPromptBuild(settings: SettingsConfig): string {
+    const lines: string[] = [];
+    for (const [name, details] of Object.entries(BUILTIN_MODEL_FLAVORS)) {
+        lines.push(`- "${name}": ${details.description}`);
+    }
+
+    const customFlavors = settings.modelFlavors ?? {};
+    for (const [name, entry] of Object.entries(customFlavors)) {
+        if (name in BUILTIN_MODEL_FLAVORS) {
+            continue;
+        }
+        lines.push(`- "${name}": ${entry.description}`);
+    }
+    return lines.join("\n");
 }
