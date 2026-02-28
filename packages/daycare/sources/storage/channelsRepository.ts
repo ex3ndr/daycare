@@ -27,41 +27,43 @@ export class ChannelsRepository {
         await this.createLock.inLock(async () => {
             const current = this.channelsById.get(record.id) ?? (await this.channelLoadById(record.id));
             const next = current
-                ? await versionAdvance<ChannelDbRecord>({
-                      changes: {
-                          userId: record.userId,
-                          name: record.name,
-                          leader: record.leader,
-                          createdAt: record.createdAt,
-                          updatedAt: record.updatedAt
-                      },
-                      findCurrent: async () => current,
-                      closeCurrent: async (row, now) => {
-                          await this.db
-                              .update(channelsTable)
-                              .set({ validTo: now })
-                              .where(
-                                  and(
-                                      eq(channelsTable.id, row.id),
-                                      eq(channelsTable.version, row.version ?? 1),
-                                      isNull(channelsTable.validTo)
-                                  )
-                              );
-                      },
-                      insertNext: async (row) => {
-                          await this.db.insert(channelsTable).values({
-                              id: row.id,
-                              version: row.version ?? 1,
-                              validFrom: row.validFrom ?? row.createdAt,
-                              validTo: row.validTo ?? null,
-                              userId: row.userId,
-                              name: row.name,
-                              leader: row.leader,
-                              createdAt: row.createdAt,
-                              updatedAt: row.updatedAt
-                          });
-                      }
-                  })
+                ? await this.db.transaction(async (tx) =>
+                      versionAdvance<ChannelDbRecord>({
+                          changes: {
+                              userId: record.userId,
+                              name: record.name,
+                              leader: record.leader,
+                              createdAt: record.createdAt,
+                              updatedAt: record.updatedAt
+                          },
+                          findCurrent: async () => current,
+                          closeCurrent: async (row, now) => {
+                              await tx
+                                  .update(channelsTable)
+                                  .set({ validTo: now })
+                                  .where(
+                                      and(
+                                          eq(channelsTable.id, row.id),
+                                          eq(channelsTable.version, row.version ?? 1),
+                                          isNull(channelsTable.validTo)
+                                      )
+                                  );
+                          },
+                          insertNext: async (row) => {
+                              await tx.insert(channelsTable).values({
+                                  id: row.id,
+                                  version: row.version ?? 1,
+                                  validFrom: row.validFrom ?? row.createdAt,
+                                  validTo: row.validTo ?? null,
+                                  userId: row.userId,
+                                  name: row.name,
+                                  leader: row.leader,
+                                  createdAt: row.createdAt,
+                                  updatedAt: row.updatedAt
+                              });
+                          }
+                      })
+                  )
                 : {
                       ...record,
                       version: 1,
@@ -193,41 +195,43 @@ export class ChannelsRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            const advanced = await versionAdvance<ChannelDbRecord>({
-                changes: {
-                    userId: next.userId,
-                    name: next.name,
-                    leader: next.leader,
-                    createdAt: next.createdAt,
-                    updatedAt: next.updatedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(channelsTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(channelsTable.id, row.id),
-                                eq(channelsTable.version, row.version ?? 1),
-                                isNull(channelsTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(channelsTable).values({
-                        id: row.id,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? row.createdAt,
-                        validTo: row.validTo ?? null,
-                        userId: row.userId,
-                        name: row.name,
-                        leader: row.leader,
-                        createdAt: row.createdAt,
-                        updatedAt: row.updatedAt
-                    });
-                }
-            });
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<ChannelDbRecord>({
+                    changes: {
+                        userId: next.userId,
+                        name: next.name,
+                        leader: next.leader,
+                        createdAt: next.createdAt,
+                        updatedAt: next.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(channelsTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(channelsTable.id, row.id),
+                                    eq(channelsTable.version, row.version ?? 1),
+                                    isNull(channelsTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(channelsTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            userId: row.userId,
+                            name: row.name,
+                            leader: row.leader,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
+                    }
+                })
+            );
 
             await this.cacheLock.inLock(() => {
                 if (current.name !== advanced.name) {

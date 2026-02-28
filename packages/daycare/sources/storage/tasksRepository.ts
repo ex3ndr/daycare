@@ -138,46 +138,48 @@ export class TasksRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
-                next = await versionAdvance<TaskDbRecord>({
-                    changes: {
-                        userId,
-                        title: record.title,
-                        description: record.description,
-                        code: record.code,
-                        parameters: record.parameters ? JSON.stringify(record.parameters) : null,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await this.db
-                            .update(tasksTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(tasksTable.userId, row.userId),
-                                    eq(tasksTable.id, row.id),
-                                    eq(tasksTable.version, row.version ?? 1),
-                                    isNull(tasksTable.validTo)
-                                )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await this.db.insert(tasksTable).values({
-                            id: row.id,
-                            userId: row.userId,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? row.createdAt,
-                            validTo: row.validTo ?? null,
-                            title: row.title,
-                            description: row.description,
-                            code: row.code,
-                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
-                            createdAt: row.createdAt,
-                            updatedAt: row.updatedAt
-                        });
-                    }
-                });
+                next = await this.db.transaction(async (tx) =>
+                    versionAdvance<TaskDbRecord>({
+                        changes: {
+                            userId,
+                            title: record.title,
+                            description: record.description,
+                            code: record.code,
+                            parameters: record.parameters,
+                            createdAt: record.createdAt,
+                            updatedAt: record.updatedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            await tx
+                                .update(tasksTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(tasksTable.userId, row.userId),
+                                        eq(tasksTable.id, row.id),
+                                        eq(tasksTable.version, row.version ?? 1),
+                                        isNull(tasksTable.validTo)
+                                    )
+                                );
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(tasksTable).values({
+                                id: row.id,
+                                userId: row.userId,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? row.createdAt,
+                                validTo: row.validTo ?? null,
+                                title: row.title,
+                                description: row.description,
+                                code: row.code,
+                                parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                                createdAt: row.createdAt,
+                                updatedAt: row.updatedAt
+                            });
+                        }
+                    })
+                );
             }
 
             await this.cacheLock.inLock(() => {
@@ -208,46 +210,47 @@ export class TasksRepository {
                 parameters: data.parameters === undefined ? current.parameters : data.parameters
             };
 
-            const advanced = await versionAdvance<TaskDbRecord>({
-                changes: {
-                    userId: next.userId,
-                    title: next.title,
-                    description: next.description,
-                    code: next.code,
-                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
-                    createdAt: next.createdAt,
-                    updatedAt: next.updatedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(tasksTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(tasksTable.userId, row.userId),
-                                eq(tasksTable.id, row.id),
-                                eq(tasksTable.version, row.version ?? 1),
-                                isNull(tasksTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(tasksTable).values({
-                        id: row.id,
-                        userId: row.userId,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? row.createdAt,
-                        validTo: row.validTo ?? null,
-                        title: row.title,
-                        description: row.description,
-                        code: row.code,
-                        parameters: row.parameters ? JSON.stringify(row.parameters) : null,
-                        createdAt: row.createdAt,
-                        updatedAt: row.updatedAt
-                    });
-                }
-            });
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<TaskDbRecord>({
+                    changes: {
+                        userId: next.userId,
+                        title: next.title,
+                        description: next.description,
+                        code: next.code,
+                        parameters: next.parameters,
+                        createdAt: next.createdAt,
+                        updatedAt: next.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(tasksTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksTable.userId, row.userId),
+                                    eq(tasksTable.id, row.id),
+                                    eq(tasksTable.version, row.version ?? 1),
+                                    isNull(tasksTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(tasksTable).values({
+                            id: row.id,
+                            userId: row.userId,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            title: row.title,
+                            description: row.description,
+                            code: row.code,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
+                    }
+                })
+            );
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(advanced);

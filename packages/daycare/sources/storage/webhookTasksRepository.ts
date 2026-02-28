@@ -126,43 +126,45 @@ export class WebhookTasksRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
-                next = await versionAdvance<WebhookTaskDbRecord>({
-                    changes: {
-                        taskId,
-                        userId: record.userId,
-                        agentId: record.agentId,
-                        lastRunAt: record.lastRunAt,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await this.db
-                            .update(tasksWebhookTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(tasksWebhookTable.id, row.id),
-                                    eq(tasksWebhookTable.version, row.version ?? 1),
-                                    isNull(tasksWebhookTable.validTo)
-                                )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await this.db.insert(tasksWebhookTable).values({
-                            id: row.id,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? row.createdAt,
-                            validTo: row.validTo ?? null,
-                            taskId: row.taskId,
-                            userId: row.userId,
-                            agentId: row.agentId,
-                            lastRunAt: row.lastRunAt,
-                            createdAt: row.createdAt,
-                            updatedAt: row.updatedAt
-                        });
-                    }
-                });
+                next = await this.db.transaction(async (tx) =>
+                    versionAdvance<WebhookTaskDbRecord>({
+                        changes: {
+                            taskId,
+                            userId: record.userId,
+                            agentId: record.agentId,
+                            lastRunAt: record.lastRunAt,
+                            createdAt: record.createdAt,
+                            updatedAt: record.updatedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            await tx
+                                .update(tasksWebhookTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(tasksWebhookTable.id, row.id),
+                                        eq(tasksWebhookTable.version, row.version ?? 1),
+                                        isNull(tasksWebhookTable.validTo)
+                                    )
+                                );
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(tasksWebhookTable).values({
+                                id: row.id,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? row.createdAt,
+                                validTo: row.validTo ?? null,
+                                taskId: row.taskId,
+                                userId: row.userId,
+                                agentId: row.agentId,
+                                lastRunAt: row.lastRunAt,
+                                createdAt: row.createdAt,
+                                updatedAt: row.updatedAt
+                            });
+                        }
+                    })
+                );
             }
 
             await this.cacheLock.inLock(() => {
@@ -178,37 +180,39 @@ export class WebhookTasksRepository {
                 return;
             }
 
-            const next = await versionAdvance<WebhookTaskDbRecord>({
-                now: runAt,
-                changes: { lastRunAt: runAt, updatedAt: runAt },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(tasksWebhookTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(tasksWebhookTable.id, row.id),
-                                eq(tasksWebhookTable.version, row.version ?? 1),
-                                isNull(tasksWebhookTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(tasksWebhookTable).values({
-                        id: row.id,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? row.createdAt,
-                        validTo: row.validTo ?? null,
-                        taskId: row.taskId,
-                        userId: row.userId,
-                        agentId: row.agentId,
-                        lastRunAt: row.lastRunAt,
-                        createdAt: row.createdAt,
-                        updatedAt: row.updatedAt
-                    });
-                }
-            });
+            const next = await this.db.transaction(async (tx) =>
+                versionAdvance<WebhookTaskDbRecord>({
+                    now: runAt,
+                    changes: { lastRunAt: runAt, updatedAt: runAt },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(tasksWebhookTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksWebhookTable.id, row.id),
+                                    eq(tasksWebhookTable.version, row.version ?? 1),
+                                    isNull(tasksWebhookTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(tasksWebhookTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            taskId: row.taskId,
+                            userId: row.userId,
+                            agentId: row.agentId,
+                            lastRunAt: row.lastRunAt,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
+                    }
+                })
+            );
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);

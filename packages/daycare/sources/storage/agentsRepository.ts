@@ -120,51 +120,53 @@ export class AgentsRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
-                next = await versionAdvance<AgentDbRecord>({
-                    changes: {
-                        userId: record.userId,
-                        type: record.type,
-                        descriptor: record.descriptor,
-                        activeSessionId: record.activeSessionId,
-                        permissions: record.permissions,
-                        tokens: record.tokens,
-                        stats: record.stats,
-                        lifecycle: record.lifecycle,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await this.db
-                            .update(agentsTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(agentsTable.id, row.id),
-                                    eq(agentsTable.version, row.version ?? 1),
-                                    isNull(agentsTable.validTo)
-                                )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await this.db.insert(agentsTable).values({
-                            id: row.id,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? row.createdAt,
-                            validTo: row.validTo ?? null,
-                            userId: row.userId,
-                            type: row.type,
-                            descriptor: JSON.stringify(row.descriptor),
-                            activeSessionId: row.activeSessionId,
-                            permissions: JSON.stringify(row.permissions),
-                            tokens: row.tokens ? JSON.stringify(row.tokens) : null,
-                            stats: JSON.stringify(row.stats),
-                            lifecycle: row.lifecycle,
-                            createdAt: row.createdAt,
-                            updatedAt: row.updatedAt
-                        });
-                    }
-                });
+                next = await this.db.transaction(async (tx) =>
+                    versionAdvance<AgentDbRecord>({
+                        changes: {
+                            userId: record.userId,
+                            type: record.type,
+                            descriptor: record.descriptor,
+                            activeSessionId: record.activeSessionId,
+                            permissions: record.permissions,
+                            tokens: record.tokens,
+                            stats: record.stats,
+                            lifecycle: record.lifecycle,
+                            createdAt: record.createdAt,
+                            updatedAt: record.updatedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            await tx
+                                .update(agentsTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(agentsTable.id, row.id),
+                                        eq(agentsTable.version, row.version ?? 1),
+                                        isNull(agentsTable.validTo)
+                                    )
+                                );
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(agentsTable).values({
+                                id: row.id,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? row.createdAt,
+                                validTo: row.validTo ?? null,
+                                userId: row.userId,
+                                type: row.type,
+                                descriptor: JSON.stringify(row.descriptor),
+                                activeSessionId: row.activeSessionId,
+                                permissions: JSON.stringify(row.permissions),
+                                tokens: row.tokens ? JSON.stringify(row.tokens) : null,
+                                stats: JSON.stringify(row.stats),
+                                lifecycle: row.lifecycle,
+                                createdAt: row.createdAt,
+                                updatedAt: row.updatedAt
+                            });
+                        }
+                    })
+                );
             }
 
             await this.cacheLock.inLock(() => {
@@ -190,51 +192,53 @@ export class AgentsRepository {
                 tokens: data.tokens === undefined ? current.tokens : data.tokens
             };
 
-            const advanced = await versionAdvance<AgentDbRecord>({
-                changes: {
-                    userId: next.userId,
-                    type: next.type,
-                    descriptor: next.descriptor,
-                    activeSessionId: next.activeSessionId,
-                    permissions: next.permissions,
-                    tokens: next.tokens,
-                    stats: next.stats,
-                    lifecycle: next.lifecycle,
-                    createdAt: next.createdAt,
-                    updatedAt: next.updatedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(agentsTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(agentsTable.id, row.id),
-                                eq(agentsTable.version, row.version ?? 1),
-                                isNull(agentsTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(agentsTable).values({
-                        id: row.id,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? row.createdAt,
-                        validTo: row.validTo ?? null,
-                        userId: row.userId,
-                        type: row.type,
-                        descriptor: JSON.stringify(row.descriptor),
-                        activeSessionId: row.activeSessionId,
-                        permissions: JSON.stringify(row.permissions),
-                        tokens: row.tokens ? JSON.stringify(row.tokens) : null,
-                        stats: JSON.stringify(row.stats),
-                        lifecycle: row.lifecycle,
-                        createdAt: row.createdAt,
-                        updatedAt: row.updatedAt
-                    });
-                }
-            });
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<AgentDbRecord>({
+                    changes: {
+                        userId: next.userId,
+                        type: next.type,
+                        descriptor: next.descriptor,
+                        activeSessionId: next.activeSessionId,
+                        permissions: next.permissions,
+                        tokens: next.tokens,
+                        stats: next.stats,
+                        lifecycle: next.lifecycle,
+                        createdAt: next.createdAt,
+                        updatedAt: next.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(agentsTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(agentsTable.id, row.id),
+                                    eq(agentsTable.version, row.version ?? 1),
+                                    isNull(agentsTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(agentsTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            userId: row.userId,
+                            type: row.type,
+                            descriptor: JSON.stringify(row.descriptor),
+                            activeSessionId: row.activeSessionId,
+                            permissions: JSON.stringify(row.permissions),
+                            tokens: row.tokens ? JSON.stringify(row.tokens) : null,
+                            stats: JSON.stringify(row.stats),
+                            lifecycle: row.lifecycle,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
+                    }
+                })
+            );
 
             await this.cacheLock.inLock(() => {
                 this.agentCacheSet(advanced);

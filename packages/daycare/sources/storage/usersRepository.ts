@@ -299,48 +299,50 @@ export class UsersRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            const advanced = await versionAdvance<UserWithConnectorKeysDbRecord>({
-                changes: {
-                    isOwner: next.isOwner,
-                    firstName: next.firstName,
-                    lastName: next.lastName,
-                    country: next.country,
-                    timezone: next.timezone,
-                    createdAt: next.createdAt,
-                    updatedAt: next.updatedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(usersTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(usersTable.id, row.id),
-                                eq(usersTable.version, row.version ?? 1),
-                                isNull(usersTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(usersTable).values({
-                        id: row.id,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? row.createdAt,
-                        validTo: row.validTo ?? null,
-                        isOwner: row.isOwner ? 1 : 0,
-                        parentUserId: row.parentUserId,
-                        name: row.name,
-                        firstName: row.firstName,
-                        lastName: row.lastName,
-                        country: row.country,
-                        timezone: row.timezone,
-                        nametag: row.nametag,
-                        createdAt: row.createdAt,
-                        updatedAt: row.updatedAt
-                    });
-                }
-            });
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<UserWithConnectorKeysDbRecord>({
+                    changes: {
+                        isOwner: next.isOwner,
+                        firstName: next.firstName,
+                        lastName: next.lastName,
+                        country: next.country,
+                        timezone: next.timezone,
+                        createdAt: next.createdAt,
+                        updatedAt: next.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(usersTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(usersTable.id, row.id),
+                                    eq(usersTable.version, row.version ?? 1),
+                                    isNull(usersTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(usersTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            isOwner: row.isOwner ? 1 : 0,
+                            parentUserId: row.parentUserId,
+                            name: row.name,
+                            firstName: row.firstName,
+                            lastName: row.lastName,
+                            country: row.country,
+                            timezone: row.timezone,
+                            nametag: row.nametag,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
+                    }
+                })
+            );
 
             await this.cacheLock.inLock(() => {
                 this.userCacheSet(advanced);
@@ -353,16 +355,19 @@ export class UsersRepository {
         await lock.inLock(async () => {
             const current = this.usersById.get(id) ?? (await this.userLoadById(id));
             if (current) {
-                await this.db
-                    .update(usersTable)
-                    .set({ validTo: Date.now() })
-                    .where(
-                        and(
-                            eq(usersTable.id, current.id),
-                            eq(usersTable.version, current.version ?? 1),
-                            isNull(usersTable.validTo)
-                        )
-                    );
+                await this.db.transaction(async (tx) => {
+                    await tx
+                        .update(usersTable)
+                        .set({ validTo: Date.now() })
+                        .where(
+                            and(
+                                eq(usersTable.id, current.id),
+                                eq(usersTable.version, current.version ?? 1),
+                                isNull(usersTable.validTo)
+                            )
+                        );
+                    await tx.delete(userConnectorKeysTable).where(eq(userConnectorKeysTable.userId, current.id));
+                });
             }
             await this.cacheLock.inLock(() => {
                 if (current) {

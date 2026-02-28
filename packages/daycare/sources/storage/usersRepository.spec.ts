@@ -110,4 +110,37 @@ describe("UsersRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("keeps current user row when version advance insert fails", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const users = new UsersRepository(storage.db);
+            const owner = await users.findOwner();
+            const second = await users.create({
+                isOwner: false,
+                createdAt: 2,
+                updatedAt: 2,
+                nametag: "owner-2"
+            });
+
+            expect(owner?.isOwner).toBe(true);
+            await expect(
+                users.update(second.id, {
+                    isOwner: true,
+                    updatedAt: 3
+                })
+            ).rejects.toThrow();
+
+            const persisted = await users.findById(second.id);
+            expect(persisted?.id).toBe(second.id);
+            expect(persisted?.isOwner).toBe(false);
+
+            const rows = (await storage.connection
+                .prepare("SELECT id FROM users WHERE id = ? AND valid_to IS NULL")
+                .all(second.id)) as Array<{ id: string }>;
+            expect(rows).toHaveLength(1);
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

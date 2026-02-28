@@ -74,81 +74,83 @@ export class ProcessesRepository {
                     lastExitedAt: next.lastExitedAt
                 });
             } else {
-                next = await versionAdvance<ProcessDbRecord>({
-                    changes: {
-                        userId: record.userId,
-                        name: record.name,
-                        command: record.command,
-                        cwd: record.cwd,
-                        home: record.home,
-                        env: record.env,
-                        packageManagers: record.packageManagers,
-                        allowedDomains: record.allowedDomains,
-                        allowLocalBinding: record.allowLocalBinding,
-                        permissions: record.permissions,
-                        owner: record.owner,
-                        keepAlive: record.keepAlive,
-                        desiredState: record.desiredState,
-                        status: record.status,
-                        pid: record.pid,
-                        bootTimeMs: record.bootTimeMs,
-                        restartCount: record.restartCount,
-                        restartFailureCount: record.restartFailureCount,
-                        nextRestartAt: record.nextRestartAt,
-                        settingsPath: record.settingsPath,
-                        logPath: record.logPath,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt,
-                        lastStartedAt: record.lastStartedAt,
-                        lastExitedAt: record.lastExitedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await this.db
-                            .update(processesTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(processesTable.id, row.id),
-                                    eq(processesTable.version, row.version ?? 1),
-                                    isNull(processesTable.validTo)
-                                )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await this.db.insert(processesTable).values({
-                            id: row.id,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? row.createdAt,
-                            validTo: row.validTo ?? null,
-                            userId: row.userId,
-                            name: row.name,
-                            command: row.command,
-                            cwd: row.cwd,
-                            home: row.home,
-                            env: JSON.stringify(row.env),
-                            packageManagers: JSON.stringify(row.packageManagers),
-                            allowedDomains: JSON.stringify(row.allowedDomains),
-                            allowLocalBinding: row.allowLocalBinding ? 1 : 0,
-                            permissions: JSON.stringify(row.permissions),
-                            owner: row.owner ? JSON.stringify(row.owner) : null,
-                            keepAlive: row.keepAlive ? 1 : 0,
-                            desiredState: row.desiredState,
-                            status: row.status,
-                            pid: row.pid,
-                            bootTimeMs: row.bootTimeMs,
-                            restartCount: row.restartCount,
-                            restartFailureCount: row.restartFailureCount,
-                            nextRestartAt: row.nextRestartAt,
-                            settingsPath: row.settingsPath,
-                            logPath: row.logPath,
-                            createdAt: row.createdAt,
-                            updatedAt: row.updatedAt,
-                            lastStartedAt: row.lastStartedAt,
-                            lastExitedAt: row.lastExitedAt
-                        });
-                    }
-                });
+                next = await this.db.transaction(async (tx) =>
+                    versionAdvance<ProcessDbRecord>({
+                        changes: {
+                            userId: record.userId,
+                            name: record.name,
+                            command: record.command,
+                            cwd: record.cwd,
+                            home: record.home,
+                            env: record.env,
+                            packageManagers: record.packageManagers,
+                            allowedDomains: record.allowedDomains,
+                            allowLocalBinding: record.allowLocalBinding,
+                            permissions: record.permissions,
+                            owner: record.owner,
+                            keepAlive: record.keepAlive,
+                            desiredState: record.desiredState,
+                            status: record.status,
+                            pid: record.pid,
+                            bootTimeMs: record.bootTimeMs,
+                            restartCount: record.restartCount,
+                            restartFailureCount: record.restartFailureCount,
+                            nextRestartAt: record.nextRestartAt,
+                            settingsPath: record.settingsPath,
+                            logPath: record.logPath,
+                            createdAt: record.createdAt,
+                            updatedAt: record.updatedAt,
+                            lastStartedAt: record.lastStartedAt,
+                            lastExitedAt: record.lastExitedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            await tx
+                                .update(processesTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(processesTable.id, row.id),
+                                        eq(processesTable.version, row.version ?? 1),
+                                        isNull(processesTable.validTo)
+                                    )
+                                );
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(processesTable).values({
+                                id: row.id,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? row.createdAt,
+                                validTo: row.validTo ?? null,
+                                userId: row.userId,
+                                name: row.name,
+                                command: row.command,
+                                cwd: row.cwd,
+                                home: row.home,
+                                env: JSON.stringify(row.env),
+                                packageManagers: JSON.stringify(row.packageManagers),
+                                allowedDomains: JSON.stringify(row.allowedDomains),
+                                allowLocalBinding: row.allowLocalBinding ? 1 : 0,
+                                permissions: JSON.stringify(row.permissions),
+                                owner: row.owner ? JSON.stringify(row.owner) : null,
+                                keepAlive: row.keepAlive ? 1 : 0,
+                                desiredState: row.desiredState,
+                                status: row.status,
+                                pid: row.pid,
+                                bootTimeMs: row.bootTimeMs,
+                                restartCount: row.restartCount,
+                                restartFailureCount: row.restartFailureCount,
+                                nextRestartAt: row.nextRestartAt,
+                                settingsPath: row.settingsPath,
+                                logPath: row.logPath,
+                                createdAt: row.createdAt,
+                                updatedAt: row.updatedAt,
+                                lastStartedAt: row.lastStartedAt,
+                                lastExitedAt: row.lastExitedAt
+                            });
+                        }
+                    })
+                );
             }
 
             await this.cacheLock.inLock(() => {
@@ -272,81 +274,83 @@ export class ProcessesRepository {
                 lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
             };
 
-            const advanced = await versionAdvance<ProcessDbRecord>({
-                changes: {
-                    userId: next.userId,
-                    name: next.name,
-                    command: next.command,
-                    cwd: next.cwd,
-                    home: next.home,
-                    env: next.env,
-                    packageManagers: next.packageManagers,
-                    allowedDomains: next.allowedDomains,
-                    allowLocalBinding: next.allowLocalBinding,
-                    permissions: next.permissions,
-                    owner: next.owner,
-                    keepAlive: next.keepAlive,
-                    desiredState: next.desiredState,
-                    status: next.status,
-                    pid: next.pid,
-                    bootTimeMs: next.bootTimeMs,
-                    restartCount: next.restartCount,
-                    restartFailureCount: next.restartFailureCount,
-                    nextRestartAt: next.nextRestartAt,
-                    settingsPath: next.settingsPath,
-                    logPath: next.logPath,
-                    createdAt: next.createdAt,
-                    updatedAt: next.updatedAt,
-                    lastStartedAt: next.lastStartedAt,
-                    lastExitedAt: next.lastExitedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(processesTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(processesTable.id, row.id),
-                                eq(processesTable.version, row.version ?? 1),
-                                isNull(processesTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(processesTable).values({
-                        id: row.id,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? row.createdAt,
-                        validTo: row.validTo ?? null,
-                        userId: row.userId,
-                        name: row.name,
-                        command: row.command,
-                        cwd: row.cwd,
-                        home: row.home,
-                        env: JSON.stringify(row.env),
-                        packageManagers: JSON.stringify(row.packageManagers),
-                        allowedDomains: JSON.stringify(row.allowedDomains),
-                        allowLocalBinding: row.allowLocalBinding ? 1 : 0,
-                        permissions: JSON.stringify(row.permissions),
-                        owner: row.owner ? JSON.stringify(row.owner) : null,
-                        keepAlive: row.keepAlive ? 1 : 0,
-                        desiredState: row.desiredState,
-                        status: row.status,
-                        pid: row.pid,
-                        bootTimeMs: row.bootTimeMs,
-                        restartCount: row.restartCount,
-                        restartFailureCount: row.restartFailureCount,
-                        nextRestartAt: row.nextRestartAt,
-                        settingsPath: row.settingsPath,
-                        logPath: row.logPath,
-                        createdAt: row.createdAt,
-                        updatedAt: row.updatedAt,
-                        lastStartedAt: row.lastStartedAt,
-                        lastExitedAt: row.lastExitedAt
-                    });
-                }
-            });
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<ProcessDbRecord>({
+                    changes: {
+                        userId: next.userId,
+                        name: next.name,
+                        command: next.command,
+                        cwd: next.cwd,
+                        home: next.home,
+                        env: next.env,
+                        packageManagers: next.packageManagers,
+                        allowedDomains: next.allowedDomains,
+                        allowLocalBinding: next.allowLocalBinding,
+                        permissions: next.permissions,
+                        owner: next.owner,
+                        keepAlive: next.keepAlive,
+                        desiredState: next.desiredState,
+                        status: next.status,
+                        pid: next.pid,
+                        bootTimeMs: next.bootTimeMs,
+                        restartCount: next.restartCount,
+                        restartFailureCount: next.restartFailureCount,
+                        nextRestartAt: next.nextRestartAt,
+                        settingsPath: next.settingsPath,
+                        logPath: next.logPath,
+                        createdAt: next.createdAt,
+                        updatedAt: next.updatedAt,
+                        lastStartedAt: next.lastStartedAt,
+                        lastExitedAt: next.lastExitedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(processesTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(processesTable.id, row.id),
+                                    eq(processesTable.version, row.version ?? 1),
+                                    isNull(processesTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(processesTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            userId: row.userId,
+                            name: row.name,
+                            command: row.command,
+                            cwd: row.cwd,
+                            home: row.home,
+                            env: JSON.stringify(row.env),
+                            packageManagers: JSON.stringify(row.packageManagers),
+                            allowedDomains: JSON.stringify(row.allowedDomains),
+                            allowLocalBinding: row.allowLocalBinding ? 1 : 0,
+                            permissions: JSON.stringify(row.permissions),
+                            owner: row.owner ? JSON.stringify(row.owner) : null,
+                            keepAlive: row.keepAlive ? 1 : 0,
+                            desiredState: row.desiredState,
+                            status: row.status,
+                            pid: row.pid,
+                            bootTimeMs: row.bootTimeMs,
+                            restartCount: row.restartCount,
+                            restartFailureCount: row.restartFailureCount,
+                            nextRestartAt: row.nextRestartAt,
+                            settingsPath: row.settingsPath,
+                            logPath: row.logPath,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt,
+                            lastStartedAt: row.lastStartedAt,
+                            lastExitedAt: row.lastExitedAt
+                        });
+                    }
+                })
+            );
 
             await this.cacheLock.inLock(() => {
                 this.recordCacheSet(advanced);

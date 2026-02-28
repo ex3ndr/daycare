@@ -31,75 +31,79 @@ export class ConnectionsRepository {
                 requestedBAt: requesterId === userBId ? requestedAt : null
             });
         } else if (requesterId === userAId) {
-            await versionAdvance<ConnectionDbRecord>({
-                now: requestedAt,
-                changes: {
-                    requestedA: true,
-                    requestedAAt: requestedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(connectionsTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(connectionsTable.userAId, row.userAId),
-                                eq(connectionsTable.userBId, row.userBId),
-                                eq(connectionsTable.version, row.version ?? 1),
-                                isNull(connectionsTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(connectionsTable).values({
-                        userAId: row.userAId,
-                        userBId: row.userBId,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? 0,
-                        validTo: row.validTo ?? null,
-                        requestedA: row.requestedA ? 1 : 0,
-                        requestedB: row.requestedB ? 1 : 0,
-                        requestedAAt: row.requestedAAt,
-                        requestedBAt: row.requestedBAt
-                    });
-                }
-            });
+            await this.db.transaction(async (tx) =>
+                versionAdvance<ConnectionDbRecord>({
+                    now: requestedAt,
+                    changes: {
+                        requestedA: true,
+                        requestedAAt: requestedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(connectionsTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(connectionsTable.userAId, row.userAId),
+                                    eq(connectionsTable.userBId, row.userBId),
+                                    eq(connectionsTable.version, row.version ?? 1),
+                                    isNull(connectionsTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(connectionsTable).values({
+                            userAId: row.userAId,
+                            userBId: row.userBId,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? 0,
+                            validTo: row.validTo ?? null,
+                            requestedA: row.requestedA ? 1 : 0,
+                            requestedB: row.requestedB ? 1 : 0,
+                            requestedAAt: row.requestedAAt,
+                            requestedBAt: row.requestedBAt
+                        });
+                    }
+                })
+            );
         } else {
-            await versionAdvance<ConnectionDbRecord>({
-                now: requestedAt,
-                changes: {
-                    requestedB: true,
-                    requestedBAt: requestedAt
-                },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await this.db
-                        .update(connectionsTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(connectionsTable.userAId, row.userAId),
-                                eq(connectionsTable.userBId, row.userBId),
-                                eq(connectionsTable.version, row.version ?? 1),
-                                isNull(connectionsTable.validTo)
-                            )
-                        );
-                },
-                insertNext: async (row) => {
-                    await this.db.insert(connectionsTable).values({
-                        userAId: row.userAId,
-                        userBId: row.userBId,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? 0,
-                        validTo: row.validTo ?? null,
-                        requestedA: row.requestedA ? 1 : 0,
-                        requestedB: row.requestedB ? 1 : 0,
-                        requestedAAt: row.requestedAAt,
-                        requestedBAt: row.requestedBAt
-                    });
-                }
-            });
+            await this.db.transaction(async (tx) =>
+                versionAdvance<ConnectionDbRecord>({
+                    now: requestedAt,
+                    changes: {
+                        requestedB: true,
+                        requestedBAt: requestedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await tx
+                            .update(connectionsTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(connectionsTable.userAId, row.userAId),
+                                    eq(connectionsTable.userBId, row.userBId),
+                                    eq(connectionsTable.version, row.version ?? 1),
+                                    isNull(connectionsTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(connectionsTable).values({
+                            userAId: row.userAId,
+                            userBId: row.userBId,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? 0,
+                            validTo: row.validTo ?? null,
+                            requestedA: row.requestedA ? 1 : 0,
+                            requestedB: row.requestedB ? 1 : 0,
+                            requestedAAt: row.requestedAAt,
+                            requestedBAt: row.requestedBAt
+                        });
+                    }
+                })
+            );
         }
 
         const record = await this.find(userAId, userBId);
@@ -115,36 +119,38 @@ export class ConnectionsRepository {
         if (!current) {
             return null;
         }
-        await versionAdvance<ConnectionDbRecord>({
-            changes: userId === userAId ? { requestedA: false } : { requestedB: false },
-            findCurrent: async () => current,
-            closeCurrent: async (row, now) => {
-                await this.db
-                    .update(connectionsTable)
-                    .set({ validTo: now })
-                    .where(
-                        and(
-                            eq(connectionsTable.userAId, row.userAId),
-                            eq(connectionsTable.userBId, row.userBId),
-                            eq(connectionsTable.version, row.version ?? 1),
-                            isNull(connectionsTable.validTo)
-                        )
-                    );
-            },
-            insertNext: async (row) => {
-                await this.db.insert(connectionsTable).values({
-                    userAId: row.userAId,
-                    userBId: row.userBId,
-                    version: row.version ?? 1,
-                    validFrom: row.validFrom ?? 0,
-                    validTo: row.validTo ?? null,
-                    requestedA: row.requestedA ? 1 : 0,
-                    requestedB: row.requestedB ? 1 : 0,
-                    requestedAAt: row.requestedAAt,
-                    requestedBAt: row.requestedBAt
-                });
-            }
-        });
+        await this.db.transaction(async (tx) =>
+            versionAdvance<ConnectionDbRecord>({
+                changes: userId === userAId ? { requestedA: false } : { requestedB: false },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await tx
+                        .update(connectionsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(connectionsTable.userAId, row.userAId),
+                                eq(connectionsTable.userBId, row.userBId),
+                                eq(connectionsTable.version, row.version ?? 1),
+                                isNull(connectionsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await tx.insert(connectionsTable).values({
+                        userAId: row.userAId,
+                        userBId: row.userBId,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? 0,
+                        validTo: row.validTo ?? null,
+                        requestedA: row.requestedA ? 1 : 0,
+                        requestedB: row.requestedB ? 1 : 0,
+                        requestedAAt: row.requestedAAt,
+                        requestedBAt: row.requestedBAt
+                    });
+                }
+            })
+        );
         return this.find(userAId, userBId);
     }
 

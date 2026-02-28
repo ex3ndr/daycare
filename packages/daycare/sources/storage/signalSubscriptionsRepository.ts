@@ -39,39 +39,41 @@ export class SignalSubscriptionsRepository {
                 .limit(1);
             const current = currentRows[0] ? subscriptionParse(currentRows[0]) : null;
             const next = current
-                ? await versionAdvance<SignalSubscriptionDbRecord>({
-                      changes: {
-                          silent: record.silent,
-                          updatedAt: record.updatedAt
-                      },
-                      findCurrent: async () => current,
-                      closeCurrent: async (row, now) => {
-                          await this.db
-                              .update(signalsSubscriptionsTable)
-                              .set({ validTo: now })
-                              .where(
-                                  and(
-                                      eq(signalsSubscriptionsTable.id, row.id),
-                                      eq(signalsSubscriptionsTable.version, row.version ?? 1),
-                                      isNull(signalsSubscriptionsTable.validTo)
-                                  )
-                              );
-                      },
-                      insertNext: async (row) => {
-                          await this.db.insert(signalsSubscriptionsTable).values({
-                              id: row.id,
-                              version: row.version ?? 1,
-                              validFrom: row.validFrom ?? row.createdAt,
-                              validTo: row.validTo ?? null,
-                              userId: row.userId,
-                              agentId: row.agentId,
-                              pattern: row.pattern,
-                              silent: row.silent ? 1 : 0,
-                              createdAt: row.createdAt,
-                              updatedAt: row.updatedAt
-                          });
-                      }
-                  })
+                ? await this.db.transaction(async (tx) =>
+                      versionAdvance<SignalSubscriptionDbRecord>({
+                          changes: {
+                              silent: record.silent,
+                              updatedAt: record.updatedAt
+                          },
+                          findCurrent: async () => current,
+                          closeCurrent: async (row, now) => {
+                              await tx
+                                  .update(signalsSubscriptionsTable)
+                                  .set({ validTo: now })
+                                  .where(
+                                      and(
+                                          eq(signalsSubscriptionsTable.id, row.id),
+                                          eq(signalsSubscriptionsTable.version, row.version ?? 1),
+                                          isNull(signalsSubscriptionsTable.validTo)
+                                      )
+                                  );
+                          },
+                          insertNext: async (row) => {
+                              await tx.insert(signalsSubscriptionsTable).values({
+                                  id: row.id,
+                                  version: row.version ?? 1,
+                                  validFrom: row.validFrom ?? row.createdAt,
+                                  validTo: row.validTo ?? null,
+                                  userId: row.userId,
+                                  agentId: row.agentId,
+                                  pattern: row.pattern,
+                                  silent: row.silent ? 1 : 0,
+                                  createdAt: row.createdAt,
+                                  updatedAt: row.updatedAt
+                              });
+                          }
+                      })
+                  )
                 : {
                       ...record,
                       version: 1,

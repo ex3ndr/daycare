@@ -67,6 +67,20 @@ describe("Storage", () => {
         }
     });
 
+    it("allows reusing connector key after user deletion", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const first = await storage.resolveUserByConnectorKey("telegram:reusable");
+            await storage.users.delete(first.id);
+
+            const second = await storage.resolveUserByConnectorKey("telegram:reusable");
+            expect(second.id).not.toBe(first.id);
+            expect(second.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:reusable"]);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("creates agent and session atomically", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-storage-"));
         try {
