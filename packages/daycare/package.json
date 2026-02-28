@@ -48,7 +48,7 @@
     "@electric-sql/pglite": "^0.3.15",
     "@elevenlabs/elevenlabs-js": "^2.37.0",
     "@hapi/boom": "^10.0.1",
-    "@mariozechner/pi-ai": "0.50.3",
+    "@mariozechner/pi-ai": "0.55.3",
     "@paralleldrive/cuid2": "^2.2.2",
     "@pydantic/monty": "0.0.7",
     "@sinclair/typebox": "^0.34.41",

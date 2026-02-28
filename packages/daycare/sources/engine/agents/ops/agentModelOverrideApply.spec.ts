@@ -20,7 +20,7 @@ describe("agentModelOverrideApply", () => {
         const override: AgentModelOverride = { type: "selector", value: "large" };
         const result = agentModelOverrideApply(baseProviders, override, "anthropic", undefined);
         expect(result).toHaveLength(1);
-        expect(result[0]!.model).toBe("claude-opus-4-5");
+        expect(result[0]!.model).toBe("claude-opus-4-6");
         expect(result[0]!.id).toBe("anthropic");
     });
 
@@ -39,7 +39,7 @@ describe("agentModelOverrideApply", () => {
     it("falls back to first provider when providerId is null", () => {
         const override: AgentModelOverride = { type: "selector", value: "large" };
         const result = agentModelOverrideApply(baseProviders, override, null, undefined);
-        expect(result[0]!.model).toBe("claude-opus-4-5");
+        expect(result[0]!.model).toBe("claude-opus-4-6");
     });
 
     it("returns providers unchanged for selector when provider has no model catalog", () => {

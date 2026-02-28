@@ -12,6 +12,16 @@ type ProviderModelRegistry = { [K in KnownProvider]: ProviderModelInfo[] };
 
 export const PROVIDER_MODELS = {
     "amazon-bedrock": [
+        { id: "anthropic.claude-opus-4-6-v1", name: "Claude Opus 4.6", size: "large" },
+        { id: "anthropic.claude-sonnet-4-6", name: "Claude Sonnet 4.6", size: "normal" },
+        { id: "global.anthropic.claude-opus-4-6-v1", name: "Claude Opus 4.6 (Global)", size: "large" },
+        { id: "global.anthropic.claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Global)", size: "normal" },
+        { id: "amazon.nova-2-lite-v1:0", name: "Nova 2 Lite", size: "small" },
+        { id: "amazon.nova-premier-v1:0", name: "Nova Premier", size: "normal" },
+        { id: "deepseek.v3.2-v1:0", name: "DeepSeek-V3.2", size: "normal" },
+        { id: "writer.palmyra-x5-v1:0", name: "Palmyra X5", size: "large" },
+        { id: "writer.palmyra-x4-v1:0", name: "Palmyra X4", size: "large" },
+        { id: "zai.glm-4.7", name: "GLM-4.7", size: "normal" },
         { id: "global.anthropic.claude-opus-4-5-20251101-v1:0", name: "Claude Opus 4.5", size: "large" },
         { id: "eu.anthropic.claude-opus-4-5-20251101-v1:0", name: "Claude Opus 4.5 (EU)", size: "large" },
         { id: "global.anthropic.claude-haiku-4-5-20251001-v1:0", name: "Claude Haiku 4.5", size: "small" },
@@ -29,12 +39,6 @@ export const PROVIDER_MODELS = {
             deprecated: true
         },
         { id: "us.anthropic.claude-opus-4-20250514-v1:0", name: "Claude Opus 4", size: "large", deprecated: true },
-        {
-            id: "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-            name: "Claude Sonnet 3.7",
-            size: "normal",
-            deprecated: true
-        },
         {
             id: "anthropic.claude-3-5-sonnet-20241022-v2:0",
             name: "Claude Sonnet 3.5 v2",
@@ -54,18 +58,11 @@ export const PROVIDER_MODELS = {
         { id: "mistral.mistral-large-2402-v1:0", name: "Mistral Large (24.02)", size: "normal" },
         { id: "openai.gpt-oss-safeguard-120b", name: "GPT OSS Safeguard 120B", size: "normal" },
         { id: "openai.gpt-oss-120b-1:0", name: "gpt-oss-120b", size: "normal" },
-        { id: "us.meta.llama4-maverick-17b-instruct-v1:0", name: "Llama 4 Maverick 17B Instruct", size: "normal" },
-        { id: "us.meta.llama4-scout-17b-instruct-v1:0", name: "Llama 4 Scout 17B Instruct", size: "normal" },
         { id: "qwen.qwen3-32b-v1:0", name: "Qwen3 32B (dense)", size: "normal" },
         { id: "google.gemma-3-27b-it", name: "Google Gemma 3 27B Instruct", size: "normal" },
         { id: "mistral.ministral-3-14b-instruct", name: "Ministral 14B 3.0", size: "normal" },
         { id: "mistral.ministral-3-8b-instruct", name: "Ministral 3 8B", size: "normal" },
         { id: "google.gemma-3-4b-it", name: "Gemma 3 4B IT", size: "normal" },
-        { id: "us.meta.llama3-3-70b-instruct-v1:0", name: "Llama 3.3 70B Instruct", size: "normal" },
-        { id: "us.meta.llama3-2-90b-instruct-v1:0", name: "Llama 3.2 90B Instruct", size: "normal" },
-        { id: "us.meta.llama3-2-11b-instruct-v1:0", name: "Llama 3.2 11B Instruct", size: "normal" },
-        { id: "us.meta.llama3-2-3b-instruct-v1:0", name: "Llama 3.2 3B Instruct", size: "normal" },
-        { id: "us.meta.llama3-2-1b-instruct-v1:0", name: "Llama 3.2 1B Instruct", size: "normal" },
         { id: "meta.llama3-1-70b-instruct-v1:0", name: "Llama 3.1 70B Instruct", size: "normal", deprecated: true },
         { id: "meta.llama3-1-8b-instruct-v1:0", name: "Llama 3.1 8B Instruct", size: "normal" },
         { id: "deepseek.v3-v1:0", name: "DeepSeek-V3.1", size: "normal" },
@@ -73,22 +70,50 @@ export const PROVIDER_MODELS = {
         { id: "qwen.qwen3-vl-235b-a22b", name: "Qwen/Qwen3-VL-235B-A22B-Instruct", size: "normal" },
         { id: "qwen.qwen3-coder-30b-a3b-v1:0", name: "Qwen3 Coder 30B A3B Instruct", size: "normal" },
         { id: "qwen.qwen3-coder-480b-a35b-v1:0", name: "Qwen3 Coder 480B A35B Instruct", size: "normal" },
-        { id: "global.amazon.nova-2-lite-v1:0", name: "Nova 2 Lite", size: "normal" },
         { id: "moonshot.kimi-k2-thinking", name: "Kimi K2 Thinking", size: "normal" },
         { id: "minimax.minimax-m2", name: "MiniMax M2", size: "normal" },
         { id: "nvidia.nemotron-nano-12b-v2", name: "NVIDIA Nemotron Nano 12B v2 VL BF16", size: "normal" },
         { id: "nvidia.nemotron-nano-9b-v2", name: "NVIDIA Nemotron Nano 9B v2", size: "normal" },
-        { id: "us.deepseek.r1-v1:0", name: "DeepSeek-R1", size: "normal" },
-        { id: "us.amazon.nova-lite-v1:0", name: "Nova Lite", size: "normal", deprecated: true },
-        { id: "us.amazon.nova-micro-v1:0", name: "Nova Micro", size: "normal" },
-        { id: "us.amazon.nova-premier-v1:0", name: "Nova Premier", size: "normal" },
-        { id: "us.amazon.nova-pro-v1:0", name: "Nova Pro", size: "normal" },
         { id: "cohere.command-r-v1:0", name: "Command R", size: "normal" },
         { id: "cohere.command-r-plus-v1:0", name: "Command R+", size: "normal" },
         { id: "openai.gpt-oss-20b-1:0", name: "gpt-oss-20b", size: "normal" },
-        { id: "openai.gpt-oss-safeguard-20b", name: "GPT OSS Safeguard 20B", size: "normal" }
+        { id: "openai.gpt-oss-safeguard-20b", name: "GPT OSS Safeguard 20B", size: "normal" },
+        { id: "amazon.nova-lite-v1:0", name: "Nova Lite", size: "small" },
+        { id: "amazon.nova-micro-v1:0", name: "Nova Micro", size: "normal" },
+        { id: "amazon.nova-pro-v1:0", name: "Nova Pro", size: "normal" },
+        { id: "amazon.titan-text-express-v1", name: "Titan Text G1 - Express", size: "normal" },
+        { id: "amazon.titan-text-express-v1:0:8k", name: "Titan Text G1 - Express", size: "normal" },
+        { id: "anthropic.claude-3-7-sonnet-20250219-v1:0", name: "Claude Sonnet 3.7", size: "normal" },
+        { id: "anthropic.claude-haiku-4-5-20251001-v1:0", name: "Claude Haiku 4.5", size: "small" },
+        { id: "anthropic.claude-opus-4-1-20250805-v1:0", name: "Claude Opus 4.1", size: "large" },
+        { id: "anthropic.claude-opus-4-20250514-v1:0", name: "Claude Opus 4", size: "large" },
+        { id: "anthropic.claude-opus-4-5-20251101-v1:0", name: "Claude Opus 4.5", size: "large" },
+        { id: "anthropic.claude-sonnet-4-20250514-v1:0", name: "Claude Sonnet 4", size: "normal" },
+        { id: "anthropic.claude-sonnet-4-5-20250929-v1:0", name: "Claude Sonnet 4.5", size: "normal" },
+        { id: "deepseek.r1-v1:0", name: "DeepSeek-R1", size: "normal" },
+        { id: "eu.anthropic.claude-opus-4-6-v1", name: "Claude Opus 4.6 (EU)", size: "large" },
+        { id: "eu.anthropic.claude-sonnet-4-20250514-v1:0", name: "Claude Sonnet 4 (EU)", size: "normal" },
+        { id: "eu.anthropic.claude-sonnet-4-6", name: "Claude Sonnet 4.6 (EU)", size: "normal" },
+        { id: "meta.llama3-2-11b-instruct-v1:0", name: "Llama 3.2 11B Instruct", size: "normal" },
+        { id: "meta.llama3-2-1b-instruct-v1:0", name: "Llama 3.2 1B Instruct", size: "small" },
+        { id: "meta.llama3-2-3b-instruct-v1:0", name: "Llama 3.2 3B Instruct", size: "small" },
+        { id: "meta.llama3-2-90b-instruct-v1:0", name: "Llama 3.2 90B Instruct", size: "large" },
+        { id: "meta.llama3-3-70b-instruct-v1:0", name: "Llama 3.3 70B Instruct", size: "large" },
+        { id: "meta.llama4-maverick-17b-instruct-v1:0", name: "Llama 4 Maverick 17B Instruct", size: "normal" },
+        { id: "meta.llama4-scout-17b-instruct-v1:0", name: "Llama 4 Scout 17B Instruct", size: "normal" },
+        { id: "minimax.minimax-m2.1", name: "MiniMax M2.1", size: "small" },
+        { id: "moonshotai.kimi-k2.5", name: "Kimi K2.5", size: "normal" },
+        { id: "us.anthropic.claude-haiku-4-5-20251001-v1:0", name: "Claude Haiku 4.5 (US)", size: "small" },
+        { id: "us.anthropic.claude-opus-4-5-20251101-v1:0", name: "Claude Opus 4.5 (US)", size: "large" },
+        { id: "us.anthropic.claude-opus-4-6-v1", name: "Claude Opus 4.6 (US)", size: "large" },
+        { id: "us.anthropic.claude-sonnet-4-20250514-v1:0", name: "Claude Sonnet 4 (US)", size: "normal" },
+        { id: "us.anthropic.claude-sonnet-4-5-20250929-v1:0", name: "Claude Sonnet 4.5 (US)", size: "normal" },
+        { id: "us.anthropic.claude-sonnet-4-6", name: "Claude Sonnet 4.6 (US)", size: "normal" },
+        { id: "zai.glm-4.7-flash", name: "GLM-4.7-Flash", size: "small" }
     ],
     anthropic: [
+        { id: "claude-opus-4-6", name: "Claude Opus 4.6", size: "large" },
+        { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", size: "normal" },
         { id: "claude-opus-4-5", name: "Claude Opus 4.5 (latest)", size: "large" },
         { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5 (latest)", size: "normal" },
         { id: "claude-haiku-4-5", name: "Claude Haiku 4.5 (latest)", size: "small" },
@@ -112,6 +137,8 @@ export const PROVIDER_MODELS = {
         { id: "claude-3-sonnet-20240229", name: "Claude Sonnet 3", size: "normal", deprecated: true }
     ],
     "azure-openai-responses": [
+        { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
+        { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark", size: "normal" },
         { id: "gpt-5.2-chat-latest", name: "GPT-5.2 Chat", size: "normal" },
         { id: "gpt-5.1-chat-latest", name: "GPT-5.1 Chat", size: "normal" },
         { id: "gpt-5-chat-latest", name: "GPT-5 Chat Latest", size: "normal" },
@@ -150,9 +177,13 @@ export const PROVIDER_MODELS = {
     cerebras: [
         { id: "qwen-3-235b-a22b-instruct-2507", name: "Qwen 3 235B Instruct", size: "normal" },
         { id: "gpt-oss-120b", name: "GPT OSS 120B", size: "normal" },
-        { id: "zai-glm-4.7", name: "Z.AI GLM-4.7", size: "normal" }
+        { id: "zai-glm-4.7", name: "Z.AI GLM-4.7", size: "normal" },
+        { id: "llama3.1-8b", name: "Llama 3.1 8B", size: "small" }
     ],
     "github-copilot": [
+        { id: "claude-opus-4.6", name: "Claude Opus 4.6", size: "large" },
+        { id: "claude-sonnet-4.6", name: "Claude Sonnet 4.6", size: "normal" },
+        { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", size: "normal" },
         { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
         { id: "gpt-5.2-codex", name: "GPT-5.2-Codex", size: "normal" },
         { id: "gpt-5.1", name: "GPT-5.1", size: "normal", deprecated: true },
@@ -173,6 +204,8 @@ export const PROVIDER_MODELS = {
         { id: "grok-code-fast-1", name: "Grok Code Fast 1", size: "normal" }
     ],
     google: [
+        { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "gemini-3.1-pro-preview-customtools", name: "Gemini 3.1 Pro Preview Custom Tools", size: "normal" },
         { id: "gemini-flash-latest", name: "Gemini Flash Latest", size: "small" },
         { id: "gemini-flash-lite-latest", name: "Gemini Flash-Lite Latest", size: "small" },
         { id: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview", size: "normal" },
@@ -215,6 +248,7 @@ export const PROVIDER_MODELS = {
         { id: "gemini-1.5-flash-8b", name: "Gemini 1.5 Flash-8B", size: "small" }
     ],
     "google-antigravity": [
+        { id: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 Thinking (Antigravity)", size: "large" },
         { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B Medium (Antigravity)", size: "normal" },
         { id: "claude-opus-4-5-thinking", name: "Claude Opus 4.5 Thinking (Antigravity)", size: "large" },
         { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5 (Antigravity)", size: "normal" },
@@ -224,6 +258,7 @@ export const PROVIDER_MODELS = {
         { id: "gemini-3-flash", name: "Gemini 3 Flash (Antigravity)", size: "small" }
     ],
     "google-gemini-cli": [
+        { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview (Cloud Code Assist)", size: "normal" },
         { id: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview (Cloud Code Assist)", size: "normal" },
         { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Cloud Code Assist)", size: "small" },
         { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Cloud Code Assist)", size: "normal" },
@@ -231,6 +266,7 @@ export const PROVIDER_MODELS = {
         { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Cloud Code Assist)", size: "small", deprecated: true }
     ],
     "google-vertex": [
+        { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview (Vertex)", size: "normal" },
         { id: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview (Vertex)", size: "normal" },
         { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Vertex)", size: "small" },
         { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Vertex)", size: "normal" },
@@ -265,6 +301,10 @@ export const PROVIDER_MODELS = {
         { id: "qwen-qwq-32b", name: "Qwen QwQ 32B", size: "normal" }
     ],
     huggingface: [
+        { id: "zai-org/GLM-5", name: "GLM-5", size: "normal" },
+        { id: "Qwen/Qwen3.5-397B-A17B", name: "Qwen3.5-397B-A17B", size: "large" },
+        { id: "Qwen/Qwen3-Coder-Next", name: "Qwen3-Coder-Next", size: "normal" },
+        { id: "MiniMaxAI/MiniMax-M2.5", name: "MiniMax-M2.5", size: "normal" },
         { id: "Qwen/Qwen3-235B-A22B-Thinking-2507", name: "Qwen3-235B-A22B-Thinking-2507", size: "normal" },
         { id: "moonshotai/Kimi-K2-Instruct-0905", name: "Kimi-K2-Instruct-0905", size: "normal" },
         { id: "zai-org/GLM-4.7", name: "GLM-4.7", size: "normal" },
@@ -285,10 +325,14 @@ export const PROVIDER_MODELS = {
         { id: "kimi-k2-thinking", name: "Kimi K2 Thinking", size: "normal" }
     ],
     minimax: [
+        { id: "MiniMax-M2.5", name: "MiniMax-M2.5", size: "normal" },
+        { id: "MiniMax-M2.5-highspeed", name: "MiniMax-M2.5-highspeed", size: "normal" },
         { id: "MiniMax-M2.1", name: "MiniMax-M2.1", size: "normal" },
         { id: "MiniMax-M2", name: "MiniMax-M2", size: "normal", deprecated: true }
     ],
     "minimax-cn": [
+        { id: "MiniMax-M2.5", name: "MiniMax-M2.5", size: "normal" },
+        { id: "MiniMax-M2.5-highspeed", name: "MiniMax-M2.5-highspeed", size: "normal" },
         { id: "MiniMax-M2.1", name: "MiniMax-M2.1", size: "normal" },
         { id: "MiniMax-M2", name: "MiniMax-M2", size: "normal", deprecated: true }
     ],
@@ -320,6 +364,8 @@ export const PROVIDER_MODELS = {
         { id: "pixtral-12b", name: "Pixtral 12B", size: "normal" }
     ],
     openai: [
+        { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
+        { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark", size: "normal" },
         { id: "gpt-5.2-chat-latest", name: "GPT-5.2 Chat", size: "normal" },
         { id: "gpt-5.1-chat-latest", name: "GPT-5.1 Chat", size: "normal" },
         { id: "gpt-5-chat-latest", name: "GPT-5 Chat Latest", size: "normal" },
@@ -356,6 +402,8 @@ export const PROVIDER_MODELS = {
         { id: "o1-pro", name: "o1-pro", size: "normal" }
     ],
     "openai-codex": [
+        { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
+        { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark", size: "normal" },
         { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
         { id: "gpt-5.2-codex", name: "GPT-5.2 Codex", size: "normal" },
         { id: "gpt-5.1", name: "GPT-5.1", size: "normal", deprecated: true },
@@ -363,6 +411,14 @@ export const PROVIDER_MODELS = {
         { id: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini", size: "normal" }
     ],
     opencode: [
+        { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
+        { id: "claude-opus-4-6", name: "Claude Opus 4.6", size: "large" },
+        { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", size: "normal" },
+        { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "glm-5", name: "GLM-5", size: "normal" },
+        { id: "minimax-m2.5", name: "MiniMax M2.5", size: "normal" },
+        { id: "minimax-m2.5-free", name: "MiniMax M2.5 Free", size: "normal" },
+        { id: "trinity-large-preview-free", name: "Trinity Large Preview", size: "large" },
         { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
         { id: "gpt-5.2-codex", name: "GPT-5.2 Codex", size: "normal" },
         { id: "gpt-5.1", name: "GPT-5.1", size: "normal", deprecated: true },
@@ -381,7 +437,6 @@ export const PROVIDER_MODELS = {
         { id: "claude-sonnet-4", name: "Claude Sonnet 4", size: "normal", deprecated: true },
         { id: "claude-3-5-haiku", name: "Claude Haiku 3.5", size: "small", deprecated: true },
         { id: "gemini-3-pro", name: "Gemini 3 Pro", size: "normal" },
-        { id: "qwen3-coder", name: "Qwen3 Coder", size: "normal" },
         { id: "gemini-3-flash", name: "Gemini 3 Flash", size: "small" },
         { id: "kimi-k2.5", name: "Kimi K2.5", size: "normal" },
         { id: "minimax-m2.1", name: "MiniMax M2.1", size: "normal" },
@@ -390,6 +445,15 @@ export const PROVIDER_MODELS = {
         { id: "big-pickle", name: "Big Pickle", size: "normal" }
     ],
     openrouter: [
+        { id: "anthropic/claude-opus-4.6", name: "Anthropic: Claude Opus 4.6", size: "large" },
+        { id: "anthropic/claude-sonnet-4.6", name: "Anthropic: Claude Sonnet 4.6", size: "normal" },
+        { id: "openai/gpt-5.3-codex", name: "OpenAI: GPT-5.3-Codex", size: "normal" },
+        { id: "google/gemini-3.1-pro-preview", name: "Google: Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "z-ai/glm-5", name: "Z.ai: GLM 5", size: "normal" },
+        { id: "qwen/qwen3.5-397b-a17b", name: "Qwen: Qwen3.5 397B A17B", size: "large" },
+        { id: "qwen/qwen3-coder-next", name: "Qwen: Qwen3 Coder Next", size: "normal" },
+        { id: "auto", name: "Auto", size: "normal" },
+        { id: "openrouter/free", name: "Free Models Router", size: "normal" },
         { id: "mistralai/ministral-14b-2512", name: "Mistral: Ministral 3 14B 2512", size: "normal" },
         { id: "mistralai/ministral-3b-2512", name: "Mistral: Ministral 3 3B 2512", size: "normal" },
         { id: "mistralai/ministral-8b-2512", name: "Mistral: Ministral 3 8B 2512", size: "normal" },
@@ -443,7 +507,6 @@ export const PROVIDER_MODELS = {
         { id: "openai/gpt-5-mini", name: "OpenAI: GPT-5 Mini", size: "normal" },
         { id: "openai/gpt-5-nano", name: "OpenAI: GPT-5 Nano", size: "normal" },
         { id: "openai/gpt-5-pro", name: "OpenAI: GPT-5 Pro", size: "normal", deprecated: true },
-        { id: "nousresearch/hermes-4-70b", name: "Nous: Hermes 4 70B", size: "normal" },
         { id: "z-ai/glm-4-32b", name: "Z.AI: GLM 4 32B ", size: "normal" },
         { id: "z-ai/glm-4.7", name: "Z.AI: GLM 4.7", size: "normal" },
         { id: "z-ai/glm-4.7-flash", name: "Z.AI: GLM 4.7 Flash", size: "normal" },
@@ -526,12 +589,6 @@ export const PROVIDER_MODELS = {
         { id: "meta-llama/llama-3.1-405b-instruct", name: "Meta: Llama 3.1 405B Instruct", size: "normal" },
         { id: "allenai/olmo-3.1-32b-instruct", name: "AllenAI: Olmo 3.1 32B Instruct", size: "normal" },
         {
-            id: "mistralai/mistral-small-3.1-24b-instruct",
-            name: "Mistral: Mistral Small 3.1 24B",
-            size: "normal",
-            deprecated: true
-        },
-        {
             id: "mistralai/mistral-small-3.1-24b-instruct:free",
             name: "Mistral: Mistral Small 3.1 24B (free)",
             size: "normal",
@@ -559,11 +616,6 @@ export const PROVIDER_MODELS = {
         { id: "mistralai/mistral-medium-3", name: "Mistral: Mistral Medium 3", size: "normal", deprecated: true },
         { id: "nvidia/nemotron-3-nano-30b-a3b", name: "NVIDIA: Nemotron 3 Nano 30B A3B", size: "normal" },
         { id: "nvidia/nemotron-3-nano-30b-a3b:free", name: "NVIDIA: Nemotron 3 Nano 30B A3B (free)", size: "normal" },
-        {
-            id: "nousresearch/deephermes-3-mistral-24b-preview",
-            name: "Nous: DeepHermes 3 Mistral 24B Preview",
-            size: "normal"
-        },
         { id: "openai/o3", name: "OpenAI: o3", size: "normal" },
         { id: "openai/o3-deep-research", name: "OpenAI: o3 Deep Research", size: "normal" },
         { id: "openai/o3-mini", name: "OpenAI: o3 Mini", size: "normal" },
@@ -590,7 +642,6 @@ export const PROVIDER_MODELS = {
         { id: "qwen/qwen3-vl-30b-a3b-thinking", name: "Qwen: Qwen3 VL 30B A3B Thinking", size: "normal" },
         { id: "qwen/qwen3-vl-8b-instruct", name: "Qwen: Qwen3 VL 8B Instruct", size: "normal" },
         { id: "qwen/qwen3-vl-8b-thinking", name: "Qwen: Qwen3 VL 8B Thinking", size: "normal" },
-        { id: "stepfun-ai/step3", name: "StepFun: Step3", size: "normal" },
         { id: "upstage/solar-pro-3:free", name: "Upstage: Solar Pro 3 (free)", size: "normal" },
         { id: "x-ai/grok-3", name: "xAI: Grok 3", size: "normal", deprecated: true },
         { id: "x-ai/grok-3-beta", name: "xAI: Grok 3 Beta", size: "normal" },
@@ -621,26 +672,9 @@ export const PROVIDER_MODELS = {
             name: "Google: Gemini 2.5 Flash Lite Preview 09-2025",
             size: "small"
         },
-        {
-            id: "google/gemini-2.5-flash-preview-09-2025",
-            name: "Google: Gemini 2.5 Flash Preview 09-2025",
-            size: "small",
-            deprecated: true
-        },
         { id: "minimax/minimax-m2.1", name: "MiniMax: MiniMax M2.1", size: "normal" },
         { id: "sao10k/l3-euryale-70b", name: "Sao10k: Llama 3 Euryale 70B v2.1", size: "normal" },
         { id: "amazon/nova-2-lite-v1", name: "Amazon: Nova 2 Lite", size: "normal" },
-        { id: "deepcogito/cogito-v2-preview-llama-109b-moe", name: "Cogito V2 Preview Llama 109B", size: "normal" },
-        {
-            id: "deepcogito/cogito-v2-preview-llama-405b",
-            name: "Deep Cogito: Cogito V2 Preview Llama 405B",
-            size: "normal"
-        },
-        {
-            id: "deepcogito/cogito-v2-preview-llama-70b",
-            name: "Deep Cogito: Cogito V2 Preview Llama 70B",
-            size: "normal"
-        },
         { id: "minimax/minimax-m2", name: "MiniMax: MiniMax M2", size: "normal", deprecated: true },
         { id: "moonshotai/kimi-k2-thinking", name: "MoonshotAI: Kimi K2 Thinking", size: "normal" },
         { id: "nvidia/nemotron-nano-12b-v2-vl:free", name: "NVIDIA: Nemotron Nano 12B 2 VL (free)", size: "normal" },
@@ -648,7 +682,6 @@ export const PROVIDER_MODELS = {
         { id: "nvidia/nemotron-nano-9b-v2:free", name: "NVIDIA: Nemotron Nano 9B V2 (free)", size: "normal" },
         { id: "xiaomi/mimo-v2-flash", name: "Xiaomi: MiMo-V2-Flash", size: "normal" },
         { id: "google/gemini-2.0-flash-001", name: "Google: Gemini 2.0 Flash", size: "small", deprecated: true },
-        { id: "google/gemini-2.0-flash-exp:free", name: "Google: Gemini 2.0 Flash Experimental (free)", size: "small" },
         {
             id: "google/gemini-2.0-flash-lite-001",
             name: "Google: Gemini 2.0 Flash Lite",
@@ -656,7 +689,6 @@ export const PROVIDER_MODELS = {
             deprecated: true
         },
         { id: "ai21/jamba-large-1.7", name: "AI21: Jamba Large 1.7", size: "normal" },
-        { id: "ai21/jamba-mini-1.7", name: "AI21: Jamba Mini 1.7", size: "normal" },
         { id: "bytedance-seed/seed-1.6", name: "ByteDance Seed: Seed 1.6", size: "normal" },
         { id: "bytedance-seed/seed-1.6-flash", name: "ByteDance Seed: Seed 1.6 Flash", size: "normal" },
         { id: "mistralai/devstral-small", name: "Mistral: Devstral Small 1.1", size: "normal" },
@@ -666,13 +698,10 @@ export const PROVIDER_MODELS = {
         { id: "amazon/nova-pro-v1", name: "Amazon: Nova Pro 1.0", size: "normal" },
         { id: "deepseek/deepseek-r1", name: "DeepSeek: R1", size: "normal" },
         { id: "deepseek/deepseek-r1-0528", name: "DeepSeek: R1 0528", size: "normal" },
-        { id: "deepseek/deepseek-r1-distill-llama-70b", name: "DeepSeek: R1 Distill Llama 70B", size: "normal" },
         { id: "kwaipilot/kat-coder-pro", name: "Kwaipilot: KAT-Coder-Pro V1", size: "normal" },
         { id: "minimax/minimax-m1", name: "MiniMax: MiniMax M1", size: "normal" },
         { id: "openai/o1", name: "OpenAI: o1", size: "normal" },
         { id: "tngtech/deepseek-r1t2-chimera", name: "TNG: DeepSeek R1T2 Chimera", size: "normal" },
-        { id: "tngtech/tng-r1t-chimera", name: "TNG: R1T Chimera", size: "normal" },
-        { id: "tngtech/tng-r1t-chimera:free", name: "TNG: R1T Chimera (free)", size: "normal" },
         { id: "x-ai/grok-code-fast-1", name: "xAI: Grok Code Fast 1", size: "normal" },
         { id: "arcee-ai/trinity-large-preview:free", name: "Arcee AI: Trinity Large Preview (free)", size: "normal" },
         { id: "arcee-ai/trinity-mini", name: "Arcee AI: Trinity Mini", size: "normal" },
@@ -681,13 +710,9 @@ export const PROVIDER_MODELS = {
         { id: "inception/mercury", name: "Inception: Mercury", size: "normal" },
         { id: "inception/mercury-coder", name: "Inception: Mercury Coder", size: "normal" },
         { id: "mistralai/mistral-large", name: "Mistral Large", size: "normal" },
-        { id: "mistralai/mistral-tiny", name: "Mistral Tiny", size: "normal" },
         { id: "mistralai/devstral-medium", name: "Mistral: Devstral Medium", size: "normal" },
-        { id: "mistralai/ministral-3b", name: "Mistral: Ministral 3B", size: "normal", deprecated: true },
-        { id: "mistralai/ministral-8b", name: "Mistral: Ministral 8B", size: "normal", deprecated: true },
         { id: "mistralai/mistral-nemo", name: "Mistral: Mistral Nemo", size: "normal" },
         { id: "mistralai/mistral-small-creative", name: "Mistral: Mistral Small Creative", size: "normal" },
-        { id: "mistralai/pixtral-12b", name: "Mistral: Pixtral 12B", size: "normal" },
         { id: "mistralai/mistral-saba", name: "Mistral: Saba", size: "normal" },
         { id: "openai/gpt-oss-20b", name: "OpenAI: gpt-oss-20b", size: "normal" },
         { id: "openai/gpt-oss-20b:free", name: "OpenAI: gpt-oss-20b (free)", size: "normal" },
@@ -701,9 +726,32 @@ export const PROVIDER_MODELS = {
         { id: "relace/relace-search", name: "Relace: Relace Search", size: "normal" },
         { id: "thedrummer/rocinante-12b", name: "TheDrummer: Rocinante 12B", size: "normal" },
         { id: "thedrummer/unslopnemo-12b", name: "TheDrummer: UnslopNemo 12B", size: "normal" },
-        { id: "alibaba/tongyi-deepresearch-30b-a3b", name: "Tongyi DeepResearch 30B A3B", size: "normal" }
+        { id: "alibaba/tongyi-deepresearch-30b-a3b", name: "Tongyi DeepResearch 30B A3B", size: "normal" },
+        { id: "bytedance-seed/seed-2.0-mini", name: "ByteDance Seed: Seed-2.0-Mini", size: "small" },
+        {
+            id: "google/gemini-3.1-pro-preview-customtools",
+            name: "Google: Gemini 3.1 Pro Preview Custom Tools",
+            size: "normal"
+        },
+        { id: "meituan/longcat-flash-chat", name: "Meituan: LongCat Flash Chat", size: "small" },
+        { id: "minimax/minimax-m2.5", name: "MiniMax: MiniMax M2.5", size: "normal" },
+        { id: "qwen/qwen3-max-thinking", name: "Qwen: Qwen3 Max Thinking", size: "normal" },
+        { id: "qwen/qwen3-vl-32b-instruct", name: "Qwen: Qwen3 VL 32B Instruct", size: "normal" },
+        { id: "qwen/qwen3.5-122b-a10b", name: "Qwen: Qwen3.5-122B-A10B", size: "large" },
+        { id: "qwen/qwen3.5-27b", name: "Qwen: Qwen3.5-27B", size: "normal" },
+        { id: "qwen/qwen3.5-35b-a3b", name: "Qwen: Qwen3.5-35B-A3B", size: "small" },
+        { id: "qwen/qwen3.5-flash-02-23", name: "Qwen: Qwen3.5-Flash", size: "small" },
+        { id: "qwen/qwen3.5-plus-02-15", name: "Qwen: Qwen3.5 Plus 2026-02-15", size: "normal" },
+        { id: "stepfun/step-3.5-flash", name: "StepFun: Step 3.5 Flash", size: "small" },
+        { id: "stepfun/step-3.5-flash:free", name: "StepFun: Step 3.5 Flash (free)", size: "small" }
     ],
     "vercel-ai-gateway": [
+        { id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6", size: "large" },
+        { id: "anthropic/claude-sonnet-4.6", name: "Claude Sonnet 4.6", size: "normal" },
+        { id: "openai/gpt-5.3-codex", name: "GPT 5.3 Codex", size: "normal" },
+        { id: "google/gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "zai/glm-5", name: "GLM-5", size: "normal" },
+        { id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", size: "normal" },
         { id: "alibaba/qwen3-235b-a22b-thinking", name: "Qwen3 235B A22B Thinking 2507", size: "normal" },
         { id: "alibaba/qwen-3-235b", name: "Qwen3 235B A22b Instruct 2507", size: "normal" },
         { id: "mistral/pixtral-12b", name: "Pixtral 12B 2409", size: "normal" },
@@ -766,7 +814,6 @@ export const PROVIDER_MODELS = {
         { id: "meta/llama-3.3-70b", name: "Llama 3.3 70B Instruct", size: "normal" },
         { id: "meta/llama-3.2-90b", name: "Llama 3.2 90B Vision Instruct", size: "normal" },
         { id: "meta/llama-3.2-11b", name: "Llama 3.2 11B Vision Instruct", size: "normal" },
-        { id: "deepseek/deepseek-v3.2-exp", name: "DeepSeek V3.2 Exp", size: "normal" },
         { id: "deepseek/deepseek-v3.2-thinking", name: "DeepSeek V3.2 Thinking", size: "normal" },
         { id: "meta/llama-3.1-70b", name: "Llama 3.1 70B Instruct", size: "normal", deprecated: true },
         { id: "meta/llama-3.1-8b", name: "Llama 3.1 8B Instruct", size: "normal" },
@@ -784,7 +831,6 @@ export const PROVIDER_MODELS = {
         { id: "alibaba/qwen3-max-thinking", name: "Qwen 3 Max Thinking", size: "normal" },
         { id: "alibaba/qwen3-coder", name: "Qwen3 Coder 480B A35B Instruct", size: "normal" },
         { id: "alibaba/qwen3-coder-plus", name: "Qwen3 Coder Plus", size: "normal" },
-        { id: "alibaba/qwen3-max", name: "Qwen3 Max", size: "normal" },
         { id: "alibaba/qwen3-max-preview", name: "Qwen3 Max Preview", size: "normal" },
         { id: "openai/o3", name: "o3", size: "normal" },
         { id: "openai/o3-pro", name: "o3 Pro", size: "normal" },
@@ -833,11 +879,14 @@ export const PROVIDER_MODELS = {
         { id: "mistral/pixtral-large", name: "Pixtral Large", size: "normal" },
         { id: "perplexity/sonar", name: "Sonar", size: "normal" },
         { id: "perplexity/sonar-pro", name: "Sonar Pro", size: "normal" },
-        { id: "stealth/sonoma-dusk-alpha", name: "Sonoma Dusk Alpha", size: "normal" },
-        { id: "stealth/sonoma-sky-alpha", name: "Sonoma Sky Alpha", size: "normal" },
         { id: "arcee-ai/trinity-large-preview", name: "Trinity Large Preview", size: "normal" },
         { id: "openai/gpt-oss-20b", name: "gpt-oss-20b", size: "normal" },
-        { id: "openai/gpt-oss-safeguard-20b", name: "gpt-oss-safeguard-20b", size: "normal" }
+        { id: "openai/gpt-oss-safeguard-20b", name: "gpt-oss-safeguard-20b", size: "normal" },
+        { id: "alibaba/qwen3-coder-next", name: "Qwen3 Coder Next", size: "normal" },
+        { id: "alibaba/qwen3-vl-thinking", name: "Qwen3 VL 235B A22B Thinking", size: "large" },
+        { id: "alibaba/qwen3.5-flash", name: "Qwen 3.5 Flash", size: "small" },
+        { id: "alibaba/qwen3.5-plus", name: "Qwen 3.5 Plus", size: "normal" },
+        { id: "minimax/minimax-m2.5", name: "MiniMax M2.5", size: "normal" }
     ],
     xai: [
         { id: "grok-3-fast-latest", name: "Grok 3 Fast Latest", size: "normal" },
@@ -864,6 +913,7 @@ export const PROVIDER_MODELS = {
         { id: "grok-vision-beta", name: "Grok Vision Beta", size: "normal" }
     ],
     zai: [
+        { id: "glm-5", name: "GLM-5", size: "normal" },
         { id: "glm-4.7", name: "GLM-4.7", size: "normal" },
         { id: "glm-4.7-flash", name: "GLM-4.7-Flash", size: "normal" },
         { id: "glm-4.6", name: "GLM-4.6", size: "normal", deprecated: true },
