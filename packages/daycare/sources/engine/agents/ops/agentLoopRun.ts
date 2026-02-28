@@ -946,10 +946,14 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         logger.debug(`error: Sending error message to user message=${message}`);
         await notifySubagentFailure("Inference failed", error);
         if (connector && targetId) {
-            await connector.sendMessage(targetId, {
-                text: message,
-                replyToMessageId: entry.context.messageId
-            });
+            try {
+                await connector.sendMessage(targetId, {
+                    text: message,
+                    replyToMessageId: entry.context.messageId
+                });
+            } catch (sendError) {
+                logger.warn({ connector: source, error: sendError }, "error: Failed to send inference error response");
+            }
         }
         logger.debug("error: handleMessage completed with error");
         return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };

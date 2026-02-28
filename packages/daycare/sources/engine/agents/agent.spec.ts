@@ -1527,6 +1527,165 @@ describe("Agent", () => {
         }
     });
 
+    it("keeps history on restore when pending recovery and connector error reporting both fail", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const sendMessage = vi.fn(async () => {
+                throw new Error("connector unavailable");
+            });
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: () => () => undefined,
+                sendMessage
+            };
+            expect(connectorRegistry.register("telegram", connector)).toEqual({ ok: true, status: "loaded" });
+
+            const complete = vi.fn();
+            complete.mockRejectedValueOnce(new Error("provider unavailable during restore"));
+            complete.mockResolvedValueOnce({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant",
+                    content: [{ type: "text", text: "history kept" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            });
+
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpenTest(),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "reset",
+                    message: "seed session"
+                }
+            );
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
+
+            const startedAt = Date.now();
+            const preamble = montyPreambleBuild([waitToolBuild()]);
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "assistant_message",
+                at: startedAt - 1,
+                tokens: null,
+                content: [
+                    {
+                        type: "toolCall",
+                        id: "tool-call-recover",
+                        name: "run_python",
+                        arguments: { code: "wait(300)" }
+                    }
+                ]
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_start",
+                at: startedAt,
+                toolCallId: "tool-call-recover",
+                code: "wait(300)",
+                preamble
+            });
+            await agentSystem.storage.appendHistory(agentId, {
+                type: "rlm_tool_call",
+                at: startedAt + 1,
+                toolCallId: "tool-call-recover",
+                snapshotId: createId(),
+                printOutput: ["waiting..."],
+                toolCallCount: 1,
+                toolName: "wait",
+                toolArgs: { seconds: 300 }
+            });
+
+            const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
+            expect(restoreResult).toEqual({ type: "restore", ok: true });
+
+            const messageResult = await postAndAwait(
+                agentSystem,
+                { agentId },
+                {
+                    type: "message",
+                    message: { text: "follow up" },
+                    context: {}
+                }
+            );
+            expect(messageResult).toEqual({ type: "message", responseText: "history kept" });
+
+            expect(complete).toHaveBeenCalledTimes(2);
+            const secondContext = complete.mock.calls[1]?.[0] as { messages?: unknown[] } | undefined;
+            const hasRestoredToolResult = secondContext?.messages?.some((message) => {
+                if (typeof message !== "object" || message === null) {
+                    return false;
+                }
+                const role = (message as { role?: unknown }).role;
+                const toolCallId = (message as { toolCallId?: unknown }).toolCallId;
+                if (role !== "toolResult" || toolCallId !== "tool-call-recover") {
+                    return false;
+                }
+                const content = (message as { content?: unknown }).content;
+                if (!Array.isArray(content)) {
+                    return false;
+                }
+                return content.some(
+                    (part) =>
+                        typeof part === "object" &&
+                        part !== null &&
+                        "type" in part &&
+                        "text" in part &&
+                        (part as { type?: string; text?: string }).type === "text" &&
+                        (part as { text?: string }).text?.includes("Python VM crashed")
+                );
+            });
+            expect(hasRestoredToolResult).toBe(true);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("uses permanent agent workspaceDir as workingDir on restore", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {

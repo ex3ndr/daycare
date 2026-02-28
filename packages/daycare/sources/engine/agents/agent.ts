@@ -935,7 +935,11 @@ export class Agent {
     }
 
     private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
-        await this.completePendingToolCalls("session_crashed");
+        try {
+            await this.completePendingToolCalls("session_crashed");
+        } catch (error) {
+            logger.warn({ agentId: this.id, error }, "restore: Pending tool-call recovery failed; rebuilding context");
+        }
         const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const historyMessages = await this.buildHistoryContext(history);
         this.state.context = {
