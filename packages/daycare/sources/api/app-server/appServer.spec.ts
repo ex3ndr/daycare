@@ -147,7 +147,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                 return [];
             }
             return options.tasksListActive(ctx.userId);
-        }
+        },
+        tokenStatsFetch: async () => []
     });
 
     await appServer.start();

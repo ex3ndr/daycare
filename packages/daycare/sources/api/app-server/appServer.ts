@@ -1,5 +1,7 @@
 import http from "node:http";
 import type { ConnectorMessage, Context, TaskActiveSummary } from "@/types";
+import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
+import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import { agentDescriptorTargetResolve } from "../../engine/agents/ops/agentDescriptorTargetResolve.js";
@@ -31,6 +33,7 @@ export type AppServerOptions = {
     toolResolver: ToolResolver;
     webhooks: Webhooks;
     tasksListActive: (ctx: Context) => Promise<TaskActiveSummary[]>;
+    tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
 };
 
 /**
@@ -47,6 +50,7 @@ export class AppServer {
     private readonly toolResolver: ToolResolver;
     private readonly webhooks: Webhooks;
     private readonly tasksListActive: AppServerOptions["tasksListActive"];
+    private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly logger = getLogger("api.app-server");
 
     private server: http.Server | null = null;
@@ -61,6 +65,7 @@ export class AppServer {
         this.toolResolver = options.toolResolver;
         this.webhooks = options.webhooks;
         this.tasksListActive = options.tasksListActive;
+        this.tokenStatsFetch = options.tokenStatsFetch;
     }
 
     async start(): Promise<void> {
@@ -173,7 +178,8 @@ export class AppServer {
             usersDir: this.config.current.usersDir,
             sendJson: appSendJson,
             readJsonBody: appReadJsonBody,
-            tasksListActive: this.tasksListActive
+            tasksListActive: this.tasksListActive,
+            tokenStatsFetch: this.tokenStatsFetch
         });
         if (handled) {
             return;

@@ -385,7 +385,8 @@ export class Engine {
             connectorRegistry: this.modules.connectors,
             toolResolver: this.modules.tools,
             webhooks: this.webhooks,
-            tasksListActive: (ctx) => taskListActive({ storage: this.storage, ctx })
+            tasksListActive: (ctx) => taskListActive({ storage: this.storage, ctx }),
+            tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findAll({ ...options, userId: ctx.userId })
         });
         this.channels = new Channels({
             channels: this.storage.channels,

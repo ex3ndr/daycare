@@ -1,5 +1,8 @@
 import type http from "node:http";
 import type { Context, TaskActiveSummary } from "@/types";
+import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
+import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
+import { costsRouteHandle } from "./costs/costsRoutes.js";
 import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 
@@ -9,6 +12,7 @@ export type ApiRouteContext = {
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     tasksListActive: ((ctx: Context) => Promise<TaskActiveSummary[]>) | null;
+    tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
 };
 
 /**
@@ -28,6 +32,13 @@ export async function apiRouteHandle(
     }
     if (pathname.startsWith("/tasks")) {
         return tasksRouteHandle(request, response, pathname, context);
+    }
+    if (pathname.startsWith("/costs")) {
+        return costsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            tokenStatsFetch: context.tokenStatsFetch
+        });
     }
 
     return false;

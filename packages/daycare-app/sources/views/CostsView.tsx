@@ -1,60 +1,119 @@
-import { Text, View } from "react-native";
+import { useCallback, useEffect, useMemo } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { costsBreakdownByAgent } from "@/modules/costs/costsBreakdownByAgent";
+import { costsBreakdownByModel } from "@/modules/costs/costsBreakdownByModel";
+import { useCostsStore } from "@/modules/costs/costsContext";
+import { costsFormatCurrency } from "@/modules/costs/costsFormatCurrency";
+import { costsPeriodRange } from "@/modules/costs/costsPeriodRange";
+import { costsSummarize } from "@/modules/costs/costsSummarize";
+import { costsTimeSeries } from "@/modules/costs/costsTimeSeries";
+import { CostsBarChart } from "./costs/CostsBarChart";
+import { CostsPeriodSelector } from "./costs/CostsPeriodSelector";
+import { CostsSummaryCard } from "./costs/CostsSummaryCard";
 
-function CostSummary() {
-    const { theme } = useUnistyles();
-    return (
-        <View style={summaryStyles.container}>
-            <Text style={[summaryStyles.label, { color: theme.colors.onSurfaceVariant }]}>February 2026</Text>
-            <Text style={[summaryStyles.total, { color: theme.colors.onSurface }]}>$142.50</Text>
-            <Text style={[summaryStyles.change, { color: "#2e7d32" }]}>-12% vs last month</Text>
-        </View>
-    );
-}
-
-const summaryStyles = StyleSheet.create({
-    container: {
+const styles = StyleSheet.create({
+    centered: {
         alignItems: "center",
-        paddingVertical: 24,
-        gap: 4
+        justifyContent: "center",
+        padding: 32
     },
-    label: {
+    errorText: {
         fontSize: 14,
-        fontFamily: "IBMPlexSans-Regular"
-    },
-    total: {
-        fontSize: 36,
-        fontFamily: "IBMPlexSans-SemiBold"
-    },
-    change: {
-        fontSize: 14,
-        fontFamily: "IBMPlexSans-Regular"
+        fontFamily: "IBMPlexSans-Regular",
+        textAlign: "center"
     }
 });
 
 export function CostsView() {
+    const { theme } = useUnistyles();
+
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+
+    const period = useCostsStore((s) => s.period);
+    const rows = useCostsStore((s) => s.rows);
+    const loading = useCostsStore((s) => s.loading);
+    const error = useCostsStore((s) => s.error);
+    const setPeriod = useCostsStore((s) => s.setPeriod);
+    const fetchCosts = useCostsStore((s) => s.fetch);
+
+    const doFetch = useCallback(() => {
+        if (baseUrl && token) {
+            void fetchCosts(baseUrl, token);
+        }
+    }, [baseUrl, token, fetchCosts]);
+
+    // Fetch on mount and when period changes
+    useEffect(() => {
+        doFetch();
+    }, [doFetch, period]);
+
+    const summary = useMemo(() => costsSummarize(rows), [rows]);
+    const agentBreakdown = useMemo(() => costsBreakdownByAgent(rows), [rows]);
+    const modelBreakdown = useMemo(() => costsBreakdownByModel(rows), [rows]);
+    const timeBuckets = useMemo(() => {
+        const range = costsPeriodRange(period);
+        return costsTimeSeries(rows, range.from, range.to);
+    }, [rows, period]);
+
+    if (loading && rows.length === 0) {
+        return (
+            <View style={[styles.centered, { flex: 1 }]}>
+                <ActivityIndicator color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    if (error && rows.length === 0) {
+        return (
+            <View style={[styles.centered, { flex: 1 }]}>
+                <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+            </View>
+        );
+    }
+
     return (
         <ItemListStatic>
             <ItemGroup>
-                <CostSummary />
+                <CostsPeriodSelector value={period} onChange={setPeriod} />
             </ItemGroup>
-            <ItemGroup title="By Agent">
-                <Item title="Scout" subtitle="1,240 requests" detail="$45.20" showChevron={false} />
-                <Item title="Builder" subtitle="892 requests" detail="$38.70" showChevron={false} />
-                <Item title="Operator" subtitle="2,105 requests" detail="$28.40" showChevron={false} />
-                <Item title="Reviewer" subtitle="310 requests" detail="$12.80" showChevron={false} />
-                <Item title="Scheduler" subtitle="156 requests" detail="$8.50" showChevron={false} />
-                <Item title="Monitor" subtitle="3,420 requests" detail="$4.10" showChevron={false} />
+            <ItemGroup>
+                <CostsSummaryCard summary={summary} period={period} />
             </ItemGroup>
-            <ItemGroup title="By Service">
-                <Item title="Claude API" subtitle="Inference tokens" detail="$98.30" showChevron={false} />
-                <Item title="Vercel" subtitle="Hosting and edge functions" detail="$22.00" showChevron={false} />
-                <Item title="Postgres" subtitle="Database queries and storage" detail="$14.20" showChevron={false} />
-                <Item title="S3 Storage" subtitle="File storage and bandwidth" detail="$8.00" showChevron={false} />
+            <ItemGroup title="Cost Over Time">
+                <CostsBarChart buckets={timeBuckets} />
             </ItemGroup>
+            {agentBreakdown.length > 0 && (
+                <ItemGroup title="By Agent">
+                    {agentBreakdown.map((entry) => (
+                        <Item
+                            key={entry.agentId}
+                            title={entry.agentId}
+                            subtitle={`${entry.rows} hourly rows`}
+                            detail={costsFormatCurrency(entry.cost)}
+                            showChevron={false}
+                        />
+                    ))}
+                </ItemGroup>
+            )}
+            {modelBreakdown.length > 0 && (
+                <ItemGroup title="By Model">
+                    {modelBreakdown.map((entry) => (
+                        <Item
+                            key={entry.model}
+                            title={entry.model}
+                            subtitle={`${entry.rows} hourly rows`}
+                            detail={costsFormatCurrency(entry.cost)}
+                            showChevron={false}
+                        />
+                    ))}
+                </ItemGroup>
+            )}
         </ItemListStatic>
     );
 }
