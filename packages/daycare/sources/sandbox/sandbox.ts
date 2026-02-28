@@ -1,6 +1,7 @@
 import type { ExecException } from "node:child_process";
 import { promises as fs, realpathSync } from "node:fs";
 import path from "node:path";
+import { parseEnv } from "node:util";
 
 import type { SessionPermissions } from "@/types";
 import { resolveWorkspacePath } from "../engine/permissions.js";
@@ -213,8 +214,13 @@ export class Sandbox {
         if (domainIssues.length > 0) {
             throw new Error(domainIssues.join(" "));
         }
+        const dotenvEnv = await sandboxExecDotenvLoad(cwd, args.dotenv);
         const envOverrides = envNormalize(args.env);
-        const env = envOverrides ? { ...process.env, ...envOverrides } : process.env;
+        const env = {
+            ...process.env,
+            ...(dotenvEnv ?? {}),
+            ...(envOverrides ?? {})
+        };
         const filesystem = sandboxFilesystemPolicyBuild({
             writeDirs: permissions.writeDirs,
             workingDir: permissions.workingDir,
@@ -520,6 +526,42 @@ async function pathExists(target: string): Promise<boolean> {
         return true;
     } catch {
         return false;
+    }
+}
+
+async function sandboxExecDotenvLoad(
+    cwd: string,
+    dotenv?: boolean | string
+): Promise<Record<string, string> | undefined> {
+    if (dotenv !== true && dotenv !== false && dotenv !== undefined && typeof dotenv !== "string") {
+        return undefined;
+    }
+    if (!dotenv) {
+        return undefined;
+    }
+
+    const dotenvPath =
+        dotenv === true
+            ? path.resolve(cwd, ".env")
+            : path.isAbsolute(dotenv)
+              ? path.resolve(dotenv)
+              : path.resolve(cwd, dotenv);
+    let content: string;
+    try {
+        content = await fs.readFile(dotenvPath, "utf8");
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT" && dotenv === true) {
+            return undefined;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to load dotenv file at ${dotenvPath}: ${message}`);
+    }
+
+    try {
+        return envNormalize(parseEnv(content));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Invalid dotenv file at ${dotenvPath}: ${message}`);
     }
 }
 

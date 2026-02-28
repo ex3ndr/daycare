@@ -272,4 +272,23 @@ describe("Sandbox", () => {
         expect(result.failed).toBe(false);
         expect(result.cwd).toBe(cwd);
     });
+
+    itIfSandbox("loads dotenv values and lets env overrides win", async () => {
+        const dotenvPath = path.join(sandbox.workingDir, ".env");
+        await fs.writeFile(dotenvPath, ["DOTENV_ONLY=from-dotenv", "SHARED=from-dotenv"].join("\n"), "utf8");
+
+        const result = await sandbox.exec({
+            command:
+                "node -e \"process.stdout.write([process.env.DOTENV_ONLY ?? '', process.env.SHARED ?? '', process.env.EXPLICIT_ONLY ?? ''].join('|'))\"",
+            dotenv: true,
+            env: {
+                SHARED: "from-env",
+                EXPLICIT_ONLY: "from-env"
+            },
+            allowedDomains: ["example.com"]
+        });
+
+        expect(result.failed).toBe(false);
+        expect(result.stdout.trim()).toBe("from-dotenv|from-env|from-env");
+    });
 });

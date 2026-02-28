@@ -70,6 +70,7 @@ const execSchema = Type.Object(
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
         env: Type.Optional(envSchema),
+        dotenv: Type.Optional(Type.Union([Type.Boolean(), Type.String({ minLength: 1 })])),
         packageManagers: Type.Optional(
             Type.Array(
                 Type.Union([
@@ -332,7 +333,7 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: execReturns,
@@ -343,6 +344,7 @@ export function buildExecTool(): ToolDefinition {
                 cwd: payload.cwd,
                 timeoutMs: payload.timeoutMs,
                 env: payload.env,
+                dotenv: payload.dotenv,
                 packageManagers: payload.packageManagers,
                 allowedDomains: payload.allowedDomains ?? [],
                 signal: toolContext.abortSignal

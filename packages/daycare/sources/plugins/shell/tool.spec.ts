@@ -197,6 +197,42 @@ describe("exec tool allowedDomains", () => {
         expect(firstCall?.allowedDomains).toEqual([]);
     });
 
+    it("forwards env and dotenv inputs to sandbox exec", async () => {
+        const tool = buildExecTool();
+        const context = createContext(workingDir);
+        const exec = vi.fn(
+            async (_args: {
+                command: string;
+                env?: Record<string, string | number | boolean>;
+                dotenv?: boolean | string;
+                allowedDomains?: string[];
+            }) => ({
+                stdout: "ok",
+                stderr: "",
+                failed: false,
+                exitCode: 0,
+                signal: null,
+                cwd: workingDir
+            })
+        );
+        context.sandbox.exec = exec;
+
+        const result = await tool.execute(
+            {
+                command: "echo ok",
+                env: { NODE_ENV: "test", PORT: 3000, DEBUG: true },
+                dotenv: ".env.local"
+            },
+            context,
+            execToolCall
+        );
+        expect(result.toolMessage.isError).toBe(false);
+        expect(exec).toHaveBeenCalledOnce();
+        const firstCall = exec.mock.calls[0]?.[0];
+        expect(firstCall?.env).toEqual({ NODE_ENV: "test", PORT: 3000, DEBUG: true });
+        expect(firstCall?.dotenv).toBe(".env.local");
+    });
+
     it("forwards abort signal to sandbox exec", async () => {
         const tool = buildExecTool();
         const abortController = new AbortController();

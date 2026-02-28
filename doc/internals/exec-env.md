@@ -1,19 +1,24 @@
 # Exec Environment Variables
 
-`exec` accepts an optional `env` map to inject environment variables into the
-command runtime. Keys are trimmed and blank keys are ignored. Values accept strings,
-numbers, or booleans and are coerced to strings before execution. The base environment
-is built by merging the normalized overrides onto `process.env`.
+`exec` supports two environment inputs:
+- `env`: inline key/value overrides (string, number, boolean)
+- `dotenv`: `true` (load `.env` from `cwd` if present) or a dotenv file path (absolute or `cwd`-relative)
 
-They also accept `home` (absolute path) to remap home-related environment variables for
-the command. This helps package managers and CLI tools avoid reading or writing the real
-user home. Internally this is forwarded to sandbox runtime as the `home` option.
+Keys are trimmed and invalid keys are ignored. Values are coerced to strings.
+
+Merge order:
+1. `process.env`
+2. dotenv values (if loaded)
+3. explicit `env` values
+
+This means explicit `env` always wins over dotenv entries.
 
 Example:
 ```json
 {
   "command": "node scripts/check.js",
-  "home": "/absolute/path/in/workspace/.daycare-home",
+  "cwd": "/workspace/app",
+  "dotenv": true,
   "env": {
     "NODE_ENV": "production",
     "PORT": 3000,
@@ -24,13 +29,13 @@ Example:
 
 ```mermaid
 flowchart TD
-  A[env input] --> B{object?}
-  B -- no --> C[ignore]
-  B -- yes --> D[trim keys + filter primitives]
-  D --> E[coerce values to strings]
-  E --> F[merge with process.env]
-  F --> G{home provided?}
-  G -- no --> H[execute command]
-  G -- yes --> I[set HOME USERPROFILE XDG_* TMP* and language cache envs to home]
-  I --> H
+  A[exec input] --> B{dotenv set?}
+  B -- no --> C[skip dotenv]
+  B -- yes --> D[resolve dotenv path from cwd]
+  D --> E[read + parse dotenv file]
+  E --> F[normalize env keys/values]
+  C --> G[normalize explicit env]
+  F --> H[merge with process.env]
+  G --> H
+  H --> I[execute command]
 ```

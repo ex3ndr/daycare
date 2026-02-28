@@ -79,12 +79,14 @@ Behavior:
 ### `exec(args)`
 
 ```ts
-await sandbox.exec({ command, cwd, timeoutMs, env, packageManagers, allowedDomains });
+await sandbox.exec({ command, cwd, timeoutMs, env, dotenv, packageManagers, allowedDomains });
 ```
 
 Behavior:
 - validates allowed domains
 - resolves `cwd` inside workspace scope
+- optionally loads dotenv values (`dotenv: true` uses `cwd/.env`, string uses explicit path)
+- merges env in order: `process.env` -> dotenv -> explicit `env`
 - builds filesystem policy from permissions
 - always runs with `HOME = homeDir`
 - executes through `runInSandbox` (host mode) or `dockerRunInSandbox` (docker mode)
