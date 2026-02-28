@@ -20,11 +20,7 @@ describe("costsBreakdownByAgent", () => {
     });
 
     it("groups by agent and sorts by cost descending", () => {
-        const result = costsBreakdownByAgent([
-            row("scout", 0.01),
-            row("builder", 0.05),
-            row("scout", 0.02)
-        ]);
+        const result = costsBreakdownByAgent([row("scout", 0.01), row("builder", 0.05), row("scout", 0.02)]);
         expect(result).toHaveLength(2);
         expect(result[0].agentId).toBe("builder");
         expect(result[0].cost).toBeCloseTo(0.05);
@@ -35,11 +31,7 @@ describe("costsBreakdownByAgent", () => {
     });
 
     it("counts rows per agent", () => {
-        const result = costsBreakdownByAgent([
-            row("a", 0.1),
-            row("a", 0.1),
-            row("a", 0.1)
-        ]);
+        const result = costsBreakdownByAgent([row("a", 0.1), row("a", 0.1), row("a", 0.1)]);
         expect(result[0].rows).toBe(3);
     });
 });

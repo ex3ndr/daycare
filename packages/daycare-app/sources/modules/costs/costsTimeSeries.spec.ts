@@ -38,11 +38,7 @@ describe("costsTimeSeries", () => {
     it("aggregates multiple rows in the same hour", () => {
         const from = 0;
         const to = HOUR_MS;
-        const result = costsTimeSeries(
-            [row(0, 0.01), row(0, 0.02), row(HOUR_MS, 0.05)],
-            from,
-            to
-        );
+        const result = costsTimeSeries([row(0, 0.01), row(0, 0.02), row(HOUR_MS, 0.05)], from, to);
         expect(result).toHaveLength(2);
         expect(result[0].cost).toBeCloseTo(0.03);
         expect(result[1].cost).toBeCloseTo(0.05);

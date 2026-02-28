@@ -12,7 +12,5 @@ export function costsBreakdownByAgent(rows: TokenStatsRow[]): CostsAgentBreakdow
         entry.rows += 1;
         map.set(row.agentId, entry);
     }
-    return [...map.entries()]
-        .map(([agentId, data]) => ({ agentId, ...data }))
-        .sort((a, b) => b.cost - a.cost);
+    return [...map.entries()].map(([agentId, data]) => ({ agentId, ...data })).sort((a, b) => b.cost - a.cost);
 }

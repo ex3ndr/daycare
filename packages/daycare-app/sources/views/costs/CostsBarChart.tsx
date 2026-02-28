@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import type { CostsTimeBucket } from "@/modules/costs/costsTypes";
@@ -12,9 +11,7 @@ export function CostsBarChart({ buckets }: { buckets: CostsTimeBucket[] }) {
     if (buckets.length === 0) {
         return (
             <View style={[styles.emptyContainer, { height: CHART_HEIGHT }]}>
-                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
-                    No data
-                </Text>
+                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No data</Text>
             </View>
         );
     }
@@ -32,15 +29,12 @@ export function CostsBarChart({ buckets }: { buckets: CostsTimeBucket[] }) {
     return (
         <View style={styles.container}>
             <View
-                style={[
-                    styles.chartArea,
-                    { height: CHART_HEIGHT, backgroundColor: theme.colors.surfaceContainerLow }
-                ]}
+                style={[styles.chartArea, { height: CHART_HEIGHT, backgroundColor: theme.colors.surfaceContainerLow }]}
             >
-                {bars.map((bar, index) => {
+                {bars.map((bar) => {
                     const height = maxCost > 0 ? (bar.cost / maxCost) * (CHART_HEIGHT - 8) : 0;
                     return (
-                        <View key={index} style={styles.barWrapper}>
+                        <View key={bar.timestamp} style={styles.barWrapper}>
                             <View
                                 style={[
                                     styles.bar,
@@ -55,15 +49,9 @@ export function CostsBarChart({ buckets }: { buckets: CostsTimeBucket[] }) {
                 })}
             </View>
             <View style={styles.xAxis}>
-                <Text style={[styles.xLabel, { color: theme.colors.onSurfaceVariant }]}>
-                    {labelStart}
-                </Text>
-                <Text style={[styles.xLabel, { color: theme.colors.onSurfaceVariant }]}>
-                    {labelMid}
-                </Text>
-                <Text style={[styles.xLabel, { color: theme.colors.onSurfaceVariant }]}>
-                    {labelEnd}
-                </Text>
+                <Text style={[styles.xLabel, { color: theme.colors.onSurfaceVariant }]}>{labelStart}</Text>
+                <Text style={[styles.xLabel, { color: theme.colors.onSurfaceVariant }]}>{labelMid}</Text>
+                <Text style={[styles.xLabel, { color: theme.colors.onSurfaceVariant }]}>{labelEnd}</Text>
             </View>
         </View>
     );

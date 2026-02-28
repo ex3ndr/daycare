@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
@@ -42,16 +42,12 @@ export function CostsView() {
     const setPeriod = useCostsStore((s) => s.setPeriod);
     const fetchCosts = useCostsStore((s) => s.fetch);
 
-    const doFetch = useCallback(() => {
+    // biome-ignore lint/correctness/useExhaustiveDependencies: period triggers re-fetch; store reads it internally
+    useEffect(() => {
         if (baseUrl && token) {
             void fetchCosts(baseUrl, token);
         }
-    }, [baseUrl, token, fetchCosts]);
-
-    // Fetch on mount and when period changes
-    useEffect(() => {
-        doFetch();
-    }, [doFetch, period]);
+    }, [baseUrl, token, fetchCosts, period]);
 
     const summary = useMemo(() => costsSummarize(rows), [rows]);
     const agentBreakdown = useMemo(() => costsBreakdownByAgent(rows), [rows]);

@@ -9,44 +9,30 @@ const PERIOD_LABELS: Record<CostsPeriod, string> = {
     "30d": "Last 30 days"
 };
 
-export function CostsSummaryCard({
-    summary,
-    period
-}: {
-    summary: CostsSummary;
-    period: CostsPeriod;
-}) {
+export function CostsSummaryCard({ summary, period }: { summary: CostsSummary; period: CostsPeriod }) {
     const { theme } = useUnistyles();
 
     return (
         <View style={styles.container}>
-            <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
-                {PERIOD_LABELS[period]}
-            </Text>
+            <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>{PERIOD_LABELS[period]}</Text>
             <Text style={[styles.total, { color: theme.colors.onSurface }]}>
                 {costsFormatCurrency(summary.totalCost)}
             </Text>
             <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-                        Input
-                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Input</Text>
                     <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>
                         {formatTokenCount(summary.totalInput)}
                     </Text>
                 </View>
                 <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-                        Output
-                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Output</Text>
                     <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>
                         {formatTokenCount(summary.totalOutput)}
                     </Text>
                 </View>
                 <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-                        Cache
-                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Cache</Text>
                     <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>
                         {formatTokenCount(summary.totalCacheRead + summary.totalCacheWrite)}
                     </Text>

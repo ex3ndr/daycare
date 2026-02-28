@@ -12,7 +12,5 @@ export function costsBreakdownByModel(rows: TokenStatsRow[]): CostsModelBreakdow
         entry.rows += 1;
         map.set(row.model, entry);
     }
-    return [...map.entries()]
-        .map(([model, data]) => ({ model, ...data }))
-        .sort((a, b) => b.cost - a.cost);
+    return [...map.entries()].map(([model, data]) => ({ model, ...data })).sort((a, b) => b.cost - a.cost);
 }
