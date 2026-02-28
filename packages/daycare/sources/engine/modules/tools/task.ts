@@ -9,6 +9,23 @@ import { contextForAgent, contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { rlmVerify } from "../rlm/rlmVerify.js";
+import { taskParameterCodePrepend, taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
+import type { TaskParameter } from "../tasks/taskParameterTypes.js";
+import { taskParameterValidate } from "../tasks/taskParameterValidate.js";
+
+const taskParameterSchema = Type.Object(
+    {
+        name: Type.String({ minLength: 1 }),
+        type: Type.Union([
+            Type.Literal("number"),
+            Type.Literal("string"),
+            Type.Literal("boolean"),
+            Type.Literal("any")
+        ]),
+        nullable: Type.Boolean()
+    },
+    { additionalProperties: false }
+);
 
 const taskCreateSchema = Type.Object(
     {
@@ -21,6 +38,12 @@ const taskCreateSchema = Type.Object(
                 "To do work without LLM inference: call tools then call skip()."
         }),
         description: Type.Optional(Type.String()),
+        parameters: Type.Optional(
+            Type.Array(taskParameterSchema, {
+                description:
+                    "Typed parameter schema. Each parameter becomes a Python variable injected into the code at runtime."
+            })
+        ),
         cron: Type.Optional(Type.String({ minLength: 1, description: "Cron expression (e.g. '0 * * * *')." })),
         cronTimezone: Type.Optional(
             Type.String({
@@ -59,7 +82,12 @@ const taskUpdateSchema = Type.Object(
                 description: "Python code. Print/return text to produce an LLM prompt, or call tools and skip()."
             })
         ),
-        description: Type.Optional(Type.String())
+        description: Type.Optional(Type.String()),
+        parameters: Type.Optional(
+            Type.Array(taskParameterSchema, {
+                description: "Updated parameter schema. Replaces the existing parameter list."
+            })
+        )
     },
     { additionalProperties: false }
 );
@@ -74,7 +102,19 @@ const taskDeleteSchema = Type.Object(
 const taskRunSchema = Type.Object(
     {
         taskId: Type.String({ minLength: 1 }),
-        agentId: Type.Optional(Type.String({ minLength: 1 }))
+        agentId: Type.Optional(Type.String({ minLength: 1 })),
+        parameters: Type.Optional(
+            Type.Record(Type.String(), Type.Unknown(), {
+                description: "Parameter values matching the task's parameter schema."
+            })
+        ),
+        sync: Type.Optional(
+            Type.Boolean({
+                description:
+                    "When true, waits for code execution to complete and returns the output directly " +
+                    "instead of triggering LLM inference."
+            })
+        )
     },
     { additionalProperties: false }
 );
@@ -89,6 +129,11 @@ const taskTriggerAddSchema = Type.Object(
             Type.String({
                 minLength: 1,
                 description: "Optional target agent for webhook triggers."
+            })
+        ),
+        parameters: Type.Optional(
+            Type.Record(Type.String(), Type.Unknown(), {
+                description: "Static parameter values stored on the trigger and injected on each execution."
             })
         )
     },
@@ -121,7 +166,9 @@ const taskResultSchema = Type.Object(
         webhookPath: Type.Optional(Type.String()),
         deleted: Type.Optional(Type.Boolean()),
         removed: Type.Optional(Type.Boolean()),
-        removedCount: Type.Optional(Type.Number())
+        removedCount: Type.Optional(Type.Number()),
+        success: Type.Optional(Type.Boolean()),
+        output: Type.Optional(Type.String())
     },
     { additionalProperties: false }
 );
@@ -156,9 +203,12 @@ export function buildTaskCreateTool(): ToolDefinition {
                 throw new Error("Task userId is required.");
             }
 
+            const paramPreamble = payload.parameters?.length
+                ? taskParameterPreambleStubs(payload.parameters as TaskParameter[])
+                : undefined;
             const verifyContexts = await taskVerifyContextsResolve(toolContext, payload);
             for (const verifyContext of verifyContexts) {
-                rlmVerify(payload.code, verifyContext);
+                rlmVerify(payload.code, verifyContext, paramPreamble);
             }
 
             if (payload.cron && !cronExpressionParse(payload.cron)) {
@@ -179,7 +229,7 @@ export function buildTaskCreateTool(): ToolDefinition {
                     title: payload.title,
                     description: payload.description ?? null,
                     code: payload.code,
-                    parameters: null,
+                    parameters: (payload.parameters as TaskParameter[]) ?? null,
                     createdAt: now,
                     updatedAt: now
                 });
@@ -297,9 +347,14 @@ export function buildTaskReadTool(): ToolDefinition {
                 })
             );
 
+            const parameterLines = task.parameters?.length
+                ? task.parameters.map((p) => `  - ${p.name}: ${p.type}${p.nullable ? " (nullable)" : ""}`)
+                : ["  - (none)"];
             const lines = [
                 `Task ${task.id}: ${task.title}`,
                 `Description: ${task.description ?? "(none)"}`,
+                `Parameters: ${task.parameters?.length ?? 0}`,
+                ...parameterLines,
                 `Cron triggers: ${cronTriggers.length}`,
                 ...(cronLines.length > 0 ? cronLines : ["  - (none)"]),
                 `Heartbeat triggers: ${heartbeatTriggers.length}`,
@@ -338,14 +393,34 @@ export function buildTaskUpdateTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskUpdateArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
-            if (payload.title === undefined && payload.code === undefined && payload.description === undefined) {
-                throw new Error("Provide at least one field to update: title, code, or description.");
+            if (
+                payload.title === undefined &&
+                payload.code === undefined &&
+                payload.description === undefined &&
+                payload.parameters === undefined
+            ) {
+                throw new Error("Provide at least one field to update: title, code, description, or parameters.");
+            }
+
+            const nextParams =
+                payload.parameters !== undefined ? ((payload.parameters as TaskParameter[]) ?? null) : task.parameters;
+            if (payload.code) {
+                const paramPreamble = nextParams?.length ? taskParameterPreambleStubs(nextParams) : undefined;
+                // Verify against the default "task" context
+                const verifyContext: Parameters<ToolDefinition["execute"]>[1] = {
+                    ...toolContext,
+                    agent: {
+                        descriptor: { type: "system", tag: "task" }
+                    } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
+                };
+                rlmVerify(payload.code, verifyContext, paramPreamble);
             }
 
             await toolContext.agentSystem.storage.tasks.update(toolContext.ctx, task.id, {
                 title: payload.title ?? task.title,
                 code: payload.code ?? task.code,
                 description: payload.description === undefined ? task.description : payload.description,
+                parameters: nextParams,
                 updatedAt: Date.now()
             });
 
@@ -419,26 +494,61 @@ export function buildTaskRunTool(): ToolDefinition {
                 ? { agentId: payload.agentId }
                 : { descriptor: { type: "system" as const, tag: "task" } };
 
+            // Validate and inject parameters
+            let code = task.code;
+            if (task.parameters?.length) {
+                const values = payload.parameters ?? {};
+                const error = taskParameterValidate(task.parameters, values);
+                if (error) {
+                    throw new Error(error);
+                }
+                code = taskParameterCodePrepend(code, task.parameters, values);
+            }
+
             const text = ["[task]", `taskId: ${task.id}`, `taskTitle: ${task.title}`].join("\n");
-            await toolContext.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
+            const result = await toolContext.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
                 type: "system_message",
                 text,
-                code: [task.code],
+                code: [code],
                 origin: "task",
                 execute: true,
+                sync: payload.sync === true,
                 context: toolContext.messageContext
             });
 
+            if (payload.sync === true && result.type === "system_message") {
+                const responseText = result.responseText ?? "";
+                const success = !result.responseError;
+                const summary = success
+                    ? `Task ${task.id} completed successfully.`
+                    : `Task ${task.id} execution failed.`;
+                const typedResult: TaskResult = {
+                    summary,
+                    taskId: task.id,
+                    success,
+                    output: responseText
+                };
+                return {
+                    toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
+                        taskId: task.id,
+                        success,
+                        output: responseText
+                    }),
+                    typedResult
+                };
+            }
+
             const summary = `Task ${task.id} executed.`;
+            const typedResult: TaskResult = {
+                summary,
+                taskId: task.id
+            };
             return {
                 toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
                     taskId: task.id,
                     target
                 }),
-                typedResult: {
-                    summary,
-                    taskId: task.id
-                }
+                typedResult
             };
         }
     };
@@ -460,12 +570,20 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
                 if (!payload.schedule) {
                     throw new Error("schedule is required when type is cron.");
                 }
+                // Validate trigger parameters against task schema
+                if (task.parameters?.length && payload.parameters) {
+                    const error = taskParameterValidate(task.parameters, payload.parameters as Record<string, unknown>);
+                    if (error) {
+                        throw new Error(error);
+                    }
+                }
                 const ensured = await taskCronTriggerEnsure(
                     toolContext,
                     task.id,
                     payload.schedule,
                     undefined,
-                    payload.timezone
+                    payload.timezone,
+                    payload.parameters as Record<string, unknown> | undefined
                 );
                 const summary = ensured.duplicate
                     ? `Cron trigger for schedule ${payload.schedule.trim()} (${ensured.timezone}) already exists on task ${task.id} (${ensured.id}).`
@@ -508,7 +626,18 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
                 };
             }
 
-            const ensured = await taskHeartbeatTriggerEnsure(toolContext, task.id);
+            // Validate trigger parameters against task schema
+            if (task.parameters?.length && payload.parameters) {
+                const error = taskParameterValidate(task.parameters, payload.parameters as Record<string, unknown>);
+                if (error) {
+                    throw new Error(error);
+                }
+            }
+            const ensured = await taskHeartbeatTriggerEnsure(
+                toolContext,
+                task.id,
+                payload.parameters as Record<string, unknown> | undefined
+            );
             const summary = ensured.duplicate
                 ? `Heartbeat trigger already exists on task ${task.id} (${ensured.id}).`
                 : `Added heartbeat trigger ${ensured.id} to task ${task.id}.`;
@@ -620,6 +749,7 @@ async function taskResolveForUser(
     title: string;
     description: string | null;
     code: string;
+    parameters: TaskParameter[] | null;
 }> {
     const normalizedTaskId = taskId.trim();
     if (!taskIdIsSafe(normalizedTaskId)) {
@@ -732,7 +862,8 @@ async function taskCronTriggerEnsure(
     taskId: string,
     schedule: string,
     agentId?: string,
-    timezone?: string
+    timezone?: string,
+    parameters?: Record<string, unknown>
 ): Promise<{ id: string; duplicate: boolean; timezone: string }> {
     const normalizedSchedule = schedule.trim();
     if (!cronExpressionParse(normalizedSchedule)) {
@@ -752,21 +883,23 @@ async function taskCronTriggerEnsure(
         taskId,
         schedule: normalizedSchedule,
         timezone: normalizedTimezone,
-        agentId
+        agentId,
+        parameters
     });
     return { id: created.id, duplicate: false, timezone: normalizedTimezone };
 }
 
 async function taskHeartbeatTriggerEnsure(
     toolContext: Parameters<ToolDefinition["execute"]>[1],
-    taskId: string
+    taskId: string,
+    parameters?: Record<string, unknown>
 ): Promise<{ id: string; duplicate: boolean }> {
     const existing = await toolContext.heartbeats.listTriggersForTask(toolContext.ctx, taskId);
     if (existing.length > 0) {
         return { id: existing[0]!.id, duplicate: true };
     }
 
-    const created = await toolContext.heartbeats.addTrigger(toolContext.ctx, { taskId });
+    const created = await toolContext.heartbeats.addTrigger(toolContext.ctx, { taskId, parameters });
     return { id: created.id, duplicate: false };
 }
 

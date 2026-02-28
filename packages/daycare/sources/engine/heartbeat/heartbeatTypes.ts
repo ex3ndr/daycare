@@ -24,4 +24,5 @@ export type HeartbeatCreateTaskArgs = {
     id?: string;
     taskId: string;
     overwrite?: boolean;
+    parameters?: Record<string, unknown>;
 };

@@ -3,6 +3,8 @@ import type { Context } from "@/types";
 import { getLogger } from "../../../log.js";
 import type { HeartbeatTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
+import { taskParameterCodePrepend } from "../../modules/tasks/taskParameterCodegen.js";
+import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
 import type {
     HeartbeatCreateTaskArgs,
     HeartbeatDefinition,
@@ -104,6 +106,7 @@ export class HeartbeatScheduler {
                 taskId: definition.taskId,
                 userId,
                 title,
+                parameters: definition.parameters ?? existing.parameters,
                 updatedAt: now
             };
             await this.repository.update(triggerId, updated);
@@ -115,7 +118,7 @@ export class HeartbeatScheduler {
             taskId: definition.taskId,
             userId,
             title,
-            parameters: null,
+            parameters: definition.parameters ?? null,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now
@@ -239,11 +242,26 @@ export class HeartbeatScheduler {
             if (!linked) {
                 throw new Error(`Heartbeat trigger ${trigger.id} references missing task: ${trigger.taskId}`);
             }
+
+            // Inject trigger parameters into code
+            let code = linked.code;
+            if (linked.parameters?.length && trigger.parameters) {
+                const error = taskParameterValidate(linked.parameters, trigger.parameters);
+                if (error) {
+                    logger.warn(
+                        { triggerId: trigger.id, error },
+                        "error: Heartbeat trigger parameter validation failed"
+                    );
+                    throw new Error(`Parameter validation failed for heartbeat trigger ${trigger.id}: ${error}`);
+                }
+                code = taskParameterCodePrepend(code, linked.parameters, trigger.parameters);
+            }
+
             resolved.push({
                 ...trigger,
                 taskId: linked.id,
                 title: linked.title,
-                code: linked.code
+                code
             });
         }
         return resolved;

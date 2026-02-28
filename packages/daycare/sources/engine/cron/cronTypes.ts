@@ -12,6 +12,7 @@ export type CronTaskDefinition = {
     userId: string;
     enabled?: boolean;
     deleteAfterRun?: boolean;
+    parameters?: Record<string, unknown>;
 };
 
 /**
@@ -28,6 +29,7 @@ export type CronTaskContext = {
     timezone: string;
     agentId: string | null;
     userId: string;
+    parameters?: Record<string, unknown>;
 };
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TaskParameter } from "./taskParameterTypes.js";
 import { taskParameterCodePrepend, taskParameterPreambleStubs } from "./taskParameterCodegen.js";
+import type { TaskParameter } from "./taskParameterTypes.js";
 
 describe("taskParameterCodePrepend", () => {
     it("prepends string variable", () => {

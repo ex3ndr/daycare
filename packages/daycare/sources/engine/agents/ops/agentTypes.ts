@@ -141,6 +141,8 @@ export type AgentInboxItem =
           execute?: boolean;
           code?: string[];
           context?: MessageContext;
+          /** When true, return code execution output directly without LLM inference. */
+          sync?: boolean;
       }
     | {
           type: "signal";
@@ -183,6 +185,7 @@ export type AgentInboxResult =
     | {
           type: "system_message";
           responseText: string | null;
+          responseError?: boolean;
       }
     | {
           type: "signal";

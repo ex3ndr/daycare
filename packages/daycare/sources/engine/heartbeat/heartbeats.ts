@@ -145,14 +145,15 @@ export class Heartbeats {
         return deleted;
     }
 
-    async addTrigger(ctx: Context, input: { taskId: string; id?: string }) {
+    async addTrigger(ctx: Context, input: { taskId: string; id?: string; parameters?: Record<string, unknown> }) {
         const task = await this.storage.tasks.findById(ctx, input.taskId);
         if (!task) {
             throw new Error(`Task not found: ${input.taskId}`);
         }
         return this.addTask(ctx, {
             id: input.id,
-            taskId: input.taskId
+            taskId: input.taskId,
+            parameters: input.parameters
         });
     }
 

@@ -6,10 +6,7 @@ import type { TaskParameter } from "./taskParameterTypes.js";
  *
  * Expects: params is a non-empty array, values is a plain object.
  */
-export function taskParameterValidate(
-    params: TaskParameter[],
-    values: Record<string, unknown>
-): string | null {
+export function taskParameterValidate(params: TaskParameter[], values: Record<string, unknown>): string | null {
     for (const param of params) {
         const value = values[param.name];
 

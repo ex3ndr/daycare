@@ -131,6 +131,7 @@ export class Crons {
             agentId?: string;
             enabled?: boolean;
             deleteAfterRun?: boolean;
+            parameters?: Record<string, unknown>;
         }
     ) {
         const taskRecord = await this.storage.tasks.findById(ctx, input.taskId);
@@ -144,7 +145,8 @@ export class Crons {
             timezone: input.timezone,
             agentId: input.agentId,
             enabled: input.enabled,
-            deleteAfterRun: input.deleteAfterRun
+            deleteAfterRun: input.deleteAfterRun,
+            parameters: input.parameters
         });
     }
 

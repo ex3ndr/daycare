@@ -7,6 +7,9 @@ import type { TasksRepository } from "../../../storage/tasksRepository.js";
 import type { UsersRepository } from "../../../storage/usersRepository.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
+import { taskParameterCodePrepend } from "../../modules/tasks/taskParameterCodegen.js";
+import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
+import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
 import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
 import { cronTimezoneResolve } from "./cronTimezoneResolve.js";
@@ -146,7 +149,7 @@ export class CronScheduler {
             agentId: definition.agentId ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
-            parameters: null,
+            parameters: definition.parameters ?? null,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now
@@ -241,14 +244,26 @@ export class CronScheduler {
         const runAtMs = runAt.getTime();
         const runtimeTask = await this.taskRuntimeResolve(task);
 
+        // Inject trigger parameters into code
+        let code = runtimeTask.code;
+        if (runtimeTask.parameterSchema?.length && task.parameters) {
+            const error = taskParameterValidate(runtimeTask.parameterSchema, task.parameters);
+            if (error) {
+                logger.warn({ taskId: task.id, error }, "error: Cron trigger parameter validation failed");
+                throw new Error(`Parameter validation failed for cron trigger ${task.id}: ${error}`);
+            }
+            code = taskParameterCodePrepend(code, runtimeTask.parameterSchema, task.parameters);
+        }
+
         const taskContext: CronTaskContext = {
             triggerId: task.id,
             taskId: runtimeTask.taskId,
             taskName: runtimeTask.taskTitle,
-            code: runtimeTask.code,
+            code,
             timezone: task.timezone,
             agentId: task.agentId,
-            userId: task.userId
+            userId: task.userId,
+            parameters: task.parameters ?? undefined
         };
 
         const messageContext: MessageContext = { timezone: task.timezone };
@@ -280,7 +295,7 @@ export class CronScheduler {
 
     private async taskRuntimeResolve(
         task: CronTaskDbRecord
-    ): Promise<{ taskId: string; taskTitle: string; code: string }> {
+    ): Promise<{ taskId: string; taskTitle: string; code: string; parameterSchema: TaskParameter[] | null }> {
         const linkedTask = await this.tasksRepository.findById(
             { userId: task.userId, agentId: task.agentId ?? "system:cron" },
             task.taskId
@@ -288,7 +303,12 @@ export class CronScheduler {
         if (!linkedTask) {
             throw new Error(`Cron trigger ${task.id} references missing task: ${task.taskId}`);
         }
-        return { taskId: linkedTask.id, taskTitle: linkedTask.title, code: linkedTask.code };
+        return {
+            taskId: linkedTask.id,
+            taskTitle: linkedTask.title,
+            code: linkedTask.code,
+            parameterSchema: linkedTask.parameters
+        };
     }
 
     private runTick(): void {

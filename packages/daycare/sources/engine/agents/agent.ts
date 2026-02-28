@@ -336,8 +336,12 @@ export class Agent {
                 return { type: "message", responseText };
             }
             case "system_message": {
-                const responseText = await this.handleSystemMessage(item);
-                return { type: "system_message", responseText };
+                const systemResult = await this.handleSystemMessage(item);
+                return {
+                    type: "system_message",
+                    responseText: systemResult.responseText,
+                    responseError: systemResult.responseError
+                };
             }
             case "signal": {
                 const signalResult = await this.handleSignal(item);
@@ -649,7 +653,9 @@ export class Agent {
         return result.responseText ?? null;
     }
 
-    private async handleSystemMessage(item: AgentInboxSystemMessage): Promise<string | null> {
+    private async handleSystemMessage(
+        item: AgentInboxSystemMessage
+    ): Promise<{ responseText: string | null; responseError?: boolean }> {
         let systemText = item.text;
         if (item.execute) {
             if (item.code && item.code.length > 0) {
@@ -662,6 +668,7 @@ export class Agent {
                 const preamble = montyPreambleBuild(rlmToolsForContextResolve(this.agentSystem.toolResolver, context));
                 const outputs: string[] = [];
                 let skipTurn = false;
+                let hasError = false;
                 for (const code of item.code) {
                     try {
                         const result = await rlmExecute(
@@ -679,6 +686,7 @@ export class Agent {
                         const output = result.printOutput.length > 0 ? result.printOutput.join("\n") : result.output;
                         outputs.push(output);
                     } catch (error) {
+                        hasError = true;
                         const message = error instanceof Error ? error.message : String(error);
                         outputs.push(`<exec_error>${message}</exec_error>`);
                     }
@@ -693,8 +701,26 @@ export class Agent {
                         },
                         "event: Code execution skipped via skip()"
                     );
-                    return null;
+                    return { responseText: null };
                 }
+
+                // Sync mode: return code output directly without LLM inference
+                if (item.sync) {
+                    const output = outputs.join("\n\n");
+                    logger.info(
+                        {
+                            agentId: this.id,
+                            origin: item.origin ?? "system",
+                            codeBlockCount: item.code.length,
+                            outputCount: outputs.length,
+                            hasError,
+                            durationMs: Date.now() - startedAt
+                        },
+                        "event: Sync code execution completed"
+                    );
+                    return { responseText: output, responseError: hasError };
+                }
+
                 systemText = [systemText, ...outputs].filter((s) => s.trim().length > 0).join("\n\n");
                 logger.info(
                     {
@@ -727,7 +753,7 @@ export class Agent {
                         },
                         "event: Executable system message skipped via skip()"
                     );
-                    return null;
+                    return { responseText: null };
                 }
                 systemText = expandResult.expanded;
                 const errorTagCount = tagExtractAll(systemText, "exec_error").length;
@@ -771,7 +797,7 @@ export class Agent {
             this.state.context.messages.push(userMessage);
             this.state.updatedAt = receivedAt;
             await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
-            return null;
+            return { responseText: null };
         }
 
         const messageItem: AgentInboxMessage = {
@@ -779,7 +805,8 @@ export class Agent {
             message: { text },
             context: item.context ?? {}
         };
-        return this.handleMessage(messageItem);
+        const responseText = await this.handleMessage(messageItem);
+        return { responseText };
     }
 
     private async handleSignal(item: AgentInboxSignal): Promise<{ delivered: boolean; responseText: string | null }> {
@@ -798,14 +825,14 @@ export class Agent {
             isChannelSignalType(item.signal.type) && channelSignalData
                 ? channelMessageBuild(channelSignalData)
                 : signalMessageBuild(item.signal);
-        const responseText = await this.handleSystemMessage({
+        const systemResult = await this.handleSystemMessage({
             type: "system_message",
             text,
             origin: `signal:${item.signal.id}`,
             silent: isInternalSignal ? false : (subscription?.silent ?? false),
             context: {}
         });
-        return { delivered: true, responseText };
+        return { delivered: true, responseText: systemResult.responseText };
     }
 
     private async handleReset(item: AgentInboxReset): Promise<boolean> {

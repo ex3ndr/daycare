@@ -45,9 +45,7 @@ describe("taskParameterValidate", () => {
 
     it("returns error for wrong type (number expected, string given)", () => {
         const params: TaskParameter[] = [{ name: "count", type: "number", nullable: false }];
-        expect(taskParameterValidate(params, { count: "five" })).toBe(
-            'Parameter "count" expects number, got string.'
-        );
+        expect(taskParameterValidate(params, { count: "five" })).toBe('Parameter "count" expects number, got string.');
     });
 
     it("returns error for wrong type (string expected, number given)", () => {
@@ -57,9 +55,7 @@ describe("taskParameterValidate", () => {
 
     it("returns error for wrong type (boolean expected, string given)", () => {
         const params: TaskParameter[] = [{ name: "flag", type: "boolean", nullable: false }];
-        expect(taskParameterValidate(params, { flag: "true" })).toBe(
-            'Parameter "flag" expects boolean, got string.'
-        );
+        expect(taskParameterValidate(params, { flag: "true" })).toBe('Parameter "flag" expects boolean, got string.');
     });
 
     it("accepts any value for any type", () => {
