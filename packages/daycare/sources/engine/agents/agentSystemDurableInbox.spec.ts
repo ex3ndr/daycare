@@ -341,6 +341,7 @@ async function harnessCreate(
         listTasks: async () => []
     } as unknown as Crons);
     agentSystem.setHeartbeats({} as unknown as Heartbeats);
+    agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
     agentSystem.setSignals(signals);
     return { config, storage, eventBus, signals, agentSystem };
 }

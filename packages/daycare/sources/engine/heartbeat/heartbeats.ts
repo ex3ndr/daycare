@@ -172,11 +172,12 @@ export class Heartbeats {
     }
 
     private async taskDeleteIfOrphan(ctx: Context, taskId: string): Promise<void> {
-        const [cronTriggers, heartbeatTriggers] = await Promise.all([
+        const [cronTriggers, heartbeatTriggers, webhookTriggers] = await Promise.all([
             this.storage.cronTasks.findManyByTaskId(ctx, taskId),
-            this.storage.heartbeatTasks.findManyByTaskId(ctx, taskId)
+            this.storage.heartbeatTasks.findManyByTaskId(ctx, taskId),
+            this.storage.webhookTasks.findManyByTaskId(ctx, taskId)
         ]);
-        if (cronTriggers.length > 0 || heartbeatTriggers.length > 0) {
+        if (cronTriggers.length > 0 || heartbeatTriggers.length > 0 || webhookTriggers.length > 0) {
             return;
         }
         await this.storage.tasks.delete(ctx, taskId);

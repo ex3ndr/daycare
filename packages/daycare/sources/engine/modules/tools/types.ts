@@ -11,6 +11,7 @@ import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Memory } from "../../memory/memory.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
+import type { Webhooks } from "../../webhook/webhooks.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 
@@ -31,6 +32,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     messageContext: MessageContext;
     agentSystem: AgentSystem;
     heartbeats: Heartbeats;
+    webhooks?: Webhooks;
     memory?: Memory;
     toolResolver?: ToolResolverApi;
     skills?: AgentSkill[];

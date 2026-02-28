@@ -10,6 +10,10 @@ export const migrations: Migration[] = [
         fileName: "20260227_user_profile.sql"
     },
     {
+        name: "20260227_webhook_triggers",
+        fileName: "20260227_webhook_triggers.sql"
+    },
+    {
         name: "20260228_timezones",
         fileName: "20260228_timezones.sql"
     }

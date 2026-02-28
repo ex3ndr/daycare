@@ -10,6 +10,7 @@ import { contextForAgent } from "../../agents/context.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
 import { Heartbeats } from "../../heartbeat/heartbeats.js";
+import { Webhooks } from "../../webhook/webhooks.js";
 import {
     buildTaskCreateTool,
     buildTaskDeleteTool,
@@ -48,7 +49,8 @@ describe("task tools", () => {
                 description: "Daily checks",
                 cron: "0 9 * * *",
                 cronTimezone: "UTC",
-                heartbeat: true
+                heartbeat: true,
+                webhook: true
             },
             runtime.context,
             toolCall("task_create")
@@ -63,6 +65,7 @@ describe("task tools", () => {
         const readResult = await readTool.execute({ taskId }, runtime.context, toolCall("task_read"));
         expect(readResult.typedResult.summary).toContain("Cron triggers: 1");
         expect(readResult.typedResult.summary).toContain("Heartbeat triggers: 1");
+        expect(readResult.typedResult.summary).toContain("Webhook triggers: 1");
 
         const updateTool = buildTaskUpdateTool();
         await updateTool.execute(
@@ -98,6 +101,7 @@ describe("task tools", () => {
         expect(await runtime.storage.tasks.findById(runtime.context.ctx, taskId)).toBeNull();
         expect((await runtime.crons.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
         expect((await runtime.heartbeats.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
+        expect((await runtime.webhooks.listTriggersForTask(runtime.context.ctx, taskId)).length).toBe(0);
     });
 
     it("reuses existing matching triggers during task_create", async () => {
@@ -312,6 +316,23 @@ describe("task tools", () => {
         expect(String(duplicateHeartbeatAddResult.typedResult.heartbeatTriggerId ?? "")).toBe(heartbeatTriggerId);
         expect((await runtime.heartbeats.listTriggersForTask(runtime.context.ctx, "task-one")).length).toBe(1);
 
+        const webhookAddResult = await addTool.execute(
+            { taskId: "task-one", type: "webhook" },
+            runtime.context,
+            toolCall("task_trigger_add")
+        );
+        const webhookTriggerId = String(webhookAddResult.typedResult.webhookTriggerId ?? "");
+        expect(webhookTriggerId).not.toBe("");
+        expect(String(webhookAddResult.typedResult.webhookPath ?? "")).toBe(`/v1/webhooks/${webhookTriggerId}`);
+
+        const duplicateWebhookAddResult = await addTool.execute(
+            { taskId: "task-one", type: "webhook" },
+            runtime.context,
+            toolCall("task_trigger_add")
+        );
+        expect(String(duplicateWebhookAddResult.typedResult.webhookTriggerId ?? "")).toBe(webhookTriggerId);
+        expect((await runtime.webhooks.listTriggersForTask(runtime.context.ctx, "task-one")).length).toBe(1);
+
         const removeTool = buildTaskTriggerRemoveTool();
         const cronRemoveResult = await removeTool.execute(
             { taskId: "task-one", type: "cron" },
@@ -325,6 +346,12 @@ describe("task tools", () => {
             toolCall("task_trigger_remove")
         );
         expect(heartbeatRemoveResult.typedResult.removed).toBe(true);
+        const webhookRemoveResult = await removeTool.execute(
+            { taskId: "task-one", type: "webhook" },
+            runtime.context,
+            toolCall("task_trigger_remove")
+        );
+        expect(webhookRemoveResult.typedResult.removed).toBe(true);
     });
 
     it("defaults cron timezone from user profile and treats timezone as part of uniqueness", async () => {
@@ -450,6 +477,7 @@ async function runtimeBuild(): Promise<{
     storage: Storage;
     crons: Crons;
     heartbeats: Heartbeats;
+    webhooks: Webhooks;
     context: ToolExecutionContext;
     postAndAwait: (...args: unknown[]) => Promise<unknown>;
 }> {
@@ -485,8 +513,12 @@ async function runtimeBuild(): Promise<{
         intervalMs: 60_000,
         agentSystem: agentSystem as never
     });
+    const webhooks = new Webhooks({
+        storage,
+        agentSystem: agentSystem as never
+    });
 
-    Object.assign(agentSystem, { crons, heartbeats, toolResolver });
+    Object.assign(agentSystem, { crons, heartbeats, webhooks, toolResolver });
 
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -500,8 +532,9 @@ async function runtimeBuild(): Promise<{
         messageContext: { messageId: "msg-1" },
         agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"],
         heartbeats,
+        webhooks,
         toolResolver: toolResolver as ToolExecutionContext["toolResolver"]
     };
 
-    return { dir, storage, crons, heartbeats, context, postAndAwait };
+    return { dir, storage, crons, heartbeats, webhooks, context, postAndAwait };
 }

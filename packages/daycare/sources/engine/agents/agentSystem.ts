@@ -31,6 +31,7 @@ import type { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import type { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
+import type { Webhooks } from "../webhook/webhooks.js";
 import { Agent } from "./agent.js";
 import { contextForAgent, contextForUser } from "./context.js";
 import { agentDescriptorCacheKey } from "./ops/agentDescriptorCacheKey.js";
@@ -104,6 +105,7 @@ export class AgentSystem {
     private readonly delayedSignals: DelayedSignalsFacade | null;
     private _crons: Crons | null = null;
     private _heartbeats: Heartbeats | null = null;
+    private _webhooks: Webhooks | null = null;
     private _signals: Signals | null = null;
     private entries = new Map<string, AgentEntry>();
     private keyMap = new Map<string, string>();
@@ -157,6 +159,17 @@ export class AgentSystem {
 
     setHeartbeats(heartbeats: Heartbeats): void {
         this._heartbeats = heartbeats;
+    }
+
+    get webhooks(): Webhooks {
+        if (!this._webhooks) {
+            throw new Error("Webhooks not set");
+        }
+        return this._webhooks;
+    }
+
+    setWebhooks(webhooks: Webhooks): void {
+        this._webhooks = webhooks;
     }
 
     get signals(): Signals {

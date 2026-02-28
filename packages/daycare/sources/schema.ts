@@ -193,6 +193,27 @@ export const tasksHeartbeatTable = pgTable(
     ]
 );
 
+export const tasksWebhookTable = pgTable(
+    "tasks_webhook",
+    {
+        id: text("id").primaryKey(),
+        taskId: text("task_id").notNull(),
+        userId: text("user_id").notNull(),
+        agentId: text("agent_id"),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        foreignKey({
+            columns: [table.userId, table.taskId],
+            foreignColumns: [tasksTable.userId, tasksTable.id]
+        }),
+        index("idx_tasks_webhook_task_id").on(table.userId, table.taskId),
+        index("idx_tasks_webhook_updated_at").on(table.updatedAt),
+        index("idx_tasks_webhook_user_id").on(table.userId)
+    ]
+);
+
 export const signalsEventsTable = pgTable(
     "signals_events",
     {
@@ -415,6 +436,7 @@ export const schema = {
     tasksTable,
     tasksCronTable,
     tasksHeartbeatTable,
+    tasksWebhookTable,
     signalsEventsTable,
     signalsSubscriptionsTable,
     signalsDelayedTable,

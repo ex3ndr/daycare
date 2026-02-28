@@ -38,6 +38,7 @@ import { rlmVmSnapshotIs } from "../../modules/rlm/rlmVmProgress.js";
 import { rlmWorkerKeyResolve } from "../../modules/rlm/rlmWorkerKeyResolve.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import type { Skills } from "../../skills/skills.js";
+import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
@@ -67,6 +68,7 @@ type AgentLoopRunOptions = {
     assistant: AssistantSettings | null;
     agentSystem: AgentSystem;
     heartbeats: Heartbeats;
+    webhooks: Webhooks;
     memory: Memory;
     skills: Skills;
     skillsActiveRoot?: string;
@@ -121,6 +123,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         assistant,
         agentSystem,
         heartbeats,
+        webhooks,
         memory,
         skills,
         providersForAgent,
@@ -179,6 +182,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             messageContext: entry.context,
             agentSystem,
             heartbeats,
+            webhooks,
             memory,
             skills: activeSkills,
             skillsPersonalRoot: options.skillsPersonalRoot,

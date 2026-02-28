@@ -100,6 +100,7 @@ import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
+import { Webhooks } from "./webhook/webhooks.js";
 
 const logger = getLogger("engine.runtime");
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
@@ -120,6 +121,7 @@ export class Engine {
     readonly agentSystem: AgentSystem;
     readonly crons: Crons;
     readonly heartbeats: Heartbeats;
+    readonly webhooks: Webhooks;
     readonly signals: Signals;
     readonly delayedSignals: DelayedSignals;
     readonly channels: Channels;
@@ -361,6 +363,11 @@ export class Engine {
         });
         this.heartbeats = heartbeats;
         this.agentSystem.setHeartbeats(heartbeats);
+        this.webhooks = new Webhooks({
+            storage: this.storage,
+            agentSystem: this.agentSystem
+        });
+        this.agentSystem.setWebhooks(this.webhooks);
         this.channels = new Channels({
             channels: this.storage.channels,
             channelMessages: this.storage.channelMessages,
@@ -500,6 +507,7 @@ export class Engine {
         await this.incomingMessages.flush();
         this.crons.stop();
         this.heartbeats.stop();
+        this.webhooks.stop();
         this.delayedSignals.stop();
         this.processes.unload();
         await this.exposes.stop();

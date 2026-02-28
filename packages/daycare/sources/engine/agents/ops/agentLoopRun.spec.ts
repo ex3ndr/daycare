@@ -341,6 +341,7 @@ function optionsBuild(params?: {
             config: { current: { settings: { assistant: null } } }
         } as unknown as Parameters<typeof agentLoopRun>[0]["agentSystem"],
         heartbeats: {} as Parameters<typeof agentLoopRun>[0]["heartbeats"],
+        webhooks: {} as Parameters<typeof agentLoopRun>[0]["webhooks"],
         memory: {} as Parameters<typeof agentLoopRun>[0]["memory"],
         skills: {
             list: async () => [],

@@ -231,6 +231,7 @@ describe("Agent", () => {
             });
             agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
             agentSystem.setHeartbeats({} as Parameters<AgentSystem["setHeartbeats"]>[0]);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
             await agentSystem.load();
             await agentSystem.start();
 
@@ -292,6 +293,7 @@ describe("Agent", () => {
             });
             agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
             agentSystem.setHeartbeats({} as Parameters<AgentSystem["setHeartbeats"]>[0]);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
             await agentSystem.load();
             await agentSystem.start();
 
@@ -1001,6 +1003,7 @@ describe("Agent", () => {
             });
             agentSystem.setCrons({} as unknown as Crons);
             agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
             await agentSystem.load();
             await agentSystem.start();
 
@@ -1186,6 +1189,7 @@ describe("Agent", () => {
             });
             agentSystem.setCrons({} as unknown as Crons);
             agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
             await agentSystem.load();
             await agentSystem.start();
 
@@ -1306,6 +1310,7 @@ describe("Agent", () => {
             });
             agentSystem.setCrons({} as unknown as Crons);
             agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
             await agentSystem.load();
             await agentSystem.start();
 
@@ -1452,6 +1457,7 @@ describe("Agent", () => {
             });
             agentSystem.setCrons({} as unknown as Crons);
             agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
             await agentSystem.load();
             await agentSystem.start();
 

@@ -21,6 +21,7 @@ import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
+import { WebhookTasksRepository } from "./webhookTasksRepository.js";
 
 /**
  * Facade for all storage access and repository instances.
@@ -34,6 +35,7 @@ export class Storage {
     readonly inbox: InboxRepository;
     readonly cronTasks: CronTasksRepository;
     readonly heartbeatTasks: HeartbeatTasksRepository;
+    readonly webhookTasks: WebhookTasksRepository;
     readonly tasks: TasksRepository;
     readonly signalEvents: SignalEventsRepository;
     readonly signalSubscriptions: SignalSubscriptionsRepository;
@@ -58,6 +60,7 @@ export class Storage {
         this.inbox = new InboxRepository(connection);
         this.cronTasks = new CronTasksRepository(connection);
         this.heartbeatTasks = new HeartbeatTasksRepository(connection);
+        this.webhookTasks = new WebhookTasksRepository(connection);
         this.tasks = new TasksRepository(connection);
         this.signalEvents = new SignalEventsRepository(connection);
         this.signalSubscriptions = new SignalSubscriptionsRepository(connection);
