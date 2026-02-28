@@ -9,7 +9,7 @@ import { contextForAgent, contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { rlmVerify } from "../rlm/rlmVerify.js";
-import { taskParameterCodePrepend, taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
+import { taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
 import type { TaskParameter } from "../tasks/taskParameterTypes.js";
 import { taskParameterValidate } from "../tasks/taskParameterValidate.js";
 
@@ -494,22 +494,23 @@ export function buildTaskRunTool(): ToolDefinition {
                 ? { agentId: payload.agentId }
                 : { descriptor: { type: "system" as const, tag: "task" } };
 
-            // Validate and inject parameters
-            let code = task.code;
+            // Validate parameters and pass as native inputs
+            let inputValues: Record<string, unknown> | undefined;
             if (task.parameters?.length) {
                 const values = payload.parameters ?? {};
                 const error = taskParameterValidate(task.parameters, values);
                 if (error) {
                     throw new Error(error);
                 }
-                code = taskParameterCodePrepend(code, task.parameters, values);
+                inputValues = values;
             }
 
             const text = ["[task]", `taskId: ${task.id}`, `taskTitle: ${task.title}`].join("\n");
             const result = await toolContext.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
                 type: "system_message",
                 text,
-                code: [code],
+                code: [task.code],
+                inputs: inputValues ? [inputValues] : undefined,
                 origin: "task",
                 execute: true,
                 sync: payload.sync === true,

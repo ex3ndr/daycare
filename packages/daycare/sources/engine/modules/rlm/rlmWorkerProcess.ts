@@ -64,14 +64,17 @@ function startHandle(
         rlmPrintCaptureAppend(printCapture, values);
     };
     const script = `${runtimePrelude}\n\n${request.payload.code}`;
+    const inputs = request.payload.inputs;
     const monty = new Monty(script, {
         scriptName: "run_python.py",
         externalFunctions: request.payload.externalFunctions,
+        inputs: inputs ? Object.keys(inputs) : undefined,
         typeCheck: true,
         typeCheckPrefixCode: request.payload.preamble.length > 0 ? request.payload.preamble : undefined
     });
     const progress = monty.start({
         limits: request.payload.limits,
+        inputs,
         printCallback
     });
     rlmPrintCaptureFlushTrailing(printCapture);

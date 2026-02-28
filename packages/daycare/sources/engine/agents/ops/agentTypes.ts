@@ -140,6 +140,8 @@ export type AgentInboxItem =
           silent?: boolean;
           execute?: boolean;
           code?: string[];
+          /** Per-code-block input variables injected natively into Monty VM. */
+          inputs?: Array<Record<string, unknown> | null>;
           context?: MessageContext;
           /** When true, return code execution output directly without LLM inference. */
           sync?: boolean;

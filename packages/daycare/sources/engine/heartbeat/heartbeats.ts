@@ -52,6 +52,7 @@ export class Heartbeats {
                         type: "system_message",
                         text: batch.text,
                         code: batch.code,
+                        inputs: batch.inputs,
                         origin: "heartbeat",
                         execute: true
                     });

@@ -3,7 +3,6 @@ import type { Context } from "@/types";
 import { getLogger } from "../../../log.js";
 import type { HeartbeatTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { taskParameterCodePrepend } from "../../modules/tasks/taskParameterCodegen.js";
 import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
 import type {
     HeartbeatCreateTaskArgs,
@@ -243,8 +242,8 @@ export class HeartbeatScheduler {
                 throw new Error(`Heartbeat trigger ${trigger.id} references missing task: ${trigger.taskId}`);
             }
 
-            // Inject trigger parameters into code
-            let code = linked.code;
+            // Validate trigger parameters and pass as native inputs
+            let inputValues: Record<string, unknown> | undefined;
             if (linked.parameters?.length && trigger.parameters) {
                 const error = taskParameterValidate(linked.parameters, trigger.parameters);
                 if (error) {
@@ -254,14 +253,15 @@ export class HeartbeatScheduler {
                     );
                     throw new Error(`Parameter validation failed for heartbeat trigger ${trigger.id}: ${error}`);
                 }
-                code = taskParameterCodePrepend(code, linked.parameters, trigger.parameters);
+                inputValues = trigger.parameters;
             }
 
             resolved.push({
                 ...trigger,
                 taskId: linked.id,
                 title: linked.title,
-                code
+                code: linked.code,
+                inputs: inputValues
             });
         }
         return resolved;

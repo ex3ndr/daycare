@@ -49,7 +49,8 @@ export async function rlmExecute(
     toolResolver: ToolResolverApi,
     toolCallId: string,
     historyCallback?: RlmHistoryCallback,
-    checkSteering?: RlmCheckSteeringCallback
+    checkSteering?: RlmCheckSteeringCallback,
+    inputs?: Record<string, unknown>
 ): Promise<RlmExecuteResult> {
     const availableTools = rlmToolsForContextResolve(toolResolver, context).filter(
         (tool) => tool.name !== RLM_TOOL_NAME
@@ -94,6 +95,7 @@ export async function rlmExecute(
             preamble,
             externalFunctions,
             limits: RLM_LIMITS,
+            inputs,
             printCallback
         })
     ).progress;

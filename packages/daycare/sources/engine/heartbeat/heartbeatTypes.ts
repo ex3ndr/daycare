@@ -8,7 +8,7 @@ import type { TasksRepository } from "../../storage/tasksRepository.js";
 import type { ConfigModule } from "../config/configModule.js";
 
 export type HeartbeatDefinition = HeartbeatTaskDbRecord;
-export type HeartbeatRunTask = HeartbeatDefinition & { code: string };
+export type HeartbeatRunTask = HeartbeatDefinition & { code: string; inputs?: Record<string, unknown> };
 
 export type HeartbeatSchedulerOptions = {
     config: ConfigModule;

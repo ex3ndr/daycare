@@ -7,7 +7,6 @@ import type { TasksRepository } from "../../../storage/tasksRepository.js";
 import type { UsersRepository } from "../../../storage/usersRepository.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import type { ConfigModule } from "../../config/configModule.js";
-import { taskParameterCodePrepend } from "../../modules/tasks/taskParameterCodegen.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
 import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
@@ -244,26 +243,27 @@ export class CronScheduler {
         const runAtMs = runAt.getTime();
         const runtimeTask = await this.taskRuntimeResolve(task);
 
-        // Inject trigger parameters into code
-        let code = runtimeTask.code;
+        // Validate trigger parameters
+        let inputValues: Record<string, unknown> | undefined;
         if (runtimeTask.parameterSchema?.length && task.parameters) {
             const error = taskParameterValidate(runtimeTask.parameterSchema, task.parameters);
             if (error) {
                 logger.warn({ taskId: task.id, error }, "error: Cron trigger parameter validation failed");
                 throw new Error(`Parameter validation failed for cron trigger ${task.id}: ${error}`);
             }
-            code = taskParameterCodePrepend(code, runtimeTask.parameterSchema, task.parameters);
+            inputValues = task.parameters;
         }
 
         const taskContext: CronTaskContext = {
             triggerId: task.id,
             taskId: runtimeTask.taskId,
             taskName: runtimeTask.taskTitle,
-            code,
+            code: runtimeTask.code,
             timezone: task.timezone,
             agentId: task.agentId,
             userId: task.userId,
-            parameters: task.parameters ?? undefined
+            parameters: task.parameters ?? undefined,
+            inputs: inputValues
         };
 
         const messageContext: MessageContext = { timezone: task.timezone };

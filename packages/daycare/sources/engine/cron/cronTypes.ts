@@ -30,6 +30,7 @@ export type CronTaskContext = {
     agentId: string | null;
     userId: string;
     parameters?: Record<string, unknown>;
+    inputs?: Record<string, unknown>;
 };
 
 /**

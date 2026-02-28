@@ -14,6 +14,7 @@ type RlmStepStartOptions = {
     preamble: string;
     externalFunctions: string[];
     limits: RlmStepStartLimits;
+    inputs?: Record<string, unknown>;
     printCallback: (...values: unknown[]) => void;
 };
 
@@ -30,7 +31,8 @@ export async function rlmStepStart(options: RlmStepStartOptions): Promise<RlmSte
         code: options.code,
         preamble: options.preamble,
         externalFunctions: options.externalFunctions,
-        limits: options.limits
+        limits: options.limits,
+        inputs: options.inputs
     });
     for (const line of started.printOutput) {
         options.printCallback(line);

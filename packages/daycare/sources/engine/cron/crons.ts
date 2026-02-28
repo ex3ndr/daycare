@@ -49,6 +49,7 @@ export class Crons {
                     type: "system_message",
                     text: built.text,
                     code: built.code,
+                    inputs: task.inputs ? [task.inputs] : undefined,
                     origin: "cron",
                     execute: true,
                     context: messageContext

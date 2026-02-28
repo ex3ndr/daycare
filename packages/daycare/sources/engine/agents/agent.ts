@@ -669,7 +669,9 @@ export class Agent {
                 const outputs: string[] = [];
                 let skipTurn = false;
                 let hasError = false;
-                for (const code of item.code) {
+                for (let codeIdx = 0; codeIdx < item.code.length; codeIdx++) {
+                    const code = item.code[codeIdx]!;
+                    const codeInputs = item.inputs?.[codeIdx] ?? undefined;
                     try {
                         const result = await rlmExecute(
                             code,
@@ -677,7 +679,9 @@ export class Agent {
                             context,
                             this.agentSystem.toolResolver,
                             createId(),
-                            context.appendHistoryRecord
+                            context.appendHistoryRecord,
+                            undefined,
+                            codeInputs
                         );
                         if (result.skipTurn) {
                             skipTurn = true;

@@ -16,6 +16,7 @@ export type RlmWorkerRequest =
               preamble: string;
               externalFunctions: string[];
               limits: RlmWorkerLimits;
+              inputs?: Record<string, unknown>;
           };
       }
     | {
