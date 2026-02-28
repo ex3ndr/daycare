@@ -1,33 +1,53 @@
 import "../theme.css";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
+import * as Fonts from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import * as React from "react";
-import { StatusBar } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StatusBar, View } from "react-native";
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context";
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
-import { View } from "react-native";
 
 export { ErrorBoundary } from "expo-router";
+
+let fontsLoaded = false;
+async function loadFonts() {
+    if (fontsLoaded) return;
+    fontsLoaded = true;
+    await Fonts.loadAsync({
+        "IBMPlexSans-Regular": require("@/assets/fonts/IBMPlexSans-Regular.ttf"),
+        "IBMPlexSans-Italic": require("@/assets/fonts/IBMPlexSans-Italic.ttf"),
+        "IBMPlexSans-SemiBold": require("@/assets/fonts/IBMPlexSans-SemiBold.ttf"),
+        "IBMPlexMono-Regular": require("@/assets/fonts/IBMPlexMono-Regular.ttf"),
+        "IBMPlexMono-Italic": require("@/assets/fonts/IBMPlexMono-Italic.ttf"),
+        "IBMPlexMono-SemiBold": require("@/assets/fonts/IBMPlexMono-SemiBold.ttf"),
+        "BricolageGrotesque-Bold": require("@/assets/fonts/BricolageGrotesque-Bold.ttf"),
+        SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
+    });
+}
 
 export default function RootLayout() {
     const { theme } = useUnistyles();
     const ready = useAuthStore((state) => state.ready);
     const authState = useAuthStore((state) => state.state);
     const bootstrap = useAuthStore((state) => state.bootstrap);
+    const [fontsReady, setFontsReady] = React.useState(false);
+
+    React.useEffect(() => {
+        loadFonts().then(() => setFontsReady(true));
+    }, []);
 
     React.useEffect(() => {
         void bootstrap();
     }, [bootstrap]);
 
     React.useEffect(() => {
-        if (ready) {
+        if (ready && fontsReady) {
             void SplashScreen.hideAsync();
         }
-    }, [ready]);
+    }, [ready, fontsReady]);
 
     const navigationTheme = React.useMemo(() => {
         if (theme.dark) {
@@ -59,7 +79,7 @@ export default function RootLayout() {
         };
     }, [theme]);
 
-    if (!ready) {
+    if (!ready || !fontsReady) {
         return null;
     }
 
@@ -87,9 +107,3 @@ export default function RootLayout() {
         </>
     );
 }
-
-const styles = StyleSheet.create(() => ({
-    root: {
-        width: '100%',
-    }
-}));
