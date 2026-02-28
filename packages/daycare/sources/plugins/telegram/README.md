@@ -34,7 +34,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 
 ## Outgoing message handling
 - Sends text replies with `reply_to_message_id` when present.
-- Sends images with `sendPhoto` and other files with `sendDocument`.
+- Sends images with `sendPhoto`, videos with `sendVideo`, voice notes with `sendVoice` when `sendAs: "voice"`, and other files with `sendDocument`.
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands

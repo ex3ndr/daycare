@@ -11,6 +11,7 @@ Daycare now uses one explicit file-delivery model across runtime modes:
 - `ToolExecutionResult` no longer contains a `files` array.
 - `agentLoopRun` no longer auto-attaches files returned by tools at loop completion.
 - `generate_image` and `generate_mermaid_png` report output paths in text so the model can decide when to send.
+- `send_file` supports explicit `sendAs: "voice"` for connectors that advertise voice file mode support.
 
 ## Say Mode `<file>` Tags
 
@@ -40,6 +41,9 @@ Resolution order in say mode:
 flowchart TD
   A[Tool result text includes file path] --> B{Mode}
   B -->|Normal| C[Model calls send_file]
+  C --> C1{sendAs}
+  C1 -->|voice| C2[Connector sends voice note when supported]
+  C1 -->|auto/photo/video/document| C3[Connector sends using selected mode]
   B -->|Say| D[Model emits say + file tags]
   D --> E[Extract file tags + attributes]
   E --> F[Resolve file references securely]

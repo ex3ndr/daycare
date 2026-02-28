@@ -61,7 +61,7 @@ export class TelegramConnector implements Connector {
     capabilities: ConnectorCapabilities = {
         sendText: true,
         sendFiles: {
-            modes: ["document", "photo", "video"]
+            modes: ["document", "photo", "video", "voice"]
         },
         messageFormatPrompt: TELEGRAM_MESSAGE_FORMAT_PROMPT,
         reactions: true,
@@ -363,7 +363,11 @@ export class TelegramConnector implements Connector {
         targetId: string,
         file: ConnectorFile,
         sendAs: ConnectorFile["sendAs"] | "auto",
-        options?: TelegramBot.SendPhotoOptions | TelegramBot.SendVideoOptions | TelegramBot.SendDocumentOptions
+        options?:
+            | TelegramBot.SendPhotoOptions
+            | TelegramBot.SendVideoOptions
+            | TelegramBot.SendDocumentOptions
+            | TelegramBot.SendVoiceOptions
     ): Promise<void> {
         const fileOptions: TelegramBot.FileOptions = {
             filename: file.name,
@@ -380,6 +384,10 @@ export class TelegramConnector implements Connector {
         }
         if (sendAs === "document") {
             await this.bot.sendDocument(targetId, file.path, options, fileOptions);
+            return;
+        }
+        if (sendAs === "voice") {
+            await this.bot.sendVoice(targetId, file.path, options, fileOptions);
             return;
         }
         if (file.mimeType.startsWith("image/")) {

@@ -18,7 +18,13 @@ const schema = Type.Object(
         name: Type.Optional(Type.String({ minLength: 1 })),
         mimeType: Type.Optional(Type.String({ minLength: 1 })),
         sendAs: Type.Optional(
-            Type.Union([Type.Literal("auto"), Type.Literal("document"), Type.Literal("photo"), Type.Literal("video")])
+            Type.Union([
+                Type.Literal("auto"),
+                Type.Literal("document"),
+                Type.Literal("photo"),
+                Type.Literal("video"),
+                Type.Literal("voice")
+            ])
         ),
         text: Type.Optional(Type.String()),
         source: Type.Optional(Type.String({ minLength: 1 })),
@@ -68,7 +74,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         tool: {
             name: "send_file",
             description:
-                "Send a file to the current channel via the active connector. Supports photo/video/document modes when available.",
+                "Send a file to the current channel via the active connector. Supports photo/video/document/voice modes when available.",
             parameters: schema
         },
         returns: sendFileReturns,

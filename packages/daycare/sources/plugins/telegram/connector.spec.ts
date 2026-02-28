@@ -16,6 +16,7 @@ type TelegramBotMock = {
     sendPhoto: MockFn;
     sendVideo: MockFn;
     sendDocument: MockFn;
+    sendVoice: MockFn;
     downloadFile: MockFn;
     editMessageText: MockFn;
     answerCallbackQuery: MockFn;
@@ -34,6 +35,7 @@ vi.mock("node-telegram-bot-api", () => {
         sendPhoto = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
         sendVideo = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
         sendDocument = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
+        sendVoice = vi.fn(async () => ({ message_id: 101, chat: { id: 123 } }));
         downloadFile = vi.fn(async () => "/tmp/downloaded-file");
         editMessageText = vi.fn(async () => undefined);
         answerCallbackQuery = vi.fn(async () => undefined);
@@ -813,6 +815,43 @@ describe("TelegramConnector file uploads", () => {
         expect(call?.[3]).toMatchObject({
             filename: "report.txt",
             contentType: "text/plain"
+        });
+    });
+
+    it("sends explicit contentType and filename for voice uploads", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Voice note",
+            files: [
+                {
+                    id: "f-voice-1",
+                    name: "voice-note.ogg",
+                    mimeType: "audio/ogg",
+                    size: 64,
+                    path: "/tmp/voice-note.ogg",
+                    sendAs: "voice"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendVoice).toHaveBeenCalledTimes(1);
+        const call = bot!.sendVoice.mock.calls[0];
+        expect(call?.[3]).toMatchObject({
+            filename: "voice-note.ogg",
+            contentType: "audio/ogg"
         });
     });
 });
