@@ -66,6 +66,7 @@ export type {
     ConnectorFileDisposition,
     ConnectorFileMode,
     ConnectorMessage,
+    ConnectorMessageButton,
     MessageContext,
     MessageContextEnrichment,
     MessageHandler,

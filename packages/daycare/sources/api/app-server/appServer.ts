@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { Context, TaskActiveSummary } from "@/types";
+import type { ConnectorMessage, Context, TaskActiveSummary } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import { agentDescriptorTargetResolve } from "../../engine/agents/ops/agentDescriptorTargetResolve.js";
@@ -247,6 +247,18 @@ export class AppServer {
                     secret: await this.secretResolve(),
                     expiresInSeconds: APP_AUTH_LINK_EXPIRES_IN_SECONDS
                 });
+                if (descriptor.connector === "telegram") {
+                    await this.messageSend(descriptor, context, {
+                        text: "Open your Daycare app using the button below.",
+                        buttons: [
+                            {
+                                text: "Open Daycare",
+                                url: link.url
+                            }
+                        ]
+                    });
+                    return;
+                }
                 await this.messageSend(descriptor, context, {
                     text: `Open your Daycare app: ${link.url}`
                 });
@@ -272,7 +284,7 @@ export class AppServer {
     private async messageSend(
         descriptor: Parameters<typeof agentDescriptorTargetResolve>[0],
         context: { messageId?: string },
-        message: { text: string }
+        message: ConnectorMessage
     ): Promise<void> {
         const target = agentDescriptorTargetResolve(descriptor);
         if (!target) {
@@ -283,7 +295,7 @@ export class AppServer {
             return;
         }
         await connector.sendMessage(target.targetId, {
-            text: message.text,
+            ...message,
             replyToMessageId: context.messageId
         });
     }

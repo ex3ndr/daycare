@@ -854,4 +854,51 @@ describe("TelegramConnector file uploads", () => {
             contentType: "audio/ogg"
         });
     });
+
+    it("sends inline URL buttons for text messages", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Use button below to authenticate.",
+            replyToMessageId: "77",
+            buttons: [
+                {
+                    text: "Open Daycare",
+                    url: "https://app.example.com/auth#token"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[0]).toBe("123");
+        expect(typeof sendCall?.[1]).toBe("string");
+        expect((sendCall?.[1] as string).trim()).toBe("Use button below to authenticate.");
+        expect(sendCall?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_to_message_id: 77,
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open Daycare",
+                            url: "https://app.example.com/auth#token"
+                        }
+                    ]
+                ]
+            }
+        });
+    });
 });
