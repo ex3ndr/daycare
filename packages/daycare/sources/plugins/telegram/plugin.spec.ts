@@ -74,7 +74,8 @@ function pluginApiBuild(
             settings: {
                 mode: "private",
                 allowedUids: ["123"],
-                sendReplies: true,
+                sendReplies: false,
+                sendRepliesInGroups: true,
                 polling: false,
                 clearWebhook: false,
                 statePath: null,
@@ -160,6 +161,16 @@ describe("telegram plugin settings schema", () => {
         }) as { sendReplies: boolean };
 
         expect(parsed.sendReplies).toBe(false);
+    });
+
+    it("defaults to sendReplies=false and sendRepliesInGroups=true", () => {
+        const parsed = plugin.settingsSchema.parse({
+            mode: "private",
+            allowedUids: ["123"]
+        }) as { sendReplies: boolean; sendRepliesInGroups: boolean };
+
+        expect(parsed.sendReplies).toBe(false);
+        expect(parsed.sendRepliesInGroups).toBe(true);
     });
 });
 

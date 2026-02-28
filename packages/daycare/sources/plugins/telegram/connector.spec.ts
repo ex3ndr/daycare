@@ -860,6 +860,7 @@ describe("TelegramConnector file uploads", () => {
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
+            sendReplies: true,
             polling: false,
             clearWebhook: false,
             statePath: null,
@@ -902,12 +903,11 @@ describe("TelegramConnector file uploads", () => {
         });
     });
 
-    it("does not send reply_to_message_id when replies are disabled", async () => {
+    it("does not send reply_to_message_id for private targets by default", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
-            sendReplies: false,
             polling: false,
             clearWebhook: false,
             statePath: null,
@@ -945,5 +945,36 @@ describe("TelegramConnector file uploads", () => {
             }
         });
         expect(sendCall?.[2]).not.toHaveProperty("reply_to_message_id");
+    });
+
+    it("sends reply_to_message_id for group targets when group replies are enabled", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "public",
+            allowedUids: ["123"],
+            sendReplies: false,
+            sendRepliesInGroups: true,
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("-100123", {
+            text: "Group reply",
+            replyToMessageId: "77"
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_to_message_id: 77
+        });
     });
 });

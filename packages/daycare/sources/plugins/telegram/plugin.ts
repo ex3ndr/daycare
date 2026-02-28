@@ -17,7 +17,8 @@ const allowedUidSchema = z.union([z.string().trim().min(1), z.number().int()]);
 const settingsSchema = z
     .object({
         mode: z.enum(["public", "private"]).default("private"),
-        sendReplies: z.boolean().optional().default(true),
+        sendReplies: z.boolean().optional().default(false),
+        sendRepliesInGroups: z.boolean().optional().default(true),
         allowedUids: z
             .array(allowedUidSchema)
             .optional()

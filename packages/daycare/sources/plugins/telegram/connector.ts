@@ -25,6 +25,7 @@ export type TelegramConnectorOptions = {
     allowedUids: string[];
     mode?: "public" | "private";
     sendReplies?: boolean;
+    sendRepliesInGroups?: boolean;
     polling?: boolean;
     clearWebhook?: boolean;
     statePath?: string | null;
@@ -86,6 +87,7 @@ export class TelegramConnector implements Connector {
     private allowedUids: Set<string>;
     private mode: "public" | "private";
     private sendReplies: boolean;
+    private sendRepliesInGroups: boolean;
     private shuttingDown = false;
     private clearWebhookOnStart: boolean;
     private clearedWebhook = false;
@@ -102,7 +104,8 @@ export class TelegramConnector implements Connector {
         this.fileStore = options.fileStore;
         this.dataDir = options.dataDir;
         this.mode = options.mode ?? "private";
-        this.sendReplies = options.sendReplies ?? true;
+        this.sendReplies = options.sendReplies ?? false;
+        this.sendRepliesInGroups = options.sendRepliesInGroups ?? true;
         this.allowedUids = new Set(options.allowedUids.map((uid) => String(uid)));
         this.statePath =
             options.statePath === undefined ? path.join(this.dataDir, "telegram-offset.json") : options.statePath;
@@ -245,7 +248,7 @@ export class TelegramConnector implements Connector {
         if (files.length === 0) {
             logger.debug(`send: Sending text-only message targetId=${targetId}`);
             await this.sendTextWithFallback(targetId, message.text ?? "", {
-                ...messageReplyOptionsBuild(message, this.sendReplies),
+                ...messageReplyOptionsBuild(message, targetId, this.sendReplies, this.sendRepliesInGroups),
                 ...(message.buttons?.length ? { reply_markup: messageButtonsBuild(message.buttons) } : {})
             });
             logger.debug(`send: Text message sent targetId=${targetId}`);
@@ -330,11 +333,24 @@ export class TelegramConnector implements Connector {
             ? {
                   caption: htmlCaption,
                   parse_mode: "HTML" as TelegramBot.ParseMode,
-                  ...messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies)
+                  ...messageReplyOptionsBuild(
+                      { replyToMessageId },
+                      targetId,
+                      this.sendReplies,
+                      this.sendRepliesInGroups
+                  )
               }
             : caption
-              ? { caption, ...messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies) }
-              : messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies);
+              ? {
+                    caption,
+                    ...messageReplyOptionsBuild(
+                        { replyToMessageId },
+                        targetId,
+                        this.sendReplies,
+                        this.sendRepliesInGroups
+                    )
+                }
+              : messageReplyOptionsBuild({ replyToMessageId }, targetId, this.sendReplies, this.sendRepliesInGroups);
         const sendAs = file.sendAs ?? "auto";
         try {
             await this.sendFileWithOptions(targetId, file, sendAs, options);
@@ -345,7 +361,7 @@ export class TelegramConnector implements Connector {
             logger.warn({ error }, "error: Telegram HTML caption parse error; retrying without parse_mode");
             await this.sendFileWithOptions(targetId, file, sendAs, {
                 caption,
-                ...messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies)
+                ...messageReplyOptionsBuild({ replyToMessageId }, targetId, this.sendReplies, this.sendRepliesInGroups)
             });
         }
     }
@@ -943,9 +959,12 @@ function recoverLastUpdateId(content: string): number | null {
 
 function messageReplyOptionsBuild(
     message: Pick<ConnectorMessage, "replyToMessageId">,
-    sendReplies: boolean
+    targetId: string,
+    sendReplies: boolean,
+    sendRepliesInGroups: boolean
 ): Pick<TelegramBot.SendMessageOptions, "reply_to_message_id"> | undefined {
-    if (!sendReplies) {
+    const shouldSendReply = sendReplies || (sendRepliesInGroups && targetIdIsGroupChat(targetId));
+    if (!shouldSendReply) {
         return undefined;
     }
     const replyToMessageId = message.replyToMessageId;
@@ -959,6 +978,11 @@ function messageReplyOptionsBuild(
     return {
         reply_to_message_id: parsed
     };
+}
+
+function targetIdIsGroupChat(targetId: string): boolean {
+    const parsed = Number(targetId);
+    return Number.isFinite(parsed) && parsed < 0;
 }
 
 function messageButtonsBuild(buttons: NonNullable<ConnectorMessage["buttons"]>): TelegramBot.InlineKeyboardMarkup {
