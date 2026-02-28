@@ -59,18 +59,37 @@ type WriteArgs = Static<typeof writeSchema>;
 type EditArgs = Static<typeof editSchema>;
 type EditSpec = Static<typeof editItemSchema>;
 
-const envSchema = Type.Record(
-    Type.String({ minLength: 1 }),
-    Type.Union([Type.String(), Type.Number(), Type.Boolean()])
-);
-
 const execSchema = Type.Object(
     {
-        command: Type.String({ minLength: 1 }),
-        cwd: Type.Optional(Type.String({ minLength: 1 })),
-        timeoutMs: Type.Optional(Type.Number({ minimum: 100, maximum: 300_000 })),
-        env: Type.Optional(envSchema),
-        dotenv: Type.Optional(Type.Union([Type.Boolean(), Type.String({ minLength: 1 })])),
+        command: Type.String({
+            minLength: 1,
+            description: "Shell command to execute."
+        }),
+        cwd: Type.Optional(
+            Type.String({
+                minLength: 1,
+                description:
+                    "Working directory for execution (absolute or workspace-relative path inside the workspace)."
+            })
+        ),
+        timeoutMs: Type.Optional(
+            Type.Number({
+                minimum: 100,
+                maximum: 300_000,
+                description: "Execution timeout in milliseconds. Maximum is 300000ms (5 minutes)."
+            })
+        ),
+        env: Type.Optional(
+            Type.Record(Type.String({ minLength: 1 }), Type.Union([Type.String(), Type.Number(), Type.Boolean()]), {
+                description: "Inline environment variable overrides for this command."
+            })
+        ),
+        dotenv: Type.Optional(
+            Type.Union([Type.Boolean(), Type.String({ minLength: 1 })], {
+                description:
+                    "Loads environment variables from dotenv. Use true to load .env from cwd, or pass an explicit dotenv file path."
+            })
+        ),
         packageManagers: Type.Optional(
             Type.Array(
                 Type.Union([
@@ -84,10 +103,18 @@ const execSchema = Type.Object(
                     Type.Literal("ruby"),
                     Type.Literal("rust")
                 ]),
-                { minItems: 1 }
+                {
+                    minItems: 1,
+                    description: "Language ecosystem presets that auto-allow known package registry domains."
+                }
             )
         ),
-        allowedDomains: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
+        allowedDomains: Type.Optional(
+            Type.Array(Type.String({ minLength: 1 }), {
+                minItems: 1,
+                description: "Explicit outbound network allowlist. Supports subdomain wildcards like *.example.com."
+            })
+        )
     },
     { additionalProperties: false }
 );
@@ -333,7 +360,7 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: execReturns,
