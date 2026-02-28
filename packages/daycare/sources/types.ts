@@ -123,6 +123,13 @@ export type {
 } from "./engine/signals/signalTypes.js";
 // Skills
 export type { AgentSkill } from "./engine/skills/skillTypes.js";
+// Tasks
+export type {
+    TaskActiveCronTrigger,
+    TaskActiveHeartbeatTrigger,
+    TaskActiveSummary,
+    TaskActiveWebhookTrigger
+} from "./engine/tasks/taskListActive.js";
 // Files
 export type { FileReference } from "./files/types.js";
 // Sandbox

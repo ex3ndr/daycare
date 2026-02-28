@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
+import { APP_AUTH_SEED_KEY } from "../../../api/app-server/appJwtSecretResolve.js";
 import { configResolve } from "../../../config/configResolve.js";
-import { APP_AUTH_SEED_KEY } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
-import type { PluginInstanceSettings } from "../../../settings.js";
+import type { AppServerSettings } from "../../../settings.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
@@ -368,16 +368,9 @@ describe("task tools", () => {
 
     it("uses configured app server endpoint for webhook trigger URL", async () => {
         const runtime = await runtimeBuild({
-            plugins: [
-                {
-                    instanceId: "daycare-app-server",
-                    pluginId: "daycare-app-server",
-                    enabled: true,
-                    settings: {
-                        serverEndpoint: "https://api.example.com/"
-                    }
-                }
-            ]
+            appServer: {
+                serverEndpoint: "https://api.example.com/"
+            }
         });
         tempDirs.push(runtime.dir);
         storages.push(runtime.storage);
@@ -531,7 +524,7 @@ describe("task tools", () => {
     });
 });
 
-async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}): Promise<{
+async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Promise<{
     dir: string;
     storage: Storage;
     crons: Crons;
@@ -549,7 +542,7 @@ async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}
         configResolve(
             {
                 engine: { dataDir: dir },
-                ...(options.plugins ? { plugins: options.plugins } : {})
+                ...(options.appServer ? { appServer: options.appServer } : {})
             },
             path.join(dir, "settings.json")
         )

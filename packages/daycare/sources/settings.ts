@@ -71,6 +71,16 @@ export type SecuritySettings = {
     appReviewerEnabled?: boolean;
 };
 
+export type AppServerSettings = {
+    enabled?: boolean;
+    host?: string;
+    port?: number;
+    appEndpoint?: string;
+    serverEndpoint?: string;
+    jwtSecret?: string;
+    telegramInstanceId?: string;
+};
+
 export type DockerSettings = {
     enabled?: boolean;
     image?: string;
@@ -123,6 +133,7 @@ export type SettingsConfig = {
     assistant?: AssistantSettings;
     agents?: AgentSettings;
     security?: SecuritySettings;
+    appServer?: AppServerSettings;
     plugins?: PluginInstanceSettings[];
     providers?: ProviderSettings[];
     inference?: {

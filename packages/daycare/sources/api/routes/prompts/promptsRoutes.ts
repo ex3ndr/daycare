@@ -1,5 +1,5 @@
 import type http from "node:http";
-import type { Context } from "../../engine/agents/context.js";
+import type { Context } from "@/types";
 import { promptsList } from "./promptsList.js";
 import { promptsRead } from "./promptsRead.js";
 import { promptsWrite } from "./promptsWrite.js";

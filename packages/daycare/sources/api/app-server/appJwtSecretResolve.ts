@@ -8,7 +8,7 @@ export type AppAuthStore = {
 };
 
 /**
- * Resolves the shared auth seed from plugin settings or auth store, generating one if missing.
+ * Resolves the shared auth seed from app server settings or auth store, generating one if missing.
  * Expects: settingsSecret may be undefined; auth provides get/set entry access.
  */
 export async function appJwtSecretResolve(settingsSecret: string | undefined, auth: AppAuthStore): Promise<string> {

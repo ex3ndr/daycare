@@ -67,6 +67,7 @@ export class Webhooks {
             taskId: task.id,
             userId,
             agentId: input.agentId?.trim() || null,
+            lastRunAt: null,
             createdAt: now,
             updatedAt: now
         };
@@ -132,6 +133,7 @@ export class Webhooks {
             execute: true,
             ...(messageContext ? { context: messageContext } : {})
         });
+        await this.storage.webhookTasks.recordRun(trigger.id, Date.now());
 
         logger.info({ triggerId: trigger.id, taskId: task.id }, "event: Webhook trigger executed");
     }

@@ -1,6 +1,0 @@
-{
-    "id": "daycare-app-server",
-    "name": "Daycare App Server",
-    "description": "API server for the Daycare app: authentication, prompts, and app access links.",
-    "entry": "./plugin.js"
-}

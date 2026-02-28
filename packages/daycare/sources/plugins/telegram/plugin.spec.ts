@@ -481,21 +481,15 @@ describe("telegram plugin web app menu", () => {
         }
     });
 
-    it("passes app web app URL to connector when daycare-app-server is enabled", async () => {
+    it("passes app web app URL to connector when app server is enabled", async () => {
         const dataDir = await tempDirCreate();
         const built = pluginApiBuild(dataDir, {
             engineSettings: {
-                plugins: [
-                    {
-                        instanceId: "daycare-app-server",
-                        pluginId: "daycare-app-server",
-                        enabled: true,
-                        settings: {
-                            appEndpoint: "https://app.example.com",
-                            serverEndpoint: "https://api.example.com"
-                        }
-                    }
-                ]
+                appServer: {
+                    enabled: true,
+                    appEndpoint: "https://app.example.com",
+                    serverEndpoint: "https://api.example.com"
+                }
             }
         });
 

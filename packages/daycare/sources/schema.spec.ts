@@ -43,6 +43,16 @@ describe("schema", () => {
             );
             expect(cronColumnNames.has("timezone")).toBe(true);
 
+            const webhookColumns = (await db
+                .prepare(
+                    "SELECT column_name AS name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks_webhook'"
+                )
+                .all()) as Array<{ name?: string }>;
+            const webhookColumnNames = new Set(
+                webhookColumns.map((entry) => entry.name).filter((entry): entry is string => !!entry)
+            );
+            expect(webhookColumnNames.has("last_run_at")).toBe(true);
+
             const indexes = (await db
                 .prepare("SELECT indexname AS name FROM pg_indexes WHERE schemaname = 'public' ORDER BY indexname ASC")
                 .all()) as Array<{ name?: string }>;

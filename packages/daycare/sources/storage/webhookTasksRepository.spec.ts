@@ -32,6 +32,7 @@ describe("WebhookTasksRepository", () => {
                 taskId: "task-alpha",
                 userId: "user-1",
                 agentId: null,
+                lastRunAt: null,
                 createdAt: 10,
                 updatedAt: 10
             };
@@ -40,6 +41,7 @@ describe("WebhookTasksRepository", () => {
                 taskId: "task-beta",
                 userId: "user-1",
                 agentId: "agent-1",
+                lastRunAt: null,
                 createdAt: 11,
                 updatedAt: 11
             };
@@ -84,6 +86,7 @@ describe("WebhookTasksRepository", () => {
                 taskId: "task-cache",
                 userId: "user-1",
                 agentId: null,
+                lastRunAt: null,
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -109,6 +112,7 @@ describe("WebhookTasksRepository", () => {
                     taskId: "",
                     userId: "user-1",
                     agentId: null,
+                    lastRunAt: null,
                     createdAt: 1,
                     updatedAt: 1
                 })
@@ -127,6 +131,39 @@ describe("WebhookTasksRepository", () => {
             await expect(repo.findById("hook-row-bad")).rejects.toThrow(
                 "Webhook trigger hook-row-bad is missing required task_id."
             );
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("records last webhook run time", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new WebhookTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-run",
+                userId: "user-1",
+                title: "Run",
+                description: null,
+                code: "Prompt",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "hook-run",
+                taskId: "task-run",
+                userId: "user-1",
+                agentId: null,
+                lastRunAt: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            await repo.recordRun("hook-run", 50);
+
+            const updated = await repo.findById("hook-run");
+            expect(updated?.lastRunAt).toBe(50);
+            expect(updated?.updatedAt).toBe(50);
         } finally {
             storage.connection.close();
         }

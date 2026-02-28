@@ -1,6 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { sql } from "drizzle-orm";
-import { drizzle as drizzleNodePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
 import {
     bigint,
     check,
@@ -202,6 +202,7 @@ export const tasksWebhookTable = pgTable(
         taskId: text("task_id").notNull(),
         userId: text("user_id").notNull(),
         agentId: text("agent_id"),
+        lastRunAt: bigint("last_run_at", { mode: "number" }),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },

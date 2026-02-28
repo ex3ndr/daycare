@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appAuthLinkGenerate } from "../api/app-server/appAuthLinkTool.js";
+import { appJwtSecretResolve } from "../api/app-server/appJwtSecretResolve.js";
 import { configLoad } from "../config/configLoad.js";
-import { appAuthLinkGenerate } from "../plugins/daycare-app-server/appAuthLinkTool.js";
-import { appJwtSecretResolve } from "../plugins/daycare-app-server/appJwtSecretResolve.js";
 import { appLinkCommand } from "./appLink.js";
 
 vi.mock("../config/configLoad.js", () => ({
     configLoad: vi.fn()
 }));
 
-vi.mock("../plugins/daycare-app-server/appAuthLinkTool.js", () => ({
+vi.mock("../api/app-server/appAuthLinkTool.js", () => ({
     APP_AUTH_DEFAULT_ENDPOINT: "https://daycare.dev",
     APP_AUTH_LINK_EXPIRES_IN_SECONDS: 3600,
     appAuthLinkGenerate: vi.fn()
 }));
 
-vi.mock("../plugins/daycare-app-server/appJwtSecretResolve.js", () => ({
+vi.mock("../api/app-server/appJwtSecretResolve.js", () => ({
     appJwtSecretResolve: vi.fn()
 }));
 
@@ -62,17 +62,12 @@ describe("appLinkCommand", () => {
                 assistant: {},
                 agents: { emergencyContextLimit: 100 },
                 security: { appReviewerEnabled: true },
-                plugins: [
-                    {
-                        instanceId: "daycare-app-server",
-                        pluginId: "daycare-app-server",
-                        settings: {
-                            host: "127.0.0.1",
-                            port: 7332,
-                            jwtSecret: "settings-secret"
-                        }
-                    }
-                ],
+                appServer: {
+                    host: "127.0.0.1",
+                    port: 7332,
+                    jwtSecret: "settings-secret"
+                },
+                plugins: [],
                 providers: [],
                 inference: {},
                 cron: {},

@@ -1,8 +1,8 @@
 import path from "node:path";
+import { appAuthLinkGenerate } from "../api/app-server/appAuthLinkTool.js";
+import { appJwtSecretResolve } from "../api/app-server/appJwtSecretResolve.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
-import { appAuthLinkGenerate } from "../plugins/daycare-app-server/appAuthLinkTool.js";
-import { appJwtSecretResolve } from "../plugins/daycare-app-server/appJwtSecretResolve.js";
 import { DEFAULT_SETTINGS_PATH } from "../settings.js";
 import { type AppLinkCommandOptions, appLinkOptionsResolve } from "./appLinkOptionsResolve.js";
 
@@ -31,7 +31,7 @@ export async function appLinkCommand(userId: string, options: AppLinkOptions): P
         }
 
         const config = await configLoad(settingsPath);
-        const resolved = appLinkOptionsResolve(options, config.settings.plugins ?? []);
+        const resolved = appLinkOptionsResolve(options, config.settings.appServer);
         const authStore = new AuthStore(config);
         const secret = await appJwtSecretResolve(resolved.settingsJwtSecret, authStore);
         const link = await appAuthLinkGenerate({

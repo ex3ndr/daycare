@@ -16,5 +16,9 @@ export const migrations: Migration[] = [
     {
         name: "20260228_timezones",
         fileName: "20260228_timezones.sql"
+    },
+    {
+        name: "20260228_webhook_last_run",
+        fileName: "20260228_webhook_last_run.sql"
     }
 ];

@@ -237,7 +237,15 @@ function dashboardPortResolve(input: string): number {
 }
 
 function dashboardPasswordGenerate(): string {
-    return randomBytes(18).toString("base64url");
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+        const candidate = randomBytes(18).toString("base64url");
+        if (dashboardPasswordIsStrong(candidate)) {
+            return candidate;
+        }
+    }
+
+    // Fallback guarantees policy compliance even if random retries fail.
+    return `A${randomBytes(6).toString("hex")}z0`;
 }
 
 async function dashboardPasswordPrompt(

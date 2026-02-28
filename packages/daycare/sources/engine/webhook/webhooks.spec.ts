@@ -89,6 +89,8 @@ describe("Webhooks", () => {
                     }
                 })
             );
+            const updatedTrigger = await storage.webhookTasks.findById("hook-exec");
+            expect(updatedTrigger?.lastRunAt).toBeTypeOf("number");
         } finally {
             storage.connection.close();
         }

@@ -1,14 +1,17 @@
-# Daycare App Server Plugin
+# Daycare App Server
 
-Pure API server for the Daycare app. Handles authentication, prompt file management, and provides `/app` access links.
+Core API server for the Daycare app. Handles authentication, prompt file management, active task listing, and `/app` access links.
 
 ## Settings
 
+Configure under top-level `settings.appServer`:
+
+- `enabled`: enable/disable app server runtime (`false` by default)
 - `host`: bind host, default `127.0.0.1`
 - `port`: bind port, default `7332`
 - `appEndpoint`: app endpoint URL where generated links open, default `https://daycare.dev`
 - `serverEndpoint` (optional): backend endpoint URL embedded in hash payload (for example `https://api.example.com`)
-- `jwtSecret` (optional): shared seed override; when omitted, plugin uses auth store key `seed`
+- `jwtSecret` (optional): shared seed override; when omitted, uses auth store key `seed`
 - `telegramInstanceId` (optional): preferred Telegram plugin instance id for WebApp auth (defaults to first enabled `telegram` plugin, or `telegram`)
 
 Notes:
@@ -27,6 +30,9 @@ Notes:
 - `GET /prompts`: list available prompt files
 - `GET /prompts/:filename`: read prompt file content (falls back to bundled default)
 - `PUT /prompts/:filename`: update prompt file content (`{ "content": "..." }`)
+
+### Tasks (authenticated via `Authorization: Bearer <token>`)
+- `GET /tasks/active`: list active tasks with cron/heartbeat/webhook triggers and last execution timestamps
 
 Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
 
@@ -49,7 +55,8 @@ Token lifecycle:
 ## Structure
 
 ```
-plugin.ts           — server lifecycle and route wiring
+appServer.ts        — server lifecycle and route wiring
+appServerSettingsResolve.ts — settings defaults and validation
 appHttp.ts          — HTTP utilities (CORS, JSON, body parsing, listen/close)
 appAuthExtract.ts   — JWT Bearer token extraction
 appAuthLinkTool.ts  — magic link generation tool
@@ -60,6 +67,7 @@ routes/
   routeAuthValidate.ts  — POST /auth/validate
   routeAuthRefresh.ts   — POST /auth/refresh
   routeAuthTelegram.ts  — POST /auth/telegram
+  routeWebhookTrigger.ts — POST /v1/webhooks/:token
 ```
 
-Prompt API handlers live in `sources/api/prompts/` (shared across the codebase).
+Shared authenticated API handlers live in `sources/api/routes/`.

@@ -15,6 +15,7 @@ export class WebhookTasksRepository {
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
+    private readonly runLock = new AsyncLock();
     private allTasksLoaded = false;
 
     constructor(db: DaycareDb) {
@@ -98,6 +99,7 @@ export class WebhookTasksRepository {
                     taskId,
                     userId: record.userId,
                     agentId: record.agentId,
+                    lastRunAt: record.lastRunAt,
                     createdAt: record.createdAt,
                     updatedAt: record.updatedAt
                 })
@@ -107,6 +109,7 @@ export class WebhookTasksRepository {
                         taskId,
                         userId: record.userId,
                         agentId: record.agentId,
+                        lastRunAt: record.lastRunAt,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
                     }
@@ -114,6 +117,26 @@ export class WebhookTasksRepository {
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(record);
+            });
+        });
+    }
+
+    async recordRun(id: string, runAt: number): Promise<void> {
+        await this.runLock.inLock(async () => {
+            await this.db
+                .update(tasksWebhookTable)
+                .set({ lastRunAt: runAt, updatedAt: runAt })
+                .where(eq(tasksWebhookTable.id, id));
+            await this.cacheLock.inLock(() => {
+                const cached = this.tasksById.get(id);
+                if (!cached) {
+                    return;
+                }
+                this.tasksById.set(id, {
+                    ...cached,
+                    lastRunAt: runAt,
+                    updatedAt: runAt
+                });
             });
         });
     }
@@ -168,6 +191,7 @@ function webhookTaskParse(row: typeof tasksWebhookTable.$inferSelect): WebhookTa
         taskId,
         userId: row.userId,
         agentId: row.agentId,
+        lastRunAt: row.lastRunAt,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
     };

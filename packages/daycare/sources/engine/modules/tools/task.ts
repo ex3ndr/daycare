@@ -1,8 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { appJwtSecretResolve } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
-import type { PluginInstanceSettings } from "../../../settings.js";
+import { appJwtSecretResolve } from "../../../api/app-server/appJwtSecretResolve.js";
 import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
@@ -824,55 +823,17 @@ async function taskWebhookTokenSign(
 }
 
 function taskWebhookOriginResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): string {
-    const plugins = toolContext.agentSystem.config?.current.settings.plugins ?? [];
-    const appServer =
-        plugins.find(
-            (plugin) =>
-                plugin.pluginId === "daycare-app-server" &&
-                plugin.instanceId === "daycare-app-server" &&
-                plugin.enabled !== false
-        ) ?? plugins.find((plugin) => plugin.pluginId === "daycare-app-server" && plugin.enabled !== false);
-    const settings = taskAppServerSettingsResolve(appServer);
-    const serverEndpoint = taskWebhookServerEndpointResolve(settings.serverEndpoint);
+    const settings = toolContext.agentSystem.config?.current.settings.appServer;
+    const serverEndpoint = taskWebhookServerEndpointResolve(settings?.serverEndpoint);
     if (serverEndpoint) {
         return serverEndpoint;
     }
-    return taskWebhookHostPortOriginBuild(settings.host, settings.port);
-}
-
-function taskAppServerSettingsResolve(plugin: PluginInstanceSettings | undefined): {
-    host: unknown;
-    port: unknown;
-    serverEndpoint: unknown;
-    jwtSecret: unknown;
-} {
-    if (!plugin?.settings || typeof plugin.settings !== "object") {
-        return {
-            host: undefined,
-            port: undefined,
-            serverEndpoint: undefined,
-            jwtSecret: undefined
-        };
-    }
-    return {
-        host: plugin.settings.host,
-        port: plugin.settings.port,
-        serverEndpoint: plugin.settings.serverEndpoint,
-        jwtSecret: plugin.settings.jwtSecret
-    };
+    return taskWebhookHostPortOriginBuild(settings?.host, settings?.port);
 }
 
 async function taskWebhookSecretResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): Promise<string> {
-    const plugins = toolContext.agentSystem.config?.current.settings.plugins ?? [];
-    const appServer =
-        plugins.find(
-            (plugin) =>
-                plugin.pluginId === "daycare-app-server" &&
-                plugin.instanceId === "daycare-app-server" &&
-                plugin.enabled !== false
-        ) ?? plugins.find((plugin) => plugin.pluginId === "daycare-app-server" && plugin.enabled !== false);
-    const settings = taskAppServerSettingsResolve(appServer);
-    const settingsJwtSecret = taskWebhookJwtSecretResolve(settings.jwtSecret);
+    const appServer = toolContext.agentSystem.config?.current.settings.appServer;
+    const settingsJwtSecret = taskWebhookJwtSecretResolve(appServer?.jwtSecret);
     return appJwtSecretResolve(settingsJwtSecret, toolContext.auth);
 }
 

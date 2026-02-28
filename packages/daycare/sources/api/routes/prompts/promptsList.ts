@@ -1,4 +1,4 @@
-import type { AgentPromptFilesPaths } from "../../engine/agents/ops/agentPromptFilesEnsure.js";
+import type { AgentPromptFilesPaths } from "../../../engine/agents/ops/agentPromptFilesEnsure.js";
 
 export const PROMPT_FILES = ["SOUL.md", "USER.md", "AGENTS.md", "TOOLS.md"] as const;
 export type PromptFileName = (typeof PROMPT_FILES)[number];

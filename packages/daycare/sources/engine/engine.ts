@@ -4,6 +4,7 @@ import path from "node:path";
 import Docker from "dockerode";
 
 import type { AgentDescriptor, AgentTokenEntry, Config, ConnectorMessage, Context, MessageContext } from "@/types";
+import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
 import { getLogger } from "../log.js";
@@ -98,6 +99,7 @@ import { PluginRegistry } from "./plugins/registry.js";
 import { Processes } from "./processes/processes.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
+import { taskListActive } from "./tasks/taskListActive.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
 import { Webhooks } from "./webhook/webhooks.js";
@@ -122,6 +124,7 @@ export class Engine {
     readonly crons: Crons;
     readonly heartbeats: Heartbeats;
     readonly webhooks: Webhooks;
+    readonly appServer: AppServer;
     readonly signals: Signals;
     readonly delayedSignals: DelayedSignals;
     readonly channels: Channels;
@@ -369,6 +372,15 @@ export class Engine {
         });
         this.agentSystem.setWebhooks(this.webhooks);
         this.pluginManager.setWebhooks(this.webhooks);
+        this.appServer = new AppServer({
+            config: this.config,
+            auth: this.authStore,
+            commandRegistry: this.modules.commands,
+            connectorRegistry: this.modules.connectors,
+            toolResolver: this.modules.tools,
+            webhooks: this.webhooks,
+            tasksListActive: (ctx) => taskListActive({ storage: this.storage, ctx })
+        });
         this.channels = new Channels({
             channels: this.storage.channels,
             channelMessages: this.storage.channelMessages,
@@ -412,6 +424,7 @@ export class Engine {
         logger.debug("reload: Reloading plugins with current config");
         await this.pluginManager.reload();
         logger.debug("reload: Plugin reload complete");
+        await this.appServer.start();
 
         await this.channels.load();
         await this.exposes.start();
@@ -504,6 +517,7 @@ export class Engine {
         });
         this.memoryWorker.stop();
         this.reloadSync.stop();
+        await this.appServer.stop();
         await this.modules.connectors.unregisterAll("shutdown");
         await this.incomingMessages.flush();
         this.crons.stop();
@@ -760,6 +774,7 @@ export class Engine {
             await userHomeEnsure(this.agentSystem.userHomeForUserId(ownerCtx.userId));
             await this.providerManager.reload();
             await this.pluginManager.reload();
+            await this.appServer.reload();
             this.inferenceRouter.reload();
             logger.info("reload: Runtime configuration reloaded");
         });

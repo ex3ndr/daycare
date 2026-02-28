@@ -1,22 +1,19 @@
+import { APP_AUTH_DEFAULT_ENDPOINT } from "../../api/app-server/appAuthLinkTool.js";
+import { appEndpointNormalize } from "../../api/app-server/appEndpointNormalize.js";
 import type { SettingsConfig } from "../../settings.js";
-import { APP_AUTH_DEFAULT_ENDPOINT } from "../daycare-app-server/appAuthLinkTool.js";
-import { appEndpointNormalize } from "../daycare-app-server/appEndpointNormalize.js";
 
 /**
- * Resolves Telegram WebApp URL when daycare-app-server is enabled.
- * Expects: engineSettings are normalized plugin settings and telegramInstanceId is non-empty.
+ * Resolves Telegram WebApp URL when app server is enabled.
+ * Expects: engineSettings are normalized settings and telegramInstanceId is non-empty.
  */
 export function telegramWebAppUrlResolve(engineSettings: SettingsConfig, telegramInstanceId: string): string | null {
-    const appServer = (engineSettings.plugins ?? []).find(
-        (entry) => entry.pluginId === "daycare-app-server" && entry.enabled !== false
-    );
-    if (!appServer) {
+    const appServerSettings = engineSettings.appServer;
+    if (appServerSettings?.enabled !== true) {
         return null;
     }
 
-    const pluginSettings = (appServer.settings ?? {}) as Record<string, unknown>;
-    const appEndpoint = appEndpointNormalize(valueAsString(pluginSettings.appEndpoint), "appEndpoint");
-    const serverEndpoint = appEndpointNormalize(valueAsString(pluginSettings.serverEndpoint), "serverEndpoint");
+    const appEndpoint = appEndpointNormalize(valueAsString(appServerSettings?.appEndpoint), "appEndpoint");
+    const serverEndpoint = appEndpointNormalize(valueAsString(appServerSettings?.serverEndpoint), "serverEndpoint");
     const appBaseUrl = appEndpoint ?? serverEndpoint ?? APP_AUTH_DEFAULT_ENDPOINT;
     const backendUrl = serverEndpoint ?? appBaseUrl;
     return telegramWebAppUrlBuild(appBaseUrl, backendUrl, telegramInstanceId);

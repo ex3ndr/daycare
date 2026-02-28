@@ -1,19 +1,13 @@
-import {
-    APP_AUTH_DEFAULT_ENDPOINT,
-    APP_AUTH_LINK_EXPIRES_IN_SECONDS
-} from "../plugins/daycare-app-server/appAuthLinkTool.js";
-import { appEndpointNormalize } from "../plugins/daycare-app-server/appEndpointNormalize.js";
-import type { PluginInstanceSettings } from "../settings.js";
-
-const APP_DEFAULT_HOST = "127.0.0.1";
-const APP_DEFAULT_PORT = 7332;
+import { APP_AUTH_DEFAULT_ENDPOINT, APP_AUTH_EXPIRES_IN_SECONDS } from "../api/app-server/appAuthLinkTool.js";
+import { appEndpointNormalize } from "../api/app-server/appEndpointNormalize.js";
+import { APP_SERVER_DEFAULT_HOST, APP_SERVER_DEFAULT_PORT } from "../api/app-server/appServerSettingsResolve.js";
+import type { AppServerSettings } from "../settings.js";
 
 export type AppLinkCommandOptions = {
     host?: string;
     port?: string;
     appEndpoint?: string;
     serverEndpoint?: string;
-    instance?: string;
     expiresInSeconds?: string;
 };
 
@@ -27,28 +21,20 @@ export type AppLinkResolvedOptions = {
 };
 
 /**
- * Resolves app-link command options from CLI flags and daycare-app-server plugin settings.
- * Expects: plugin list comes from validated settings.
+ * Resolves app-link command options from CLI flags and appServer settings.
+ * Expects: appServer values come from validated settings.
  */
 export function appLinkOptionsResolve(
     options: AppLinkCommandOptions,
-    plugins: PluginInstanceSettings[] = []
+    appServer: AppServerSettings | undefined
 ): AppLinkResolvedOptions {
-    const plugin = appLinkPluginResolve(plugins, options.instance);
-    const pluginSettings = appLinkSettingsResolve(plugin);
-
-    const host = appLinkHostResolve(options.host, pluginSettings.host);
-    const port = appLinkPortResolve(options.port, pluginSettings.port);
+    const host = appLinkHostResolve(options.host, appServer?.host);
+    const port = appLinkPortResolve(options.port, appServer?.port);
     const appEndpoint =
-        appLinkEndpointResolve(options.appEndpoint, pluginSettings.appEndpoint, "appEndpoint") ??
-        APP_AUTH_DEFAULT_ENDPOINT;
-    const serverEndpoint = appLinkEndpointResolve(
-        options.serverEndpoint,
-        pluginSettings.serverEndpoint,
-        "serverEndpoint"
-    );
+        appLinkEndpointResolve(options.appEndpoint, appServer?.appEndpoint, "appEndpoint") ?? APP_AUTH_DEFAULT_ENDPOINT;
+    const serverEndpoint = appLinkEndpointResolve(options.serverEndpoint, appServer?.serverEndpoint, "serverEndpoint");
     const expiresInSeconds = appLinkExpiresResolve(options.expiresInSeconds);
-    const settingsJwtSecret = appLinkSecretResolve(pluginSettings.jwtSecret);
+    const settingsJwtSecret = appLinkSecretResolve(appServer?.jwtSecret);
 
     return {
         host,
@@ -58,31 +44,6 @@ export function appLinkOptionsResolve(
         expiresInSeconds,
         settingsJwtSecret
     };
-}
-
-function appLinkPluginResolve(
-    plugins: PluginInstanceSettings[],
-    instanceId: string | undefined
-): PluginInstanceSettings | undefined {
-    if (!instanceId) {
-        return plugins.find((entry) => entry.pluginId === "daycare-app-server");
-    }
-
-    const target = plugins.find((entry) => entry.instanceId === instanceId);
-    if (!target) {
-        throw new Error(`Plugin instance "${instanceId}" was not found in settings.`);
-    }
-    if (target.pluginId !== "daycare-app-server") {
-        throw new Error(`Plugin instance "${instanceId}" is not a daycare-app-server plugin.`);
-    }
-    return target;
-}
-
-function appLinkSettingsResolve(plugin: PluginInstanceSettings | undefined): Record<string, unknown> {
-    if (!plugin || !plugin.settings || typeof plugin.settings !== "object") {
-        return {};
-    }
-    return plugin.settings;
 }
 
 function appLinkHostResolve(hostOption: string | undefined, hostSetting: unknown): string {
@@ -95,7 +56,7 @@ function appLinkHostResolve(hostOption: string | undefined, hostSetting: unknown
         return hostSetting.trim();
     }
 
-    return APP_DEFAULT_HOST;
+    return APP_SERVER_DEFAULT_HOST;
 }
 
 function appLinkPortResolve(portOption: string | undefined, portSetting: unknown): number {
@@ -115,7 +76,7 @@ function appLinkPortResolve(portOption: string | undefined, portSetting: unknown
         }
     }
 
-    return APP_DEFAULT_PORT;
+    return APP_SERVER_DEFAULT_PORT;
 }
 
 function appLinkEndpointResolve(
@@ -153,7 +114,7 @@ function appLinkPortParse(value: string | undefined): number | null {
 
 function appLinkExpiresResolve(value: string | undefined): number {
     if (!value || !value.trim()) {
-        return APP_AUTH_LINK_EXPIRES_IN_SECONDS;
+        return APP_AUTH_EXPIRES_IN_SECONDS;
     }
 
     const parsed = Number.parseInt(value, 10);

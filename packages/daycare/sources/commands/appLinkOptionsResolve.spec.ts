@@ -2,20 +2,17 @@ import { describe, expect, it } from "vitest";
 import { appLinkOptionsResolve } from "./appLinkOptionsResolve.js";
 
 describe("appLinkOptionsResolve", () => {
-    it("uses daycare-app-server plugin settings when present", () => {
-        const resolved = appLinkOptionsResolve({}, [
+    it("uses app server settings when present", () => {
+        const resolved = appLinkOptionsResolve(
+            {},
             {
-                instanceId: "daycare-app-server",
-                pluginId: "daycare-app-server",
-                settings: {
-                    host: "0.0.0.0",
-                    port: 7444,
-                    appEndpoint: "https://app.example.com/",
-                    serverEndpoint: "https://api.example.com/",
-                    jwtSecret: "plugin-secret"
-                }
+                host: "0.0.0.0",
+                port: 7444,
+                appEndpoint: "https://app.example.com/",
+                serverEndpoint: "https://api.example.com/",
+                jwtSecret: "settings-secret"
             }
-        ]);
+        );
 
         expect(resolved).toEqual({
             host: "0.0.0.0",
@@ -23,11 +20,11 @@ describe("appLinkOptionsResolve", () => {
             appEndpoint: "https://app.example.com",
             serverEndpoint: "https://api.example.com",
             expiresInSeconds: 3600,
-            settingsJwtSecret: "plugin-secret"
+            settingsJwtSecret: "settings-secret"
         });
     });
 
-    it("prefers CLI host and port options over plugin settings", () => {
+    it("prefers CLI host and port options over settings", () => {
         const resolved = appLinkOptionsResolve(
             {
                 host: "localhost",
@@ -36,18 +33,12 @@ describe("appLinkOptionsResolve", () => {
                 serverEndpoint: "https://api.public.example.com/",
                 expiresInSeconds: "120"
             },
-            [
-                {
-                    instanceId: "daycare-app-server",
-                    pluginId: "daycare-app-server",
-                    settings: {
-                        host: "127.0.0.1",
-                        port: 7332,
-                        appEndpoint: "https://app.internal.example",
-                        serverEndpoint: "https://api.internal.example"
-                    }
-                }
-            ]
+            {
+                host: "127.0.0.1",
+                port: 7332,
+                appEndpoint: "https://app.internal.example",
+                serverEndpoint: "https://api.internal.example"
+            }
         );
 
         expect(resolved.host).toBe("localhost");
@@ -57,19 +48,8 @@ describe("appLinkOptionsResolve", () => {
         expect(resolved.expiresInSeconds).toBe(120);
     });
 
-    it("throws when requested instance id is missing", () => {
-        expect(() =>
-            appLinkOptionsResolve(
-                {
-                    instance: "missing"
-                },
-                []
-            )
-        ).toThrow('Plugin instance "missing" was not found in settings.');
-    });
-
-    it("falls back to defaults when plugin is not configured", () => {
-        const resolved = appLinkOptionsResolve({}, []);
+    it("falls back to defaults when app server is not configured", () => {
+        const resolved = appLinkOptionsResolve({}, undefined);
 
         expect(resolved.host).toBe("127.0.0.1");
         expect(resolved.port).toBe(7332);
@@ -84,7 +64,7 @@ describe("appLinkOptionsResolve", () => {
                 {
                     appEndpoint: "app.example.com"
                 },
-                []
+                undefined
             )
         ).toThrow("appEndpoint must be an endpoint URL");
     });

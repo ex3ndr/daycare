@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
-import type { Context } from "../../engine/agents/context.js";
-import { agentPromptBundledRead } from "../../engine/agents/ops/agentPromptBundledRead.js";
-import { UserHome } from "../../engine/users/userHome.js";
+import type { Context } from "@/types";
+import { agentPromptBundledRead } from "../../../engine/agents/ops/agentPromptBundledRead.js";
+import { UserHome } from "../../../engine/users/userHome.js";
 import { PROMPT_PATH_KEY, promptsFilenameValidate } from "./promptsList.js";
 
 export type PromptsReadInput = {

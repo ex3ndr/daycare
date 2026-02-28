@@ -42,8 +42,8 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Debounces Telegram `setMyCommands` updates by 1 second.
 - Initial command sync is triggered from plugin `postStart()` so command registration happens after startup plugin loading.
 - Core commands currently include: `/reset`, `/context`, `/compact`, and `/abort`.
-- When `daycare-app-server` is enabled, chat menu button is switched to a Telegram WebApp button that opens the app root (`/?backend=...&telegramInstanceId=...`).
-- Without `daycare-app-server`, menu button is kept on default commands mode.
+- When `settings.appServer.enabled` is true, chat menu button is switched to a Telegram WebApp button that opens the app root (`/?backend=...&telegramInstanceId=...`).
+- When `settings.appServer.enabled` is false, menu button is kept on default commands mode.
 
 ## Persistence
 - Tracks the last processed Telegram `update_id` and persists it to the configured state file.

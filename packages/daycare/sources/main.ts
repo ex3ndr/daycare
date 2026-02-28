@@ -43,7 +43,6 @@ program
     .description("Generate a Daycare app auth link URL for a user")
     .argument("<userId>", "User id to embed in the token")
     .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
-    .option("--instance <instanceId>", "daycare-app-server plugin instance id")
     .option("--host <host>", "Override host in the generated URL")
     .option("--port <port>", "Override port in the generated URL")
     .option("--app-endpoint <endpoint>", "Override app endpoint URL where the auth link opens")
