@@ -118,7 +118,7 @@ const execSchema = Type.Object(
         allowedDomains: Type.Optional(
             Type.Array(Type.String({ minLength: 1 }), {
                 description:
-                    "Explicit outbound network allowlist. Supports subdomain wildcards like *.example.com. Use [] to block all outbound domains. Use [\"*\"] to allow all domains."
+                    "Explicit outbound network allowlist. Supports subdomain wildcards like *.example.com. Use [] to block all outbound domains. Use [\"*\"] to allow all domains, including apps with unusual networking behavior (for example untrusted TLS or ignoring HTTP_PROXY)."
             })
         )
     },
@@ -366,7 +366,7 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com). Use [\"*\"] to allow all domains. Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com). Use [\"*\"] to allow all domains, which can help with complicated apps that require unusual networking behavior (for example untrusted TLS or not respecting HTTP_PROXY). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: execReturns,

@@ -3,7 +3,9 @@
 The `exec` tool can optionally allow outbound network access for specific domains.
 The list is explicit: exact domains are allowed, and subdomain wildcards like
 `*.example.com` are supported. A global wildcard (`*`) disables domain
-restrictions entirely, allowing all outbound network access. When
+restrictions entirely, allowing all outbound network access. This is useful for
+complicated applications with unusual networking behavior (for example untrusted
+TLS or not respecting `HTTP_PROXY`). When
 `allowedDomains` is omitted (or explicitly set to `[]`), Daycare resolves to an
 empty allowlist and keeps network access blocked.
 
