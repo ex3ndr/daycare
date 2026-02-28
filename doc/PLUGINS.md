@@ -95,7 +95,7 @@ Tools can call `context.print?.(...args)` to emit diagnostic lines into Python e
 ```mermaid
 flowchart LR
     Tool[tool.execute] --> Print[context.print?.(...args)]
-    Print --> Capture[rlmPrintCaptureAppend]
+    Print --> Capture[rlmPrintCaptureAppendToolPrint]
     Capture --> Output[rlmExecute printOutput[]]
 ```
 
