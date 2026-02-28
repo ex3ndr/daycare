@@ -479,7 +479,11 @@ export function formatExecOutput(stdout: string, stderr: string, failed: boolean
     return formatExecStreams(stdout, stderr, failed).output;
 }
 
-function formatExecStreams(stdout: string, stderr: string, failed: boolean): {
+function formatExecStreams(
+    stdout: string,
+    stderr: string,
+    failed: boolean
+): {
     output: string;
     stdout?: string;
     stderr?: string;
