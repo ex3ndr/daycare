@@ -11,7 +11,7 @@ import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import { apiRouteHandle } from "../routes/routes.js";
 import { appAuthExtract } from "./appAuthExtract.js";
-import { APP_AUTH_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
+import { APP_AUTH_LINK_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
@@ -135,11 +135,7 @@ export class AppServer {
         }
         if (pathname === "/auth/refresh" && request.method === "POST") {
             await routeAuthRefresh(request, response, {
-                secretResolve: () => this.secretResolve(),
-                host: settings.host,
-                port: settings.port,
-                appEndpoint: settings.appEndpoint,
-                serverEndpoint: settings.serverEndpoint
+                secretResolve: () => this.secretResolve()
             });
             return;
         }
@@ -249,7 +245,7 @@ export class AppServer {
                     serverEndpoint: settings.serverEndpoint,
                     userId: descriptor.userId,
                     secret: await this.secretResolve(),
-                    expiresInSeconds: APP_AUTH_EXPIRES_IN_SECONDS
+                    expiresInSeconds: APP_AUTH_LINK_EXPIRES_IN_SECONDS
                 });
                 await this.messageSend(descriptor, context, {
                     text: `Open your Daycare app: ${link.url}`

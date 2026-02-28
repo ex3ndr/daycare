@@ -247,7 +247,15 @@ describe("AppServer auth endpoints", () => {
             body: JSON.stringify({ token })
         });
 
-        await expect(response.json()).resolves.toEqual({ ok: true, userId: "user-1" });
+        const payload = (await response.json()) as {
+            ok: boolean;
+            userId?: string;
+            token?: string;
+            expiresAt?: number;
+        };
+        expect(payload).toMatchObject({ ok: true, userId: "user-1" });
+        expect(typeof payload.token).toBe("string");
+        expect(typeof payload.expiresAt).toBe("number");
     });
 
     it("returns token for valid Telegram WebApp initData", async () => {

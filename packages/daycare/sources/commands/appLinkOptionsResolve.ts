@@ -1,4 +1,4 @@
-import { APP_AUTH_DEFAULT_ENDPOINT, APP_AUTH_EXPIRES_IN_SECONDS } from "../api/app-server/appAuthLinkTool.js";
+import { APP_AUTH_DEFAULT_ENDPOINT, APP_AUTH_LINK_EXPIRES_IN_SECONDS } from "../api/app-server/appAuthLinkTool.js";
 import { appEndpointNormalize } from "../api/app-server/appEndpointNormalize.js";
 import { APP_SERVER_DEFAULT_HOST, APP_SERVER_DEFAULT_PORT } from "../api/app-server/appServerSettingsResolve.js";
 import type { AppServerSettings } from "../settings.js";
@@ -114,7 +114,7 @@ function appLinkPortParse(value: string | undefined): number | null {
 
 function appLinkExpiresResolve(value: string | undefined): number {
     if (!value || !value.trim()) {
-        return APP_AUTH_EXPIRES_IN_SECONDS;
+        return APP_AUTH_LINK_EXPIRES_IN_SECONDS;
     }
 
     const parsed = Number.parseInt(value, 10);
