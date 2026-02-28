@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { jwtVerify } from "../../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 
 export type RouteWebhookTriggerOptions = {
@@ -19,7 +19,9 @@ export async function routeWebhookTrigger(
 ): Promise<void> {
     let webhookId = "";
     try {
-        const verified = await jwtVerify(webhookToken, await options.secretResolve());
+        const verified = await jwtVerify(webhookToken, await options.secretResolve(), {
+            service: JWT_SERVICE_WEBHOOK
+        });
         webhookId = verified.userId.trim();
         if (!webhookId) {
             appSendJson(response, 404, { ok: false, error: "Webhook trigger not found." });

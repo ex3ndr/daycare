@@ -48,7 +48,7 @@ flowchart LR
 flowchart LR
     CLI[daycare app-link userId] --> Settings[Load settings.json]
     Settings --> PluginSettings[Resolve daycare-app-server host/port/jwtSecret]
-    PluginSettings --> Secret[Resolve/generate app-auth.jwtSecret in auth store]
+    PluginSettings --> Secret[Resolve/generate seed in auth store]
     Secret --> Sign[Sign token userId + exp]
     Sign --> URL[Print http://host:port/auth#base64url(...)]
 ```

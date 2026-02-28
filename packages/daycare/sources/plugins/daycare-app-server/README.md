@@ -8,7 +8,7 @@ Pure API server for the Daycare app. Handles authentication, prompt file managem
 - `port`: bind port, default `7332`
 - `appEndpoint`: app endpoint URL where generated links open, default `https://daycare.dev`
 - `serverEndpoint` (optional): backend endpoint URL embedded in hash payload (for example `https://api.example.com`)
-- `jwtSecret` (optional): HS256 JWT signing secret; when omitted, plugin uses auth store key `app-auth.jwtSecret`
+- `jwtSecret` (optional): shared seed override; when omitted, plugin uses auth store key `seed`
 - `telegramInstanceId` (optional): preferred Telegram plugin instance id for WebApp auth (defaults to first enabled `telegram` plugin, or `telegram`)
 
 Notes:

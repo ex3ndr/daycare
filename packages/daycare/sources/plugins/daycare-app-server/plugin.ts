@@ -144,6 +144,8 @@ export const plugin = definePlugin({
 
         return {
             load: async () => {
+                await secretResolve();
+
                 const linkTool = appAuthLinkTool({
                     host: settings.host,
                     port: settings.port,

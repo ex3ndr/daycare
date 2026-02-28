@@ -3,7 +3,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { appJwtSecretResolve } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
 import type { PluginInstanceSettings } from "../../../settings.js";
-import { jwtSign } from "../../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { contextForAgent, contextForUser } from "../../agents/context.js";
@@ -816,7 +816,10 @@ async function taskWebhookTokenSign(
             userId: triggerId
         },
         secret,
-        WEBHOOK_TOKEN_EXPIRES_IN_SECONDS
+        WEBHOOK_TOKEN_EXPIRES_IN_SECONDS,
+        {
+            service: JWT_SERVICE_WEBHOOK
+        }
     );
 }
 

@@ -4,11 +4,11 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
-import { APP_AUTH_SECRET_KEY } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
+import { APP_AUTH_SEED_KEY } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
 import type { PluginInstanceSettings } from "../../../settings.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
-import { jwtVerify } from "../../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
 import { contextForAgent } from "../../agents/context.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
@@ -329,7 +329,11 @@ describe("task tools", () => {
         const webhookPath = String(webhookAddResult.typedResult.webhookPath ?? "");
         expect(webhookPath.startsWith("http://127.0.0.1:7332/v1/webhooks/")).toBe(true);
         const webhookToken = webhookPath.split("/").at(-1) ?? "";
-        await expect(jwtVerify(webhookToken, runtime.webhookSecret)).resolves.toMatchObject({
+        await expect(
+            jwtVerify(webhookToken, runtime.webhookSecret, {
+                service: JWT_SERVICE_WEBHOOK
+            })
+        ).resolves.toMatchObject({
             userId: webhookTriggerId
         });
 
@@ -400,7 +404,11 @@ describe("task tools", () => {
         const webhookPath = String(webhookAddResult.typedResult.webhookPath ?? "");
         expect(webhookPath.startsWith("https://api.example.com/v1/webhooks/")).toBe(true);
         const webhookToken = webhookPath.split("/").at(-1) ?? "";
-        await expect(jwtVerify(webhookToken, runtime.webhookSecret)).resolves.toMatchObject({
+        await expect(
+            jwtVerify(webhookToken, runtime.webhookSecret, {
+                service: JWT_SERVICE_WEBHOOK
+            })
+        ).resolves.toMatchObject({
             userId: webhookTriggerId
         });
     });
@@ -549,11 +557,9 @@ async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}
     const webhookSecret = "valid-secret-for-tests-1234567890";
     const authEntries = new Map<string, Record<string, unknown>>([
         [
-            APP_AUTH_SECRET_KEY,
+            APP_AUTH_SEED_KEY,
             {
-                type: "token",
-                token: webhookSecret,
-                secret: webhookSecret
+                seed: webhookSecret
             }
         ]
     ]);

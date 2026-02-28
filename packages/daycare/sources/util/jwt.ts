@@ -6,13 +6,23 @@ export type JwtUserPayload = {
     exp: number;
 };
 
-const JWT_SERVICE = "daycare.app-auth";
+export const JWT_SERVICE_APP_AUTH = "daycare.app-auth";
+export const JWT_SERVICE_WEBHOOK = "daycare.webhook";
+
+type JwtTokenOptions = {
+    service?: string;
+};
 
 /**
  * Signs a short-lived user token using privacy-kit ephemeral tokens.
  * Expects: payload.userId is non-empty and expiresInSeconds is an integer.
  */
-export async function jwtSign(payload: { userId: string }, secret: string, expiresInSeconds: number): Promise<string> {
+export async function jwtSign(
+    payload: { userId: string },
+    secret: string,
+    expiresInSeconds: number,
+    options: JwtTokenOptions = {}
+): Promise<string> {
     const userId = payload.userId.trim();
     if (!userId) {
         throw new Error("JWT payload userId is required.");
@@ -20,9 +30,10 @@ export async function jwtSign(payload: { userId: string }, secret: string, expir
     if (!Number.isInteger(expiresInSeconds)) {
         throw new Error("JWT expiresInSeconds must be an integer.");
     }
+    const service = jwtServiceNormalize(options.service);
 
     const generator = await createEphemeralTokenGenerator({
-        service: JWT_SERVICE,
+        service,
         seed: jwtSecretNormalize(secret),
         ttl: expiresInSeconds * 1000
     });
@@ -33,16 +44,17 @@ export async function jwtSign(payload: { userId: string }, secret: string, expir
  * Verifies a user token and normalizes its core claims.
  * Expects: token is signed by jwtSign with the provided secret.
  */
-export async function jwtVerify(token: string, secret: string): Promise<JwtUserPayload> {
+export async function jwtVerify(token: string, secret: string, options: JwtTokenOptions = {}): Promise<JwtUserPayload> {
     const normalizedSecret = jwtSecretNormalize(secret);
+    const service = jwtServiceNormalize(options.service);
 
     const generator = await createEphemeralTokenGenerator({
-        service: JWT_SERVICE,
+        service,
         seed: normalizedSecret,
         ttl: 60_000
     });
     const verifier = await createEphemeralTokenVerifier({
-        service: JWT_SERVICE,
+        service,
         publicKey: generator.publicKey
     });
 
@@ -63,6 +75,14 @@ function jwtSecretNormalize(secret: string): string {
     const normalized = secret.trim();
     if (!normalized) {
         throw new Error("JWT secret is required.");
+    }
+    return normalized;
+}
+
+function jwtServiceNormalize(service: string | undefined): string {
+    const normalized = service?.trim() ?? JWT_SERVICE_APP_AUTH;
+    if (!normalized) {
+        throw new Error("JWT service is required.");
     }
     return normalized;
 }

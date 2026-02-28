@@ -2,6 +2,7 @@
 
 Webhook triggers add a third task trigger mode (with cron and heartbeat).
 Each webhook trigger stores a cuid2 id internally, while external endpoints use a signed token that embeds that id.
+Token signing uses the shared auth seed (`auth.json` key `seed`) with a dedicated webhook service scope.
 
 ## What Was Added
 

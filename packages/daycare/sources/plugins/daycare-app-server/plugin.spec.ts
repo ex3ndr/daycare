@@ -4,10 +4,10 @@ import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jwtSign, jwtVerify } from "../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../util/jwt.js";
 import { plugin } from "./plugin.js";
 
-const APP_AUTH_SECRET_KEY = "app-auth.jwtSecret";
+const APP_AUTH_SEED_KEY = "seed";
 
 type PluginInstance = Awaited<ReturnType<typeof plugin.create>>;
 
@@ -65,10 +65,8 @@ function telegramInitDataBuild(options: { botToken: string; userId: string; auth
 async function pluginCreateForTests(options?: PluginCreateTestOptions) {
     const entries = new Map<string, Record<string, unknown>>();
     if (options?.secret) {
-        entries.set(APP_AUTH_SECRET_KEY, {
-            type: "token",
-            token: options.secret,
-            secret: options.secret
+        entries.set(APP_AUTH_SEED_KEY, {
+            seed: options.secret
         });
     }
     if (options?.telegram?.botToken) {
@@ -192,7 +190,9 @@ describe("daycare-app-server plugin auth endpoints", () => {
             secret,
             webhookTrigger: trigger
         });
-        const webhookToken = await jwtSign({ userId: "hook-1" }, secret, 3600);
+        const webhookToken = await jwtSign({ userId: "hook-1" }, secret, 3600, {
+            service: JWT_SERVICE_WEBHOOK
+        });
 
         const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
@@ -213,7 +213,9 @@ describe("daycare-app-server plugin auth endpoints", () => {
                 throw new Error("Webhook trigger not found: missing");
             }
         });
-        const webhookToken = await jwtSign({ userId: "missing" }, secret, 3600);
+        const webhookToken = await jwtSign({ userId: "missing" }, secret, 3600, {
+            service: JWT_SERVICE_WEBHOOK
+        });
 
         const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
@@ -236,7 +238,9 @@ describe("daycare-app-server plugin auth endpoints", () => {
                 throw new Error("Webhook execution failed");
             }
         });
-        const webhookToken = await jwtSign({ userId: "hook-err" }, secret, 3600);
+        const webhookToken = await jwtSign({ userId: "hook-err" }, secret, 3600, {
+            service: JWT_SERVICE_WEBHOOK
+        });
 
         const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
@@ -254,7 +258,9 @@ describe("daycare-app-server plugin auth endpoints", () => {
     it("returns 503 when webhook runtime is unavailable", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await pluginCreateForTests({ secret });
-        const webhookToken = await jwtSign({ userId: "hook-1" }, secret, 3600);
+        const webhookToken = await jwtSign({ userId: "hook-1" }, secret, 3600, {
+            service: JWT_SERVICE_WEBHOOK
+        });
 
         const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
