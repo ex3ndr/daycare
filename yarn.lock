@@ -11300,10 +11300,10 @@ react-native-screens@~4.23.0:
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
 
-react-native-unistyles@3.0.15:
-  version "3.0.15"
-  resolved "https://registry.yarnpkg.com/react-native-unistyles/-/react-native-unistyles-3.0.15.tgz#d2ed6a79f54c26a84b1a5b4c01a6e0d964d3302b"
-  integrity sha512-mbALO/lTc1oCWrCww79Zzipr1uVoePE2VXXgJO7zOKApK/hjBas03zpe3C4H6w7gBnD/z6TJYwTwQZt/yAWBeQ==
+react-native-unistyles@3.0.24:
+  version "3.0.24"
+  resolved "https://registry.yarnpkg.com/react-native-unistyles/-/react-native-unistyles-3.0.24.tgz#1251efe8edec29e4a5faa03f79e4e50d95717ccc"
+  integrity sha512-JWwkoXGSrxSzTBphBx1oYHTGQRyI7fup29D8kpjFdKqBLEXoOA1SzBB8phHb51kC4dCawaP1iOuyXoYm0kyCvw==
 
 react-native-web@^0.21.0:
   version "0.21.2"

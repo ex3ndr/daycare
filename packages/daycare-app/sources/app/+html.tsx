@@ -9,7 +9,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
                 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
                 <ScrollViewStyleReset />
-                <style>{responsiveBackground}</style>
+                <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
             </head>
             <body>{children}</body>
         </html>

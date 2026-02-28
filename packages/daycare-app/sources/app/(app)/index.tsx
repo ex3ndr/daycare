@@ -104,7 +104,9 @@ export default function DaycareHomeScreen() {
 
 const styles = StyleSheet.create({
     root: {
-        flex: 1
+        flexGrow: 1,
+        flexBasis: 0,
+        flexDirection: 'column'
     },
     centered: {
         flex: 1,

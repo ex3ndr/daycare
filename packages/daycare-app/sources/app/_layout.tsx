@@ -9,6 +9,7 @@ import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-c
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
+import { View } from "react-native";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -68,7 +69,7 @@ export default function RootLayout() {
             <AuthProvider>
                 <AlertProvider>
                     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                        <GestureHandlerRootView style={styles.root}>
+                        <View style={{ flexDirection: 'column', flexGrow: 1, flexBasis: 0 }}>
                             <ThemeProvider value={navigationTheme}>
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Protected guard={authState === "authenticated"}>
@@ -79,7 +80,7 @@ export default function RootLayout() {
                                     </Stack.Protected>
                                 </Stack>
                             </ThemeProvider>
-                        </GestureHandlerRootView>
+                        </View>
                     </SafeAreaProvider>
                 </AlertProvider>
             </AuthProvider>
@@ -89,6 +90,6 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create(() => ({
     root: {
-        flex: 1
+        width: '100%',
     }
 }));
