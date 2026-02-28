@@ -4,8 +4,8 @@ The `exec` tool can optionally allow outbound network access for specific domain
 The list is explicit: exact domains are allowed, and subdomain wildcards like
 `*.example.com` are supported. A global wildcard (`*`) disables domain
 restrictions entirely, allowing all outbound network access. When
-`allowedDomains` is omitted, Daycare resolves to an empty allowlist and keeps
-network access blocked.
+`allowedDomains` is omitted (or explicitly set to `[]`), Daycare resolves to an
+empty allowlist and keeps network access blocked.
 
 `exec` now runs with **zero additional permissions by default**:
 - no network access
@@ -41,7 +41,7 @@ flowchart TD
   C --> D
   D --> E{contains "*"?}
   E -- yes --> I[build sandbox config with unrestricted network]
-  E -- no --> J{resolved domains empty?}
+  E -- no --> J{resolved domains empty?<br/>(omitted or [])}
   J -- yes --> K[build sandbox config with empty allowlist (network blocked)]
   J -- no --> L[build sandbox config with resolved allowedDomains]
 ```

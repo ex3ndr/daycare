@@ -52,6 +52,7 @@ The `exec` tool supports an explicit domain allowlist for outbound network acces
 
 - Exact domains and `*.example.com` wildcards are supported
 - Omitting `allowedDomains` keeps network access blocked
+- Providing `allowedDomains: []` is valid and also keeps network access blocked
 - Global wildcard (`*`) disables domain restrictions entirely
 - Network access requires the `@network` permission tag
 

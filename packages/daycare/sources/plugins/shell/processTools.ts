@@ -40,7 +40,11 @@ const processStartSchema = Type.Object(
         env: Type.Optional(envSchema),
         keepAlive: Type.Optional(Type.Boolean()),
         packageManagers: Type.Optional(Type.Array(packageManagerSchema, { minItems: 1 })),
-        allowedDomains: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }))
+        allowedDomains: Type.Optional(
+            Type.Array(Type.String({ minLength: 1 }), {
+                description: "Explicit outbound network allowlist for the process. Use [] to block all domains."
+            })
+        )
     },
     { additionalProperties: false }
 );

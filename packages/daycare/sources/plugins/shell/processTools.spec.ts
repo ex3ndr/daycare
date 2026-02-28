@@ -10,6 +10,17 @@ import {
 } from "./processTools.js";
 
 describe("process_start permissions", () => {
+    it("accepts empty allowedDomains in process_start schema", () => {
+        const tool = buildProcessStartTool({ create: vi.fn(async () => buildProcessInfo()) } as unknown as Processes);
+        const parameters = tool.tool.parameters as {
+            properties?: {
+                allowedDomains?: { minItems?: number };
+            };
+        };
+
+        expect(parameters.properties?.allowedDomains?.minItems).toBeUndefined();
+    });
+
     it("uses /tmp write scope for process sandboxing", async () => {
         let capturedPermissions: SessionPermissions | null = null;
         const create = vi.fn(async (_input: ProcessCreateInput, permissions: SessionPermissions) => {
@@ -57,6 +68,29 @@ describe("process_start permissions", () => {
         );
 
         expect(context.sandbox.permissions).toEqual(original);
+    });
+
+    it("forwards explicit empty allowedDomains", async () => {
+        const create = vi.fn(async (_input: ProcessCreateInput) => {
+            return buildProcessInfo();
+        });
+        const tool = buildProcessStartTool({ create } as unknown as Processes);
+
+        await tool.execute(
+            {
+                command: "echo hello",
+                allowedDomains: []
+            },
+            createContext({
+                workingDir: "/workspace",
+                writeDirs: ["/workspace", "/tmp"]
+            }),
+            { id: "call-0c", name: "process_start" }
+        );
+
+        expect(create).toHaveBeenCalledOnce();
+        const firstCall = create.mock.calls[0]?.[0] as ProcessCreateInput | undefined;
+        expect(firstCall?.allowedDomains).toEqual([]);
     });
 
     it("does not forward caller write grants", async () => {

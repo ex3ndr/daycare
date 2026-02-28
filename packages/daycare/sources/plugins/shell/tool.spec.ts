@@ -176,6 +176,17 @@ describe("exec tool allowedDomains", () => {
         await fs.rm(workingDir, { recursive: true, force: true });
     });
 
+    it("accepts empty allowedDomains in exec schema", () => {
+        const tool = buildExecTool();
+        const parameters = tool.tool.parameters as {
+            properties?: {
+                allowedDomains?: { minItems?: number };
+            };
+        };
+
+        expect(parameters.properties?.allowedDomains?.minItems).toBeUndefined();
+    });
+
     it("defaults missing allowedDomains to an empty list", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
@@ -192,6 +203,26 @@ describe("exec tool allowedDomains", () => {
         const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(result.toolMessage.isError).toBe(false);
         expect(result.typedResult.cwd).toBe(workingDir);
+        expect(exec).toHaveBeenCalledOnce();
+        const firstCall = exec.mock.calls[0]?.[0];
+        expect(firstCall?.allowedDomains).toEqual([]);
+    });
+
+    it("forwards explicit empty allowedDomains list", async () => {
+        const tool = buildExecTool();
+        const context = createContext(workingDir);
+        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => ({
+            stdout: "ok",
+            stderr: "",
+            failed: false,
+            exitCode: 0,
+            signal: null,
+            cwd: workingDir
+        }));
+        context.sandbox.exec = exec;
+
+        const result = await tool.execute({ command: "echo ok", allowedDomains: [] }, context, execToolCall);
+        expect(result.toolMessage.isError).toBe(false);
         expect(exec).toHaveBeenCalledOnce();
         const firstCall = exec.mock.calls[0]?.[0];
         expect(firstCall?.allowedDomains).toEqual([]);
