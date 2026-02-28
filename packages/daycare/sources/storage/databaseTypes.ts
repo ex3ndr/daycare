@@ -186,7 +186,6 @@ export type DatabaseTaskRow = {
     parameters: string | null;
     created_at: number;
     updated_at: number;
-    deleted_at: number | null;
 };
 
 export type TaskDbRecord = {
@@ -201,7 +200,6 @@ export type TaskDbRecord = {
     parameters: TaskParameter[] | null;
     createdAt: number;
     updatedAt: number;
-    deletedAt?: number | null;
 };
 
 export type DatabaseSignalEventRow = {

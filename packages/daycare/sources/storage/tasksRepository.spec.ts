@@ -21,8 +21,7 @@ describe("TasksRepository", () => {
                 code: "print('hello')",
                 parameters: null,
                 createdAt: 10,
-                updatedAt: 10,
-                deletedAt: null
+                updatedAt: 10
             };
 
             await repo.create(record);
@@ -44,14 +43,13 @@ describe("TasksRepository", () => {
             expect(updated?.title).toBe("Daily report updated");
             expect(updated?.code).toBe("print('updated')");
             expect(updated?.updatedAt).toBe(20);
-            expect(updated?.deletedAt).toBeNull();
 
             expect(await repo.delete(ctx, "task-1")).toBe(true);
             expect(await repo.delete(ctx, "task-1")).toBe(false);
             expect(await repo.findById(ctx, "task-1")).toBeNull();
             const deleted = await repo.findAnyById(ctx, "task-1");
             expect(deleted?.id).toBe("task-1");
-            expect(typeof deleted?.deletedAt).toBe("number");
+            expect(typeof deleted?.validTo).toBe("number");
         } finally {
             storage.connection.close();
         }
@@ -73,8 +71,7 @@ describe("TasksRepository", () => {
                 code: "print('cache')",
                 parameters: null,
                 createdAt: 1,
-                updatedAt: 1,
-                deletedAt: null
+                updatedAt: 1
             });
 
             const first = await repo.findById(ctx, "cached-task");
@@ -106,8 +103,7 @@ describe("TasksRepository", () => {
                 code: "print('a')",
                 parameters: null,
                 createdAt: 1,
-                updatedAt: 1,
-                deletedAt: null
+                updatedAt: 1
             });
             await repo.create({
                 id: "task-shared",
@@ -120,8 +116,7 @@ describe("TasksRepository", () => {
                 code: "print('b')",
                 parameters: null,
                 createdAt: 2,
-                updatedAt: 2,
-                deletedAt: null
+                updatedAt: 2
             });
 
             const first = await repo.findById(ctxA, "task-shared");

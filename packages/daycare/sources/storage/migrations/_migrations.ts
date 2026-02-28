@@ -28,5 +28,9 @@ export const migrations: Migration[] = [
     {
         name: "20260228_entity_versioning",
         fileName: "20260228_entity_versioning.sql"
+    },
+    {
+        name: "20260228_tasks_drop_deleted_at",
+        fileName: "20260228_tasks_drop_deleted_at.sql"
     }
 ];

@@ -132,9 +132,9 @@ describe("WebhookTasksRepository", () => {
 
             await storage.connection
                 .prepare(
-                    "INSERT INTO tasks (id, user_id, version, valid_from, valid_to, title, description, code, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO tasks (id, user_id, version, valid_from, valid_to, title, description, code, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
-                .run("   ", "user-1", 1, 1, null, "Bad", null, "print('bad')", 1, 1, null);
+                .run("   ", "user-1", 1, 1, null, "Bad", null, "print('bad')", 1, 1);
             await storage.connection
                 .prepare(
                     "INSERT INTO tasks_webhook (id, version, valid_from, valid_to, task_id, user_id, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"

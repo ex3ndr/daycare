@@ -143,8 +143,7 @@ export const tasksTable = pgTable(
         code: text("code").notNull(),
         parameters: text("parameters"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
-        updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
-        deletedAt: bigint("deleted_at", { mode: "number" })
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
         primaryKey({ columns: [table.userId, table.id, table.version] }),
