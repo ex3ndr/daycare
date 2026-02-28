@@ -1,4 +1,4 @@
-import type { AgentHistoryRecord, SessionSummary } from "@/lib/engine-client";
+import type { AgentHistoryRecord, AssistantContentBlock, SessionSummary } from "@/lib/engine-client";
 
 type AgentHistoryExportMarkdownInput = {
   agentId: string;
@@ -96,14 +96,22 @@ function recordSummaryBuild(record: AgentHistoryRecord): string {
         return textTruncate(record.text, 160);
       }
       return record.files.length ? `Message included ${record.files.length} file(s).` : "User message with no text.";
-    case "assistant_message":
-      if (record.text) {
-        return textTruncate(record.text, 160);
+    case "assistant_message": {
+      const blocks = Array.isArray(record.content) ? (record.content as AssistantContentBlock[]) : [];
+      const text = blocks
+        .filter((b): b is Extract<AssistantContentBlock, { type: "text" }> => b.type === "text")
+        .map((b) => b.text)
+        .join("\n")
+        .trim();
+      const toolCalls = blocks.filter((b) => b.type === "toolCall");
+      if (text) {
+        return textTruncate(text, 160);
       }
-      if (record.toolCalls.length) {
-        return `Assistant response included ${record.toolCalls.length} tool call(s).`;
+      if (toolCalls.length) {
+        return `Assistant response included ${toolCalls.length} tool call(s).`;
       }
       return "Assistant message with no text.";
+    }
     case "tool_result":
       return `Tool call ${record.toolCallId} completed with ${record.output.files.length} file(s).`;
     case "rlm_start":

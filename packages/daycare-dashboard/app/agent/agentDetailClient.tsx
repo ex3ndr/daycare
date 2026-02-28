@@ -20,6 +20,7 @@ import {
   type AgentDescriptor,
   type AgentHistoryRecord,
   type AgentSummary,
+  type AssistantContentBlock,
   type EngineEvent,
   type FileReference,
   type SessionSummary,
@@ -161,7 +162,6 @@ export default function AgentDetailPage() {
       }
       if (record.type === "assistant_message") {
         assistantMessages += 1;
-        files += historyFilesResolve(record.files).length;
       }
       if (record.type === "tool_result") {
         toolResults += 1;
@@ -567,15 +567,18 @@ function formatRecordSummary(record: AgentHistoryRecord) {
         : userFiles.length
           ? `${userFiles.length} file(s)`
           : "User message";
-    case "assistant_message":
-      const toolCalls = historyToolCallsResolve(record);
-      if (record.text) {
-        return truncateText(record.text, 140);
+    case "assistant_message": {
+      const contentBlocks = historyContentResolve(record.content);
+      const summaryText = contentBlocksExtractText(contentBlocks);
+      const summaryToolCalls = contentBlocksExtractToolCalls(contentBlocks);
+      if (summaryText) {
+        return truncateText(summaryText, 140);
       }
-      if (toolCalls.length) {
-        return `${toolCalls.length} tool call${toolCalls.length === 1 ? "" : "s"}`;
+      if (summaryToolCalls.length) {
+        return `${summaryToolCalls.length} tool call${summaryToolCalls.length === 1 ? "" : "s"}`;
       }
       return "Assistant message";
+    }
     case "tool_result":
       return `Tool result ${record.toolCallId}`;
     case "rlm_start":
@@ -629,22 +632,10 @@ function renderRecordDetails(record: AgentHistoryRecord) {
           {renderFilesSection(userFiles)}
         </>
       );
-    case "assistant_message":
-      const toolCalls = historyToolCallsResolve(record);
-      const assistantFiles = historyFilesResolve(record.files);
-      return (
-        <>
-          <RecordSection title="Response">
-            {record.text ? (
-              <p className="whitespace-pre-wrap break-words text-sm text-foreground">{record.text}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">No assistant text captured.</p>
-            )}
-          </RecordSection>
-          {renderToolCallsSection(toolCalls)}
-          {renderFilesSection(assistantFiles)}
-        </>
-      );
+    case "assistant_message": {
+      const contentBlocks = historyContentResolve(record.content);
+      return renderAssistantContentBlocks(contentBlocks, record.tokens);
+    }
     case "tool_result":
       const output = historyToolResultOutputResolve(record.output);
       return (
@@ -710,7 +701,7 @@ function renderRecordDetails(record: AgentHistoryRecord) {
             />
           </RecordSection>
           <RecordSection title="Result">
-            <p className="whitespace-pre-wrap break-words text-sm text-foreground">{record.toolResult}</p>
+            <SmartTextBlock value={record.toolResult} />
           </RecordSection>
         </>
       );
@@ -734,7 +725,7 @@ function renderRecordDetails(record: AgentHistoryRecord) {
           ) : null}
           <RecordSection title="Output">
             {record.output ? (
-              <p className="whitespace-pre-wrap break-words text-sm text-foreground">{record.output}</p>
+              <SmartTextBlock value={record.output} />
             ) : (
               <p className="text-sm text-muted-foreground">No output captured.</p>
             )}
@@ -832,6 +823,92 @@ function renderPrintOutputSection(printOutput: string[]) {
   );
 }
 
+function renderAssistantContentBlocks(
+  blocks: AssistantContentBlock[],
+  tokens: { provider: string; model: string; size: Record<string, number> } | null
+) {
+  const textParts = contentBlocksExtractText(blocks);
+  const toolCalls = contentBlocksExtractToolCalls(blocks);
+  const thinkingParts = contentBlocksExtractThinking(blocks);
+  const hasContent = textParts.length > 0 || toolCalls.length > 0 || thinkingParts.length > 0;
+
+  return (
+    <>
+      {thinkingParts.length > 0 ? (
+        <RecordSection title="Thinking">
+          <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground italic">{thinkingParts.join("\n\n")}</p>
+        </RecordSection>
+      ) : null}
+      {textParts ? (
+        <RecordSection title="Response">
+          <p className="whitespace-pre-wrap break-words text-sm text-foreground">{textParts}</p>
+        </RecordSection>
+      ) : !hasContent ? (
+        <RecordSection title="Response">
+          <p className="text-sm text-muted-foreground">No assistant text captured.</p>
+        </RecordSection>
+      ) : null}
+      {toolCalls.length > 0 ? (
+        <RecordSection title={`Tool calls (${toolCalls.length})`}>
+          <div className="grid gap-3">
+            {toolCalls.map((tc, index) => (
+              <div key={tc.id ?? `${tc.name}-${index}`} className="rounded-md border bg-muted/40 p-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <Badge variant="secondary" className="font-mono">
+                    {tc.name ?? "unknown"}
+                  </Badge>
+                  {tc.id ? <span className="truncate text-muted-foreground">id: {tc.id}</span> : null}
+                </div>
+                <div className="mt-2">
+                  <JsonBlock value={tc.arguments ?? {}} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </RecordSection>
+      ) : null}
+      {tokens ? (
+        <RecordSection title="Tokens">
+          <KeyValueList
+            items={[
+              { label: "Provider", value: tokens.provider },
+              { label: "Model", value: tokens.model },
+              ...(tokens.size
+                ? Object.entries(tokens.size).map(([key, val]) => ({
+                    label: key.charAt(0).toUpperCase() + key.slice(1),
+                    value: typeof val === "number" ? val.toLocaleString() : String(val)
+                  }))
+                : [])
+            ]}
+            emptyLabel="No token data."
+          />
+        </RecordSection>
+      ) : null}
+    </>
+  );
+}
+
+/** Renders a text value, formatting as JSON when the string is valid JSON. */
+function SmartTextBlock({ value }: { value: string }) {
+  const parsed = tryParseJson(value);
+  if (parsed !== undefined) {
+    return <JsonBlock value={parsed} />;
+  }
+  return <p className="whitespace-pre-wrap break-words text-sm text-foreground">{value}</p>;
+}
+
+function tryParseJson(value: string): unknown | undefined {
+  const trimmed = value.trim();
+  if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
 function buildToolResultMeta(record: Extract<AgentHistoryRecord, { type: "tool_result" }>) {
   const output = historyToolResultOutputResolve(record.output);
   const toolMessageMeta = parseToolMessage(output.toolMessage);
@@ -849,11 +926,26 @@ function historyFilesResolve(value: unknown): FileReference[] {
   return Array.isArray(value) ? (value as FileReference[]) : [];
 }
 
-function historyToolCallsResolve(
-  record: Extract<AgentHistoryRecord, { type: "assistant_message" }>
-): Record<string, unknown>[] {
-  const candidate = (record as { toolCalls?: unknown }).toolCalls;
-  return Array.isArray(candidate) ? (candidate as Record<string, unknown>[]) : [];
+function historyContentResolve(value: unknown): AssistantContentBlock[] {
+  return Array.isArray(value) ? (value as AssistantContentBlock[]) : [];
+}
+
+function contentBlocksExtractText(blocks: AssistantContentBlock[]): string {
+  return blocks
+    .filter((b): b is Extract<AssistantContentBlock, { type: "text" }> => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+}
+
+function contentBlocksExtractToolCalls(blocks: AssistantContentBlock[]): Extract<AssistantContentBlock, { type: "toolCall" }>[] {
+  return blocks.filter((b): b is Extract<AssistantContentBlock, { type: "toolCall" }> => b.type === "toolCall");
+}
+
+function contentBlocksExtractThinking(blocks: AssistantContentBlock[]): string[] {
+  return blocks
+    .filter((b): b is Extract<AssistantContentBlock, { type: "thinking" }> => b.type === "thinking")
+    .map((b) => b.thinking);
 }
 
 function historyToolResultOutputResolve(value: unknown): { toolMessage: Record<string, unknown>; files: FileReference[] } {

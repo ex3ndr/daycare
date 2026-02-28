@@ -109,6 +109,11 @@ export type AgentSummary = {
   updatedAt: number;
 };
 
+export type AssistantContentBlock =
+    | { type: "text"; text: string }
+    | { type: "thinking"; thinking: string }
+    | { type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> };
+
 export type AgentHistoryRecord =
   | { type: "start"; at: number }
   | { type: "reset"; at: number; message?: string }
@@ -116,9 +121,8 @@ export type AgentHistoryRecord =
   | {
       type: "assistant_message";
       at: number;
-      text: string;
-      files: FileReference[];
-      toolCalls: Record<string, unknown>[];
+      content: AssistantContentBlock[];
+      tokens: { provider: string; model: string; size: Record<string, number> } | null;
     }
   | {
       type: "tool_result";
