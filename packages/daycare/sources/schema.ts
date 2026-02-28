@@ -134,6 +134,7 @@ export const tasksTable = pgTable(
         title: text("title").notNull(),
         description: text("description"),
         code: text("code").notNull(),
+        parameters: text("parameters"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
         deletedAt: bigint("deleted_at", { mode: "number" })
@@ -158,6 +159,7 @@ export const tasksCronTable = pgTable(
         agentId: text("agent_id"),
         enabled: integer("enabled").notNull().default(1),
         deleteAfterRun: integer("delete_after_run").notNull().default(0),
+        parameters: text("parameters"),
         lastRunAt: bigint("last_run_at", { mode: "number" }),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
@@ -180,6 +182,7 @@ export const tasksHeartbeatTable = pgTable(
         taskId: text("task_id").notNull(),
         userId: text("user_id").notNull(),
         title: text("title").notNull(),
+        parameters: text("parameters"),
         lastRunAt: bigint("last_run_at", { mode: "number" }),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()

@@ -42,6 +42,7 @@ describe("Crons", () => {
                 title: "Scoped task",
                 description: null,
                 code: "Run scoped task",
+                parameters: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             });

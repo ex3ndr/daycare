@@ -250,6 +250,7 @@ async function cronTaskInsert(
         title: input.name,
         description: null,
         code: input.code,
+        parameters: null,
         createdAt: now,
         updatedAt: now
     });
@@ -264,6 +265,7 @@ async function cronTaskInsert(
         agentId: null,
         enabled: input.enabled !== false,
         deleteAfterRun: false,
+        parameters: null,
         lastRunAt: null,
         createdAt: now,
         updatedAt: now

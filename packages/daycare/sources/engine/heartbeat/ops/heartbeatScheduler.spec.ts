@@ -52,6 +52,7 @@ describe("HeartbeatScheduler", () => {
             title: "Alpha",
             description: null,
             code: "Check alpha.",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });
@@ -61,6 +62,7 @@ describe("HeartbeatScheduler", () => {
             title: "Beta",
             description: null,
             code: "Check beta.",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });
@@ -108,6 +110,7 @@ describe("HeartbeatScheduler", () => {
             title: "Alpha",
             description: null,
             code: "Check alpha.",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });
@@ -117,6 +120,7 @@ describe("HeartbeatScheduler", () => {
             title: "Beta",
             description: null,
             code: "Check beta.",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });
@@ -155,6 +159,7 @@ describe("HeartbeatScheduler", () => {
             title: "Owned task",
             description: null,
             code: "Owned prompt",
+            parameters: null,
             createdAt: Date.now(),
             updatedAt: Date.now()
         });
@@ -184,6 +189,7 @@ describe("HeartbeatScheduler", () => {
             title: "Trim user id",
             description: null,
             code: "Delete using padded ctx user id",
+            parameters: null,
             createdAt: Date.now(),
             updatedAt: Date.now()
         });

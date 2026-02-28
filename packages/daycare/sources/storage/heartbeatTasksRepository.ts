@@ -98,6 +98,7 @@ export class HeartbeatTasksRepository {
                     taskId,
                     userId: record.userId,
                     title: record.title,
+                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
                     lastRunAt: record.lastRunAt,
                     createdAt: record.createdAt,
                     updatedAt: record.updatedAt
@@ -108,6 +109,7 @@ export class HeartbeatTasksRepository {
                         taskId,
                         userId: record.userId,
                         title: record.title,
+                        parameters: record.parameters ? JSON.stringify(record.parameters) : null,
                         lastRunAt: record.lastRunAt,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
@@ -134,6 +136,7 @@ export class HeartbeatTasksRepository {
                 id: current.id,
                 taskId: data.taskId ?? current.taskId,
                 userId: data.userId ?? current.userId,
+                parameters: data.parameters === undefined ? current.parameters : data.parameters,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
             if (!next.taskId.trim()) {
@@ -146,6 +149,7 @@ export class HeartbeatTasksRepository {
                     taskId: next.taskId.trim(),
                     userId: next.userId,
                     title: next.title,
+                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
                     lastRunAt: next.lastRunAt,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
@@ -223,6 +227,7 @@ function heartbeatTaskParse(row: typeof tasksHeartbeatTable.$inferSelect): Heart
         taskId,
         userId: row.userId,
         title: row.title,
+        parameters: row.parameters ? JSON.parse(row.parameters) : null,
         lastRunAt: row.lastRunAt,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt

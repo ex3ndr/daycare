@@ -121,6 +121,7 @@ export class TasksRepository {
                     title: record.title,
                     description: record.description,
                     code: record.code,
+                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
                     createdAt: record.createdAt,
                     updatedAt: record.updatedAt,
                     deletedAt: record.deletedAt ?? null
@@ -132,6 +133,7 @@ export class TasksRepository {
                         title: record.title,
                         description: record.description,
                         code: record.code,
+                        parameters: record.parameters ? JSON.stringify(record.parameters) : null,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt,
                         deletedAt: record.deletedAt ?? null
@@ -167,6 +169,7 @@ export class TasksRepository {
                 id: current.id,
                 userId: data.userId?.trim() || current.userId,
                 description: data.description === undefined ? current.description : data.description,
+                parameters: data.parameters === undefined ? current.parameters : data.parameters,
                 deletedAt: data.deletedAt === undefined ? current.deletedAt : data.deletedAt
             };
 
@@ -177,6 +180,7 @@ export class TasksRepository {
                     title: next.title,
                     description: next.description,
                     code: next.code,
+                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt,
                     deletedAt: next.deletedAt ?? null
@@ -252,6 +256,7 @@ function taskParse(row: typeof tasksTable.$inferSelect): TaskDbRecord {
         title: row.title,
         description: row.description,
         code: row.code,
+        parameters: row.parameters ? JSON.parse(row.parameters) : null,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         deletedAt: row.deletedAt

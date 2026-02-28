@@ -115,6 +115,7 @@ export class HeartbeatScheduler {
             taskId: definition.taskId,
             userId,
             title,
+            parameters: null,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now

@@ -14,6 +14,7 @@ describe("HeartbeatTasksRepository", () => {
                 title: "Alpha",
                 description: null,
                 code: "Check alpha",
+                parameters: null,
                 createdAt: 10,
                 updatedAt: 10
             });
@@ -23,6 +24,7 @@ describe("HeartbeatTasksRepository", () => {
                 title: "Beta",
                 description: null,
                 code: "Check beta",
+                parameters: null,
                 createdAt: 11,
                 updatedAt: 11
             });
@@ -31,6 +33,7 @@ describe("HeartbeatTasksRepository", () => {
                 taskId: "task-alpha",
                 userId: "user-1",
                 title: "Alpha",
+                parameters: null,
                 lastRunAt: null,
                 createdAt: 10,
                 updatedAt: 10
@@ -40,6 +43,7 @@ describe("HeartbeatTasksRepository", () => {
                 taskId: "task-beta",
                 userId: "user-1",
                 title: "Beta",
+                parameters: null,
                 lastRunAt: null,
                 createdAt: 11,
                 updatedAt: 11
@@ -84,6 +88,7 @@ describe("HeartbeatTasksRepository", () => {
                 title: "Cache",
                 description: null,
                 code: "Prompt",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -92,6 +97,7 @@ describe("HeartbeatTasksRepository", () => {
                 taskId: "task-cache-heartbeat",
                 userId: "user-1",
                 title: "Cache",
+                parameters: null,
                 lastRunAt: null,
                 createdAt: 1,
                 updatedAt: 1

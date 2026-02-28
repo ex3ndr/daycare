@@ -146,6 +146,7 @@ export class CronScheduler {
             agentId: definition.agentId ?? null,
             enabled: definition.enabled !== false,
             deleteAfterRun: definition.deleteAfterRun === true,
+            parameters: null,
             lastRunAt: null,
             createdAt: now,
             updatedAt: now

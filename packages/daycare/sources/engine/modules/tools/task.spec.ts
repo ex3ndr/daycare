@@ -125,6 +125,7 @@ describe("task tools", () => {
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
+                parameters: null,
                 lastRunAt: null,
                 createdAt: now,
                 updatedAt: now
@@ -136,6 +137,7 @@ describe("task tools", () => {
                 taskId: "daily-check",
                 userId: "user-1",
                 title: "Daily check",
+                parameters: null,
                 lastRunAt: null,
                 createdAt: now,
                 updatedAt: now
@@ -273,6 +275,7 @@ describe("task tools", () => {
             title: "Manual task",
             description: null,
             code: "print('manual')",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });
@@ -423,6 +426,7 @@ describe("task tools", () => {
             title: "Timezone task",
             description: null,
             code: "print('timezone')",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });
@@ -457,6 +461,7 @@ describe("task tools", () => {
             title: "Timezone required",
             description: null,
             code: "print('timezone')",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });

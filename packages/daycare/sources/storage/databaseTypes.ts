@@ -8,6 +8,7 @@ import type {
     ExposeTarget,
     SessionPermissions
 } from "@/types";
+import type { TaskParameter } from "../engine/modules/tasks/taskParameterTypes.js";
 import type { SignalSource } from "../engine/signals/signalTypes.js";
 
 export type DatabaseAgentRow = {
@@ -84,6 +85,7 @@ export type DatabaseCronTaskRow = {
     agent_id: string | null;
     enabled: number;
     delete_after_run: number;
+    parameters: string | null;
     last_run_at: number | null;
     created_at: number;
     updated_at: number;
@@ -100,6 +102,7 @@ export type CronTaskDbRecord = {
     agentId: string | null;
     enabled: boolean;
     deleteAfterRun: boolean;
+    parameters: Record<string, unknown> | null;
     lastRunAt: number | null;
     createdAt: number;
     updatedAt: number;
@@ -110,6 +113,7 @@ export type DatabaseHeartbeatTaskRow = {
     task_id: string;
     user_id: string;
     title: string;
+    parameters: string | null;
     last_run_at: number | null;
     created_at: number;
     updated_at: number;
@@ -120,6 +124,7 @@ export type HeartbeatTaskDbRecord = {
     taskId: string;
     userId: string;
     title: string;
+    parameters: Record<string, unknown> | null;
     lastRunAt: number | null;
     createdAt: number;
     updatedAt: number;
@@ -151,6 +156,7 @@ export type DatabaseTaskRow = {
     title: string;
     description: string | null;
     code: string;
+    parameters: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
@@ -162,6 +168,7 @@ export type TaskDbRecord = {
     title: string;
     description: string | null;
     code: string;
+    parameters: TaskParameter[] | null;
     createdAt: number;
     updatedAt: number;
     deletedAt?: number | null;

@@ -7,6 +7,7 @@ const buildTask = (id: string, title: string, code: string) => ({
     taskId: `task-${id}`,
     userId: "user-1",
     title,
+    parameters: null,
     code,
     lastRunAt: null,
     createdAt: 1,

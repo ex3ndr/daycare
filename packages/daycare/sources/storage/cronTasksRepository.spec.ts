@@ -15,6 +15,7 @@ describe("CronTasksRepository", () => {
                 title: "Daily Report",
                 description: "Generate daily summary",
                 code: "Summarize yesterday.",
+                parameters: null,
                 createdAt: 10,
                 updatedAt: 10
             });
@@ -29,6 +30,7 @@ describe("CronTasksRepository", () => {
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
+                parameters: null,
                 lastRunAt: null,
                 createdAt: 10,
                 updatedAt: 10
@@ -78,6 +80,7 @@ describe("CronTasksRepository", () => {
                 title: "Cached",
                 description: null,
                 code: "Prompt",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -92,6 +95,7 @@ describe("CronTasksRepository", () => {
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
+                parameters: null,
                 lastRunAt: null,
                 createdAt: 1,
                 updatedAt: 1

@@ -179,6 +179,7 @@ export function buildTaskCreateTool(): ToolDefinition {
                     title: payload.title,
                     description: payload.description ?? null,
                     code: payload.code,
+                    parameters: null,
                     createdAt: now,
                     updatedAt: now
                 });

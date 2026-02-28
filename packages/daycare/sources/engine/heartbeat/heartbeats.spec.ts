@@ -39,6 +39,7 @@ describe("Heartbeats", () => {
                 title: "beat",
                 description: null,
                 code: "run",
+                parameters: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             });
@@ -78,6 +79,7 @@ describe("Heartbeats", () => {
                 title: "beat",
                 description: null,
                 code: "check",
+                parameters: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             });
@@ -87,6 +89,7 @@ describe("Heartbeats", () => {
                 taskId: "task-hb-1",
                 userId: "user-1",
                 title: "beat",
+                parameters: null,
                 lastRunAt: null,
                 createdAt: Date.now(),
                 updatedAt: Date.now()

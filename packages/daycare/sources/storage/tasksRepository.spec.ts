@@ -16,6 +16,7 @@ describe("TasksRepository", () => {
                 title: "Daily report",
                 description: "Summarize yesterday",
                 code: "print('hello')",
+                parameters: null,
                 createdAt: 10,
                 updatedAt: 10,
                 deletedAt: null
@@ -64,6 +65,7 @@ describe("TasksRepository", () => {
                 title: "Cache",
                 description: null,
                 code: "print('cache')",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1,
                 deletedAt: null
@@ -93,6 +95,7 @@ describe("TasksRepository", () => {
                 title: "A",
                 description: null,
                 code: "print('a')",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1,
                 deletedAt: null
@@ -103,6 +106,7 @@ describe("TasksRepository", () => {
                 title: "B",
                 description: null,
                 code: "print('b')",
+                parameters: null,
                 createdAt: 2,
                 updatedAt: 2,
                 deletedAt: null

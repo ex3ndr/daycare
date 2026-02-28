@@ -338,6 +338,7 @@ describe("topologyTool", () => {
                             taskId: "task-check-health",
                             userId: "user-1",
                             title: "Health Check",
+                            parameters: null,
                             lastRunAt: Date.parse("2025-01-15T10:00:00Z"),
                             createdAt: 1,
                             updatedAt: 1
@@ -785,6 +786,7 @@ describe("topologyTool", () => {
                             taskId: "owner-heartbeat-task",
                             userId: ownerUserId,
                             title: "Owner Heartbeat",
+                            parameters: null,
                             lastRunAt: null,
                             createdAt: 1,
                             updatedAt: 1
@@ -794,6 +796,7 @@ describe("topologyTool", () => {
                             taskId: "other-heartbeat-task",
                             userId: "other-user",
                             title: "Other Heartbeat",
+                            parameters: null,
                             lastRunAt: null,
                             createdAt: 2,
                             updatedAt: 2
@@ -1040,6 +1043,7 @@ describe("topologyTool", () => {
                             taskId: "task-check-health",
                             userId: "user-1",
                             title: "Health Check",
+                            parameters: null,
                             lastRunAt: null,
                             createdAt: 1,
                             updatedAt: 1
@@ -1124,6 +1128,7 @@ function cronTaskBuild(input: {
         timezone: input.timezone ?? "UTC",
         enabled: input.enabled,
         deleteAfterRun: false,
+        parameters: null,
         lastRunAt: null,
         agentId: input.agentId ?? null,
         createdAt: 1,
@@ -1143,6 +1148,7 @@ async function topologyTaskCreate(
         title,
         description: null,
         code: "print('ok')",
+        parameters: null,
         createdAt: 1,
         updatedAt: 1
     });

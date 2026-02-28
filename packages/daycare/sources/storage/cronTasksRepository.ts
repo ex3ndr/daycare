@@ -124,6 +124,7 @@ export class CronTasksRepository {
                     agentId: record.agentId,
                     enabled: record.enabled ? 1 : 0,
                     deleteAfterRun: record.deleteAfterRun ? 1 : 0,
+                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
                     lastRunAt: record.lastRunAt,
                     createdAt: record.createdAt,
                     updatedAt: record.updatedAt
@@ -140,6 +141,7 @@ export class CronTasksRepository {
                         agentId: record.agentId,
                         enabled: record.enabled ? 1 : 0,
                         deleteAfterRun: record.deleteAfterRun ? 1 : 0,
+                        parameters: record.parameters ? JSON.stringify(record.parameters) : null,
                         lastRunAt: record.lastRunAt,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
@@ -169,6 +171,7 @@ export class CronTasksRepository {
                 description: data.description === undefined ? current.description : data.description,
                 timezone: data.timezone === undefined ? current.timezone : data.timezone,
                 agentId: data.agentId === undefined ? current.agentId : data.agentId,
+                parameters: data.parameters === undefined ? current.parameters : data.parameters,
                 lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
             };
             if (!next.taskId.trim()) {
@@ -188,6 +191,7 @@ export class CronTasksRepository {
                     agentId: next.agentId,
                     enabled: next.enabled ? 1 : 0,
                     deleteAfterRun: next.deleteAfterRun ? 1 : 0,
+                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
                     lastRunAt: next.lastRunAt,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
@@ -256,6 +260,7 @@ function cronTaskParse(row: typeof tasksCronTable.$inferSelect): CronTaskDbRecor
         agentId: row.agentId,
         enabled: row.enabled === 1,
         deleteAfterRun: row.deleteAfterRun === 1,
+        parameters: row.parameters ? JSON.parse(row.parameters) : null,
         lastRunAt: row.lastRunAt,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
