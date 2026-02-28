@@ -4,6 +4,7 @@ import { createId } from "@paralleldrive/cuid2";
 import type { ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
+import { rlmRuntimeToolExecute } from "./rlmRuntimeToolExecute.js";
 import { rlmValueFormat } from "./rlmValueFormat.js";
 import type { RlmVmSnapshot } from "./rlmVmProgress.js";
 import type { RlmWorkerResumeOptions } from "./rlmWorkerProtocol.js";
@@ -75,28 +76,37 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
         if (argsError) {
             throw argsError;
         }
-        const toolResult = await options.toolResolver.execute(
-            {
-                type: "toolCall",
-                id: createId(),
-                name: tool.name,
-                arguments: parsedArgs as Record<string, unknown>
-            },
-            { ...options.context, pythonExecution: true }
-        );
-        const value = rlmResultConvert(toolResult);
-        toolResultText = rlmValueFormat(value);
-
-        if (toolResult.toolMessage.isError) {
-            toolIsError = true;
+        const runtimeResult = rlmRuntimeToolExecute(tool.name, parsedArgs);
+        if (runtimeResult.handled) {
+            toolResultText = rlmValueFormat(runtimeResult.value);
             resumeOptions = {
-                exception: {
-                    type: "RuntimeError",
-                    message: toolResultText.trim().length > 0 ? toolResultText : `Tool execution failed: ${tool.name}`
-                }
+                returnValue: runtimeResult.value
             };
         } else {
-            resumeOptions = { returnValue: value };
+            const toolResult = await options.toolResolver.execute(
+                {
+                    type: "toolCall",
+                    id: createId(),
+                    name: tool.name,
+                    arguments: parsedArgs as Record<string, unknown>
+                },
+                { ...options.context, pythonExecution: true }
+            );
+            const value = rlmResultConvert(toolResult);
+            toolResultText = rlmValueFormat(value);
+
+            if (toolResult.toolMessage.isError) {
+                toolIsError = true;
+                resumeOptions = {
+                    exception: {
+                        type: "RuntimeError",
+                        message:
+                            toolResultText.trim().length > 0 ? toolResultText : `Tool execution failed: ${tool.name}`
+                    }
+                };
+            } else {
+                resumeOptions = { returnValue: value };
+            }
         }
     } catch (error) {
         if (abortErrorIs(error, options.context.abortSignal)) {

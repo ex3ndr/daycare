@@ -6,6 +6,7 @@ Call `skip()` to skip the current turn without producing output for the LLM. For
 Every single Python block runs in a SEPARATE throw away instance. In-memory variables do not persist across blocks. If you need results later, persist them to disk with `write_output(...)` and **always print the returned path** — it contains a timestamp prefix and is unique per call. Then read that path back in a later block.
 When `read(...)` is called from Python execution, text is unbounded for the selected `offset`/`limit` range (no 50KB/2000-line truncation).
 Use `read_json(...)` when you need parsed JSON objects/lists directly instead of raw text.
+Use `json_parse(text=...)["value"]` and `json_stringify(value=..., pretty=True|False)["value"]` for in-memory JSON conversion when needed.
 For shell commands via `exec(...)`, home paths should use `~` (or `$HOME`) in the command itself; `pwd` is the current
 working directory, not the home directory.
 

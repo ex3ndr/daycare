@@ -221,6 +221,27 @@ describe("rlmExecute", () => {
         expect(resolver.execute).not.toHaveBeenCalled();
     });
 
+    it("supports json_parse/json_stringify runtime operations with optional pretty output", async () => {
+        const resolver = createResolver(async (name) => {
+            throw new Error(`Unexpected tool ${name}`);
+        });
+
+        const result = await rlmExecute(
+            [
+                'parsed = json_parse(\'{"alpha":1,"rows":[{"id":"a"}]}\')["value"]',
+                'json_stringify(parsed, pretty=True)["value"]'
+            ].join("\n"),
+            montyPreambleBuild(baseTools),
+            createContext(),
+            resolver,
+            "tool-call-json-helpers"
+        );
+
+        expect(result.output).toBe('{\n  "alpha": 1,\n  "rows": [\n    {\n      "id": "a"\n    }\n  ]\n}');
+        expect(result.toolCallCount).toBe(2);
+        expect(resolver.execute).not.toHaveBeenCalled();
+    });
+
     it("fails fast when python calls an undefined function", async () => {
         const resolver = createResolver(async (name) => {
             throw new Error(`Unexpected tool ${name}`);

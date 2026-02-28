@@ -33,6 +33,10 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain('EchoResponse = TypedDict("EchoResponse", {})');
         expect(prompt).toContain("def echo() -> EchoResponse:");
         expect(prompt).toContain("def skip() -> SkipResponse:");
+        expect(prompt).toContain("def json_parse(text: str) -> JsonParseResponse:");
+        expect(prompt).toContain(
+            "def json_stringify(value: Any, pretty: bool | None = None) -> JsonStringifyResponse:"
+        );
         expect(prompt).not.toContain("Available skills");
         expect(prompt).toContain("Execution results are sent back as `run_python` tool results.");
         expect(prompt).toContain("do not use `print()` for the final return value");

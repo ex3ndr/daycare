@@ -45,13 +45,25 @@ describe("montyPreambleBuild", () => {
             "",
             'SkipResponse = TypedDict("SkipResponse", {})',
             "",
+            'JsonParseResponse = TypedDict("JsonParseResponse", { "value": Any })',
+            "",
+            'JsonStringifyResponse = TypedDict("JsonStringifyResponse", { "value": str })',
+            "",
             "def read_file(path: str, retries: int | None = None, verbose: bool | None = None) -> ReadFileResponse:",
             '    """Read a file from disk."""',
             '    raise NotImplementedError("read_file is provided by runtime.")',
             "",
             "def skip() -> SkipResponse:",
             '    """Skip this turn. Call when you have nothing useful to do right now."""',
-            '    raise NotImplementedError("skip is provided by runtime.")'
+            '    raise NotImplementedError("skip is provided by runtime.")',
+            "",
+            "def json_parse(text: str) -> JsonParseResponse:",
+            '    """Parse JSON string text and return the parsed value in `value`."""',
+            '    raise NotImplementedError("json_parse is provided by runtime.")',
+            "",
+            "def json_stringify(value: Any, pretty: bool | None = None) -> JsonStringifyResponse:",
+            '    """Serialize a value into a JSON string in `value`. Set pretty=True for indentation."""',
+            '    raise NotImplementedError("json_stringify is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);
@@ -120,13 +132,25 @@ describe("montyPreambleBuild", () => {
             "",
             'SkipResponse = TypedDict("SkipResponse", {})',
             "",
+            'JsonParseResponse = TypedDict("JsonParseResponse", { "value": Any })',
+            "",
+            'JsonStringifyResponse = TypedDict("JsonStringifyResponse", { "value": str })',
+            "",
             "def search_v2(query: str) -> SearchV2Response:",
             '    """valid python name"""',
             '    raise NotImplementedError("search_v2 is provided by runtime.")',
             "",
             "def skip() -> SkipResponse:",
             '    """Skip this turn. Call when you have nothing useful to do right now."""',
-            '    raise NotImplementedError("skip is provided by runtime.")'
+            '    raise NotImplementedError("skip is provided by runtime.")',
+            "",
+            "def json_parse(text: str) -> JsonParseResponse:",
+            '    """Parse JSON string text and return the parsed value in `value`."""',
+            '    raise NotImplementedError("json_parse is provided by runtime.")',
+            "",
+            "def json_stringify(value: Any, pretty: bool | None = None) -> JsonStringifyResponse:",
+            '    """Serialize a value into a JSON string in `value`. Set pretty=True for indentation."""',
+            '    raise NotImplementedError("json_stringify is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);
@@ -156,9 +180,21 @@ describe("montyPreambleBuild", () => {
             "# Typed tool stubs for code assistance only.",
             'SkipResponse = TypedDict("SkipResponse", {})',
             "",
+            'JsonParseResponse = TypedDict("JsonParseResponse", { "value": Any })',
+            "",
+            'JsonStringifyResponse = TypedDict("JsonStringifyResponse", { "value": str })',
+            "",
             "def skip() -> SkipResponse:",
             '    """Skip this turn. Call when you have nothing useful to do right now."""',
-            '    raise NotImplementedError("skip is provided by runtime.")'
+            '    raise NotImplementedError("skip is provided by runtime.")',
+            "",
+            "def json_parse(text: str) -> JsonParseResponse:",
+            '    """Parse JSON string text and return the parsed value in `value`."""',
+            '    raise NotImplementedError("json_parse is provided by runtime.")',
+            "",
+            "def json_stringify(value: Any, pretty: bool | None = None) -> JsonStringifyResponse:",
+            '    """Serialize a value into a JSON string in `value`. Set pretty=True for indentation."""',
+            '    raise NotImplementedError("json_stringify is provided by runtime.")'
         ].join("\n");
 
         expect(result).toBe(expected);

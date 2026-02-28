@@ -3,6 +3,7 @@ import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
 import { rlmPrintCaptureAppend, rlmPrintCaptureCreate, rlmPrintCaptureFlushTrailing } from "./rlmPrintCapture.js";
+import { rlmRuntimeTools } from "./rlmRuntimeTools.js";
 import { rlmSnapshotSave } from "./rlmSnapshotSave.js";
 import { rlmStepResume } from "./rlmStepResume.js";
 import { rlmStepStart } from "./rlmStepStart.js";
@@ -50,6 +51,12 @@ export async function rlmExecute(
     );
     const workerKey = rlmWorkerKeyResolve(context.ctx);
     const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
+    for (const runtimeTool of rlmRuntimeTools()) {
+        if (toolByName.has(runtimeTool.name)) {
+            continue;
+        }
+        toolByName.set(runtimeTool.name, runtimeTool);
+    }
     const externalFunctions = [...toolByName.keys()];
     if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
         externalFunctions.push(SKIP_TOOL_NAME);
