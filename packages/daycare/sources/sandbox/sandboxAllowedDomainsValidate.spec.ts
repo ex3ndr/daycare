@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.js";
 
 describe("sandboxAllowedDomainsValidate", () => {
-    it("rejects wildcard domains", () => {
-        expect(sandboxAllowedDomainsValidate(["*"])).toEqual(['Wildcard "*" is not allowed in allowedDomains.']);
+    it("allows global wildcard to disable domain restrictions", () => {
+        expect(sandboxAllowedDomainsValidate(["*"])).toEqual([]);
     });
 
     it("returns no issues for explicit domains", () => {

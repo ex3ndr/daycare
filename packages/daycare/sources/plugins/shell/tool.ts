@@ -118,7 +118,8 @@ const execSchema = Type.Object(
         allowedDomains: Type.Optional(
             Type.Array(Type.String({ minLength: 1 }), {
                 minItems: 1,
-                description: "Explicit outbound network allowlist. Supports subdomain wildcards like *.example.com."
+                description:
+                    'Explicit outbound network allowlist. Supports subdomain wildcards like *.example.com. Use ["*"] to allow all domains.'
             })
         )
     },

@@ -2,7 +2,8 @@
 
 The `exec` tool can optionally allow outbound network access for specific domains.
 The list is explicit: exact domains are allowed, and subdomain wildcards like
-`*.example.com` are supported. A global wildcard (`*`) is not allowed.
+`*.example.com` are supported. A global wildcard (`*`) disables domain
+restrictions entirely, allowing all outbound network access.
 
 `exec` now runs with **zero additional permissions by default**:
 - no network access
@@ -40,7 +41,7 @@ flowchart TD
   B --> D[merge + dedupe]
   C --> D
   D --> E{contains "*"?}
-  E -- yes --> F[error: wildcard not allowed]
+  E -- yes --> I[build sandbox config with unrestricted network]
   E -- no --> G{network permission enabled?}
   G -- no --> H[error: network permission required]
   G -- yes --> J{resolved domains empty?}

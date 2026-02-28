@@ -51,7 +51,7 @@ All paths are validated before use:
 The `exec` tool supports an explicit domain allowlist for outbound network access:
 
 - Exact domains and `*.example.com` wildcards are supported
-- Global wildcard (`*`) is not allowed
+- Global wildcard (`*`) disables domain restrictions entirely
 - Network access requires the `@network` permission tag
 
 ### Language ecosystem presets

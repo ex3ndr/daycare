@@ -1,11 +1,9 @@
 /**
- * Validates sandbox allowedDomains against wildcard requirements.
+ * Validates sandbox allowedDomains entries.
  * Expects: allowedDomains is already normalized and deduped.
+ * A global wildcard ("*") disables domain restrictions entirely.
  */
 export function sandboxAllowedDomainsValidate(allowedDomains: string[]): string[] {
     const issues: string[] = [];
-    if (allowedDomains.includes("*")) {
-        issues.push('Wildcard "*" is not allowed in allowedDomains.');
-    }
     return issues;
 }
