@@ -901,4 +901,49 @@ describe("TelegramConnector file uploads", () => {
             }
         });
     });
+
+    it("does not send reply_to_message_id when replies are disabled", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            sendReplies: false,
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Use button below to authenticate.",
+            replyToMessageId: "77",
+            buttons: [
+                {
+                    text: "Open Daycare",
+                    url: "https://app.example.com/auth#token"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open Daycare",
+                            url: "https://app.example.com/auth#token"
+                        }
+                    ]
+                ]
+            }
+        });
+        expect(sendCall?.[2]).not.toHaveProperty("reply_to_message_id");
+    });
 });

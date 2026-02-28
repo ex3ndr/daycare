@@ -16,6 +16,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 ## Settings
 - `mode` (optional): `"private"` (default) or `"public"`.
 - `allowedUids` (conditionally required): list of Telegram user IDs that are allowed to interact with the bot when mode is `"private"`.
+- `sendReplies` (optional): when `true` (default), include `reply_to_message_id` for contextual replies.
 - `polling` (optional): enable/disable polling (default true).
 - `clearWebhook` (optional): clear Telegram webhook before polling (default true).
 - `statePath` (optional): override `lastUpdateId` storage path (default `${dataDir}/telegram-offset.json`).
@@ -33,7 +34,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Emits normalized payloads to agent handling.
 
 ## Outgoing message handling
-- Sends text replies with `reply_to_message_id` when present.
+- Sends text replies with `reply_to_message_id` when present and `sendReplies` is enabled.
 - Sends images with `sendPhoto`, videos with `sendVideo`, voice notes with `sendVoice` when `sendAs: "voice"`, and other files with `sendDocument`.
 - Supports typing indicators and emoji reactions.
 

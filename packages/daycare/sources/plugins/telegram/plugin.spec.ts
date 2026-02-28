@@ -54,7 +54,13 @@ async function tempDirCreate(): Promise<string> {
     return dir;
 }
 
-function pluginApiBuild(dataDir: string, options?: { engineSettings?: Record<string, unknown> }) {
+function pluginApiBuild(
+    dataDir: string,
+    options?: {
+        engineSettings?: Record<string, unknown>;
+        settings?: Record<string, unknown>;
+    }
+) {
     const registerConnector = vi.fn();
     const unregisterConnector = vi.fn(async () => undefined);
     return {
@@ -68,9 +74,11 @@ function pluginApiBuild(dataDir: string, options?: { engineSettings?: Record<str
             settings: {
                 mode: "private",
                 allowedUids: ["123"],
+                sendReplies: true,
                 polling: false,
                 clearWebhook: false,
-                statePath: null
+                statePath: null,
+                ...(options?.settings ?? {})
             },
             engineSettings: (options?.engineSettings ?? {}) as never,
             logger: {
@@ -142,6 +150,16 @@ describe("telegram plugin settings schema", () => {
         }
         expect(parsed.error.issues[0]?.path).toEqual(["allowedUids"]);
         expect(parsed.error.issues[0]?.message).toBe("allowedUids must have at least 1 entry in private mode");
+    });
+
+    it("accepts sendReplies=false", () => {
+        const parsed = plugin.settingsSchema.parse({
+            mode: "private",
+            allowedUids: ["123"],
+            sendReplies: false
+        }) as { sendReplies: boolean };
+
+        expect(parsed.sendReplies).toBe(false);
     });
 });
 
@@ -499,6 +517,23 @@ describe("telegram plugin web app menu", () => {
         expect(connector).toBeDefined();
         expect(connector?.options).toMatchObject({
             webAppUrl: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram"
+        });
+    });
+
+    it("passes sendReplies=false to connector options", async () => {
+        const dataDir = await tempDirCreate();
+        const built = pluginApiBuild(dataDir, {
+            settings: {
+                sendReplies: false
+            }
+        });
+
+        const instance = await plugin.create(built.api as never);
+        await instance.load?.();
+        const connector = connectorInstances[0];
+        expect(connector).toBeDefined();
+        expect(connector?.options).toMatchObject({
+            sendReplies: false
         });
     });
 });

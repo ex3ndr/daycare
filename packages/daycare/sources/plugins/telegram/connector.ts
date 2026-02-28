@@ -24,6 +24,7 @@ export type TelegramConnectorOptions = {
     token: string;
     allowedUids: string[];
     mode?: "public" | "private";
+    sendReplies?: boolean;
     polling?: boolean;
     clearWebhook?: boolean;
     statePath?: string | null;
@@ -84,6 +85,7 @@ export class TelegramConnector implements Connector {
     private webAppUrl: string | null = null;
     private allowedUids: Set<string>;
     private mode: "public" | "private";
+    private sendReplies: boolean;
     private shuttingDown = false;
     private clearWebhookOnStart: boolean;
     private clearedWebhook = false;
@@ -100,6 +102,7 @@ export class TelegramConnector implements Connector {
         this.fileStore = options.fileStore;
         this.dataDir = options.dataDir;
         this.mode = options.mode ?? "private";
+        this.sendReplies = options.sendReplies ?? true;
         this.allowedUids = new Set(options.allowedUids.map((uid) => String(uid)));
         this.statePath =
             options.statePath === undefined ? path.join(this.dataDir, "telegram-offset.json") : options.statePath;
@@ -242,7 +245,7 @@ export class TelegramConnector implements Connector {
         if (files.length === 0) {
             logger.debug(`send: Sending text-only message targetId=${targetId}`);
             await this.sendTextWithFallback(targetId, message.text ?? "", {
-                ...messageReplyOptionsBuild(message),
+                ...messageReplyOptionsBuild(message, this.sendReplies),
                 ...(message.buttons?.length ? { reply_markup: messageButtonsBuild(message.buttons) } : {})
             });
             logger.debug(`send: Text message sent targetId=${targetId}`);
@@ -327,11 +330,11 @@ export class TelegramConnector implements Connector {
             ? {
                   caption: htmlCaption,
                   parse_mode: "HTML" as TelegramBot.ParseMode,
-                  ...messageReplyOptionsBuild({ replyToMessageId })
+                  ...messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies)
               }
             : caption
-              ? { caption, ...messageReplyOptionsBuild({ replyToMessageId }) }
-              : messageReplyOptionsBuild({ replyToMessageId });
+              ? { caption, ...messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies) }
+              : messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies);
         const sendAs = file.sendAs ?? "auto";
         try {
             await this.sendFileWithOptions(targetId, file, sendAs, options);
@@ -342,7 +345,7 @@ export class TelegramConnector implements Connector {
             logger.warn({ error }, "error: Telegram HTML caption parse error; retrying without parse_mode");
             await this.sendFileWithOptions(targetId, file, sendAs, {
                 caption,
-                ...messageReplyOptionsBuild({ replyToMessageId })
+                ...messageReplyOptionsBuild({ replyToMessageId }, this.sendReplies)
             });
         }
     }
@@ -939,8 +942,12 @@ function recoverLastUpdateId(content: string): number | null {
 }
 
 function messageReplyOptionsBuild(
-    message: Pick<ConnectorMessage, "replyToMessageId">
+    message: Pick<ConnectorMessage, "replyToMessageId">,
+    sendReplies: boolean
 ): Pick<TelegramBot.SendMessageOptions, "reply_to_message_id"> | undefined {
+    if (!sendReplies) {
+        return undefined;
+    }
     const replyToMessageId = message.replyToMessageId;
     if (!replyToMessageId) {
         return undefined;

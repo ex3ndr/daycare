@@ -19,6 +19,7 @@ Connect Daycare to Telegram via the Bot API with long polling. Only processes pr
   "settings": {
     "mode": "private",
     "allowedUids": [123456789],
+    "sendReplies": false,
     "polling": true,
     "clearWebhook": true
   }
@@ -31,6 +32,7 @@ Connect Daycare to Telegram via the Bot API with long polling. Only processes pr
 |---------|------|---------|-------------|
 | `mode` | `"private" \| "public"` | `"private"` | Access policy for Telegram users |
 | `allowedUids` | number[] | required in `private`, optional in `public` | Telegram user IDs allowed to interact |
+| `sendReplies` | boolean | `true` | Include `reply_to_message_id` when context has a source message id |
 | `polling` | boolean | `true` | Enable/disable long polling |
 | `clearWebhook` | boolean | `true` | Clear Telegram webhook before polling starts |
 | `statePath` | string | auto | Override path for `lastUpdateId` storage |
