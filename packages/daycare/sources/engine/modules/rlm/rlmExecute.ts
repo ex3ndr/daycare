@@ -79,8 +79,8 @@ export async function rlmExecute(
     const printCallback = (...values: unknown[]): void => {
         rlmPrintCaptureAppend(printCapture, values);
     };
-    const toolPrintCallback = (...values: unknown[]): void => {
-        rlmPrintCaptureAppendToolPrint(printCapture, values);
+    const toolPrintCallback = (stream: "stdout" | "stderr", text: string): void => {
+        rlmPrintCaptureAppendToolPrint(printCapture, stream, text);
     };
     const toolContext: ToolExecutionContext = {
         ...context,

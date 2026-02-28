@@ -32,10 +32,14 @@ export function rlmPrintCaptureAppend(state: RlmPrintCaptureState, args: unknown
 
 /**
  * Appends one tool-originated print callback invocation into capture state.
- * Expects: arbitrary value lists; does not interpret stdout/stderr tuple markers.
+ * Expects: stream selector and text chunk, same tuple shape as Monty print callback.
  */
-export function rlmPrintCaptureAppendToolPrint(state: RlmPrintCaptureState, args: unknown[]): void {
-    state.lines.push(printLineBuild(args));
+export function rlmPrintCaptureAppendToolPrint(
+    state: RlmPrintCaptureState,
+    stream: "stdout" | "stderr",
+    text: string
+): void {
+    rlmPrintCaptureAppend(state, [stream, text]);
 }
 
 /**

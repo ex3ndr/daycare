@@ -31,27 +31,29 @@ describe("rlmPrintCapture", () => {
         const lines: string[] = [];
         const capture = rlmPrintCaptureCreate(lines);
 
-        rlmPrintCaptureAppendToolPrint(capture, ["debug info"]);
+        rlmPrintCaptureAppendToolPrint(capture, "stdout", "debug info");
+        rlmPrintCaptureFlushTrailing(capture);
 
         expect(lines).toEqual(["debug info"]);
     });
 
-    it("supports tool-style print calls with multiple arguments", () => {
+    it("ignores stderr tool print chunks", () => {
         const lines: string[] = [];
         const capture = rlmPrintCaptureCreate(lines);
 
-        rlmPrintCaptureAppendToolPrint(capture, ["debug", 42, { ok: true }, null]);
+        rlmPrintCaptureAppendToolPrint(capture, "stderr", "debug info");
+        rlmPrintCaptureFlushTrailing(capture);
 
-        expect(lines).toEqual(['debug 42 {"ok":true}']);
+        expect(lines).toEqual([]);
     });
 
-    it("treats stdout/stderr markers as literal tool print arguments", () => {
+    it("supports newline chunking for tool stdout print chunks", () => {
         const lines: string[] = [];
         const capture = rlmPrintCaptureCreate(lines);
 
-        rlmPrintCaptureAppendToolPrint(capture, ["stderr", "x"]);
-        rlmPrintCaptureAppendToolPrint(capture, ["stdout", "y"]);
+        rlmPrintCaptureAppendToolPrint(capture, "stdout", "alpha\nbeta");
+        rlmPrintCaptureFlushTrailing(capture);
 
-        expect(lines).toEqual(["stderr x", "stdout y"]);
+        expect(lines).toEqual(["alpha", "beta"]);
     });
 });

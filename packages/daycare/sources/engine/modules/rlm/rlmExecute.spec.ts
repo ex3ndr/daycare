@@ -97,7 +97,7 @@ describe("rlmExecute", () => {
 
     it("exposes context.print to tools during python execution", async () => {
         const execute = vi.fn(async (toolCall: ToolCall, toolContext: ToolExecutionContext) => {
-            toolContext.print?.("tool", toolCall.name);
+            toolContext.print?.("stdout", `tool ${toolCall.name}`);
             return okResult(toolCall.name, "ok");
         });
         const resolver: ToolResolverApi = {
@@ -122,7 +122,7 @@ describe("rlmExecute", () => {
         expect(typeof executionContext.print).toBe("function");
     });
 
-    it("keeps stdout/stderr labels as literal values for context.print", async () => {
+    it("routes context.print through stdout/stderr selector", async () => {
         const execute = vi.fn(async (toolCall: ToolCall, toolContext: ToolExecutionContext) => {
             toolContext.print?.("stderr", `${toolCall.name}:err`);
             toolContext.print?.("stdout", `${toolCall.name}:out`);
@@ -143,7 +143,7 @@ describe("rlmExecute", () => {
         );
 
         expect(result.output).toBe("done");
-        expect(result.printOutput).toEqual(["stderr echo:err", "stdout echo:out"]);
+        expect(result.printOutput).toEqual(["echo:out"]);
     });
 
     it("resumes execution after tool calls and returns final output", async () => {

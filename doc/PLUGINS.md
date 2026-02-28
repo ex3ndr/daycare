@@ -85,16 +85,16 @@ sequenceDiagram
 
 ## Tool Execution Context Print Callback
 
-Tools can call `context.print?.(...args)` to emit diagnostic lines into Python execution output.
+Tools can call `context.print?.("stdout" | "stderr", "text chunk")` to emit diagnostics during Python execution.
 
 - `context.print` is defined only when a tool runs from RLM Python execution.
 - Outside Python execution, `context.print` remains `undefined`.
-- Printed values are appended to the same `printOutput` stream used by Python `print()`.
-- Tool print args are treated as literal values; labels like `"stderr"` or `"stdout"` are not filtered.
+- `stdout` chunks are appended to the same `printOutput` stream used by Python `print()`.
+- `stderr` chunks are ignored in `printOutput` (matching Monty stream handling).
 
 ```mermaid
 flowchart LR
-    Tool[tool.execute] --> Print[context.print?.(...args)]
+    Tool[tool.execute] --> Print[context.print?.(stream, text)]
     Print --> Capture[rlmPrintCaptureAppendToolPrint]
     Capture --> Output[rlmExecute printOutput[]]
 ```
