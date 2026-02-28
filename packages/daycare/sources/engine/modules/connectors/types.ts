@@ -23,6 +23,12 @@ export type ConnectorMessage = {
     rawText?: string | null;
     files?: ConnectorFile[];
     replyToMessageId?: string;
+    buttons?: ConnectorMessageButton[];
+};
+
+export type ConnectorMessageButton = {
+    text: string;
+    url: string;
 };
 
 export type MessageContext = {

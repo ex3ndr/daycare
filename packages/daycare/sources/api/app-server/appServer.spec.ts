@@ -157,7 +157,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         port,
         auth,
         commands: modules.commands,
-        tools: modules.tools
+        tools: modules.tools,
+        connectors: modules.connectors
     };
 }
 
@@ -186,6 +187,50 @@ describe("AppServer auth endpoints", () => {
 
         expect(built.commands.get("app")).not.toBeNull();
         expect(built.tools.listTools().some((tool) => tool.name === "app_auth_link")).toBe(true);
+    });
+
+    it("sends Telegram /app links as an inline button", async () => {
+        const built = await appServerCreateForTests({ secret: "valid-secret-for-tests-1234567890" });
+        const sendMessage = vi.fn(
+            async (
+                _targetId: string,
+                _message: {
+                    text: string;
+                    replyToMessageId?: string;
+                    buttons?: Array<{ text: string; url: string }>;
+                }
+            ) => undefined
+        );
+        built.connectors.register("telegram", {
+            capabilities: { sendText: true },
+            onMessage: () => () => undefined,
+            sendMessage
+        });
+
+        const command = built.commands.get("app");
+        expect(command).not.toBeNull();
+
+        await command!.handler(
+            "/app",
+            { messageId: "42" },
+            {
+                type: "user",
+                connector: "telegram",
+                channelId: "123",
+                userId: "123"
+            }
+        );
+
+        expect(sendMessage).toHaveBeenCalledTimes(1);
+        const sentCall = sendMessage.mock.calls[0];
+        expect(sentCall).toBeTruthy();
+        const sent = sentCall![1];
+        expect(sent.text).toBe("Open your Daycare app using the button below.");
+        expect(sent.text).not.toContain("http");
+        expect(sent.replyToMessageId).toBe("42");
+        expect(sent.buttons).toHaveLength(1);
+        expect(sent.buttons?.[0]).toMatchObject({ text: "Open Daycare" });
+        expect(sent.buttons?.[0]?.url).toContain("/auth#");
     });
 
     it("keeps app command and tool disabled when app server is disabled", async () => {

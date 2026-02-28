@@ -241,7 +241,10 @@ export class TelegramConnector implements Connector {
         const files = message.files ?? [];
         if (files.length === 0) {
             logger.debug(`send: Sending text-only message targetId=${targetId}`);
-            await this.sendTextWithFallback(targetId, message.text ?? "");
+            await this.sendTextWithFallback(targetId, message.text ?? "", {
+                ...messageReplyOptionsBuild(message),
+                ...(message.buttons?.length ? { reply_markup: messageButtonsBuild(message.buttons) } : {})
+            });
             logger.debug(`send: Text message sent targetId=${targetId}`);
             return;
         }
@@ -263,7 +266,7 @@ export class TelegramConnector implements Connector {
         logger.debug(
             `send: Sending first file targetId=${targetId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`
         );
-        await this.sendFile(targetId, first, sendCaption);
+        await this.sendFile(targetId, first, sendCaption, message.replyToMessageId);
         for (const file of rest) {
             logger.debug(
                 `send: Sending additional file targetId=${targetId} fileName=${file.name} mimeType=${file.mimeType}`
@@ -312,14 +315,23 @@ export class TelegramConnector implements Connector {
         });
     }
 
-    private async sendFile(targetId: string, file: ConnectorFile, caption?: string): Promise<void> {
+    private async sendFile(
+        targetId: string,
+        file: ConnectorFile,
+        caption?: string,
+        replyToMessageId?: string
+    ): Promise<void> {
         const htmlCaption = caption ? markdownToTelegramHtml(caption) : undefined;
         const useHtmlCaption = !!htmlCaption && htmlCaption.length <= TELEGRAM_CAPTION_MAX_LENGTH;
         const options = useHtmlCaption
-            ? { caption: htmlCaption, parse_mode: "HTML" as TelegramBot.ParseMode }
+            ? {
+                  caption: htmlCaption,
+                  parse_mode: "HTML" as TelegramBot.ParseMode,
+                  ...messageReplyOptionsBuild({ replyToMessageId })
+              }
             : caption
-              ? { caption }
-              : undefined;
+              ? { caption, ...messageReplyOptionsBuild({ replyToMessageId }) }
+              : messageReplyOptionsBuild({ replyToMessageId });
         const sendAs = file.sendAs ?? "auto";
         try {
             await this.sendFileWithOptions(targetId, file, sendAs, options);
@@ -328,34 +340,42 @@ export class TelegramConnector implements Connector {
                 throw error;
             }
             logger.warn({ error }, "error: Telegram HTML caption parse error; retrying without parse_mode");
-            await this.sendFileWithOptions(targetId, file, sendAs, { caption });
+            await this.sendFileWithOptions(targetId, file, sendAs, {
+                caption,
+                ...messageReplyOptionsBuild({ replyToMessageId })
+            });
         }
     }
 
-    private async sendTextWithFallback(targetId: string, text: string): Promise<void> {
+    private async sendTextWithFallback(
+        targetId: string,
+        text: string,
+        options?: TelegramBot.SendMessageOptions
+    ): Promise<void> {
         const chunks = telegramMessageSplit(text, TELEGRAM_MESSAGE_MAX_LENGTH);
-        for (const chunk of chunks) {
-            await this.sendTextChunk(targetId, chunk);
+        for (const [index, chunk] of chunks.entries()) {
+            await this.sendTextChunk(targetId, chunk, index === chunks.length - 1 ? options : undefined);
         }
     }
 
-    private async sendTextChunk(targetId: string, text: string): Promise<void> {
+    private async sendTextChunk(targetId: string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void> {
         const html = markdownToTelegramHtml(text);
         const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
         try {
             if (useHtml) {
                 await this.bot.sendMessage(targetId, html, {
+                    ...options,
                     parse_mode: "HTML"
                 });
                 return;
             }
-            await this.bot.sendMessage(targetId, text);
+            await this.bot.sendMessage(targetId, text, options);
         } catch (error) {
             if (!useHtml || !isTelegramParseError(error)) {
                 throw error;
             }
             logger.warn({ error }, "error: Telegram HTML parse error; retrying without parse_mode");
-            await this.bot.sendMessage(targetId, text);
+            await this.bot.sendMessage(targetId, text, options);
         }
     }
 
@@ -912,6 +932,35 @@ function recoverLastUpdateId(content: string): number | null {
         return Number.isFinite(value) ? value : null;
     }
     return null;
+}
+
+function messageReplyOptionsBuild(
+    message: Pick<ConnectorMessage, "replyToMessageId">
+): Pick<TelegramBot.SendMessageOptions, "reply_to_message_id"> | undefined {
+    const replyToMessageId = message.replyToMessageId;
+    if (!replyToMessageId) {
+        return undefined;
+    }
+    const parsed = Number(replyToMessageId);
+    if (!Number.isFinite(parsed)) {
+        return undefined;
+    }
+    return {
+        reply_to_message_id: parsed
+    };
+}
+
+function messageButtonsBuild(
+    buttons: NonNullable<ConnectorMessage["buttons"]>
+): TelegramBot.InlineKeyboardMarkup {
+    return {
+        inline_keyboard: buttons.map((button) => [
+            {
+                text: button.text,
+                url: button.url
+            }
+        ])
+    };
 }
 
 function connectorStateParse(value: unknown): TelegramConnectorState | null {
