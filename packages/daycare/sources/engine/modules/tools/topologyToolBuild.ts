@@ -503,9 +503,8 @@ export function topologyTool(
                     authenticated: Boolean(endpoint.auth)
                 }));
 
-            const secretEntries = (
-                await Promise.all(visibleUserIds.map((userId) => secrets.list(contextForUser({ userId }))))
-            ).flat();
+            // Keep secrets scoped to caller ctx so topology and exec use the same visibility model.
+            const secretEntries = await secrets.list(toolContext.ctx);
             const secretByName = new Map<string, TopologySecret>();
             for (const entry of secretEntries) {
                 if (secretByName.has(entry.name)) {

@@ -166,6 +166,70 @@ describe("topologyTool", () => {
         }
     });
 
+    it("only includes secrets from caller context even when subusers are visible", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-tool-secrets-scope-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir, db: { autoMigrate: false } }
+                },
+                path.join(dir, "settings.json")
+            );
+            const storage = storageResolve(config);
+            await databaseMigrate(storage.connection);
+
+            await storage.users.create({ id: "owner-user" });
+            await storage.users.create({ id: "subuser-1", parentUserId: "owner-user" });
+
+            const secrets = new Secrets(config.usersDir);
+            await secrets.add(contextForUser({ userId: "owner-user" }), {
+                name: "owner-secret",
+                displayName: "Owner Secret",
+                description: "Owner scoped secret",
+                variables: {
+                    OWNER_TOKEN: "owner-value"
+                }
+            });
+            await secrets.add(contextForUser({ userId: "subuser-1" }), {
+                name: "subuser-secret",
+                displayName: "Subuser Secret",
+                description: "Subuser scoped secret",
+                variables: {
+                    SUBUSER_TOKEN: "subuser-value"
+                }
+            });
+
+            const tool = topologyTool(
+                { listTasks: async () => [] } as unknown as Crons,
+                { listSubscriptions: async () => [] } as unknown as Signals,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
+                { list: async () => [] } as never,
+                secrets
+            );
+            const result = await tool.execute(
+                {},
+                contextBuild(config, {
+                    callerAgentId: "owner-agent",
+                    callerUserId: "owner-user",
+                    heartbeatTasks: []
+                }),
+                toolCall
+            );
+
+            expect(result.typedResult.secrets).toEqual([
+                {
+                    name: "owner-secret",
+                    displayName: "Owner Secret",
+                    description: "Owner scoped secret",
+                    variableNames: ["OWNER_TOKEN"]
+                }
+            ]);
+            expect(result.typedResult.secretCount).toBe(1);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("returns populated topology with expected section formatting", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-tool-"));
         try {
