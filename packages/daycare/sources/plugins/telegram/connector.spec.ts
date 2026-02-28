@@ -710,7 +710,7 @@ describe("TelegramConnector command updates", () => {
                 polling: false,
                 clearWebhook: false,
                 statePath: null,
-                webAppUrl: "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com",
+                webAppUrl: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com",
                 fileStore,
                 dataDir: "/tmp",
                 enableGracefulShutdown: false
@@ -728,7 +728,7 @@ describe("TelegramConnector command updates", () => {
                     type: "web_app",
                     text: "Open Daycare",
                     web_app: {
-                        url: "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com"
+                        url: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com"
                     }
                 }
             });

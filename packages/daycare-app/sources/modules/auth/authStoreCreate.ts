@@ -16,6 +16,7 @@ export type AuthSessionStorage = {
 export type AuthStoreDependencies = {
     storage: AuthSessionStorage;
     validateToken: (baseUrl: string, token: string) => Promise<{ ok: boolean; userId?: string }>;
+    sessionResolve?: () => Promise<AuthSession | null>;
 };
 
 export type AuthStore = {
@@ -41,6 +42,25 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
         token: null,
         userId: null,
         bootstrap: async () => {
+            const resolvedSession = await dependencies.sessionResolve?.();
+            if (resolvedSession) {
+                const result = await dependencies.validateToken(resolvedSession.baseUrl, resolvedSession.token);
+                if (result.ok === true && typeof result.userId === "string") {
+                    await dependencies.storage.write({
+                        baseUrl: resolvedSession.baseUrl,
+                        token: resolvedSession.token
+                    });
+                    set({
+                        ready: true,
+                        state: "authenticated",
+                        baseUrl: resolvedSession.baseUrl,
+                        token: resolvedSession.token,
+                        userId: result.userId
+                    });
+                    return;
+                }
+            }
+
             const storedSession = await dependencies.storage.read();
             if (!storedSession) {
                 set({ ready: true, state: "unauthenticated", baseUrl: null, token: null, userId: null });

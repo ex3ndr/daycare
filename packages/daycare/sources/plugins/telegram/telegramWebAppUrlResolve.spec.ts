@@ -7,7 +7,7 @@ describe("telegramWebAppUrlResolve", () => {
         expect(result).toBeNull();
     });
 
-    it("builds a web app auth URL with backend and telegram instance id", () => {
+    it("builds a web app URL with backend and telegram instance id", () => {
         const result = telegramWebAppUrlResolve(
             {
                 plugins: [
@@ -26,7 +26,7 @@ describe("telegramWebAppUrlResolve", () => {
         );
 
         expect(result).toBe(
-            "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram-main"
+            "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram-main"
         );
     });
 });

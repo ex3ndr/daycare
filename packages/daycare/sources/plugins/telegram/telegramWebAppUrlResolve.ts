@@ -19,13 +19,14 @@ export function telegramWebAppUrlResolve(engineSettings: SettingsConfig, telegra
     const serverEndpoint = appEndpointNormalize(valueAsString(pluginSettings.serverEndpoint), "serverEndpoint");
     const appBaseUrl = appEndpoint ?? serverEndpoint ?? APP_AUTH_DEFAULT_ENDPOINT;
     const backendUrl = serverEndpoint ?? appBaseUrl;
-    return telegramWebAppAuthUrlBuild(appBaseUrl, backendUrl, telegramInstanceId);
+    return telegramWebAppUrlBuild(appBaseUrl, backendUrl, telegramInstanceId);
 }
 
-function telegramWebAppAuthUrlBuild(appBaseUrl: string, backendUrl: string, telegramInstanceId: string): string {
+function telegramWebAppUrlBuild(appBaseUrl: string, backendUrl: string, telegramInstanceId: string): string {
     const url = new URL(appBaseUrl);
-    const normalizedPath = url.pathname.endsWith("/") ? url.pathname.slice(0, -1) : url.pathname;
-    url.pathname = `${normalizedPath || ""}/auth`;
+    if (url.pathname.endsWith("/") && url.pathname !== "/") {
+        url.pathname = url.pathname.slice(0, -1);
+    }
     url.searchParams.set("backend", backendUrl);
     url.searchParams.set("telegramInstanceId", telegramInstanceId);
     return url.toString();

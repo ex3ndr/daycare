@@ -15,10 +15,11 @@ This change adds Telegram WebApp authentication support across:
 - Added Telegram auth exchange flow in app frontend:
   - Reads `backend` and `telegramInstanceId` from URL query params.
   - Reads `Telegram.WebApp.initData` from WebApp runtime.
+  - Resolves Telegram session during auth bootstrap on every page.
   - Exchanges `initData` via `/auth/telegram`, then logs in with returned token.
 - Added Telegram bot menu WebApp integration:
   - When `daycare-app-server` is enabled, Telegram connector sets chat menu button to `web_app`.
-  - URL points to `/auth` with query params needed by the app (`backend`, `telegramInstanceId`).
+  - URL points to app root with query params needed by Telegram auth (`backend`, `telegramInstanceId`).
   - Without app-server, menu button remains default commands mode.
 
 ```mermaid
@@ -29,7 +30,8 @@ sequenceDiagram
     participant S as daycare-app-server
 
     U->>T: Open bot menu button (web_app)
-    T-->>A: Launch /auth?backend=...&telegramInstanceId=...
+    T-->>A: Launch /?backend=...&telegramInstanceId=...
+    A->>A: Bootstrap auth on current page
     A->>A: Read Telegram.WebApp.initData
     A->>S: POST /auth/telegram { initData, telegramInstanceId }
     S->>S: Resolve telegram bot token

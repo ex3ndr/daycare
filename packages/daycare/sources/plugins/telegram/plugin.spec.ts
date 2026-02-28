@@ -504,7 +504,7 @@ describe("telegram plugin web app menu", () => {
         const connector = connectorInstances[0];
         expect(connector).toBeDefined();
         expect(connector?.options).toMatchObject({
-            webAppUrl: "https://app.example.com/auth?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram"
+            webAppUrl: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram"
         });
     });
 });
