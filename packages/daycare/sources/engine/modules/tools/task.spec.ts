@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import type { PluginInstanceSettings } from "../../../settings.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
@@ -323,7 +324,9 @@ describe("task tools", () => {
         );
         const webhookTriggerId = String(webhookAddResult.typedResult.webhookTriggerId ?? "");
         expect(webhookTriggerId).not.toBe("");
-        expect(String(webhookAddResult.typedResult.webhookPath ?? "")).toBe(`/v1/webhooks/${webhookTriggerId}`);
+        expect(String(webhookAddResult.typedResult.webhookPath ?? "")).toBe(
+            `http://127.0.0.1:7332/v1/webhooks/${webhookTriggerId}`
+        );
 
         const duplicateWebhookAddResult = await addTool.execute(
             { taskId: "task-one", type: "webhook" },
@@ -352,6 +355,46 @@ describe("task tools", () => {
             toolCall("task_trigger_remove")
         );
         expect(webhookRemoveResult.typedResult.removed).toBe(true);
+    });
+
+    it("uses configured app server endpoint for webhook trigger URL", async () => {
+        const runtime = await runtimeBuild({
+            plugins: [
+                {
+                    instanceId: "daycare-app-server",
+                    pluginId: "daycare-app-server",
+                    enabled: true,
+                    settings: {
+                        serverEndpoint: "https://api.example.com/"
+                    }
+                }
+            ]
+        });
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const now = Date.now();
+        await runtime.storage.tasks.create({
+            id: "task-one",
+            userId: "user-1",
+            title: "Manual task",
+            description: null,
+            code: "print('manual')",
+            createdAt: now,
+            updatedAt: now
+        });
+
+        const addTool = buildTaskTriggerAddTool();
+        const webhookAddResult = await addTool.execute(
+            { taskId: "task-one", type: "webhook" },
+            runtime.context,
+            toolCall("task_trigger_add")
+        );
+
+        const webhookTriggerId = String(webhookAddResult.typedResult.webhookTriggerId ?? "");
+        expect(String(webhookAddResult.typedResult.webhookPath ?? "")).toBe(
+            `https://api.example.com/v1/webhooks/${webhookTriggerId}`
+        );
     });
 
     it("defaults cron timezone from user profile and treats timezone as part of uniqueness", async () => {
@@ -472,7 +515,7 @@ describe("task tools", () => {
     });
 });
 
-async function runtimeBuild(): Promise<{
+async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}): Promise<{
     dir: string;
     storage: Storage;
     crons: Crons;
@@ -485,9 +528,18 @@ async function runtimeBuild(): Promise<{
     const storage = await storageOpenTest();
     const postAndAwait = vi.fn(async () => ({ status: "completed" }));
     const eventBus = { emit: vi.fn() };
-    const config = new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json")));
+    const config = new ConfigModule(
+        configResolve(
+            {
+                engine: { dataDir: dir },
+                ...(options.plugins ? { plugins: options.plugins } : {})
+            },
+            path.join(dir, "settings.json")
+        )
+    );
 
     const agentSystem = {
+        config,
         storage,
         postAndAwait
     } as unknown as ToolExecutionContext["agentSystem"] & { crons: Crons; heartbeats: Heartbeats };

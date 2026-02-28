@@ -108,10 +108,6 @@ export const plugin = definePlugin({
             }
             const webhookId = webhookIdResolve(pathname);
             if (request.method === "POST" && webhookId) {
-                if (!api.webhooks) {
-                    appSendJson(response, 503, { ok: false, error: "Webhook runtime unavailable." });
-                    return;
-                }
                 await routeWebhookTrigger(request, response, webhookId, {
                     trigger: api.webhooks.trigger
                 });

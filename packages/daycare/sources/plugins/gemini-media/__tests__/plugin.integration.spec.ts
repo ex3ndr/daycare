@@ -111,6 +111,11 @@ describe("gemini-media plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime",
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }
@@ -281,6 +286,11 @@ describe("gemini-media plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime",
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }

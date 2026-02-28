@@ -560,6 +560,58 @@ export const plugin = {
         });
     });
 
+    it("always provides webhooks api to plugins", async () => {
+        const dir = await createTempDir();
+        const pluginSource = `import { z } from "zod";
+
+export const plugin = {
+  settingsSchema: z.object({}).passthrough(),
+  create: (api) => ({
+    load: async () => {
+      let unavailable = null;
+      try {
+        await api.webhooks.trigger("missing");
+      } catch (error) {
+        unavailable = error instanceof Error ? error.message : String(error);
+      }
+      api.events.emit({
+        type: "webhooks-api",
+        payload: {
+          hasTrigger: typeof api.webhooks.trigger === "function",
+          unavailable
+        }
+      });
+    }
+  })
+};
+`;
+        const entryPath = await writePluginFile(dir, pluginSource);
+        const events: PluginEvent[] = [];
+        const { manager } = await createManager(entryPath, "webhooks-api", dir, (event) => {
+            events.push(event);
+        });
+
+        await manager.load({
+            instanceId: "webhooks-api-one",
+            pluginId: "webhooks-api",
+            enabled: true,
+            settings: {}
+        });
+
+        expect(events).toHaveLength(1);
+        expect(events[0]).toEqual(
+            expect.objectContaining({
+                pluginId: "webhooks-api",
+                instanceId: "webhooks-api-one",
+                type: "webhooks-api",
+                payload: {
+                    hasTrigger: true,
+                    unavailable: "Webhook runtime unavailable."
+                }
+            })
+        );
+    });
+
     it("normalizes plugin system prompts from strings and structured return values", async () => {
         const dir = await createTempDir();
         const pluginSource = `import { z } from "zod";

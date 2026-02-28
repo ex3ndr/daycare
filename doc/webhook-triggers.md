@@ -9,7 +9,7 @@ Each webhook trigger is a cuid2 id used as both identifier and secret.
 - `WebhookTasksRepository` for CRUD + caching
 - `Webhooks` facade for trigger creation, listing, deletion, and execution
 - `task_trigger_add` / `task_trigger_remove` support for `type: "webhook"`
-- `task_read` output now includes webhook trigger URLs
+- `task_read` output now includes webhook trigger URLs (full endpoint URL)
 - `task_create` supports `webhook: true`
 - `task_delete` removes webhook triggers
 - App server route:
@@ -56,8 +56,9 @@ flowchart LR
 flowchart TD
     A[task_trigger_add type=webhook] --> B[Webhooks.addTrigger]
     B --> C[Insert tasks_webhook row]
-    C --> D[Return webhook id + /v1/webhooks/:id]
+    C --> D[Resolve app-server endpoint]
+    D --> E[Return webhook id + endpoint/v1/webhooks/:id]
 
-    E[task_trigger_remove type=webhook] --> F[Webhooks.deleteTriggersForTask]
-    F --> G[Delete matching tasks_webhook rows]
+    F[task_trigger_remove type=webhook] --> G[Webhooks.deleteTriggersForTask]
+    G --> H[Delete matching tasks_webhook rows]
 ```

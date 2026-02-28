@@ -27,6 +27,10 @@ export async function routeWebhookTrigger(
             appSendJson(response, 404, { ok: false, error: message });
             return;
         }
+        if (message === "Webhook runtime unavailable.") {
+            appSendJson(response, 503, { ok: false, error: message });
+            return;
+        }
         appSendJson(response, 500, { ok: false, error: message });
     }
 }

@@ -277,7 +277,6 @@ export class PluginManager {
         this.logger.debug(`ready: Plugin tmp directory ready tmpDir=${tmpDir}`);
 
         this.logger.debug("event: Building plugin API");
-        const webhooks = this.webhooks;
         const api: PluginApi = {
             instance: pluginConfig,
             settings: parsedSettings,
@@ -294,11 +293,14 @@ export class PluginManager {
             processes: this.processes,
             mode: this.mode,
             engineEvents: this.engineEvents,
-            webhooks: webhooks
-                ? {
-                      trigger: async (webhookId: string, data?: unknown) => webhooks.trigger(webhookId, data)
-                  }
-                : undefined,
+            webhooks: {
+                trigger: async (webhookId: string, data?: unknown) => {
+                    if (!this.webhooks) {
+                        throw new Error("Webhook runtime unavailable.");
+                    }
+                    return this.webhooks.trigger(webhookId, data);
+                }
+            },
             events: {
                 emit: (event) => {
                     this.logger.debug(`event: Plugin emitting event instanceId=${instanceId} eventType=${event.type}`);

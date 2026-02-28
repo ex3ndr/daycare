@@ -92,6 +92,11 @@ describeIf("nano-banana-pro image generation", () => {
                     repository: storage.processes
                 }),
                 mode: "runtime",
+                webhooks: {
+                    trigger: async () => {
+                        throw new Error("Webhook runtime unavailable.");
+                    }
+                },
                 events: {
                     emit: () => undefined
                 }

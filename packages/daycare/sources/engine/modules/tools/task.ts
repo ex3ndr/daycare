@@ -1,6 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { PluginInstanceSettings } from "../../../settings.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { contextForAgent, contextForUser } from "../../agents/context.js";
@@ -125,6 +126,9 @@ const taskResultSchema = Type.Object(
 );
 
 type TaskResult = Static<typeof taskResultSchema>;
+
+const APP_SERVER_DEFAULT_HOST = "127.0.0.1";
+const APP_SERVER_DEFAULT_PORT = 7332;
 
 const taskReturns: ToolResultContract<TaskResult> = {
     schema: taskResultSchema,
@@ -285,7 +289,7 @@ export function buildTaskReadTool(): ToolDefinition {
             const heartbeatLines = heartbeatTriggers.map((trigger) => `  - ${trigger.id} (heartbeat)`);
             const webhookLines = webhookTriggers.map(
                 (trigger) =>
-                    `  - ${trigger.id} (webhook: ${taskWebhookPathBuild(trigger.id)}, agent: ${trigger.agentId ?? "system:webhook"})`
+                    `  - ${trigger.id} (webhook: ${taskWebhookEndpointBuild(toolContext, trigger.id)}, agent: ${trigger.agentId ?? "system:webhook"})`
             );
 
             const lines = [
@@ -773,7 +777,7 @@ async function taskWebhookTriggerEnsure(
         return {
             id: duplicate.id,
             duplicate: true,
-            webhookPath: taskWebhookPathBuild(duplicate.id)
+            webhookPath: taskWebhookEndpointBuild(toolContext, duplicate.id)
         };
     }
 
@@ -784,12 +788,101 @@ async function taskWebhookTriggerEnsure(
     return {
         id: created.id,
         duplicate: false,
-        webhookPath: taskWebhookPathBuild(created.id)
+        webhookPath: taskWebhookEndpointBuild(toolContext, created.id)
     };
 }
 
-function taskWebhookPathBuild(triggerId: string): string {
-    return `/v1/webhooks/${triggerId}`;
+function taskWebhookEndpointBuild(toolContext: Parameters<ToolDefinition["execute"]>[1], triggerId: string): string {
+    return `${taskWebhookOriginResolve(toolContext)}/v1/webhooks/${triggerId}`;
+}
+
+function taskWebhookOriginResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): string {
+    const plugins = toolContext.agentSystem.config?.current.settings.plugins ?? [];
+    const appServer =
+        plugins.find(
+            (plugin) =>
+                plugin.pluginId === "daycare-app-server" &&
+                plugin.instanceId === "daycare-app-server" &&
+                plugin.enabled !== false
+        ) ?? plugins.find((plugin) => plugin.pluginId === "daycare-app-server" && plugin.enabled !== false);
+    const settings = taskAppServerSettingsResolve(appServer);
+    const serverEndpoint = taskWebhookServerEndpointResolve(settings.serverEndpoint);
+    if (serverEndpoint) {
+        return serverEndpoint;
+    }
+    return taskWebhookHostPortOriginBuild(settings.host, settings.port);
+}
+
+function taskAppServerSettingsResolve(plugin: PluginInstanceSettings | undefined): {
+    host: unknown;
+    port: unknown;
+    serverEndpoint: unknown;
+} {
+    if (!plugin?.settings || typeof plugin.settings !== "object") {
+        return {
+            host: undefined,
+            port: undefined,
+            serverEndpoint: undefined
+        };
+    }
+    return {
+        host: plugin.settings.host,
+        port: plugin.settings.port,
+        serverEndpoint: plugin.settings.serverEndpoint
+    };
+}
+
+function taskWebhookServerEndpointResolve(value: unknown): string | null {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+    try {
+        const parsed = new URL(trimmed);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+            return null;
+        }
+        if (parsed.search || parsed.hash) {
+            return null;
+        }
+        if (parsed.pathname.replace(/\/+$/, "").length > 0) {
+            return null;
+        }
+        return `${parsed.protocol}//${parsed.host}`;
+    } catch {
+        return null;
+    }
+}
+
+function taskWebhookHostPortOriginBuild(hostValue: unknown, portValue: unknown): string {
+    const host = taskWebhookHostResolve(hostValue);
+    const port = taskWebhookPortResolve(portValue);
+    const formattedHost = host.includes(":") && !host.startsWith("[") && !host.endsWith("]") ? `[${host}]` : host;
+    return `http://${formattedHost}:${port}`;
+}
+
+function taskWebhookHostResolve(value: unknown): string {
+    if (typeof value !== "string") {
+        return APP_SERVER_DEFAULT_HOST;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : APP_SERVER_DEFAULT_HOST;
+}
+
+function taskWebhookPortResolve(value: unknown): number {
+    if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 65535) {
+        return value;
+    }
+    if (typeof value === "string") {
+        const parsed = Number.parseInt(value.trim(), 10);
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
+            return parsed;
+        }
+    }
+    return APP_SERVER_DEFAULT_PORT;
 }
 
 function taskWebhooksResolve(

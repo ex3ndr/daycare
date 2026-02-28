@@ -92,6 +92,11 @@ describe("database plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime" as const,
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }

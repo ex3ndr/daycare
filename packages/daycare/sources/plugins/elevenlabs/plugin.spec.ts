@@ -135,6 +135,11 @@ describe("elevenlabs plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime",
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }
@@ -269,6 +274,11 @@ describe("elevenlabs plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime",
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }
@@ -356,6 +366,11 @@ describe("elevenlabs plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime",
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }
@@ -479,6 +494,11 @@ describe("elevenlabs plugin", () => {
                 repository: storage.processes
             }),
             mode: "runtime",
+            webhooks: {
+                trigger: async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                }
+            },
             events: {
                 emit: () => undefined
             }

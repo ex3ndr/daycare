@@ -37,9 +37,7 @@ type PluginCreateTestOptions = {
         instanceId?: string;
         botToken: string;
     };
-    webhooks?: {
-        trigger?: (webhookId: string, data?: unknown) => Promise<void>;
-    };
+    webhookTrigger?: (webhookId: string, data?: unknown) => Promise<void>;
 };
 
 function telegramInitDataBuild(options: { botToken: string; userId: string; authDateSeconds: number }): string {
@@ -143,11 +141,13 @@ async function pluginCreateForTests(options?: PluginCreateTestOptions) {
         },
         processes: {},
         mode: "runtime" as const,
-        webhooks: options?.webhooks
-            ? {
-                  trigger: options.webhooks.trigger ?? (async () => undefined)
-              }
-            : undefined,
+        webhooks: {
+            trigger:
+                options?.webhookTrigger ??
+                (async () => {
+                    throw new Error("Webhook runtime unavailable.");
+                })
+        },
         events: {
             emit: vi.fn()
         }
@@ -188,9 +188,7 @@ describe("daycare-app-server plugin auth endpoints", () => {
     it("routes POST /v1/webhooks/:id to webhook runtime", async () => {
         const trigger = vi.fn(async () => undefined);
         const built = await pluginCreateForTests({
-            webhooks: {
-                trigger
-            }
+            webhookTrigger: trigger
         });
 
         const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-1`, {
@@ -206,10 +204,8 @@ describe("daycare-app-server plugin auth endpoints", () => {
 
     it("returns 404 when webhook trigger does not exist", async () => {
         const built = await pluginCreateForTests({
-            webhooks: {
-                trigger: async () => {
-                    throw new Error("Webhook trigger not found: missing");
-                }
+            webhookTrigger: async () => {
+                throw new Error("Webhook trigger not found: missing");
             }
         });
 
@@ -228,10 +224,8 @@ describe("daycare-app-server plugin auth endpoints", () => {
 
     it("returns 500 when webhook execution fails", async () => {
         const built = await pluginCreateForTests({
-            webhooks: {
-                trigger: async () => {
-                    throw new Error("Webhook execution failed");
-                }
+            webhookTrigger: async () => {
+                throw new Error("Webhook execution failed");
             }
         });
 
