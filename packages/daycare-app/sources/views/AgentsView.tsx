@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withSequence,
+    withTiming
+} from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 // Block states matching classic defrag visualization
 type BlockState = "running" | "queued" | "complete" | "error" | "idle" | "writing";
+type AgentBlock = { id: string; state: BlockState };
 
 const BLOCK_SIZE = 14;
 const BLOCK_GAP = 2;
@@ -31,13 +38,17 @@ const stateLabels: Record<BlockState, string> = {
 };
 
 // Generate a seeded block map for each agent
-function generateBlocks(seed: number, profile: Record<BlockState, number>): BlockState[] {
-    const blocks: BlockState[] = [];
+function generateBlocks(seed: number, profile: Record<BlockState, number>): AgentBlock[] {
+    const blocks: AgentBlock[] = [];
     for (const [state, count] of Object.entries(profile) as [BlockState, number][]) {
-        for (let i = 0; i < count; i++) blocks.push(state);
+        for (let i = 0; i < count; i++) {
+            blocks.push({ id: `${seed}-${blocks.length}`, state });
+        }
     }
     // Fill remaining with idle
-    while (blocks.length < TOTAL_BLOCKS) blocks.push("idle");
+    while (blocks.length < TOTAL_BLOCKS) {
+        blocks.push({ id: `${seed}-${blocks.length}`, state: "idle" });
+    }
     // Seeded shuffle
     let s = seed;
     for (let i = blocks.length - 1; i > 0; i--) {
@@ -95,11 +106,7 @@ function ScanCursor({ active }: { active: boolean }) {
     useEffect(() => {
         if (active) {
             position.value = 0;
-            position.value = withRepeat(
-                withTiming(COLS * (BLOCK_SIZE + BLOCK_GAP), { duration: 3000 }),
-                -1,
-                false
-            );
+            position.value = withRepeat(withTiming(COLS * (BLOCK_SIZE + BLOCK_GAP), { duration: 3000 }), -1, false);
         }
     }, [active, position]);
 
@@ -135,10 +142,7 @@ function Block({ state, animate }: { state: BlockState; animate: boolean }) {
     useEffect(() => {
         if (animate && (state === "running" || state === "writing")) {
             opacity.value = withRepeat(
-                withSequence(
-                    withTiming(0.4, { duration: 600 }),
-                    withTiming(1, { duration: 600 })
-                ),
+                withSequence(withTiming(0.4, { duration: 600 }), withTiming(1, { duration: 600 })),
                 -1,
                 true
             );
@@ -149,15 +153,7 @@ function Block({ state, animate }: { state: BlockState; animate: boolean }) {
         opacity: opacity.value
     }));
 
-    return (
-        <Animated.View
-            style={[
-                gridStyles.block,
-                { backgroundColor: stateColors[state] },
-                animatedStyle
-            ]}
-        />
-    );
+    return <Animated.View style={[gridStyles.block, { backgroundColor: stateColors[state] }, animatedStyle]} />;
 }
 
 // Grid for a single agent
@@ -168,8 +164,8 @@ function AgentGrid({ agent }: { agent: (typeof agents)[number] }) {
     // Count blocks by state for the summary
     const counts = useMemo(() => {
         const c: Partial<Record<BlockState, number>> = {};
-        for (const b of agent.blocks) {
-            c[b] = (c[b] || 0) + 1;
+        for (const block of agent.blocks) {
+            c[block.state] = (c[block.state] || 0) + 1;
         }
         return c;
     }, [agent.blocks]);
@@ -181,13 +177,9 @@ function AgentGrid({ agent }: { agent: (typeof agents)[number] }) {
                 <View style={gridStyles.agentInfo}>
                     <View style={gridStyles.agentNameRow}>
                         <View style={[gridStyles.statusDot, { backgroundColor: stateColors[agent.status] }]} />
-                        <Text style={[gridStyles.agentName, { color: theme.colors.onSurface }]}>
-                            {agent.name}
-                        </Text>
+                        <Text style={[gridStyles.agentName, { color: theme.colors.onSurface }]}>{agent.name}</Text>
                     </View>
-                    <Text style={[gridStyles.agentRole, { color: theme.colors.onSurfaceVariant }]}>
-                        {agent.role}
-                    </Text>
+                    <Text style={[gridStyles.agentRole, { color: theme.colors.onSurfaceVariant }]}>{agent.role}</Text>
                 </View>
                 <View style={gridStyles.statsRow}>
                     {(["running", "queued", "complete", "error"] as BlockState[]).map((s) =>
@@ -207,8 +199,8 @@ function AgentGrid({ agent }: { agent: (typeof agents)[number] }) {
             <View style={[gridStyles.gridContainer, { backgroundColor: theme.colors.surface }]}>
                 <ScanCursor active={isActive} />
                 <View style={gridStyles.grid}>
-                    {agent.blocks.map((state, i) => (
-                        <Block key={i} state={state} animate={isActive} />
+                    {agent.blocks.map((block) => (
+                        <Block key={block.id} state={block.state} animate={isActive} />
                     ))}
                 </View>
             </View>
@@ -242,7 +234,7 @@ export function AgentsView() {
     );
 }
 
-const gridStyles = StyleSheet.create((theme) => ({
+const gridStyles = StyleSheet.create({
     container: {
         padding: 16,
         gap: 12
@@ -339,4 +331,4 @@ const gridStyles = StyleSheet.create((theme) => ({
         height: BLOCK_SIZE,
         borderRadius: 2
     }
-}));
+});

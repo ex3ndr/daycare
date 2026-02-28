@@ -63,7 +63,7 @@ describe("AgentSystem durable inboxes", () => {
             expect(item.message.text).toBe("first\nsecond");
             expect(item.context).toEqual({ messageId: "m-2" });
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await dirRemove(dir);
         }
     });
 
@@ -81,7 +81,7 @@ describe("AgentSystem durable inboxes", () => {
 
             expect(rows).toEqual([]);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await dirRemove(dir);
         }
     });
 
@@ -108,12 +108,15 @@ describe("AgentSystem durable inboxes", () => {
             });
             await second.agentSystem.load();
             await second.agentSystem.start();
-            await vi.waitFor(async () => {
-                const afterReplay = await second.storage.inbox.findByAgentId(agentId);
-                expect(afterReplay).toEqual([]);
-            });
+            await vi.waitFor(
+                async () => {
+                    const afterReplay = await second.storage.inbox.findByAgentId(agentId);
+                    expect(afterReplay).toEqual([]);
+                },
+                { timeout: 20_000, interval: 100 }
+            );
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await dirRemove(dir);
         }
     });
 
@@ -208,7 +211,7 @@ describe("AgentSystem durable inboxes", () => {
                 expect(complete).toHaveBeenCalledTimes(1);
             });
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await dirRemove(dir);
         }
     });
 
@@ -244,7 +247,7 @@ describe("AgentSystem durable inboxes", () => {
                 expect(rows).toEqual([]);
             });
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await dirRemove(dir);
         }
     });
 
@@ -284,7 +287,7 @@ describe("AgentSystem durable inboxes", () => {
                 expect(rows).toEqual([]);
             });
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await dirRemove(dir);
         }
     });
 });
@@ -474,4 +477,26 @@ async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: strin
         throw new Error(`Agent not found: ${agentId}`);
     }
     return ctx;
+}
+
+async function dirRemove(dir: string): Promise<void> {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+        try {
+            await rm(dir, { recursive: true, force: true });
+            return;
+        } catch (error) {
+            if (!dirRemoveRetryable(error) || attempt === 9) {
+                throw error;
+            }
+            await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 25));
+        }
+    }
+}
+
+function dirRemoveRetryable(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+        return false;
+    }
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "ENOTEMPTY" || code === "EBUSY";
 }

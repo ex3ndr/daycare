@@ -40,9 +40,7 @@ function WorkflowSteps({ steps }: { steps: Step[] }) {
                             stepStyles.stepName,
                             {
                                 color:
-                                    step.status === "pending"
-                                        ? theme.colors.onSurfaceVariant
-                                        : theme.colors.onSurface
+                                    step.status === "pending" ? theme.colors.onSurfaceVariant : theme.colors.onSurface
                             }
                         ]}
                     >

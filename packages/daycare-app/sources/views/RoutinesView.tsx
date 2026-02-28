@@ -13,7 +13,9 @@ function RoutineStatus({ status, nextRun }: { status: "ok" | "warning" | "disabl
     };
     return (
         <View style={routineStyles.container}>
-            {nextRun && <Text style={[routineStyles.nextRun, { color: theme.colors.onSurfaceVariant }]}>{nextRun}</Text>}
+            {nextRun && (
+                <Text style={[routineStyles.nextRun, { color: theme.colors.onSurfaceVariant }]}>{nextRun}</Text>
+            )}
             <View style={[routineStyles.dot, { backgroundColor: colors[status] }]} />
         </View>
     );

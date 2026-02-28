@@ -9,11 +9,11 @@ import { TreePanelLayout } from "@/components/layout/TreePanelLayout";
 import { AgentsView } from "@/views/AgentsView";
 import { CoachingView } from "@/views/CoachingView";
 import { CostsView } from "@/views/CostsView";
-import { RoutinesView } from "@/views/RoutinesView";
 import { EmailView } from "@/views/EmailView";
 import { InboxView } from "@/views/InboxView";
 import { InventoryView } from "@/views/InventoryView";
 import { PeopleView } from "@/views/PeopleView";
+import { RoutinesView } from "@/views/RoutinesView";
 import { TodosView } from "@/views/TodosView";
 import { WorkflowsView } from "@/views/WorkflowsView";
 
