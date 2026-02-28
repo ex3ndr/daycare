@@ -1,15 +1,40 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
-
-import { databaseOpenTest } from "./databaseOpenTest.js";
+import { agentsTable, usersTable } from "../schema.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
+
+async function createTestEntities(
+    storage: Awaited<ReturnType<typeof storageOpenTest>>,
+    users: string[],
+    agents: string[]
+) {
+    for (const userId of users) {
+        await storage.db
+            .insert(usersTable)
+            .values({ id: userId, nametag: `tag-${userId}`, isOwner: 0, createdAt: 1, updatedAt: 1 });
+    }
+    for (const agentId of agents) {
+        await storage.db.insert(agentsTable).values({
+            id: agentId,
+            userId: users[0] ?? "user-a",
+            type: "cron",
+            descriptor: JSON.stringify({ type: "cron", id: agentId, name: agentId }),
+            permissions: JSON.stringify({ workingDir: "/tmp", writeDirs: ["/tmp"] }),
+            stats: "{}",
+            lifecycle: "active",
+            createdAt: 1,
+            updatedAt: 1
+        });
+    }
+}
 
 describe("TokenStatsRepository", () => {
     it("increments hourly rows and merges by hour/user/agent/model", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            await schemaCreate(db);
-            const repository = new TokenStatsRepository(db);
+            await createTestEntities(storage, ["user-a"], ["agent-a"]);
+            const repository = new TokenStatsRepository(storage.db);
             const ctx = ctxBuild("user-a", "agent-a");
             const hour = Date.UTC(2026, 1, 26, 9, 12, 0, 0);
 
@@ -46,15 +71,15 @@ describe("TokenStatsRepository", () => {
                 cost: 0.3
             });
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 
     it("filters rows by range and identity", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            await schemaCreate(db);
-            const repository = new TokenStatsRepository(db);
+            await createTestEntities(storage, ["user-a", "user-b"], ["agent-a", "agent-b", "agent-c"]);
+            const repository = new TokenStatsRepository(storage.db);
 
             await repository.increment(ctxBuild("user-a", "agent-a"), {
                 at: Date.UTC(2026, 1, 26, 8, 5, 0, 0),
@@ -102,27 +127,10 @@ describe("TokenStatsRepository", () => {
             expect(byModel).toHaveLength(2);
             expect(byModel.every((row) => row.model === "openai/gpt-5")).toBe(true);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 });
-
-async function schemaCreate(db: ReturnType<typeof databaseOpenTest>): Promise<void> {
-    await db.exec(`
-        CREATE TABLE token_stats_hourly (
-            hour_start BIGINT NOT NULL,
-            user_id TEXT NOT NULL,
-            agent_id TEXT NOT NULL,
-            model TEXT NOT NULL,
-            input_tokens INTEGER NOT NULL DEFAULT 0,
-            output_tokens INTEGER NOT NULL DEFAULT 0,
-            cache_read_tokens INTEGER NOT NULL DEFAULT 0,
-            cache_write_tokens INTEGER NOT NULL DEFAULT 0,
-            cost REAL NOT NULL DEFAULT 0,
-            PRIMARY KEY (hour_start, user_id, agent_id, model)
-        );
-    `);
-}
 
 function ctxBuild(userId: string, agentId: string): Context {
     return { userId, agentId };

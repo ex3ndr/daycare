@@ -7,7 +7,7 @@ describe("InboxRepository", () => {
     it("supports insert, ordered lookup, and delete operations", async () => {
         const storage = await storageOpenTest();
         try {
-            const repository = new InboxRepository(storage.drizzle);
+            const repository = new InboxRepository(storage.db);
 
             await repository.insert("inbox-2", "agent-a", 20, "reset", '{"type":"reset"}');
             await repository.insert("inbox-1", "agent-a", 10, "message", '{"type":"message"}');
@@ -25,7 +25,7 @@ describe("InboxRepository", () => {
             const finalRows = await repository.findByAgentId("agent-a");
             expect(finalRows).toEqual([]);
         } finally {
-            await storage.db.close();
+            await storage.connection.close();
         }
     });
 });

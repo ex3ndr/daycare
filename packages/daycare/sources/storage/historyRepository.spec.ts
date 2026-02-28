@@ -51,7 +51,7 @@ describe("HistoryRepository", () => {
                 { type: "note", at: 21, text: "B1" }
             ]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -67,7 +67,7 @@ describe("HistoryRepository", () => {
             expect(id1).toBeGreaterThan(0);
             expect(id2).toBeGreaterThan(id1);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -87,7 +87,7 @@ describe("HistoryRepository", () => {
                 expect(records[0]).toEqual({ type: "note", at: 12, text: "b" });
                 expect(records[1]).toEqual({ type: "note", at: 13, text: "c" });
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -102,7 +102,7 @@ describe("HistoryRepository", () => {
                 const records = await history.findSinceId(sessionId, lastId);
                 expect(records).toHaveLength(0);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
     });
@@ -120,7 +120,7 @@ describe("HistoryRepository", () => {
                 const maxId = await history.maxId(sessionId);
                 expect(maxId).toBe(id2);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -133,7 +133,7 @@ describe("HistoryRepository", () => {
                 const maxId = await history.maxId(sessionId);
                 expect(maxId).toBeNull();
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
     });

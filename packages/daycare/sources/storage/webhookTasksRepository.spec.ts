@@ -62,7 +62,7 @@ describe("WebhookTasksRepository", () => {
             expect(await repo.delete("hook-beta")).toBe(false);
             expect(await repo.findById("hook-beta")).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -91,11 +91,11 @@ describe("WebhookTasksRepository", () => {
             const first = await repo.findById("hook-cache");
             expect(first?.id).toBe("hook-cache");
 
-            storage.db.prepare("DELETE FROM tasks_webhook WHERE id = ?").run("hook-cache");
+            storage.connection.prepare("DELETE FROM tasks_webhook WHERE id = ?").run("hook-cache");
             const second = await repo.findById("hook-cache");
             expect(second?.id).toBe("hook-cache");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -114,12 +114,12 @@ describe("WebhookTasksRepository", () => {
                 })
             ).rejects.toThrow("Webhook trigger taskId is required.");
 
-            await storage.db
+            await storage.connection
                 .prepare(
                     "INSERT INTO tasks (id, user_id, title, description, code, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 )
                 .run("   ", "user-1", "Bad", null, "print('bad')", 1, 1, null);
-            await storage.db
+            await storage.connection
                 .prepare(
                     "INSERT INTO tasks_webhook (id, task_id, user_id, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
                 )
@@ -128,7 +128,7 @@ describe("WebhookTasksRepository", () => {
                 "Webhook trigger hook-row-bad is missing required task_id."
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

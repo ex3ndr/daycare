@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpenTest } from "./databaseOpenTest.js";
 import { ProcessesRepository } from "./processesRepository.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("ProcessesRepository", () => {
     it("supports CRUD and filtering by user and owner", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new ProcessesRepository(db);
+            const repository = new ProcessesRepository(storage.db);
 
             await repository.create(
                 recordBuild({ id: "p-1", userId: "user-a", owner: { type: "plugin", id: "plugin-a" } })
@@ -42,43 +41,10 @@ describe("ProcessesRepository", () => {
             expect(removedDirect).toBe(true);
             expect(remaining.map((entry) => entry.id)).toEqual(["p-1"]);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE processes (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            command TEXT NOT NULL,
-            cwd TEXT NOT NULL,
-            home TEXT,
-            env TEXT NOT NULL,
-            package_managers TEXT NOT NULL,
-            allowed_domains TEXT NOT NULL,
-            allow_local_binding INTEGER NOT NULL,
-            permissions TEXT NOT NULL,
-            owner TEXT,
-            keep_alive INTEGER NOT NULL,
-            desired_state TEXT NOT NULL,
-            status TEXT NOT NULL,
-            pid INTEGER,
-            boot_time_ms INTEGER,
-            restart_count INTEGER NOT NULL,
-            restart_failure_count INTEGER NOT NULL,
-            next_restart_at INTEGER,
-            settings_path TEXT NOT NULL,
-            log_path TEXT NOT NULL,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            last_started_at INTEGER,
-            last_exited_at INTEGER
-        );
-    `);
-}
 
 function ctxBuild(userId: string): Context {
     return { agentId: "test-agent", userId };

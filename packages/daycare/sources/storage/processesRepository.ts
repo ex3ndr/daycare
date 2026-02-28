@@ -1,7 +1,9 @@
+import { asc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { processesTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseProcessRow, ProcessDbRecord, ProcessOwnerDbRecord } from "./databaseTypes.js";
+import type { ProcessDbRecord, ProcessOwnerDbRecord } from "./databaseTypes.js";
 
 export type ProcessesFindManyOptions = {
     ownerId?: string;
@@ -13,110 +15,85 @@ type ProcessesFindAllOptions = ProcessesFindManyOptions & {
 };
 
 /**
- * Processes repository backed by SQLite with write-through caching.
+ * Processes repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for processes.
  */
 export class ProcessesRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly recordsById = new Map<string, ProcessDbRecord>();
     private readonly recordLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allRecordsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: ProcessDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
+            const values = {
+                id: record.id,
+                userId: record.userId,
+                name: record.name,
+                command: record.command,
+                cwd: record.cwd,
+                home: record.home,
+                env: JSON.stringify(record.env),
+                packageManagers: JSON.stringify(record.packageManagers),
+                allowedDomains: JSON.stringify(record.allowedDomains),
+                allowLocalBinding: record.allowLocalBinding ? 1 : 0,
+                permissions: JSON.stringify(record.permissions),
+                owner: record.owner ? JSON.stringify(record.owner) : null,
+                keepAlive: record.keepAlive ? 1 : 0,
+                desiredState: record.desiredState,
+                status: record.status,
+                pid: record.pid,
+                bootTimeMs: record.bootTimeMs,
+                restartCount: record.restartCount,
+                restartFailureCount: record.restartFailureCount,
+                nextRestartAt: record.nextRestartAt,
+                settingsPath: record.settingsPath,
+                logPath: record.logPath,
+                createdAt: record.createdAt,
+                updatedAt: record.updatedAt,
+                lastStartedAt: record.lastStartedAt,
+                lastExitedAt: record.lastExitedAt
+            };
+
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO processes (
-                    id,
-                    user_id,
-                    name,
-                    command,
-                    cwd,
-                    home,
-                    env,
-                    package_managers,
-                    allowed_domains,
-                    allow_local_binding,
-                    permissions,
-                    owner,
-                    keep_alive,
-                    desired_state,
-                    status,
-                    pid,
-                    boot_time_ms,
-                    restart_count,
-                    restart_failure_count,
-                    next_restart_at,
-                    settings_path,
-                    log_path,
-                    created_at,
-                    updated_at,
-                    last_started_at,
-                    last_exited_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    user_id = excluded.user_id,
-                    name = excluded.name,
-                    command = excluded.command,
-                    cwd = excluded.cwd,
-                    home = excluded.home,
-                    env = excluded.env,
-                    package_managers = excluded.package_managers,
-                    allowed_domains = excluded.allowed_domains,
-                    allow_local_binding = excluded.allow_local_binding,
-                    permissions = excluded.permissions,
-                    owner = excluded.owner,
-                    keep_alive = excluded.keep_alive,
-                    desired_state = excluded.desired_state,
-                    status = excluded.status,
-                    pid = excluded.pid,
-                    boot_time_ms = excluded.boot_time_ms,
-                    restart_count = excluded.restart_count,
-                    restart_failure_count = excluded.restart_failure_count,
-                    next_restart_at = excluded.next_restart_at,
-                    settings_path = excluded.settings_path,
-                    log_path = excluded.log_path,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at,
-                    last_started_at = excluded.last_started_at,
-                    last_exited_at = excluded.last_exited_at
-                `
-                )
-                .run(
-                    record.id,
-                    record.userId,
-                    record.name,
-                    record.command,
-                    record.cwd,
-                    record.home,
-                    JSON.stringify(record.env),
-                    JSON.stringify(record.packageManagers),
-                    JSON.stringify(record.allowedDomains),
-                    record.allowLocalBinding ? 1 : 0,
-                    JSON.stringify(record.permissions),
-                    record.owner ? JSON.stringify(record.owner) : null,
-                    record.keepAlive ? 1 : 0,
-                    record.desiredState,
-                    record.status,
-                    record.pid,
-                    record.bootTimeMs,
-                    record.restartCount,
-                    record.restartFailureCount,
-                    record.nextRestartAt,
-                    record.settingsPath,
-                    record.logPath,
-                    record.createdAt,
-                    record.updatedAt,
-                    record.lastStartedAt,
-                    record.lastExitedAt
-                );
+                .insert(processesTable)
+                .values(values)
+                .onConflictDoUpdate({
+                    target: processesTable.id,
+                    set: {
+                        userId: values.userId,
+                        name: values.name,
+                        command: values.command,
+                        cwd: values.cwd,
+                        home: values.home,
+                        env: values.env,
+                        packageManagers: values.packageManagers,
+                        allowedDomains: values.allowedDomains,
+                        allowLocalBinding: values.allowLocalBinding,
+                        permissions: values.permissions,
+                        owner: values.owner,
+                        keepAlive: values.keepAlive,
+                        desiredState: values.desiredState,
+                        status: values.status,
+                        pid: values.pid,
+                        bootTimeMs: values.bootTimeMs,
+                        restartCount: values.restartCount,
+                        restartFailureCount: values.restartFailureCount,
+                        nextRestartAt: values.nextRestartAt,
+                        settingsPath: values.settingsPath,
+                        logPath: values.logPath,
+                        createdAt: values.createdAt,
+                        updatedAt: values.updatedAt,
+                        lastStartedAt: values.lastStartedAt,
+                        lastExitedAt: values.lastExitedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.recordCacheSet(record);
@@ -175,14 +152,17 @@ export class ProcessesRepository {
         }
 
         const rows = options.userId
-            ? ((await this.db
-                  .prepare("SELECT * FROM processes WHERE user_id = ? ORDER BY created_at ASC, id ASC")
-                  .all(options.userId)) as DatabaseProcessRow[])
-            : ((await this.db
-                  .prepare("SELECT * FROM processes ORDER BY created_at ASC, id ASC")
-                  .all()) as DatabaseProcessRow[]);
+            ? await this.db
+                  .select()
+                  .from(processesTable)
+                  .where(eq(processesTable.userId, options.userId))
+                  .orderBy(asc(processesTable.createdAt), asc(processesTable.id))
+            : await this.db
+                  .select()
+                  .from(processesTable)
+                  .orderBy(asc(processesTable.createdAt), asc(processesTable.id));
 
-        const parsed = rows.map((row) => this.recordParse(row));
+        const parsed = rows.map((row) => recordParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
@@ -236,66 +216,35 @@ export class ProcessesRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                  UPDATE processes
-                  SET
-                    user_id = ?,
-                    name = ?,
-                    command = ?,
-                    cwd = ?,
-                    home = ?,
-                    env = ?,
-                    package_managers = ?,
-                    allowed_domains = ?,
-                    allow_local_binding = ?,
-                    permissions = ?,
-                    owner = ?,
-                    keep_alive = ?,
-                    desired_state = ?,
-                    status = ?,
-                    pid = ?,
-                    boot_time_ms = ?,
-                    restart_count = ?,
-                    restart_failure_count = ?,
-                    next_restart_at = ?,
-                    settings_path = ?,
-                    log_path = ?,
-                    created_at = ?,
-                    updated_at = ?,
-                    last_started_at = ?,
-                    last_exited_at = ?
-                  WHERE id = ?
-                `
-                )
-                .run(
-                    next.userId,
-                    next.name,
-                    next.command,
-                    next.cwd,
-                    next.home,
-                    JSON.stringify(next.env),
-                    JSON.stringify(next.packageManagers),
-                    JSON.stringify(next.allowedDomains),
-                    next.allowLocalBinding ? 1 : 0,
-                    JSON.stringify(next.permissions),
-                    next.owner ? JSON.stringify(next.owner) : null,
-                    next.keepAlive ? 1 : 0,
-                    next.desiredState,
-                    next.status,
-                    next.pid,
-                    next.bootTimeMs,
-                    next.restartCount,
-                    next.restartFailureCount,
-                    next.nextRestartAt,
-                    next.settingsPath,
-                    next.logPath,
-                    next.createdAt,
-                    next.updatedAt,
-                    next.lastStartedAt,
-                    next.lastExitedAt,
-                    id
-                );
+                .update(processesTable)
+                .set({
+                    userId: next.userId,
+                    name: next.name,
+                    command: next.command,
+                    cwd: next.cwd,
+                    home: next.home,
+                    env: JSON.stringify(next.env),
+                    packageManagers: JSON.stringify(next.packageManagers),
+                    allowedDomains: JSON.stringify(next.allowedDomains),
+                    allowLocalBinding: next.allowLocalBinding ? 1 : 0,
+                    permissions: JSON.stringify(next.permissions),
+                    owner: next.owner ? JSON.stringify(next.owner) : null,
+                    keepAlive: next.keepAlive ? 1 : 0,
+                    desiredState: next.desiredState,
+                    status: next.status,
+                    pid: next.pid,
+                    bootTimeMs: next.bootTimeMs,
+                    restartCount: next.restartCount,
+                    restartFailureCount: next.restartFailureCount,
+                    nextRestartAt: next.nextRestartAt,
+                    settingsPath: next.settingsPath,
+                    logPath: next.logPath,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt,
+                    lastStartedAt: next.lastStartedAt,
+                    lastExitedAt: next.lastExitedAt
+                })
+                .where(eq(processesTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.recordCacheSet(next);
@@ -306,13 +255,14 @@ export class ProcessesRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.recordLockForId(id);
         return lock.inLock(async () => {
-            const removed = await this.db.prepare("DELETE FROM processes WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(processesTable)
+                .where(eq(processesTable.id, id))
+                .returning({ id: processesTable.id });
             await this.cacheLock.inLock(() => {
                 this.recordsById.delete(id);
             });
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
@@ -348,44 +298,12 @@ export class ProcessesRepository {
     }
 
     private async recordLoadById(id: string): Promise<ProcessDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM processes WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseProcessRow
-            | undefined;
+        const rows = await this.db.select().from(processesTable).where(eq(processesTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.recordParse(row);
-    }
-
-    private recordParse(row: DatabaseProcessRow): ProcessDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            name: row.name,
-            command: row.command,
-            cwd: row.cwd,
-            home: row.home,
-            env: jsonRecordParse(row.env),
-            packageManagers: jsonStringArrayParse(row.package_managers),
-            allowedDomains: jsonStringArrayParse(row.allowed_domains),
-            allowLocalBinding: row.allow_local_binding === 1,
-            permissions: permissionsParse(row.permissions),
-            owner: ownerParse(row.owner),
-            keepAlive: row.keep_alive === 1,
-            desiredState: row.desired_state,
-            status: row.status,
-            pid: row.pid,
-            bootTimeMs: row.boot_time_ms,
-            restartCount: row.restart_count,
-            restartFailureCount: row.restart_failure_count,
-            nextRestartAt: row.next_restart_at,
-            settingsPath: row.settings_path,
-            logPath: row.log_path,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            lastStartedAt: row.last_started_at,
-            lastExitedAt: row.last_exited_at
-        };
+        return recordParse(row);
     }
 
     private recordCacheSet(record: ProcessDbRecord): void {
@@ -401,6 +319,37 @@ export class ProcessesRepository {
         this.recordLocks.set(recordId, lock);
         return lock;
     }
+}
+
+function recordParse(row: typeof processesTable.$inferSelect): ProcessDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        name: row.name,
+        command: row.command,
+        cwd: row.cwd,
+        home: row.home,
+        env: jsonRecordParse(row.env),
+        packageManagers: jsonStringArrayParse(row.packageManagers),
+        allowedDomains: jsonStringArrayParse(row.allowedDomains),
+        allowLocalBinding: row.allowLocalBinding === 1,
+        permissions: permissionsParse(row.permissions),
+        owner: ownerParse(row.owner),
+        keepAlive: row.keepAlive === 1,
+        desiredState: row.desiredState as ProcessDbRecord["desiredState"],
+        status: row.status as ProcessDbRecord["status"],
+        pid: row.pid,
+        bootTimeMs: row.bootTimeMs,
+        restartCount: row.restartCount,
+        restartFailureCount: row.restartFailureCount,
+        nextRestartAt: row.nextRestartAt,
+        settingsPath: row.settingsPath,
+        logPath: row.logPath,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        lastStartedAt: row.lastStartedAt,
+        lastExitedAt: row.lastExitedAt
+    };
 }
 
 function processRecordClone(record: ProcessDbRecord): ProcessDbRecord {

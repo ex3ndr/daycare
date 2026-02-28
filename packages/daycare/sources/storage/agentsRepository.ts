@@ -1,20 +1,22 @@
+import { asc, eq } from "drizzle-orm";
+import type { DaycareDb } from "../schema.js";
+import { agentsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { AgentDbRecord, DatabaseAgentRow } from "./databaseTypes.js";
+import type { AgentDbRecord } from "./databaseTypes.js";
 
 /**
- * Agents repository backed by SQLite with write-through caching.
+ * Agents repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for agents.
  */
 export class AgentsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly agentsById = new Map<string, AgentDbRecord>();
     private readonly agentLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allAgentsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -30,13 +32,12 @@ export class AgentsRepository {
             if (existing) {
                 return agentClone(existing);
             }
-            const row = (await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id)) as
-                | DatabaseAgentRow
-                | undefined;
+            const rows = await this.db.select().from(agentsTable).where(eq(agentsTable.id, id)).limit(1);
+            const row = rows[0];
             if (!row) {
                 return null;
             }
-            const parsed = this.agentParse(row);
+            const parsed = agentParse(row);
             await this.cacheLock.inLock(() => {
                 this.agentCacheSet(parsed);
             });
@@ -48,10 +49,8 @@ export class AgentsRepository {
         if (this.allAgentsLoaded) {
             return agentsSort(Array.from(this.agentsById.values())).map((record) => agentClone(record));
         }
-        const rows = (await this.db
-            .prepare("SELECT * FROM agents ORDER BY updated_at ASC")
-            .all()) as DatabaseAgentRow[];
-        const parsed = rows.map((row) => this.agentParse(row));
+        const rows = await this.db.select().from(agentsTable).orderBy(asc(agentsTable.updatedAt));
+        const parsed = rows.map((row) => agentParse(row));
         await this.cacheLock.inLock(() => {
             this.agentsById.clear();
             for (const entry of parsed) {
@@ -68,10 +67,12 @@ export class AgentsRepository {
             return agentsSort(filtered).map((record) => agentClone(record));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM agents WHERE user_id = ? ORDER BY updated_at ASC")
-            .all(userId)) as DatabaseAgentRow[];
-        const parsed = rows.map((row) => this.agentParse(row));
+        const rows = await this.db
+            .select()
+            .from(agentsTable)
+            .where(eq(agentsTable.userId, userId))
+            .orderBy(asc(agentsTable.updatedAt));
+        const parsed = rows.map((row) => agentParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
@@ -85,47 +86,35 @@ export class AgentsRepository {
     async create(record: AgentDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO agents (
-                    id,
-                    user_id,
-                    type,
-                    descriptor,
-                    active_session_id,
-                    permissions,
-                    tokens,
-                    stats,
-                    lifecycle,
-                    created_at,
-                    updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    user_id = excluded.user_id,
-                    type = excluded.type,
-                    descriptor = excluded.descriptor,
-                    active_session_id = excluded.active_session_id,
-                    permissions = excluded.permissions,
-                    tokens = excluded.tokens,
-                    stats = excluded.stats,
-                    lifecycle = excluded.lifecycle,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(
-                    record.id,
-                    record.userId,
-                    record.type,
-                    JSON.stringify(record.descriptor),
-                    record.activeSessionId,
-                    JSON.stringify(record.permissions),
-                    record.tokens ? JSON.stringify(record.tokens) : null,
-                    JSON.stringify(record.stats),
-                    record.lifecycle,
-                    record.createdAt,
-                    record.updatedAt
-                );
+                .insert(agentsTable)
+                .values({
+                    id: record.id,
+                    userId: record.userId,
+                    type: record.type,
+                    descriptor: JSON.stringify(record.descriptor),
+                    activeSessionId: record.activeSessionId,
+                    permissions: JSON.stringify(record.permissions),
+                    tokens: record.tokens ? JSON.stringify(record.tokens) : null,
+                    stats: JSON.stringify(record.stats),
+                    lifecycle: record.lifecycle,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: agentsTable.id,
+                    set: {
+                        userId: record.userId,
+                        type: record.type,
+                        descriptor: JSON.stringify(record.descriptor),
+                        activeSessionId: record.activeSessionId,
+                        permissions: JSON.stringify(record.permissions),
+                        tokens: record.tokens ? JSON.stringify(record.tokens) : null,
+                        stats: JSON.stringify(record.stats),
+                        lifecycle: record.lifecycle,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.agentCacheSet(record);
@@ -151,36 +140,20 @@ export class AgentsRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                  UPDATE agents
-                  SET
-                    user_id = ?,
-                    type = ?,
-                    descriptor = ?,
-                    active_session_id = ?,
-                    permissions = ?,
-                    tokens = ?,
-                    stats = ?,
-                    lifecycle = ?,
-                    created_at = ?,
-                    updated_at = ?
-                  WHERE id = ?
-                `
-                )
-                .run(
-                    next.userId,
-                    next.type,
-                    JSON.stringify(next.descriptor),
-                    next.activeSessionId,
-                    JSON.stringify(next.permissions),
-                    next.tokens ? JSON.stringify(next.tokens) : null,
-                    JSON.stringify(next.stats),
-                    next.lifecycle,
-                    next.createdAt,
-                    next.updatedAt,
-                    id
-                );
+                .update(agentsTable)
+                .set({
+                    userId: next.userId,
+                    type: next.type,
+                    descriptor: JSON.stringify(next.descriptor),
+                    activeSessionId: next.activeSessionId,
+                    permissions: JSON.stringify(next.permissions),
+                    tokens: next.tokens ? JSON.stringify(next.tokens) : null,
+                    stats: JSON.stringify(next.stats),
+                    lifecycle: next.lifecycle,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                })
+                .where(eq(agentsTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.agentCacheSet(next);
@@ -210,30 +183,29 @@ export class AgentsRepository {
     }
 
     private async agentLoadById(id: string): Promise<AgentDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM agents WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseAgentRow
-            | undefined;
+        const rows = await this.db.select().from(agentsTable).where(eq(agentsTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.agentParse(row);
+        return agentParse(row);
     }
+}
 
-    private agentParse(row: DatabaseAgentRow): AgentDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            type: row.type,
-            descriptor: JSON.parse(row.descriptor) as AgentDbRecord["descriptor"],
-            activeSessionId: row.active_session_id,
-            permissions: JSON.parse(row.permissions) as AgentDbRecord["permissions"],
-            tokens: row.tokens ? (JSON.parse(row.tokens) as NonNullable<AgentDbRecord["tokens"]>) : null,
-            stats: JSON.parse(row.stats) as AgentDbRecord["stats"],
-            lifecycle: row.lifecycle,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
-    }
+function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        type: row.type as AgentDbRecord["type"],
+        descriptor: JSON.parse(row.descriptor) as AgentDbRecord["descriptor"],
+        activeSessionId: row.activeSessionId,
+        permissions: JSON.parse(row.permissions) as AgentDbRecord["permissions"],
+        tokens: row.tokens ? (JSON.parse(row.tokens) as NonNullable<AgentDbRecord["tokens"]>) : null,
+        stats: JSON.parse(row.stats) as AgentDbRecord["stats"],
+        lifecycle: row.lifecycle as AgentDbRecord["lifecycle"],
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
 }
 
 function agentClone(record: AgentDbRecord): AgentDbRecord {

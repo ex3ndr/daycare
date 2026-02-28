@@ -49,7 +49,7 @@ describe("TasksRepository", () => {
             expect(deleted?.id).toBe("task-1");
             expect(typeof deleted?.deletedAt).toBe("number");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -72,11 +72,11 @@ describe("TasksRepository", () => {
             const first = await repo.findById(ctx, "cached-task");
             expect(first?.id).toBe("cached-task");
 
-            storage.db.prepare("DELETE FROM tasks WHERE user_id = ? AND id = ?").run(ctx.userId, "cached-task");
+            storage.connection.prepare("DELETE FROM tasks WHERE user_id = ? AND id = ?").run(ctx.userId, "cached-task");
             const second = await repo.findById(ctx, "cached-task");
             expect(second?.id).toBe("cached-task");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -113,7 +113,7 @@ describe("TasksRepository", () => {
             expect(first?.title).toBe("A");
             expect(second?.title).toBe("B");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

@@ -38,7 +38,7 @@ describe("userProfileUpdateTool", () => {
                 nametag: "swift-fox-42"
             });
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -69,7 +69,7 @@ describe("userProfileUpdateTool", () => {
             expect(result.typedResult.country).toBeNull();
             expect(result.typedResult.timezone).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -92,7 +92,7 @@ describe("userProfileUpdateTool", () => {
                 )
             ).rejects.toThrow("Invalid timezone: Mars/Base");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -109,7 +109,7 @@ describe("userProfileUpdateTool", () => {
                 "At least one profile field must be provided."
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

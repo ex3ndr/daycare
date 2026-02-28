@@ -15,13 +15,10 @@ export class InboxRepository {
     }
 
     async insert(id: string, agentId: string, postedAt: number, type: string, data: string): Promise<void> {
-        await this.db
-            .insert(inboxTable)
-            .values({ id, agentId, postedAt, type, data })
-            .onConflictDoUpdate({
-                target: inboxTable.id,
-                set: { agentId, postedAt, type, data }
-            });
+        await this.db.insert(inboxTable).values({ id, agentId, postedAt, type, data }).onConflictDoUpdate({
+            target: inboxTable.id,
+            set: { agentId, postedAt, type, data }
+        });
     }
 
     async findByAgentId(agentId: string): Promise<InboxDbRecord[]> {

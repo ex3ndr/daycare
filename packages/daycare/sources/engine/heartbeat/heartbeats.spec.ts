@@ -49,7 +49,7 @@ describe("Heartbeats", () => {
             await expect(heartbeats.removeTask(contextBuild("user-b"), task.id)).resolves.toBe(false);
             await expect(heartbeats.removeTask(contextBuild("user-a"), task.id)).resolves.toBe(true);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -103,7 +103,7 @@ describe("Heartbeats", () => {
                 })
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

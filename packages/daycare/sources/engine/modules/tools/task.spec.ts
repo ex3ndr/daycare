@@ -34,7 +34,7 @@ describe("task tools", () => {
         await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
         tempDirs.length = 0;
         for (const storage of storages) {
-            storage.db.close();
+            storage.connection.close();
         }
         storages.length = 0;
     });

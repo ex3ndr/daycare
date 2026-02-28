@@ -1,54 +1,52 @@
+import { and, asc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
 import { signalTypeMatchesPattern } from "../engine/signals/signalTypeMatchesPattern.js";
+import type { DaycareDb } from "../schema.js";
+import { signalsSubscriptionsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseSignalSubscriptionRow, SignalSubscriptionDbRecord } from "./databaseTypes.js";
+import type { SignalSubscriptionDbRecord } from "./databaseTypes.js";
 
 /**
- * Signal subscriptions repository backed by SQLite with write-through caching.
+ * Signal subscriptions repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for signals_subscriptions.
  */
 export class SignalSubscriptionsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly subscriptionsByKey = new Map<string, SignalSubscriptionDbRecord>();
     private readonly subscriptionLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allSubscriptionsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: SignalSubscriptionDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO signals_subscriptions (
-                    id,
-                    user_id,
-                    agent_id,
-                    pattern,
-                    silent,
-                    created_at,
-                    updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(user_id, agent_id, pattern) DO UPDATE SET
-                    id = excluded.id,
-                    silent = excluded.silent,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(
-                    record.id,
-                    record.userId,
-                    record.agentId,
-                    record.pattern,
-                    record.silent ? 1 : 0,
-                    record.createdAt,
-                    record.updatedAt
-                );
+                .insert(signalsSubscriptionsTable)
+                .values({
+                    id: record.id,
+                    userId: record.userId,
+                    agentId: record.agentId,
+                    pattern: record.pattern,
+                    silent: record.silent ? 1 : 0,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: [
+                        signalsSubscriptionsTable.userId,
+                        signalsSubscriptionsTable.agentId,
+                        signalsSubscriptionsTable.pattern
+                    ],
+                    set: {
+                        id: record.id,
+                        silent: record.silent ? 1 : 0,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.subscriptionCacheSet(record);
@@ -64,16 +62,21 @@ export class SignalSubscriptionsRepository {
         const key = subscriptionKeyBuild(keys, pattern);
         const lock = await this.subscriptionLockForKey(key);
         return lock.inLock(async () => {
-            const removed = await this.db
-                .prepare("DELETE FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ?")
-                .run(keys.userId, keys.agentId, pattern);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(signalsSubscriptionsTable)
+                .where(
+                    and(
+                        eq(signalsSubscriptionsTable.userId, keys.userId),
+                        eq(signalsSubscriptionsTable.agentId, keys.agentId),
+                        eq(signalsSubscriptionsTable.pattern, pattern)
+                    )
+                )
+                .returning({ id: signalsSubscriptionsTable.id });
 
             await this.cacheLock.inLock(() => {
                 this.subscriptionsByKey.delete(key);
             });
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
@@ -123,12 +126,17 @@ export class SignalSubscriptionsRepository {
             return cached;
         }
 
-        const rows = (await this.db
-            .prepare(
-                "SELECT * FROM signals_subscriptions ORDER BY user_id ASC, agent_id ASC, pattern ASC, created_at ASC, id ASC"
-            )
-            .all()) as DatabaseSignalSubscriptionRow[];
-        const parsed = signalSubscriptionsSort(rows.map((row) => this.subscriptionParse(row)));
+        const rows = await this.db
+            .select()
+            .from(signalsSubscriptionsTable)
+            .orderBy(
+                asc(signalsSubscriptionsTable.userId),
+                asc(signalsSubscriptionsTable.agentId),
+                asc(signalsSubscriptionsTable.pattern),
+                asc(signalsSubscriptionsTable.createdAt),
+                asc(signalsSubscriptionsTable.id)
+            );
+        const parsed = signalSubscriptionsSort(rows.map((row) => subscriptionParse(row)));
 
         await this.cacheLock.inLock(() => {
             this.subscriptionsByKey.clear();
@@ -171,25 +179,22 @@ export class SignalSubscriptionsRepository {
         if (!keys) {
             return null;
         }
-        const row = (await this.db
-            .prepare("SELECT * FROM signals_subscriptions WHERE user_id = ? AND agent_id = ? AND pattern = ? LIMIT 1")
-            .get(keys.userId, keys.agentId, pattern)) as DatabaseSignalSubscriptionRow | undefined;
+        const rows = await this.db
+            .select()
+            .from(signalsSubscriptionsTable)
+            .where(
+                and(
+                    eq(signalsSubscriptionsTable.userId, keys.userId),
+                    eq(signalsSubscriptionsTable.agentId, keys.agentId),
+                    eq(signalsSubscriptionsTable.pattern, pattern)
+                )
+            )
+            .limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.subscriptionParse(row);
-    }
-
-    private subscriptionParse(row: DatabaseSignalSubscriptionRow): SignalSubscriptionDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            agentId: row.agent_id,
-            pattern: row.pattern,
-            silent: row.silent === 1,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
+        return subscriptionParse(row);
     }
 
     private async subscriptionLockForKey(key: string): Promise<AsyncLock> {
@@ -207,6 +212,27 @@ export class SignalSubscriptionsRepository {
             return lock;
         });
     }
+}
+
+/** Converts a Drizzle row (camelCase) to the application record type. */
+function subscriptionParse(row: {
+    id: string;
+    userId: string;
+    agentId: string;
+    pattern: string;
+    silent: number;
+    createdAt: number;
+    updatedAt: number;
+}): SignalSubscriptionDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        agentId: row.agentId,
+        pattern: row.pattern,
+        silent: row.silent === 1,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
 }
 
 function subscriptionKeyBuild(ctx: Context, pattern: string): string {

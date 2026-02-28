@@ -73,7 +73,7 @@ describe("systemPromptResolve", () => {
             expect(result.systemPromptSections).toEqual([]);
             expect(result.firstMessagePrompt).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -86,7 +86,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Be concise."]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -105,7 +105,7 @@ describe("systemPromptResolve", () => {
             const result2 = await systemPromptResolve(storage, "u2", false);
             expect(result2.systemPromptSections).toEqual([]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -123,7 +123,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Active."]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -142,7 +142,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Welcome new user!"]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -164,7 +164,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Welcome back!"]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -183,7 +183,7 @@ describe("systemPromptResolve", () => {
             const resultNotFirst = await systemPromptResolve(storage, "u1", false);
             expect(resultNotFirst.firstMessagePrompt).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -201,7 +201,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", true);
             expect(result.firstMessagePrompt).toBe("Line 1.\nLine 2.");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -225,7 +225,7 @@ describe("systemPromptResolve", () => {
             const result = await systemPromptResolve(storage, "u1", false);
             expect(result.systemPromptSections).toEqual(["Global rule.", "User-specific rule."]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

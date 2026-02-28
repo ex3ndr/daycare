@@ -1,36 +1,49 @@
+import { and, asc, eq, gt, max } from "drizzle-orm";
 import type { AgentHistoryRecord } from "@/types";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseSessionHistoryRow } from "./databaseTypes.js";
+import type { DaycareDb } from "../schema.js";
+import { sessionHistoryTable, sessionsTable } from "../schema.js";
 
 /**
- * Session history repository backed by SQLite without caching.
+ * Session history repository backed by Drizzle without caching.
  * Expects: schema migrations already applied for session_history.
  */
 export class HistoryRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async findBySessionId(sessionId: string): Promise<AgentHistoryRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM session_history WHERE session_id = ? ORDER BY id ASC")
-            .all(sessionId)) as DatabaseSessionHistoryRow[];
+        const rows = await this.db
+            .select()
+            .from(sessionHistoryTable)
+            .where(eq(sessionHistoryTable.sessionId, sessionId))
+            .orderBy(asc(sessionHistoryTable.id));
 
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
 
     async findByAgentId(agentId: string, limit?: number): Promise<AgentHistoryRecord[]> {
-        const sql = `
-              SELECT h.*
-              FROM session_history h
-              INNER JOIN sessions s ON s.id = h.session_id
-              WHERE s.agent_id = ?
-              ORDER BY s.created_at ASC, h.id ASC
-              ${limit !== undefined ? `LIMIT ${limit}` : ""}
-            `;
-        const rows = (await this.db.prepare(sql).all(agentId)) as DatabaseSessionHistoryRow[];
+        let query = this.db
+            .select({
+                id: sessionHistoryTable.id,
+                sessionId: sessionHistoryTable.sessionId,
+                type: sessionHistoryTable.type,
+                at: sessionHistoryTable.at,
+                data: sessionHistoryTable.data
+            })
+            .from(sessionHistoryTable)
+            .innerJoin(sessionsTable, eq(sessionHistoryTable.sessionId, sessionsTable.id))
+            .where(eq(sessionsTable.agentId, agentId))
+            .orderBy(asc(sessionsTable.createdAt), asc(sessionHistoryTable.id))
+            .$dynamic();
+
+        if (limit !== undefined) {
+            query = query.limit(limit);
+        }
+
+        const rows = await query;
 
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
@@ -41,17 +54,20 @@ export class HistoryRepository {
      */
     async append(sessionId: string, record: AgentHistoryRecord): Promise<number> {
         const { type, at, ...data } = record;
-        const inserted = (await this.db
-            .prepare(
-                `
-              INSERT INTO session_history (session_id, type, at, data) VALUES (?, ?, ?, ?) RETURNING id
-            `
-            )
-            .get(sessionId, type, at, JSON.stringify(data))) as { id: number | bigint } | undefined;
-        if (!inserted) {
+        const inserted = await this.db
+            .insert(sessionHistoryTable)
+            .values({
+                sessionId,
+                type,
+                at,
+                data: JSON.stringify(data)
+            })
+            .returning({ id: sessionHistoryTable.id });
+        const first = inserted[0];
+        if (!first) {
             throw new Error("Failed to append history record.");
         }
-        return Number(inserted.id);
+        return first.id;
     }
 
     /**
@@ -59,9 +75,11 @@ export class HistoryRepository {
      * Expects: afterId >= 0; returns empty array when no records exist after afterId.
      */
     async findSinceId(sessionId: string, afterId: number): Promise<AgentHistoryRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM session_history WHERE session_id = ? AND id > ? ORDER BY id ASC")
-            .all(sessionId, afterId)) as DatabaseSessionHistoryRow[];
+        const rows = await this.db
+            .select()
+            .from(sessionHistoryTable)
+            .where(and(eq(sessionHistoryTable.sessionId, sessionId), gt(sessionHistoryTable.id, afterId)))
+            .orderBy(asc(sessionHistoryTable.id));
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
     }
 
@@ -70,14 +88,19 @@ export class HistoryRepository {
      * Returns null when the session has no history records.
      */
     async maxId(sessionId: string): Promise<number | null> {
-        const row = (await this.db
-            .prepare("SELECT MAX(id) AS max_id FROM session_history WHERE session_id = ?")
-            .get(sessionId)) as { max_id: number | bigint | null };
-        return row.max_id !== null ? Number(row.max_id) : null;
+        const rows = await this.db
+            .select({ maxId: max(sessionHistoryTable.id) })
+            .from(sessionHistoryTable)
+            .where(eq(sessionHistoryTable.sessionId, sessionId));
+        const first = rows[0];
+        if (!first || first.maxId === null) {
+            return null;
+        }
+        return first.maxId;
     }
 }
 
-function historyParse(row: DatabaseSessionHistoryRow): AgentHistoryRecord | null {
+function historyParse(row: { type: string; at: number; data: string }): AgentHistoryRecord | null {
     try {
         if (!historyRecordTypeIs(row.type)) {
             return null;

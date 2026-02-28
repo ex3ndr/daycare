@@ -1,20 +1,22 @@
+import { and, asc, eq, or } from "drizzle-orm";
+import type { DaycareDb } from "../schema.js";
+import { systemPromptsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseSystemPromptRow, SystemPromptDbRecord, SystemPromptScope } from "./databaseTypes.js";
+import type { SystemPromptDbRecord, SystemPromptScope } from "./databaseTypes.js";
 
 /**
- * System prompts repository backed by SQLite with write-through caching.
+ * System prompts repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for system_prompts.
  */
 export class SystemPromptsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly promptsById = new Map<string, SystemPromptDbRecord>();
     private readonly promptLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -49,9 +51,7 @@ export class SystemPromptsRepository {
             return Array.from(this.promptsById.values()).map((p) => promptClone(p));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM system_prompts ORDER BY created_at ASC")
-            .all()) as DatabaseSystemPromptRow[];
+        const rows = await this.db.select().from(systemPromptsTable).orderBy(asc(systemPromptsTable.createdAt));
         const parsed = rows.map((row) => promptParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -67,61 +67,74 @@ export class SystemPromptsRepository {
 
     async findByScope(scope: SystemPromptScope, userId?: string): Promise<SystemPromptDbRecord[]> {
         if (scope === "user" && userId) {
-            const rows = (await this.db
-                .prepare("SELECT * FROM system_prompts WHERE scope = ? AND user_id = ? ORDER BY created_at ASC")
-                .all(scope, userId)) as DatabaseSystemPromptRow[];
+            const rows = await this.db
+                .select()
+                .from(systemPromptsTable)
+                .where(and(eq(systemPromptsTable.scope, scope), eq(systemPromptsTable.userId, userId)))
+                .orderBy(asc(systemPromptsTable.createdAt));
             return rows.map((row) => promptParse(row));
         }
-        const rows = (await this.db
-            .prepare("SELECT * FROM system_prompts WHERE scope = ? ORDER BY created_at ASC")
-            .all(scope)) as DatabaseSystemPromptRow[];
+        const rows = await this.db
+            .select()
+            .from(systemPromptsTable)
+            .where(eq(systemPromptsTable.scope, scope))
+            .orderBy(asc(systemPromptsTable.createdAt));
         return rows.map((row) => promptParse(row));
     }
 
     async findEnabled(userId?: string): Promise<SystemPromptDbRecord[]> {
         if (userId) {
-            const rows = (await this.db
-                .prepare(
-                    "SELECT * FROM system_prompts WHERE enabled = 1 AND (scope = 'global' OR (scope = 'user' AND user_id = ?)) ORDER BY created_at ASC"
+            const rows = await this.db
+                .select()
+                .from(systemPromptsTable)
+                .where(
+                    and(
+                        eq(systemPromptsTable.enabled, 1),
+                        or(
+                            eq(systemPromptsTable.scope, "global"),
+                            and(eq(systemPromptsTable.scope, "user"), eq(systemPromptsTable.userId, userId))
+                        )
+                    )
                 )
-                .all(userId)) as DatabaseSystemPromptRow[];
+                .orderBy(asc(systemPromptsTable.createdAt));
             return rows.map((row) => promptParse(row));
         }
-        const rows = (await this.db
-            .prepare("SELECT * FROM system_prompts WHERE enabled = 1 AND scope = 'global' ORDER BY created_at ASC")
-            .all()) as DatabaseSystemPromptRow[];
+        const rows = await this.db
+            .select()
+            .from(systemPromptsTable)
+            .where(and(eq(systemPromptsTable.enabled, 1), eq(systemPromptsTable.scope, "global")))
+            .orderBy(asc(systemPromptsTable.createdAt));
         return rows.map((row) => promptParse(row));
     }
 
     async create(record: SystemPromptDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                INSERT INTO system_prompts (id, scope, user_id, kind, condition, prompt, enabled, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    scope = excluded.scope,
-                    user_id = excluded.user_id,
-                    kind = excluded.kind,
-                    condition = excluded.condition,
-                    prompt = excluded.prompt,
-                    enabled = excluded.enabled,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(
-                    record.id,
-                    record.scope,
-                    record.userId,
-                    record.kind,
-                    record.condition,
-                    record.prompt,
-                    record.enabled ? 1 : 0,
-                    record.createdAt,
-                    record.updatedAt
-                );
+                .insert(systemPromptsTable)
+                .values({
+                    id: record.id,
+                    scope: record.scope,
+                    userId: record.userId,
+                    kind: record.kind,
+                    condition: record.condition,
+                    prompt: record.prompt,
+                    enabled: record.enabled ? 1 : 0,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: systemPromptsTable.id,
+                    set: {
+                        scope: record.scope,
+                        userId: record.userId,
+                        kind: record.kind,
+                        condition: record.condition,
+                        prompt: record.prompt,
+                        enabled: record.enabled ? 1 : 0,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.promptCacheSet(record);
@@ -144,24 +157,18 @@ export class SystemPromptsRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                UPDATE system_prompts
-                SET scope = ?, user_id = ?, kind = ?, condition = ?, prompt = ?, enabled = ?, created_at = ?, updated_at = ?
-                WHERE id = ?
-                `
-                )
-                .run(
-                    next.scope,
-                    next.userId,
-                    next.kind,
-                    next.condition,
-                    next.prompt,
-                    next.enabled ? 1 : 0,
-                    next.createdAt,
-                    next.updatedAt,
-                    id
-                );
+                .update(systemPromptsTable)
+                .set({
+                    scope: next.scope,
+                    userId: next.userId,
+                    kind: next.kind,
+                    condition: next.condition,
+                    prompt: next.prompt,
+                    enabled: next.enabled ? 1 : 0,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                })
+                .where(eq(systemPromptsTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.promptCacheSet(next);
@@ -172,15 +179,16 @@ export class SystemPromptsRepository {
     async deleteById(id: string): Promise<boolean> {
         const lock = this.promptLockForId(id);
         return lock.inLock(async () => {
-            const removed = await this.db.prepare("DELETE FROM system_prompts WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(systemPromptsTable)
+                .where(eq(systemPromptsTable.id, id))
+                .returning({ id: systemPromptsTable.id });
 
             await this.cacheLock.inLock(() => {
                 this.promptsById.delete(id);
             });
 
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
@@ -189,9 +197,8 @@ export class SystemPromptsRepository {
     }
 
     private async promptLoadById(id: string): Promise<SystemPromptDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM system_prompts WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseSystemPromptRow
-            | undefined;
+        const rows = await this.db.select().from(systemPromptsTable).where(eq(systemPromptsTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
@@ -209,17 +216,17 @@ export class SystemPromptsRepository {
     }
 }
 
-function promptParse(row: DatabaseSystemPromptRow): SystemPromptDbRecord {
+function promptParse(row: typeof systemPromptsTable.$inferSelect): SystemPromptDbRecord {
     return {
         id: row.id,
-        scope: row.scope,
-        userId: row.user_id,
-        kind: row.kind,
+        scope: row.scope as SystemPromptDbRecord["scope"],
+        userId: row.userId,
+        kind: row.kind as SystemPromptDbRecord["kind"],
         condition: row.condition as SystemPromptDbRecord["condition"],
         prompt: row.prompt,
         enabled: row.enabled === 1,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
     };
 }
 

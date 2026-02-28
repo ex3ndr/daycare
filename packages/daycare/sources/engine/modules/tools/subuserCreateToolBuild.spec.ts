@@ -55,7 +55,7 @@ describe("subuserCreateToolBuild", () => {
             expect(agent!.type).toBe("subuser");
             expect(agent!.descriptor.type).toBe("subuser");
 
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -80,7 +80,7 @@ describe("subuserCreateToolBuild", () => {
                 "Only the owner user can create subusers."
             );
 
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

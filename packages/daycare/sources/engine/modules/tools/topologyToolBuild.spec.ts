@@ -33,7 +33,7 @@ describe("topologyTool", () => {
                 path.join(dir, "settings.json")
             );
             const storage = storageResolve(config);
-            await databaseMigrate(storage.db);
+            await databaseMigrate(storage.connection);
 
             const tool = topologyTool(
                 { listTasks: async () => [] } as unknown as Crons,
@@ -114,7 +114,7 @@ describe("topologyTool", () => {
                 path.join(dir, "settings.json")
             );
             const storage = storageResolve(config);
-            await databaseMigrate(storage.db);
+            await databaseMigrate(storage.connection);
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
             const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });
@@ -286,7 +286,7 @@ describe("topologyTool", () => {
             );
 
             const storage = storageResolve(config);
-            await databaseMigrate(storage.db);
+            await databaseMigrate(storage.connection);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
 
             const activeCtx = contextForAgent({ userId: "user-1", agentId: "agent-active" });
@@ -344,7 +344,7 @@ describe("topologyTool", () => {
             path.join(dir, "settings.json")
         );
         const storage = storageResolve(config);
-        await databaseMigrate(storage.db);
+        await databaseMigrate(storage.connection);
         try {
             // Find the owner user (created by bootstrap migration)
             const owner = await storage.users.findOwner();
@@ -417,7 +417,7 @@ describe("topologyTool", () => {
             expect(result.typedResult.subusers).toEqual([]);
             expect(result.typedResult.friends).toEqual([]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -429,7 +429,7 @@ describe("topologyTool", () => {
             path.join(dir, "settings.json")
         );
         const storage = storageResolve(config);
-        await databaseMigrate(storage.db);
+        await databaseMigrate(storage.connection);
         try {
             // Find the owner user
             const owner = await storage.users.findOwner();
@@ -499,7 +499,7 @@ describe("topologyTool", () => {
             );
             expect(result.typedResult.friendCount).toBe(0);
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -511,7 +511,7 @@ describe("topologyTool", () => {
             path.join(dir, "settings.json")
         );
         const storage = storageResolve(config);
-        await databaseMigrate(storage.db);
+        await databaseMigrate(storage.connection);
         try {
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
@@ -705,7 +705,7 @@ describe("topologyTool", () => {
                 }
             ]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -717,7 +717,7 @@ describe("topologyTool", () => {
             path.join(dir, "settings.json")
         );
         const storage = storageResolve(config);
-        await databaseMigrate(storage.db);
+        await databaseMigrate(storage.connection);
         try {
             await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
@@ -841,7 +841,7 @@ describe("topologyTool", () => {
             );
             expect(result.typedResult.friendCount).toBe(1);
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -856,7 +856,7 @@ describe("topologyTool", () => {
                 path.join(dir, "settings.json")
             );
             const storage = storageResolve(config);
-            await databaseMigrate(storage.db);
+            await databaseMigrate(storage.connection);
 
             const permissions = permissionBuildUser(new UserHome(config.usersDir, "user-1"));
             const callerCtx = contextForAgent({ userId: "user-1", agentId: "agent-caller" });

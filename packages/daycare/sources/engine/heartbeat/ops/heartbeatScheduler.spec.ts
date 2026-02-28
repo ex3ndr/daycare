@@ -25,7 +25,7 @@ describe("HeartbeatScheduler", () => {
         await Promise.all(temps.map((dir) => rm(dir, { recursive: true, force: true })));
         temps.length = 0;
         for (const storage of storages) {
-            storage.db.close();
+            storage.connection.close();
         }
         storages.length = 0;
     });

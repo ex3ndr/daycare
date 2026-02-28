@@ -70,7 +70,7 @@ describe("HeartbeatTasksRepository", () => {
             expect(await repo.delete("beta")).toBe(false);
             expect(await repo.findById("beta")).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -100,11 +100,11 @@ describe("HeartbeatTasksRepository", () => {
             const first = await repo.findById("cache-heartbeat");
             expect(first?.id).toBe("cache-heartbeat");
 
-            storage.db.prepare("DELETE FROM tasks_heartbeat WHERE id = ?").run("cache-heartbeat");
+            storage.connection.prepare("DELETE FROM tasks_heartbeat WHERE id = ?").run("cache-heartbeat");
             const second = await repo.findById("cache-heartbeat");
             expect(second?.id).toBe("cache-heartbeat");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

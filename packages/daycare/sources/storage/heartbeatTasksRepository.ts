@@ -1,14 +1,16 @@
+import { and, asc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { tasksHeartbeatTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseHeartbeatTaskRow, HeartbeatTaskDbRecord } from "./databaseTypes.js";
+import type { HeartbeatTaskDbRecord } from "./databaseTypes.js";
 
 /**
- * Heartbeat tasks repository backed by SQLite with write-through caching.
+ * Heartbeat tasks repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for tasks_heartbeat.
  */
 export class HeartbeatTasksRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly tasksById = new Map<string, HeartbeatTaskDbRecord>();
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
@@ -16,7 +18,7 @@ export class HeartbeatTasksRepository {
     private readonly runLock = new AsyncLock();
     private allTasksLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -47,10 +49,12 @@ export class HeartbeatTasksRepository {
     }
 
     async findMany(ctx: Context): Promise<HeartbeatTaskDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId)) as DatabaseHeartbeatTaskRow[];
-        return rows.map((task) => heartbeatTaskClone(this.taskParse(task)));
+        const rows = await this.db
+            .select()
+            .from(tasksHeartbeatTable)
+            .where(eq(tasksHeartbeatTable.userId, ctx.userId))
+            .orderBy(asc(tasksHeartbeatTable.updatedAt));
+        return rows.map((row) => heartbeatTaskClone(heartbeatTaskParse(row)));
     }
 
     async findAll(): Promise<HeartbeatTaskDbRecord[]> {
@@ -58,10 +62,8 @@ export class HeartbeatTasksRepository {
             return heartbeatTasksSort(Array.from(this.tasksById.values())).map((task) => heartbeatTaskClone(task));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks_heartbeat ORDER BY updated_at ASC")
-            .all()) as DatabaseHeartbeatTaskRow[];
-        const parsed = rows.map((row) => this.taskParse(row));
+        const rows = await this.db.select().from(tasksHeartbeatTable).orderBy(asc(tasksHeartbeatTable.updatedAt));
+        const parsed = rows.map((row) => heartbeatTaskParse(row));
 
         await this.cacheLock.inLock(() => {
             this.tasksById.clear();
@@ -75,10 +77,12 @@ export class HeartbeatTasksRepository {
     }
 
     async findManyByTaskId(ctx: Context, taskId: string): Promise<HeartbeatTaskDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks_heartbeat WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId, taskId)) as DatabaseHeartbeatTaskRow[];
-        return rows.map((row) => heartbeatTaskClone(this.taskParse(row)));
+        const rows = await this.db
+            .select()
+            .from(tasksHeartbeatTable)
+            .where(and(eq(tasksHeartbeatTable.userId, ctx.userId), eq(tasksHeartbeatTable.taskId, taskId)))
+            .orderBy(asc(tasksHeartbeatTable.updatedAt));
+        return rows.map((row) => heartbeatTaskClone(heartbeatTaskParse(row)));
     }
 
     async create(record: HeartbeatTaskDbRecord): Promise<void> {
@@ -88,35 +92,27 @@ export class HeartbeatTasksRepository {
         }
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO tasks_heartbeat (
-                    id,
-                    task_id,
-                    user_id,
-                    title,
-                    last_run_at,
-                    created_at,
-                    updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    task_id = excluded.task_id,
-                    user_id = excluded.user_id,
-                    title = excluded.title,
-                    last_run_at = excluded.last_run_at,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(
-                    record.id,
+                .insert(tasksHeartbeatTable)
+                .values({
+                    id: record.id,
                     taskId,
-                    record.userId,
-                    record.title,
-                    record.lastRunAt,
-                    record.createdAt,
-                    record.updatedAt
-                );
+                    userId: record.userId,
+                    title: record.title,
+                    lastRunAt: record.lastRunAt,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: tasksHeartbeatTable.id,
+                    set: {
+                        taskId,
+                        userId: record.userId,
+                        title: record.title,
+                        lastRunAt: record.lastRunAt,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(record);
@@ -145,20 +141,16 @@ export class HeartbeatTasksRepository {
             }
 
             await this.db
-                .prepare(
-                    `
-                  UPDATE tasks_heartbeat
-                  SET
-                    task_id = ?,
-                    user_id = ?,
-                    title = ?,
-                    last_run_at = ?,
-                    created_at = ?,
-                    updated_at = ?
-                  WHERE id = ?
-                `
-                )
-                .run(next.taskId.trim(), next.userId, next.title, next.lastRunAt, next.createdAt, next.updatedAt, id);
+                .update(tasksHeartbeatTable)
+                .set({
+                    taskId: next.taskId.trim(),
+                    userId: next.userId,
+                    title: next.title,
+                    lastRunAt: next.lastRunAt,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                })
+                .where(eq(tasksHeartbeatTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);
@@ -169,21 +161,22 @@ export class HeartbeatTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const removed = await this.db.prepare("DELETE FROM tasks_heartbeat WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(tasksHeartbeatTable)
+                .where(eq(tasksHeartbeatTable.id, id))
+                .returning({ id: tasksHeartbeatTable.id });
 
             await this.cacheLock.inLock(() => {
                 this.tasksById.delete(id);
             });
 
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
     async recordRun(runAt: number): Promise<void> {
         await this.runLock.inLock(async () => {
-            await this.db.prepare("UPDATE tasks_heartbeat SET last_run_at = ?, updated_at = ?").run(runAt, runAt);
+            await this.db.update(tasksHeartbeatTable).set({ lastRunAt: runAt, updatedAt: runAt });
             await this.cacheLock.inLock(() => {
                 for (const [taskId, task] of this.tasksById.entries()) {
                     this.tasksById.set(taskId, {
@@ -201,29 +194,12 @@ export class HeartbeatTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<HeartbeatTaskDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM tasks_heartbeat WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseHeartbeatTaskRow
-            | undefined;
+        const rows = await this.db.select().from(tasksHeartbeatTable).where(eq(tasksHeartbeatTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.taskParse(row);
-    }
-
-    private taskParse(row: DatabaseHeartbeatTaskRow): HeartbeatTaskDbRecord {
-        const taskId = row.task_id?.trim();
-        if (!taskId) {
-            throw new Error(`Heartbeat trigger ${row.id} is missing required task_id.`);
-        }
-        return {
-            id: row.id,
-            taskId,
-            userId: row.user_id,
-            title: row.title,
-            lastRunAt: row.last_run_at,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
+        return heartbeatTaskParse(row);
     }
 
     private taskLockForId(taskId: string): AsyncLock {
@@ -235,6 +211,22 @@ export class HeartbeatTasksRepository {
         this.taskLocks.set(taskId, lock);
         return lock;
     }
+}
+
+function heartbeatTaskParse(row: typeof tasksHeartbeatTable.$inferSelect): HeartbeatTaskDbRecord {
+    const taskId = row.taskId?.trim();
+    if (!taskId) {
+        throw new Error(`Heartbeat trigger ${row.id} is missing required task_id.`);
+    }
+    return {
+        id: row.id,
+        taskId,
+        userId: row.userId,
+        title: row.title,
+        lastRunAt: row.lastRunAt,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
 }
 
 function heartbeatTaskClone(record: HeartbeatTaskDbRecord): HeartbeatTaskDbRecord {

@@ -513,7 +513,7 @@ export class Engine {
         this.processes.unload();
         await this.exposes.stop();
         await this.pluginManager.unloadAll();
-        await databaseClose(this.storage.db);
+        await databaseClose(this.storage.connection);
     }
 
     getStatus() {

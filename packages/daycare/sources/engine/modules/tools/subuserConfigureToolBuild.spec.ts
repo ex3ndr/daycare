@@ -63,7 +63,7 @@ describe("subuserConfigureToolBuild", () => {
             // Verify in-memory update was called
             expect(updateAgentDescriptor).toHaveBeenCalled();
 
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -87,7 +87,7 @@ describe("subuserConfigureToolBuild", () => {
                 tool.execute({ subuserId: "some-id", systemPrompt: "prompt" }, context, configureToolCall)
             ).rejects.toThrow("Only the owner user can configure subusers.");
 
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

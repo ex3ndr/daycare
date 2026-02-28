@@ -41,7 +41,7 @@ describe("subuserListToolBuild", () => {
             expect(result.typedResult.summary).toContain("app-one");
             expect(result.typedResult.summary).toContain("app-two");
 
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -65,7 +65,7 @@ describe("subuserListToolBuild", () => {
             expect(result.typedResult.count).toBe(0);
             expect(result.typedResult.summary).toContain("No subusers");
 
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

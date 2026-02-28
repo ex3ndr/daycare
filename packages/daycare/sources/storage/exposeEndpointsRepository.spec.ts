@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpenTest } from "./databaseOpenTest.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("ExposeEndpointsRepository", () => {
     it("supports CRUD and user scoping", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new ExposeEndpointsRepository(db);
+            const repository = new ExposeEndpointsRepository(storage.db);
 
             await repository.create({
                 id: "ep-1",
@@ -54,26 +53,10 @@ describe("ExposeEndpointsRepository", () => {
             expect(removed).toBe(true);
             expect(remaining.map((entry) => entry.id)).toEqual(["ep-1"]);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE expose_endpoints (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            target TEXT NOT NULL,
-            provider TEXT NOT NULL,
-            domain TEXT NOT NULL,
-            mode TEXT NOT NULL,
-            auth TEXT,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-        );
-    `);
-}
 
 function ctxBuild(userId: string): Context {
     return { agentId: "test-agent", userId };

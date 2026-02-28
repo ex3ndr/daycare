@@ -45,7 +45,7 @@ describe("friendUnshareSubuserToolBuild", () => {
                 requestedB: true
             });
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -80,7 +80,7 @@ describe("friendUnshareSubuserToolBuild", () => {
                 })
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -109,7 +109,7 @@ describe("friendUnshareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("No share exists");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

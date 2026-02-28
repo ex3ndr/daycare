@@ -66,7 +66,7 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -138,7 +138,7 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -178,7 +178,7 @@ describe("Exposes", () => {
 
             await second.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -217,7 +217,7 @@ describe("Exposes", () => {
 
             await second.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -277,7 +277,7 @@ describe("Exposes", () => {
             expect(restoreFailProvider.destroyTunnel).toHaveBeenCalledWith("https://broken-restore.example.com");
             await second.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -323,7 +323,7 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -367,7 +367,7 @@ describe("Exposes", () => {
 
             await exposes.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
@@ -413,7 +413,7 @@ async function exposeEndpointRowRead(
     storage: Storage,
     endpointId: string
 ): Promise<{ domain: string; auth: { passwordHash: string } | null }> {
-    const row = (await storage.db
+    const row = (await storage.connection
         .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")
         .get(endpointId)) as { domain?: string; auth?: string | null } | undefined;
     return {

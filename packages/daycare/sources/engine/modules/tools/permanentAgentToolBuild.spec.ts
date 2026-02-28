@@ -59,7 +59,7 @@ describe("permanentAgentToolBuild", () => {
             );
             expect(updateAgentDescriptor).toHaveBeenCalledTimes(1);
             expect(updateAgentPermissions).toHaveBeenCalledTimes(1);
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -97,7 +97,7 @@ describe("permanentAgentToolBuild", () => {
             const agents = await agentPermanentList(storage);
             const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
             expect(created?.descriptor.username).toBe("opsbot");
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -135,7 +135,7 @@ describe("permanentAgentToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow("Tool context userId is required.");
-            storage.db.close();
+            storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

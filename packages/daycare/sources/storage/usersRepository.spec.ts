@@ -63,7 +63,7 @@ describe("UsersRepository", () => {
             expect(await users.findByConnectorKey("telegram:1")).toBeNull();
             expect(await users.findByNametag("swift-fox-42")).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -76,11 +76,11 @@ describe("UsersRepository", () => {
             const first = await users.findById(created.id);
             expect(first?.id).toBe(created.id);
 
-            storage.db.prepare("DELETE FROM users WHERE id = ?").run(created.id);
+            storage.connection.prepare("DELETE FROM users WHERE id = ?").run(created.id);
             const second = await users.findById(created.id);
             expect(second?.id).toBe(created.id);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -88,10 +88,10 @@ describe("UsersRepository", () => {
         const storage = await storageOpenTest();
         try {
             const users = new UsersRepository(storage.db);
-            storage.db
+            storage.connection
                 .prepare("INSERT INTO users (id, is_owner, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
                 .run("user-1", 0, "brave-wolf-99", 10, 11);
-            storage.db
+            storage.connection
                 .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?)")
                 .run("user-1", "telegram:1");
 
@@ -105,7 +105,7 @@ describe("UsersRepository", () => {
             expect(await users.findByConnectorKey("telegram:1")).toBeNull();
             expect(await users.findByNametag("brave-wolf-99")).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

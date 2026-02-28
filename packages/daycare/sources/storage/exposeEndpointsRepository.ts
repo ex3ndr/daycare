@@ -1,63 +1,55 @@
+import { asc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
 import { exposeDomainNormalize, exposeTargetParse } from "../engine/expose/exposeTypes.js";
+import type { DaycareDb } from "../schema.js";
+import { exposeEndpointsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseExposeEndpointRow, ExposeEndpointDbRecord } from "./databaseTypes.js";
+import type { ExposeEndpointDbRecord } from "./databaseTypes.js";
 
 /**
- * Expose endpoints repository backed by SQLite with write-through caching.
+ * Expose endpoints repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for expose_endpoints.
  */
 export class ExposeEndpointsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly endpointsById = new Map<string, ExposeEndpointDbRecord>();
     private readonly endpointLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allEndpointsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: ExposeEndpointDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO expose_endpoints (
-                    id,
-                    user_id,
-                    target,
-                    provider,
-                    domain,
-                    mode,
-                    auth,
-                    created_at,
-                    updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    user_id = excluded.user_id,
-                    target = excluded.target,
-                    provider = excluded.provider,
-                    domain = excluded.domain,
-                    mode = excluded.mode,
-                    auth = excluded.auth,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(
-                    record.id,
-                    record.userId,
-                    JSON.stringify(record.target),
-                    record.provider,
-                    exposeDomainNormalize(record.domain),
-                    record.mode,
-                    record.auth ? JSON.stringify(record.auth) : null,
-                    record.createdAt,
-                    record.updatedAt
-                );
+                .insert(exposeEndpointsTable)
+                .values({
+                    id: record.id,
+                    userId: record.userId,
+                    target: JSON.stringify(record.target),
+                    provider: record.provider,
+                    domain: exposeDomainNormalize(record.domain),
+                    mode: record.mode,
+                    auth: record.auth ? JSON.stringify(record.auth) : null,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: exposeEndpointsTable.id,
+                    set: {
+                        userId: record.userId,
+                        target: JSON.stringify(record.target),
+                        provider: record.provider,
+                        domain: exposeDomainNormalize(record.domain),
+                        mode: record.mode,
+                        auth: record.auth ? JSON.stringify(record.auth) : null,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.endpointCacheSet(record);
@@ -101,10 +93,12 @@ export class ExposeEndpointsRepository {
     }
 
     async findMany(ctx: Context): Promise<ExposeEndpointDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM expose_endpoints WHERE user_id = ? ORDER BY created_at ASC, id ASC")
-            .all(ctx.userId)) as DatabaseExposeEndpointRow[];
-        return rows.map((entry) => endpointClone(this.endpointParse(entry)));
+        const rows = await this.db
+            .select()
+            .from(exposeEndpointsTable)
+            .where(eq(exposeEndpointsTable.userId, ctx.userId))
+            .orderBy(asc(exposeEndpointsTable.createdAt), asc(exposeEndpointsTable.id));
+        return rows.map((entry) => endpointClone(endpointParse(entry)));
     }
 
     async findAll(): Promise<ExposeEndpointDbRecord[]> {
@@ -118,11 +112,12 @@ export class ExposeEndpointsRepository {
             return cached;
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM expose_endpoints ORDER BY created_at ASC, id ASC")
-            .all()) as DatabaseExposeEndpointRow[];
+        const rows = await this.db
+            .select()
+            .from(exposeEndpointsTable)
+            .orderBy(asc(exposeEndpointsTable.createdAt), asc(exposeEndpointsTable.id));
 
-        const parsed = rows.map((row) => this.endpointParse(row));
+        const parsed = rows.map((row) => endpointParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const entry of parsed) {
@@ -158,32 +153,18 @@ export class ExposeEndpointsRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                  UPDATE expose_endpoints
-                  SET
-                    user_id = ?,
-                    target = ?,
-                    provider = ?,
-                    domain = ?,
-                    mode = ?,
-                    auth = ?,
-                    created_at = ?,
-                    updated_at = ?
-                  WHERE id = ?
-                `
-                )
-                .run(
-                    next.userId,
-                    JSON.stringify(next.target),
-                    next.provider,
-                    next.domain,
-                    next.mode,
-                    next.auth ? JSON.stringify(next.auth) : null,
-                    next.createdAt,
-                    next.updatedAt,
-                    id
-                );
+                .update(exposeEndpointsTable)
+                .set({
+                    userId: next.userId,
+                    target: JSON.stringify(next.target),
+                    provider: next.provider,
+                    domain: next.domain,
+                    mode: next.mode,
+                    auth: next.auth ? JSON.stringify(next.auth) : null,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                })
+                .where(eq(exposeEndpointsTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.endpointCacheSet(next);
@@ -194,39 +175,25 @@ export class ExposeEndpointsRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.endpointLockForId(id);
         return lock.inLock(async () => {
-            const removed = await this.db.prepare("DELETE FROM expose_endpoints WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(exposeEndpointsTable)
+                .where(eq(exposeEndpointsTable.id, id))
+                .returning({ id: exposeEndpointsTable.id });
 
             await this.cacheLock.inLock(() => {
                 this.endpointsById.delete(id);
             });
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
     private async endpointLoadById(id: string): Promise<ExposeEndpointDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM expose_endpoints WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseExposeEndpointRow
-            | undefined;
+        const rows = await this.db.select().from(exposeEndpointsTable).where(eq(exposeEndpointsTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.endpointParse(row);
-    }
-
-    private endpointParse(row: DatabaseExposeEndpointRow): ExposeEndpointDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            target: targetParse(row.target),
-            provider: row.provider,
-            domain: exposeDomainNormalize(row.domain),
-            mode: row.mode,
-            auth: authParse(row.auth),
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
+        return endpointParse(row);
     }
 
     private endpointCacheSet(record: ExposeEndpointDbRecord): void {
@@ -242,6 +209,20 @@ export class ExposeEndpointsRepository {
         this.endpointLocks.set(endpointId, lock);
         return lock;
     }
+}
+
+function endpointParse(row: typeof exposeEndpointsTable.$inferSelect): ExposeEndpointDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        target: targetParse(row.target),
+        provider: row.provider,
+        domain: exposeDomainNormalize(row.domain),
+        mode: row.mode as ExposeEndpointDbRecord["mode"],
+        auth: authParse(row.auth),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
 }
 
 function targetParse(raw: string): ExposeEndpointDbRecord["target"] {

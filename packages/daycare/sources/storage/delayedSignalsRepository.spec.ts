@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpenTest } from "./databaseOpenTest.js";
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("DelayedSignalsRepository", () => {
     it("creates, reads due records, deletes, and cancels by repeat key", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new DelayedSignalsRepository(db);
+            const repository = new DelayedSignalsRepository(storage.db);
 
             await repository.create({
                 id: "delay-1",
@@ -63,26 +62,10 @@ describe("DelayedSignalsRepository", () => {
             expect(cancelled).toBe(1);
             expect(empty).toEqual([]);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE signals_delayed (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            type TEXT NOT NULL,
-            deliver_at INTEGER NOT NULL,
-            source TEXT NOT NULL,
-            data TEXT,
-            repeat_key TEXT,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-        );
-    `);
-}
 
 function ctxBuild(userId: string): Context {
     return { agentId: "test-agent", userId };

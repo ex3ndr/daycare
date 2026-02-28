@@ -1,77 +1,69 @@
+import { and, asc, eq, lte, ne } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { signalsDelayedTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseDelayedSignalRow, DelayedSignalDbRecord } from "./databaseTypes.js";
+import type { DelayedSignalDbRecord } from "./databaseTypes.js";
 
 /**
- * Delayed signals repository backed by SQLite with write-through caching.
+ * Delayed signals repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for signals_delayed.
  */
 export class DelayedSignalsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly signalsById = new Map<string, DelayedSignalDbRecord>();
     private readonly signalLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allSignalsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: DelayedSignalDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            await this.db.exec("BEGIN");
-            try {
+            await this.db.transaction(async (tx) => {
                 if (record.repeatKey) {
-                    await this.db
-                        .prepare(
-                            "DELETE FROM signals_delayed WHERE user_id = ? AND type = ? AND repeat_key = ? AND id <> ?"
-                        )
-                        .run(record.userId, record.type, record.repeatKey, record.id);
+                    await tx
+                        .delete(signalsDelayedTable)
+                        .where(
+                            and(
+                                eq(signalsDelayedTable.userId, record.userId),
+                                eq(signalsDelayedTable.type, record.type),
+                                eq(signalsDelayedTable.repeatKey, record.repeatKey),
+                                ne(signalsDelayedTable.id, record.id)
+                            )
+                        );
                 }
 
-                await this.db
-                    .prepare(
-                        `
-                      INSERT INTO signals_delayed (
-                        id,
-                        user_id,
-                        type,
-                        deliver_at,
-                        source,
-                        data,
-                        repeat_key,
-                        created_at,
-                        updated_at
-                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                      ON CONFLICT(id) DO UPDATE SET
-                        user_id = excluded.user_id,
-                        type = excluded.type,
-                        deliver_at = excluded.deliver_at,
-                        source = excluded.source,
-                        data = excluded.data,
-                        repeat_key = excluded.repeat_key,
-                        created_at = excluded.created_at,
-                        updated_at = excluded.updated_at
-                    `
-                    )
-                    .run(
-                        record.id,
-                        record.userId,
-                        record.type,
-                        record.deliverAt,
-                        JSON.stringify(record.source),
-                        record.data === undefined ? null : JSON.stringify(record.data),
-                        record.repeatKey,
-                        record.createdAt,
-                        record.updatedAt
-                    );
-                await this.db.exec("COMMIT");
-            } catch (error) {
-                await this.db.exec("ROLLBACK");
-                throw error;
-            }
+                await tx
+                    .insert(signalsDelayedTable)
+                    .values({
+                        id: record.id,
+                        userId: record.userId,
+                        type: record.type,
+                        deliverAt: record.deliverAt,
+                        source: JSON.stringify(record.source),
+                        data: record.data === undefined ? null : JSON.stringify(record.data),
+                        repeatKey: record.repeatKey,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    })
+                    .onConflictDoUpdate({
+                        target: signalsDelayedTable.id,
+                        set: {
+                            userId: record.userId,
+                            type: record.type,
+                            deliverAt: record.deliverAt,
+                            source: JSON.stringify(record.source),
+                            data: record.data === undefined ? null : JSON.stringify(record.data),
+                            repeatKey: record.repeatKey,
+                            createdAt: record.createdAt,
+                            updatedAt: record.updatedAt
+                        }
+                    });
+            });
 
             await this.cacheLock.inLock(() => {
                 this.signalCacheSet(record);
@@ -120,10 +112,12 @@ export class DelayedSignalsRepository {
     }
 
     async findDue(now: number): Promise<DelayedSignalDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM signals_delayed WHERE deliver_at <= ? ORDER BY deliver_at ASC, id ASC")
-            .all(now)) as DatabaseDelayedSignalRow[];
-        const parsed = rows.map((row) => this.signalParse(row));
+        const rows = await this.db
+            .select()
+            .from(signalsDelayedTable)
+            .where(lte(signalsDelayedTable.deliverAt, now))
+            .orderBy(asc(signalsDelayedTable.deliverAt), asc(signalsDelayedTable.id));
+        const parsed = rows.map((row) => signalParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
@@ -136,10 +130,12 @@ export class DelayedSignalsRepository {
 
     async findMany(ctx: Context): Promise<DelayedSignalDbRecord[]> {
         const userId = contextUserIdRequire(ctx);
-        const rows = (await this.db
-            .prepare("SELECT * FROM signals_delayed WHERE user_id = ? ORDER BY deliver_at ASC, id ASC")
-            .all(userId)) as DatabaseDelayedSignalRow[];
-        const parsed = rows.map((row) => this.signalParse(row));
+        const rows = await this.db
+            .select()
+            .from(signalsDelayedTable)
+            .where(eq(signalsDelayedTable.userId, userId))
+            .orderBy(asc(signalsDelayedTable.deliverAt), asc(signalsDelayedTable.id));
+        const parsed = rows.map((row) => signalParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
@@ -155,10 +151,11 @@ export class DelayedSignalsRepository {
             return delayedSignalsSort(Array.from(this.signalsById.values())).map((entry) => delayedSignalClone(entry));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM signals_delayed ORDER BY deliver_at ASC, id ASC")
-            .all()) as DatabaseDelayedSignalRow[];
-        const parsed = rows.map((row) => this.signalParse(row));
+        const rows = await this.db
+            .select()
+            .from(signalsDelayedTable)
+            .orderBy(asc(signalsDelayedTable.deliverAt), asc(signalsDelayedTable.id));
+        const parsed = rows.map((row) => signalParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
@@ -173,23 +170,30 @@ export class DelayedSignalsRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.signalLockForId(id);
         return lock.inLock(async () => {
-            const removed = await this.db.prepare("DELETE FROM signals_delayed WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(signalsDelayedTable)
+                .where(eq(signalsDelayedTable.id, id))
+                .returning({ id: signalsDelayedTable.id });
             await this.cacheLock.inLock(() => {
                 this.signalsById.delete(id);
             });
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
     async deleteByRepeatKey(ctx: Context, type: string, repeatKey: string): Promise<number> {
         const normalizedUserId = contextUserIdRequire(ctx);
-        const removed = await this.db
-            .prepare("DELETE FROM signals_delayed WHERE user_id = ? AND type = ? AND repeat_key = ?")
-            .run(normalizedUserId, type, repeatKey);
-        const rawChanges = (removed as { changes?: number | bigint }).changes;
-        const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+        const result = await this.db
+            .delete(signalsDelayedTable)
+            .where(
+                and(
+                    eq(signalsDelayedTable.userId, normalizedUserId),
+                    eq(signalsDelayedTable.type, type),
+                    eq(signalsDelayedTable.repeatKey, repeatKey)
+                )
+            )
+            .returning({ id: signalsDelayedTable.id });
+        const changes = result.length;
 
         if (changes > 0) {
             await this.cacheLock.inLock(() => {
@@ -209,27 +213,12 @@ export class DelayedSignalsRepository {
     }
 
     private async signalLoadById(id: string): Promise<DelayedSignalDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM signals_delayed WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseDelayedSignalRow
-            | undefined;
+        const rows = await this.db.select().from(signalsDelayedTable).where(eq(signalsDelayedTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.signalParse(row);
-    }
-
-    private signalParse(row: DatabaseDelayedSignalRow): DelayedSignalDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            type: row.type,
-            deliverAt: row.deliver_at,
-            source: sourceParse(row.source),
-            data: dataParse(row.data),
-            repeatKey: row.repeat_key,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
+        return signalParse(row);
     }
 
     private signalLockForId(signalId: string): AsyncLock {
@@ -241,6 +230,31 @@ export class DelayedSignalsRepository {
         this.signalLocks.set(signalId, lock);
         return lock;
     }
+}
+
+/** Converts a Drizzle row (camelCase) to the application record type. */
+function signalParse(row: {
+    id: string;
+    userId: string;
+    type: string;
+    deliverAt: number;
+    source: string;
+    data: string | null;
+    repeatKey: string | null;
+    createdAt: number;
+    updatedAt: number;
+}): DelayedSignalDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        type: row.type,
+        deliverAt: row.deliverAt,
+        source: sourceParse(row.source),
+        data: dataParse(row.data),
+        repeatKey: row.repeatKey,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
 }
 
 function delayedSignalsSort(records: DelayedSignalDbRecord[]): DelayedSignalDbRecord[] {

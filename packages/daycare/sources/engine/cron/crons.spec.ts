@@ -53,7 +53,7 @@ describe("Crons", () => {
             await expect(crons.deleteTask(ctxB, task.id)).resolves.toBe(false);
             await expect(crons.deleteTask(ctxA, task.id)).resolves.toBe(true);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -120,7 +120,7 @@ describe("Crons", () => {
                 })
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

@@ -1,53 +1,50 @@
 import { createId } from "@paralleldrive/cuid2";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { CreateSessionInput, DatabaseSessionRow, SessionDbRecord } from "./databaseTypes.js";
+import { and, asc, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
+import type { DaycareDb } from "../schema.js";
+import { sessionsTable } from "../schema.js";
+import type { CreateSessionInput, SessionDbRecord } from "./databaseTypes.js";
 
 /**
- * Sessions repository backed by SQLite without caching.
+ * Sessions repository backed by Drizzle without caching.
  * Expects: schema migrations already applied for sessions.
  */
 export class SessionsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async findById(id: string): Promise<SessionDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM sessions WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseSessionRow
-            | undefined;
-        if (!row) {
+        const rows = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, id)).limit(1);
+        const first = rows[0];
+        if (!first) {
             return null;
         }
-        return this.sessionParse(row);
+        return sessionParse(first);
     }
 
     async findByAgentId(agentId: string): Promise<SessionDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM sessions WHERE agent_id = ? ORDER BY created_at ASC")
-            .all(agentId)) as DatabaseSessionRow[];
-        return rows.map((row) => this.sessionParse(row));
+        const rows = await this.db
+            .select()
+            .from(sessionsTable)
+            .where(eq(sessionsTable.agentId, agentId))
+            .orderBy(asc(sessionsTable.createdAt));
+        return rows.map((row) => sessionParse(row));
     }
 
     async create(input: CreateSessionInput): Promise<string> {
         const sessionId = createId();
         const createdAt = input.createdAt ?? Date.now();
-        await this.db
-            .prepare(
-                `
-              INSERT INTO sessions (
-                id,
-                agent_id,
-                inference_session_id,
-                created_at,
-                reset_message,
-                invalidated_at,
-                processed_until
-              ) VALUES (?, ?, ?, ?, ?, NULL, NULL)
-            `
-            )
-            .run(sessionId, input.agentId, input.inferenceSessionId ?? null, createdAt, input.resetMessage ?? null);
+        await this.db.insert(sessionsTable).values({
+            id: sessionId,
+            agentId: input.agentId,
+            inferenceSessionId: input.inferenceSessionId ?? null,
+            createdAt,
+            resetMessage: input.resetMessage ?? null,
+            invalidatedAt: null,
+            processedUntil: null
+        });
         return sessionId;
     }
 
@@ -57,8 +54,9 @@ export class SessionsRepository {
      */
     async endSession(sessionId: string, endedAt: number): Promise<void> {
         await this.db
-            .prepare("UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL")
-            .run(endedAt, sessionId);
+            .update(sessionsTable)
+            .set({ endedAt })
+            .where(and(eq(sessionsTable.id, sessionId), isNull(sessionsTable.endedAt)));
     }
 
     /**
@@ -68,14 +66,14 @@ export class SessionsRepository {
      */
     async invalidate(sessionId: string, historyId: number): Promise<void> {
         await this.db
-            .prepare(
-                `
-              UPDATE sessions
-              SET invalidated_at = ?
-              WHERE id = ? AND (invalidated_at IS NULL OR invalidated_at < ?)
-            `
-            )
-            .run(historyId, sessionId, historyId);
+            .update(sessionsTable)
+            .set({ invalidatedAt: historyId })
+            .where(
+                and(
+                    eq(sessionsTable.id, sessionId),
+                    or(isNull(sessionsTable.invalidatedAt), lt(sessionsTable.invalidatedAt, historyId))
+                )
+            );
     }
 
     /**
@@ -83,10 +81,13 @@ export class SessionsRepository {
      * Expects: limit > 0.
      */
     async findInvalidated(limit: number): Promise<SessionDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM sessions WHERE invalidated_at IS NOT NULL ORDER BY invalidated_at ASC LIMIT ?")
-            .all(limit)) as DatabaseSessionRow[];
-        return rows.map((row) => this.sessionParse(row));
+        const rows = await this.db
+            .select()
+            .from(sessionsTable)
+            .where(isNotNull(sessionsTable.invalidatedAt))
+            .orderBy(asc(sessionsTable.invalidatedAt))
+            .limit(limit);
+        return rows.map((row) => sessionParse(row));
     }
 
     /**
@@ -96,27 +97,23 @@ export class SessionsRepository {
      */
     async markProcessed(sessionId: string, processedUntil: number, expectedInvalidatedAt: number): Promise<boolean> {
         const result = await this.db
-            .prepare(
-                `
-              UPDATE sessions
-              SET invalidated_at = NULL, processed_until = ?
-              WHERE id = ? AND invalidated_at = ?
-            `
-            )
-            .run(processedUntil, sessionId, expectedInvalidatedAt);
-        return result.changes === 1;
+            .update(sessionsTable)
+            .set({ invalidatedAt: null, processedUntil })
+            .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.invalidatedAt, expectedInvalidatedAt)))
+            .returning({ id: sessionsTable.id });
+        return result.length === 1;
     }
+}
 
-    private sessionParse(row: DatabaseSessionRow): SessionDbRecord {
-        return {
-            id: row.id,
-            agentId: row.agent_id,
-            inferenceSessionId: row.inference_session_id,
-            createdAt: row.created_at,
-            resetMessage: row.reset_message,
-            invalidatedAt: row.invalidated_at ?? null,
-            processedUntil: row.processed_until ?? null,
-            endedAt: row.ended_at ?? null
-        };
-    }
+function sessionParse(row: typeof sessionsTable.$inferSelect): SessionDbRecord {
+    return {
+        id: row.id,
+        agentId: row.agentId,
+        inferenceSessionId: row.inferenceSessionId,
+        createdAt: row.createdAt,
+        resetMessage: row.resetMessage,
+        invalidatedAt: row.invalidatedAt ?? null,
+        processedUntil: row.processedUntil ?? null,
+        endedAt: row.endedAt ?? null
+    };
 }

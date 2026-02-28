@@ -40,7 +40,7 @@ describe("Webhooks", () => {
             await expect(storage.tasks.findById(contextBuild("user-a"), "task-a")).resolves.toBeNull();
             expect(postAndAwait).not.toHaveBeenCalled();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -90,7 +90,7 @@ describe("Webhooks", () => {
                 })
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -105,7 +105,7 @@ describe("Webhooks", () => {
             });
             await expect(webhooks.trigger("missing")).rejects.toThrow("Webhook trigger not found: missing");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

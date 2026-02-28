@@ -1,19 +1,16 @@
+import { and, asc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { channelMembersTable, channelsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type {
-    ChannelDbRecord,
-    ChannelMemberDbRecord,
-    DatabaseChannelMemberRow,
-    DatabaseChannelRow
-} from "./databaseTypes.js";
+import type { ChannelDbRecord, ChannelMemberDbRecord } from "./databaseTypes.js";
 
 /**
- * Channels repository backed by SQLite with write-through caching.
+ * Channels repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for channels and channel_members.
  */
 export class ChannelsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly channelsById = new Map<string, ChannelDbRecord>();
     private readonly channelIdByName = new Map<string, string>();
     private readonly channelLocks = new Map<string, AsyncLock>();
@@ -21,32 +18,32 @@ export class ChannelsRepository {
     private readonly createLock = new AsyncLock();
     private allChannelsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: ChannelDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO channels (
-                    id,
-                    user_id,
-                    name,
-                    leader,
-                    created_at,
-                    updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    user_id = excluded.user_id,
-                    name = excluded.name,
-                    leader = excluded.leader,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(record.id, record.userId, record.name, record.leader, record.createdAt, record.updatedAt);
+                .insert(channelsTable)
+                .values({
+                    id: record.id,
+                    userId: record.userId,
+                    name: record.name,
+                    leader: record.leader,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: channelsTable.id,
+                    set: {
+                        userId: record.userId,
+                        name: record.name,
+                        leader: record.leader,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.channelCacheSet(record);
@@ -89,13 +86,12 @@ export class ChannelsRepository {
             return null;
         }
 
-        const row = (await this.db.prepare("SELECT * FROM channels WHERE name = ? LIMIT 1").get(name)) as
-            | DatabaseChannelRow
-            | undefined;
+        const rows = await this.db.select().from(channelsTable).where(eq(channelsTable.name, name)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        const parsed = this.channelParse(row);
+        const parsed = channelParse(row);
         await this.cacheLock.inLock(() => {
             this.channelCacheSet(parsed);
         });
@@ -103,10 +99,12 @@ export class ChannelsRepository {
     }
 
     async findMany(ctx: Context): Promise<ChannelDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM channels WHERE user_id = ? ORDER BY created_at ASC, id ASC")
-            .all(ctx.userId)) as DatabaseChannelRow[];
-        return rows.map((row) => channelClone(this.channelParse(row)));
+        const rows = await this.db
+            .select()
+            .from(channelsTable)
+            .where(eq(channelsTable.userId, ctx.userId))
+            .orderBy(asc(channelsTable.createdAt), asc(channelsTable.id));
+        return rows.map((row) => channelClone(channelParse(row)));
     }
 
     async findAll(): Promise<ChannelDbRecord[]> {
@@ -114,10 +112,11 @@ export class ChannelsRepository {
             return channelsSort(Array.from(this.channelsById.values())).map((record) => channelClone(record));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM channels ORDER BY created_at ASC, id ASC")
-            .all()) as DatabaseChannelRow[];
-        const parsed = rows.map((row) => this.channelParse(row));
+        const rows = await this.db
+            .select()
+            .from(channelsTable)
+            .orderBy(asc(channelsTable.createdAt), asc(channelsTable.id));
+        const parsed = rows.map((row) => channelParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const record of parsed) {
@@ -149,14 +148,15 @@ export class ChannelsRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                  UPDATE channels
-                  SET user_id = ?, name = ?, leader = ?, created_at = ?, updated_at = ?
-                  WHERE id = ?
-                `
-                )
-                .run(next.userId, next.name, next.leader, next.createdAt, next.updatedAt, id);
+                .update(channelsTable)
+                .set({
+                    userId: next.userId,
+                    name: next.name,
+                    leader: next.leader,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                })
+                .where(eq(channelsTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.channelCacheSet(next);
@@ -168,9 +168,10 @@ export class ChannelsRepository {
         const lock = this.channelLockForId(id);
         return lock.inLock(async () => {
             const current = this.channelsById.get(id) ?? (await this.channelLoadById(id));
-            const removed = await this.db.prepare("DELETE FROM channels WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(channelsTable)
+                .where(eq(channelsTable.id, id))
+                .returning({ id: channelsTable.id });
 
             await this.cacheLock.inLock(() => {
                 this.channelsById.delete(id);
@@ -179,7 +180,7 @@ export class ChannelsRepository {
                 }
             });
 
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
@@ -188,45 +189,49 @@ export class ChannelsRepository {
         record: Omit<ChannelMemberDbRecord, "id" | "channelId"> & { channelId?: string }
     ): Promise<ChannelMemberDbRecord> {
         await this.db
-            .prepare(
-                `
-              INSERT INTO channel_members (
-                channel_id,
-                user_id,
-                agent_id,
-                username,
-                joined_at
-              ) VALUES (?, ?, ?, ?, ?)
-              ON CONFLICT(channel_id, agent_id) DO UPDATE SET
-                user_id = excluded.user_id,
-                username = excluded.username,
-                joined_at = excluded.joined_at
-            `
-            )
-            .run(channelId, record.userId, record.agentId, record.username, record.joinedAt);
+            .insert(channelMembersTable)
+            .values({
+                channelId,
+                userId: record.userId,
+                agentId: record.agentId,
+                username: record.username,
+                joinedAt: record.joinedAt
+            })
+            .onConflictDoUpdate({
+                target: [channelMembersTable.channelId, channelMembersTable.agentId],
+                set: {
+                    userId: record.userId,
+                    username: record.username,
+                    joinedAt: record.joinedAt
+                }
+            });
 
-        const existing = (await this.db
-            .prepare("SELECT * FROM channel_members WHERE channel_id = ? AND agent_id = ? LIMIT 1")
-            .get(channelId, record.agentId)) as DatabaseChannelMemberRow | undefined;
-        if (!existing) {
+        const memberRows = await this.db
+            .select()
+            .from(channelMembersTable)
+            .where(and(eq(channelMembersTable.channelId, channelId), eq(channelMembersTable.agentId, record.agentId)))
+            .limit(1);
+        const memberRow = memberRows[0];
+        if (!memberRow) {
             throw new Error("Failed to load inserted channel member.");
         }
-        return memberParse(existing);
+        return memberParse(memberRow);
     }
 
     async removeMember(channelId: string, agentId: string): Promise<boolean> {
-        const removed = await this.db
-            .prepare("DELETE FROM channel_members WHERE channel_id = ? AND agent_id = ?")
-            .run(channelId, agentId);
-        const rawChanges = (removed as { changes?: number | bigint }).changes;
-        const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
-        return changes > 0;
+        const result = await this.db
+            .delete(channelMembersTable)
+            .where(and(eq(channelMembersTable.channelId, channelId), eq(channelMembersTable.agentId, agentId)))
+            .returning({ id: channelMembersTable.id });
+        return result.length > 0;
     }
 
     async findMembers(channelId: string): Promise<ChannelMemberDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM channel_members WHERE channel_id = ? ORDER BY joined_at ASC, id ASC")
-            .all(channelId)) as DatabaseChannelMemberRow[];
+        const rows = await this.db
+            .select()
+            .from(channelMembersTable)
+            .where(eq(channelMembersTable.channelId, channelId))
+            .orderBy(asc(channelMembersTable.joinedAt), asc(channelMembersTable.id));
         return rows.map((row) => memberParse(row));
     }
 
@@ -236,24 +241,12 @@ export class ChannelsRepository {
     }
 
     private async channelLoadById(id: string): Promise<ChannelDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM channels WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseChannelRow
-            | undefined;
+        const rows = await this.db.select().from(channelsTable).where(eq(channelsTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.channelParse(row);
-    }
-
-    private channelParse(row: DatabaseChannelRow): ChannelDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            name: row.name,
-            leader: row.leader,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
+        return channelParse(row);
     }
 
     private channelLockForId(channelId: string): AsyncLock {
@@ -267,6 +260,17 @@ export class ChannelsRepository {
     }
 }
 
+function channelParse(row: typeof channelsTable.$inferSelect): ChannelDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        name: row.name,
+        leader: row.leader,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
+}
+
 function channelClone(record: ChannelDbRecord): ChannelDbRecord {
     return {
         ...record
@@ -277,13 +281,13 @@ function channelsSort(records: ChannelDbRecord[]): ChannelDbRecord[] {
     return records.slice().sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
 }
 
-function memberParse(row: DatabaseChannelMemberRow): ChannelMemberDbRecord {
+function memberParse(row: typeof channelMembersTable.$inferSelect): ChannelMemberDbRecord {
     return {
         id: row.id,
-        channelId: row.channel_id,
-        userId: row.user_id,
-        agentId: row.agent_id,
+        channelId: row.channelId,
+        userId: row.userId,
+        agentId: row.agentId,
         username: row.username,
-        joinedAt: row.joined_at
+        joinedAt: row.joinedAt
     };
 }

@@ -48,7 +48,7 @@ describe("Processes", () => {
             }
             manager.unload();
         }
-        storage.db.close();
+        storage.connection.close();
         await fs.rm(baseDir, { recursive: true, force: true });
     });
 

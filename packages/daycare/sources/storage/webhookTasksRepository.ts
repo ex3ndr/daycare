@@ -1,21 +1,23 @@
+import { and, asc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { tasksWebhookTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseWebhookTaskRow, WebhookTaskDbRecord } from "./databaseTypes.js";
+import type { WebhookTaskDbRecord } from "./databaseTypes.js";
 
 /**
- * Webhook task repository backed by SQLite with write-through caching.
+ * Webhook task repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for tasks_webhook.
  */
 export class WebhookTasksRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly tasksById = new Map<string, WebhookTaskDbRecord>();
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allTasksLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -46,10 +48,12 @@ export class WebhookTasksRepository {
     }
 
     async findMany(ctx: Context): Promise<WebhookTaskDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks_webhook WHERE user_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId)) as DatabaseWebhookTaskRow[];
-        return rows.map((row) => webhookTaskClone(this.taskParse(row)));
+        const rows = await this.db
+            .select()
+            .from(tasksWebhookTable)
+            .where(eq(tasksWebhookTable.userId, ctx.userId))
+            .orderBy(asc(tasksWebhookTable.updatedAt));
+        return rows.map((row) => webhookTaskClone(webhookTaskParse(row)));
     }
 
     async findAll(): Promise<WebhookTaskDbRecord[]> {
@@ -57,10 +61,8 @@ export class WebhookTasksRepository {
             return webhookTasksSort(Array.from(this.tasksById.values())).map((task) => webhookTaskClone(task));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks_webhook ORDER BY updated_at ASC")
-            .all()) as DatabaseWebhookTaskRow[];
-        const parsed = rows.map((row) => this.taskParse(row));
+        const rows = await this.db.select().from(tasksWebhookTable).orderBy(asc(tasksWebhookTable.updatedAt));
+        const parsed = rows.map((row) => webhookTaskParse(row));
 
         await this.cacheLock.inLock(() => {
             this.tasksById.clear();
@@ -74,10 +76,12 @@ export class WebhookTasksRepository {
     }
 
     async findManyByTaskId(ctx: Context, taskId: string): Promise<WebhookTaskDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks_webhook WHERE user_id = ? AND task_id = ? ORDER BY updated_at ASC")
-            .all(ctx.userId, taskId)) as DatabaseWebhookTaskRow[];
-        return rows.map((row) => webhookTaskClone(this.taskParse(row)));
+        const rows = await this.db
+            .select()
+            .from(tasksWebhookTable)
+            .where(and(eq(tasksWebhookTable.userId, ctx.userId), eq(tasksWebhookTable.taskId, taskId)))
+            .orderBy(asc(tasksWebhookTable.updatedAt));
+        return rows.map((row) => webhookTaskClone(webhookTaskParse(row)));
     }
 
     async create(record: WebhookTaskDbRecord): Promise<void> {
@@ -88,25 +92,25 @@ export class WebhookTasksRepository {
 
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO tasks_webhook (
-                    id,
-                    task_id,
-                    user_id,
-                    agent_id,
-                    created_at,
-                    updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    task_id = excluded.task_id,
-                    user_id = excluded.user_id,
-                    agent_id = excluded.agent_id,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at
-                `
-                )
-                .run(record.id, taskId, record.userId, record.agentId, record.createdAt, record.updatedAt);
+                .insert(tasksWebhookTable)
+                .values({
+                    id: record.id,
+                    taskId,
+                    userId: record.userId,
+                    agentId: record.agentId,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                })
+                .onConflictDoUpdate({
+                    target: tasksWebhookTable.id,
+                    set: {
+                        taskId,
+                        userId: record.userId,
+                        agentId: record.agentId,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(record);
@@ -117,15 +121,16 @@ export class WebhookTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const removed = await this.db.prepare("DELETE FROM tasks_webhook WHERE id = ?").run(id);
-            const rawChanges = (removed as { changes?: number | bigint }).changes;
-            const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
+            const result = await this.db
+                .delete(tasksWebhookTable)
+                .where(eq(tasksWebhookTable.id, id))
+                .returning({ id: tasksWebhookTable.id });
 
             await this.cacheLock.inLock(() => {
                 this.tasksById.delete(id);
             });
 
-            return changes > 0;
+            return result.length > 0;
         });
     }
 
@@ -134,28 +139,12 @@ export class WebhookTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<WebhookTaskDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM tasks_webhook WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseWebhookTaskRow
-            | undefined;
+        const rows = await this.db.select().from(tasksWebhookTable).where(eq(tasksWebhookTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.taskParse(row);
-    }
-
-    private taskParse(row: DatabaseWebhookTaskRow): WebhookTaskDbRecord {
-        const taskId = row.task_id?.trim();
-        if (!taskId) {
-            throw new Error(`Webhook trigger ${row.id} is missing required task_id.`);
-        }
-        return {
-            id: row.id,
-            taskId,
-            userId: row.user_id,
-            agentId: row.agent_id,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-        };
+        return webhookTaskParse(row);
     }
 
     private taskLockForId(taskId: string): AsyncLock {
@@ -167,6 +156,21 @@ export class WebhookTasksRepository {
         this.taskLocks.set(taskId, lock);
         return lock;
     }
+}
+
+function webhookTaskParse(row: typeof tasksWebhookTable.$inferSelect): WebhookTaskDbRecord {
+    const taskId = row.taskId?.trim();
+    if (!taskId) {
+        throw new Error(`Webhook trigger ${row.id} is missing required task_id.`);
+    }
+    return {
+        id: row.id,
+        taskId,
+        userId: row.userId,
+        agentId: row.agentId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+    };
 }
 
 function webhookTaskClone(record: WebhookTaskDbRecord): WebhookTaskDbRecord {

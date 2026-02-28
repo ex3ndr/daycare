@@ -88,7 +88,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -130,7 +130,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -170,7 +170,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -217,7 +217,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -240,7 +240,7 @@ describe("MemoryWorker", () => {
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).toBe(maxId);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -284,7 +284,7 @@ describe("MemoryWorker", () => {
 
             worker.stop();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

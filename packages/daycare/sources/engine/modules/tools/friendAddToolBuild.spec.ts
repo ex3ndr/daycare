@@ -54,7 +54,7 @@ describe("friendAddToolBuild", () => {
             expect(friends?.requestedA).toBe(true);
             expect(friends?.requestedB).toBe(true);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -94,7 +94,7 @@ describe("friendAddToolBuild", () => {
             expect(share?.requestedA).toBe(true);
             expect(share?.requestedB).toBe(true);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -125,7 +125,7 @@ describe("friendAddToolBuild", () => {
                 )
             ).rejects.toThrow("No pending share request for this subuser.");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -155,7 +155,7 @@ describe("friendAddToolBuild", () => {
                 )
             ).rejects.toThrow("You are not friends with subuser owner");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -181,7 +181,7 @@ describe("friendAddToolBuild", () => {
                 )
             ).rejects.toThrow("Friend request cooldown is active");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 

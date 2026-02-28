@@ -30,7 +30,7 @@ describe("agentSystemPromptSectionEnvironment", () => {
 
             expect(section).toContain("- Timezone: `America/New_York`");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -57,7 +57,7 @@ describe("agentSystemPromptSectionEnvironment", () => {
 
             expect(section).not.toContain("- Timezone:");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

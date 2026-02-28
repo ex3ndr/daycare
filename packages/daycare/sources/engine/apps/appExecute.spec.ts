@@ -175,7 +175,7 @@ describe("appExecute", () => {
         const updated = await agentStateRead(storage, contextForAgent({ userId: "user-1", agentId }));
         expect(updated?.permissions.workingDir).toBe(path.join(rootDir, "apps", "github-reviewer", "data"));
         expect(updated?.permissions.writeDirs).toEqual([path.join(rootDir, "apps", "github-reviewer", "data")]);
-        storage.db.close();
+        storage.connection.close();
     });
 
     it("posts app task asynchronously by default", async () => {
@@ -297,7 +297,7 @@ describe("appExecute", () => {
         expect(item.type).toBe("message");
         expect(item.message?.text).toContain("Task:");
         expect(item.message?.text).toContain("Review PR #99");
-        storage.db.close();
+        storage.connection.close();
     });
 });
 

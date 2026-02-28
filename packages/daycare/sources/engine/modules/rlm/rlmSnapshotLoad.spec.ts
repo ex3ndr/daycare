@@ -51,7 +51,7 @@ describe("rlmSnapshotLoad", () => {
                 });
                 expect(missing).toBeNull();
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });

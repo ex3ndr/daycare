@@ -1,21 +1,17 @@
 import { createId } from "@paralleldrive/cuid2";
+import { asc, eq } from "drizzle-orm";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
+import type { DaycareDb } from "../schema.js";
+import { userConnectorKeysTable, usersTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type {
-    CreateUserInput,
-    DatabaseUserConnectorKeyRow,
-    DatabaseUserRow,
-    UpdateUserInput,
-    UserWithConnectorKeysDbRecord
-} from "./databaseTypes.js";
+import type { CreateUserInput, UpdateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
 
 /**
- * Users repository backed by SQLite with write-through caching.
+ * Users repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for users and user_connector_keys.
  */
 export class UsersRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly usersById = new Map<string, UserWithConnectorKeysDbRecord>();
     private readonly userIdByConnectorKey = new Map<string, string>();
     private readonly userIdByNametag = new Map<string, string>();
@@ -24,7 +20,7 @@ export class UsersRepository {
     private readonly createLock = new AsyncLock();
     private allUsersLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -59,18 +55,13 @@ export class UsersRepository {
             return this.findById(cachedUserId);
         }
 
-        const row = (await this.db
-            .prepare(
-                `
-              SELECT user_id
-              FROM user_connector_keys
-              WHERE connector_key = ?
-              LIMIT 1
-            `
-            )
-            .get(key)) as { user_id?: string } | undefined;
+        const rows = await this.db
+            .select({ userId: userConnectorKeysTable.userId })
+            .from(userConnectorKeysTable)
+            .where(eq(userConnectorKeysTable.connectorKey, key))
+            .limit(1);
 
-        const userId = row?.user_id?.trim() ?? "";
+        const userId = rows[0]?.userId?.trim() ?? "";
         if (!userId) {
             return null;
         }
@@ -101,10 +92,12 @@ export class UsersRepository {
             return null;
         }
 
-        const row = (await this.db.prepare("SELECT id FROM users WHERE nametag = ? LIMIT 1").get(normalized)) as
-            | { id?: string }
-            | undefined;
-        const userId = row?.id?.trim() ?? "";
+        const rows = await this.db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.nametag, normalized))
+            .limit(1);
+        const userId = rows[0]?.id?.trim() ?? "";
         if (!userId) {
             return null;
         }
@@ -127,43 +120,33 @@ export class UsersRepository {
             return usersSort(Array.from(this.usersById.values())).map((user) => userClone(user));
         }
 
-        const userRows = (await this.db
-            .prepare("SELECT * FROM users ORDER BY created_at ASC, id ASC")
-            .all()) as DatabaseUserRow[];
-        const keyRows = (await this.db
-            .prepare(
-                `
-              SELECT id, user_id, connector_key
-              FROM user_connector_keys
-              ORDER BY id ASC
-            `
-            )
-            .all()) as DatabaseUserConnectorKeyRow[];
+        const userRows = await this.db.select().from(usersTable).orderBy(asc(usersTable.createdAt), asc(usersTable.id));
+        const keyRows = await this.db.select().from(userConnectorKeysTable).orderBy(asc(userConnectorKeysTable.id));
 
-        const keysByUserId = new Map<string, DatabaseUserConnectorKeyRow[]>();
+        const keysByUserId = new Map<string, (typeof keyRows)[number][]>();
         for (const keyRow of keyRows) {
-            const rows = keysByUserId.get(keyRow.user_id) ?? [];
+            const rows = keysByUserId.get(keyRow.userId) ?? [];
             rows.push(keyRow);
-            keysByUserId.set(keyRow.user_id, rows);
+            keysByUserId.set(keyRow.userId, rows);
         }
 
         const records = userRows.map((row) => {
             const record: UserWithConnectorKeysDbRecord = {
                 id: row.id,
-                isOwner: row.is_owner === 1,
-                parentUserId: row.parent_user_id ?? null,
+                isOwner: row.isOwner === 1,
+                parentUserId: row.parentUserId ?? null,
                 name: row.name ?? null,
-                firstName: row.first_name ?? null,
-                lastName: row.last_name ?? null,
+                firstName: row.firstName ?? null,
+                lastName: row.lastName ?? null,
                 country: row.country ?? null,
                 timezone: row.timezone ?? null,
                 nametag: row.nametag,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
+                createdAt: row.createdAt,
+                updatedAt: row.updatedAt,
                 connectorKeys: (keysByUserId.get(row.id) ?? []).map((keyRow) => ({
                     id: keyRow.id,
-                    userId: keyRow.user_id,
-                    connectorKey: keyRow.connector_key
+                    userId: keyRow.userId,
+                    connectorKey: keyRow.connectorKey
                 }))
             };
             return record;
@@ -189,10 +172,12 @@ export class UsersRepository {
         if (this.allUsersLoaded) {
             return null;
         }
-        const row = (await this.db.prepare("SELECT id FROM users WHERE is_owner = 1 LIMIT 1").get()) as
-            | { id?: string }
-            | undefined;
-        const userId = row?.id?.trim() ?? "";
+        const rows = await this.db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.isOwner, 1))
+            .limit(1);
+        const userId = rows[0]?.id?.trim() ?? "";
         if (!userId) {
             return null;
         }
@@ -221,23 +206,19 @@ export class UsersRepository {
             for (let attempt = 0; attempt < maxGeneratedNametagAttempts; attempt += 1) {
                 nametag = shouldGenerateNametag ? nametagGenerate() : explicitNametag;
                 try {
-                    await this.db
-                        .prepare(
-                            "INSERT INTO users (id, is_owner, parent_user_id, name, first_name, last_name, country, timezone, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                        )
-                        .run(
-                            id,
-                            isOwner ? 1 : 0,
-                            parentUserId,
-                            name,
-                            firstName,
-                            lastName,
-                            country,
-                            timezone,
-                            nametag,
-                            createdAt,
-                            updatedAt
-                        );
+                    await this.db.insert(usersTable).values({
+                        id,
+                        isOwner: isOwner ? 1 : 0,
+                        parentUserId,
+                        name,
+                        firstName,
+                        lastName,
+                        country,
+                        timezone,
+                        nametag,
+                        createdAt,
+                        updatedAt
+                    });
                     break;
                 } catch (error) {
                     if (!shouldGenerateNametag || !sqliteUniqueConstraintOnNametagIs(error)) {
@@ -253,13 +234,15 @@ export class UsersRepository {
 
             const connectorKeys: UserWithConnectorKeysDbRecord["connectorKeys"] = [];
             if (connectorKey) {
-                const inserted = (await this.db
-                    .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?) RETURNING id")
-                    .get(id, connectorKey)) as { id: number | bigint } | undefined;
-                if (!inserted) {
+                const inserted = await this.db
+                    .insert(userConnectorKeysTable)
+                    .values({ userId: id, connectorKey })
+                    .returning({ id: userConnectorKeysTable.id });
+                const insertedRow = inserted[0];
+                if (!insertedRow) {
                     throw new Error("Failed to insert connector key.");
                 }
-                connectorKeys.push({ id: Number(inserted.id), userId: id, connectorKey });
+                connectorKeys.push({ id: Number(insertedRow.id), userId: id, connectorKey });
             }
 
             const record: UserWithConnectorKeysDbRecord = {
@@ -303,23 +286,17 @@ export class UsersRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                  UPDATE users
-                  SET is_owner = ?, first_name = ?, last_name = ?, country = ?, timezone = ?, created_at = ?, updated_at = ?
-                  WHERE id = ?
-                `
-                )
-                .run(
-                    next.isOwner ? 1 : 0,
-                    next.firstName,
-                    next.lastName,
-                    next.country,
-                    next.timezone,
-                    next.createdAt,
-                    next.updatedAt,
-                    id
-                );
+                .update(usersTable)
+                .set({
+                    isOwner: next.isOwner ? 1 : 0,
+                    firstName: next.firstName,
+                    lastName: next.lastName,
+                    country: next.country,
+                    timezone: next.timezone,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                })
+                .where(eq(usersTable.id, id));
 
             await this.cacheLock.inLock(() => {
                 this.userCacheSet(next);
@@ -331,7 +308,7 @@ export class UsersRepository {
         const lock = this.userLockForId(id);
         await lock.inLock(async () => {
             const current = this.usersById.get(id) ?? (await this.userLoadById(id));
-            await this.db.prepare("DELETE FROM users WHERE id = ?").run(id);
+            await this.db.delete(usersTable).where(eq(usersTable.id, id));
             await this.cacheLock.inLock(() => {
                 if (current) {
                     for (const connectorKey of current.connectorKeys) {
@@ -365,13 +342,15 @@ export class UsersRepository {
                 throw new Error(`User not found: ${userId}`);
             }
 
-            const inserted = (await this.db
-                .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?) RETURNING id")
-                .get(userId, connectorKey)) as { id: number | bigint } | undefined;
-            if (!inserted) {
+            const inserted = await this.db
+                .insert(userConnectorKeysTable)
+                .values({ userId, connectorKey })
+                .returning({ id: userConnectorKeysTable.id });
+            const insertedRow = inserted[0];
+            if (!insertedRow) {
                 throw new Error("Failed to insert connector key.");
             }
-            const rowId = Number(inserted.id);
+            const rowId = Number(insertedRow.id);
 
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
@@ -394,39 +373,33 @@ export class UsersRepository {
     }
 
     private async userLoadById(userId: string): Promise<UserWithConnectorKeysDbRecord | null> {
-        const userRow = (await this.db.prepare("SELECT * FROM users WHERE id = ? LIMIT 1").get(userId)) as
-            | DatabaseUserRow
-            | undefined;
+        const userRows = await this.db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+        const userRow = userRows[0];
         if (!userRow) {
             return null;
         }
-        const keyRows = (await this.db
-            .prepare(
-                `
-              SELECT id, user_id, connector_key
-              FROM user_connector_keys
-              WHERE user_id = ?
-              ORDER BY id ASC
-            `
-            )
-            .all(userId)) as DatabaseUserConnectorKeyRow[];
+        const keyRows = await this.db
+            .select()
+            .from(userConnectorKeysTable)
+            .where(eq(userConnectorKeysTable.userId, userId))
+            .orderBy(asc(userConnectorKeysTable.id));
 
         return {
             id: userRow.id,
-            isOwner: userRow.is_owner === 1,
-            parentUserId: userRow.parent_user_id ?? null,
+            isOwner: userRow.isOwner === 1,
+            parentUserId: userRow.parentUserId ?? null,
             name: userRow.name ?? null,
-            firstName: userRow.first_name ?? null,
-            lastName: userRow.last_name ?? null,
+            firstName: userRow.firstName ?? null,
+            lastName: userRow.lastName ?? null,
             country: userRow.country ?? null,
             timezone: userRow.timezone ?? null,
             nametag: userRow.nametag,
-            createdAt: userRow.created_at,
-            updatedAt: userRow.updated_at,
+            createdAt: userRow.createdAt,
+            updatedAt: userRow.updatedAt,
             connectorKeys: keyRows.map((row) => ({
                 id: row.id,
-                userId: row.user_id,
-                connectorKey: row.connector_key
+                userId: row.userId,
+                connectorKey: row.connectorKey
             }))
         };
     }

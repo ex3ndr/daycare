@@ -50,7 +50,7 @@ describe("AgentsRepository", () => {
             expect(listed).toHaveLength(1);
             expect(listed[0]?.id).toBe("agent-1");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -79,11 +79,11 @@ describe("AgentsRepository", () => {
             const first = await repo.findById("agent-cache");
             expect(first?.id).toBe("agent-cache");
 
-            storage.db.prepare("DELETE FROM agents WHERE id = ?").run("agent-cache");
+            storage.connection.prepare("DELETE FROM agents WHERE id = ?").run("agent-cache");
             const second = await repo.findById("agent-cache");
             expect(second?.id).toBe("agent-cache");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -95,7 +95,7 @@ describe("AgentsRepository", () => {
                 throw new Error("Owner user missing");
             }
             const repo = new AgentsRepository(storage.db);
-            storage.db
+            storage.connection
                 .prepare(
                     `
                   INSERT INTO agents (
@@ -131,7 +131,7 @@ describe("AgentsRepository", () => {
             expect(loaded?.id).toBe("agent-db");
             expect(loaded?.updatedAt).toBe(2);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -179,7 +179,7 @@ describe("AgentsRepository", () => {
             const otherAgents = await repo.findByUserId(otherUser.id);
             expect(otherAgents.map((agent) => agent.id)).toEqual(["agent-other"]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

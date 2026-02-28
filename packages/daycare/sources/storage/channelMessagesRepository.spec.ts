@@ -9,10 +9,10 @@ describe("ChannelMessagesRepository", () => {
     it("creates messages and returns recent entries", async () => {
         const storage = await storageOpenTest();
         try {
-            const repository = new ChannelMessagesRepository(storage.drizzle);
+            const repository = new ChannelMessagesRepository(storage.db);
 
             // Create parent channel required by FK constraint
-            await storage.drizzle.insert(channelsTable).values({
+            await storage.db.insert(channelsTable).values({
                 id: "channel-1",
                 userId: "user-a",
                 name: "test-channel",
@@ -37,7 +37,7 @@ describe("ChannelMessagesRepository", () => {
             expect(recent.map((entry) => entry.id)).toEqual(["m-3", "m-4"]);
             expect(recent[1]?.mentions).toEqual(["bob"]);
         } finally {
-            await storage.db.close();
+            await storage.connection.close();
         }
     });
 });

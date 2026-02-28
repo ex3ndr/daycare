@@ -1,20 +1,22 @@
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { tasksTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseTaskRow, TaskDbRecord } from "./databaseTypes.js";
+import type { TaskDbRecord } from "./databaseTypes.js";
 
 /**
- * Unified tasks repository backed by SQLite with write-through caching.
+ * Unified tasks repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for tasks.
  */
 export class TasksRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly tasksById = new Map<string, TaskDbRecord>();
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -75,17 +77,21 @@ export class TasksRepository {
     }
 
     async findMany(ctx: Context): Promise<TaskDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks WHERE user_id = ? AND deleted_at IS NULL ORDER BY updated_at ASC")
-            .all(ctx.userId)) as DatabaseTaskRow[];
-        return rows.map((row) => taskClone(this.taskParse(row)));
+        const rows = await this.db
+            .select()
+            .from(tasksTable)
+            .where(and(eq(tasksTable.userId, ctx.userId), isNull(tasksTable.deletedAt)))
+            .orderBy(asc(tasksTable.updatedAt));
+        return rows.map((row) => taskClone(taskParse(row)));
     }
 
     async findAll(): Promise<TaskDbRecord[]> {
-        const rows = (await this.db
-            .prepare("SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY updated_at ASC")
-            .all()) as DatabaseTaskRow[];
-        const parsed = rows.map((row) => this.taskParse(row));
+        const rows = await this.db
+            .select()
+            .from(tasksTable)
+            .where(isNull(tasksTable.deletedAt))
+            .orderBy(asc(tasksTable.updatedAt));
+        const parsed = rows.map((row) => taskParse(row));
 
         await this.cacheLock.inLock(() => {
             for (const task of parsed) {
@@ -108,38 +114,29 @@ export class TasksRepository {
             }
 
             await this.db
-                .prepare(
-                    `
-                    INSERT INTO tasks (
-                        id,
-                        user_id,
-                        title,
-                        description,
-                        code,
-                        created_at,
-                        updated_at,
-                        deleted_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(user_id, id) DO UPDATE SET
-                        user_id = excluded.user_id,
-                        title = excluded.title,
-                        description = excluded.description,
-                        code = excluded.code,
-                        created_at = excluded.created_at,
-                        updated_at = excluded.updated_at,
-                        deleted_at = excluded.deleted_at
-                    `
-                )
-                .run(
-                    record.id,
+                .insert(tasksTable)
+                .values({
+                    id: record.id,
                     userId,
-                    record.title,
-                    record.description,
-                    record.code,
-                    record.createdAt,
-                    record.updatedAt,
-                    record.deletedAt ?? null
-                );
+                    title: record.title,
+                    description: record.description,
+                    code: record.code,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt,
+                    deletedAt: record.deletedAt ?? null
+                })
+                .onConflictDoUpdate({
+                    target: [tasksTable.userId, tasksTable.id],
+                    set: {
+                        userId,
+                        title: record.title,
+                        description: record.description,
+                        code: record.code,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt,
+                        deletedAt: record.deletedAt ?? null
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet({
@@ -174,31 +171,17 @@ export class TasksRepository {
             };
 
             await this.db
-                .prepare(
-                    `
-                    UPDATE tasks
-                    SET
-                        user_id = ?,
-                        title = ?,
-                        description = ?,
-                        code = ?,
-                        created_at = ?,
-                        updated_at = ?,
-                        deleted_at = ?
-                    WHERE user_id = ? AND id = ?
-                    `
-                )
-                .run(
-                    next.userId,
-                    next.title,
-                    next.description,
-                    next.code,
-                    next.createdAt,
-                    next.updatedAt,
-                    next.deletedAt ?? null,
-                    current.userId,
-                    id
-                );
+                .update(tasksTable)
+                .set({
+                    userId: next.userId,
+                    title: next.title,
+                    description: next.description,
+                    code: next.code,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt,
+                    deletedAt: next.deletedAt ?? null
+                })
+                .where(and(eq(tasksTable.userId, current.userId), eq(tasksTable.id, id)));
 
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet(next);
@@ -220,10 +203,9 @@ export class TasksRepository {
             }
             const now = Date.now();
             await this.db
-                .prepare(
-                    "UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ? AND deleted_at IS NULL"
-                )
-                .run(now, now, userId, id);
+                .update(tasksTable)
+                .set({ deletedAt: now, updatedAt: now })
+                .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id), isNull(tasksTable.deletedAt)));
             await this.cacheLock.inLock(() => {
                 this.taskCacheSet({
                     ...current,
@@ -240,26 +222,16 @@ export class TasksRepository {
     }
 
     private async taskLoadById(userId: string, id: string): Promise<TaskDbRecord | null> {
-        const row = (await this.db
-            .prepare("SELECT * FROM tasks WHERE user_id = ? AND id = ? LIMIT 1")
-            .get(userId, id)) as DatabaseTaskRow | undefined;
+        const rows = await this.db
+            .select()
+            .from(tasksTable)
+            .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id)))
+            .limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.taskParse(row);
-    }
-
-    private taskParse(row: DatabaseTaskRow): TaskDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            title: row.title,
-            description: row.description,
-            code: row.code,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            deletedAt: row.deleted_at
-        };
+        return taskParse(row);
     }
 
     private taskLockForId(taskId: string): AsyncLock {
@@ -271,6 +243,19 @@ export class TasksRepository {
         this.taskLocks.set(taskId, lock);
         return lock;
     }
+}
+
+function taskParse(row: typeof tasksTable.$inferSelect): TaskDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        title: row.title,
+        description: row.description,
+        code: row.code,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        deletedAt: row.deletedAt
+    };
 }
 
 function taskClone(record: TaskDbRecord): TaskDbRecord {

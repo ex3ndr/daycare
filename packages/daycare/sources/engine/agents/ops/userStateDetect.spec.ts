@@ -18,7 +18,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "nonexistent");
             expect(state).toBe("new_user");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -31,7 +31,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("new_user");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -60,7 +60,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("new_user");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -91,7 +91,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("active_user");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -128,7 +128,7 @@ describe("userStateDetect", () => {
             const state = await userStateDetect(storage, "u1");
             expect(state).toBe("returning_user");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -168,7 +168,7 @@ describe("userStateDetect", () => {
             // Even though user is < 7 days old, compaction means they're not "new"
             expect(state).toBe("active_user");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

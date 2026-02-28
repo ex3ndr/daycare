@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpenTest } from "./databaseOpenTest.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("SignalEventsRepository", () => {
     it("creates records and filters by user/type", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new SignalEventsRepository(db);
+            const repository = new SignalEventsRepository(storage.db);
 
             await repository.create({
                 id: "ev-1",
@@ -47,15 +46,14 @@ describe("SignalEventsRepository", () => {
             expect(byBoth.map((entry) => entry.id)).toEqual(["ev-1"]);
             expect(byUser.every((entry) => entry.userId === "user-a")).toBe(true);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 
     it("returns recent records with limit normalization", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new SignalEventsRepository(db);
+            const repository = new SignalEventsRepository(storage.db);
 
             for (let index = 1; index <= 5; index += 1) {
                 await repository.create({
@@ -74,23 +72,10 @@ describe("SignalEventsRepository", () => {
             expect(recentTwo.map((entry) => entry.id)).toEqual(["ev-4", "ev-5"]);
             expect(recentHuge).toHaveLength(5);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE signals_events (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            type TEXT NOT NULL,
-            source TEXT NOT NULL,
-            data TEXT,
-            created_at INTEGER NOT NULL
-        );
-    `);
-}
 
 function ctxBuild(userId: string): Context {
     return { agentId: "test-agent", userId };

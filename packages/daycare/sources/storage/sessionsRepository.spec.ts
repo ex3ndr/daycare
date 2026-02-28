@@ -61,7 +61,7 @@ describe("SessionsRepository", () => {
             expect(listed[0]?.createdAt).toBe(5);
             expect(listed[1]?.createdAt).toBe(8);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -77,7 +77,7 @@ describe("SessionsRepository", () => {
                 const session = await sessions.findById(sessionId);
                 expect(session?.endedAt).toBe(2000);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -93,7 +93,7 @@ describe("SessionsRepository", () => {
                 const session = await sessions.findById(sessionId);
                 expect(session?.endedAt).toBe(2000);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
     });
@@ -110,7 +110,7 @@ describe("SessionsRepository", () => {
                 const session = await sessions.findById(sessionId);
                 expect(session?.invalidatedAt).toBe(42);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -126,7 +126,7 @@ describe("SessionsRepository", () => {
                 const session = await sessions.findById(sessionId);
                 expect(session?.invalidatedAt).toBe(20);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -142,7 +142,7 @@ describe("SessionsRepository", () => {
                 const session = await sessions.findById(sessionId);
                 expect(session?.invalidatedAt).toBe(20);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
     });
@@ -162,7 +162,7 @@ describe("SessionsRepository", () => {
                 const result = await sessions.findInvalidated(10);
                 expect(result.map((r) => r.id)).toEqual([s1, s2]);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -180,7 +180,7 @@ describe("SessionsRepository", () => {
                 expect(result).toHaveLength(1);
                 expect(result[0]?.id).toBe(s1);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -198,7 +198,7 @@ describe("SessionsRepository", () => {
                 expect(result[0]?.id).toBe(s2);
                 expect(result[1]?.id).toBe(s1);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
     });
@@ -218,7 +218,7 @@ describe("SessionsRepository", () => {
                 expect(session?.invalidatedAt).toBeNull();
                 expect(session?.processedUntil).toBe(42);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
 
@@ -238,7 +238,7 @@ describe("SessionsRepository", () => {
                 expect(session?.invalidatedAt).toBe(100);
                 expect(session?.processedUntil).toBeNull();
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         });
     });

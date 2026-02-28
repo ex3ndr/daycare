@@ -55,7 +55,7 @@ describe("rlmSnapshotSave", () => {
                 });
                 expect(loaded).toEqual(Buffer.from([1, 2, 3]));
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });

@@ -1,9 +1,9 @@
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
+import type { DaycareDb } from "../schema.js";
+import { signalsEventsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseSignalEventRow, SignalEventDbRecord } from "./databaseTypes.js";
-
-type SQLInputValue = string | number | bigint | Uint8Array | null;
+import type { SignalEventDbRecord } from "./databaseTypes.js";
 
 export type SignalEventsFindManyOptions = {
     type?: string;
@@ -16,50 +16,43 @@ type SignalEventsQueryOptions = SignalEventsFindManyOptions & {
 };
 
 /**
- * Signal events repository backed by SQLite with write-through caching.
+ * Signal events repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for signals_events.
  */
 export class SignalEventsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
     private readonly eventsById = new Map<string, SignalEventDbRecord>();
     private readonly eventLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
     private allEventsLoaded = false;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: SignalEventDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             await this.db
-                .prepare(
-                    `
-                  INSERT INTO signals_events (
-                    id,
-                    user_id,
-                    type,
-                    source,
-                    data,
-                    created_at
-                  ) VALUES (?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    user_id = excluded.user_id,
-                    type = excluded.type,
-                    source = excluded.source,
-                    data = excluded.data,
-                    created_at = excluded.created_at
-                `
-                )
-                .run(
-                    record.id,
-                    record.userId,
-                    record.type,
-                    JSON.stringify(record.source),
-                    record.data === undefined ? null : JSON.stringify(record.data),
-                    record.createdAt
-                );
+                .insert(signalsEventsTable)
+                .values({
+                    id: record.id,
+                    userId: record.userId,
+                    type: record.type,
+                    source: JSON.stringify(record.source),
+                    data: record.data === undefined ? null : JSON.stringify(record.data),
+                    createdAt: record.createdAt
+                })
+                .onConflictDoUpdate({
+                    target: signalsEventsTable.id,
+                    set: {
+                        userId: record.userId,
+                        type: record.type,
+                        source: JSON.stringify(record.source),
+                        data: record.data === undefined ? null : JSON.stringify(record.data),
+                        createdAt: record.createdAt
+                    }
+                });
 
             await this.cacheLock.inLock(() => {
                 this.eventCacheSet(record);
@@ -80,33 +73,31 @@ export class SignalEventsRepository {
             return signalEventsSort(Array.from(this.eventsById.values())).map((event) => signalEventClone(event));
         }
 
-        const where: string[] = [];
-        const values: SQLInputValue[] = [];
+        // Build dynamic WHERE conditions
+        const conditions = [];
         if (options.userId) {
-            where.push("user_id = ?");
-            values.push(options.userId);
+            conditions.push(eq(signalsEventsTable.userId, options.userId));
         }
         if (options.type) {
-            where.push("type = ?");
-            values.push(options.type);
+            conditions.push(eq(signalsEventsTable.type, options.type));
         }
 
-        let sql = "SELECT * FROM signals_events";
-        if (where.length > 0) {
-            sql += ` WHERE ${where.join(" AND ")}`;
-        }
-        sql += " ORDER BY created_at ASC, id ASC";
+        let query = this.db
+            .select()
+            .from(signalsEventsTable)
+            .where(conditions.length > 0 ? and(...conditions) : undefined)
+            .orderBy(asc(signalsEventsTable.createdAt), asc(signalsEventsTable.id))
+            .$dynamic();
+
         if (limit !== null) {
-            sql += " LIMIT ?";
-            values.push(limit);
+            query = query.limit(limit);
         }
         if (offset > 0) {
-            sql += " OFFSET ?";
-            values.push(offset);
+            query = query.offset(offset);
         }
 
-        const rows = (await this.db.prepare(sql).all(...values)) as DatabaseSignalEventRow[];
-        const parsed = rows.map((row) => this.eventParse(row));
+        const rows = await query;
+        const parsed = rows.map((row) => eventParse(row));
 
         if (!hasFilter) {
             await this.cacheLock.inLock(() => {
@@ -122,10 +113,13 @@ export class SignalEventsRepository {
 
     async findRecent(ctx: Context, limit = 200): Promise<SignalEventDbRecord[]> {
         const normalizedLimit = Math.min(1000, Math.max(1, Math.floor(limit)));
-        const rows = (await this.db
-            .prepare("SELECT * FROM signals_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?")
-            .all(ctx.userId, normalizedLimit)) as DatabaseSignalEventRow[];
-        const parsed = rows.map((row) => this.eventParse(row)).reverse();
+        const rows = await this.db
+            .select()
+            .from(signalsEventsTable)
+            .where(eq(signalsEventsTable.userId, ctx.userId))
+            .orderBy(desc(signalsEventsTable.createdAt), desc(signalsEventsTable.id))
+            .limit(normalizedLimit);
+        const parsed = rows.map((row) => eventParse(row)).reverse();
         return parsed.map((event) => signalEventClone(event));
     }
 
@@ -140,10 +134,12 @@ export class SignalEventsRepository {
             return all.slice(all.length - normalizedLimit).map((event) => signalEventClone(event));
         }
 
-        const rows = (await this.db
-            .prepare("SELECT * FROM signals_events ORDER BY created_at DESC, id DESC LIMIT ?")
-            .all(normalizedLimit)) as DatabaseSignalEventRow[];
-        const parsed = rows.map((row) => this.eventParse(row)).reverse();
+        const rows = await this.db
+            .select()
+            .from(signalsEventsTable)
+            .orderBy(desc(signalsEventsTable.createdAt), desc(signalsEventsTable.id))
+            .limit(normalizedLimit);
+        const parsed = rows.map((row) => eventParse(row)).reverse();
         return parsed.map((event) => signalEventClone(event));
     }
 
@@ -187,24 +183,12 @@ export class SignalEventsRepository {
     }
 
     private async eventLoadById(id: string): Promise<SignalEventDbRecord | null> {
-        const row = (await this.db.prepare("SELECT * FROM signals_events WHERE id = ? LIMIT 1").get(id)) as
-            | DatabaseSignalEventRow
-            | undefined;
+        const rows = await this.db.select().from(signalsEventsTable).where(eq(signalsEventsTable.id, id)).limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
-        return this.eventParse(row);
-    }
-
-    private eventParse(row: DatabaseSignalEventRow): SignalEventDbRecord {
-        return {
-            id: row.id,
-            userId: row.user_id,
-            type: row.type,
-            source: sourceParse(row.source),
-            data: dataParse(row.data),
-            createdAt: row.created_at
-        };
+        return eventParse(row);
     }
 
     private eventLockForId(eventId: string): AsyncLock {
@@ -216,6 +200,25 @@ export class SignalEventsRepository {
         this.eventLocks.set(eventId, lock);
         return lock;
     }
+}
+
+/** Converts a Drizzle row (camelCase) to the application record type. */
+function eventParse(row: {
+    id: string;
+    userId: string;
+    type: string;
+    source: string;
+    data: string | null;
+    createdAt: number;
+}): SignalEventDbRecord {
+    return {
+        id: row.id,
+        userId: row.userId,
+        type: row.type,
+        source: sourceParse(row.source),
+        data: dataParse(row.data),
+        createdAt: row.createdAt
+    };
 }
 
 function sourceParse(raw: string): SignalEventDbRecord["source"] {

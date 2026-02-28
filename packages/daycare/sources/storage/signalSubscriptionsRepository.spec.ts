@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
 
-import { databaseOpenTest } from "./databaseOpenTest.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("SignalSubscriptionsRepository", () => {
     it("creates, updates, deletes, and reads subscriptions", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new SignalSubscriptionsRepository(db);
+            const repository = new SignalSubscriptionsRepository(storage.db);
 
             await repository.create({
                 id: "sub-1",
@@ -41,15 +40,14 @@ describe("SignalSubscriptionsRepository", () => {
             expect(removed).toBe(true);
             expect(missing).toBeNull();
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 
     it("matches patterns and user scope", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new SignalSubscriptionsRepository(db);
+            const repository = new SignalSubscriptionsRepository(storage.db);
 
             await repository.create({
                 id: "sub-a",
@@ -88,15 +86,14 @@ describe("SignalSubscriptionsRepository", () => {
             expect(allMatches.map((entry) => entry.id).sort()).toEqual(["sub-a", "sub-b"]);
             expect(userMatches.map((entry) => entry.id)).toEqual(["sub-a"]);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 
     it("normalizes ctx userId for keyed and matching lookups", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new SignalSubscriptionsRepository(db);
+            const repository = new SignalSubscriptionsRepository(storage.db);
 
             await repository.create({
                 id: "sub-trim",
@@ -114,25 +111,10 @@ describe("SignalSubscriptionsRepository", () => {
             expect(byKey?.id).toBe("sub-trim");
             expect(matching.map((entry) => entry.id)).toEqual(["sub-trim"]);
         } finally {
-            db.close();
+            storage.connection.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE signals_subscriptions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            agent_id TEXT NOT NULL,
-            pattern TEXT NOT NULL,
-            silent INTEGER NOT NULL DEFAULT 0,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            UNIQUE(user_id, agent_id, pattern)
-        );
-    `);
-}
 
 function ctxBuild(userId: string, agentId = "test-agent"): Context {
     return { agentId, userId };

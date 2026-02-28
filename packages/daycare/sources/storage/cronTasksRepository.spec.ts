@@ -64,7 +64,7 @@ describe("CronTasksRepository", () => {
             expect(await repo.delete("daily-report")).toBe(false);
             expect(await repo.findById("daily-report")).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -100,11 +100,11 @@ describe("CronTasksRepository", () => {
             const first = await repo.findById("cached-task");
             expect(first?.id).toBe("cached-task");
 
-            storage.db.prepare("DELETE FROM tasks_cron WHERE id = ?").run("cached-task");
+            storage.connection.prepare("DELETE FROM tasks_cron WHERE id = ?").run("cached-task");
             const second = await repo.findById("cached-task");
             expect(second?.id).toBe("cached-task");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

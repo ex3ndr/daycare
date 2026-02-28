@@ -37,7 +37,7 @@ describe("SystemPromptsRepository", () => {
             expect(found!.scope).toBe("global");
             expect(found!.enabled).toBe(true);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -47,7 +47,7 @@ describe("SystemPromptsRepository", () => {
             const found = await storage.systemPrompts.findById("nonexistent");
             expect(found).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -62,7 +62,7 @@ describe("SystemPromptsRepository", () => {
             expect(all[0]!.id).toBe("p1");
             expect(all[1]!.id).toBe("p2");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -80,7 +80,7 @@ describe("SystemPromptsRepository", () => {
             expect(userPrompts).toHaveLength(1);
             expect(userPrompts[0]!.id).toBe("u1");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -104,7 +104,7 @@ describe("SystemPromptsRepository", () => {
             expect(ids).not.toContain("g2");
             expect(ids).not.toContain("u2");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -121,7 +121,7 @@ describe("SystemPromptsRepository", () => {
             const found = await storage.systemPrompts.findById("p1");
             expect(found!.prompt).toBe("updated");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -135,7 +135,7 @@ describe("SystemPromptsRepository", () => {
             const found = await storage.systemPrompts.findById("p1");
             expect(found).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -145,7 +145,7 @@ describe("SystemPromptsRepository", () => {
             const deleted = await storage.systemPrompts.deleteById("nonexistent");
             expect(deleted).toBe(false);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -165,7 +165,7 @@ describe("SystemPromptsRepository", () => {
             const p3 = await storage.systemPrompts.findById("p3");
             expect(p3!.condition).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -178,7 +178,7 @@ describe("SystemPromptsRepository", () => {
             expect(found!.kind).toBe("first_message");
             expect(found!.prompt).toBe("Welcome!");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

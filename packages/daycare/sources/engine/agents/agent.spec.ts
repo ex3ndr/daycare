@@ -1257,7 +1257,7 @@ describe("Agent", () => {
             await connectorRegistry.unregisterAll("test");
         } finally {
             if (agentSystem) {
-                await agentSystem.storage.db.close().catch(() => undefined);
+                await agentSystem.storage.connection.close().catch(() => undefined);
             }
             await rm(dir, { recursive: true, force: true });
         }

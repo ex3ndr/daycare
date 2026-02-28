@@ -34,7 +34,7 @@ describe("friendSendToolBuild", () => {
                 })
             );
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -57,7 +57,7 @@ describe("friendSendToolBuild", () => {
                 )
             ).rejects.toThrow("You are not friends");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -111,7 +111,7 @@ describe("friendSendToolBuild", () => {
             );
             expect(postToUserAgents).not.toHaveBeenCalled();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -142,7 +142,7 @@ describe("friendSendToolBuild", () => {
                 )
             ).rejects.toThrow("No active shared access");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

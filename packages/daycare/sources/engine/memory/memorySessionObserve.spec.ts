@@ -91,7 +91,7 @@ describe("memorySessionObserve", () => {
             ]);
             expect(router.complete).toHaveBeenCalledOnce();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -148,7 +148,7 @@ describe("memorySessionObserve", () => {
             expect(context.systemPrompt).toContain("automated agent");
             expect(context.systemPrompt).not.toContain("between a person and an AI assistant");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -174,7 +174,7 @@ describe("memorySessionObserve", () => {
             expect(observations).toEqual([]);
             expect(router.complete).not.toHaveBeenCalled();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

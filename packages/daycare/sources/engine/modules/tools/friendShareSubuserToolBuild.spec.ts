@@ -47,7 +47,7 @@ describe("friendShareSubuserToolBuild", () => {
                 requestedB: false
             });
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -76,7 +76,7 @@ describe("friendShareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("You are not friends");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -108,7 +108,7 @@ describe("friendShareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("Subuser does not belong to the calling user.");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -142,7 +142,7 @@ describe("friendShareSubuserToolBuild", () => {
                 )
             ).rejects.toThrow("already shared");
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

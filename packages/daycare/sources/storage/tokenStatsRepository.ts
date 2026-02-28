@@ -1,9 +1,10 @@
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import type { Context } from "@/types";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { DatabaseTokenStatsHourlyRow, TokenStatsHourlyDbRecord } from "./databaseTypes.js";
+import type { DaycareDb } from "../schema.js";
+import { tokenStatsHourlyTable } from "../schema.js";
+import type { TokenStatsHourlyDbRecord } from "./databaseTypes.js";
 
 const HOUR_MS = 60 * 60 * 1000;
-type SQLInputValue = string | number | bigint | Uint8Array | null;
 
 export type TokenStatsIncrementInput = {
     at?: number;
@@ -29,9 +30,9 @@ export type TokenStatsFindManyOptions = {
  * Expects: schema migrations already applied for token_stats_hourly.
  */
 export class TokenStatsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -51,38 +52,33 @@ export class TokenStatsRepository {
         const hourStart = hourStartResolve(input.at ?? Date.now());
 
         await this.db
-            .prepare(
-                `
-                INSERT INTO token_stats_hourly (
-                    hour_start,
-                    user_id,
-                    agent_id,
-                    model,
-                    input_tokens,
-                    output_tokens,
-                    cache_read_tokens,
-                    cache_write_tokens,
-                    cost
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(hour_start, user_id, agent_id, model) DO UPDATE SET
-                    input_tokens = token_stats_hourly.input_tokens + excluded.input_tokens,
-                    output_tokens = token_stats_hourly.output_tokens + excluded.output_tokens,
-                    cache_read_tokens = token_stats_hourly.cache_read_tokens + excluded.cache_read_tokens,
-                    cache_write_tokens = token_stats_hourly.cache_write_tokens + excluded.cache_write_tokens,
-                    cost = token_stats_hourly.cost + excluded.cost
-            `
-            )
-            .run(
+            .insert(tokenStatsHourlyTable)
+            .values({
                 hourStart,
-                ctx.userId,
-                ctx.agentId,
+                userId: ctx.userId,
+                agentId: ctx.agentId,
                 model,
                 inputTokens,
                 outputTokens,
                 cacheReadTokens,
                 cacheWriteTokens,
                 cost
-            );
+            })
+            .onConflictDoUpdate({
+                target: [
+                    tokenStatsHourlyTable.hourStart,
+                    tokenStatsHourlyTable.userId,
+                    tokenStatsHourlyTable.agentId,
+                    tokenStatsHourlyTable.model
+                ],
+                set: {
+                    inputTokens: sql`${tokenStatsHourlyTable.inputTokens} + ${sql.raw("excluded.input_tokens")}`,
+                    outputTokens: sql`${tokenStatsHourlyTable.outputTokens} + ${sql.raw("excluded.output_tokens")}`,
+                    cacheReadTokens: sql`${tokenStatsHourlyTable.cacheReadTokens} + ${sql.raw("excluded.cache_read_tokens")}`,
+                    cacheWriteTokens: sql`${tokenStatsHourlyTable.cacheWriteTokens} + ${sql.raw("excluded.cache_write_tokens")}`,
+                    cost: sql`${tokenStatsHourlyTable.cost} + ${sql.raw("excluded.cost")}`
+                }
+            });
     }
 
     async findMany(
@@ -97,8 +93,7 @@ export class TokenStatsRepository {
     }
 
     async findAll(options: TokenStatsFindManyOptions = {}): Promise<TokenStatsHourlyDbRecord[]> {
-        const where: string[] = [];
-        const values: SQLInputValue[] = [];
+        const conditions = [];
 
         const from = options.from === undefined ? undefined : hourStartResolve(options.from);
         const to = options.to === undefined ? undefined : hourStartResolve(options.to);
@@ -107,53 +102,50 @@ export class TokenStatsRepository {
         const model = options.model?.trim();
 
         if (from !== undefined) {
-            where.push("hour_start >= ?");
-            values.push(from);
+            conditions.push(gte(tokenStatsHourlyTable.hourStart, from));
         }
         if (to !== undefined) {
-            where.push("hour_start <= ?");
-            values.push(to);
+            conditions.push(lte(tokenStatsHourlyTable.hourStart, to));
         }
         if (userId) {
-            where.push("user_id = ?");
-            values.push(userId);
+            conditions.push(eq(tokenStatsHourlyTable.userId, userId));
         }
         if (agentId) {
-            where.push("agent_id = ?");
-            values.push(agentId);
+            conditions.push(eq(tokenStatsHourlyTable.agentId, agentId));
         }
         if (model) {
-            where.push("model = ?");
-            values.push(model);
+            conditions.push(eq(tokenStatsHourlyTable.model, model));
         }
 
-        let sql = "SELECT * FROM token_stats_hourly";
-        if (where.length > 0) {
-            sql += ` WHERE ${where.join(" AND ")}`;
-        }
-        sql += " ORDER BY hour_start ASC, user_id ASC, agent_id ASC, model ASC";
-
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
         const limit = numberLimitResolve(options.limit);
-        if (limit !== null) {
-            sql += " LIMIT ?";
-            values.push(limit);
-        }
 
-        const rows = (await this.db.prepare(sql).all(...values)) as DatabaseTokenStatsHourlyRow[];
+        const baseQuery = this.db
+            .select()
+            .from(tokenStatsHourlyTable)
+            .where(whereClause)
+            .orderBy(
+                asc(tokenStatsHourlyTable.hourStart),
+                asc(tokenStatsHourlyTable.userId),
+                asc(tokenStatsHourlyTable.agentId),
+                asc(tokenStatsHourlyTable.model)
+            );
+
+        const rows = limit !== null ? await baseQuery.limit(limit) : await baseQuery;
         return rows.map((row) => rowParse(row));
     }
 }
 
-function rowParse(row: DatabaseTokenStatsHourlyRow): TokenStatsHourlyDbRecord {
+function rowParse(row: typeof tokenStatsHourlyTable.$inferSelect): TokenStatsHourlyDbRecord {
     return {
-        hourStart: numberTokenNormalize(row.hour_start),
-        userId: row.user_id,
-        agentId: row.agent_id,
+        hourStart: numberTokenNormalize(row.hourStart),
+        userId: row.userId,
+        agentId: row.agentId,
         model: row.model,
-        input: numberTokenNormalize(row.input_tokens),
-        output: numberTokenNormalize(row.output_tokens),
-        cacheRead: numberTokenNormalize(row.cache_read_tokens),
-        cacheWrite: numberTokenNormalize(row.cache_write_tokens),
+        input: numberTokenNormalize(row.inputTokens),
+        output: numberTokenNormalize(row.outputTokens),
+        cacheRead: numberTokenNormalize(row.cacheReadTokens),
+        cacheWrite: numberTokenNormalize(row.cacheWriteTokens),
         cost: numberCostNormalize(row.cost)
     };
 }

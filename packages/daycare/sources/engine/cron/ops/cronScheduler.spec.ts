@@ -22,7 +22,7 @@ describe("CronScheduler", () => {
 
     afterEach(async () => {
         vi.useRealTimers();
-        storage.db.close();
+        storage.connection.close();
         await fs.rm(tempDir, { recursive: true, force: true });
     });
 

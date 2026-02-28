@@ -34,7 +34,7 @@ describe("friendRemoveToolBuild", () => {
             expect(state?.requestedA).toBe(false);
             expect(state?.requestedB).toBe(true);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -60,7 +60,7 @@ describe("friendRemoveToolBuild", () => {
             expect(state?.requestedA).toBe(false);
             expect(state?.requestedB).toBe(false);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -86,7 +86,7 @@ describe("friendRemoveToolBuild", () => {
             expect(state?.requestedA).toBe(false);
             expect(state?.requestedB).toBe(false);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -127,7 +127,7 @@ describe("friendRemoveToolBuild", () => {
                 expect(state?.requestedB).toBe(false);
             }
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -156,7 +156,7 @@ describe("friendRemoveToolBuild", () => {
             expect(postToUserAgents).not.toHaveBeenCalled();
             expect(await storage.connections.find(subuser.id, bob.id)).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -197,7 +197,7 @@ describe("friendRemoveToolBuild", () => {
             expect(await storage.connections.find(aliceSub.id, bob.id)).toBeNull();
             expect(await storage.connections.find(bobSub.id, alice.id)).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

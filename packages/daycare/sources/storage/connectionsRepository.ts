@@ -1,14 +1,16 @@
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { ConnectionDbRecord, DatabaseConnectionRow } from "./databaseTypes.js";
+import { and, asc, eq, or, sql } from "drizzle-orm";
+import type { DaycareDb } from "../schema.js";
+import { connectionsTable, usersTable } from "../schema.js";
+import type { ConnectionDbRecord } from "./databaseTypes.js";
 
 /**
- * Connections repository backed by SQLite.
+ * Connections repository backed by Drizzle.
  * Expects: schema migrations already applied for connections.
  */
 export class ConnectionsRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
@@ -16,40 +18,40 @@ export class ConnectionsRepository {
         const [userAId, userBId] = sortPair(requesterId, targetId);
         if (requesterId === userAId) {
             await this.db
-                .prepare(
-                    `
-                    INSERT INTO connections (
-                        user_a_id,
-                        user_b_id,
-                        requested_a,
-                        requested_b,
-                        requested_a_at,
-                        requested_b_at
-                    ) VALUES (?, ?, 1, 0, ?, NULL)
-                    ON CONFLICT(user_a_id, user_b_id) DO UPDATE SET
-                        requested_a = 1,
-                        requested_a_at = excluded.requested_a_at
-                `
-                )
-                .run(userAId, userBId, requestedAt);
+                .insert(connectionsTable)
+                .values({
+                    userAId,
+                    userBId,
+                    requestedA: 1,
+                    requestedB: 0,
+                    requestedAAt: requestedAt,
+                    requestedBAt: null
+                })
+                .onConflictDoUpdate({
+                    target: [connectionsTable.userAId, connectionsTable.userBId],
+                    set: {
+                        requestedA: 1,
+                        requestedAAt: requestedAt
+                    }
+                });
         } else {
             await this.db
-                .prepare(
-                    `
-                    INSERT INTO connections (
-                        user_a_id,
-                        user_b_id,
-                        requested_a,
-                        requested_b,
-                        requested_a_at,
-                        requested_b_at
-                    ) VALUES (?, ?, 0, 1, NULL, ?)
-                    ON CONFLICT(user_a_id, user_b_id) DO UPDATE SET
-                        requested_b = 1,
-                        requested_b_at = excluded.requested_b_at
-                `
-                )
-                .run(userAId, userBId, requestedAt);
+                .insert(connectionsTable)
+                .values({
+                    userAId,
+                    userBId,
+                    requestedA: 0,
+                    requestedB: 1,
+                    requestedAAt: null,
+                    requestedBAt: requestedAt
+                })
+                .onConflictDoUpdate({
+                    target: [connectionsTable.userAId, connectionsTable.userBId],
+                    set: {
+                        requestedB: 1,
+                        requestedBAt: requestedAt
+                    }
+                });
         }
 
         const record = await this.find(userAId, userBId);
@@ -63,40 +65,26 @@ export class ConnectionsRepository {
         const [userAId, userBId] = sortPair(userId, otherId);
         if (userId === userAId) {
             await this.db
-                .prepare(
-                    `
-                    UPDATE connections
-                    SET requested_a = 0
-                    WHERE user_a_id = ? AND user_b_id = ?
-                `
-                )
-                .run(userAId, userBId);
+                .update(connectionsTable)
+                .set({ requestedA: 0 })
+                .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)));
         } else {
             await this.db
-                .prepare(
-                    `
-                    UPDATE connections
-                    SET requested_b = 0
-                    WHERE user_a_id = ? AND user_b_id = ?
-                `
-                )
-                .run(userAId, userBId);
+                .update(connectionsTable)
+                .set({ requestedB: 0 })
+                .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)));
         }
         return this.find(userAId, userBId);
     }
 
     async find(id1: string, id2: string): Promise<ConnectionDbRecord | null> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const row = (await this.db
-            .prepare(
-                `
-                SELECT *
-                FROM connections
-                WHERE user_a_id = ? AND user_b_id = ?
-                LIMIT 1
-            `
-            )
-            .get(userAId, userBId)) as DatabaseConnectionRow | undefined;
+        const rows = await this.db
+            .select()
+            .from(connectionsTable)
+            .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)))
+            .limit(1);
+        const row = rows[0];
         if (!row) {
             return null;
         }
@@ -104,76 +92,92 @@ export class ConnectionsRepository {
     }
 
     async findFriends(userId: string): Promise<ConnectionDbRecord[]> {
-        const rows = (await this.db
-            .prepare(
-                `
-                SELECT *
-                FROM connections
-                WHERE (user_a_id = ? OR user_b_id = ?)
-                    AND requested_a = 1
-                    AND requested_b = 1
-                ORDER BY user_a_id ASC, user_b_id ASC
-            `
+        const rows = await this.db
+            .select()
+            .from(connectionsTable)
+            .where(
+                and(
+                    or(eq(connectionsTable.userAId, userId), eq(connectionsTable.userBId, userId)),
+                    eq(connectionsTable.requestedA, 1),
+                    eq(connectionsTable.requestedB, 1)
+                )
             )
-            .all(userId, userId)) as DatabaseConnectionRow[];
+            .orderBy(asc(connectionsTable.userAId), asc(connectionsTable.userBId));
         return rows.map((row) => connectionParse(row));
     }
 
     async findConnectionsForSubusersOf(ownerUserId: string): Promise<ConnectionDbRecord[]> {
-        const rows = (await this.db
-            .prepare(
-                `
-                SELECT DISTINCT c.*
-                FROM connections c
-                INNER JOIN users su
-                    ON (c.user_a_id = su.id OR c.user_b_id = su.id)
-                WHERE su.parent_user_id = ?
-                ORDER BY c.user_a_id ASC, c.user_b_id ASC
-            `
+        // Use raw SQL for the DISTINCT + JOIN query that Drizzle doesn't easily express
+        const rows = await this.db
+            .selectDistinct({
+                userAId: connectionsTable.userAId,
+                userBId: connectionsTable.userBId,
+                requestedA: connectionsTable.requestedA,
+                requestedB: connectionsTable.requestedB,
+                requestedAAt: connectionsTable.requestedAAt,
+                requestedBAt: connectionsTable.requestedBAt
+            })
+            .from(connectionsTable)
+            .innerJoin(
+                usersTable,
+                or(eq(connectionsTable.userAId, usersTable.id), eq(connectionsTable.userBId, usersTable.id))
             )
-            .all(ownerUserId)) as DatabaseConnectionRow[];
+            .where(eq(usersTable.parentUserId, ownerUserId))
+            .orderBy(asc(connectionsTable.userAId), asc(connectionsTable.userBId));
         return rows.map((row) => connectionParse(row));
     }
 
     async findConnectionsWithSubusersOf(friendUserId: string, ownerUserId: string): Promise<ConnectionDbRecord[]> {
-        const rows = (await this.db
-            .prepare(
-                `
-                SELECT c.*
-                FROM connections c
-                INNER JOIN users su
-                    ON (
-                        (c.user_a_id = su.id AND c.user_b_id = ?)
-                        OR
-                        (c.user_b_id = su.id AND c.user_a_id = ?)
-                    )
-                WHERE su.parent_user_id = ?
-                ORDER BY c.user_a_id ASC, c.user_b_id ASC
-            `
+        const rows = await this.db
+            .select({
+                userAId: connectionsTable.userAId,
+                userBId: connectionsTable.userBId,
+                requestedA: connectionsTable.requestedA,
+                requestedB: connectionsTable.requestedB,
+                requestedAAt: connectionsTable.requestedAAt,
+                requestedBAt: connectionsTable.requestedBAt
+            })
+            .from(connectionsTable)
+            .innerJoin(
+                usersTable,
+                or(
+                    and(
+                        eq(connectionsTable.userAId, usersTable.id),
+                        eq(connectionsTable.userBId, sql`${friendUserId}`)
+                    ),
+                    and(eq(connectionsTable.userBId, usersTable.id), eq(connectionsTable.userAId, sql`${friendUserId}`))
+                )
             )
-            .all(friendUserId, friendUserId, ownerUserId)) as DatabaseConnectionRow[];
+            .where(eq(usersTable.parentUserId, ownerUserId))
+            .orderBy(asc(connectionsTable.userAId), asc(connectionsTable.userBId));
         return rows.map((row) => connectionParse(row));
     }
 
     async delete(id1: string, id2: string): Promise<boolean> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const removed = await this.db
-            .prepare("DELETE FROM connections WHERE user_a_id = ? AND user_b_id = ?")
-            .run(userAId, userBId);
-        const rawChanges = (removed as { changes?: number | bigint }).changes;
-        const changes = typeof rawChanges === "bigint" ? Number(rawChanges) : (rawChanges ?? 0);
-        return changes > 0;
+        const result = await this.db
+            .delete(connectionsTable)
+            .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)))
+            .returning({ userAId: connectionsTable.userAId });
+        return result.length > 0;
     }
 }
 
-function connectionParse(row: DatabaseConnectionRow): ConnectionDbRecord {
+function connectionParse(row: {
+    userAId: string;
+    userBId: string;
+    requestedA: number;
+    requestedB: number;
+    requestedAAt: number | null;
+    requestedBAt: number | null;
+}): ConnectionDbRecord {
     return {
-        userAId: row.user_a_id,
-        userBId: row.user_b_id,
-        requestedA: row.requested_a === 1,
-        requestedB: row.requested_b === 1,
-        requestedAAt: row.requested_a_at,
-        requestedBAt: row.requested_b_at
+        userAId: row.userAId,
+        userBId: row.userBId,
+        requestedA: row.requestedA === 1,
+        requestedB: row.requestedB === 1,
+        requestedAAt: row.requestedAAt,
+        requestedBAt: row.requestedBAt
     };
 }
 

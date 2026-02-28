@@ -22,7 +22,7 @@ describe("ConnectionsRepository", () => {
             expect(confirmed.requestedAAt).toBe(100);
             expect(confirmed.requestedBAt).toBe(200);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -41,7 +41,7 @@ describe("ConnectionsRepository", () => {
             expect(cleared?.requestedAAt).toBe(100);
             expect(cleared?.requestedBAt).toBe(200);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -65,7 +65,7 @@ describe("ConnectionsRepository", () => {
             expect(removed).toBe(true);
             expect(await storage.connections.find("alice", "bob")).toBeNull();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -92,7 +92,7 @@ describe("ConnectionsRepository", () => {
                 "alice-sub-2:bob"
             ]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -119,7 +119,7 @@ describe("ConnectionsRepository", () => {
             expect(rows).toHaveLength(2);
             expect(rows.map((row) => `${row.userAId}:${row.userBId}`)).toEqual(["alice-sub-1:bob", "alice-sub-2:bob"]);
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 });

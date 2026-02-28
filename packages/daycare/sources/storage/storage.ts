@@ -1,6 +1,6 @@
 import type { AgentHistoryRecord } from "@/types";
-import { type DaycareDb, schemaDrizzle } from "../schema.js";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
+import { type DaycareDb, schemaDrizzle } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import { AgentsRepository } from "./agentsRepository.js";
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
@@ -49,45 +49,41 @@ export class Storage {
     readonly systemPrompts: SystemPromptsRepository;
     readonly tokenStats: TokenStatsRepository;
 
-    readonly drizzle: DaycareDb;
+    readonly db: DaycareDb;
+    readonly connection: StorageDatabase;
 
-    private readonly connection: StorageDatabase;
     private readonly connectorKeyLocks = new Map<string, AsyncLock>();
 
-    private constructor(connection: StorageDatabase, drizzle: DaycareDb) {
+    private constructor(connection: StorageDatabase, db: DaycareDb) {
         this.connection = connection;
-        this.drizzle = drizzle;
-        this.users = new UsersRepository(connection);
-        this.agents = new AgentsRepository(connection);
-        this.sessions = new SessionsRepository(connection);
-        this.history = new HistoryRepository(connection);
-        this.inbox = new InboxRepository(drizzle);
-        this.cronTasks = new CronTasksRepository(connection);
-        this.heartbeatTasks = new HeartbeatTasksRepository(connection);
-        this.webhookTasks = new WebhookTasksRepository(connection);
-        this.tasks = new TasksRepository(connection);
-        this.signalEvents = new SignalEventsRepository(connection);
-        this.signalSubscriptions = new SignalSubscriptionsRepository(connection);
-        this.delayedSignals = new DelayedSignalsRepository(connection);
-        this.channels = new ChannelsRepository(connection);
-        this.channelMessages = new ChannelMessagesRepository(drizzle);
-        this.connections = new ConnectionsRepository(connection);
-        this.exposeEndpoints = new ExposeEndpointsRepository(connection);
-        this.processes = new ProcessesRepository(connection);
-        this.systemPrompts = new SystemPromptsRepository(connection);
-        this.tokenStats = new TokenStatsRepository(connection);
+        this.db = db;
+        this.users = new UsersRepository(db);
+        this.agents = new AgentsRepository(db);
+        this.sessions = new SessionsRepository(db);
+        this.history = new HistoryRepository(db);
+        this.inbox = new InboxRepository(db);
+        this.cronTasks = new CronTasksRepository(db);
+        this.heartbeatTasks = new HeartbeatTasksRepository(db);
+        this.webhookTasks = new WebhookTasksRepository(db);
+        this.tasks = new TasksRepository(db);
+        this.signalEvents = new SignalEventsRepository(db);
+        this.signalSubscriptions = new SignalSubscriptionsRepository(db);
+        this.delayedSignals = new DelayedSignalsRepository(db);
+        this.channels = new ChannelsRepository(db);
+        this.channelMessages = new ChannelMessagesRepository(db);
+        this.connections = new ConnectionsRepository(db);
+        this.exposeEndpoints = new ExposeEndpointsRepository(db);
+        this.processes = new ProcessesRepository(db);
+        this.systemPrompts = new SystemPromptsRepository(db);
+        this.tokenStats = new TokenStatsRepository(db);
     }
 
-    static fromDatabase(db: StorageDatabase): Storage {
-        if (!db.__pgliteClient) {
+    static fromDatabase(rawDb: StorageDatabase): Storage {
+        if (!rawDb.__pgliteClient) {
             throw new Error("DaycareDb requires a PGlite client; Postgres targets are not yet supported with Drizzle");
         }
-        const drizzle = schemaDrizzle(db.__pgliteClient);
-        return new Storage(db, drizzle);
-    }
-
-    get db(): StorageDatabase {
-        return this.connection;
+        const db = schemaDrizzle(rawDb.__pgliteClient);
+        return new Storage(rawDb, db);
     }
 
     async createUser(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {

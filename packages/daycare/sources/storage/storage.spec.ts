@@ -20,7 +20,7 @@ describe("Storage", () => {
         const db = databaseOpenTest();
         try {
             const storage = Storage.fromDatabase(db);
-            const tables = (await storage.db
+            const tables = (await storage.connection
                 .prepare(
                     "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
                 )
@@ -35,16 +35,16 @@ describe("Storage", () => {
 
     it("opens with migrations and closes connection", async () => {
         const storage = await storageOpenTest();
-        const tables = (await storage.db
+        const tables = (await storage.connection
             .prepare(
                 "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC"
             )
             .all()) as Array<{ name?: string }>;
         expect(tables.some((entry) => entry.name === "agents")).toBe(true);
         expect(tables.some((entry) => entry.name === "users")).toBe(true);
-        storage.db.close();
+        storage.connection.close();
 
-        await expect(storage.db.prepare("SELECT 1").get()).rejects.toThrow();
+        await expect(storage.connection.prepare("SELECT 1").get()).rejects.toThrow();
     });
 
     it("resolves user by connector key under concurrent requests", async () => {
@@ -63,7 +63,7 @@ describe("Storage", () => {
             expect(resolved?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:alice"]);
             expect(resolved?.nametag).toBeTruthy();
         } finally {
-            storage.db.close();
+            storage.connection.close();
         }
     });
 
@@ -104,7 +104,7 @@ describe("Storage", () => {
                 const persistedSession = await storage.sessions.findById(result.sessionId);
                 expect(persistedSession?.inferenceSessionId).toBe("infer-1");
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -144,7 +144,7 @@ describe("Storage", () => {
                     storage.appendHistory("missing-agent", { type: "note", at: 11, text: "x" })
                 ).rejects.toThrow("Agent not found for history append");
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -219,7 +219,7 @@ describe("Storage", () => {
                 });
                 expect(loaded).toEqual(snapshotDump);
             } finally {
-                storage.db.close();
+                storage.connection.close();
             }
         } finally {
             await rm(dir, { recursive: true, force: true });
