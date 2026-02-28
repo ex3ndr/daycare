@@ -14,7 +14,7 @@ import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironme
 import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
-import type { ProcessesRepository } from "../../storage/processesRepository.js";
+import type { ProcessesRepository, ProcessesRuntimeUpdate } from "../../storage/processesRepository.js";
 import { atomicWrite } from "../../util/atomicWrite.js";
 import { envNormalize } from "../../util/envNormalize.js";
 import { AsyncLock } from "../../util/lock.js";
@@ -113,7 +113,7 @@ export class Processes {
     private readonly bootTimeProvider: () => Promise<number | null>;
     private readonly repository: Pick<
         ProcessesRepository,
-        "create" | "findAll" | "findById" | "update" | "delete" | "deleteByOwner"
+        "create" | "findAll" | "findById" | "update" | "updateRuntime" | "delete" | "deleteByOwner"
     >;
     private readonly records = new Map<string, ProcessRecord>();
     private readonly children = new Map<string, ChildProcess>();
@@ -128,7 +128,7 @@ export class Processes {
             bootTimeProvider?: () => Promise<number | null>;
             repository: Pick<
                 ProcessesRepository,
-                "create" | "findAll" | "findById" | "update" | "delete" | "deleteByOwner"
+                "create" | "findAll" | "findById" | "update" | "updateRuntime" | "delete" | "deleteByOwner"
             >;
         }
     ) {
@@ -233,7 +233,7 @@ export class Processes {
 
             await this.startRecordLocked(record, { incrementRestart: false });
             this.records.set(record.id, record);
-            await this.writeRecordLocked(record);
+            await this.repository.create(processRecordToDb(record));
             return toProcessInfo(record);
         });
     }
@@ -586,7 +586,7 @@ export class Processes {
     }
 
     private async writeRecordLocked(record: ProcessRecord): Promise<void> {
-        await this.repository.create(processRecordToDb(record));
+        await this.repository.updateRuntime(record.id, processRuntimeState(record));
     }
 
     private processDir(processId: string): string {
@@ -779,6 +779,24 @@ function processRecordToDb(record: ProcessRecord): ProcessDbRecord {
         permissions: clonePermissions(record.permissions),
         owner: record.owner ? ownerNormalize(record.owner) : null,
         keepAlive: record.keepAlive,
+        desiredState: record.desiredState,
+        status: record.status,
+        pid: record.pid,
+        bootTimeMs: record.bootTimeMs,
+        restartCount: record.restartCount,
+        restartFailureCount: record.restartFailureCount,
+        nextRestartAt: record.nextRestartAt,
+        settingsPath: record.settingsPath,
+        logPath: record.logPath,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        lastStartedAt: record.lastStartedAt,
+        lastExitedAt: record.lastExitedAt
+    };
+}
+
+function processRuntimeState(record: ProcessRecord): ProcessesRuntimeUpdate {
+    return {
         desiredState: record.desiredState,
         status: record.status,
         pid: record.pid,

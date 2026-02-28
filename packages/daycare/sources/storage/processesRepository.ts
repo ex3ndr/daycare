@@ -15,6 +15,25 @@ type ProcessesFindAllOptions = ProcessesFindManyOptions & {
     userId?: string;
 };
 
+export type ProcessesRuntimeUpdate = Partial<
+    Pick<
+        ProcessDbRecord,
+        | "desiredState"
+        | "status"
+        | "pid"
+        | "bootTimeMs"
+        | "restartCount"
+        | "restartFailureCount"
+        | "nextRestartAt"
+        | "settingsPath"
+        | "logPath"
+        | "createdAt"
+        | "updatedAt"
+        | "lastStartedAt"
+        | "lastExitedAt"
+    >
+>;
+
 /**
  * Processes repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for processes.
@@ -42,67 +61,12 @@ export class ProcessesRepository {
                     validFrom: record.createdAt,
                     validTo: null
                 };
-                await this.db.insert(processesTable).values({
-                    id: next.id,
-                    version: next.version ?? 1,
-                    validFrom: next.validFrom ?? next.createdAt,
-                    validTo: next.validTo ?? null,
-                    userId: next.userId,
-                    name: next.name,
-                    command: next.command,
-                    cwd: next.cwd,
-                    home: next.home,
-                    env: JSON.stringify(next.env),
-                    packageManagers: JSON.stringify(next.packageManagers),
-                    allowedDomains: JSON.stringify(next.allowedDomains),
-                    allowLocalBinding: next.allowLocalBinding ? 1 : 0,
-                    permissions: JSON.stringify(next.permissions),
-                    owner: next.owner ? JSON.stringify(next.owner) : null,
-                    keepAlive: next.keepAlive ? 1 : 0,
-                    desiredState: next.desiredState,
-                    status: next.status,
-                    pid: next.pid,
-                    bootTimeMs: next.bootTimeMs,
-                    restartCount: next.restartCount,
-                    restartFailureCount: next.restartFailureCount,
-                    nextRestartAt: next.nextRestartAt,
-                    settingsPath: next.settingsPath,
-                    logPath: next.logPath,
-                    createdAt: next.createdAt,
-                    updatedAt: next.updatedAt,
-                    lastStartedAt: next.lastStartedAt,
-                    lastExitedAt: next.lastExitedAt
-                });
+                await this.db.insert(processesTable).values(processRowInsert(next));
             } else {
+                const resolved = processRecordCurrentResolve(current, record);
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<ProcessDbRecord>({
-                        changes: {
-                            userId: record.userId,
-                            name: record.name,
-                            command: record.command,
-                            cwd: record.cwd,
-                            home: record.home,
-                            env: record.env,
-                            packageManagers: record.packageManagers,
-                            allowedDomains: record.allowedDomains,
-                            allowLocalBinding: record.allowLocalBinding,
-                            permissions: record.permissions,
-                            owner: record.owner,
-                            keepAlive: record.keepAlive,
-                            desiredState: record.desiredState,
-                            status: record.status,
-                            pid: record.pid,
-                            bootTimeMs: record.bootTimeMs,
-                            restartCount: record.restartCount,
-                            restartFailureCount: record.restartFailureCount,
-                            nextRestartAt: record.nextRestartAt,
-                            settingsPath: record.settingsPath,
-                            logPath: record.logPath,
-                            createdAt: record.createdAt,
-                            updatedAt: record.updatedAt,
-                            lastStartedAt: record.lastStartedAt,
-                            lastExitedAt: record.lastExitedAt
-                        },
+                        changes: processVersionChanges(resolved),
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
                             await tx
@@ -117,37 +81,7 @@ export class ProcessesRepository {
                                 );
                         },
                         insertNext: async (row) => {
-                            await tx.insert(processesTable).values({
-                                id: row.id,
-                                version: row.version ?? 1,
-                                validFrom: row.validFrom ?? row.createdAt,
-                                validTo: row.validTo ?? null,
-                                userId: row.userId,
-                                name: row.name,
-                                command: row.command,
-                                cwd: row.cwd,
-                                home: row.home,
-                                env: JSON.stringify(row.env),
-                                packageManagers: JSON.stringify(row.packageManagers),
-                                allowedDomains: JSON.stringify(row.allowedDomains),
-                                allowLocalBinding: row.allowLocalBinding ? 1 : 0,
-                                permissions: JSON.stringify(row.permissions),
-                                owner: row.owner ? JSON.stringify(row.owner) : null,
-                                keepAlive: row.keepAlive ? 1 : 0,
-                                desiredState: row.desiredState,
-                                status: row.status,
-                                pid: row.pid,
-                                bootTimeMs: row.bootTimeMs,
-                                restartCount: row.restartCount,
-                                restartFailureCount: row.restartFailureCount,
-                                nextRestartAt: row.nextRestartAt,
-                                settingsPath: row.settingsPath,
-                                logPath: row.logPath,
-                                createdAt: row.createdAt,
-                                updatedAt: row.updatedAt,
-                                lastStartedAt: row.lastStartedAt,
-                                lastExitedAt: row.lastExitedAt
-                            });
+                            await tx.insert(processesTable).values(processRowInsert(row));
                         }
                     })
                 );
@@ -243,66 +177,10 @@ export class ProcessesRepository {
                 throw new Error(`Process not found: ${id}`);
             }
 
-            const next: ProcessDbRecord = {
-                ...current,
-                ...data,
-                id: current.id,
-                userId: data.userId ?? current.userId,
-                name: data.name ?? current.name,
-                command: data.command ?? current.command,
-                cwd: data.cwd ?? current.cwd,
-                home: data.home === undefined ? current.home : data.home,
-                env: data.env ?? current.env,
-                packageManagers: data.packageManagers ?? current.packageManagers,
-                allowedDomains: data.allowedDomains ?? current.allowedDomains,
-                allowLocalBinding: data.allowLocalBinding ?? current.allowLocalBinding,
-                permissions: data.permissions ?? current.permissions,
-                owner: data.owner === undefined ? current.owner : data.owner,
-                keepAlive: data.keepAlive ?? current.keepAlive,
-                desiredState: data.desiredState ?? current.desiredState,
-                status: data.status ?? current.status,
-                pid: data.pid === undefined ? current.pid : data.pid,
-                bootTimeMs: data.bootTimeMs === undefined ? current.bootTimeMs : data.bootTimeMs,
-                restartCount: data.restartCount ?? current.restartCount,
-                restartFailureCount: data.restartFailureCount ?? current.restartFailureCount,
-                nextRestartAt: data.nextRestartAt === undefined ? current.nextRestartAt : data.nextRestartAt,
-                settingsPath: data.settingsPath ?? current.settingsPath,
-                logPath: data.logPath ?? current.logPath,
-                createdAt: data.createdAt ?? current.createdAt,
-                updatedAt: data.updatedAt ?? current.updatedAt,
-                lastStartedAt: data.lastStartedAt === undefined ? current.lastStartedAt : data.lastStartedAt,
-                lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
-            };
-
+            const next = processRecordMerge(current, data);
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<ProcessDbRecord>({
-                    changes: {
-                        userId: next.userId,
-                        name: next.name,
-                        command: next.command,
-                        cwd: next.cwd,
-                        home: next.home,
-                        env: next.env,
-                        packageManagers: next.packageManagers,
-                        allowedDomains: next.allowedDomains,
-                        allowLocalBinding: next.allowLocalBinding,
-                        permissions: next.permissions,
-                        owner: next.owner,
-                        keepAlive: next.keepAlive,
-                        desiredState: next.desiredState,
-                        status: next.status,
-                        pid: next.pid,
-                        bootTimeMs: next.bootTimeMs,
-                        restartCount: next.restartCount,
-                        restartFailureCount: next.restartFailureCount,
-                        nextRestartAt: next.nextRestartAt,
-                        settingsPath: next.settingsPath,
-                        logPath: next.logPath,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt,
-                        lastStartedAt: next.lastStartedAt,
-                        lastExitedAt: next.lastExitedAt
-                    },
+                    changes: processVersionChanges(next),
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
                         await tx
@@ -317,43 +195,37 @@ export class ProcessesRepository {
                             );
                     },
                     insertNext: async (row) => {
-                        await tx.insert(processesTable).values({
-                            id: row.id,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? row.createdAt,
-                            validTo: row.validTo ?? null,
-                            userId: row.userId,
-                            name: row.name,
-                            command: row.command,
-                            cwd: row.cwd,
-                            home: row.home,
-                            env: JSON.stringify(row.env),
-                            packageManagers: JSON.stringify(row.packageManagers),
-                            allowedDomains: JSON.stringify(row.allowedDomains),
-                            allowLocalBinding: row.allowLocalBinding ? 1 : 0,
-                            permissions: JSON.stringify(row.permissions),
-                            owner: row.owner ? JSON.stringify(row.owner) : null,
-                            keepAlive: row.keepAlive ? 1 : 0,
-                            desiredState: row.desiredState,
-                            status: row.status,
-                            pid: row.pid,
-                            bootTimeMs: row.bootTimeMs,
-                            restartCount: row.restartCount,
-                            restartFailureCount: row.restartFailureCount,
-                            nextRestartAt: row.nextRestartAt,
-                            settingsPath: row.settingsPath,
-                            logPath: row.logPath,
-                            createdAt: row.createdAt,
-                            updatedAt: row.updatedAt,
-                            lastStartedAt: row.lastStartedAt,
-                            lastExitedAt: row.lastExitedAt
-                        });
+                        await tx.insert(processesTable).values(processRowInsert(row));
                     }
                 })
             );
 
             await this.cacheLock.inLock(() => {
                 this.recordCacheSet(advanced);
+            });
+        });
+    }
+
+    async updateRuntime(id: string, data: ProcessesRuntimeUpdate): Promise<void> {
+        const lock = this.recordLockForId(id);
+        await lock.inLock(async () => {
+            const current = this.recordsById.get(id) ?? (await this.recordLoadById(id));
+            if (!current) {
+                throw new Error(`Process not found: ${id}`);
+            }
+            const next = processRuntimeMerge(current, data);
+            await this.db
+                .update(processesTable)
+                .set(processRowRuntimeUpdate(next))
+                .where(
+                    and(
+                        eq(processesTable.id, current.id),
+                        eq(processesTable.version, current.version ?? 1),
+                        isNull(processesTable.validTo)
+                    )
+                );
+            await this.cacheLock.inLock(() => {
+                this.recordCacheSet(next);
             });
         });
     }
@@ -487,6 +359,184 @@ function processRecordClone(record: ProcessDbRecord): ProcessDbRecord {
             readDirs: [...(record.permissions.readDirs ?? [])]
         },
         owner: record.owner ? { ...record.owner } : null
+    };
+}
+
+function processRecordCurrentResolve(current: ProcessDbRecord, record: ProcessDbRecord): ProcessDbRecord {
+    return {
+        ...record,
+        id: current.id,
+        version: current.version ?? 1,
+        validFrom: current.validFrom ?? current.createdAt,
+        validTo: current.validTo ?? null
+    };
+}
+
+function processVersionChanges(
+    record: ProcessDbRecord
+): Omit<ProcessDbRecord, "id" | "version" | "validFrom" | "validTo"> {
+    return {
+        userId: record.userId,
+        name: record.name,
+        command: record.command,
+        cwd: record.cwd,
+        home: record.home,
+        env: record.env,
+        packageManagers: record.packageManagers,
+        allowedDomains: record.allowedDomains,
+        allowLocalBinding: record.allowLocalBinding,
+        permissions: record.permissions,
+        owner: record.owner,
+        keepAlive: record.keepAlive,
+        desiredState: record.desiredState,
+        status: record.status,
+        pid: record.pid,
+        bootTimeMs: record.bootTimeMs,
+        restartCount: record.restartCount,
+        restartFailureCount: record.restartFailureCount,
+        nextRestartAt: record.nextRestartAt,
+        settingsPath: record.settingsPath,
+        logPath: record.logPath,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        lastStartedAt: record.lastStartedAt,
+        lastExitedAt: record.lastExitedAt
+    };
+}
+
+function processRowInsert(record: ProcessDbRecord): typeof processesTable.$inferInsert {
+    return {
+        id: record.id,
+        version: record.version ?? 1,
+        validFrom: record.validFrom ?? record.createdAt,
+        validTo: record.validTo ?? null,
+        ...processRowUpdate(record)
+    };
+}
+
+function processRowUpdate(
+    record: ProcessDbRecord
+): Omit<typeof processesTable.$inferInsert, "id" | "version" | "validFrom" | "validTo"> {
+    return {
+        userId: record.userId,
+        name: record.name,
+        command: record.command,
+        cwd: record.cwd,
+        home: record.home,
+        env: JSON.stringify(record.env),
+        packageManagers: JSON.stringify(record.packageManagers),
+        allowedDomains: JSON.stringify(record.allowedDomains),
+        allowLocalBinding: record.allowLocalBinding ? 1 : 0,
+        permissions: JSON.stringify(record.permissions),
+        owner: record.owner ? JSON.stringify(record.owner) : null,
+        keepAlive: record.keepAlive ? 1 : 0,
+        desiredState: record.desiredState,
+        status: record.status,
+        pid: record.pid,
+        bootTimeMs: record.bootTimeMs,
+        restartCount: record.restartCount,
+        restartFailureCount: record.restartFailureCount,
+        nextRestartAt: record.nextRestartAt,
+        settingsPath: record.settingsPath,
+        logPath: record.logPath,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        lastStartedAt: record.lastStartedAt,
+        lastExitedAt: record.lastExitedAt
+    };
+}
+
+function processRowRuntimeUpdate(
+    record: ProcessDbRecord
+): Pick<
+    typeof processesTable.$inferInsert,
+    | "desiredState"
+    | "status"
+    | "pid"
+    | "bootTimeMs"
+    | "restartCount"
+    | "restartFailureCount"
+    | "nextRestartAt"
+    | "settingsPath"
+    | "logPath"
+    | "createdAt"
+    | "updatedAt"
+    | "lastStartedAt"
+    | "lastExitedAt"
+> {
+    return {
+        desiredState: record.desiredState,
+        status: record.status,
+        pid: record.pid,
+        bootTimeMs: record.bootTimeMs,
+        restartCount: record.restartCount,
+        restartFailureCount: record.restartFailureCount,
+        nextRestartAt: record.nextRestartAt,
+        settingsPath: record.settingsPath,
+        logPath: record.logPath,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        lastStartedAt: record.lastStartedAt,
+        lastExitedAt: record.lastExitedAt
+    };
+}
+
+function processRecordMerge(current: ProcessDbRecord, data: Partial<ProcessDbRecord>): ProcessDbRecord {
+    return {
+        ...current,
+        ...data,
+        id: current.id,
+        version: current.version ?? 1,
+        validFrom: current.validFrom ?? current.createdAt,
+        validTo: current.validTo ?? null,
+        userId: data.userId ?? current.userId,
+        name: data.name ?? current.name,
+        command: data.command ?? current.command,
+        cwd: data.cwd ?? current.cwd,
+        home: data.home === undefined ? current.home : data.home,
+        env: data.env ?? current.env,
+        packageManagers: data.packageManagers ?? current.packageManagers,
+        allowedDomains: data.allowedDomains ?? current.allowedDomains,
+        allowLocalBinding: data.allowLocalBinding ?? current.allowLocalBinding,
+        permissions: data.permissions ?? current.permissions,
+        owner: data.owner === undefined ? current.owner : data.owner,
+        keepAlive: data.keepAlive ?? current.keepAlive,
+        desiredState: data.desiredState ?? current.desiredState,
+        status: data.status ?? current.status,
+        pid: data.pid === undefined ? current.pid : data.pid,
+        bootTimeMs: data.bootTimeMs === undefined ? current.bootTimeMs : data.bootTimeMs,
+        restartCount: data.restartCount ?? current.restartCount,
+        restartFailureCount: data.restartFailureCount ?? current.restartFailureCount,
+        nextRestartAt: data.nextRestartAt === undefined ? current.nextRestartAt : data.nextRestartAt,
+        settingsPath: data.settingsPath ?? current.settingsPath,
+        logPath: data.logPath ?? current.logPath,
+        createdAt: data.createdAt ?? current.createdAt,
+        updatedAt: data.updatedAt ?? current.updatedAt,
+        lastStartedAt: data.lastStartedAt === undefined ? current.lastStartedAt : data.lastStartedAt,
+        lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
+    };
+}
+
+function processRuntimeMerge(current: ProcessDbRecord, data: ProcessesRuntimeUpdate): ProcessDbRecord {
+    return {
+        ...current,
+        id: current.id,
+        version: current.version ?? 1,
+        validFrom: current.validFrom ?? current.createdAt,
+        validTo: current.validTo ?? null,
+        desiredState: data.desiredState ?? current.desiredState,
+        status: data.status ?? current.status,
+        pid: data.pid === undefined ? current.pid : data.pid,
+        bootTimeMs: data.bootTimeMs === undefined ? current.bootTimeMs : data.bootTimeMs,
+        restartCount: data.restartCount ?? current.restartCount,
+        restartFailureCount: data.restartFailureCount ?? current.restartFailureCount,
+        nextRestartAt: data.nextRestartAt === undefined ? current.nextRestartAt : data.nextRestartAt,
+        settingsPath: data.settingsPath ?? current.settingsPath,
+        logPath: data.logPath ?? current.logPath,
+        createdAt: data.createdAt ?? current.createdAt,
+        updatedAt: data.updatedAt ?? current.updatedAt,
+        lastStartedAt: data.lastStartedAt === undefined ? current.lastStartedAt : data.lastStartedAt,
+        lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
     };
 }
 

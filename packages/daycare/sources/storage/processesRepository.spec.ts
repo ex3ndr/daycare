@@ -44,6 +44,61 @@ describe("ProcessesRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("updates runtime fields in place without advancing version", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repository = new ProcessesRepository(storage.db);
+            await repository.create(recordBuild({ id: "p-1", userId: "user-a", owner: null }));
+
+            await repository.updateRuntime("p-1", {
+                status: "exited",
+                pid: null,
+                restartCount: 3,
+                updatedAt: 2,
+                lastExitedAt: 2
+            });
+
+            const current = await repository.findById("p-1");
+            expect(current?.version).toBe(1);
+            expect(current?.status).toBe("exited");
+            expect(current?.restartCount).toBe(3);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to FROM processes WHERE id = ? ORDER BY version")
+                .all("p-1")) as Array<{ version: number; valid_to: number | null }>;
+            expect(rows).toEqual([{ version: 1, valid_to: null }]);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("keeps regular update versioned for process definition changes", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repository = new ProcessesRepository(storage.db);
+            await repository.create(recordBuild({ id: "p-1", userId: "user-a", owner: null }));
+
+            await repository.update("p-1", {
+                command: 'node -e "2"',
+                updatedAt: 2
+            });
+
+            const current = await repository.findById("p-1");
+            expect(current?.version).toBe(2);
+            expect(current?.command).toBe('node -e "2"');
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to FROM processes WHERE id = ? ORDER BY version")
+                .all("p-1")) as Array<{ version: number; valid_to: number | null }>;
+            expect(rows).toHaveLength(2);
+            expect(rows[0]?.version).toBe(1);
+            expect(typeof rows[0]?.valid_to).toBe("number");
+            expect(rows[1]).toEqual({ version: 2, valid_to: null });
+        } finally {
+            storage.connection.close();
+        }
+    });
 });
 
 function ctxBuild(userId: string): Context {
