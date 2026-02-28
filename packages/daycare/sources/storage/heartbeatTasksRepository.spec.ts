@@ -30,6 +30,9 @@ describe("HeartbeatTasksRepository", () => {
             });
             const first: HeartbeatTaskDbRecord = {
                 id: "alpha",
+                version: 1,
+                validFrom: 10,
+                validTo: null,
                 taskId: "task-alpha",
                 userId: "user-1",
                 title: "Alpha",
@@ -40,6 +43,9 @@ describe("HeartbeatTasksRepository", () => {
             };
             const second: HeartbeatTaskDbRecord = {
                 id: "beta",
+                version: 1,
+                validFrom: 11,
+                validTo: null,
                 taskId: "task-beta",
                 userId: "user-1",
                 title: "Beta",
@@ -94,6 +100,9 @@ describe("HeartbeatTasksRepository", () => {
             });
             await repo.create({
                 id: "cache-heartbeat",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 taskId: "task-cache-heartbeat",
                 userId: "user-1",
                 title: "Cache",

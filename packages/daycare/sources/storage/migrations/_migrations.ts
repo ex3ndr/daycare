@@ -24,5 +24,9 @@ export const migrations: Migration[] = [
     {
         name: "20260228_webhook_last_run",
         fileName: "20260228_webhook_last_run.sql"
+    },
+    {
+        name: "20260228_entity_versioning",
+        fileName: "20260228_entity_versioning.sql"
     }
 ];

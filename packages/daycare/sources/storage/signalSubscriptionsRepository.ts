@@ -1,10 +1,11 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import { signalTypeMatchesPattern } from "../engine/signals/signalTypeMatchesPattern.js";
 import type { DaycareDb } from "../schema.js";
 import { signalsSubscriptionsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { SignalSubscriptionDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Signal subscriptions repository backed by Drizzle with write-through caching.
@@ -24,32 +25,77 @@ export class SignalSubscriptionsRepository {
 
     async create(record: SignalSubscriptionDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(signalsSubscriptionsTable)
-                .values({
-                    id: record.id,
-                    userId: record.userId,
-                    agentId: record.agentId,
-                    pattern: record.pattern,
-                    silent: record.silent ? 1 : 0,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: [
-                        signalsSubscriptionsTable.userId,
-                        signalsSubscriptionsTable.agentId,
-                        signalsSubscriptionsTable.pattern
-                    ],
-                    set: {
-                        id: record.id,
-                        silent: record.silent ? 1 : 0,
-                        updatedAt: record.updatedAt
-                    }
+            const currentRows = await this.db
+                .select()
+                .from(signalsSubscriptionsTable)
+                .where(
+                    and(
+                        eq(signalsSubscriptionsTable.userId, record.userId),
+                        eq(signalsSubscriptionsTable.agentId, record.agentId),
+                        eq(signalsSubscriptionsTable.pattern, record.pattern),
+                        isNull(signalsSubscriptionsTable.validTo)
+                    )
+                )
+                .limit(1);
+            const current = currentRows[0] ? subscriptionParse(currentRows[0]) : null;
+            const next = current
+                ? await versionAdvance<SignalSubscriptionDbRecord>({
+                      changes: {
+                          silent: record.silent,
+                          updatedAt: record.updatedAt
+                      },
+                      findCurrent: async () => current,
+                      closeCurrent: async (row, now) => {
+                          await this.db
+                              .update(signalsSubscriptionsTable)
+                              .set({ validTo: now })
+                              .where(
+                                  and(
+                                      eq(signalsSubscriptionsTable.id, row.id),
+                                      eq(signalsSubscriptionsTable.version, row.version ?? 1),
+                                      isNull(signalsSubscriptionsTable.validTo)
+                                  )
+                              );
+                      },
+                      insertNext: async (row) => {
+                          await this.db.insert(signalsSubscriptionsTable).values({
+                              id: row.id,
+                              version: row.version ?? 1,
+                              validFrom: row.validFrom ?? row.createdAt,
+                              validTo: row.validTo ?? null,
+                              userId: row.userId,
+                              agentId: row.agentId,
+                              pattern: row.pattern,
+                              silent: row.silent ? 1 : 0,
+                              createdAt: row.createdAt,
+                              updatedAt: row.updatedAt
+                          });
+                      }
+                  })
+                : {
+                      ...record,
+                      version: 1,
+                      validFrom: record.createdAt,
+                      validTo: null
+                  };
+
+            if (!current) {
+                await this.db.insert(signalsSubscriptionsTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    userId: next.userId,
+                    agentId: next.agentId,
+                    pattern: next.pattern,
+                    silent: next.silent ? 1 : 0,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.subscriptionCacheSet(record);
+                this.subscriptionCacheSet(next);
             });
         });
     }
@@ -62,21 +108,37 @@ export class SignalSubscriptionsRepository {
         const key = subscriptionKeyBuild(keys, pattern);
         const lock = await this.subscriptionLockForKey(key);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(signalsSubscriptionsTable)
+            const rows = await this.db
+                .select()
+                .from(signalsSubscriptionsTable)
                 .where(
                     and(
                         eq(signalsSubscriptionsTable.userId, keys.userId),
                         eq(signalsSubscriptionsTable.agentId, keys.agentId),
-                        eq(signalsSubscriptionsTable.pattern, pattern)
+                        eq(signalsSubscriptionsTable.pattern, pattern),
+                        isNull(signalsSubscriptionsTable.validTo)
                     )
                 )
-                .returning({ id: signalsSubscriptionsTable.id });
+                .limit(1);
+            const current = rows[0] ? subscriptionParse(rows[0]) : null;
+            if (!current) {
+                return false;
+            }
+            await this.db
+                .update(signalsSubscriptionsTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(signalsSubscriptionsTable.id, current.id),
+                        eq(signalsSubscriptionsTable.version, current.version ?? 1),
+                        isNull(signalsSubscriptionsTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.subscriptionsByKey.delete(key);
             });
-            return result.length > 0;
+            return true;
         });
     }
 
@@ -129,6 +191,7 @@ export class SignalSubscriptionsRepository {
         const rows = await this.db
             .select()
             .from(signalsSubscriptionsTable)
+            .where(isNull(signalsSubscriptionsTable.validTo))
             .orderBy(
                 asc(signalsSubscriptionsTable.userId),
                 asc(signalsSubscriptionsTable.agentId),
@@ -186,7 +249,8 @@ export class SignalSubscriptionsRepository {
                 and(
                     eq(signalsSubscriptionsTable.userId, keys.userId),
                     eq(signalsSubscriptionsTable.agentId, keys.agentId),
-                    eq(signalsSubscriptionsTable.pattern, pattern)
+                    eq(signalsSubscriptionsTable.pattern, pattern),
+                    isNull(signalsSubscriptionsTable.validTo)
                 )
             )
             .limit(1);
@@ -217,6 +281,9 @@ export class SignalSubscriptionsRepository {
 /** Converts a Drizzle row (camelCase) to the application record type. */
 function subscriptionParse(row: {
     id: string;
+    version: number;
+    validFrom: number;
+    validTo: number | null;
     userId: string;
     agentId: string;
     pattern: string;
@@ -226,6 +293,9 @@ function subscriptionParse(row: {
 }): SignalSubscriptionDbRecord {
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         userId: row.userId,
         agentId: row.agentId,
         pattern: row.pattern,

@@ -58,7 +58,7 @@ describe("schema", () => {
                 .all()) as Array<{ name?: string }>;
             const indexNames = new Set(indexes.map((entry) => entry.name).filter((entry): entry is string => !!entry));
 
-            expect(indexNames.has("idx_users_nametag_required")).toBe(true);
+            expect(indexNames.has("idx_users_nametag")).toBe(true);
             expect(indexNames.has("idx_users_single_owner")).toBe(true);
             expect(indexNames.has("idx_tasks_cron_task_id")).toBe(true);
             expect(indexNames.has("idx_token_stats_hourly_agent_hour")).toBe(true);

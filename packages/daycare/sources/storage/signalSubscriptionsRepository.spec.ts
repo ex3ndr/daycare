@@ -31,7 +31,7 @@ describe("SignalSubscriptionsRepository", () => {
             });
 
             const found = await repository.findByUserAndAgent(ctxBuild("user-a", "agent-1"), "build:*");
-            expect(found?.id).toBe("sub-2");
+            expect(found?.id).toBe("sub-1");
             expect(found?.silent).toBe(false);
 
             const removed = await repository.delete(ctxBuild("user-a", "agent-1"), "build:*");

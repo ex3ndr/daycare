@@ -1,7 +1,8 @@
-import { and, asc, eq, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { connectionsTable, usersTable } from "../schema.js";
 import type { ConnectionDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Connections repository backed by Drizzle.
@@ -16,42 +17,89 @@ export class ConnectionsRepository {
 
     async upsertRequest(requesterId: string, targetId: string, requestedAt = Date.now()): Promise<ConnectionDbRecord> {
         const [userAId, userBId] = sortPair(requesterId, targetId);
-        if (requesterId === userAId) {
-            await this.db
-                .insert(connectionsTable)
-                .values({
-                    userAId,
-                    userBId,
-                    requestedA: 1,
-                    requestedB: 0,
-                    requestedAAt: requestedAt,
-                    requestedBAt: null
-                })
-                .onConflictDoUpdate({
-                    target: [connectionsTable.userAId, connectionsTable.userBId],
-                    set: {
-                        requestedA: 1,
-                        requestedAAt: requestedAt
-                    }
-                });
+        const current = await this.find(userAId, userBId);
+        if (!current) {
+            await this.db.insert(connectionsTable).values({
+                userAId,
+                userBId,
+                version: 1,
+                validFrom: requestedAt,
+                validTo: null,
+                requestedA: requesterId === userAId ? 1 : 0,
+                requestedB: requesterId === userBId ? 1 : 0,
+                requestedAAt: requesterId === userAId ? requestedAt : null,
+                requestedBAt: requesterId === userBId ? requestedAt : null
+            });
+        } else if (requesterId === userAId) {
+            await versionAdvance<ConnectionDbRecord>({
+                now: requestedAt,
+                changes: {
+                    requestedA: true,
+                    requestedAAt: requestedAt
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(connectionsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(connectionsTable.userAId, row.userAId),
+                                eq(connectionsTable.userBId, row.userBId),
+                                eq(connectionsTable.version, row.version ?? 1),
+                                isNull(connectionsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(connectionsTable).values({
+                        userAId: row.userAId,
+                        userBId: row.userBId,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? 0,
+                        validTo: row.validTo ?? null,
+                        requestedA: row.requestedA ? 1 : 0,
+                        requestedB: row.requestedB ? 1 : 0,
+                        requestedAAt: row.requestedAAt,
+                        requestedBAt: row.requestedBAt
+                    });
+                }
+            });
         } else {
-            await this.db
-                .insert(connectionsTable)
-                .values({
-                    userAId,
-                    userBId,
-                    requestedA: 0,
-                    requestedB: 1,
-                    requestedAAt: null,
+            await versionAdvance<ConnectionDbRecord>({
+                now: requestedAt,
+                changes: {
+                    requestedB: true,
                     requestedBAt: requestedAt
-                })
-                .onConflictDoUpdate({
-                    target: [connectionsTable.userAId, connectionsTable.userBId],
-                    set: {
-                        requestedB: 1,
-                        requestedBAt: requestedAt
-                    }
-                });
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(connectionsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(connectionsTable.userAId, row.userAId),
+                                eq(connectionsTable.userBId, row.userBId),
+                                eq(connectionsTable.version, row.version ?? 1),
+                                isNull(connectionsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(connectionsTable).values({
+                        userAId: row.userAId,
+                        userBId: row.userBId,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? 0,
+                        validTo: row.validTo ?? null,
+                        requestedA: row.requestedA ? 1 : 0,
+                        requestedB: row.requestedB ? 1 : 0,
+                        requestedAAt: row.requestedAAt,
+                        requestedBAt: row.requestedBAt
+                    });
+                }
+            });
         }
 
         const record = await this.find(userAId, userBId);
@@ -63,17 +111,40 @@ export class ConnectionsRepository {
 
     async clearSide(userId: string, otherId: string): Promise<ConnectionDbRecord | null> {
         const [userAId, userBId] = sortPair(userId, otherId);
-        if (userId === userAId) {
-            await this.db
-                .update(connectionsTable)
-                .set({ requestedA: 0 })
-                .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)));
-        } else {
-            await this.db
-                .update(connectionsTable)
-                .set({ requestedB: 0 })
-                .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)));
+        const current = await this.find(userAId, userBId);
+        if (!current) {
+            return null;
         }
+        await versionAdvance<ConnectionDbRecord>({
+            changes: userId === userAId ? { requestedA: false } : { requestedB: false },
+            findCurrent: async () => current,
+            closeCurrent: async (row, now) => {
+                await this.db
+                    .update(connectionsTable)
+                    .set({ validTo: now })
+                    .where(
+                        and(
+                            eq(connectionsTable.userAId, row.userAId),
+                            eq(connectionsTable.userBId, row.userBId),
+                            eq(connectionsTable.version, row.version ?? 1),
+                            isNull(connectionsTable.validTo)
+                        )
+                    );
+            },
+            insertNext: async (row) => {
+                await this.db.insert(connectionsTable).values({
+                    userAId: row.userAId,
+                    userBId: row.userBId,
+                    version: row.version ?? 1,
+                    validFrom: row.validFrom ?? 0,
+                    validTo: row.validTo ?? null,
+                    requestedA: row.requestedA ? 1 : 0,
+                    requestedB: row.requestedB ? 1 : 0,
+                    requestedAAt: row.requestedAAt,
+                    requestedBAt: row.requestedBAt
+                });
+            }
+        });
         return this.find(userAId, userBId);
     }
 
@@ -82,7 +153,13 @@ export class ConnectionsRepository {
         const rows = await this.db
             .select()
             .from(connectionsTable)
-            .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)))
+            .where(
+                and(
+                    eq(connectionsTable.userAId, userAId),
+                    eq(connectionsTable.userBId, userBId),
+                    isNull(connectionsTable.validTo)
+                )
+            )
             .limit(1);
         const row = rows[0];
         if (!row) {
@@ -98,6 +175,7 @@ export class ConnectionsRepository {
             .where(
                 and(
                     or(eq(connectionsTable.userAId, userId), eq(connectionsTable.userBId, userId)),
+                    isNull(connectionsTable.validTo),
                     eq(connectionsTable.requestedA, 1),
                     eq(connectionsTable.requestedB, 1)
                 )
@@ -112,6 +190,9 @@ export class ConnectionsRepository {
             .selectDistinct({
                 userAId: connectionsTable.userAId,
                 userBId: connectionsTable.userBId,
+                version: connectionsTable.version,
+                validFrom: connectionsTable.validFrom,
+                validTo: connectionsTable.validTo,
                 requestedA: connectionsTable.requestedA,
                 requestedB: connectionsTable.requestedB,
                 requestedAAt: connectionsTable.requestedAAt,
@@ -122,7 +203,13 @@ export class ConnectionsRepository {
                 usersTable,
                 or(eq(connectionsTable.userAId, usersTable.id), eq(connectionsTable.userBId, usersTable.id))
             )
-            .where(eq(usersTable.parentUserId, ownerUserId))
+            .where(
+                and(
+                    eq(usersTable.parentUserId, ownerUserId),
+                    isNull(usersTable.validTo),
+                    isNull(connectionsTable.validTo)
+                )
+            )
             .orderBy(asc(connectionsTable.userAId), asc(connectionsTable.userBId));
         return rows.map((row) => connectionParse(row));
     }
@@ -132,6 +219,9 @@ export class ConnectionsRepository {
             .select({
                 userAId: connectionsTable.userAId,
                 userBId: connectionsTable.userBId,
+                version: connectionsTable.version,
+                validFrom: connectionsTable.validFrom,
+                validTo: connectionsTable.validTo,
                 requestedA: connectionsTable.requestedA,
                 requestedB: connectionsTable.requestedB,
                 requestedAAt: connectionsTable.requestedAAt,
@@ -148,24 +238,44 @@ export class ConnectionsRepository {
                     and(eq(connectionsTable.userBId, usersTable.id), eq(connectionsTable.userAId, sql`${friendUserId}`))
                 )
             )
-            .where(eq(usersTable.parentUserId, ownerUserId))
+            .where(
+                and(
+                    eq(usersTable.parentUserId, ownerUserId),
+                    isNull(usersTable.validTo),
+                    isNull(connectionsTable.validTo)
+                )
+            )
             .orderBy(asc(connectionsTable.userAId), asc(connectionsTable.userBId));
         return rows.map((row) => connectionParse(row));
     }
 
     async delete(id1: string, id2: string): Promise<boolean> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const result = await this.db
-            .delete(connectionsTable)
-            .where(and(eq(connectionsTable.userAId, userAId), eq(connectionsTable.userBId, userBId)))
-            .returning({ userAId: connectionsTable.userAId });
-        return result.length > 0;
+        const current = await this.find(userAId, userBId);
+        if (!current) {
+            return false;
+        }
+        await this.db
+            .update(connectionsTable)
+            .set({ validTo: Date.now() })
+            .where(
+                and(
+                    eq(connectionsTable.userAId, current.userAId),
+                    eq(connectionsTable.userBId, current.userBId),
+                    eq(connectionsTable.version, current.version ?? 1),
+                    isNull(connectionsTable.validTo)
+                )
+            );
+        return true;
     }
 }
 
 function connectionParse(row: {
     userAId: string;
     userBId: string;
+    version: number;
+    validFrom: number;
+    validTo: number | null;
     requestedA: number;
     requestedB: number;
     requestedAAt: number | null;
@@ -174,6 +284,9 @@ function connectionParse(row: {
     return {
         userAId: row.userAId,
         userBId: row.userBId,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? 0,
+        validTo: row.validTo ?? null,
         requestedA: row.requestedA === 1,
         requestedB: row.requestedB === 1,
         requestedAAt: row.requestedAAt,

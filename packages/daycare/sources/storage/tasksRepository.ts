@@ -4,6 +4,7 @@ import type { DaycareDb } from "../schema.js";
 import { tasksTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { TaskDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Unified tasks repository backed by Drizzle with write-through caching.
@@ -80,7 +81,7 @@ export class TasksRepository {
         const rows = await this.db
             .select()
             .from(tasksTable)
-            .where(and(eq(tasksTable.userId, ctx.userId), isNull(tasksTable.deletedAt)))
+            .where(and(eq(tasksTable.userId, ctx.userId), isNull(tasksTable.validTo), isNull(tasksTable.deletedAt)))
             .orderBy(asc(tasksTable.updatedAt));
         return rows.map((row) => taskClone(taskParse(row)));
     }
@@ -89,7 +90,7 @@ export class TasksRepository {
         const rows = await this.db
             .select()
             .from(tasksTable)
-            .where(isNull(tasksTable.deletedAt))
+            .where(and(isNull(tasksTable.validTo), isNull(tasksTable.deletedAt)))
             .orderBy(asc(tasksTable.updatedAt));
         const parsed = rows.map((row) => taskParse(row));
 
@@ -112,23 +113,33 @@ export class TasksRepository {
             if (existing?.deletedAt != null) {
                 throw new Error(`Task id is reserved by a deleted task: ${record.id}`);
             }
-
-            await this.db
-                .insert(tasksTable)
-                .values({
-                    id: record.id,
+            let next: TaskDbRecord;
+            if (!existing) {
+                next = {
+                    ...record,
                     userId,
-                    title: record.title,
-                    description: record.description,
-                    code: record.code,
-                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt,
+                    version: 1,
+                    validFrom: record.createdAt,
+                    validTo: null,
                     deletedAt: record.deletedAt ?? null
-                })
-                .onConflictDoUpdate({
-                    target: [tasksTable.userId, tasksTable.id],
-                    set: {
+                };
+                await this.db.insert(tasksTable).values({
+                    id: next.id,
+                    userId: next.userId,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    title: next.title,
+                    description: next.description,
+                    code: next.code,
+                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt,
+                    deletedAt: next.deletedAt
+                });
+            } else {
+                next = await versionAdvance<TaskDbRecord>({
+                    changes: {
                         userId,
                         title: record.title,
                         description: record.description,
@@ -137,15 +148,42 @@ export class TasksRepository {
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt,
                         deletedAt: record.deletedAt ?? null
+                    },
+                    findCurrent: async () => existing,
+                    closeCurrent: async (row, now) => {
+                        await this.db
+                            .update(tasksTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksTable.userId, row.userId),
+                                    eq(tasksTable.id, row.id),
+                                    eq(tasksTable.version, row.version ?? 1),
+                                    isNull(tasksTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await this.db.insert(tasksTable).values({
+                            id: row.id,
+                            userId: row.userId,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            title: row.title,
+                            description: row.description,
+                            code: row.code,
+                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt,
+                            deletedAt: row.deletedAt ?? null
+                        });
                     }
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet({
-                    ...record,
-                    userId,
-                    deletedAt: record.deletedAt ?? null
-                });
+                this.taskCacheSet(next);
             });
         });
     }
@@ -173,9 +211,8 @@ export class TasksRepository {
                 deletedAt: data.deletedAt === undefined ? current.deletedAt : data.deletedAt
             };
 
-            await this.db
-                .update(tasksTable)
-                .set({
+            const advanced = await versionAdvance<TaskDbRecord>({
+                changes: {
                     userId: next.userId,
                     title: next.title,
                     description: next.description,
@@ -184,11 +221,41 @@ export class TasksRepository {
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt,
                     deletedAt: next.deletedAt ?? null
-                })
-                .where(and(eq(tasksTable.userId, current.userId), eq(tasksTable.id, id)));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(tasksTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(tasksTable.userId, row.userId),
+                                eq(tasksTable.id, row.id),
+                                eq(tasksTable.version, row.version ?? 1),
+                                isNull(tasksTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(tasksTable).values({
+                        id: row.id,
+                        userId: row.userId,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        title: row.title,
+                        description: row.description,
+                        code: row.code,
+                        parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt,
+                        deletedAt: row.deletedAt ?? null
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet(next);
+                this.taskCacheSet(advanced);
             });
         });
     }
@@ -206,16 +273,45 @@ export class TasksRepository {
                 return false;
             }
             const now = Date.now();
-            await this.db
-                .update(tasksTable)
-                .set({ deletedAt: now, updatedAt: now })
-                .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id), isNull(tasksTable.deletedAt)));
-            await this.cacheLock.inLock(() => {
-                this.taskCacheSet({
-                    ...current,
+            const advanced = await versionAdvance<TaskDbRecord>({
+                now,
+                changes: {
                     deletedAt: now,
                     updatedAt: now
-                });
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, closedAt) => {
+                    await this.db
+                        .update(tasksTable)
+                        .set({ validTo: closedAt })
+                        .where(
+                            and(
+                                eq(tasksTable.userId, row.userId),
+                                eq(tasksTable.id, row.id),
+                                eq(tasksTable.version, row.version ?? 1),
+                                isNull(tasksTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(tasksTable).values({
+                        id: row.id,
+                        userId: row.userId,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        title: row.title,
+                        description: row.description,
+                        code: row.code,
+                        parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt,
+                        deletedAt: row.deletedAt ?? null
+                    });
+                }
+            });
+            await this.cacheLock.inLock(() => {
+                this.taskCacheSet(advanced);
             });
             return true;
         });
@@ -229,7 +325,7 @@ export class TasksRepository {
         const rows = await this.db
             .select()
             .from(tasksTable)
-            .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id)))
+            .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id), isNull(tasksTable.validTo)))
             .limit(1);
         const row = rows[0];
         if (!row) {
@@ -253,6 +349,9 @@ function taskParse(row: typeof tasksTable.$inferSelect): TaskDbRecord {
     return {
         id: row.id,
         userId: row.userId,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         title: row.title,
         description: row.description,
         code: row.code,

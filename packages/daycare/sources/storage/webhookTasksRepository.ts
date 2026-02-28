@@ -1,9 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { tasksWebhookTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { WebhookTaskDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Webhook task repository backed by Drizzle with write-through caching.
@@ -52,7 +53,7 @@ export class WebhookTasksRepository {
         const rows = await this.db
             .select()
             .from(tasksWebhookTable)
-            .where(eq(tasksWebhookTable.userId, ctx.userId))
+            .where(and(eq(tasksWebhookTable.userId, ctx.userId), isNull(tasksWebhookTable.validTo)))
             .orderBy(asc(tasksWebhookTable.updatedAt));
         return rows.map((row) => webhookTaskClone(webhookTaskParse(row)));
     }
@@ -62,7 +63,11 @@ export class WebhookTasksRepository {
             return webhookTasksSort(Array.from(this.tasksById.values())).map((task) => webhookTaskClone(task));
         }
 
-        const rows = await this.db.select().from(tasksWebhookTable).orderBy(asc(tasksWebhookTable.updatedAt));
+        const rows = await this.db
+            .select()
+            .from(tasksWebhookTable)
+            .where(isNull(tasksWebhookTable.validTo))
+            .orderBy(asc(tasksWebhookTable.updatedAt));
         const parsed = rows.map((row) => webhookTaskParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -80,7 +85,13 @@ export class WebhookTasksRepository {
         const rows = await this.db
             .select()
             .from(tasksWebhookTable)
-            .where(and(eq(tasksWebhookTable.userId, ctx.userId), eq(tasksWebhookTable.taskId, taskId)))
+            .where(
+                and(
+                    eq(tasksWebhookTable.userId, ctx.userId),
+                    eq(tasksWebhookTable.taskId, taskId),
+                    isNull(tasksWebhookTable.validTo)
+                )
+            )
             .orderBy(asc(tasksWebhookTable.updatedAt));
         return rows.map((row) => webhookTaskClone(webhookTaskParse(row)));
     }
@@ -92,51 +103,115 @@ export class WebhookTasksRepository {
         }
 
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(tasksWebhookTable)
-                .values({
-                    id: record.id,
+            const current = this.tasksById.get(record.id) ?? (await this.taskLoadById(record.id));
+            let next: WebhookTaskDbRecord;
+            if (!current) {
+                next = {
+                    ...record,
                     taskId,
-                    userId: record.userId,
-                    agentId: record.agentId,
-                    lastRunAt: record.lastRunAt,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: tasksWebhookTable.id,
-                    set: {
+                    version: 1,
+                    validFrom: record.createdAt,
+                    validTo: null
+                };
+                await this.db.insert(tasksWebhookTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    taskId: next.taskId,
+                    userId: next.userId,
+                    agentId: next.agentId,
+                    lastRunAt: next.lastRunAt,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                });
+            } else {
+                next = await versionAdvance<WebhookTaskDbRecord>({
+                    changes: {
                         taskId,
                         userId: record.userId,
                         agentId: record.agentId,
                         lastRunAt: record.lastRunAt,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await this.db
+                            .update(tasksWebhookTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksWebhookTable.id, row.id),
+                                    eq(tasksWebhookTable.version, row.version ?? 1),
+                                    isNull(tasksWebhookTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await this.db.insert(tasksWebhookTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            taskId: row.taskId,
+                            userId: row.userId,
+                            agentId: row.agentId,
+                            lastRunAt: row.lastRunAt,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
                     }
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet(record);
+                this.taskCacheSet(next);
             });
         });
     }
 
     async recordRun(id: string, runAt: number): Promise<void> {
         await this.runLock.inLock(async () => {
-            await this.db
-                .update(tasksWebhookTable)
-                .set({ lastRunAt: runAt, updatedAt: runAt })
-                .where(eq(tasksWebhookTable.id, id));
-            await this.cacheLock.inLock(() => {
-                const cached = this.tasksById.get(id);
-                if (!cached) {
-                    return;
+            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
+            if (!current) {
+                return;
+            }
+
+            const next = await versionAdvance<WebhookTaskDbRecord>({
+                now: runAt,
+                changes: { lastRunAt: runAt, updatedAt: runAt },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(tasksWebhookTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(tasksWebhookTable.id, row.id),
+                                eq(tasksWebhookTable.version, row.version ?? 1),
+                                isNull(tasksWebhookTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(tasksWebhookTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        taskId: row.taskId,
+                        userId: row.userId,
+                        agentId: row.agentId,
+                        lastRunAt: row.lastRunAt,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
                 }
-                this.tasksById.set(id, {
-                    ...cached,
-                    lastRunAt: runAt,
-                    updatedAt: runAt
-                });
+            });
+
+            await this.cacheLock.inLock(() => {
+                this.taskCacheSet(next);
             });
         });
     }
@@ -144,16 +219,27 @@ export class WebhookTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(tasksWebhookTable)
-                .where(eq(tasksWebhookTable.id, id))
-                .returning({ id: tasksWebhookTable.id });
+            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
+            if (!current) {
+                return false;
+            }
+
+            await this.db
+                .update(tasksWebhookTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(tasksWebhookTable.id, current.id),
+                        eq(tasksWebhookTable.version, current.version ?? 1),
+                        isNull(tasksWebhookTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.tasksById.delete(id);
             });
 
-            return result.length > 0;
+            return true;
         });
     }
 
@@ -162,7 +248,11 @@ export class WebhookTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<WebhookTaskDbRecord | null> {
-        const rows = await this.db.select().from(tasksWebhookTable).where(eq(tasksWebhookTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(tasksWebhookTable)
+            .where(and(eq(tasksWebhookTable.id, id), isNull(tasksWebhookTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -188,6 +278,9 @@ function webhookTaskParse(row: typeof tasksWebhookTable.$inferSelect): WebhookTa
     }
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         taskId,
         userId: row.userId,
         agentId: row.agentId,

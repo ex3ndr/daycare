@@ -4,7 +4,6 @@ import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
 import {
     bigint,
     check,
-    foreignKey,
     index,
     integer,
     pgTable,
@@ -25,7 +24,10 @@ export const migrationsTable = pgTable("_migrations", {
 export const usersTable = pgTable(
     "users",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         isOwner: integer("is_owner").notNull().default(0),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
@@ -38,15 +40,14 @@ export const usersTable = pgTable(
         nametag: text("nametag").notNull()
     },
     (table) => [
+        primaryKey({ columns: [table.id, table.version] }),
         check("users_nametag_required", sql`trim(${table.nametag}) <> ''`),
-        foreignKey({
-            columns: [table.parentUserId],
-            foreignColumns: [table.id]
-        }),
-        uniqueIndex("idx_users_nametag_required").on(table.nametag),
-        uniqueIndex("idx_users_nametag").on(table.nametag),
-        uniqueIndex("idx_users_single_owner").on(table.isOwner).where(sql`${table.isOwner} = 1`),
-        index("idx_users_parent").on(table.parentUserId).where(sql`${table.parentUserId} IS NOT NULL`)
+        uniqueIndex("idx_users_nametag").on(table.nametag).where(sql`${table.validTo} IS NULL`),
+        uniqueIndex("idx_users_single_owner")
+            .on(table.isOwner)
+            .where(sql`${table.isOwner} = 1 AND ${table.validTo} IS NULL`),
+        index("idx_users_parent").on(table.parentUserId).where(sql`${table.parentUserId} IS NOT NULL`),
+        index("idx_users_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
@@ -54,9 +55,7 @@ export const userConnectorKeysTable = pgTable(
     "user_connector_keys",
     {
         id: serial("id").primaryKey(),
-        userId: text("user_id")
-            .notNull()
-            .references(() => usersTable.id, { onDelete: "cascade" }),
+        userId: text("user_id").notNull(),
         connectorKey: text("connector_key").notNull().unique()
     },
     (table) => [index("idx_user_connector_keys_user_id").on(table.userId)]
@@ -65,7 +64,10 @@ export const userConnectorKeysTable = pgTable(
 export const agentsTable = pgTable(
     "agents",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         type: text("type").notNull(),
         descriptor: text("descriptor").notNull(),
         activeSessionId: text("active_session_id"),
@@ -77,16 +79,18 @@ export const agentsTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
         userId: text("user_id").notNull()
     },
-    (table) => [index("idx_agents_user_id").on(table.userId)]
+    (table) => [
+        primaryKey({ columns: [table.id, table.version] }),
+        index("idx_agents_user_id").on(table.userId),
+        index("idx_agents_id_valid_to").on(table.id, table.validTo)
+    ]
 );
 
 export const sessionsTable = pgTable(
     "sessions",
     {
         id: text("id").primaryKey(),
-        agentId: text("agent_id")
-            .notNull()
-            .references(() => agentsTable.id, { onDelete: "cascade" }),
+        agentId: text("agent_id").notNull(),
         inferenceSessionId: text("inference_session_id"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         resetMessage: text("reset_message"),
@@ -131,6 +135,9 @@ export const tasksTable = pgTable(
     {
         id: text("id").notNull(),
         userId: text("user_id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         title: text("title").notNull(),
         description: text("description"),
         code: text("code").notNull(),
@@ -140,16 +147,20 @@ export const tasksTable = pgTable(
         deletedAt: bigint("deleted_at", { mode: "number" })
     },
     (table) => [
-        primaryKey({ columns: [table.userId, table.id] }),
+        primaryKey({ columns: [table.userId, table.id, table.version] }),
         index("idx_tasks_user_id").on(table.userId),
-        index("idx_tasks_updated_at").on(table.updatedAt)
+        index("idx_tasks_updated_at").on(table.updatedAt),
+        index("idx_tasks_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
 export const tasksCronTable = pgTable(
     "tasks_cron",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         taskId: text("task_id").notNull(),
         userId: text("user_id").notNull(),
         name: text("name").notNull(),
@@ -165,20 +176,21 @@ export const tasksCronTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
-        foreignKey({
-            columns: [table.userId, table.taskId],
-            foreignColumns: [tasksTable.userId, tasksTable.id]
-        }),
+        primaryKey({ columns: [table.id, table.version] }),
         index("idx_tasks_cron_enabled").on(table.enabled),
         index("idx_tasks_cron_task_id").on(table.userId, table.taskId),
-        index("idx_tasks_cron_updated_at").on(table.updatedAt)
+        index("idx_tasks_cron_updated_at").on(table.updatedAt),
+        index("idx_tasks_cron_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
 export const tasksHeartbeatTable = pgTable(
     "tasks_heartbeat",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         taskId: text("task_id").notNull(),
         userId: text("user_id").notNull(),
         title: text("title").notNull(),
@@ -188,20 +200,21 @@ export const tasksHeartbeatTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
-        foreignKey({
-            columns: [table.userId, table.taskId],
-            foreignColumns: [tasksTable.userId, tasksTable.id]
-        }),
+        primaryKey({ columns: [table.id, table.version] }),
         index("idx_tasks_heartbeat_task_id").on(table.userId, table.taskId),
         index("idx_tasks_heartbeat_updated_at").on(table.updatedAt),
-        index("idx_tasks_heartbeat_user_id").on(table.userId)
+        index("idx_tasks_heartbeat_user_id").on(table.userId),
+        index("idx_tasks_heartbeat_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
 export const tasksWebhookTable = pgTable(
     "tasks_webhook",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         taskId: text("task_id").notNull(),
         userId: text("user_id").notNull(),
         agentId: text("agent_id"),
@@ -210,13 +223,11 @@ export const tasksWebhookTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
-        foreignKey({
-            columns: [table.userId, table.taskId],
-            foreignColumns: [tasksTable.userId, tasksTable.id]
-        }),
+        primaryKey({ columns: [table.id, table.version] }),
         index("idx_tasks_webhook_task_id").on(table.userId, table.taskId),
         index("idx_tasks_webhook_updated_at").on(table.updatedAt),
-        index("idx_tasks_webhook_user_id").on(table.userId)
+        index("idx_tasks_webhook_user_id").on(table.userId),
+        index("idx_tasks_webhook_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
@@ -240,7 +251,10 @@ export const signalsEventsTable = pgTable(
 export const signalsSubscriptionsTable = pgTable(
     "signals_subscriptions",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         userId: text("user_id").notNull(),
         agentId: text("agent_id").notNull(),
         pattern: text("pattern").notNull(),
@@ -249,8 +263,12 @@ export const signalsSubscriptionsTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
-        uniqueIndex("signals_subscriptions_user_agent_pattern_unique").on(table.userId, table.agentId, table.pattern),
-        index("idx_signals_subscriptions_user_agent").on(table.userId, table.agentId)
+        primaryKey({ columns: [table.id, table.version] }),
+        uniqueIndex("signals_subscriptions_user_agent_pattern_unique")
+            .on(table.userId, table.agentId, table.pattern)
+            .where(sql`${table.validTo} IS NULL`),
+        index("idx_signals_subscriptions_user_agent").on(table.userId, table.agentId),
+        index("idx_signals_subscriptions_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
@@ -273,23 +291,30 @@ export const signalsDelayedTable = pgTable(
 export const channelsTable = pgTable(
     "channels",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         userId: text("user_id").notNull(),
-        name: text("name").notNull().unique(),
+        name: text("name").notNull(),
         leader: text("leader").notNull(),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
-    (table) => [index("idx_channels_name").on(table.name), index("idx_channels_user").on(table.userId)]
+    (table) => [
+        primaryKey({ columns: [table.id, table.version] }),
+        uniqueIndex("channels_name_unique").on(table.name).where(sql`${table.validTo} IS NULL`),
+        index("idx_channels_name").on(table.name),
+        index("idx_channels_user").on(table.userId),
+        index("idx_channels_id_valid_to").on(table.id, table.validTo)
+    ]
 );
 
 export const channelMembersTable = pgTable(
     "channel_members",
     {
         id: serial("id").primaryKey(),
-        channelId: text("channel_id")
-            .notNull()
-            .references(() => channelsTable.id, { onDelete: "cascade" }),
+        channelId: text("channel_id").notNull(),
         userId: text("user_id").notNull(),
         agentId: text("agent_id").notNull(),
         username: text("username").notNull(),
@@ -305,9 +330,7 @@ export const channelMessagesTable = pgTable(
     "channel_messages",
     {
         id: text("id").primaryKey(),
-        channelId: text("channel_id")
-            .notNull()
-            .references(() => channelsTable.id, { onDelete: "cascade" }),
+        channelId: text("channel_id").notNull(),
         userId: text("user_id").notNull(),
         senderUsername: text("sender_username").notNull(),
         text: text("text").notNull(),
@@ -320,7 +343,10 @@ export const channelMessagesTable = pgTable(
 export const exposeEndpointsTable = pgTable(
     "expose_endpoints",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         userId: text("user_id").notNull(),
         target: text("target").notNull(),
         provider: text("provider").notNull(),
@@ -331,15 +357,20 @@ export const exposeEndpointsTable = pgTable(
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
+        primaryKey({ columns: [table.id, table.version] }),
         index("idx_expose_endpoints_domain").on(table.domain),
-        index("idx_expose_endpoints_user").on(table.userId)
+        index("idx_expose_endpoints_user").on(table.userId),
+        index("idx_expose_endpoints_id_valid_to").on(table.id, table.validTo)
     ]
 );
 
 export const processesTable = pgTable(
     "processes",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         userId: text("user_id").notNull(),
         name: text("name").notNull(),
         command: text("command").notNull(),
@@ -366,34 +397,42 @@ export const processesTable = pgTable(
         lastStartedAt: bigint("last_started_at", { mode: "number" }),
         lastExitedAt: bigint("last_exited_at", { mode: "number" })
     },
-    (table) => [index("idx_processes_owner").on(table.owner), index("idx_processes_user").on(table.userId)]
+    (table) => [
+        primaryKey({ columns: [table.id, table.version] }),
+        index("idx_processes_owner").on(table.owner),
+        index("idx_processes_user").on(table.userId),
+        index("idx_processes_id_valid_to").on(table.id, table.validTo)
+    ]
 );
 
 export const connectionsTable = pgTable(
     "connections",
     {
-        userAId: text("user_a_id")
-            .notNull()
-            .references(() => usersTable.id, { onDelete: "cascade" }),
-        userBId: text("user_b_id")
-            .notNull()
-            .references(() => usersTable.id, { onDelete: "cascade" }),
+        userAId: text("user_a_id").notNull(),
+        userBId: text("user_b_id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         requestedA: integer("requested_a").notNull().default(0),
         requestedB: integer("requested_b").notNull().default(0),
         requestedAAt: bigint("requested_a_at", { mode: "number" }),
         requestedBAt: bigint("requested_b_at", { mode: "number" })
     },
     (table) => [
-        primaryKey({ columns: [table.userAId, table.userBId] }),
+        primaryKey({ columns: [table.userAId, table.userBId, table.version] }),
         check("connections_user_order", sql`${table.userAId} < ${table.userBId}`),
-        index("idx_connections_user_b").on(table.userBId)
+        index("idx_connections_user_b").on(table.userBId),
+        index("idx_connections_pair_valid_to").on(table.userAId, table.userBId, table.validTo)
     ]
 );
 
 export const systemPromptsTable = pgTable(
     "system_prompts",
     {
-        id: text("id").primaryKey(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         scope: text("scope").notNull(),
         userId: text("user_id"),
         kind: text("kind").notNull(),
@@ -403,19 +442,20 @@ export const systemPromptsTable = pgTable(
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
-    (table) => [index("idx_system_prompts_scope").on(table.scope), index("idx_system_prompts_user_id").on(table.userId)]
+    (table) => [
+        primaryKey({ columns: [table.id, table.version] }),
+        index("idx_system_prompts_scope").on(table.scope),
+        index("idx_system_prompts_user_id").on(table.userId),
+        index("idx_system_prompts_id_valid_to").on(table.id, table.validTo)
+    ]
 );
 
 export const tokenStatsHourlyTable = pgTable(
     "token_stats_hourly",
     {
         hourStart: bigint("hour_start", { mode: "number" }).notNull(),
-        userId: text("user_id")
-            .notNull()
-            .references(() => usersTable.id, { onDelete: "cascade" }),
-        agentId: text("agent_id")
-            .notNull()
-            .references(() => agentsTable.id, { onDelete: "cascade" }),
+        userId: text("user_id").notNull(),
+        agentId: text("agent_id").notNull(),
         model: text("model").notNull(),
         inputTokens: integer("input_tokens").notNull().default(0),
         outputTokens: integer("output_tokens").notNull().default(0),

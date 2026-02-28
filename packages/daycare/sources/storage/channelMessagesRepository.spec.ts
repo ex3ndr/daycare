@@ -14,6 +14,9 @@ describe("ChannelMessagesRepository", () => {
             // Create parent channel required by FK constraint
             await storage.db.insert(channelsTable).values({
                 id: "channel-1",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 userId: "user-a",
                 name: "test-channel",
                 leader: "user-a",

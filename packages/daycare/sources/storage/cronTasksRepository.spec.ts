@@ -21,6 +21,9 @@ describe("CronTasksRepository", () => {
             });
             const record: CronTaskDbRecord = {
                 id: "daily-report",
+                version: 1,
+                validFrom: 10,
+                validTo: null,
                 taskId: "task-daily-report",
                 userId: "user-1",
                 name: "Daily Report",
@@ -86,6 +89,9 @@ describe("CronTasksRepository", () => {
             });
             await repo.create({
                 id: "cached-task",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 taskId: "task-cached-task",
                 userId: "user-1",
                 name: "Cached",

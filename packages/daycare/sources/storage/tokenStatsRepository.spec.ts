@@ -10,13 +10,23 @@ async function createTestEntities(
     agents: string[]
 ) {
     for (const userId of users) {
-        await storage.db
-            .insert(usersTable)
-            .values({ id: userId, nametag: `tag-${userId}`, isOwner: 0, createdAt: 1, updatedAt: 1 });
+        await storage.db.insert(usersTable).values({
+            id: userId,
+            version: 1,
+            validFrom: 1,
+            validTo: null,
+            nametag: `tag-${userId}`,
+            isOwner: 0,
+            createdAt: 1,
+            updatedAt: 1
+        });
     }
     for (const agentId of agents) {
         await storage.db.insert(agentsTable).values({
             id: agentId,
+            version: 1,
+            validFrom: 1,
+            validTo: null,
             userId: users[0] ?? "user-a",
             type: "cron",
             descriptor: JSON.stringify({ type: "cron", id: agentId, name: agentId }),

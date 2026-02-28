@@ -1,5 +1,4 @@
 import { createId } from "@paralleldrive/cuid2";
-import { eq } from "drizzle-orm";
 import type { AgentHistoryRecord } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { agentsTable, type DaycareDb, schemaDrizzle, sessionsTable } from "../schema.js";
@@ -134,7 +133,10 @@ export class Storage {
     ): Promise<{ agent: CreateAgentInput["record"]; sessionId: string }> {
         const baseRecord = {
             ...input.record,
-            activeSessionId: null
+            activeSessionId: null,
+            version: 1,
+            validFrom: input.record.createdAt,
+            validTo: null
         };
 
         const sessionCreatedAt = input.session?.createdAt ?? baseRecord.createdAt;
@@ -146,16 +148,19 @@ export class Storage {
         await this.db.transaction(async (tx) => {
             await tx.insert(agentsTable).values({
                 id: baseRecord.id,
+                version: baseRecord.version,
+                validFrom: baseRecord.validFrom,
+                validTo: baseRecord.validTo,
                 userId: baseRecord.userId,
                 type: baseRecord.type,
                 descriptor: JSON.stringify(baseRecord.descriptor),
-                activeSessionId: null,
+                activeSessionId: sessionId,
                 permissions: JSON.stringify(baseRecord.permissions),
                 tokens: baseRecord.tokens ? JSON.stringify(baseRecord.tokens) : null,
                 stats: JSON.stringify(baseRecord.stats),
                 lifecycle: baseRecord.lifecycle,
                 createdAt: baseRecord.createdAt,
-                updatedAt: baseRecord.updatedAt
+                updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)
             });
             await tx.insert(sessionsTable).values({
                 id: sessionId,
@@ -166,13 +171,6 @@ export class Storage {
                 invalidatedAt: null,
                 processedUntil: null
             });
-            await tx
-                .update(agentsTable)
-                .set({
-                    activeSessionId: sessionId,
-                    updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)
-                })
-                .where(eq(agentsTable.id, baseRecord.id));
         });
 
         const agent = {

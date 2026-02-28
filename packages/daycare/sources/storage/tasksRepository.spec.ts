@@ -13,6 +13,9 @@ describe("TasksRepository", () => {
             const record: TaskDbRecord = {
                 id: "task-1",
                 userId: "user-1",
+                version: 1,
+                validFrom: 10,
+                validTo: null,
                 title: "Daily report",
                 description: "Summarize yesterday",
                 code: "print('hello')",
@@ -62,6 +65,9 @@ describe("TasksRepository", () => {
             await repo.create({
                 id: "cached-task",
                 userId: "user-1",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 title: "Cache",
                 description: null,
                 code: "print('cache')",
@@ -92,6 +98,9 @@ describe("TasksRepository", () => {
             await repo.create({
                 id: "task-shared",
                 userId: "user-1",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 title: "A",
                 description: null,
                 code: "print('a')",
@@ -103,6 +112,9 @@ describe("TasksRepository", () => {
             await repo.create({
                 id: "task-shared",
                 userId: "user-2",
+                version: 1,
+                validFrom: 2,
+                validTo: null,
                 title: "B",
                 description: null,
                 code: "print('b')",

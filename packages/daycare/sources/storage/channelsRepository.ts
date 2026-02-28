@@ -1,9 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { channelMembersTable, channelsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { ChannelDbRecord, ChannelMemberDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Channels repository backed by Drizzle with write-through caching.
@@ -24,29 +25,69 @@ export class ChannelsRepository {
 
     async create(record: ChannelDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(channelsTable)
-                .values({
-                    id: record.id,
-                    userId: record.userId,
-                    name: record.name,
-                    leader: record.leader,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: channelsTable.id,
-                    set: {
-                        userId: record.userId,
-                        name: record.name,
-                        leader: record.leader,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt
-                    }
+            const current = this.channelsById.get(record.id) ?? (await this.channelLoadById(record.id));
+            const next = current
+                ? await versionAdvance<ChannelDbRecord>({
+                      changes: {
+                          userId: record.userId,
+                          name: record.name,
+                          leader: record.leader,
+                          createdAt: record.createdAt,
+                          updatedAt: record.updatedAt
+                      },
+                      findCurrent: async () => current,
+                      closeCurrent: async (row, now) => {
+                          await this.db
+                              .update(channelsTable)
+                              .set({ validTo: now })
+                              .where(
+                                  and(
+                                      eq(channelsTable.id, row.id),
+                                      eq(channelsTable.version, row.version ?? 1),
+                                      isNull(channelsTable.validTo)
+                                  )
+                              );
+                      },
+                      insertNext: async (row) => {
+                          await this.db.insert(channelsTable).values({
+                              id: row.id,
+                              version: row.version ?? 1,
+                              validFrom: row.validFrom ?? row.createdAt,
+                              validTo: row.validTo ?? null,
+                              userId: row.userId,
+                              name: row.name,
+                              leader: row.leader,
+                              createdAt: row.createdAt,
+                              updatedAt: row.updatedAt
+                          });
+                      }
+                  })
+                : {
+                      ...record,
+                      version: 1,
+                      validFrom: record.createdAt,
+                      validTo: null
+                  };
+
+            if (!current) {
+                await this.db.insert(channelsTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    userId: next.userId,
+                    name: next.name,
+                    leader: next.leader,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.channelCacheSet(record);
+                if (current && current.name !== next.name) {
+                    this.channelIdByName.delete(current.name);
+                }
+                this.channelCacheSet(next);
             });
         });
     }
@@ -86,7 +127,11 @@ export class ChannelsRepository {
             return null;
         }
 
-        const rows = await this.db.select().from(channelsTable).where(eq(channelsTable.name, name)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(channelsTable)
+            .where(and(eq(channelsTable.name, name), isNull(channelsTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -102,7 +147,7 @@ export class ChannelsRepository {
         const rows = await this.db
             .select()
             .from(channelsTable)
-            .where(eq(channelsTable.userId, ctx.userId))
+            .where(and(eq(channelsTable.userId, ctx.userId), isNull(channelsTable.validTo)))
             .orderBy(asc(channelsTable.createdAt), asc(channelsTable.id));
         return rows.map((row) => channelClone(channelParse(row)));
     }
@@ -115,6 +160,7 @@ export class ChannelsRepository {
         const rows = await this.db
             .select()
             .from(channelsTable)
+            .where(isNull(channelsTable.validTo))
             .orderBy(asc(channelsTable.createdAt), asc(channelsTable.id));
         const parsed = rows.map((row) => channelParse(row));
 
@@ -147,19 +193,47 @@ export class ChannelsRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            await this.db
-                .update(channelsTable)
-                .set({
+            const advanced = await versionAdvance<ChannelDbRecord>({
+                changes: {
                     userId: next.userId,
                     name: next.name,
                     leader: next.leader,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(channelsTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(channelsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(channelsTable.id, row.id),
+                                eq(channelsTable.version, row.version ?? 1),
+                                isNull(channelsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(channelsTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        userId: row.userId,
+                        name: row.name,
+                        leader: row.leader,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.channelCacheSet(next);
+                if (current.name !== advanced.name) {
+                    this.channelIdByName.delete(current.name);
+                }
+                this.channelCacheSet(advanced);
             });
         });
     }
@@ -168,10 +242,19 @@ export class ChannelsRepository {
         const lock = this.channelLockForId(id);
         return lock.inLock(async () => {
             const current = this.channelsById.get(id) ?? (await this.channelLoadById(id));
-            const result = await this.db
-                .delete(channelsTable)
-                .where(eq(channelsTable.id, id))
-                .returning({ id: channelsTable.id });
+            if (!current) {
+                return false;
+            }
+            await this.db
+                .update(channelsTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(channelsTable.id, current.id),
+                        eq(channelsTable.version, current.version ?? 1),
+                        isNull(channelsTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.channelsById.delete(id);
@@ -180,7 +263,7 @@ export class ChannelsRepository {
                 }
             });
 
-            return result.length > 0;
+            return true;
         });
     }
 
@@ -241,7 +324,11 @@ export class ChannelsRepository {
     }
 
     private async channelLoadById(id: string): Promise<ChannelDbRecord | null> {
-        const rows = await this.db.select().from(channelsTable).where(eq(channelsTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(channelsTable)
+            .where(and(eq(channelsTable.id, id), isNull(channelsTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -263,6 +350,9 @@ export class ChannelsRepository {
 function channelParse(row: typeof channelsTable.$inferSelect): ChannelDbRecord {
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         userId: row.userId,
         name: row.name,
         leader: row.leader,

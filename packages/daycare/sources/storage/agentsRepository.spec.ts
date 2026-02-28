@@ -22,6 +22,9 @@ describe("AgentsRepository", () => {
             const repo = new AgentsRepository(storage.db);
             const record: AgentDbRecord = {
                 id: "agent-1",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 userId: ownerUser.id,
                 type: "cron",
                 descriptor: { type: "cron", id: "agent-1", name: "cron" },
@@ -100,6 +103,9 @@ describe("AgentsRepository", () => {
                     `
                   INSERT INTO agents (
                     id,
+                    version,
+                    valid_from,
+                    valid_to,
                     user_id,
                     type,
                     descriptor,
@@ -110,11 +116,14 @@ describe("AgentsRepository", () => {
                     lifecycle,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `
                 )
                 .run(
                     "agent-db",
+                    1,
+                    1,
+                    null,
                     ownerUser.id,
                     "cron",
                     JSON.stringify({ type: "cron", id: "agent-db", name: "db" }),

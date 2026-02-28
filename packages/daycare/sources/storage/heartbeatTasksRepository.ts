@@ -1,9 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { tasksHeartbeatTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { HeartbeatTaskDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Heartbeat tasks repository backed by Drizzle with write-through caching.
@@ -52,7 +53,7 @@ export class HeartbeatTasksRepository {
         const rows = await this.db
             .select()
             .from(tasksHeartbeatTable)
-            .where(eq(tasksHeartbeatTable.userId, ctx.userId))
+            .where(and(eq(tasksHeartbeatTable.userId, ctx.userId), isNull(tasksHeartbeatTable.validTo)))
             .orderBy(asc(tasksHeartbeatTable.updatedAt));
         return rows.map((row) => heartbeatTaskClone(heartbeatTaskParse(row)));
     }
@@ -62,7 +63,11 @@ export class HeartbeatTasksRepository {
             return heartbeatTasksSort(Array.from(this.tasksById.values())).map((task) => heartbeatTaskClone(task));
         }
 
-        const rows = await this.db.select().from(tasksHeartbeatTable).orderBy(asc(tasksHeartbeatTable.updatedAt));
+        const rows = await this.db
+            .select()
+            .from(tasksHeartbeatTable)
+            .where(isNull(tasksHeartbeatTable.validTo))
+            .orderBy(asc(tasksHeartbeatTable.updatedAt));
         const parsed = rows.map((row) => heartbeatTaskParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -80,7 +85,13 @@ export class HeartbeatTasksRepository {
         const rows = await this.db
             .select()
             .from(tasksHeartbeatTable)
-            .where(and(eq(tasksHeartbeatTable.userId, ctx.userId), eq(tasksHeartbeatTable.taskId, taskId)))
+            .where(
+                and(
+                    eq(tasksHeartbeatTable.userId, ctx.userId),
+                    eq(tasksHeartbeatTable.taskId, taskId),
+                    isNull(tasksHeartbeatTable.validTo)
+                )
+            )
             .orderBy(asc(tasksHeartbeatTable.updatedAt));
         return rows.map((row) => heartbeatTaskClone(heartbeatTaskParse(row)));
     }
@@ -91,21 +102,32 @@ export class HeartbeatTasksRepository {
             throw new Error("Heartbeat trigger taskId is required.");
         }
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(tasksHeartbeatTable)
-                .values({
-                    id: record.id,
+            const current = this.tasksById.get(record.id) ?? (await this.taskLoadById(record.id));
+            let next: HeartbeatTaskDbRecord;
+            if (!current) {
+                next = {
+                    ...record,
                     taskId,
-                    userId: record.userId,
-                    title: record.title,
-                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
-                    lastRunAt: record.lastRunAt,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: tasksHeartbeatTable.id,
-                    set: {
+                    version: 1,
+                    validFrom: record.createdAt,
+                    validTo: null
+                };
+                await this.db.insert(tasksHeartbeatTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    taskId: next.taskId,
+                    userId: next.userId,
+                    title: next.title,
+                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
+                    lastRunAt: next.lastRunAt,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                });
+            } else {
+                next = await versionAdvance<HeartbeatTaskDbRecord>({
+                    changes: {
                         taskId,
                         userId: record.userId,
                         title: record.title,
@@ -113,11 +135,40 @@ export class HeartbeatTasksRepository {
                         lastRunAt: record.lastRunAt,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await this.db
+                            .update(tasksHeartbeatTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksHeartbeatTable.id, row.id),
+                                    eq(tasksHeartbeatTable.version, row.version ?? 1),
+                                    isNull(tasksHeartbeatTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await this.db.insert(tasksHeartbeatTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            taskId: row.taskId,
+                            userId: row.userId,
+                            title: row.title,
+                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                            lastRunAt: row.lastRunAt,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
                     }
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet(record);
+                this.taskCacheSet(next);
             });
         });
     }
@@ -143,9 +194,8 @@ export class HeartbeatTasksRepository {
                 throw new Error("Heartbeat trigger taskId is required.");
             }
 
-            await this.db
-                .update(tasksHeartbeatTable)
-                .set({
+            const advanced = await versionAdvance<HeartbeatTaskDbRecord>({
+                changes: {
                     taskId: next.taskId.trim(),
                     userId: next.userId,
                     title: next.title,
@@ -153,11 +203,39 @@ export class HeartbeatTasksRepository {
                     lastRunAt: next.lastRunAt,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(tasksHeartbeatTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(tasksHeartbeatTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(tasksHeartbeatTable.id, row.id),
+                                eq(tasksHeartbeatTable.version, row.version ?? 1),
+                                isNull(tasksHeartbeatTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(tasksHeartbeatTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        taskId: row.taskId,
+                        userId: row.userId,
+                        title: row.title,
+                        parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                        lastRunAt: row.lastRunAt,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet(next);
+                this.taskCacheSet(advanced);
             });
         });
     }
@@ -165,31 +243,76 @@ export class HeartbeatTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(tasksHeartbeatTable)
-                .where(eq(tasksHeartbeatTable.id, id))
-                .returning({ id: tasksHeartbeatTable.id });
+            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
+            if (!current) {
+                return false;
+            }
+
+            await this.db
+                .update(tasksHeartbeatTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(tasksHeartbeatTable.id, current.id),
+                        eq(tasksHeartbeatTable.version, current.version ?? 1),
+                        isNull(tasksHeartbeatTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.tasksById.delete(id);
             });
 
-            return result.length > 0;
+            return true;
         });
     }
 
     async recordRun(runAt: number): Promise<void> {
         await this.runLock.inLock(async () => {
-            await this.db.update(tasksHeartbeatTable).set({ lastRunAt: runAt, updatedAt: runAt });
-            await this.cacheLock.inLock(() => {
-                for (const [taskId, task] of this.tasksById.entries()) {
-                    this.tasksById.set(taskId, {
-                        ...task,
-                        lastRunAt: runAt,
-                        updatedAt: runAt
-                    });
-                }
-            });
+            const currentRows = await this.db
+                .select()
+                .from(tasksHeartbeatTable)
+                .where(isNull(tasksHeartbeatTable.validTo))
+                .orderBy(asc(tasksHeartbeatTable.id));
+
+            for (const row of currentRows) {
+                const current = heartbeatTaskParse(row);
+                const next = await versionAdvance<HeartbeatTaskDbRecord>({
+                    now: runAt,
+                    changes: { lastRunAt: runAt, updatedAt: runAt },
+                    findCurrent: async () => current,
+                    closeCurrent: async (record, now) => {
+                        await this.db
+                            .update(tasksHeartbeatTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksHeartbeatTable.id, record.id),
+                                    eq(tasksHeartbeatTable.version, record.version ?? 1),
+                                    isNull(tasksHeartbeatTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (record) => {
+                        await this.db.insert(tasksHeartbeatTable).values({
+                            id: record.id,
+                            version: record.version ?? 1,
+                            validFrom: record.validFrom ?? record.createdAt,
+                            validTo: record.validTo ?? null,
+                            taskId: record.taskId,
+                            userId: record.userId,
+                            title: record.title,
+                            parameters: record.parameters ? JSON.stringify(record.parameters) : null,
+                            lastRunAt: record.lastRunAt,
+                            createdAt: record.createdAt,
+                            updatedAt: record.updatedAt
+                        });
+                    }
+                });
+                await this.cacheLock.inLock(() => {
+                    this.taskCacheSet(next);
+                });
+            }
         });
     }
 
@@ -198,7 +321,11 @@ export class HeartbeatTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<HeartbeatTaskDbRecord | null> {
-        const rows = await this.db.select().from(tasksHeartbeatTable).where(eq(tasksHeartbeatTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(tasksHeartbeatTable)
+            .where(and(eq(tasksHeartbeatTable.id, id), isNull(tasksHeartbeatTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -224,6 +351,9 @@ function heartbeatTaskParse(row: typeof tasksHeartbeatTable.$inferSelect): Heart
     }
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         taskId,
         userId: row.userId,
         title: row.title,

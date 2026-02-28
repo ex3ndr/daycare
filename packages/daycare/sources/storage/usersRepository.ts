@@ -1,10 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import type { DaycareDb } from "../schema.js";
 import { userConnectorKeysTable, usersTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { CreateUserInput, UpdateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Users repository backed by Drizzle with write-through caching.
@@ -95,7 +96,7 @@ export class UsersRepository {
         const rows = await this.db
             .select({ id: usersTable.id })
             .from(usersTable)
-            .where(eq(usersTable.nametag, normalized))
+            .where(and(eq(usersTable.nametag, normalized), isNull(usersTable.validTo)))
             .limit(1);
         const userId = rows[0]?.id?.trim() ?? "";
         if (!userId) {
@@ -120,7 +121,11 @@ export class UsersRepository {
             return usersSort(Array.from(this.usersById.values())).map((user) => userClone(user));
         }
 
-        const userRows = await this.db.select().from(usersTable).orderBy(asc(usersTable.createdAt), asc(usersTable.id));
+        const userRows = await this.db
+            .select()
+            .from(usersTable)
+            .where(isNull(usersTable.validTo))
+            .orderBy(asc(usersTable.createdAt), asc(usersTable.id));
         const keyRows = await this.db.select().from(userConnectorKeysTable).orderBy(asc(userConnectorKeysTable.id));
 
         const keysByUserId = new Map<string, (typeof keyRows)[number][]>();
@@ -133,6 +138,9 @@ export class UsersRepository {
         const records = userRows.map((row) => {
             const record: UserWithConnectorKeysDbRecord = {
                 id: row.id,
+                version: row.version ?? 1,
+                validFrom: row.validFrom ?? row.createdAt,
+                validTo: row.validTo ?? null,
                 isOwner: row.isOwner === 1,
                 parentUserId: row.parentUserId ?? null,
                 name: row.name ?? null,
@@ -175,7 +183,7 @@ export class UsersRepository {
         const rows = await this.db
             .select({ id: usersTable.id })
             .from(usersTable)
-            .where(eq(usersTable.isOwner, 1))
+            .where(and(eq(usersTable.isOwner, 1), isNull(usersTable.validTo)))
             .limit(1);
         const userId = rows[0]?.id?.trim() ?? "";
         if (!userId) {
@@ -208,6 +216,9 @@ export class UsersRepository {
                 try {
                     await this.db.insert(usersTable).values({
                         id,
+                        version: 1,
+                        validFrom: createdAt,
+                        validTo: null,
                         isOwner: isOwner ? 1 : 0,
                         parentUserId,
                         name,
@@ -247,6 +258,9 @@ export class UsersRepository {
 
             const record: UserWithConnectorKeysDbRecord = {
                 id,
+                version: 1,
+                validFrom: createdAt,
+                validTo: null,
                 isOwner,
                 parentUserId,
                 name,
@@ -285,21 +299,51 @@ export class UsersRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            await this.db
-                .update(usersTable)
-                .set({
-                    isOwner: next.isOwner ? 1 : 0,
+            const advanced = await versionAdvance<UserWithConnectorKeysDbRecord>({
+                changes: {
+                    isOwner: next.isOwner,
                     firstName: next.firstName,
                     lastName: next.lastName,
                     country: next.country,
                     timezone: next.timezone,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(usersTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(usersTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(usersTable.id, row.id),
+                                eq(usersTable.version, row.version ?? 1),
+                                isNull(usersTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(usersTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        isOwner: row.isOwner ? 1 : 0,
+                        parentUserId: row.parentUserId,
+                        name: row.name,
+                        firstName: row.firstName,
+                        lastName: row.lastName,
+                        country: row.country,
+                        timezone: row.timezone,
+                        nametag: row.nametag,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.userCacheSet(next);
+                this.userCacheSet(advanced);
             });
         });
     }
@@ -308,7 +352,18 @@ export class UsersRepository {
         const lock = this.userLockForId(id);
         await lock.inLock(async () => {
             const current = this.usersById.get(id) ?? (await this.userLoadById(id));
-            await this.db.delete(usersTable).where(eq(usersTable.id, id));
+            if (current) {
+                await this.db
+                    .update(usersTable)
+                    .set({ validTo: Date.now() })
+                    .where(
+                        and(
+                            eq(usersTable.id, current.id),
+                            eq(usersTable.version, current.version ?? 1),
+                            isNull(usersTable.validTo)
+                        )
+                    );
+            }
             await this.cacheLock.inLock(() => {
                 if (current) {
                     for (const connectorKey of current.connectorKeys) {
@@ -373,7 +428,11 @@ export class UsersRepository {
     }
 
     private async userLoadById(userId: string): Promise<UserWithConnectorKeysDbRecord | null> {
-        const userRows = await this.db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+        const userRows = await this.db
+            .select()
+            .from(usersTable)
+            .where(and(eq(usersTable.id, userId), isNull(usersTable.validTo)))
+            .limit(1);
         const userRow = userRows[0];
         if (!userRow) {
             return null;
@@ -386,6 +445,9 @@ export class UsersRepository {
 
         return {
             id: userRow.id,
+            version: userRow.version ?? 1,
+            validFrom: userRow.validFrom ?? userRow.createdAt,
+            validTo: userRow.validTo ?? null,
             isOwner: userRow.isOwner === 1,
             parentUserId: userRow.parentUserId ?? null,
             name: userRow.name ?? null,

@@ -13,6 +13,9 @@ import type { SignalSource } from "../engine/signals/signalTypes.js";
 
 export type DatabaseAgentRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     user_id: string;
     type: AgentDescriptor["type"];
     descriptor: string;
@@ -54,6 +57,9 @@ export type DatabaseInboxRow = {
 
 export type AgentDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     userId: string;
     type: AgentDescriptor["type"];
     descriptor: AgentDescriptor;
@@ -76,6 +82,9 @@ export type InboxDbRecord = {
 
 export type DatabaseCronTaskRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     task_id: string;
     user_id: string;
     name: string;
@@ -93,6 +102,9 @@ export type DatabaseCronTaskRow = {
 
 export type CronTaskDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     taskId: string;
     userId: string;
     name: string;
@@ -110,6 +122,9 @@ export type CronTaskDbRecord = {
 
 export type DatabaseHeartbeatTaskRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     task_id: string;
     user_id: string;
     title: string;
@@ -121,6 +136,9 @@ export type DatabaseHeartbeatTaskRow = {
 
 export type HeartbeatTaskDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     taskId: string;
     userId: string;
     title: string;
@@ -132,6 +150,9 @@ export type HeartbeatTaskDbRecord = {
 
 export type DatabaseWebhookTaskRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     task_id: string;
     user_id: string;
     agent_id: string | null;
@@ -142,6 +163,9 @@ export type DatabaseWebhookTaskRow = {
 
 export type WebhookTaskDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     taskId: string;
     userId: string;
     agentId: string | null;
@@ -153,6 +177,9 @@ export type WebhookTaskDbRecord = {
 export type DatabaseTaskRow = {
     id: string;
     user_id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     title: string;
     description: string | null;
     code: string;
@@ -165,6 +192,9 @@ export type DatabaseTaskRow = {
 export type TaskDbRecord = {
     id: string;
     userId: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     title: string;
     description: string | null;
     code: string;
@@ -194,6 +224,9 @@ export type SignalEventDbRecord = {
 
 export type DatabaseSignalSubscriptionRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     user_id: string;
     agent_id: string;
     pattern: string;
@@ -204,6 +237,9 @@ export type DatabaseSignalSubscriptionRow = {
 
 export type SignalSubscriptionDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     userId: string;
     agentId: string;
     pattern: string;
@@ -238,6 +274,9 @@ export type DelayedSignalDbRecord = {
 
 export type DatabaseChannelRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     user_id: string;
     name: string;
     leader: string;
@@ -247,6 +286,9 @@ export type DatabaseChannelRow = {
 
 export type ChannelDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     userId: string;
     name: string;
     leader: string;
@@ -294,6 +336,9 @@ export type ChannelMessageDbRecord = {
 
 export type DatabaseExposeEndpointRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     user_id: string;
     target: string;
     provider: string;
@@ -306,6 +351,9 @@ export type DatabaseExposeEndpointRow = {
 
 export type ExposeEndpointDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     userId: string;
     target: ExposeTarget;
     provider: string;
@@ -318,6 +366,9 @@ export type ExposeEndpointDbRecord = {
 
 export type DatabaseProcessRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     user_id: string;
     name: string;
     command: string;
@@ -352,6 +403,9 @@ export type ProcessOwnerDbRecord = {
 
 export type ProcessDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     userId: string;
     name: string;
     command: string;
@@ -381,6 +435,9 @@ export type ProcessDbRecord = {
 
 export type DatabaseUserRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     is_owner: number;
     parent_user_id: string | null;
     name: string | null;
@@ -401,6 +458,9 @@ export type DatabaseUserConnectorKeyRow = {
 
 export type UserDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     isOwner: boolean;
     parentUserId: string | null;
     name: string | null;
@@ -416,6 +476,9 @@ export type UserDbRecord = {
 export type DatabaseConnectionRow = {
     user_a_id: string;
     user_b_id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     requested_a: number;
     requested_b: number;
     requested_a_at: number | null;
@@ -425,6 +488,9 @@ export type DatabaseConnectionRow = {
 export type ConnectionDbRecord = {
     userAId: string;
     userBId: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     requestedA: boolean;
     requestedB: boolean;
     requestedAAt: number | null;
@@ -497,6 +563,9 @@ export type SystemPromptCondition = "new_user" | "returning_user";
 
 export type DatabaseSystemPromptRow = {
     id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     scope: SystemPromptScope;
     user_id: string | null;
     kind: SystemPromptKind;
@@ -509,6 +578,9 @@ export type DatabaseSystemPromptRow = {
 
 export type SystemPromptDbRecord = {
     id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     scope: SystemPromptScope;
     userId: string | null;
     kind: SystemPromptKind;

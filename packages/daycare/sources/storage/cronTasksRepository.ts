@@ -1,9 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { tasksCronTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { CronTaskDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 export type CronTasksFindManyOptions = {
     includeDisabled?: boolean;
@@ -53,7 +54,7 @@ export class CronTasksRepository {
 
     async findMany(ctx: Context, options: CronTasksFindManyOptions = {}): Promise<CronTaskDbRecord[]> {
         const includeDisabled = options.includeDisabled === true;
-        const conditions = [eq(tasksCronTable.userId, ctx.userId)];
+        const conditions = [eq(tasksCronTable.userId, ctx.userId), isNull(tasksCronTable.validTo)];
         if (!includeDisabled) {
             conditions.push(eq(tasksCronTable.enabled, 1));
         }
@@ -74,10 +75,14 @@ export class CronTasksRepository {
             return visible.map((task) => cronTaskClone(task));
         }
 
-        const query = this.db.select().from(tasksCronTable);
+        const query = this.db.select().from(tasksCronTable).where(isNull(tasksCronTable.validTo));
         const rows = includeDisabled
             ? await query.orderBy(asc(tasksCronTable.updatedAt))
-            : await query.where(eq(tasksCronTable.enabled, 1)).orderBy(asc(tasksCronTable.updatedAt));
+            : await this.db
+                  .select()
+                  .from(tasksCronTable)
+                  .where(and(isNull(tasksCronTable.validTo), eq(tasksCronTable.enabled, 1)))
+                  .orderBy(asc(tasksCronTable.updatedAt));
         const parsed = rows.map((row) => cronTaskParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -99,7 +104,13 @@ export class CronTasksRepository {
         const rows = await this.db
             .select()
             .from(tasksCronTable)
-            .where(and(eq(tasksCronTable.userId, ctx.userId), eq(tasksCronTable.taskId, taskId)))
+            .where(
+                and(
+                    eq(tasksCronTable.userId, ctx.userId),
+                    eq(tasksCronTable.taskId, taskId),
+                    isNull(tasksCronTable.validTo)
+                )
+            )
             .orderBy(asc(tasksCronTable.updatedAt));
         return rows.map((row) => cronTaskClone(cronTaskParse(row)));
     }
@@ -111,27 +122,39 @@ export class CronTasksRepository {
         }
         const timezone = timezoneNormalize(record.timezone);
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(tasksCronTable)
-                .values({
-                    id: record.id,
+            const current = this.tasksById.get(record.id) ?? (await this.taskLoadById(record.id));
+            let next: CronTaskDbRecord;
+            if (!current) {
+                next = {
+                    ...record,
                     taskId,
-                    userId: record.userId,
-                    name: record.name,
-                    description: record.description,
-                    schedule: record.schedule,
                     timezone,
-                    agentId: record.agentId,
-                    enabled: record.enabled ? 1 : 0,
-                    deleteAfterRun: record.deleteAfterRun ? 1 : 0,
-                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
-                    lastRunAt: record.lastRunAt,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: tasksCronTable.id,
-                    set: {
+                    version: 1,
+                    validFrom: record.createdAt,
+                    validTo: null
+                };
+                await this.db.insert(tasksCronTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    taskId: next.taskId,
+                    userId: next.userId,
+                    name: next.name,
+                    description: next.description,
+                    schedule: next.schedule,
+                    timezone: next.timezone,
+                    agentId: next.agentId,
+                    enabled: next.enabled ? 1 : 0,
+                    deleteAfterRun: next.deleteAfterRun ? 1 : 0,
+                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
+                    lastRunAt: next.lastRunAt,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                });
+            } else {
+                next = await versionAdvance<CronTaskDbRecord>({
+                    changes: {
                         taskId,
                         userId: record.userId,
                         name: record.name,
@@ -139,17 +162,52 @@ export class CronTasksRepository {
                         schedule: record.schedule,
                         timezone,
                         agentId: record.agentId,
-                        enabled: record.enabled ? 1 : 0,
-                        deleteAfterRun: record.deleteAfterRun ? 1 : 0,
-                        parameters: record.parameters ? JSON.stringify(record.parameters) : null,
+                        enabled: record.enabled,
+                        deleteAfterRun: record.deleteAfterRun,
+                        parameters: record.parameters,
                         lastRunAt: record.lastRunAt,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await this.db
+                            .update(tasksCronTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(tasksCronTable.id, row.id),
+                                    eq(tasksCronTable.version, row.version ?? 1),
+                                    isNull(tasksCronTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await this.db.insert(tasksCronTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            taskId: row.taskId,
+                            userId: row.userId,
+                            name: row.name,
+                            description: row.description,
+                            schedule: row.schedule,
+                            timezone: row.timezone,
+                            agentId: row.agentId,
+                            enabled: row.enabled ? 1 : 0,
+                            deleteAfterRun: row.deleteAfterRun ? 1 : 0,
+                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                            lastRunAt: row.lastRunAt,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
                     }
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet(record);
+                this.taskCacheSet(next);
             });
         });
     }
@@ -179,9 +237,8 @@ export class CronTasksRepository {
             }
             next.timezone = timezoneNormalize(next.timezone);
 
-            await this.db
-                .update(tasksCronTable)
-                .set({
+            const advanced = await versionAdvance<CronTaskDbRecord>({
+                changes: {
                     taskId: next.taskId.trim(),
                     userId: next.userId,
                     name: next.name,
@@ -189,17 +246,51 @@ export class CronTasksRepository {
                     schedule: next.schedule,
                     timezone: next.timezone,
                     agentId: next.agentId,
-                    enabled: next.enabled ? 1 : 0,
-                    deleteAfterRun: next.deleteAfterRun ? 1 : 0,
-                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
+                    enabled: next.enabled,
+                    deleteAfterRun: next.deleteAfterRun,
+                    parameters: next.parameters,
                     lastRunAt: next.lastRunAt,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(tasksCronTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(tasksCronTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(tasksCronTable.id, row.id),
+                                eq(tasksCronTable.version, row.version ?? 1),
+                                isNull(tasksCronTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(tasksCronTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        taskId: row.taskId,
+                        userId: row.userId,
+                        name: row.name,
+                        description: row.description,
+                        schedule: row.schedule,
+                        timezone: row.timezone,
+                        agentId: row.agentId,
+                        enabled: row.enabled ? 1 : 0,
+                        deleteAfterRun: row.deleteAfterRun ? 1 : 0,
+                        parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                        lastRunAt: row.lastRunAt,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.taskCacheSet(next);
+                this.taskCacheSet(advanced);
             });
         });
     }
@@ -207,16 +298,27 @@ export class CronTasksRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.taskLockForId(id);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(tasksCronTable)
-                .where(eq(tasksCronTable.id, id))
-                .returning({ id: tasksCronTable.id });
+            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
+            if (!current) {
+                return false;
+            }
+
+            await this.db
+                .update(tasksCronTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(tasksCronTable.id, current.id),
+                        eq(tasksCronTable.version, current.version ?? 1),
+                        isNull(tasksCronTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.tasksById.delete(id);
             });
 
-            return result.length > 0;
+            return true;
         });
     }
 
@@ -225,7 +327,11 @@ export class CronTasksRepository {
     }
 
     private async taskLoadById(id: string): Promise<CronTaskDbRecord | null> {
-        const rows = await this.db.select().from(tasksCronTable).where(eq(tasksCronTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(tasksCronTable)
+            .where(and(eq(tasksCronTable.id, id), isNull(tasksCronTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -251,6 +357,9 @@ function cronTaskParse(row: typeof tasksCronTable.$inferSelect): CronTaskDbRecor
     }
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         taskId,
         userId: row.userId,
         name: row.name,

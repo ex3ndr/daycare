@@ -1,8 +1,9 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { systemPromptsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { SystemPromptDbRecord, SystemPromptScope } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * System prompts repository backed by Drizzle with write-through caching.
@@ -51,7 +52,11 @@ export class SystemPromptsRepository {
             return Array.from(this.promptsById.values()).map((p) => promptClone(p));
         }
 
-        const rows = await this.db.select().from(systemPromptsTable).orderBy(asc(systemPromptsTable.createdAt));
+        const rows = await this.db
+            .select()
+            .from(systemPromptsTable)
+            .where(isNull(systemPromptsTable.validTo))
+            .orderBy(asc(systemPromptsTable.createdAt));
         const parsed = rows.map((row) => promptParse(row));
 
         await this.cacheLock.inLock(() => {
@@ -70,14 +75,20 @@ export class SystemPromptsRepository {
             const rows = await this.db
                 .select()
                 .from(systemPromptsTable)
-                .where(and(eq(systemPromptsTable.scope, scope), eq(systemPromptsTable.userId, userId)))
+                .where(
+                    and(
+                        eq(systemPromptsTable.scope, scope),
+                        eq(systemPromptsTable.userId, userId),
+                        isNull(systemPromptsTable.validTo)
+                    )
+                )
                 .orderBy(asc(systemPromptsTable.createdAt));
             return rows.map((row) => promptParse(row));
         }
         const rows = await this.db
             .select()
             .from(systemPromptsTable)
-            .where(eq(systemPromptsTable.scope, scope))
+            .where(and(eq(systemPromptsTable.scope, scope), isNull(systemPromptsTable.validTo)))
             .orderBy(asc(systemPromptsTable.createdAt));
         return rows.map((row) => promptParse(row));
     }
@@ -90,6 +101,7 @@ export class SystemPromptsRepository {
                 .where(
                     and(
                         eq(systemPromptsTable.enabled, 1),
+                        isNull(systemPromptsTable.validTo),
                         or(
                             eq(systemPromptsTable.scope, "global"),
                             and(eq(systemPromptsTable.scope, "user"), eq(systemPromptsTable.userId, userId))
@@ -102,42 +114,88 @@ export class SystemPromptsRepository {
         const rows = await this.db
             .select()
             .from(systemPromptsTable)
-            .where(and(eq(systemPromptsTable.enabled, 1), eq(systemPromptsTable.scope, "global")))
+            .where(
+                and(
+                    eq(systemPromptsTable.enabled, 1),
+                    eq(systemPromptsTable.scope, "global"),
+                    isNull(systemPromptsTable.validTo)
+                )
+            )
             .orderBy(asc(systemPromptsTable.createdAt));
         return rows.map((row) => promptParse(row));
     }
 
     async create(record: SystemPromptDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(systemPromptsTable)
-                .values({
-                    id: record.id,
-                    scope: record.scope,
-                    userId: record.userId,
-                    kind: record.kind,
-                    condition: record.condition,
-                    prompt: record.prompt,
-                    enabled: record.enabled ? 1 : 0,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: systemPromptsTable.id,
-                    set: {
-                        scope: record.scope,
-                        userId: record.userId,
-                        kind: record.kind,
-                        condition: record.condition,
-                        prompt: record.prompt,
-                        enabled: record.enabled ? 1 : 0,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt
-                    }
+            const current = this.promptsById.get(record.id) ?? (await this.promptLoadById(record.id));
+            const next = current
+                ? await versionAdvance<SystemPromptDbRecord>({
+                      changes: {
+                          scope: record.scope,
+                          userId: record.userId,
+                          kind: record.kind,
+                          condition: record.condition,
+                          prompt: record.prompt,
+                          enabled: record.enabled,
+                          createdAt: record.createdAt,
+                          updatedAt: record.updatedAt
+                      },
+                      findCurrent: async () => current,
+                      closeCurrent: async (row, now) => {
+                          await this.db
+                              .update(systemPromptsTable)
+                              .set({ validTo: now })
+                              .where(
+                                  and(
+                                      eq(systemPromptsTable.id, row.id),
+                                      eq(systemPromptsTable.version, row.version ?? 1),
+                                      isNull(systemPromptsTable.validTo)
+                                  )
+                              );
+                      },
+                      insertNext: async (row) => {
+                          await this.db.insert(systemPromptsTable).values({
+                              id: row.id,
+                              version: row.version ?? 1,
+                              validFrom: row.validFrom ?? row.createdAt,
+                              validTo: row.validTo ?? null,
+                              scope: row.scope,
+                              userId: row.userId,
+                              kind: row.kind,
+                              condition: row.condition,
+                              prompt: row.prompt,
+                              enabled: row.enabled ? 1 : 0,
+                              createdAt: row.createdAt,
+                              updatedAt: row.updatedAt
+                          });
+                      }
+                  })
+                : {
+                      ...record,
+                      version: 1,
+                      validFrom: record.createdAt,
+                      validTo: null
+                  };
+
+            if (!current) {
+                await this.db.insert(systemPromptsTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    scope: next.scope,
+                    userId: next.userId,
+                    kind: next.kind,
+                    condition: next.condition,
+                    prompt: next.prompt,
+                    enabled: next.enabled ? 1 : 0,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.promptCacheSet(record);
+                this.promptCacheSet(next);
             });
         });
     }
@@ -156,22 +214,50 @@ export class SystemPromptsRepository {
                 id: current.id
             };
 
-            await this.db
-                .update(systemPromptsTable)
-                .set({
+            const advanced = await versionAdvance<SystemPromptDbRecord>({
+                changes: {
                     scope: next.scope,
                     userId: next.userId,
                     kind: next.kind,
                     condition: next.condition,
                     prompt: next.prompt,
-                    enabled: next.enabled ? 1 : 0,
+                    enabled: next.enabled,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(systemPromptsTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(systemPromptsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(systemPromptsTable.id, row.id),
+                                eq(systemPromptsTable.version, row.version ?? 1),
+                                isNull(systemPromptsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(systemPromptsTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        scope: row.scope,
+                        userId: row.userId,
+                        kind: row.kind,
+                        condition: row.condition,
+                        prompt: row.prompt,
+                        enabled: row.enabled ? 1 : 0,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.promptCacheSet(next);
+                this.promptCacheSet(advanced);
             });
         });
     }
@@ -179,16 +265,26 @@ export class SystemPromptsRepository {
     async deleteById(id: string): Promise<boolean> {
         const lock = this.promptLockForId(id);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(systemPromptsTable)
-                .where(eq(systemPromptsTable.id, id))
-                .returning({ id: systemPromptsTable.id });
+            const current = this.promptsById.get(id) ?? (await this.promptLoadById(id));
+            if (!current) {
+                return false;
+            }
+            await this.db
+                .update(systemPromptsTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(systemPromptsTable.id, current.id),
+                        eq(systemPromptsTable.version, current.version ?? 1),
+                        isNull(systemPromptsTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.promptsById.delete(id);
             });
 
-            return result.length > 0;
+            return true;
         });
     }
 
@@ -197,7 +293,11 @@ export class SystemPromptsRepository {
     }
 
     private async promptLoadById(id: string): Promise<SystemPromptDbRecord | null> {
-        const rows = await this.db.select().from(systemPromptsTable).where(eq(systemPromptsTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(systemPromptsTable)
+            .where(and(eq(systemPromptsTable.id, id), isNull(systemPromptsTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -219,6 +319,9 @@ export class SystemPromptsRepository {
 function promptParse(row: typeof systemPromptsTable.$inferSelect): SystemPromptDbRecord {
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         scope: row.scope as SystemPromptDbRecord["scope"],
         userId: row.userId,
         kind: row.kind as SystemPromptDbRecord["kind"],

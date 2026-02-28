@@ -1,10 +1,11 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import { exposeDomainNormalize, exposeTargetParse } from "../engine/expose/exposeTypes.js";
 import type { DaycareDb } from "../schema.js";
 import { exposeEndpointsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { ExposeEndpointDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Expose endpoints repository backed by Drizzle with write-through caching.
@@ -24,35 +25,76 @@ export class ExposeEndpointsRepository {
 
     async create(record: ExposeEndpointDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(exposeEndpointsTable)
-                .values({
-                    id: record.id,
-                    userId: record.userId,
-                    target: JSON.stringify(record.target),
-                    provider: record.provider,
-                    domain: exposeDomainNormalize(record.domain),
-                    mode: record.mode,
-                    auth: record.auth ? JSON.stringify(record.auth) : null,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: exposeEndpointsTable.id,
-                    set: {
-                        userId: record.userId,
-                        target: JSON.stringify(record.target),
-                        provider: record.provider,
-                        domain: exposeDomainNormalize(record.domain),
-                        mode: record.mode,
-                        auth: record.auth ? JSON.stringify(record.auth) : null,
-                        createdAt: record.createdAt,
-                        updatedAt: record.updatedAt
-                    }
+            const current = this.endpointsById.get(record.id) ?? (await this.endpointLoadById(record.id));
+            const next = current
+                ? await versionAdvance<ExposeEndpointDbRecord>({
+                      changes: {
+                          userId: record.userId,
+                          target: record.target,
+                          provider: record.provider,
+                          domain: exposeDomainNormalize(record.domain),
+                          mode: record.mode,
+                          auth: record.auth,
+                          createdAt: record.createdAt,
+                          updatedAt: record.updatedAt
+                      },
+                      findCurrent: async () => current,
+                      closeCurrent: async (row, now) => {
+                          await this.db
+                              .update(exposeEndpointsTable)
+                              .set({ validTo: now })
+                              .where(
+                                  and(
+                                      eq(exposeEndpointsTable.id, row.id),
+                                      eq(exposeEndpointsTable.version, row.version ?? 1),
+                                      isNull(exposeEndpointsTable.validTo)
+                                  )
+                              );
+                      },
+                      insertNext: async (row) => {
+                          await this.db.insert(exposeEndpointsTable).values({
+                              id: row.id,
+                              version: row.version ?? 1,
+                              validFrom: row.validFrom ?? row.createdAt,
+                              validTo: row.validTo ?? null,
+                              userId: row.userId,
+                              target: JSON.stringify(row.target),
+                              provider: row.provider,
+                              domain: exposeDomainNormalize(row.domain),
+                              mode: row.mode,
+                              auth: row.auth ? JSON.stringify(row.auth) : null,
+                              createdAt: row.createdAt,
+                              updatedAt: row.updatedAt
+                          });
+                      }
+                  })
+                : {
+                      ...record,
+                      domain: exposeDomainNormalize(record.domain),
+                      version: 1,
+                      validFrom: record.createdAt,
+                      validTo: null
+                  };
+
+            if (!current) {
+                await this.db.insert(exposeEndpointsTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    userId: next.userId,
+                    target: JSON.stringify(next.target),
+                    provider: next.provider,
+                    domain: exposeDomainNormalize(next.domain),
+                    mode: next.mode,
+                    auth: next.auth ? JSON.stringify(next.auth) : null,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.endpointCacheSet(record);
+                this.endpointCacheSet(next);
             });
         });
     }
@@ -96,7 +138,7 @@ export class ExposeEndpointsRepository {
         const rows = await this.db
             .select()
             .from(exposeEndpointsTable)
-            .where(eq(exposeEndpointsTable.userId, ctx.userId))
+            .where(and(eq(exposeEndpointsTable.userId, ctx.userId), isNull(exposeEndpointsTable.validTo)))
             .orderBy(asc(exposeEndpointsTable.createdAt), asc(exposeEndpointsTable.id));
         return rows.map((entry) => endpointClone(endpointParse(entry)));
     }
@@ -115,6 +157,7 @@ export class ExposeEndpointsRepository {
         const rows = await this.db
             .select()
             .from(exposeEndpointsTable)
+            .where(isNull(exposeEndpointsTable.validTo))
             .orderBy(asc(exposeEndpointsTable.createdAt), asc(exposeEndpointsTable.id));
 
         const parsed = rows.map((row) => endpointParse(row));
@@ -152,22 +195,50 @@ export class ExposeEndpointsRepository {
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
 
-            await this.db
-                .update(exposeEndpointsTable)
-                .set({
+            const advanced = await versionAdvance<ExposeEndpointDbRecord>({
+                changes: {
                     userId: next.userId,
-                    target: JSON.stringify(next.target),
+                    target: next.target,
                     provider: next.provider,
                     domain: next.domain,
                     mode: next.mode,
-                    auth: next.auth ? JSON.stringify(next.auth) : null,
+                    auth: next.auth,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(exposeEndpointsTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(exposeEndpointsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(exposeEndpointsTable.id, row.id),
+                                eq(exposeEndpointsTable.version, row.version ?? 1),
+                                isNull(exposeEndpointsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(exposeEndpointsTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        userId: row.userId,
+                        target: JSON.stringify(row.target),
+                        provider: row.provider,
+                        domain: row.domain,
+                        mode: row.mode,
+                        auth: row.auth ? JSON.stringify(row.auth) : null,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.endpointCacheSet(next);
+                this.endpointCacheSet(advanced);
             });
         });
     }
@@ -175,20 +246,34 @@ export class ExposeEndpointsRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.endpointLockForId(id);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(exposeEndpointsTable)
-                .where(eq(exposeEndpointsTable.id, id))
-                .returning({ id: exposeEndpointsTable.id });
+            const current = this.endpointsById.get(id) ?? (await this.endpointLoadById(id));
+            if (!current) {
+                return false;
+            }
+            await this.db
+                .update(exposeEndpointsTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(exposeEndpointsTable.id, current.id),
+                        eq(exposeEndpointsTable.version, current.version ?? 1),
+                        isNull(exposeEndpointsTable.validTo)
+                    )
+                );
 
             await this.cacheLock.inLock(() => {
                 this.endpointsById.delete(id);
             });
-            return result.length > 0;
+            return true;
         });
     }
 
     private async endpointLoadById(id: string): Promise<ExposeEndpointDbRecord | null> {
-        const rows = await this.db.select().from(exposeEndpointsTable).where(eq(exposeEndpointsTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(exposeEndpointsTable)
+            .where(and(eq(exposeEndpointsTable.id, id), isNull(exposeEndpointsTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -214,6 +299,9 @@ export class ExposeEndpointsRepository {
 function endpointParse(row: typeof exposeEndpointsTable.$inferSelect): ExposeEndpointDbRecord {
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         userId: row.userId,
         target: targetParse(row.target),
         provider: row.provider,

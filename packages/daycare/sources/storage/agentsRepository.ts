@@ -1,8 +1,9 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { agentsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { AgentDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 /**
  * Agents repository backed by Drizzle with write-through caching.
@@ -32,7 +33,11 @@ export class AgentsRepository {
             if (existing) {
                 return agentClone(existing);
             }
-            const rows = await this.db.select().from(agentsTable).where(eq(agentsTable.id, id)).limit(1);
+            const rows = await this.db
+                .select()
+                .from(agentsTable)
+                .where(and(eq(agentsTable.id, id), isNull(agentsTable.validTo)))
+                .limit(1);
             const row = rows[0];
             if (!row) {
                 return null;
@@ -49,7 +54,11 @@ export class AgentsRepository {
         if (this.allAgentsLoaded) {
             return agentsSort(Array.from(this.agentsById.values())).map((record) => agentClone(record));
         }
-        const rows = await this.db.select().from(agentsTable).orderBy(asc(agentsTable.updatedAt));
+        const rows = await this.db
+            .select()
+            .from(agentsTable)
+            .where(isNull(agentsTable.validTo))
+            .orderBy(asc(agentsTable.updatedAt));
         const parsed = rows.map((row) => agentParse(row));
         await this.cacheLock.inLock(() => {
             this.agentsById.clear();
@@ -70,7 +79,7 @@ export class AgentsRepository {
         const rows = await this.db
             .select()
             .from(agentsTable)
-            .where(eq(agentsTable.userId, userId))
+            .where(and(eq(agentsTable.userId, userId), isNull(agentsTable.validTo)))
             .orderBy(asc(agentsTable.updatedAt));
         const parsed = rows.map((row) => agentParse(row));
 
@@ -85,39 +94,81 @@ export class AgentsRepository {
 
     async create(record: AgentDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            await this.db
-                .insert(agentsTable)
-                .values({
-                    id: record.id,
-                    userId: record.userId,
-                    type: record.type,
-                    descriptor: JSON.stringify(record.descriptor),
-                    activeSessionId: record.activeSessionId,
-                    permissions: JSON.stringify(record.permissions),
-                    tokens: record.tokens ? JSON.stringify(record.tokens) : null,
-                    stats: JSON.stringify(record.stats),
-                    lifecycle: record.lifecycle,
-                    createdAt: record.createdAt,
-                    updatedAt: record.updatedAt
-                })
-                .onConflictDoUpdate({
-                    target: agentsTable.id,
-                    set: {
+            const current = this.agentsById.get(record.id) ?? (await this.agentLoadById(record.id));
+            let next: AgentDbRecord;
+            if (!current) {
+                next = {
+                    ...record,
+                    version: 1,
+                    validFrom: record.createdAt,
+                    validTo: null
+                };
+                await this.db.insert(agentsTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    userId: next.userId,
+                    type: next.type,
+                    descriptor: JSON.stringify(next.descriptor),
+                    activeSessionId: next.activeSessionId,
+                    permissions: JSON.stringify(next.permissions),
+                    tokens: next.tokens ? JSON.stringify(next.tokens) : null,
+                    stats: JSON.stringify(next.stats),
+                    lifecycle: next.lifecycle,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt
+                });
+            } else {
+                next = await versionAdvance<AgentDbRecord>({
+                    changes: {
                         userId: record.userId,
                         type: record.type,
-                        descriptor: JSON.stringify(record.descriptor),
+                        descriptor: record.descriptor,
                         activeSessionId: record.activeSessionId,
-                        permissions: JSON.stringify(record.permissions),
-                        tokens: record.tokens ? JSON.stringify(record.tokens) : null,
-                        stats: JSON.stringify(record.stats),
+                        permissions: record.permissions,
+                        tokens: record.tokens,
+                        stats: record.stats,
                         lifecycle: record.lifecycle,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await this.db
+                            .update(agentsTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(agentsTable.id, row.id),
+                                    eq(agentsTable.version, row.version ?? 1),
+                                    isNull(agentsTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await this.db.insert(agentsTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            userId: row.userId,
+                            type: row.type,
+                            descriptor: JSON.stringify(row.descriptor),
+                            activeSessionId: row.activeSessionId,
+                            permissions: JSON.stringify(row.permissions),
+                            tokens: row.tokens ? JSON.stringify(row.tokens) : null,
+                            stats: JSON.stringify(row.stats),
+                            lifecycle: row.lifecycle,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt
+                        });
                     }
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.agentCacheSet(record);
+                this.agentCacheSet(next);
             });
         });
     }
@@ -139,24 +190,54 @@ export class AgentsRepository {
                 tokens: data.tokens === undefined ? current.tokens : data.tokens
             };
 
-            await this.db
-                .update(agentsTable)
-                .set({
+            const advanced = await versionAdvance<AgentDbRecord>({
+                changes: {
                     userId: next.userId,
                     type: next.type,
-                    descriptor: JSON.stringify(next.descriptor),
+                    descriptor: next.descriptor,
                     activeSessionId: next.activeSessionId,
-                    permissions: JSON.stringify(next.permissions),
-                    tokens: next.tokens ? JSON.stringify(next.tokens) : null,
-                    stats: JSON.stringify(next.stats),
+                    permissions: next.permissions,
+                    tokens: next.tokens,
+                    stats: next.stats,
                     lifecycle: next.lifecycle,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
-                })
-                .where(eq(agentsTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(agentsTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(agentsTable.id, row.id),
+                                eq(agentsTable.version, row.version ?? 1),
+                                isNull(agentsTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(agentsTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        userId: row.userId,
+                        type: row.type,
+                        descriptor: JSON.stringify(row.descriptor),
+                        activeSessionId: row.activeSessionId,
+                        permissions: JSON.stringify(row.permissions),
+                        tokens: row.tokens ? JSON.stringify(row.tokens) : null,
+                        stats: JSON.stringify(row.stats),
+                        lifecycle: row.lifecycle,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.agentCacheSet(next);
+                this.agentCacheSet(advanced);
             });
         });
     }
@@ -183,7 +264,11 @@ export class AgentsRepository {
     }
 
     private async agentLoadById(id: string): Promise<AgentDbRecord | null> {
-        const rows = await this.db.select().from(agentsTable).where(eq(agentsTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(agentsTable)
+            .where(and(eq(agentsTable.id, id), isNull(agentsTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -195,6 +280,9 @@ export class AgentsRepository {
 function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         userId: row.userId,
         type: row.type as AgentDbRecord["type"],
         descriptor: JSON.parse(row.descriptor) as AgentDbRecord["descriptor"],

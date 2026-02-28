@@ -1,9 +1,10 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { processesTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { ProcessDbRecord, ProcessOwnerDbRecord } from "./databaseTypes.js";
+import { versionAdvance } from "./versionAdvance.js";
 
 export type ProcessesFindManyOptions = {
     ownerId?: string;
@@ -32,71 +33,126 @@ export class ProcessesRepository {
 
     async create(record: ProcessDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
-            const values = {
-                id: record.id,
-                userId: record.userId,
-                name: record.name,
-                command: record.command,
-                cwd: record.cwd,
-                home: record.home,
-                env: JSON.stringify(record.env),
-                packageManagers: JSON.stringify(record.packageManagers),
-                allowedDomains: JSON.stringify(record.allowedDomains),
-                allowLocalBinding: record.allowLocalBinding ? 1 : 0,
-                permissions: JSON.stringify(record.permissions),
-                owner: record.owner ? JSON.stringify(record.owner) : null,
-                keepAlive: record.keepAlive ? 1 : 0,
-                desiredState: record.desiredState,
-                status: record.status,
-                pid: record.pid,
-                bootTimeMs: record.bootTimeMs,
-                restartCount: record.restartCount,
-                restartFailureCount: record.restartFailureCount,
-                nextRestartAt: record.nextRestartAt,
-                settingsPath: record.settingsPath,
-                logPath: record.logPath,
-                createdAt: record.createdAt,
-                updatedAt: record.updatedAt,
-                lastStartedAt: record.lastStartedAt,
-                lastExitedAt: record.lastExitedAt
-            };
-
-            await this.db
-                .insert(processesTable)
-                .values(values)
-                .onConflictDoUpdate({
-                    target: processesTable.id,
-                    set: {
-                        userId: values.userId,
-                        name: values.name,
-                        command: values.command,
-                        cwd: values.cwd,
-                        home: values.home,
-                        env: values.env,
-                        packageManagers: values.packageManagers,
-                        allowedDomains: values.allowedDomains,
-                        allowLocalBinding: values.allowLocalBinding,
-                        permissions: values.permissions,
-                        owner: values.owner,
-                        keepAlive: values.keepAlive,
-                        desiredState: values.desiredState,
-                        status: values.status,
-                        pid: values.pid,
-                        bootTimeMs: values.bootTimeMs,
-                        restartCount: values.restartCount,
-                        restartFailureCount: values.restartFailureCount,
-                        nextRestartAt: values.nextRestartAt,
-                        settingsPath: values.settingsPath,
-                        logPath: values.logPath,
-                        createdAt: values.createdAt,
-                        updatedAt: values.updatedAt,
-                        lastStartedAt: values.lastStartedAt,
-                        lastExitedAt: values.lastExitedAt
+            const current = this.recordsById.get(record.id) ?? (await this.recordLoadById(record.id));
+            let next: ProcessDbRecord;
+            if (!current) {
+                next = {
+                    ...record,
+                    version: 1,
+                    validFrom: record.createdAt,
+                    validTo: null
+                };
+                await this.db.insert(processesTable).values({
+                    id: next.id,
+                    version: next.version ?? 1,
+                    validFrom: next.validFrom ?? next.createdAt,
+                    validTo: next.validTo ?? null,
+                    userId: next.userId,
+                    name: next.name,
+                    command: next.command,
+                    cwd: next.cwd,
+                    home: next.home,
+                    env: JSON.stringify(next.env),
+                    packageManagers: JSON.stringify(next.packageManagers),
+                    allowedDomains: JSON.stringify(next.allowedDomains),
+                    allowLocalBinding: next.allowLocalBinding ? 1 : 0,
+                    permissions: JSON.stringify(next.permissions),
+                    owner: next.owner ? JSON.stringify(next.owner) : null,
+                    keepAlive: next.keepAlive ? 1 : 0,
+                    desiredState: next.desiredState,
+                    status: next.status,
+                    pid: next.pid,
+                    bootTimeMs: next.bootTimeMs,
+                    restartCount: next.restartCount,
+                    restartFailureCount: next.restartFailureCount,
+                    nextRestartAt: next.nextRestartAt,
+                    settingsPath: next.settingsPath,
+                    logPath: next.logPath,
+                    createdAt: next.createdAt,
+                    updatedAt: next.updatedAt,
+                    lastStartedAt: next.lastStartedAt,
+                    lastExitedAt: next.lastExitedAt
+                });
+            } else {
+                next = await versionAdvance<ProcessDbRecord>({
+                    changes: {
+                        userId: record.userId,
+                        name: record.name,
+                        command: record.command,
+                        cwd: record.cwd,
+                        home: record.home,
+                        env: record.env,
+                        packageManagers: record.packageManagers,
+                        allowedDomains: record.allowedDomains,
+                        allowLocalBinding: record.allowLocalBinding,
+                        permissions: record.permissions,
+                        owner: record.owner,
+                        keepAlive: record.keepAlive,
+                        desiredState: record.desiredState,
+                        status: record.status,
+                        pid: record.pid,
+                        bootTimeMs: record.bootTimeMs,
+                        restartCount: record.restartCount,
+                        restartFailureCount: record.restartFailureCount,
+                        nextRestartAt: record.nextRestartAt,
+                        settingsPath: record.settingsPath,
+                        logPath: record.logPath,
+                        createdAt: record.createdAt,
+                        updatedAt: record.updatedAt,
+                        lastStartedAt: record.lastStartedAt,
+                        lastExitedAt: record.lastExitedAt
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        await this.db
+                            .update(processesTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(processesTable.id, row.id),
+                                    eq(processesTable.version, row.version ?? 1),
+                                    isNull(processesTable.validTo)
+                                )
+                            );
+                    },
+                    insertNext: async (row) => {
+                        await this.db.insert(processesTable).values({
+                            id: row.id,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? row.createdAt,
+                            validTo: row.validTo ?? null,
+                            userId: row.userId,
+                            name: row.name,
+                            command: row.command,
+                            cwd: row.cwd,
+                            home: row.home,
+                            env: JSON.stringify(row.env),
+                            packageManagers: JSON.stringify(row.packageManagers),
+                            allowedDomains: JSON.stringify(row.allowedDomains),
+                            allowLocalBinding: row.allowLocalBinding ? 1 : 0,
+                            permissions: JSON.stringify(row.permissions),
+                            owner: row.owner ? JSON.stringify(row.owner) : null,
+                            keepAlive: row.keepAlive ? 1 : 0,
+                            desiredState: row.desiredState,
+                            status: row.status,
+                            pid: row.pid,
+                            bootTimeMs: row.bootTimeMs,
+                            restartCount: row.restartCount,
+                            restartFailureCount: row.restartFailureCount,
+                            nextRestartAt: row.nextRestartAt,
+                            settingsPath: row.settingsPath,
+                            logPath: row.logPath,
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt,
+                            lastStartedAt: row.lastStartedAt,
+                            lastExitedAt: row.lastExitedAt
+                        });
                     }
                 });
+            }
 
             await this.cacheLock.inLock(() => {
-                this.recordCacheSet(record);
+                this.recordCacheSet(next);
             });
         });
     }
@@ -155,11 +211,12 @@ export class ProcessesRepository {
             ? await this.db
                   .select()
                   .from(processesTable)
-                  .where(eq(processesTable.userId, options.userId))
+                  .where(and(eq(processesTable.userId, options.userId), isNull(processesTable.validTo)))
                   .orderBy(asc(processesTable.createdAt), asc(processesTable.id))
             : await this.db
                   .select()
                   .from(processesTable)
+                  .where(isNull(processesTable.validTo))
                   .orderBy(asc(processesTable.createdAt), asc(processesTable.id));
 
         const parsed = rows.map((row) => recordParse(row));
@@ -215,21 +272,20 @@ export class ProcessesRepository {
                 lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
             };
 
-            await this.db
-                .update(processesTable)
-                .set({
+            const advanced = await versionAdvance<ProcessDbRecord>({
+                changes: {
                     userId: next.userId,
                     name: next.name,
                     command: next.command,
                     cwd: next.cwd,
                     home: next.home,
-                    env: JSON.stringify(next.env),
-                    packageManagers: JSON.stringify(next.packageManagers),
-                    allowedDomains: JSON.stringify(next.allowedDomains),
-                    allowLocalBinding: next.allowLocalBinding ? 1 : 0,
-                    permissions: JSON.stringify(next.permissions),
-                    owner: next.owner ? JSON.stringify(next.owner) : null,
-                    keepAlive: next.keepAlive ? 1 : 0,
+                    env: next.env,
+                    packageManagers: next.packageManagers,
+                    allowedDomains: next.allowedDomains,
+                    allowLocalBinding: next.allowLocalBinding,
+                    permissions: next.permissions,
+                    owner: next.owner,
+                    keepAlive: next.keepAlive,
                     desiredState: next.desiredState,
                     status: next.status,
                     pid: next.pid,
@@ -243,11 +299,57 @@ export class ProcessesRepository {
                     updatedAt: next.updatedAt,
                     lastStartedAt: next.lastStartedAt,
                     lastExitedAt: next.lastExitedAt
-                })
-                .where(eq(processesTable.id, id));
+                },
+                findCurrent: async () => current,
+                closeCurrent: async (row, now) => {
+                    await this.db
+                        .update(processesTable)
+                        .set({ validTo: now })
+                        .where(
+                            and(
+                                eq(processesTable.id, row.id),
+                                eq(processesTable.version, row.version ?? 1),
+                                isNull(processesTable.validTo)
+                            )
+                        );
+                },
+                insertNext: async (row) => {
+                    await this.db.insert(processesTable).values({
+                        id: row.id,
+                        version: row.version ?? 1,
+                        validFrom: row.validFrom ?? row.createdAt,
+                        validTo: row.validTo ?? null,
+                        userId: row.userId,
+                        name: row.name,
+                        command: row.command,
+                        cwd: row.cwd,
+                        home: row.home,
+                        env: JSON.stringify(row.env),
+                        packageManagers: JSON.stringify(row.packageManagers),
+                        allowedDomains: JSON.stringify(row.allowedDomains),
+                        allowLocalBinding: row.allowLocalBinding ? 1 : 0,
+                        permissions: JSON.stringify(row.permissions),
+                        owner: row.owner ? JSON.stringify(row.owner) : null,
+                        keepAlive: row.keepAlive ? 1 : 0,
+                        desiredState: row.desiredState,
+                        status: row.status,
+                        pid: row.pid,
+                        bootTimeMs: row.bootTimeMs,
+                        restartCount: row.restartCount,
+                        restartFailureCount: row.restartFailureCount,
+                        nextRestartAt: row.nextRestartAt,
+                        settingsPath: row.settingsPath,
+                        logPath: row.logPath,
+                        createdAt: row.createdAt,
+                        updatedAt: row.updatedAt,
+                        lastStartedAt: row.lastStartedAt,
+                        lastExitedAt: row.lastExitedAt
+                    });
+                }
+            });
 
             await this.cacheLock.inLock(() => {
-                this.recordCacheSet(next);
+                this.recordCacheSet(advanced);
             });
         });
     }
@@ -255,14 +357,24 @@ export class ProcessesRepository {
     async delete(id: string): Promise<boolean> {
         const lock = this.recordLockForId(id);
         return lock.inLock(async () => {
-            const result = await this.db
-                .delete(processesTable)
-                .where(eq(processesTable.id, id))
-                .returning({ id: processesTable.id });
+            const current = this.recordsById.get(id) ?? (await this.recordLoadById(id));
+            if (!current) {
+                return false;
+            }
+            await this.db
+                .update(processesTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(processesTable.id, current.id),
+                        eq(processesTable.version, current.version ?? 1),
+                        isNull(processesTable.validTo)
+                    )
+                );
             await this.cacheLock.inLock(() => {
                 this.recordsById.delete(id);
             });
-            return result.length > 0;
+            return true;
         });
     }
 
@@ -298,7 +410,11 @@ export class ProcessesRepository {
     }
 
     private async recordLoadById(id: string): Promise<ProcessDbRecord | null> {
-        const rows = await this.db.select().from(processesTable).where(eq(processesTable.id, id)).limit(1);
+        const rows = await this.db
+            .select()
+            .from(processesTable)
+            .where(and(eq(processesTable.id, id), isNull(processesTable.validTo)))
+            .limit(1);
         const row = rows[0];
         if (!row) {
             return null;
@@ -324,6 +440,9 @@ export class ProcessesRepository {
 function recordParse(row: typeof processesTable.$inferSelect): ProcessDbRecord {
     return {
         id: row.id,
+        version: row.version ?? 1,
+        validFrom: row.validFrom ?? row.createdAt,
+        validTo: row.validTo ?? null,
         userId: row.userId,
         name: row.name,
         command: row.command,

@@ -414,7 +414,7 @@ async function exposeEndpointRowRead(
     endpointId: string
 ): Promise<{ domain: string; auth: { passwordHash: string } | null }> {
     const row = (await storage.connection
-        .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? LIMIT 1")
+        .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? AND valid_to IS NULL LIMIT 1")
         .get(endpointId)) as { domain?: string; auth?: string | null } | undefined;
     return {
         domain: row?.domain ?? "",

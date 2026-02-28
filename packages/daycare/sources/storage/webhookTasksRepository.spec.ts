@@ -31,6 +31,9 @@ describe("WebhookTasksRepository", () => {
             });
             const first: WebhookTaskDbRecord = {
                 id: "hook-alpha",
+                version: 1,
+                validFrom: 10,
+                validTo: null,
                 taskId: "task-alpha",
                 userId: "user-1",
                 agentId: null,
@@ -40,6 +43,9 @@ describe("WebhookTasksRepository", () => {
             };
             const second: WebhookTaskDbRecord = {
                 id: "hook-beta",
+                version: 1,
+                validFrom: 11,
+                validTo: null,
                 taskId: "task-beta",
                 userId: "user-1",
                 agentId: "agent-1",
@@ -86,6 +92,9 @@ describe("WebhookTasksRepository", () => {
             });
             await repo.create({
                 id: "hook-cache",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 taskId: "task-cache",
                 userId: "user-1",
                 agentId: null,
@@ -123,14 +132,14 @@ describe("WebhookTasksRepository", () => {
 
             await storage.connection
                 .prepare(
-                    "INSERT INTO tasks (id, user_id, title, description, code, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO tasks (id, user_id, version, valid_from, valid_to, title, description, code, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
-                .run("   ", "user-1", "Bad", null, "print('bad')", 1, 1, null);
+                .run("   ", "user-1", 1, 1, null, "Bad", null, "print('bad')", 1, 1, null);
             await storage.connection
                 .prepare(
-                    "INSERT INTO tasks_webhook (id, task_id, user_id, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO tasks_webhook (id, version, valid_from, valid_to, task_id, user_id, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
-                .run("hook-row-bad", "   ", "user-1", null, 1, 1);
+                .run("hook-row-bad", 1, 1, null, "   ", "user-1", null, 1, 1);
             await expect(repo.findById("hook-row-bad")).rejects.toThrow(
                 "Webhook trigger hook-row-bad is missing required task_id."
             );
@@ -155,6 +164,9 @@ describe("WebhookTasksRepository", () => {
             });
             await repo.create({
                 id: "hook-run",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
                 taskId: "task-run",
                 userId: "user-1",
                 agentId: null,
