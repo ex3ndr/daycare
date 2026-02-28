@@ -1,7 +1,9 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { appJwtSecretResolve } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
 import type { PluginInstanceSettings } from "../../../settings.js";
+import { jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { contextForAgent, contextForUser } from "../../agents/context.js";
@@ -29,7 +31,7 @@ const taskCreateSchema = Type.Object(
         ),
         heartbeat: Type.Optional(Type.Boolean({ description: "Attach a heartbeat trigger (~30 min interval)." })),
         webhook: Type.Optional(
-            Type.Boolean({ description: "Attach a webhook trigger that runs on POST /v1/webhooks/<id>." })
+            Type.Boolean({ description: "Attach a webhook trigger that runs on POST /v1/webhooks/<token>." })
         ),
         agentId: Type.Optional(
             Type.String({
@@ -129,6 +131,7 @@ type TaskResult = Static<typeof taskResultSchema>;
 
 const APP_SERVER_DEFAULT_HOST = "127.0.0.1";
 const APP_SERVER_DEFAULT_PORT = 7332;
+const WEBHOOK_TOKEN_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 365 * 10;
 
 const taskReturns: ToolResultContract<TaskResult> = {
     schema: taskResultSchema,
@@ -287,9 +290,11 @@ export function buildTaskReadTool(): ToolDefinition {
                 (trigger) => `  - ${trigger.id} (cron: ${trigger.schedule}, timezone: ${trigger.timezone})`
             );
             const heartbeatLines = heartbeatTriggers.map((trigger) => `  - ${trigger.id} (heartbeat)`);
-            const webhookLines = webhookTriggers.map(
-                (trigger) =>
-                    `  - ${trigger.id} (webhook: ${taskWebhookEndpointBuild(toolContext, trigger.id)}, agent: ${trigger.agentId ?? "system:webhook"})`
+            const webhookLines = await Promise.all(
+                webhookTriggers.map(async (trigger) => {
+                    const endpoint = await taskWebhookEndpointBuild(toolContext, trigger.id);
+                    return `  - ${trigger.id} (webhook: ${endpoint}, agent: ${trigger.agentId ?? "system:webhook"})`;
+                })
             );
 
             const lines = [
@@ -777,7 +782,7 @@ async function taskWebhookTriggerEnsure(
         return {
             id: duplicate.id,
             duplicate: true,
-            webhookPath: taskWebhookEndpointBuild(toolContext, duplicate.id)
+            webhookPath: await taskWebhookEndpointBuild(toolContext, duplicate.id)
         };
     }
 
@@ -788,12 +793,31 @@ async function taskWebhookTriggerEnsure(
     return {
         id: created.id,
         duplicate: false,
-        webhookPath: taskWebhookEndpointBuild(toolContext, created.id)
+        webhookPath: await taskWebhookEndpointBuild(toolContext, created.id)
     };
 }
 
-function taskWebhookEndpointBuild(toolContext: Parameters<ToolDefinition["execute"]>[1], triggerId: string): string {
-    return `${taskWebhookOriginResolve(toolContext)}/v1/webhooks/${triggerId}`;
+async function taskWebhookEndpointBuild(
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    triggerId: string
+): Promise<string> {
+    const origin = taskWebhookOriginResolve(toolContext);
+    const token = await taskWebhookTokenSign(toolContext, triggerId);
+    return `${origin}/v1/webhooks/${token}`;
+}
+
+async function taskWebhookTokenSign(
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    triggerId: string
+): Promise<string> {
+    const secret = await taskWebhookSecretResolve(toolContext);
+    return jwtSign(
+        {
+            userId: triggerId
+        },
+        secret,
+        WEBHOOK_TOKEN_EXPIRES_IN_SECONDS
+    );
 }
 
 function taskWebhookOriginResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): string {
@@ -817,19 +841,44 @@ function taskAppServerSettingsResolve(plugin: PluginInstanceSettings | undefined
     host: unknown;
     port: unknown;
     serverEndpoint: unknown;
+    jwtSecret: unknown;
 } {
     if (!plugin?.settings || typeof plugin.settings !== "object") {
         return {
             host: undefined,
             port: undefined,
-            serverEndpoint: undefined
+            serverEndpoint: undefined,
+            jwtSecret: undefined
         };
     }
     return {
         host: plugin.settings.host,
         port: plugin.settings.port,
-        serverEndpoint: plugin.settings.serverEndpoint
+        serverEndpoint: plugin.settings.serverEndpoint,
+        jwtSecret: plugin.settings.jwtSecret
     };
+}
+
+async function taskWebhookSecretResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): Promise<string> {
+    const plugins = toolContext.agentSystem.config?.current.settings.plugins ?? [];
+    const appServer =
+        plugins.find(
+            (plugin) =>
+                plugin.pluginId === "daycare-app-server" &&
+                plugin.instanceId === "daycare-app-server" &&
+                plugin.enabled !== false
+        ) ?? plugins.find((plugin) => plugin.pluginId === "daycare-app-server" && plugin.enabled !== false);
+    const settings = taskAppServerSettingsResolve(appServer);
+    const settingsJwtSecret = taskWebhookJwtSecretResolve(settings.jwtSecret);
+    return appJwtSecretResolve(settingsJwtSecret, toolContext.auth);
+}
+
+function taskWebhookJwtSecretResolve(value: unknown): string | undefined {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function taskWebhookServerEndpointResolve(value: unknown): string | null {

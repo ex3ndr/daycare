@@ -185,13 +185,16 @@ describe("daycare-app-server plugin auth endpoints", () => {
         expect(response.headers.get("content-type")).toContain("text/plain");
     });
 
-    it("routes POST /v1/webhooks/:id to webhook runtime", async () => {
+    it("routes POST /v1/webhooks/:token to webhook runtime", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
         const trigger = vi.fn(async () => undefined);
         const built = await pluginCreateForTests({
+            secret,
             webhookTrigger: trigger
         });
+        const webhookToken = await jwtSign({ userId: "hook-1" }, secret, 3600);
 
-        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-1`, {
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ event: "deploy" })
@@ -203,13 +206,16 @@ describe("daycare-app-server plugin auth endpoints", () => {
     });
 
     it("returns 404 when webhook trigger does not exist", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
         const built = await pluginCreateForTests({
+            secret,
             webhookTrigger: async () => {
                 throw new Error("Webhook trigger not found: missing");
             }
         });
+        const webhookToken = await jwtSign({ userId: "missing" }, secret, 3600);
 
-        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/missing`, {
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({})
@@ -223,13 +229,16 @@ describe("daycare-app-server plugin auth endpoints", () => {
     });
 
     it("returns 500 when webhook execution fails", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
         const built = await pluginCreateForTests({
+            secret,
             webhookTrigger: async () => {
                 throw new Error("Webhook execution failed");
             }
         });
+        const webhookToken = await jwtSign({ userId: "hook-err" }, secret, 3600);
 
-        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-err`, {
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({})
@@ -243,9 +252,11 @@ describe("daycare-app-server plugin auth endpoints", () => {
     });
 
     it("returns 503 when webhook runtime is unavailable", async () => {
-        const built = await pluginCreateForTests();
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await pluginCreateForTests({ secret });
+        const webhookToken = await jwtSign({ userId: "hook-1" }, secret, 3600);
 
-        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/hook-1`, {
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/${webhookToken}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({})
@@ -256,6 +267,27 @@ describe("daycare-app-server plugin auth endpoints", () => {
             ok: false,
             error: "Webhook runtime unavailable."
         });
+    });
+
+    it("returns 404 for invalid webhook token", async () => {
+        const trigger = vi.fn(async () => undefined);
+        const built = await pluginCreateForTests({
+            secret: "valid-secret-for-tests-1234567890",
+            webhookTrigger: trigger
+        });
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/v1/webhooks/not-a-valid-token`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({})
+        });
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toEqual({
+            ok: false,
+            error: "Webhook trigger not found."
+        });
+        expect(trigger).not.toHaveBeenCalled();
     });
 
     it("returns ok for valid token", async () => {

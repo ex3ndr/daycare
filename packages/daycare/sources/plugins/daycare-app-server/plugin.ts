@@ -106,9 +106,10 @@ export const plugin = definePlugin({
                 });
                 return;
             }
-            const webhookId = webhookIdResolve(pathname);
-            if (request.method === "POST" && webhookId) {
-                await routeWebhookTrigger(request, response, webhookId, {
+            const webhookToken = webhookTokenResolve(pathname);
+            if (request.method === "POST" && webhookToken) {
+                await routeWebhookTrigger(request, response, webhookToken, {
+                    secretResolve,
                     trigger: api.webhooks.trigger
                 });
                 return;
@@ -239,12 +240,12 @@ function appEndpointSettingSchema(fieldName: string): z.ZodEffects<z.ZodOptional
         });
 }
 
-function webhookIdResolve(pathname: string): string | null {
+function webhookTokenResolve(pathname: string): string | null {
     const parts = pathname.split("/").filter((part) => part.length > 0);
     if (parts.length !== 3 || parts[0] !== "v1" || parts[1] !== "webhooks") {
         return null;
     }
-    const webhookId = parts[2] ?? "";
-    const normalized = webhookId.trim();
+    const webhookToken = parts[2] ?? "";
+    const normalized = webhookToken.trim();
     return normalized.length > 0 ? normalized : null;
 }

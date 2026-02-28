@@ -1,7 +1,7 @@
 # Webhook Triggers
 
 Webhook triggers add a third task trigger mode (with cron and heartbeat).
-Each webhook trigger is a cuid2 id used as both identifier and secret.
+Each webhook trigger stores a cuid2 id internally, while external endpoints use a signed token that embeds that id.
 
 ## What Was Added
 
@@ -13,7 +13,7 @@ Each webhook trigger is a cuid2 id used as both identifier and secret.
 - `task_create` supports `webhook: true`
 - `task_delete` removes webhook triggers
 - App server route:
-  - `POST /v1/webhooks/:id`
+  - `POST /v1/webhooks/:token`
 
 ## Data Model
 
@@ -42,9 +42,9 @@ erDiagram
 
 ```mermaid
 flowchart LR
-    A[External caller] --> B[POST /v1/webhooks/:id]
-    B --> C[Webhooks.trigger(id, body)]
-    C --> D[Lookup tasks_webhook by id]
+    A[External caller] --> B[POST /v1/webhooks/:token]
+    B --> C[Verify token and decode webhook id]
+    C --> D[Webhooks.trigger(id, body)]
     D --> E[Lookup task by taskId + userId]
     E --> F[agentSystem.postAndAwait]
     F --> G[Run task Python code]
@@ -57,7 +57,7 @@ flowchart TD
     A[task_trigger_add type=webhook] --> B[Webhooks.addTrigger]
     B --> C[Insert tasks_webhook row]
     C --> D[Resolve app-server endpoint]
-    D --> E[Return webhook id + endpoint/v1/webhooks/:id]
+    D --> E[Return webhook id + endpoint/v1/webhooks/:token]
 
     F[task_trigger_remove type=webhook] --> G[Webhooks.deleteTriggersForTask]
     G --> H[Delete matching tasks_webhook rows]

@@ -4,9 +4,11 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
+import { APP_AUTH_SECRET_KEY } from "../../../plugins/daycare-app-server/appJwtSecretResolve.js";
 import type { PluginInstanceSettings } from "../../../settings.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { jwtVerify } from "../../../util/jwt.js";
 import { contextForAgent } from "../../agents/context.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
@@ -324,9 +326,12 @@ describe("task tools", () => {
         );
         const webhookTriggerId = String(webhookAddResult.typedResult.webhookTriggerId ?? "");
         expect(webhookTriggerId).not.toBe("");
-        expect(String(webhookAddResult.typedResult.webhookPath ?? "")).toBe(
-            `http://127.0.0.1:7332/v1/webhooks/${webhookTriggerId}`
-        );
+        const webhookPath = String(webhookAddResult.typedResult.webhookPath ?? "");
+        expect(webhookPath.startsWith("http://127.0.0.1:7332/v1/webhooks/")).toBe(true);
+        const webhookToken = webhookPath.split("/").at(-1) ?? "";
+        await expect(jwtVerify(webhookToken, runtime.webhookSecret)).resolves.toMatchObject({
+            userId: webhookTriggerId
+        });
 
         const duplicateWebhookAddResult = await addTool.execute(
             { taskId: "task-one", type: "webhook" },
@@ -392,9 +397,12 @@ describe("task tools", () => {
         );
 
         const webhookTriggerId = String(webhookAddResult.typedResult.webhookTriggerId ?? "");
-        expect(String(webhookAddResult.typedResult.webhookPath ?? "")).toBe(
-            `https://api.example.com/v1/webhooks/${webhookTriggerId}`
-        );
+        const webhookPath = String(webhookAddResult.typedResult.webhookPath ?? "");
+        expect(webhookPath.startsWith("https://api.example.com/v1/webhooks/")).toBe(true);
+        const webhookToken = webhookPath.split("/").at(-1) ?? "";
+        await expect(jwtVerify(webhookToken, runtime.webhookSecret)).resolves.toMatchObject({
+            userId: webhookTriggerId
+        });
     });
 
     it("defaults cron timezone from user profile and treats timezone as part of uniqueness", async () => {
@@ -521,6 +529,7 @@ async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}
     crons: Crons;
     heartbeats: Heartbeats;
     webhooks: Webhooks;
+    webhookSecret: string;
     context: ToolExecutionContext;
     postAndAwait: (...args: unknown[]) => Promise<unknown>;
 }> {
@@ -537,6 +546,23 @@ async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}
             path.join(dir, "settings.json")
         )
     );
+    const webhookSecret = "valid-secret-for-tests-1234567890";
+    const authEntries = new Map<string, Record<string, unknown>>([
+        [
+            APP_AUTH_SECRET_KEY,
+            {
+                type: "token",
+                token: webhookSecret,
+                secret: webhookSecret
+            }
+        ]
+    ]);
+    const auth = {
+        getEntry: vi.fn(async (id: string) => authEntries.get(id) ?? null),
+        setEntry: vi.fn(async (id: string, entry: Record<string, unknown>) => {
+            authEntries.set(id, entry);
+        })
+    } as unknown as ToolExecutionContext["auth"];
 
     const agentSystem = {
         config,
@@ -575,7 +601,7 @@ async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
-        auth: null as unknown as ToolExecutionContext["auth"],
+        auth,
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: "agent-1" } as unknown as ToolExecutionContext["agent"],
@@ -588,5 +614,5 @@ async function runtimeBuild(options: { plugins?: PluginInstanceSettings[] } = {}
         toolResolver: toolResolver as ToolExecutionContext["toolResolver"]
     };
 
-    return { dir, storage, crons, heartbeats, webhooks, context, postAndAwait };
+    return { dir, storage, crons, heartbeats, webhooks, webhookSecret, context, postAndAwait };
 }
