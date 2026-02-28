@@ -244,7 +244,9 @@ describe("exec tool allowedDomains", () => {
         );
         const text = toolMessageText(result.toolMessage.content);
         expect(result.toolMessage.isError).toBe(false);
-        expect(text).toContain("stdout:\nok");
+        expect(text).toContain('"stdout": "ok"');
+        expect(result.typedResult.output).toContain('"stdout": "ok"');
+        expect("summary" in result.typedResult).toBe(false);
     });
 
     itIfSandbox("allows reading outside workspace", async () => {
@@ -285,7 +287,7 @@ describe("exec tool allowedDomains", () => {
         const text = toolMessageText(result.toolMessage.content);
         const expectedHome = context.sandbox.homeDir;
         expect(result.toolMessage.isError).toBe(false);
-        expect(text).toContain(`stdout:\n${expectedHome}`);
+        expect(text).toContain(`"stdout": "${expectedHome}"`);
     });
 
     itIfSandbox("denies writing to global /tmp when not write-granted", async () => {
@@ -384,33 +386,34 @@ describe("read_json tool", () => {
 });
 
 describe("formatExecOutput", () => {
-    it("tail-truncates stdout with stream label notice", () => {
+    it("tail-truncates stdout and returns JSON-structured output", () => {
         const stdout = `${"a".repeat(100)}${"z".repeat(9_000)}`;
         const text = formatExecOutput(stdout, "", false);
+        const parsed = JSON.parse(text) as { stdout?: string };
 
-        expect(text).toContain("stdout:");
-        expect(text).toContain("chars truncated from stdout");
-        expect(text.endsWith("z".repeat(8_000))).toBe(true);
+        expect(parsed.stdout).toBeDefined();
+        expect(parsed.stdout).toContain("chars truncated from stdout");
+        expect(parsed.stdout?.endsWith("z".repeat(8_000))).toBe(true);
     });
 
-    it("tail-truncates stderr with stream label notice", () => {
+    it("tail-truncates stderr and returns JSON-structured output", () => {
         const stderr = `${"x".repeat(100)}${"y".repeat(9_000)}`;
         const text = formatExecOutput("", stderr, true);
+        const parsed = JSON.parse(text) as { stderr?: string };
 
-        expect(text).toContain("stderr:");
-        expect(text).toContain("chars truncated from stderr");
-        expect(text.endsWith("y".repeat(8_000))).toBe(true);
+        expect(parsed.stderr).toBeDefined();
+        expect(parsed.stderr).toContain("chars truncated from stderr");
+        expect(parsed.stderr?.endsWith("y".repeat(8_000))).toBe(true);
     });
 
     it("includes both streams and truncates each independently", () => {
         const stdout = `${"s".repeat(50)}${"o".repeat(9_000)}`;
         const stderr = `${"e".repeat(50)}${"r".repeat(9_000)}`;
         const text = formatExecOutput(stdout, stderr, true);
+        const parsed = JSON.parse(text) as { stdout?: string; stderr?: string };
 
-        expect(text).toContain("stdout:");
-        expect(text).toContain("stderr:");
-        expect(text).toContain("chars truncated from stdout");
-        expect(text).toContain("chars truncated from stderr");
+        expect(parsed.stdout).toContain("chars truncated from stdout");
+        expect(parsed.stderr).toContain("chars truncated from stderr");
     });
 });
 

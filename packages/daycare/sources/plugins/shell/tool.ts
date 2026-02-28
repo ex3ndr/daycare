@@ -111,6 +111,20 @@ const shellResultSchema = Type.Object(
 );
 
 type ShellResult = Static<typeof shellResultSchema>;
+const execResultSchema = Type.Object(
+    {
+        output: Type.String(),
+        action: Type.String(),
+        isError: Type.Boolean(),
+        cwd: Type.Optional(Type.String()),
+        exitCode: Type.Optional(Type.Number()),
+        signal: Type.Optional(Type.String()),
+        stdout: Type.Optional(Type.String()),
+        stderr: Type.Optional(Type.String())
+    },
+    { additionalProperties: false }
+);
+type ExecResult = Static<typeof execResultSchema>;
 const readJsonResultSchema = Type.Object(
     {
         summary: Type.String(),
@@ -134,6 +148,10 @@ type ReadJsonResult = {
 const shellReturns: ToolResultContract<ShellResult> = {
     schema: shellResultSchema,
     toLLMText: (result) => result.summary
+};
+const execReturns: ToolResultContract<ExecResult> = {
+    schema: execResultSchema,
+    toLLMText: (result) => result.output
 };
 const readJsonReturns: ToolResultContract<ReadJsonResult> = {
     schema: readJsonResultSchema,
@@ -317,7 +335,7 @@ export function buildExecTool(): ToolDefinition {
                 "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
-        returns: shellReturns,
+        returns: execReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ExecArgs;
             const workingDir = toolContext.sandbox.workingDir;
@@ -330,13 +348,15 @@ export function buildExecTool(): ToolDefinition {
                 allowedDomains: payload.allowedDomains ?? [],
                 signal: toolContext.abortSignal
             });
-            const text = formatExecOutput(result.stdout, result.stderr, result.failed);
-            const toolMessage = buildToolMessage(toolCall, text, result.failed, {
+            const formattedOutput = formatExecStreams(result.stdout, result.stderr, result.failed);
+            const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed, {
                 cwd: path.relative(workingDir, result.cwd) || ".",
                 exitCode: result.exitCode,
-                signal: result.signal
+                signal: result.signal,
+                ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
+                ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
             });
-            return toolExecutionResultOutcomeWithTyped(toolMessage, shellResultBuild(toolMessage, "exec"));
+            return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
         }
     };
 }
@@ -404,6 +424,25 @@ function shellResultBuild(toolMessage: ToolResultMessage, fallbackAction: string
     };
 }
 
+function execResultBuild(toolMessage: ToolResultMessage): ExecResult {
+    const details = detailRecordGet(toolMessage.details);
+    const cwd = detailStringGet(details, "cwd");
+    const exitCode = detailNumberGet(details, "exitCode");
+    const signal = detailStringGet(details, "signal");
+    const stdout = detailStringGet(details, "stdout");
+    const stderr = detailStringGet(details, "stderr");
+    return {
+        output: toolMessageTextExtract(toolMessage),
+        action: detailStringGet(details, "action") ?? "exec",
+        isError: Boolean(toolMessage.isError),
+        ...(cwd ? { cwd } : {}),
+        ...(exitCode !== undefined ? { exitCode } : {}),
+        ...(signal ? { signal } : {}),
+        ...(stdout !== undefined ? { stdout } : {}),
+        ...(stderr !== undefined ? { stderr } : {})
+    };
+}
+
 function detailRecordGet(value: unknown): Record<string, unknown> {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
         return {};
@@ -438,19 +477,33 @@ function jsonValueIs(value: unknown): value is ToolResultValue {
 }
 
 export function formatExecOutput(stdout: string, stderr: string, failed: boolean): string {
-    const parts: string[] = [];
-    const stdoutPart = formatExecStream("stdout", stdout);
-    if (stdoutPart) {
-        parts.push(stdoutPart);
+    return formatExecStreams(stdout, stderr, failed).output;
+}
+
+function formatExecStreams(stdout: string, stderr: string, failed: boolean): {
+    output: string;
+    stdout?: string;
+    stderr?: string;
+} {
+    const stdoutValue = formatExecStream("stdout", stdout);
+    const stderrValue = formatExecStream("stderr", stderr);
+    if (stdoutValue === null && stderrValue === null) {
+        return {
+            output: failed ? "Command failed with no output." : "Command completed with no output."
+        };
     }
-    const stderrPart = formatExecStream("stderr", stderr);
-    if (stderrPart) {
-        parts.push(stderrPart);
-    }
-    if (parts.length === 0) {
-        return failed ? "Command failed with no output." : "Command completed with no output.";
-    }
-    return parts.join("\n\n");
+    return {
+        output: JSON.stringify(
+            {
+                ...(stdoutValue !== null ? { stdout: stdoutValue } : {}),
+                ...(stderrValue !== null ? { stderr: stderrValue } : {})
+            },
+            null,
+            2
+        ),
+        ...(stdoutValue !== null ? { stdout: stdoutValue } : {}),
+        ...(stderrValue !== null ? { stderr: stderrValue } : {})
+    };
 }
 
 function formatExecStream(stream: "stdout" | "stderr", value: string): string | null {
@@ -458,5 +511,5 @@ function formatExecStream(stream: "stdout" | "stderr", value: string): string | 
         return null;
     }
     const text = stringTruncateTail(value.trimEnd(), MAX_EXEC_STREAM_OUTPUT_CHARS, stream);
-    return `${stream}:\n${text}`;
+    return text;
 }
