@@ -2,7 +2,12 @@ import type { AgentHistoryRecord, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
-import { rlmPrintCaptureAppend, rlmPrintCaptureCreate, rlmPrintCaptureFlushTrailing } from "./rlmPrintCapture.js";
+import {
+    rlmPrintCaptureAppend,
+    rlmPrintCaptureAppendToolPrint,
+    rlmPrintCaptureCreate,
+    rlmPrintCaptureFlushTrailing
+} from "./rlmPrintCapture.js";
 import { rlmRuntimeTools } from "./rlmRuntimeTools.js";
 import { rlmSnapshotSave } from "./rlmSnapshotSave.js";
 import { rlmStepResume } from "./rlmStepResume.js";
@@ -74,9 +79,12 @@ export async function rlmExecute(
     const printCallback = (...values: unknown[]): void => {
         rlmPrintCaptureAppend(printCapture, values);
     };
+    const toolPrintCallback = (...values: unknown[]): void => {
+        rlmPrintCaptureAppendToolPrint(printCapture, values);
+    };
     const toolContext: ToolExecutionContext = {
         ...context,
-        print: printCallback
+        print: toolPrintCallback
     };
     let toolCallCount = 0;
     let progress = (

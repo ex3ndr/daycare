@@ -31,6 +31,14 @@ export function rlmPrintCaptureAppend(state: RlmPrintCaptureState, args: unknown
 }
 
 /**
+ * Appends one tool-originated print callback invocation into capture state.
+ * Expects: arbitrary value lists; does not interpret stdout/stderr tuple markers.
+ */
+export function rlmPrintCaptureAppendToolPrint(state: RlmPrintCaptureState, args: unknown[]): void {
+    state.lines.push(printLineBuild(args));
+}
+
+/**
  * Flushes trailing stdout buffer content that has no trailing newline.
  * Expects: called before reading captured print output for persistence/output.
  */

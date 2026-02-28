@@ -90,6 +90,7 @@ Tools can call `context.print?.(...args)` to emit diagnostic lines into Python e
 - `context.print` is defined only when a tool runs from RLM Python execution.
 - Outside Python execution, `context.print` remains `undefined`.
 - Printed values are appended to the same `printOutput` stream used by Python `print()`.
+- Tool print args are treated as literal values; labels like `"stderr"` or `"stdout"` are not filtered.
 
 ```mermaid
 flowchart LR

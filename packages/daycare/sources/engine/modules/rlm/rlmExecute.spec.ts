@@ -122,6 +122,30 @@ describe("rlmExecute", () => {
         expect(typeof executionContext.print).toBe("function");
     });
 
+    it("keeps stdout/stderr labels as literal values for context.print", async () => {
+        const execute = vi.fn(async (toolCall: ToolCall, toolContext: ToolExecutionContext) => {
+            toolContext.print?.("stderr", `${toolCall.name}:err`);
+            toolContext.print?.("stdout", `${toolCall.name}:out`);
+            return okResult(toolCall.name, "ok");
+        });
+        const resolver: ToolResolverApi = {
+            listTools: () => baseTools,
+            listToolsForAgent: () => baseTools,
+            execute
+        };
+
+        const result = await rlmExecute(
+            "echo('hello')\n'done'",
+            montyPreambleBuild(baseTools),
+            createContext(),
+            resolver,
+            "tool-call-print-labels"
+        );
+
+        expect(result.output).toBe("done");
+        expect(result.printOutput).toEqual(["stderr echo:err", "stdout echo:out"]);
+    });
+
     it("resumes execution after tool calls and returns final output", async () => {
         const resolver = createResolver(async (name, args) => {
             if (name !== "echo") {

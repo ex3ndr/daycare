@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { rlmPrintCaptureAppend, rlmPrintCaptureCreate, rlmPrintCaptureFlushTrailing } from "./rlmPrintCapture.js";
+import {
+    rlmPrintCaptureAppend,
+    rlmPrintCaptureAppendToolPrint,
+    rlmPrintCaptureCreate,
+    rlmPrintCaptureFlushTrailing
+} from "./rlmPrintCapture.js";
 
 describe("rlmPrintCapture", () => {
     it("captures stdout chunks into finalized print lines", () => {
@@ -26,7 +31,7 @@ describe("rlmPrintCapture", () => {
         const lines: string[] = [];
         const capture = rlmPrintCaptureCreate(lines);
 
-        rlmPrintCaptureAppend(capture, ["debug info"]);
+        rlmPrintCaptureAppendToolPrint(capture, ["debug info"]);
 
         expect(lines).toEqual(["debug info"]);
     });
@@ -35,8 +40,18 @@ describe("rlmPrintCapture", () => {
         const lines: string[] = [];
         const capture = rlmPrintCaptureCreate(lines);
 
-        rlmPrintCaptureAppend(capture, ["debug", 42, { ok: true }, null]);
+        rlmPrintCaptureAppendToolPrint(capture, ["debug", 42, { ok: true }, null]);
 
         expect(lines).toEqual(['debug 42 {"ok":true}']);
+    });
+
+    it("treats stdout/stderr markers as literal tool print arguments", () => {
+        const lines: string[] = [];
+        const capture = rlmPrintCaptureCreate(lines);
+
+        rlmPrintCaptureAppendToolPrint(capture, ["stderr", "x"]);
+        rlmPrintCaptureAppendToolPrint(capture, ["stdout", "y"]);
+
+        expect(lines).toEqual(["stderr x", "stdout y"]);
     });
 });
