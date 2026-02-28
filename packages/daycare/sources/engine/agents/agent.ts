@@ -1149,6 +1149,7 @@ export class Agent {
             heartbeats: this.agentSystem.heartbeats,
             webhooks: this.agentSystem.webhooks,
             memory: this.agentSystem.memory,
+            secrets: this.agentSystem.secrets,
             toolResolver: this.agentSystem.toolResolver,
             skills: [],
             allowedToolNames

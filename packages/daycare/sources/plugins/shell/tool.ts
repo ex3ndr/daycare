@@ -84,6 +84,12 @@ const execSchema = Type.Object(
                 description: "Inline environment variable overrides for this command."
             })
         ),
+        secrets: Type.Optional(
+            Type.Array(Type.String({ minLength: 1 }), {
+                minItems: 1,
+                description: "Secret names to inject as environment variables."
+            })
+        ),
         dotenv: Type.Optional(
             Type.Union([Type.Boolean(), Type.String({ minLength: 1 })], {
                 description:
@@ -360,17 +366,21 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com, no global wildcard). Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: execReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ExecArgs;
+            const secretNames = secretNamesNormalize(payload.secrets ?? []);
+            const resolvedSecrets =
+                secretNames.length > 0 ? await secretEnvResolve(toolContext, secretNames) : undefined;
             const result = await toolContext.sandbox.exec({
                 command: payload.command,
                 cwd: payload.cwd,
                 timeoutMs: payload.timeoutMs,
                 env: payload.env,
+                secrets: resolvedSecrets,
                 dotenv: payload.dotenv,
                 packageManagers: payload.packageManagers,
                 allowedDomains: payload.allowedDomains ?? [],
@@ -387,6 +397,28 @@ export function buildExecTool(): ToolDefinition {
             return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
         }
     };
+}
+
+function secretNamesNormalize(input: string[]): string[] {
+    const names: string[] = [];
+    for (const entry of input) {
+        const normalized = entry.trim();
+        if (!normalized) {
+            throw new Error("Secret names must be non-empty.");
+        }
+        names.push(normalized);
+    }
+    return names;
+}
+
+async function secretEnvResolve(
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    secretNames: string[]
+): Promise<Record<string, string>> {
+    if (!toolContext.secrets) {
+        throw new Error("Secrets service is not configured.");
+    }
+    return toolContext.secrets.resolve(toolContext.ctx, secretNames);
 }
 
 function ensureAbsolutePath(target: string): void {

@@ -216,10 +216,12 @@ export class Sandbox {
         }
         const dotenvEnv = await sandboxExecDotenvLoad(cwd, args.dotenv);
         const envOverrides = envNormalize(args.env);
+        const secretEnv = envNormalize(args.secrets);
         const env = {
             ...process.env,
             ...(dotenvEnv ?? {}),
-            ...(envOverrides ?? {})
+            ...(envOverrides ?? {}),
+            ...(secretEnv ?? {})
         };
         const filesystem = sandboxFilesystemPolicyBuild({
             writeDirs: permissions.writeDirs,

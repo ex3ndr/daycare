@@ -29,6 +29,7 @@ import type { InferenceRouter } from "../modules/inference/router.js";
 import type { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
+import { Secrets } from "../secrets/secrets.js";
 import type { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
 import type { Webhooks } from "../webhook/webhooks.js";
@@ -87,6 +88,7 @@ export type AgentSystemOptions = {
     inferenceRouter: InferenceRouter;
     authStore: AuthStore;
     memory?: Memory;
+    secrets?: Secrets;
     delayedSignals?: DelayedSignalsFacade;
 };
 
@@ -102,6 +104,7 @@ export class AgentSystem {
     readonly inferenceRouter: InferenceRouter;
     readonly authStore: AuthStore;
     readonly memory: Memory;
+    readonly secrets: Secrets;
     private readonly delayedSignals: DelayedSignalsFacade | null;
     private _crons: Crons | null = null;
     private _heartbeats: Heartbeats | null = null;
@@ -123,6 +126,7 @@ export class AgentSystem {
         this.inferenceRouter = options.inferenceRouter;
         this.authStore = options.authStore;
         this.memory = options.memory ?? new Memory({ usersDir: this.config.current.usersDir });
+        this.secrets = options.secrets ?? new Secrets(this.config.current.usersDir);
         this.delayedSignals = options.delayedSignals ?? null;
         this.eventBus.onEvent((event) => {
             if (event.type !== "signal.generated") {

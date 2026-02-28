@@ -10,6 +10,7 @@ import type { AgentSystem } from "../../agents/agentSystem.js";
 import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
 import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Memory } from "../../memory/memory.js";
+import type { Secrets } from "../../secrets/secrets.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { ConnectorRegistry } from "../connectorRegistry.js";
@@ -34,6 +35,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     heartbeats: Heartbeats;
     webhooks?: Webhooks;
     memory?: Memory;
+    secrets?: Secrets;
     toolResolver?: ToolResolverApi;
     skills?: AgentSkill[];
     skillsPersonalRoot?: string;

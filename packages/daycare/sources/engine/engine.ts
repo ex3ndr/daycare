@@ -67,6 +67,8 @@ import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
 import { buildReactionTool } from "./modules/tools/reaction.js";
 import { sayTool } from "./modules/tools/sayTool.js";
+import { secretAddToolBuild } from "./modules/tools/secretAddToolBuild.js";
+import { secretRemoveToolBuild } from "./modules/tools/secretRemoveToolBuild.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
 import { sessionHistoryToolBuild } from "./modules/tools/sessionHistoryToolBuild.js";
@@ -97,6 +99,7 @@ import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
 import { Processes } from "./processes/processes.js";
+import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { taskListActive } from "./tasks/taskListActive.js";
@@ -133,6 +136,7 @@ export class Engine {
     readonly eventBus: EngineEventBus;
     readonly apps: Apps;
     readonly memory: Memory;
+    readonly secrets: Secrets;
     readonly exposes: Exposes;
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
@@ -330,6 +334,7 @@ export class Engine {
         this.memory = new Memory({
             usersDir: this.config.current.usersDir
         });
+        this.secrets = new Secrets(this.config.current.usersDir);
 
         this.agentSystem = new AgentSystem({
             config: this.config,
@@ -343,6 +348,7 @@ export class Engine {
             inferenceRouter: this.inferenceRouter,
             authStore: this.authStore,
             memory: this.memory,
+            secrets: this.secrets,
             delayedSignals: this.delayedSignals
         });
 
@@ -449,8 +455,13 @@ export class Engine {
         this.modules.tools.register("core", skillToolBuild());
         this.modules.tools.register("core", skillAddToolBuild());
         this.modules.tools.register("core", skillRemoveToolBuild());
+        this.modules.tools.register("core", secretAddToolBuild());
+        this.modules.tools.register("core", secretRemoveToolBuild());
         this.modules.tools.register("core", userProfileUpdateTool());
-        this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.exposes));
+        this.modules.tools.register(
+            "core",
+            topologyTool(this.crons, this.signals, this.channels, this.exposes, this.secrets)
+        );
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
         this.modules.tools.register("core", subuserCreateToolBuild());

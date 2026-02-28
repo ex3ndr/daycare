@@ -7,6 +7,7 @@ import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
 import type { Exposes } from "../../expose/exposes.js";
+import type { Secrets } from "../../secrets/secrets.js";
 import type { Signals } from "../../signals/signals.js";
 
 const schema = Type.Object({}, { additionalProperties: false });
@@ -152,6 +153,9 @@ const topologyResultSchema = Type.Object(
         // Channel members are nested arrays of objects; keep schema broad for resolver compatibility.
         channels: Type.Any(),
         exposes: Type.Array(topologyExposeSchema),
+        // Secret metadata includes variableNames string arrays, which resolver-level validation
+        // does not currently permit inside typed array item objects.
+        secrets: Type.Any(),
         // Subuser fields include primitive unions (e.g. string|null), which are currently rejected
         // by resolver-level shallow object validation.
         subusers: Type.Any(),
@@ -164,6 +168,7 @@ const topologyResultSchema = Type.Object(
         signalSubscriptionCount: Type.Number(),
         channelCount: Type.Number(),
         exposeCount: Type.Number(),
+        secretCount: Type.Number(),
         friendCount: Type.Number()
     },
     { additionalProperties: false }
@@ -235,6 +240,13 @@ type TopologyExpose = {
     authenticated: boolean;
 };
 
+type TopologySecret = {
+    name: string;
+    displayName: string;
+    description: string;
+    variableNames: string[];
+};
+
 type TopologySubuser = {
     id: string;
     name: string | null;
@@ -265,6 +277,7 @@ type TopologyResult = {
     signalSubscriptions: TopologySignalSubscription[];
     channels: TopologyChannel[];
     exposes: TopologyExpose[];
+    secrets: TopologySecret[];
     subusers: TopologySubuser[];
     friends: TopologyFriend[];
     agentCount: number;
@@ -274,6 +287,7 @@ type TopologyResult = {
     signalSubscriptionCount: number;
     channelCount: number;
     exposeCount: number;
+    secretCount: number;
     friendCount: number;
 };
 
@@ -290,13 +304,14 @@ export function topologyTool(
     crons: Crons,
     signals: Signals,
     channels: Pick<Channels, "listForUserIds">,
-    _exposes: Pick<Exposes, "list">
+    _exposes: Pick<Exposes, "list">,
+    secrets: Pick<Secrets, "list"> = { list: async () => [] }
 ): ToolDefinition<typeof schema, TopologyResult> {
     return {
         tool: {
             name: "topology",
             description:
-                "Return structured topology for your visible user scope. Agents exclude memory and dead entries by default. Tasks include nested cron and heartbeat triggers.",
+                "Return structured topology for your visible user scope. Agents exclude memory and dead entries by default. Tasks include nested cron and heartbeat triggers. Secrets include metadata only (no values).",
             parameters: schema
         },
         returns: topologyReturns,
@@ -488,6 +503,23 @@ export function topologyTool(
                     authenticated: Boolean(endpoint.auth)
                 }));
 
+            const secretEntries = (
+                await Promise.all(visibleUserIds.map((userId) => secrets.list(contextForUser({ userId }))))
+            ).flat();
+            const secretByName = new Map<string, TopologySecret>();
+            for (const entry of secretEntries) {
+                if (secretByName.has(entry.name)) {
+                    continue;
+                }
+                secretByName.set(entry.name, {
+                    name: entry.name,
+                    displayName: entry.displayName,
+                    description: entry.description,
+                    variableNames: Object.keys(entry.variables).sort((left, right) => left.localeCompare(right))
+                });
+            }
+            const secretSummary = [...secretByName.values()].sort((left, right) => left.name.localeCompare(right.name));
+
             const subusers: TopologySubuser[] = isSubuser
                 ? []
                 : ownerSubusers.map((subuser) => {
@@ -511,6 +543,7 @@ export function topologyTool(
                 signalSubscriptions: signalSubscriptionsSummary,
                 channels: channelsSummary,
                 exposes: exposeSummary,
+                secrets: secretSummary,
                 subusers,
                 friends,
                 agentCount: agents.length,
@@ -520,6 +553,7 @@ export function topologyTool(
                 signalSubscriptionCount: signalSubscriptionsSummary.length,
                 channelCount: channelsSummary.length,
                 exposeCount: exposeSummary.length,
+                secretCount: secretSummary.length,
                 friendCount: friends.length
             };
 

@@ -58,6 +58,7 @@ export type SandboxExecArgs = {
     cwd?: string;
     timeoutMs?: number;
     env?: Record<string, string | number | boolean>;
+    secrets?: Record<string, string>;
     dotenv?: boolean | string;
     packageManagers?: SandboxPackageManager[];
     allowedDomains?: string[];

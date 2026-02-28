@@ -9,6 +9,9 @@ execution (`exec`), and durable process management tools.
 
 Use `exec` for filesystem search/list operations (for example `rg`, `fd`, `ls`) when needed.
 
+Exec inputs also support `secrets: string[]`, which injects saved secret environment variables for that command. Secret
+variables override both dotenv and inline `env` values.
+
 ## Read Tool Notes
 
 - `read` accepts relative and absolute paths.

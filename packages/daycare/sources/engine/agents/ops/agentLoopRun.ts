@@ -184,6 +184,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             heartbeats,
             webhooks,
             memory,
+            secrets: agentSystem.secrets,
             skills: activeSkills,
             skillsPersonalRoot: options.skillsPersonalRoot,
             appendHistoryRecord,

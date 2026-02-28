@@ -9,12 +9,13 @@ import { configResolve } from "../../../config/configResolve.js";
 import { databaseMigrate } from "../../../storage/databaseMigrate.js";
 import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
-import { contextForAgent } from "../../agents/context.js";
+import { contextForAgent, contextForUser } from "../../agents/context.js";
 import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
 import type { Crons } from "../../cron/crons.js";
 import type { HeartbeatDefinition } from "../../heartbeat/heartbeatTypes.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
+import { Secrets } from "../../secrets/secrets.js";
 import type { Signals } from "../../signals/signals.js";
 import type { SignalSubscription } from "../../signals/signalTypes.js";
 import { UserHome } from "../../users/userHome.js";
@@ -58,6 +59,7 @@ describe("topologyTool", () => {
                 signalSubscriptions: [],
                 channels: [],
                 exposes: [],
+                secrets: [],
                 subusers: [],
                 friends: [],
                 agentCount: 0,
@@ -67,6 +69,7 @@ describe("topologyTool", () => {
                 signalSubscriptionCount: 0,
                 channelCount: 0,
                 exposeCount: 0,
+                secretCount: 0,
                 friendCount: 0
             });
 
@@ -78,6 +81,7 @@ describe("topologyTool", () => {
                       signalSubscriptions: unknown[];
                       channels: unknown[];
                       exposes: unknown[];
+                      secrets: unknown[];
                       friends: unknown[];
                   }
                 | undefined;
@@ -88,6 +92,7 @@ describe("topologyTool", () => {
                 signalSubscriptions: [],
                 channels: [],
                 exposes: [],
+                secrets: [],
                 friends: [],
                 subusers: [],
                 agentCount: 0,
@@ -97,8 +102,65 @@ describe("topologyTool", () => {
                 signalSubscriptionCount: 0,
                 channelCount: 0,
                 exposeCount: 0,
+                secretCount: 0,
                 friendCount: 0
             });
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("includes secret metadata without leaking secret values", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-topology-tool-secrets-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir, db: { autoMigrate: false } }
+                },
+                path.join(dir, "settings.json")
+            );
+            const storage = storageResolve(config);
+            await databaseMigrate(storage.connection);
+
+            const secrets = new Secrets(config.usersDir);
+            await secrets.add(contextForUser({ userId: "user-1" }), {
+                name: "openai-key",
+                displayName: "OpenAI Key",
+                description: "Primary OpenAI credentials",
+                variables: {
+                    OPENAI_API_KEY: "sk-secret",
+                    OPENAI_ORG_ID: "org-secret"
+                }
+            });
+
+            const tool = topologyTool(
+                { listTasks: async () => [] } as unknown as Crons,
+                { listSubscriptions: async () => [] } as unknown as Signals,
+                { listForUserIds: (_userIds: string[]) => [] } as never,
+                { list: async () => [] } as never,
+                secrets
+            );
+            const result = await tool.execute(
+                {},
+                contextBuild(config, {
+                    callerAgentId: "agent-caller",
+                    callerUserId: "user-1",
+                    heartbeatTasks: []
+                }),
+                toolCall
+            );
+
+            expect(result.typedResult.secretCount).toBe(1);
+            expect(result.typedResult.secrets).toEqual([
+                {
+                    name: "openai-key",
+                    displayName: "OpenAI Key",
+                    description: "Primary OpenAI credentials",
+                    variableNames: ["OPENAI_API_KEY", "OPENAI_ORG_ID"]
+                }
+            ]);
+            expect(JSON.stringify(result.typedResult.secrets)).not.toContain("sk-secret");
+            expect(JSON.stringify(result.typedResult.secrets)).not.toContain("org-secret");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

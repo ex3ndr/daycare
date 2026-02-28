@@ -233,6 +233,63 @@ describe("exec tool allowedDomains", () => {
         expect(firstCall?.dotenv).toBe(".env.local");
     });
 
+    it("resolves secret names and forwards resolved secret env to sandbox exec", async () => {
+        const tool = buildExecTool();
+        const context = createContext(workingDir);
+        const resolve = vi.fn(async (_ctx: ToolExecutionContext["ctx"], _names: string[]) => ({
+            OPENAI_API_KEY: "sk-secret"
+        }));
+        context.secrets = {
+            resolve
+        } as unknown as ToolExecutionContext["secrets"];
+        const exec = vi.fn(
+            async (_args: { command: string; secrets?: Record<string, string>; allowedDomains?: string[] }) => ({
+                stdout: "ok",
+                stderr: "",
+                failed: false,
+                exitCode: 0,
+                signal: null,
+                cwd: workingDir
+            })
+        );
+        context.sandbox.exec = exec;
+
+        const result = await tool.execute(
+            {
+                command: "echo ok",
+                secrets: ["openai-key"]
+            },
+            context,
+            execToolCall
+        );
+        expect(result.toolMessage.isError).toBe(false);
+        expect(resolve).toHaveBeenCalledWith(context.ctx, ["openai-key"]);
+        const firstCall = exec.mock.calls[0]?.[0];
+        expect(firstCall?.secrets).toEqual({ OPENAI_API_KEY: "sk-secret" });
+    });
+
+    it("surfaces unknown secret name errors", async () => {
+        const tool = buildExecTool();
+        const context = createContext(workingDir);
+        const resolve = vi.fn(async () => {
+            throw new Error('Unknown secret: "missing".');
+        });
+        context.secrets = {
+            resolve
+        } as unknown as ToolExecutionContext["secrets"];
+
+        await expect(
+            tool.execute(
+                {
+                    command: "echo ok",
+                    secrets: ["missing"]
+                },
+                context,
+                execToolCall
+            )
+        ).rejects.toThrow('Unknown secret: "missing".');
+    });
+
     it("forwards abort signal to sandbox exec", async () => {
         const tool = buildExecTool();
         const abortController = new AbortController();
@@ -459,7 +516,8 @@ function createContext(
     writeDirs: string[] = [],
     pythonExecution = false,
     abortSignal?: AbortSignal,
-    homeDir = workingDir
+    homeDir = workingDir,
+    secrets?: ToolExecutionContext["secrets"]
 ): ToolExecutionContext {
     const agentId = createId();
     const messageContext = {};
@@ -504,6 +562,7 @@ function createContext(
         messageContext,
         pythonExecution,
         abortSignal,
+        secrets,
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
         heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
     };
