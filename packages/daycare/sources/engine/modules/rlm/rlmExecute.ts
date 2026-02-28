@@ -74,6 +74,10 @@ export async function rlmExecute(
     const printCallback = (...values: unknown[]): void => {
         rlmPrintCaptureAppend(printCapture, values);
     };
+    const toolContext: ToolExecutionContext = {
+        ...context,
+        print: printCallback
+    };
     let toolCallCount = 0;
     let progress = (
         await rlmStepStart({
@@ -130,7 +134,7 @@ export async function rlmExecute(
             snapshot: progress,
             toolByName,
             toolResolver,
-            context,
+            context: toolContext,
             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
                 if (!historyCallback) {
                     return;

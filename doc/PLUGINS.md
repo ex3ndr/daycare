@@ -83,6 +83,21 @@ sequenceDiagram
     Agent->>LLM: Context { systemPrompt, systemPromptImages }
 ```
 
+## Tool Execution Context Print Callback
+
+Tools can call `context.print?.(...args)` to emit diagnostic lines into Python execution output.
+
+- `context.print` is defined only when a tool runs from RLM Python execution.
+- Outside Python execution, `context.print` remains `undefined`.
+- Printed values are appended to the same `printOutput` stream used by Python `print()`.
+
+```mermaid
+flowchart LR
+    Tool[tool.execute] --> Print[context.print?.(...args)]
+    Print --> Capture[rlmPrintCaptureAppend]
+    Capture --> Output[rlmExecute printOutput[]]
+```
+
 ## Daycare App Server Plugin
 
 The `daycare-app-server` plugin exposes app authentication and static app hosting directly from the runtime.

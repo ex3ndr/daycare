@@ -302,6 +302,36 @@ describe("ToolResolver", () => {
         expect(result.typedResult).toEqual({ text: "ok" });
     });
 
+    it("leaves context.print undefined for non-python tool execution", async () => {
+        const resolver = new ToolResolver();
+        const execute = vi.fn(async (_args: unknown, context: ToolExecutionContext) => {
+            expect(context.print).toBeUndefined();
+            return okResult("read_file", "ok");
+        });
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute
+        });
+
+        const result = await resolver.execute(
+            {
+                type: "toolCall",
+                id: "call-ctx-print",
+                name: "read_file",
+                arguments: { path: "/tmp/a.txt" }
+            },
+            toolExecutionContextCreate()
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+
     it("uses returns.toLLMText when tool response contains no text block", async () => {
         const resolver = new ToolResolver();
         resolver.register("test", {

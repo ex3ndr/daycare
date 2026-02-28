@@ -1,3 +1,4 @@
+import type { ToolCall } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
@@ -92,6 +93,33 @@ describe("rlmExecute", () => {
         expect(result.output).toBe("done");
         expect(result.printOutput).toEqual(["hello world"]);
         expect(result.toolCallCount).toBe(0);
+    });
+
+    it("exposes context.print to tools during python execution", async () => {
+        const execute = vi.fn(async (toolCall: ToolCall, toolContext: ToolExecutionContext) => {
+            toolContext.print?.("tool", toolCall.name);
+            return okResult(toolCall.name, "ok");
+        });
+        const resolver: ToolResolverApi = {
+            listTools: () => baseTools,
+            listToolsForAgent: () => baseTools,
+            execute
+        };
+
+        const result = await rlmExecute(
+            "echo('hello')\n'done'",
+            montyPreambleBuild(baseTools),
+            createContext(),
+            resolver,
+            "tool-call-print-context"
+        );
+
+        expect(result.output).toBe("done");
+        expect(result.printOutput).toEqual(["tool echo"]);
+        expect(execute).toHaveBeenCalledTimes(1);
+        const executionContext = execute.mock.calls[0]?.[1] as ToolExecutionContext;
+        expect(executionContext.pythonExecution).toBe(true);
+        expect(typeof executionContext.print).toBe("function");
     });
 
     it("resumes execution after tool calls and returns final output", async () => {

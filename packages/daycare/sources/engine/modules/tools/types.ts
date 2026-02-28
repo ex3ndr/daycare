@@ -41,6 +41,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     skillsPersonalRoot?: string;
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     pythonExecution?: boolean;
+    print?: (...args: unknown[]) => void;
     allowedToolNames?: ReadonlySet<string>;
     abortSignal?: AbortSignal;
 };
