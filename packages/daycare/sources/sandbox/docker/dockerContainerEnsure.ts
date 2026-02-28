@@ -44,12 +44,14 @@ const DOCKER_DNS_PROFILE_LABEL = "daycare.dns.profile";
 const DOCKER_DNS_SERVERS_LABEL = "daycare.dns.servers";
 const DOCKER_DNS_RESOLVER_LABEL = "daycare.dns.resolver";
 const DOCKER_TMPFS_TMP_LABEL = "daycare.tmpfs.tmp";
+const DOCKER_TMPFS_RUN_LABEL = "daycare.tmpfs.run";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
 const DOCKER_DNS_RESOLVER_DOCKER = "docker";
 const DOCKER_DNS_RESOLVER_BIND = "bind";
 const DOCKER_TMPFS_TMP_ENABLED = "1";
+const DOCKER_TMPFS_RUN_ENABLED = "1";
 
 /**
  * Ensures a long-lived sandbox container exists and is running for a user.
@@ -135,13 +137,15 @@ export async function dockerContainerEnsure(
                 [DOCKER_DNS_PROFILE_LABEL]: dnsProfile.profileLabel,
                 [DOCKER_DNS_SERVERS_LABEL]: dnsServersLabel,
                 [DOCKER_DNS_RESOLVER_LABEL]: dnsResolverLabel,
-                [DOCKER_TMPFS_TMP_LABEL]: DOCKER_TMPFS_TMP_ENABLED
+                [DOCKER_TMPFS_TMP_LABEL]: DOCKER_TMPFS_TMP_ENABLED,
+                [DOCKER_TMPFS_RUN_LABEL]: DOCKER_TMPFS_RUN_ENABLED
             },
             HostConfig: {
                 Binds: binds,
                 NetworkMode: config.networkName,
                 Tmpfs: {
-                    "/tmp": "rw"
+                    "/tmp": "rw",
+                    "/run": "rw"
                 },
                 ...(dnsProfile.dnsServers ? { Dns: dnsProfile.dnsServers } : {}),
                 ...(config.runtime ? { Runtime: config.runtime } : {}),
@@ -223,6 +227,7 @@ function containerStaleReasonResolve(
     const dnsServersLabel = labels?.[DOCKER_DNS_SERVERS_LABEL];
     const dnsResolverLabel = labels?.[DOCKER_DNS_RESOLVER_LABEL];
     const tmpfsTmpLabel = labels?.[DOCKER_TMPFS_TMP_LABEL];
+    const tmpfsRunLabel = labels?.[DOCKER_TMPFS_RUN_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -255,6 +260,9 @@ function containerStaleReasonResolve(
     }
     if (!tmpfsTmpLabel) {
         return "missing-tmpfs-tmp-label";
+    }
+    if (!tmpfsRunLabel) {
+        return "missing-tmpfs-run-label";
     }
     const networkState = dockerContainerNetworkStateResolve(details, expectedNetworkName);
     if (networkState !== "correct") {
@@ -301,6 +309,9 @@ function containerStaleReasonResolve(
     }
     if (tmpfsTmpLabel !== DOCKER_TMPFS_TMP_ENABLED) {
         return `tmpfs-tmp-mismatch:${tmpfsTmpLabel}->${DOCKER_TMPFS_TMP_ENABLED}`;
+    }
+    if (tmpfsRunLabel !== DOCKER_TMPFS_RUN_ENABLED) {
+        return `tmpfs-run-mismatch:${tmpfsRunLabel}->${DOCKER_TMPFS_RUN_ENABLED}`;
     }
     return null;
 }
