@@ -65,6 +65,7 @@ import { messageContextReset } from "./ops/messageContextReset.js";
 import { systemPromptResolve } from "./ops/systemPromptResolve.js";
 
 const logger = getLogger("engine.agent");
+const RESTORE_FAILURE_RESET_MESSAGE = "Session restore failed - starting from scratch.";
 
 export class Agent {
     readonly ctx: Context;
@@ -937,18 +938,46 @@ export class Agent {
     private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
         try {
             await this.completePendingToolCalls("session_crashed");
+            const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+            const historyMessages = await this.buildHistoryContext(history);
+            this.state.context = {
+                messages: historyMessages
+            };
+            this.state.updatedAt = Date.now();
+            await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         } catch (error) {
-            logger.warn({ agentId: this.id, error }, "restore: Pending tool-call recovery failed; rebuilding context");
+            logger.warn({ agentId: this.id, error }, "restore: History restore failed; starting from scratch");
+            await this.handleReset({
+                type: "reset",
+                message: RESTORE_FAILURE_RESET_MESSAGE
+            });
+            await this.restoreFailureNotificationSend(RESTORE_FAILURE_RESET_MESSAGE);
         }
-        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
-        const historyMessages = await this.buildHistoryContext(history);
-        this.state.context = {
-            messages: historyMessages
-        };
-        this.state.updatedAt = Date.now();
-        await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         this.agentSystem.eventBus.emit("agent.restored", { agentId: this.id });
         return true;
+    }
+
+    private async restoreFailureNotificationSend(text: string): Promise<void> {
+        if (this.resolveAgentKind() !== "foreground") {
+            return;
+        }
+        const target = agentDescriptorTargetResolve(this.descriptor);
+        if (!target) {
+            return;
+        }
+        const targetId = target?.targetId ?? null;
+        if (!targetId) {
+            return;
+        }
+        const connector = this.agentSystem.connectorRegistry.get(target.connector);
+        if (!connector?.capabilities.sendText) {
+            return;
+        }
+        try {
+            await connector.sendMessage(targetId, { text });
+        } catch (error) {
+            logger.warn({ agentId: this.id, error }, "error: Failed to send restore failure notification");
+        }
     }
 
     private async runManualCompaction(): Promise<{ ok: boolean; reason?: string }> {

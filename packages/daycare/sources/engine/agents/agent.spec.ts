@@ -19,6 +19,7 @@ import type {
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
+import { sessionHistoryTable } from "../../schema.js";
 import { storageOpen } from "../../storage/storageOpen.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
@@ -1681,6 +1682,120 @@ describe("Agent", () => {
                 );
             });
             expect(hasRestoredToolResult).toBe(true);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("notifies and starts from scratch when history restore has invalid timestamp data", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const sendMessage = vi.fn(async () => undefined);
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: () => () => undefined,
+                sendMessage
+            };
+            expect(connectorRegistry.register("telegram", connector)).toEqual({ ok: true, status: "loaded" });
+
+            const complete = vi.fn(async (..._args: unknown[]) => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant",
+                    content: [{ type: "text", text: "ok" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpenTest(),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setHeartbeats({} as unknown as Heartbeats);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+            await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "reset",
+                    message: "seed session"
+                }
+            );
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
+            const before = await agentSystem.storage.agents.findById(agentId);
+            const beforeSessionId = before?.activeSessionId ?? null;
+            if (!beforeSessionId) {
+                throw new Error("Expected active session before malformed restore fixture.");
+            }
+
+            await agentSystem.storage.db.insert(sessionHistoryTable).values({
+                sessionId: beforeSessionId,
+                type: "user_message",
+                at: Date.now(),
+                data: JSON.stringify({
+                    text: "bad timestamp payload",
+                    files: [],
+                    at: "not-a-number"
+                })
+            });
+
+            const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
+            expect(restoreResult).toEqual({ type: "restore", ok: true });
+
+            const after = await agentSystem.storage.agents.findById(agentId);
+            const afterSessionId = after?.activeSessionId ?? null;
+            expect(afterSessionId).toBeTruthy();
+            expect(afterSessionId).not.toBe(beforeSessionId);
+
+            const restoredSession = await agentSystem.storage.sessions.findById(afterSessionId ?? "");
+            expect(restoredSession?.resetMessage).toBe("Session restore failed - starting from scratch.");
+
+            expect(sendMessage).toHaveBeenCalledWith(
+                "channel-1",
+                expect.objectContaining({
+                    text: "Session restore failed - starting from scratch."
+                })
+            );
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
