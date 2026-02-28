@@ -68,6 +68,7 @@ is read-only.
 All sandbox containers mount `/tmp` as writable tmpfs:
 
 - `HostConfig.Tmpfs["/tmp"] = "rw"`
+- Docker `Sandbox.exec()` always includes `/tmp` in `srt` `allowWrite`.
 
 When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
 

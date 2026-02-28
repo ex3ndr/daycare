@@ -106,11 +106,15 @@ function runtimeConfigPathRewrite(config: SandboxRuntimeConfig, mounts: PathMoun
         return config;
     }
 
+    const allowWrite = Array.from(
+        new Set([...config.filesystem.allowWrite.map((entry) => containerPathRewrite(entry, mounts)), "/tmp"])
+    );
+
     return {
         ...config,
         filesystem: {
             ...config.filesystem,
-            allowWrite: config.filesystem.allowWrite.map((entry) => containerPathRewrite(entry, mounts)),
+            allowWrite,
             denyRead: config.filesystem.denyRead.map((entry) => containerPathRewrite(entry, mounts)),
             denyWrite: config.filesystem.denyWrite.map((entry) => containerPathRewrite(entry, mounts))
         }

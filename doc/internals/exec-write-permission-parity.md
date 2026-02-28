@@ -8,19 +8,24 @@ Before:
 
 Now:
 - `exec` copies caller permissions and preserves `writeDirs`
-- `/tmp` is writable only when explicitly granted in caller permissions
+- host mode: `/tmp` is writable only when explicitly granted in caller permissions
+- Docker mode: `/tmp` is always added to `allowWrite` to match the Docker tmpfs mount policy
 
 ```mermaid
 flowchart TD
   A["Tool context permissions"] --> B["write tool"]
   A --> C["exec tool"]
   B --> D["sandboxCanWrite(target)"]
-  C --> E["resolveExecPermissions(copy)"]
-  E --> F["sandboxFilesystemPolicyBuild(allowWrite = writeDirs)"]
-  D --> G{"target in writeDirs?"}
-  F --> H{"command writes in writeDirs?"}
-  G -- no --> I["deny"]
-  H -- no --> I
-  G -- yes --> J["allow"]
-  H -- yes --> J
+  D --> E{"target in writeDirs?"}
+  E -- no --> L["deny"]
+  E -- yes --> M["allow"]
+  C --> F["resolveExecPermissions(copy)"]
+  F --> G["sandboxFilesystemPolicyBuild(allowWrite = writeDirs)"]
+  G --> H{"docker mode?"}
+  H -- yes --> I["append /tmp to allowWrite"]
+  H -- no --> J["keep allowWrite as-is"]
+  I --> K{"command writes in allowed dirs?"}
+  J --> K
+  K -- no --> L
+  K -- yes --> M
 ```

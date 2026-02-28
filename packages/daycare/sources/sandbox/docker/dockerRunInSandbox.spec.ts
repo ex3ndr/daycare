@@ -112,7 +112,7 @@ describe("dockerRunInSandbox", () => {
         });
         expect(capturedRuntimeConfig).toEqual({
             filesystem: {
-                allowWrite: ["/home", "/home/desktop"],
+                allowWrite: ["/home", "/home/desktop", "/tmp"],
                 denyRead: ["/home/.ssh"],
                 denyWrite: ["/home/.aws"]
             },
