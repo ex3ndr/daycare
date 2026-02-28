@@ -42,7 +42,9 @@ describe("dockerContainerEnsure", () => {
                         "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                         "daycare.dns.resolver": "bind",
                         "daycare.tmpfs.tmp": "1",
-                        "daycare.tmpfs.run": "1"
+                        "daycare.tmpfs.run": "1",
+                        "daycare.tmpfs.var_tmp": "1",
+                        "daycare.tmpfs.var_run": "1"
                     }
                 }
             }),
@@ -84,7 +86,9 @@ describe("dockerContainerEnsure", () => {
                         "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                         "daycare.dns.resolver": "bind",
                         "daycare.tmpfs.tmp": "1",
-                        "daycare.tmpfs.run": "1"
+                        "daycare.tmpfs.run": "1",
+                        "daycare.tmpfs.var_tmp": "1",
+                        "daycare.tmpfs.var_run": "1"
                     }
                 }
             }),
@@ -125,7 +129,9 @@ describe("dockerContainerEnsure", () => {
                         "daycare.dns.servers": "default",
                         "daycare.dns.resolver": "docker",
                         "daycare.tmpfs.tmp": "1",
-                        "daycare.tmpfs.run": "1"
+                        "daycare.tmpfs.run": "1",
+                        "daycare.tmpfs.var_tmp": "1",
+                        "daycare.tmpfs.var_run": "1"
                     }
                 },
                 NetworkSettings: {
@@ -173,7 +179,9 @@ describe("dockerContainerEnsure", () => {
                         "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                         "daycare.dns.resolver": "bind",
                         "daycare.tmpfs.tmp": "1",
-                        "daycare.tmpfs.run": "1"
+                        "daycare.tmpfs.run": "1",
+                        "daycare.tmpfs.var_tmp": "1",
+                        "daycare.tmpfs.var_run": "1"
                     }
                 },
                 NetworkSettings: {
@@ -310,6 +318,103 @@ describe("dockerContainerEnsure", () => {
         expect(docker.createContainer).toHaveBeenCalledTimes(1);
     });
 
+    it("recreates container when /var/tmp tmpfs label is missing", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default",
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0",
+                        "daycare.network": "daycare-isolated",
+                        "daycare.dns.profile": "public",
+                        "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                        "daycare.dns.resolver": "bind",
+                        "daycare.tmpfs.tmp": "1",
+                        "daycare.tmpfs.run": "1"
+                    }
+                },
+                NetworkSettings: {
+                    Networks: {
+                        "daycare-isolated": {}
+                    }
+                }
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, baseConfig);
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
+    it("recreates container when /var/run tmpfs label is missing", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default",
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0",
+                        "daycare.network": "daycare-isolated",
+                        "daycare.dns.profile": "public",
+                        "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                        "daycare.dns.resolver": "bind",
+                        "daycare.tmpfs.tmp": "1",
+                        "daycare.tmpfs.run": "1",
+                        "daycare.tmpfs.var_tmp": "1"
+                    }
+                },
+                NetworkSettings: {
+                    Networks: {
+                        "daycare-isolated": {}
+                    }
+                }
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, baseConfig);
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
     it("creates and starts container when missing", async () => {
         const existing = {
             inspect: vi.fn().mockRejectedValue({ statusCode: 404 }),
@@ -349,7 +454,9 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
                 "daycare.tmpfs.tmp": "1",
-                "daycare.tmpfs.run": "1"
+                "daycare.tmpfs.run": "1",
+                "daycare.tmpfs.var_tmp": "1",
+                "daycare.tmpfs.var_run": "1"
             },
             HostConfig: {
                 Binds: [
@@ -361,7 +468,9 @@ describe("dockerContainerEnsure", () => {
                 NetworkMode: "daycare-isolated",
                 Tmpfs: {
                     "/tmp": "rw",
-                    "/run": "rw"
+                    "/run": "rw",
+                    "/var/tmp": "rw",
+                    "/var/run": "rw"
                 },
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc"
@@ -416,7 +525,9 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.servers": "default",
                 "daycare.dns.resolver": "docker",
                 "daycare.tmpfs.tmp": "1",
-                "daycare.tmpfs.run": "1"
+                "daycare.tmpfs.run": "1",
+                "daycare.tmpfs.var_tmp": "1",
+                "daycare.tmpfs.var_run": "1"
             },
             HostConfig: {
                 Binds: [
@@ -427,7 +538,9 @@ describe("dockerContainerEnsure", () => {
                 NetworkMode: "daycare-local",
                 Tmpfs: {
                     "/tmp": "rw",
-                    "/run": "rw"
+                    "/run": "rw",
+                    "/var/tmp": "rw",
+                    "/var/run": "rw"
                 },
                 Runtime: "runsc"
             },
@@ -481,7 +594,9 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.servers": "192.168.1.1,192.168.1.2",
                 "daycare.dns.resolver": "bind",
                 "daycare.tmpfs.tmp": "1",
-                "daycare.tmpfs.run": "1"
+                "daycare.tmpfs.run": "1",
+                "daycare.tmpfs.var_tmp": "1",
+                "daycare.tmpfs.var_run": "1"
             },
             HostConfig: {
                 Binds: [
@@ -493,7 +608,9 @@ describe("dockerContainerEnsure", () => {
                 NetworkMode: "daycare-local",
                 Tmpfs: {
                     "/tmp": "rw",
-                    "/run": "rw"
+                    "/run": "rw",
+                    "/var/tmp": "rw",
+                    "/var/run": "rw"
                 },
                 Dns: ["192.168.1.1", "192.168.1.2"],
                 Runtime: "runsc"
@@ -621,7 +738,9 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
                 "daycare.tmpfs.tmp": "1",
-                "daycare.tmpfs.run": "1"
+                "daycare.tmpfs.run": "1",
+                "daycare.tmpfs.var_tmp": "1",
+                "daycare.tmpfs.var_run": "1"
             },
             HostConfig: {
                 Binds: [
@@ -633,7 +752,9 @@ describe("dockerContainerEnsure", () => {
                 NetworkMode: "daycare-isolated",
                 Tmpfs: {
                     "/tmp": "rw",
-                    "/run": "rw"
+                    "/run": "rw",
+                    "/var/tmp": "rw",
+                    "/var/run": "rw"
                 },
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
@@ -728,7 +849,9 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
                 "daycare.tmpfs.tmp": "1",
-                "daycare.tmpfs.run": "1"
+                "daycare.tmpfs.run": "1",
+                "daycare.tmpfs.var_tmp": "1",
+                "daycare.tmpfs.var_run": "1"
             },
             HostConfig: {
                 Binds: [
@@ -740,7 +863,9 @@ describe("dockerContainerEnsure", () => {
                 NetworkMode: "daycare-isolated",
                 Tmpfs: {
                     "/tmp": "rw",
-                    "/run": "rw"
+                    "/run": "rw",
+                    "/var/tmp": "rw",
+                    "/var/run": "rw"
                 },
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",
@@ -796,7 +921,9 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
                 "daycare.tmpfs.tmp": "1",
-                "daycare.tmpfs.run": "1"
+                "daycare.tmpfs.run": "1",
+                "daycare.tmpfs.var_tmp": "1",
+                "daycare.tmpfs.var_run": "1"
             },
             HostConfig: {
                 Binds: [
@@ -808,7 +935,9 @@ describe("dockerContainerEnsure", () => {
                 NetworkMode: "daycare-isolated",
                 Tmpfs: {
                     "/tmp": "rw",
-                    "/run": "rw"
+                    "/run": "rw",
+                    "/var/tmp": "rw",
+                    "/var/run": "rw"
                 },
                 Dns: ["1.1.1.1", "8.8.8.8"],
                 Runtime: "runsc",

@@ -65,11 +65,13 @@ When `readOnly` is `true`, sandbox containers are created with:
 The `/home` bind mount remains writable, so only mounted home content is writable while the rest of the root filesystem
 is read-only.
 
-All sandbox containers mount `/tmp` and `/run` as writable tmpfs:
+All sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/run` as writable tmpfs:
 
 - `HostConfig.Tmpfs["/tmp"] = "rw"`
 - `HostConfig.Tmpfs["/run"] = "rw"`
-- Docker `Sandbox.exec()` always includes `/tmp` and `/run` in `srt` `allowWrite`.
+- `HostConfig.Tmpfs["/var/tmp"] = "rw"`
+- `HostConfig.Tmpfs["/var/run"] = "rw"`
+- Docker `Sandbox.exec()` always includes `/tmp`, `/run`, `/var/tmp`, and `/var/run` in `srt` `allowWrite`.
 
 When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
 
@@ -115,6 +117,8 @@ Each sandbox container is stamped at creation time with:
 - `daycare.dns.servers` from configured DNS servers (`default` when Docker DNS is used)
 - `daycare.tmpfs.tmp` fixed to `"1"` when `/tmp` tmpfs mount is enabled
 - `daycare.tmpfs.run` fixed to `"1"` when `/run` tmpfs mount is enabled
+- `daycare.tmpfs.var_tmp` fixed to `"1"` when `/var/tmp` tmpfs mount is enabled
+- `daycare.tmpfs.var_run` fixed to `"1"` when `/var/run` tmpfs mount is enabled
 
 `dockerContainerEnsure` compares these labels against current values. If any label is missing or mismatched, the
 container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure
