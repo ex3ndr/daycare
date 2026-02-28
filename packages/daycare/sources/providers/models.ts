@@ -1,8 +1,32 @@
-// This file is maintained manually by the coding agent.
-// Keep models ordered newest-first; within the same generation, order by size.
-// For regional variants prefer global > us > eu > everything else.
-// Do not sort in code; list order is authoritative.
-// Mark older generations with deprecated: true.
+/**
+ * Manual provider model registry used by Daycare model selection.
+ *
+ * This file is intentionally curated and ORDER MATTERS.
+ * The first matching model for a size/selector may be chosen by runtime logic.
+ *
+ * Sorting rules:
+ * 1. Provider sections are kept in stable order and should follow pi-ai provider IDs.
+ * 2. Inside each provider list, put the most important/default models first.
+ * 3. After top picks, keep newer generations before older generations.
+ * 4. For regional variants, prefer global > us > eu > other regions.
+ * 5. Mark older models with `deprecated: true` instead of removing them unless pi-ai removed the ID.
+ *
+ * Update procedure:
+ * 1. Upgrade `@mariozechner/pi-ai`.
+ * 2. Sync model IDs so this file matches pi-ai exactly (providers and model IDs).
+ * 3. Re-rank each provider list manually so top entries are meaningful, not random append order.
+ * 4. Re-check model `size` values for newly added IDs (`small` | `normal` | `large`).
+ * 5. Run:
+ *    - `yarn --cwd packages/daycare vitest run sources/providers/__tests__/models.spec.ts`
+ *    - `yarn --cwd packages/daycare vitest run sources/engine/agents/ops/agentModelOverrideApply.spec.ts`
+ *    - `yarn lint`
+ *    - `yarn --cwd packages/daycare typecheck`
+ *
+ * Important:
+ * - Do not auto-sort this file.
+ * - Do not keep IDs that no longer exist in pi-ai.
+ * - Keep names human-readable and consistent with existing style.
+ */
 
 import type { KnownProvider } from "@mariozechner/pi-ai";
 
