@@ -1,6 +1,8 @@
+import { createId } from "@paralleldrive/cuid2";
+import { eq } from "drizzle-orm";
 import type { AgentHistoryRecord } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
-import { type DaycareDb, schemaDrizzle } from "../schema.js";
+import { agentsTable, type DaycareDb, schemaDrizzle, sessionsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import { AgentsRepository } from "./agentsRepository.js";
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
@@ -136,28 +138,53 @@ export class Storage {
         };
 
         const sessionCreatedAt = input.session?.createdAt ?? baseRecord.createdAt;
-        await this.connection.exec("BEGIN");
-        try {
-            await this.agents.create(baseRecord);
-            const sessionId = await this.sessions.create({
+        const sessionId = createId();
+
+        // Use tx directly to avoid deadlock with PGlite's single connection.
+        // Repo methods use this.db (the main instance), not tx, so calling them
+        // inside db.transaction() would deadlock.
+        await this.db.transaction(async (tx) => {
+            await tx.insert(agentsTable).values({
+                id: baseRecord.id,
+                userId: baseRecord.userId,
+                type: baseRecord.type,
+                descriptor: JSON.stringify(baseRecord.descriptor),
+                activeSessionId: null,
+                permissions: JSON.stringify(baseRecord.permissions),
+                tokens: baseRecord.tokens ? JSON.stringify(baseRecord.tokens) : null,
+                stats: JSON.stringify(baseRecord.stats),
+                lifecycle: baseRecord.lifecycle,
+                createdAt: baseRecord.createdAt,
+                updatedAt: baseRecord.updatedAt
+            });
+            await tx.insert(sessionsTable).values({
+                id: sessionId,
                 agentId: baseRecord.id,
                 inferenceSessionId: input.session?.inferenceSessionId ?? null,
                 createdAt: sessionCreatedAt,
-                resetMessage: input.session?.resetMessage ?? null
+                resetMessage: input.session?.resetMessage ?? null,
+                invalidatedAt: null,
+                processedUntil: null
             });
-            const agent = {
-                ...baseRecord,
-                activeSessionId: sessionId,
-                updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)
-            };
-            await this.agents.update(baseRecord.id, agent);
-            await this.connection.exec("COMMIT");
-            return { agent, sessionId };
-        } catch (error) {
-            await this.connection.exec("ROLLBACK");
-            await this.agents.invalidate(baseRecord.id);
-            throw error;
-        }
+            await tx
+                .update(agentsTable)
+                .set({
+                    activeSessionId: sessionId,
+                    updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)
+                })
+                .where(eq(agentsTable.id, baseRecord.id));
+        });
+
+        const agent = {
+            ...baseRecord,
+            activeSessionId: sessionId,
+            updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)
+        };
+
+        // Invalidate caches so repos pick up the new data.
+        await this.agents.invalidate(baseRecord.id);
+
+        return { agent, sessionId };
     }
 
     async appendHistory(agentId: string, record: AgentHistoryRecord): Promise<void> {
