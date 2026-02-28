@@ -1,81 +1,71 @@
 import type { Context } from "@/types";
-import type { StorageDatabase } from "./databaseOpen.js";
-import type { ChannelMessageDbRecord, DatabaseChannelMessageRow } from "./databaseTypes.js";
+import { and, desc, eq } from "drizzle-orm";
+import type { DaycareDb } from "../schema.js";
+import { channelMessagesTable } from "../schema.js";
+import type { ChannelMessageDbRecord } from "./databaseTypes.js";
 
 /**
- * Channel messages repository backed by SQLite.
+ * Channel messages repository backed by Drizzle.
  * Expects: schema migrations already applied for channel_messages.
  */
 export class ChannelMessagesRepository {
-    private readonly db: StorageDatabase;
+    private readonly db: DaycareDb;
 
-    constructor(db: StorageDatabase) {
+    constructor(db: DaycareDb) {
         this.db = db;
     }
 
     async create(record: ChannelMessageDbRecord): Promise<void> {
+        const mentions = JSON.stringify(record.mentions);
         await this.db
-            .prepare(
-                `
-                  INSERT INTO channel_messages (
-                    id,
-                    channel_id,
-                    user_id,
-                    sender_username,
-                    text,
+            .insert(channelMessagesTable)
+            .values({
+                id: record.id,
+                channelId: record.channelId,
+                userId: record.userId,
+                senderUsername: record.senderUsername,
+                text: record.text,
+                mentions,
+                createdAt: record.createdAt
+            })
+            .onConflictDoUpdate({
+                target: channelMessagesTable.id,
+                set: {
+                    channelId: record.channelId,
+                    userId: record.userId,
+                    senderUsername: record.senderUsername,
+                    text: record.text,
                     mentions,
-                    created_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(id) DO UPDATE SET
-                    channel_id = excluded.channel_id,
-                    user_id = excluded.user_id,
-                    sender_username = excluded.sender_username,
-                    text = excluded.text,
-                    mentions = excluded.mentions,
-                    created_at = excluded.created_at
-                `
-            )
-            .run(
-                record.id,
-                record.channelId,
-                record.userId,
-                record.senderUsername,
-                record.text,
-                JSON.stringify(record.mentions),
-                record.createdAt
-            );
+                    createdAt: record.createdAt
+                }
+            });
     }
 
     async findRecent(ctx: Context, channelId: string, limit = 50): Promise<ChannelMessageDbRecord[]> {
         const normalizedLimit = Math.min(500, Math.max(1, Math.floor(limit)));
-        const rows = (await this.db
-            .prepare(
-                `
-                  SELECT *
-                  FROM channel_messages
-                  WHERE user_id = ? AND channel_id = ?
-                  ORDER BY created_at DESC, id DESC
-                  LIMIT ?
-                `
-            )
-            .all(ctx.userId, channelId, normalizedLimit)) as DatabaseChannelMessageRow[];
+        const rows = await this.db
+            .select()
+            .from(channelMessagesTable)
+            .where(and(eq(channelMessagesTable.userId, ctx.userId), eq(channelMessagesTable.channelId, channelId)))
+            .orderBy(desc(channelMessagesTable.createdAt), desc(channelMessagesTable.id))
+            .limit(normalizedLimit);
         return rows
-            .map((row) => this.messageParse(row))
+            .map((row) => messageParse(row))
             .reverse()
             .map((record) => messageClone(record));
     }
+}
 
-    private messageParse(row: DatabaseChannelMessageRow): ChannelMessageDbRecord {
-        return {
-            id: row.id,
-            channelId: row.channel_id,
-            userId: row.user_id,
-            senderUsername: row.sender_username,
-            text: row.text,
-            mentions: mentionsParse(row.mentions),
-            createdAt: row.created_at
-        };
-    }
+function messageParse(row: typeof channelMessagesTable.$inferSelect): ChannelMessageDbRecord {
+    return {
+        id: row.id,
+        channelId: row.channelId,
+        userId: row.userId,
+        senderUsername: row.senderUsername,
+        text: row.text,
+        mentions: mentionsParse(row.mentions),
+        createdAt: row.createdAt
+    };
 }
 
 function mentionsParse(raw: string): string[] {

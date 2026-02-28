@@ -1,4 +1,5 @@
 import type { AgentHistoryRecord } from "@/types";
+import { type DaycareDb, schemaDrizzle } from "../schema.js";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { AsyncLock } from "../util/lock.js";
 import { AgentsRepository } from "./agentsRepository.js";
@@ -48,16 +49,19 @@ export class Storage {
     readonly systemPrompts: SystemPromptsRepository;
     readonly tokenStats: TokenStatsRepository;
 
+    readonly drizzle: DaycareDb;
+
     private readonly connection: StorageDatabase;
     private readonly connectorKeyLocks = new Map<string, AsyncLock>();
 
-    private constructor(connection: StorageDatabase) {
+    private constructor(connection: StorageDatabase, drizzle: DaycareDb) {
         this.connection = connection;
+        this.drizzle = drizzle;
         this.users = new UsersRepository(connection);
         this.agents = new AgentsRepository(connection);
         this.sessions = new SessionsRepository(connection);
         this.history = new HistoryRepository(connection);
-        this.inbox = new InboxRepository(connection);
+        this.inbox = new InboxRepository(drizzle);
         this.cronTasks = new CronTasksRepository(connection);
         this.heartbeatTasks = new HeartbeatTasksRepository(connection);
         this.webhookTasks = new WebhookTasksRepository(connection);
@@ -66,7 +70,7 @@ export class Storage {
         this.signalSubscriptions = new SignalSubscriptionsRepository(connection);
         this.delayedSignals = new DelayedSignalsRepository(connection);
         this.channels = new ChannelsRepository(connection);
-        this.channelMessages = new ChannelMessagesRepository(connection);
+        this.channelMessages = new ChannelMessagesRepository(drizzle);
         this.connections = new ConnectionsRepository(connection);
         this.exposeEndpoints = new ExposeEndpointsRepository(connection);
         this.processes = new ProcessesRepository(connection);
@@ -75,7 +79,11 @@ export class Storage {
     }
 
     static fromDatabase(db: StorageDatabase): Storage {
-        return new Storage(db);
+        if (!db.__pgliteClient) {
+            throw new Error("DaycareDb requires a PGlite client; Postgres targets are not yet supported with Drizzle");
+        }
+        const drizzle = schemaDrizzle(db.__pgliteClient);
+        return new Storage(db, drizzle);
     }
 
     get db(): StorageDatabase {

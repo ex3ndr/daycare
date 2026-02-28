@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@/types";
+import { channelsTable } from "../schema.js";
 
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
-import { databaseOpenTest } from "./databaseOpenTest.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("ChannelMessagesRepository", () => {
     it("creates messages and returns recent entries", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new ChannelMessagesRepository(db);
+            const repository = new ChannelMessagesRepository(storage.drizzle);
+
+            // Create parent channel required by FK constraint
+            await storage.drizzle.insert(channelsTable).values({
+                id: "channel-1",
+                userId: "user-a",
+                name: "test-channel",
+                leader: "user-a",
+                createdAt: 1,
+                updatedAt: 1
+            });
 
             for (let index = 1; index <= 4; index += 1) {
                 await repository.create({
@@ -27,24 +37,10 @@ describe("ChannelMessagesRepository", () => {
             expect(recent.map((entry) => entry.id)).toEqual(["m-3", "m-4"]);
             expect(recent[1]?.mentions).toEqual(["bob"]);
         } finally {
-            db.close();
+            await storage.db.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE channel_messages (
-            id TEXT PRIMARY KEY,
-            channel_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            sender_username TEXT NOT NULL,
-            text TEXT NOT NULL,
-            mentions TEXT NOT NULL,
-            created_at INTEGER NOT NULL
-        );
-    `);
-}
 
 function ctxBuild(userId: string): Context {
     return { agentId: "test-agent", userId };

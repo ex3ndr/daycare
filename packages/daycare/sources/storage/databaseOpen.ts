@@ -28,15 +28,18 @@ export type StorageStatement = {
 
 export class StorageDatabase {
     readonly __daycareDatabasePath: string | null;
+    /** Raw PGlite client for Drizzle ORM usage; null for Postgres targets. */
+    readonly __pgliteClient: PGlite | null;
 
     private readonly client: StorageClient;
     private readonly queue: { tail: Promise<void> };
     private closePromise: Promise<void> | null = null;
     private closed = false;
 
-    constructor(client: StorageClient, databasePath: string | null) {
+    constructor(client: StorageClient, databasePath: string | null, pgliteClient: PGlite | null = null) {
         this.client = client;
         this.__daycareDatabasePath = databasePath;
+        this.__pgliteClient = pgliteClient;
         this.queue = { tail: Promise.resolve() };
     }
 
@@ -120,17 +123,19 @@ export type StorageDatabaseTarget = { kind: "pglite"; path: StorageDatabasePath 
  */
 export function databaseOpen(target: StorageDatabasePath | StorageDatabaseTarget): StorageDatabase {
     if (typeof target !== "string" && target.kind === "postgres") {
-        return new StorageDatabase(postgresClientBuild(target.url), null);
+        return new StorageDatabase(postgresClientBuild(target.url), null, null);
     }
 
     const dbPath = typeof target === "string" ? target : target.path;
     if (dbPath === ":memory:") {
-        return new StorageDatabase(pgliteClientBuild(null), null);
+        const { storageClient, pgliteClient } = pgliteClientBuild(null);
+        return new StorageDatabase(storageClient, null, pgliteClient);
     }
 
     const resolvedPath = databaseDataPathResolve(dbPath);
     mkdirSync(path.dirname(resolvedPath), { recursive: true });
-    return new StorageDatabase(pgliteClientBuild(resolvedPath), resolvedPath);
+    const { storageClient, pgliteClient } = pgliteClientBuild(resolvedPath);
+    return new StorageDatabase(storageClient, resolvedPath, pgliteClient);
 }
 
 function databaseDataPathResolve(dbPath: string): string {
@@ -186,21 +191,24 @@ function sqlParametersTransform(sqlText: string): string {
     return transformed;
 }
 
-function pgliteClientBuild(databasePath: string | null): StorageClient {
+function pgliteClientBuild(databasePath: string | null): { storageClient: StorageClient; pgliteClient: PGlite } {
     const client = databasePath ? new PGlite(databasePath) : new PGlite();
     return {
-        query: async <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => {
-            const result = await client.query<TRow>(sqlText, params);
-            return {
-                rows: result.rows,
-                affectedRows: result.affectedRows
-            };
-        },
-        exec: async (sqlText: string) => {
-            await client.exec(sqlText);
-        },
-        close: async () => {
-            await client.close();
+        pgliteClient: client,
+        storageClient: {
+            query: async <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => {
+                const result = await client.query<TRow>(sqlText, params);
+                return {
+                    rows: result.rows,
+                    affectedRows: result.affectedRows
+                };
+            },
+            exec: async (sqlText: string) => {
+                await client.exec(sqlText);
+            },
+            close: async () => {
+                await client.close();
+            }
         }
     };
 }

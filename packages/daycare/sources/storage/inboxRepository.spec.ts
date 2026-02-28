@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseOpenTest } from "./databaseOpenTest.js";
 import { InboxRepository } from "./inboxRepository.js";
+import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("InboxRepository", () => {
     it("supports insert, ordered lookup, and delete operations", async () => {
-        const db = databaseOpenTest();
+        const storage = await storageOpenTest();
         try {
-            schemaCreate(db);
-            const repository = new InboxRepository(db);
+            const repository = new InboxRepository(storage.drizzle);
 
             await repository.insert("inbox-2", "agent-a", 20, "reset", '{"type":"reset"}');
             await repository.insert("inbox-1", "agent-a", 10, "message", '{"type":"message"}');
@@ -26,22 +25,7 @@ describe("InboxRepository", () => {
             const finalRows = await repository.findByAgentId("agent-a");
             expect(finalRows).toEqual([]);
         } finally {
-            db.close();
+            await storage.db.close();
         }
     });
 });
-
-function schemaCreate(db: ReturnType<typeof databaseOpenTest>): void {
-    db.exec(`
-        CREATE TABLE inbox (
-            id TEXT PRIMARY KEY,
-            agent_id TEXT NOT NULL,
-            posted_at INTEGER NOT NULL,
-            type TEXT NOT NULL,
-            data TEXT NOT NULL
-        );
-
-        CREATE INDEX idx_inbox_agent_order
-            ON inbox(agent_id, posted_at);
-    `);
-}
