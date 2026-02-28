@@ -1,5 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { sql } from "drizzle-orm";
+import { drizzle as drizzleNodePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
     bigint,
     check,
@@ -13,7 +14,8 @@ import {
     text,
     uniqueIndex
 } from "drizzle-orm/pg-core";
-import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
+import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
+import type { Client as PostgresClient } from "pg";
 
 export const migrationsTable = pgTable("_migrations", {
     name: text("name").primaryKey(),
@@ -450,11 +452,17 @@ export const schema = {
     tokenStatsHourlyTable
 };
 
+/**
+ * Unified Drizzle database type used by all repositories.
+ * Both PGlite and node-postgres adapters are structurally compatible
+ * at runtime; we use PgliteDatabase as the canonical type.
+ */
 export type DaycareDb = PgliteDatabase<typeof schema>;
-export type DaycareDatabaseClient = PGlite;
 
-export function schemaDrizzle(client: DaycareDatabaseClient): DaycareDb {
-    return drizzle(client, {
-        schema
-    });
+export function schemaDrizzle(client: PGlite | PostgresClient): DaycareDb {
+    // PGlite instances have a `waitReady` property; pg Client does not.
+    if ("waitReady" in client) {
+        return drizzlePglite(client as PGlite, { schema });
+    }
+    return drizzleNodePg(client as PostgresClient, { schema }) as unknown as DaycareDb;
 }

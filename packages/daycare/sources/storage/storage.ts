@@ -79,11 +79,13 @@ export class Storage {
     }
 
     static fromDatabase(rawDb: StorageDatabase): Storage {
-        if (!rawDb.__pgliteClient) {
-            throw new Error("DaycareDb requires a PGlite client; Postgres targets are not yet supported with Drizzle");
+        if (rawDb.__pgliteClient) {
+            return new Storage(rawDb, schemaDrizzle(rawDb.__pgliteClient));
         }
-        const db = schemaDrizzle(rawDb.__pgliteClient);
-        return new Storage(rawDb, db);
+        if (rawDb.__pgClient) {
+            return new Storage(rawDb, schemaDrizzle(rawDb.__pgClient));
+        }
+        throw new Error("StorageDatabase has no raw client for Drizzle ORM");
     }
 
     async createUser(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {

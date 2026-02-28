@@ -30,16 +30,24 @@ export class StorageDatabase {
     readonly __daycareDatabasePath: string | null;
     /** Raw PGlite client for Drizzle ORM usage; null for Postgres targets. */
     readonly __pgliteClient: PGlite | null;
+    /** Raw pg Client for Drizzle ORM usage; null for PGlite targets. */
+    readonly __pgClient: PostgresClient | null;
 
     private readonly client: StorageClient;
     private readonly queue: { tail: Promise<void> };
     private closePromise: Promise<void> | null = null;
     private closed = false;
 
-    constructor(client: StorageClient, databasePath: string | null, pgliteClient: PGlite | null = null) {
+    constructor(
+        client: StorageClient,
+        databasePath: string | null,
+        pgliteClient: PGlite | null = null,
+        pgClient: PostgresClient | null = null
+    ) {
         this.client = client;
         this.__daycareDatabasePath = databasePath;
         this.__pgliteClient = pgliteClient;
+        this.__pgClient = pgClient;
         this.queue = { tail: Promise.resolve() };
     }
 
@@ -123,7 +131,8 @@ export type StorageDatabaseTarget = { kind: "pglite"; path: StorageDatabasePath 
  */
 export function databaseOpen(target: StorageDatabasePath | StorageDatabaseTarget): StorageDatabase {
     if (typeof target !== "string" && target.kind === "postgres") {
-        return new StorageDatabase(postgresClientBuild(target.url), null, null);
+        const { storageClient, pgClient } = postgresClientBuild(target.url);
+        return new StorageDatabase(storageClient, null, null, pgClient);
     }
 
     const dbPath = typeof target === "string" ? target : target.path;
@@ -213,28 +222,31 @@ function pgliteClientBuild(databasePath: string | null): { storageClient: Storag
     };
 }
 
-function postgresClientBuild(url: string): StorageClient {
+function postgresClientBuild(url: string): { storageClient: StorageClient; pgClient: PostgresClient } {
     const client = new PostgresClient({ connectionString: url });
     const connected = client.connect();
     // Avoid process-level unhandled rejection when open succeeds lazily after caller gives up.
     void connected.catch(() => undefined);
 
     return {
-        query: async <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => {
-            await connected;
-            const result = await client.query(sqlText, params);
-            return {
-                rows: result.rows as TRow[],
-                affectedRows: result.rowCount ?? 0
-            };
-        },
-        exec: async (sqlText: string) => {
-            await connected;
-            await client.query(sqlText);
-        },
-        close: async () => {
-            await connected.catch(() => undefined);
-            await client.end().catch(() => undefined);
+        pgClient: client,
+        storageClient: {
+            query: async <TRow = Record<string, unknown>>(sqlText: string, params: unknown[]) => {
+                await connected;
+                const result = await client.query(sqlText, params);
+                return {
+                    rows: result.rows as TRow[],
+                    affectedRows: result.rowCount ?? 0
+                };
+            },
+            exec: async (sqlText: string) => {
+                await connected;
+                await client.query(sqlText);
+            },
+            close: async () => {
+                await connected.catch(() => undefined);
+                await client.end().catch(() => undefined);
+            }
         }
     };
 }
