@@ -1,5 +1,6 @@
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import type { BodyTextToSpeechFull, TextToSpeechConvertRequestOutputFormat } from "@elevenlabs/elevenlabs-js/api";
+import { TextToSpeechConvertRequestOutputFormat as textToSpeechOutputFormats } from "@elevenlabs/elevenlabs-js/api";
 import { z } from "zod";
 import type {
     SpeechGenerationContext,
@@ -13,6 +14,12 @@ import { type ElevenLabsVoiceCatalogEntry, elevenLabsVoiceCatalogDefault } from 
 const DEFAULT_MODEL = "eleven_multilingual_v2";
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const DEFAULT_OUTPUT_FORMAT = "mp3_44100_128";
+const outputFormatAliases: Record<string, TextToSpeechConvertRequestOutputFormat> = {
+    mp3: "mp3_44100_128",
+    mpeg: "mp3_44100_128",
+    wav: "wav_44100"
+};
+const outputFormatsSupported = new Set<string>(Object.values(textToSpeechOutputFormats));
 
 const settingsSchema = z
     .object({
@@ -97,7 +104,9 @@ async function speechGenerate(
 
     const model = request.model ?? settings.model ?? DEFAULT_MODEL;
     const voice = request.voice ?? settings.voice ?? DEFAULT_VOICE_ID;
-    const outputFormat = request.outputFormat ?? settings.outputFormat ?? DEFAULT_OUTPUT_FORMAT;
+    const outputFormat = speechOutputFormatResolve(
+        request.outputFormat ?? settings.outputFormat ?? DEFAULT_OUTPUT_FORMAT
+    );
     const voiceId = speechVoiceIdResolve(voice, voiceCatalog);
     const client = new ElevenLabsClient({ apiKey });
 
@@ -171,6 +180,27 @@ function speechVoiceIdResolve(voice: string, voiceCatalog: ElevenLabsVoiceCatalo
 
 function speechVoiceCatalogResolve(settings: ElevenLabsSettings): ElevenLabsVoiceCatalogEntry[] {
     return settings.voices ?? elevenLabsVoiceCatalogDefault;
+}
+
+function speechOutputFormatResolve(outputFormat: string): TextToSpeechConvertRequestOutputFormat {
+    const normalized = outputFormat.trim().toLowerCase();
+    if (normalized.length === 0) {
+        throw new Error("Output format must be a non-empty string");
+    }
+
+    const alias = outputFormatAliases[normalized];
+    if (alias) {
+        return alias;
+    }
+
+    if (outputFormatsSupported.has(normalized)) {
+        return normalized as TextToSpeechConvertRequestOutputFormat;
+    }
+
+    throw new Error(
+        `Unsupported ElevenLabs output format: ${outputFormat}. ` +
+            "Use mp3/mpeg/wav shorthand or explicit values like mp3_44100_128."
+    );
 }
 
 function speechMimeTypeResolve(outputFormat: string, contentType: string | null): string {

@@ -35,7 +35,7 @@ describe("elevenlabs plugin", () => {
     afterEach(async () => {
         vi.restoreAllMocks();
         convertMock.mockReset();
-        elevenLabsClientMock.mockReset();
+        elevenLabsClientMock.mockClear();
         vi.unstubAllGlobals();
         for (const dir of tempDirs.splice(0, tempDirs.length)) {
             await fs.rm(dir, { recursive: true, force: true });
@@ -180,6 +180,188 @@ describe("elevenlabs plugin", () => {
 
         await instance.unload?.();
         expect(registrationState.unregisteredProviderId).toBe("elevenlabs");
+    });
+
+    it("normalizes shorthand output format aliases", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-elevenlabs-"));
+        tempDirs.push(dir);
+
+        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const auth = new AuthStore(config);
+        await auth.setApiKey("elevenlabs", "test-elevenlabs-key");
+        const storage = await storageOpenTest();
+
+        const registrationState: { provider: SpeechGenerationProvider | null } = {
+            provider: null
+        };
+
+        const registrar = {
+            registerSpeechProvider: (provider: SpeechGenerationProvider) => {
+                registrationState.provider = provider;
+            },
+            unregisterSpeechProvider: () => undefined,
+            registerMediaAnalysisProvider: () => undefined,
+            unregisterMediaAnalysisProvider: () => undefined,
+            registerInferenceProvider: () => undefined,
+            unregisterInferenceProvider: () => undefined,
+            registerTool: () => undefined,
+            unregisterTool: () => undefined,
+            registerImageProvider: () => undefined,
+            unregisterImageProvider: () => undefined,
+            registerConnector: () => undefined,
+            unregisterConnector: async () => undefined
+        } as unknown as PluginRegistrar;
+
+        const withRawResponseMock = vi.fn(async () => ({
+            data: speechReadableFromText("audio-bytes"),
+            rawResponse: {
+                headers: new Headers({
+                    "content-type": "audio/mpeg"
+                })
+            }
+        }));
+        convertMock.mockReturnValue({
+            withRawResponse: withRawResponseMock
+        });
+
+        const settings = elevenLabs.settingsSchema.parse({ outputFormat: "wav_16000" });
+        const api: PluginApi<typeof settings> = {
+            instance: { instanceId: "elevenlabs-main", pluginId: "elevenlabs", enabled: true },
+            settings,
+            engineSettings: {},
+            logger: getLogger("test.elevenlabs.alias"),
+            auth,
+            dataDir: dir,
+            tmpDir: path.join(dir, "tmp"),
+            usersDir: path.join(dir, "users"),
+            registrar,
+            exposes: {
+                registerProvider: async () => undefined,
+                unregisterProvider: async () => undefined,
+                listProviders: () => []
+            },
+            fileStore: new FileFolder(path.join(config.dataDir, "files")),
+            inference: {
+                complete: async () => {
+                    throw new Error("Inference not available in tests");
+                }
+            },
+            processes: new Processes(dir, getLogger("test.processes.elevenlabs.alias"), {
+                repository: storage.processes
+            }),
+            mode: "runtime",
+            events: {
+                emit: () => undefined
+            }
+        };
+
+        const instance = await elevenLabs.create(api);
+        await instance.load?.();
+        if (!registrationState.provider) {
+            throw new Error("Speech provider was not registered");
+        }
+
+        await registrationState.provider.generate(
+            {
+                text: "Alias check",
+                outputFormat: "mpeg"
+            },
+            {
+                auth,
+                fileStore: api.fileStore,
+                logger: getLogger("test.elevenlabs.alias.generate")
+            }
+        );
+
+        expect(convertMock).toHaveBeenCalledWith(
+            "21m00Tcm4TlvDq8ikWAM",
+            expect.objectContaining({
+                outputFormat: "mp3_44100_128"
+            })
+        );
+    });
+
+    it("rejects unsupported output format values before calling api", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-elevenlabs-"));
+        tempDirs.push(dir);
+
+        const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+        const auth = new AuthStore(config);
+        await auth.setApiKey("elevenlabs", "test-elevenlabs-key");
+        const storage = await storageOpenTest();
+
+        const registrationState: { provider: SpeechGenerationProvider | null } = {
+            provider: null
+        };
+
+        const registrar = {
+            registerSpeechProvider: (provider: SpeechGenerationProvider) => {
+                registrationState.provider = provider;
+            },
+            unregisterSpeechProvider: () => undefined,
+            registerMediaAnalysisProvider: () => undefined,
+            unregisterMediaAnalysisProvider: () => undefined,
+            registerInferenceProvider: () => undefined,
+            unregisterInferenceProvider: () => undefined,
+            registerTool: () => undefined,
+            unregisterTool: () => undefined,
+            registerImageProvider: () => undefined,
+            unregisterImageProvider: () => undefined,
+            registerConnector: () => undefined,
+            unregisterConnector: async () => undefined
+        } as unknown as PluginRegistrar;
+
+        const settings = elevenLabs.settingsSchema.parse({});
+        const api: PluginApi<typeof settings> = {
+            instance: { instanceId: "elevenlabs-main", pluginId: "elevenlabs", enabled: true },
+            settings,
+            engineSettings: {},
+            logger: getLogger("test.elevenlabs.invalid-format"),
+            auth,
+            dataDir: dir,
+            tmpDir: path.join(dir, "tmp"),
+            usersDir: path.join(dir, "users"),
+            registrar,
+            exposes: {
+                registerProvider: async () => undefined,
+                unregisterProvider: async () => undefined,
+                listProviders: () => []
+            },
+            fileStore: new FileFolder(path.join(config.dataDir, "files")),
+            inference: {
+                complete: async () => {
+                    throw new Error("Inference not available in tests");
+                }
+            },
+            processes: new Processes(dir, getLogger("test.processes.elevenlabs.invalid-format"), {
+                repository: storage.processes
+            }),
+            mode: "runtime",
+            events: {
+                emit: () => undefined
+            }
+        };
+
+        const instance = await elevenLabs.create(api);
+        await instance.load?.();
+        if (!registrationState.provider) {
+            throw new Error("Speech provider was not registered");
+        }
+
+        await expect(
+            registrationState.provider.generate(
+                {
+                    text: "Invalid format",
+                    outputFormat: "flac"
+                },
+                {
+                    auth,
+                    fileStore: api.fileStore,
+                    logger: getLogger("test.elevenlabs.invalid-format.generate")
+                }
+            )
+        ).rejects.toThrow("Unsupported ElevenLabs output format");
+        expect(convertMock).not.toHaveBeenCalled();
     });
 });
 

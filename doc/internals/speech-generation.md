@@ -30,3 +30,24 @@ flowchart LR
 ## Plugin-first model
 
 Speech generation is plugin-only for now. Core provider definitions were not extended with built-in speech callbacks.
+
+## ElevenLabs output format normalization
+
+The ElevenLabs plugin normalizes shorthand output formats before calling the API:
+
+- `mp3` and `mpeg` -> `mp3_44100_128`
+- `wav` -> `wav_44100`
+- explicit ElevenLabs enum values (for example `mp3_22050_32`) pass through unchanged
+- unsupported values fail fast with a clear validation error
+
+```mermaid
+flowchart LR
+    A[generate_speech output_format] --> B{shorthand?}
+    B -->|mp3/mpeg| C[mp3_44100_128]
+    B -->|wav| D[wav_44100]
+    B -->|explicit enum| E[unchanged]
+    B -->|invalid| F[throw unsupported output format]
+    C --> G[ElevenLabs textToSpeech.convert]
+    D --> G
+    E --> G
+```
