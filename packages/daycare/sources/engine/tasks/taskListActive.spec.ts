@@ -14,6 +14,7 @@ describe("taskListActive", () => {
                 title: "Active",
                 description: "Has triggers",
                 code: "print('active')",
+                parameters: null,
                 createdAt: 10,
                 updatedAt: 10
             });
@@ -23,6 +24,7 @@ describe("taskListActive", () => {
                 title: "Webhook",
                 description: null,
                 code: "print('webhook')",
+                parameters: null,
                 createdAt: 20,
                 updatedAt: 20
             });
@@ -32,6 +34,7 @@ describe("taskListActive", () => {
                 title: "Inactive",
                 description: null,
                 code: "print('inactive')",
+                parameters: null,
                 createdAt: 30,
                 updatedAt: 30
             });
@@ -47,6 +50,7 @@ describe("taskListActive", () => {
                 agentId: null,
                 enabled: true,
                 deleteAfterRun: false,
+                parameters: null,
                 lastRunAt: 100,
                 createdAt: 10,
                 updatedAt: 10
@@ -62,6 +66,7 @@ describe("taskListActive", () => {
                 agentId: null,
                 enabled: false,
                 deleteAfterRun: false,
+                parameters: null,
                 lastRunAt: 300,
                 createdAt: 30,
                 updatedAt: 30
@@ -71,6 +76,7 @@ describe("taskListActive", () => {
                 taskId: "task-active",
                 userId: "user-1",
                 title: "Heartbeat",
+                parameters: null,
                 lastRunAt: 200,
                 createdAt: 10,
                 updatedAt: 10

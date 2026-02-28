@@ -385,6 +385,7 @@ describe("task tools", () => {
             title: "Manual task",
             description: null,
             code: "print('manual')",
+            parameters: null,
             createdAt: now,
             updatedAt: now
         });

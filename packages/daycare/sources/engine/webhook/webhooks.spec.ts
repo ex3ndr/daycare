@@ -22,6 +22,7 @@ describe("Webhooks", () => {
                 title: "Task A",
                 description: null,
                 code: "print('a')",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -61,6 +62,7 @@ describe("Webhooks", () => {
                 title: "Task Exec",
                 description: null,
                 code: "print('run')",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1
             });

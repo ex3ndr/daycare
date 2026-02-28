@@ -15,6 +15,7 @@ describe("WebhookTasksRepository", () => {
                 title: "Alpha",
                 description: null,
                 code: "Check alpha",
+                parameters: null,
                 createdAt: 10,
                 updatedAt: 10
             });
@@ -24,6 +25,7 @@ describe("WebhookTasksRepository", () => {
                 title: "Beta",
                 description: null,
                 code: "Check beta",
+                parameters: null,
                 createdAt: 11,
                 updatedAt: 11
             });
@@ -78,6 +80,7 @@ describe("WebhookTasksRepository", () => {
                 title: "Cache",
                 description: null,
                 code: "Prompt",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -146,6 +149,7 @@ describe("WebhookTasksRepository", () => {
                 title: "Run",
                 description: null,
                 code: "Prompt",
+                parameters: null,
                 createdAt: 1,
                 updatedAt: 1
             });
