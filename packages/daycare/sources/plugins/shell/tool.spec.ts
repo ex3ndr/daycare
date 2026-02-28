@@ -191,6 +191,7 @@ describe("exec tool allowedDomains", () => {
 
         const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(result.toolMessage.isError).toBe(false);
+        expect(result.typedResult.cwd).toBe(workingDir);
         expect(exec).toHaveBeenCalledOnce();
         const firstCall = exec.mock.calls[0]?.[0];
         expect(firstCall?.allowedDomains).toEqual([]);

@@ -338,7 +338,6 @@ export function buildExecTool(): ToolDefinition {
         returns: execReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ExecArgs;
-            const workingDir = toolContext.sandbox.workingDir;
             const result = await toolContext.sandbox.exec({
                 command: payload.command,
                 cwd: payload.cwd,
@@ -350,7 +349,7 @@ export function buildExecTool(): ToolDefinition {
             });
             const formattedOutput = formatExecStreams(result.stdout, result.stderr, result.failed);
             const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed, {
-                cwd: path.relative(workingDir, result.cwd) || ".",
+                cwd: result.cwd,
                 exitCode: result.exitCode,
                 signal: result.signal,
                 ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
