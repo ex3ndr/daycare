@@ -2,28 +2,37 @@
 
 ## Problem
 
-During restart recovery, Daycare can append synthetic `tool_result` records for pending tool calls. Anthropic requires each `tool_result` to match a `tool_use` from the immediately previous assistant turn.
+During restart recovery, Daycare can append synthetic `rlm_complete` records for pending `run_python` calls. Anthropic requires each `tool_result` to match a `tool_use` from the immediately previous assistant turn.
 
-If a synthetic result is replayed later without adjacency, Anthropic rejects the request with `unexpected tool_use_id`.
+Two crash windows can break replay:
+
+1. Assistant tool call is persisted, then process crashes before `rlm_start`.
+2. Assistant + `rlm_start` are persisted, then process crashes before `rlm_complete`; recovery appends `rlm_complete` much later.
+
+If replay emits late results in timeline position, or misses results entirely, Anthropic rejects with `unexpected tool_use_id`.
 
 ## Fix
 
-`agentHistoryContext` now replays `tool_result` records only when they match tool calls from the current assistant turn and remain contiguous with that turn.
+`agentHistoryContext` now rebuilds tool results per assistant tool call, not by raw `rlm_complete` timeline position:
 
-Any orphaned or delayed `tool_result` records are skipped while rebuilding inference context.
+- For each assistant `run_python` tool call, replay matching `rlm_complete` immediately after that assistant message.
+- If no `rlm_complete` exists and there is no unresolved `rlm_start`, synthesize an error result during replay.
+- If `rlm_start` exists without `rlm_complete`, treat it as pending and do not synthesize (restore recovery handles it).
+
+This keeps provider-visible tool-call adjacency valid while preserving append-only history.
 
 ## Flow
 
 ```mermaid
 flowchart TD
-    A[Assistant message with tool_use persisted] --> B[Process restarts before real tool_result append]
-    B --> C[Recovery appends synthetic tool_result later]
-    C --> D[Restore rebuilds context from history]
-    D --> E{tool_result matches current assistant turn IDs?}
-    E -- Yes --> F[Include tool_result in rebuilt context]
-    E -- No --> G[Drop orphaned tool_result]
-    F --> H[Provider request remains valid]
-    G --> H
+    A[Assistant message with run_python toolCall] --> B{History has matching rlm_complete?}
+    B -- Yes --> C[Place toolResult immediately after assistant message]
+    B -- No --> D{History has unresolved rlm_start?}
+    D -- Yes --> E[Skip synthetic result; pending recovery path handles it]
+    D -- No --> F[Synthesize error toolResult in rebuilt context]
+    C --> G[Provider sees valid adjacency]
+    E --> G
+    F --> G
 ```
 
 ## Implementation

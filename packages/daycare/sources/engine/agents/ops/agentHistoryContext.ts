@@ -10,6 +10,7 @@ import { messageFormatIncoming } from "../../messages/messageFormatIncoming.js";
 import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 
 const RLM_RESULT_MAX_CHARS = 16_000;
+const MISSING_RUN_PYTHON_RESULT_MESSAGE = "Daycare server was restarted before executing this command.";
 
 /**
  * Rebuilds conversation context messages from persisted history records.
@@ -20,9 +21,11 @@ export async function agentHistoryContext(
     _agentId: string
 ): Promise<Context["messages"]> {
     const messages: Context["messages"] = [];
-    const assistantToolCallIds = new Set<string>();
     let lastAssistantMessageIndex: number | null = null;
     const assistantMessageIndexByAt = new Map<number, number>();
+    const completionByToolCallId = completionByToolCallIdResolve(records);
+    const unresolvedStartToolCallIds = unresolvedStartToolCallIdsResolve(records);
+
     for (const record of records) {
         if (record.type === "rlm_start") {
             continue;
@@ -34,17 +37,6 @@ export async function agentHistoryContext(
             continue;
         }
         if (record.type === "rlm_complete") {
-            if (!assistantToolCallIds.has(record.toolCallId)) {
-                continue;
-            }
-            messages.push({
-                role: "toolResult",
-                toolCallId: record.toolCallId,
-                toolName: RLM_TOOL_NAME,
-                content: [{ type: "text", text: rlmHistoryResultTextBuild(record) }],
-                isError: record.isError,
-                timestamp: record.at
-            });
             continue;
         }
         if (record.type === "user_message") {
@@ -69,9 +61,6 @@ export async function agentHistoryContext(
         }
         if (record.type === "assistant_message") {
             const content = messageContentClone(record.content);
-            for (const toolCall of messageContentExtractToolCalls(content)) {
-                assistantToolCallIds.add(toolCall.id);
-            }
             messages.push({
                 role: "assistant",
                 content,
@@ -97,6 +86,21 @@ export async function agentHistoryContext(
             });
             lastAssistantMessageIndex = messages.length - 1;
             assistantMessageIndexByAt.set(record.at, lastAssistantMessageIndex);
+
+            for (const toolCall of messageContentExtractToolCalls(content)) {
+                if (toolCall.name !== RLM_TOOL_NAME) {
+                    continue;
+                }
+                const completion = completionByToolCallId.get(toolCall.id);
+                if (completion) {
+                    messages.push(rlmToolResultMessageBuild(completion));
+                    continue;
+                }
+                if (unresolvedStartToolCallIds.has(toolCall.id)) {
+                    continue;
+                }
+                messages.push(rlmToolResultMessageBuild(missingRlmCompletionRecordBuild(toolCall.id, record.at)));
+            }
             continue;
         }
         if (record.type === "assistant_rewrite") {
@@ -112,6 +116,72 @@ export async function agentHistoryContext(
         }
     }
     return messages;
+}
+
+function completionByToolCallIdResolve(
+    records: AgentHistoryRecord[]
+): Map<string, Extract<AgentHistoryRecord, { type: "rlm_complete" }>> {
+    const completionByToolCallId = new Map<string, Extract<AgentHistoryRecord, { type: "rlm_complete" }>>();
+    for (const record of records) {
+        if (record.type !== "rlm_complete") {
+            continue;
+        }
+        if (completionByToolCallId.has(record.toolCallId)) {
+            continue;
+        }
+        completionByToolCallId.set(record.toolCallId, record);
+    }
+    return completionByToolCallId;
+}
+
+function unresolvedStartToolCallIdsResolve(records: AgentHistoryRecord[]): Set<string> {
+    const started = new Set<string>();
+    const completed = new Set<string>();
+    for (const record of records) {
+        if (record.type === "rlm_start") {
+            started.add(record.toolCallId);
+            continue;
+        }
+        if (record.type === "rlm_complete") {
+            completed.add(record.toolCallId);
+        }
+    }
+    const unresolved = new Set<string>();
+    for (const toolCallId of started) {
+        if (!completed.has(toolCallId)) {
+            unresolved.add(toolCallId);
+        }
+    }
+    return unresolved;
+}
+
+function missingRlmCompletionRecordBuild(
+    toolCallId: string,
+    at: number
+): Extract<AgentHistoryRecord, { type: "rlm_complete" }> {
+    return {
+        type: "rlm_complete",
+        at,
+        toolCallId,
+        output: "",
+        printOutput: [],
+        toolCallCount: 0,
+        isError: true,
+        error: MISSING_RUN_PYTHON_RESULT_MESSAGE
+    };
+}
+
+function rlmToolResultMessageBuild(
+    record: Extract<AgentHistoryRecord, { type: "rlm_complete" }>
+): Extract<Context["messages"][number], { role: "toolResult" }> {
+    return {
+        role: "toolResult",
+        toolCallId: record.toolCallId,
+        toolName: RLM_TOOL_NAME,
+        content: [{ type: "text", text: rlmHistoryResultTextBuild(record) }],
+        isError: record.isError,
+        timestamp: record.at
+    };
 }
 
 function rlmHistoryResultTextBuild(record: Extract<AgentHistoryRecord, { type: "rlm_complete" }>): string {

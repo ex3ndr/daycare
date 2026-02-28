@@ -121,6 +121,118 @@ describe("agentHistoryContext", () => {
         expect(user?.role).toBe("user");
     });
 
+    it("replays late rlm_complete next to the original assistant tool call", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 10,
+                tokens: null,
+                content: [
+                    {
+                        type: "toolCall",
+                        id: "tool-late",
+                        name: "run_python",
+                        arguments: { code: "wait(10)" }
+                    }
+                ]
+            },
+            {
+                type: "user_message",
+                at: 11,
+                text: "unrelated user message",
+                files: []
+            },
+            {
+                type: "rlm_complete",
+                at: 99,
+                toolCallId: "tool-late",
+                output: "ok",
+                printOutput: [],
+                toolCallCount: 1,
+                isError: false
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+
+        expect(messages).toHaveLength(3);
+        expect(messages[0]?.role).toBe("assistant");
+        expect(messages[1]?.role).toBe("toolResult");
+        expect(messages[2]?.role).toBe("user");
+        if (!messages[1] || messages[1].role !== "toolResult") {
+            throw new Error("Expected toolResult message.");
+        }
+        expect(messages[1].toolCallId).toBe("tool-late");
+    });
+
+    it("synthesizes run_python tool results when only assistant_message exists", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 10,
+                tokens: null,
+                content: [
+                    {
+                        type: "toolCall",
+                        id: "tool-missing",
+                        name: "run_python",
+                        arguments: { code: "wait(10)" }
+                    }
+                ]
+            },
+            {
+                type: "user_message",
+                at: 11,
+                text: "continue",
+                files: []
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+
+        expect(messages).toHaveLength(3);
+        expect(messages[0]?.role).toBe("assistant");
+        expect(messages[1]?.role).toBe("toolResult");
+        expect(messages[2]?.role).toBe("user");
+        if (!messages[1] || messages[1].role !== "toolResult") {
+            throw new Error("Expected toolResult message.");
+        }
+        const textPart = messages[1].content.find((part) => part.type === "text");
+        expect(textPart && "text" in textPart ? textPart.text : "").toContain(
+            "Daycare server was restarted before executing this command."
+        );
+    });
+
+    it("does not synthesize tool results for unresolved rlm_start pending recovery", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 10,
+                tokens: null,
+                content: [
+                    {
+                        type: "toolCall",
+                        id: "tool-pending",
+                        name: "run_python",
+                        arguments: { code: "wait(10)" }
+                    }
+                ]
+            },
+            {
+                type: "rlm_start",
+                at: 11,
+                toolCallId: "tool-pending",
+                code: "wait(10)",
+                preamble: "..."
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1");
+
+        expect(messages).toHaveLength(1);
+        expect(messages[0]?.role).toBe("assistant");
+    });
+
     it("replays assistant_rewrite records during restore", async () => {
         const records: AgentHistoryRecord[] = [
             {
