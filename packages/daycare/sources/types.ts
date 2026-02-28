@@ -91,10 +91,10 @@ export type {
     ToolExecutionContext,
     ToolExecutionResult,
     ToolResultContract,
+    ToolResultObject,
     ToolResultOutcomeObject,
     ToolResultPrimitive,
     ToolResultRow,
-    ToolResultShallowObject,
     ToolResultValue,
     ToolVisibilityContext
 } from "./engine/modules/tools/types.js";

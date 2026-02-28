@@ -47,7 +47,7 @@ Example pattern:
 flowchart TD
   A[Tool execute()] --> B{typedResult provided?}
   B -->|yes| C[Use typedResult]
-  B -->|no| D{details shallow object?}
+  B -->|no| D{details structured object?}
   D -->|yes| E[Use toolMessage.details]
   D -->|no| F[Fallback to object text]
   C --> G[Validate with returns.schema]
@@ -64,9 +64,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A[rlmResultConvert] --> B{typedResult shallow object?}
+  A[rlmResultConvert] --> B{typedResult structured object?}
   B -->|yes| C[Return typedResult to Python]
-  B -->|no| D{details shallow object?}
+  B -->|no| D{details structured object?}
   D -->|yes| E[Return details to Python]
   D -->|no| F[Return joined text content]
 ```

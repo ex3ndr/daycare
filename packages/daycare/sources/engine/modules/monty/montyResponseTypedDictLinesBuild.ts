@@ -52,6 +52,18 @@ function typedDictFieldsBuild(
         if (!montyPythonIdentifierIs(name)) {
             continue;
         }
+        const objectSchema = objectSchemaResolve(propertySchema);
+        if (objectSchema) {
+            const objectTypeName = `${responseTypeName}${montyResponseTypeNameFromFunction(name).replace(/Response$/, "")}`;
+            const objectFields = typedDictFieldsBuild(objectTypeName, objectSchema, definitions);
+            definitions.push({ name: objectTypeName, fields: objectFields });
+            fields.push({
+                name,
+                typeHint: objectTypeName
+            });
+            continue;
+        }
+
         const rowItemSchema = arrayObjectItemSchemaResolve(propertySchema);
         if (rowItemSchema) {
             const rowTypeName = `${responseTypeName}${montyResponseTypeNameFromFunction(name).replace(/Response$/, "")}Item`;
@@ -80,6 +92,16 @@ function arrayObjectItemSchemaResolve(schema: unknown): Record<string, unknown> 
         return null;
     }
     return schema.items;
+}
+
+function objectSchemaResolve(schema: unknown): Record<string, unknown> | null {
+    if (!recordIs(schema) || schema.type !== "object") {
+        return null;
+    }
+    if (!recordIs(schema.properties)) {
+        return null;
+    }
+    return schema;
 }
 
 function propertyRecordResolve(value: unknown): Record<string, unknown> {

@@ -69,10 +69,12 @@ describe("ToolResolver", () => {
                 },
                 execute: async () => okResult("bad_schema", "ok")
             })
-        ).toThrow('Tool "bad_schema" return schema cannot use unrestricted additionalProperties.');
+        ).toThrow(
+            'Tool "bad_schema" return schema supports primitives, any, nested objects, arrays, and unions only; additionalProperties must not be true.'
+        );
     });
 
-    it("keeps non-any return properties shallow", () => {
+    it("accepts nested object return properties", () => {
         const resolver = new ToolResolver();
 
         expect(() =>
@@ -98,9 +100,7 @@ describe("ToolResolver", () => {
                 },
                 execute: async () => okResult("not_shallow", "ok")
             })
-        ).toThrow(
-            'Tool "not_shallow" return schema supports primitive values, any, and arrays of shallow objects only.'
-        );
+        ).not.toThrow();
     });
 
     it("accepts primitive union return properties", () => {
@@ -127,7 +127,7 @@ describe("ToolResolver", () => {
         ).not.toThrow();
     });
 
-    it("rejects union return properties with non-shallow object variants", () => {
+    it("accepts union return properties with object variants", () => {
         const resolver = new ToolResolver();
 
         expect(() =>
@@ -151,7 +151,138 @@ describe("ToolResolver", () => {
                 },
                 execute: async () => okResult("union_bad", "ok")
             })
-        ).toThrow('Tool "union_bad" return schema supports primitive values, any, and arrays of shallow objects only.');
+        ).not.toThrow();
+    });
+
+    it("accepts array of primitive return properties", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "primitive_array",
+                    description: "Primitive array schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            tags: Type.Array(Type.String())
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("primitive_array", "ok")
+            })
+        ).not.toThrow();
+    });
+
+    it("accepts deeply nested return schemas", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "deep_nested",
+                    description: "Deeply nested schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            meta: Type.Object(
+                                {
+                                    levels: Type.Array(
+                                        Type.Object(
+                                            {
+                                                name: Type.String(),
+                                                stats: Type.Object(
+                                                    {
+                                                        score: Type.Number(),
+                                                        flags: Type.Array(Type.Union([Type.String(), Type.Null()]))
+                                                    },
+                                                    { additionalProperties: false }
+                                                )
+                                            },
+                                            { additionalProperties: false }
+                                        )
+                                    )
+                                },
+                                { additionalProperties: false }
+                            )
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("deep_nested", "ok")
+            })
+        ).not.toThrow();
+    });
+
+    it("rejects nested object schemas with unrestricted additionalProperties", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "nested_additional",
+                    description: "Invalid nested additionalProperties schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            nested: Type.Object({ value: Type.String() }, { additionalProperties: true })
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("nested_additional", "ok")
+            })
+        ).toThrow(
+            'Tool "nested_additional" return schema supports primitives, any, nested objects, arrays, and unions only; additionalProperties must not be true.'
+        );
+    });
+
+    it("accepts arrays of objects with nested sub-objects", () => {
+        const resolver = new ToolResolver();
+
+        expect(() =>
+            resolver.register("test", {
+                tool: {
+                    name: "nested_rows",
+                    description: "Nested row schema tool.",
+                    parameters: Type.Object({}, { additionalProperties: false })
+                },
+                returns: {
+                    schema: Type.Object(
+                        {
+                            rows: Type.Array(
+                                Type.Object(
+                                    {
+                                        id: Type.String(),
+                                        metrics: Type.Object(
+                                            {
+                                                score: Type.Number(),
+                                                trend: Type.Array(Type.Number())
+                                            },
+                                            { additionalProperties: false }
+                                        )
+                                    },
+                                    { additionalProperties: false }
+                                )
+                            )
+                        },
+                        { additionalProperties: false }
+                    ),
+                    toLLMText: () => "ok"
+                },
+                execute: async () => okResult("nested_rows", "ok")
+            })
+        ).not.toThrow();
     });
 
     it("lists tools as visible by default when callback is not defined", () => {

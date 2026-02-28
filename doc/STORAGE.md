@@ -538,11 +538,12 @@ export type FileReference = {
 };
 
 export type ToolResultPrimitive = string | number | boolean | null;
-export type ToolResultRow = Record<string, ToolResultPrimitive>;
-export type ToolResultShallowObject = Record<string, ToolResultPrimitive | ToolResultRow[]>;
+export type ToolResultValue = ToolResultPrimitive | ToolResultValue[] | { [key: string]: ToolResultValue };
+export type ToolResultRow = Record<string, ToolResultValue>;
+export type ToolResultObject = Record<string, ToolResultValue>;
 
 export type ToolExecutionResult<
-  TResult extends ToolResultShallowObject = ToolResultShallowObject
+  TResult extends ToolResultObject = ToolResultObject
 > = {
   toolMessage: ToolResultMessage;
   typedResult: TResult;

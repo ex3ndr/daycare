@@ -52,7 +52,7 @@ export type ToolResultValue = ToolResultPrimitive | ToolResultValue[] | { [key: 
 
 export type ToolResultRow = Record<string, ToolResultValue>;
 
-export type ToolResultShallowObject = Record<string, ToolResultValue>;
+export type ToolResultObject = Record<string, ToolResultValue>;
 
 export type ToolResultOutcomeObject = {
     toolCallId: string;
@@ -62,21 +62,18 @@ export type ToolResultOutcomeObject = {
     text: string;
 };
 
-export type ToolResultContract<TResult extends ToolResultShallowObject = ToolResultShallowObject> = {
+export type ToolResultContract<TResult extends ToolResultObject = ToolResultObject> = {
     schema: TSchema;
     toLLMText(result: TResult): string;
 };
 
-export type ToolExecutionResult<TResult extends ToolResultShallowObject = ToolResultShallowObject> = {
+export type ToolExecutionResult<TResult extends ToolResultObject = ToolResultObject> = {
     toolMessage: ToolResultMessage;
     typedResult: TResult;
     skipTurn?: boolean;
 };
 
-export type ToolDefinition<
-    TParams extends TSchema = TSchema,
-    TResult extends ToolResultShallowObject = ToolResultShallowObject
-> = {
+export type ToolDefinition<TParams extends TSchema = TSchema, TResult extends ToolResultObject = ToolResultObject> = {
     tool: Tool<TParams>;
     returns: ToolResultContract<TResult>;
     execute: (

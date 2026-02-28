@@ -1,7 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import type { JsMontyObject } from "@pydantic/monty";
 
-import type { ToolExecutionResult, ToolResultPrimitive, ToolResultShallowObject, ToolResultValue } from "@/types";
+import type { ToolExecutionResult, ToolResultObject, ToolResultPrimitive, ToolResultValue } from "@/types";
 import { montyParameterEntriesBuild } from "../monty/montyParameterEntriesBuild.js";
 
 /**
@@ -39,7 +39,7 @@ export function rlmArgsConvert(
  * Converts a tool execution result into a Python-friendly string value.
  * Expects: tool result content follows the ToolResultMessage text block convention.
  */
-export function rlmResultConvert(toolResult: ToolExecutionResult<ToolResultShallowObject>): JsMontyObject {
+export function rlmResultConvert(toolResult: ToolExecutionResult<ToolResultObject>): JsMontyObject {
     if (toolResultObjectIs(toolResult.typedResult)) {
         return toolResult.typedResult;
     }
@@ -98,7 +98,7 @@ function recordIs(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function toolResultObjectIs(value: unknown): value is ToolResultShallowObject {
+function toolResultObjectIs(value: unknown): value is ToolResultObject {
     if (!recordIs(value)) {
         return false;
     }

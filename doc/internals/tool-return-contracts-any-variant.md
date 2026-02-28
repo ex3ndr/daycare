@@ -2,7 +2,7 @@
 
 ## Summary
 
-`ToolResolver` return schema validation allows an explicit `any` variant (`Type.Any()`) for top-level return properties, while keeping existing shallow constraints for all other schema shapes.
+`ToolResolver` return schema validation allows recursive return-schema shapes. Tools can use nested objects, arrays at any depth, unions, and explicit `Type.Any()` where needed.
 
 ## Validation Rules
 
@@ -10,9 +10,10 @@
 - Property schemas may be:
 - primitive (`string`, `number`, `integer`, `boolean`, `null`)
 - `any` (`Type.Any()` / `type: "any"`)
-- union wrappers (`anyOf` / `oneOf` / `allOf`) when every variant is still valid under these same rules
-- arrays of shallow objects (object items with primitive-only fields)
-- `additionalProperties` cannot be unrestricted (`true`).
+- nested objects (including objects inside objects and arrays)
+- arrays of any valid property schema (primitives, objects, unions, arrays)
+- union wrappers (`anyOf` / `oneOf` / `allOf`) when every variant is valid under these rules
+- `additionalProperties` cannot be unrestricted (`true`) at any object level.
 
 ## Flow
 
@@ -29,7 +30,7 @@ flowchart TD
     U -- yes --> V{all variants valid?}
     V -- yes --> OK
     V -- no --> X
-    U -- no --> F{array of shallow objects?}
+    U -- no --> F{object / array / primitive schema?}
     F -- yes --> OK
     F -- no --> X
 ```

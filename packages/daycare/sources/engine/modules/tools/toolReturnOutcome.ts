@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
-import type { ToolExecutionResult, ToolResultContract, ToolResultShallowObject } from "@/types";
+import type { ToolExecutionResult, ToolResultContract, ToolResultObject } from "@/types";
 
 export const toolReturnOutcomeSchema = Type.Object(
     {
@@ -39,7 +39,7 @@ export function toolExecutionResultOutcome(toolMessage: ToolResultMessage): Tool
  * Builds a strongly typed tool execution payload from a ToolResultMessage and structured result object.
  * Expects: typedResult matches the caller-defined return schema.
  */
-export function toolExecutionResultOutcomeWithTyped<TResult extends ToolResultShallowObject>(
+export function toolExecutionResultOutcomeWithTyped<TResult extends ToolResultObject>(
     toolMessage: ToolResultMessage,
     typedResult: TResult
 ): ToolExecutionResult<TResult> {

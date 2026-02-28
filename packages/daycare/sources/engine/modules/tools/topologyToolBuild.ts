@@ -51,7 +51,7 @@ const topologyHeartbeatTriggerSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const _topologyTaskSchema = Type.Object(
+const topologyTaskSchema = Type.Object(
     {
         id: Type.String(),
         userId: Type.String(),
@@ -80,7 +80,7 @@ const topologySignalSubscriptionSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const _topologyChannelSchema = Type.Object(
+const topologyChannelSchema = Type.Object(
     {
         id: Type.String(),
         name: Type.String(),
@@ -110,7 +110,17 @@ const topologyExposeSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const _topologySubuserSchema = Type.Object(
+const topologySecretSchema = Type.Object(
+    {
+        name: Type.String(),
+        displayName: Type.String(),
+        description: Type.String(),
+        variableNames: Type.Array(Type.String())
+    },
+    { additionalProperties: false }
+);
+
+const topologySubuserSchema = Type.Object(
     {
         id: Type.String(),
         name: Type.Union([Type.String(), Type.Null()]),
@@ -132,7 +142,7 @@ const topologyFriendShareSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const _topologyFriendSchema = Type.Object(
+const topologyFriendSchema = Type.Object(
     {
         userId: Type.String(),
         nametag: Type.Union([Type.String(), Type.Null()]),
@@ -146,21 +156,13 @@ const _topologyFriendSchema = Type.Object(
 const topologyResultSchema = Type.Object(
     {
         agents: Type.Array(topologyAgentSchema),
-        // Nested task trigger structure is validated by tool-specific tests; resolver return-schema
-        // guardrails currently allow only primitive fields (or Any) in array item objects.
-        tasks: Type.Any(),
+        tasks: Type.Array(topologyTaskSchema),
         signalSubscriptions: Type.Array(topologySignalSubscriptionSchema),
-        // Channel members are nested arrays of objects; keep schema broad for resolver compatibility.
-        channels: Type.Any(),
+        channels: Type.Array(topologyChannelSchema),
         exposes: Type.Array(topologyExposeSchema),
-        // Secret metadata includes variableNames string arrays, which resolver-level validation
-        // does not currently permit inside typed array item objects.
-        secrets: Type.Any(),
-        // Subuser fields include primitive unions (e.g. string|null), which are currently rejected
-        // by resolver-level shallow object validation.
-        subusers: Type.Any(),
-        // Friend sharing contains nested object arrays; keep schema broad for resolver compatibility.
-        friends: Type.Any(),
+        secrets: Type.Array(topologySecretSchema),
+        subusers: Type.Array(topologySubuserSchema),
+        friends: Type.Array(topologyFriendSchema),
         agentCount: Type.Number(),
         taskCount: Type.Number(),
         cronCount: Type.Number(),

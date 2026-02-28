@@ -151,32 +151,19 @@ function toolVisibleByDefault(entry: RegisteredTool, context: ToolVisibilityCont
 
 function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
     if (!schemaObjectIs(schema) || schema.type !== "object") {
-        throw new Error(`Tool "${toolName}" return schema must be a single-depth object schema.`);
+        throw new Error(`Tool "${toolName}" return schema must be an object schema.`);
     }
-    const properties = schemaPropertyRecordGet(schema.properties);
-    for (const propertySchema of Object.values(properties)) {
-        if (!toolResultPropertySchemaIs(propertySchema)) {
-            throw new Error(
-                `Tool "${toolName}" return schema supports primitive values, any, and arrays of shallow objects only.`
-            );
-        }
-    }
-    if ("additionalProperties" in schema && schema.additionalProperties !== undefined) {
-        const additionalProperties = schema.additionalProperties;
-        if (typeof additionalProperties === "boolean") {
-            if (additionalProperties) {
-                throw new Error(`Tool "${toolName}" return schema cannot use unrestricted additionalProperties.`);
-            }
-            return;
-        }
-        if (!toolResultPropertySchemaIs(additionalProperties)) {
-            throw new Error(
-                `Tool "${toolName}" return schema additionalProperties must be primitive, any, or arrays of shallow objects.`
-            );
-        }
+    if (!toolResultObjectSchemaIs(schema)) {
+        throw new Error(
+            `Tool "${toolName}" return schema supports primitives, any, nested objects, arrays, and unions only; additionalProperties must not be true.`
+        );
     }
 }
 
+/**
+ * Validates return-schema fragments recursively.
+ * Expects: schema fragment follows JSON-schema-like TypeBox output.
+ */
 function toolResultPropertySchemaIs(schema: unknown): boolean {
     if (!schemaObjectIs(schema)) {
         return false;
@@ -190,28 +177,32 @@ function toolResultPropertySchemaIs(schema: unknown): boolean {
     if (schemaPrimitiveIs(schema)) {
         return true;
     }
-    if (schema.type !== "array") {
-        return false;
+    if (schema.type === "object") {
+        return toolResultObjectSchemaIs(schema);
     }
-    if (!schemaObjectIs(schema.items) || schema.items.type !== "object") {
-        return false;
-    }
-    const itemProperties = schemaPropertyRecordGet(schema.items.properties);
-    if (Object.values(itemProperties).some((itemProperty) => !toolResultPropertyPrimitiveSchemaIs(itemProperty))) {
-        return false;
-    }
-    if ("additionalProperties" in schema.items && schema.items.additionalProperties !== undefined) {
-        const additionalProperties = schema.items.additionalProperties;
-        if (typeof additionalProperties === "boolean") {
-            return additionalProperties === false;
+    if (schema.type === "array") {
+        const items = schema.items;
+        if (Array.isArray(items)) {
+            return items.length > 0 && items.every((entry) => toolResultPropertySchemaIs(entry));
         }
-        return toolResultPropertyPrimitiveSchemaIs(additionalProperties);
+        return toolResultPropertySchemaIs(items);
     }
-    return true;
+    return false;
 }
 
-function toolResultPropertyPrimitiveSchemaIs(schema: unknown): boolean {
-    return schemaObjectIs(schema) && schemaPrimitiveIs(schema);
+function toolResultObjectSchemaIs(schema: Record<string, unknown>): boolean {
+    const properties = schemaPropertyRecordGet(schema.properties);
+    if (Object.values(properties).some((entry) => !toolResultPropertySchemaIs(entry))) {
+        return false;
+    }
+    if (!("additionalProperties" in schema) || schema.additionalProperties === undefined) {
+        return true;
+    }
+    const additionalProperties = schema.additionalProperties;
+    if (typeof additionalProperties === "boolean") {
+        return additionalProperties === false;
+    }
+    return toolResultPropertySchemaIs(additionalProperties);
 }
 
 function schemaAnyIs(schema: Record<string, unknown>): boolean {

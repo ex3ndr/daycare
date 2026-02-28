@@ -23,8 +23,7 @@ const resultSchema = Type.Object(
         summary: Type.String(),
         name: Type.String(),
         status: Type.String(),
-        // Arrays of primitives are not accepted by resolver-level return-schema validation.
-        variableNames: Type.Any()
+        variableNames: Type.Array(Type.String())
     },
     { additionalProperties: false }
 );
