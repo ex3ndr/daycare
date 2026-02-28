@@ -1,7 +1,7 @@
 import "../theme.css";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { Stack } from "expo-router";
 import * as Fonts from "expo-font";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as React from "react";
 import { StatusBar, View } from "react-native";
@@ -24,7 +24,7 @@ async function loadFonts() {
         "IBMPlexMono-Italic": require("@/assets/fonts/IBMPlexMono-Italic.ttf"),
         "IBMPlexMono-SemiBold": require("@/assets/fonts/IBMPlexMono-SemiBold.ttf"),
         "BricolageGrotesque-Bold": require("@/assets/fonts/BricolageGrotesque-Bold.ttf"),
-        SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
+        SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf")
     });
 }
 
@@ -89,7 +89,7 @@ export default function RootLayout() {
             <AuthProvider>
                 <AlertProvider>
                     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                        <View style={{ flexDirection: 'column', flexGrow: 1, flexBasis: 0 }}>
+                        <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
                             <ThemeProvider value={navigationTheme}>
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Protected guard={authState === "authenticated"}>

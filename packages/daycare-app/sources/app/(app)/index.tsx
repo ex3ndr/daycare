@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { AppHeader, type AppMode } from "@/components/AppHeader";
 import { Item } from "@/components/Item";
@@ -7,8 +7,15 @@ import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
 import { TreePanelLayout } from "@/components/layout/TreePanelLayout";
 import { AgentsView } from "@/views/AgentsView";
-import { ChatView } from "@/views/ChatView";
-import { SettingsView } from "@/views/SettingsView";
+import { CoachingView } from "@/views/CoachingView";
+import { CostsView } from "@/views/CostsView";
+import { RoutinesView } from "@/views/RoutinesView";
+import { EmailView } from "@/views/EmailView";
+import { InboxView } from "@/views/InboxView";
+import { InventoryView } from "@/views/InventoryView";
+import { PeopleView } from "@/views/PeopleView";
+import { TodosView } from "@/views/TodosView";
+import { WorkflowsView } from "@/views/WorkflowsView";
 
 const leftItems: Record<AppMode, Array<{ id: string; title: string; subtitle: string }>> = {
     agents: [
@@ -16,87 +23,98 @@ const leftItems: Record<AppMode, Array<{ id: string; title: string; subtitle: st
         { id: "a2", title: "Builder", subtitle: "Code specialist" },
         { id: "a3", title: "Operator", subtitle: "Runtime ops" }
     ],
-    chat: [
-        { id: "c1", title: "Team Channel", subtitle: "Most recent" },
-        { id: "c2", title: "Direct Notes", subtitle: "Pinned" },
-        { id: "c3", title: "Archive", subtitle: "Older chats" }
+    people: [
+        { id: "p1", title: "Team", subtitle: "4 members" },
+        { id: "p2", title: "External", subtitle: "3 contacts" }
     ],
-    settings: [
-        { id: "s1", title: "Account", subtitle: "Identity" },
-        { id: "s2", title: "Appearance", subtitle: "Theme and layout" },
-        { id: "s3", title: "About", subtitle: "Version info" }
+    email: [
+        { id: "e1", title: "Inbox", subtitle: "3 unread" },
+        { id: "e2", title: "Sent", subtitle: "12 messages" },
+        { id: "e3", title: "Archive", subtitle: "Older mail" }
+    ],
+    inbox: [
+        { id: "i1", title: "Action Required", subtitle: "3 items" },
+        { id: "i2", title: "Notifications", subtitle: "4 items" }
+    ],
+    todos: [
+        { id: "t1", title: "Today", subtitle: "3 tasks" },
+        { id: "t2", title: "This Week", subtitle: "2 tasks" },
+        { id: "t3", title: "Completed", subtitle: "3 done" }
+    ],
+    routines: [
+        { id: "r1", title: "Active", subtitle: "4 routines" },
+        { id: "r2", title: "Disabled", subtitle: "2 routines" }
+    ],
+    inventory: [
+        { id: "inv1", title: "API Keys", subtitle: "3 keys" },
+        { id: "inv2", title: "Compute", subtitle: "3 resources" },
+        { id: "inv3", title: "Storage", subtitle: "3 stores" },
+        { id: "inv4", title: "Integrations", subtitle: "4 connected" }
+    ],
+    workflows: [
+        { id: "wf1", title: "Recent", subtitle: "3 workflows" },
+        { id: "wf2", title: "Completed", subtitle: "2 workflows" }
+    ],
+    coaching: [
+        { id: "ch1", title: "Training", subtitle: "4 active" },
+        { id: "ch2", title: "Feedback", subtitle: "3 recent" },
+        { id: "ch3", title: "Completed", subtitle: "3 lessons" }
+    ],
+    costs: [
+        { id: "co1", title: "This Month", subtitle: "$142.50" },
+        { id: "co2", title: "Last Month", subtitle: "$161.80" }
     ]
 };
 
-function RightPlaceholder() {
-    const { theme } = useUnistyles();
-
-    return (
-        <View style={styles.centered}>
-            <Text style={[styles.centerTitle, { color: theme.colors.onSurface }]}>Conversation Details</Text>
-            <Text style={[styles.centerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-                Details and files for the conversation.
-            </Text>
-        </View>
-    );
-}
-
-function PanelOne({
-    mode,
-    selectedChatId,
-    onSelectChat
-}: {
-    mode: AppMode;
-    selectedChatId: string | null;
-    onSelectChat: (id: string) => void;
-}) {
+function PanelOne({ mode }: { mode: AppMode }) {
     return (
         <ItemListStatic>
             <ItemGroup>
                 {leftItems[mode].map((item) => (
-                    <Item
-                        key={item.id}
-                        title={item.title}
-                        subtitle={item.subtitle}
-                        selected={mode === "chat" && selectedChatId === item.id}
-                        onPress={mode === "chat" ? () => onSelectChat(item.id) : undefined}
-                    />
+                    <Item key={item.id} title={item.title} subtitle={item.subtitle} showChevron={false} />
                 ))}
             </ItemGroup>
         </ItemListStatic>
     );
 }
 
-function PanelTwo({ mode, selectedChatId }: { mode: AppMode; selectedChatId: string | null }) {
-    if (mode === "agents") {
-        return <AgentsView />;
+function PanelTwo({ mode }: { mode: AppMode }) {
+    switch (mode) {
+        case "agents":
+            return <AgentsView />;
+        case "people":
+            return <PeopleView />;
+        case "email":
+            return <EmailView />;
+        case "inbox":
+            return <InboxView />;
+        case "todos":
+            return <TodosView />;
+        case "routines":
+            return <RoutinesView />;
+        case "inventory":
+            return <InventoryView />;
+        case "workflows":
+            return <WorkflowsView />;
+        case "coaching":
+            return <CoachingView />;
+        case "costs":
+            return <CostsView />;
     }
-    if (mode === "chat") {
-        return selectedChatId ? <ChatView /> : <View />;
-    }
-    return <SettingsView />;
-}
-
-function PanelThree({ mode, selectedChatId }: { mode: AppMode; selectedChatId: string | null }) {
-    if (mode === "chat" && selectedChatId) {
-        return <RightPlaceholder />;
-    }
-    return undefined;
 }
 
 export default function DaycareHomeScreen() {
     const { theme } = useUnistyles();
-    const [mode, setMode] = React.useState<AppMode>("chat");
-    const [selectedChatId, setSelectedChatId] = React.useState<string | null>("c1");
+    const [mode, setMode] = React.useState<AppMode>("agents");
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
             <AppHeader selectedMode={mode} onModeChange={setMode} />
             <TreePanelLayout
-                panel1={<PanelOne mode={mode} selectedChatId={selectedChatId} onSelectChat={setSelectedChatId} />}
-                panel2={<PanelTwo mode={mode} selectedChatId={selectedChatId} />}
-                panel3={PanelThree({ mode, selectedChatId })}
-                panel3Placeholder={<RightPlaceholder />}
+                panel1={<PanelOne mode={mode} />}
+                panel2={<PanelTwo mode={mode} />}
+                panel3={undefined}
+                panel3Placeholder={undefined}
             />
         </View>
     );
@@ -106,19 +124,6 @@ const styles = StyleSheet.create({
     root: {
         flexGrow: 1,
         flexBasis: 0,
-        flexDirection: 'column'
-    },
-    centered: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8
-    },
-    centerTitle: {
-        fontSize: 18,
-        fontWeight: "600"
-    },
-    centerSubtitle: {
-        fontSize: 14
+        flexDirection: "column"
     }
 });

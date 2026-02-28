@@ -32,10 +32,7 @@ export async function authTelegramSessionResolve(): Promise<AuthSession | null> 
     if (!initData) {
         return null;
     }
-    const telegramContext = authTelegramWebAppContextParse(
-        window.location.search,
-        initData
-    );
+    const telegramContext = authTelegramWebAppContextParse(window.location.search, initData);
     if (!telegramContext) {
         return null;
     }

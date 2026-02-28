@@ -358,7 +358,11 @@ export class TelegramConnector implements Connector {
         }
     }
 
-    private async sendTextChunk(targetId: string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void> {
+    private async sendTextChunk(
+        targetId: string,
+        text: string,
+        options?: TelegramBot.SendMessageOptions
+    ): Promise<void> {
         const html = markdownToTelegramHtml(text);
         const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
         try {
@@ -950,9 +954,7 @@ function messageReplyOptionsBuild(
     };
 }
 
-function messageButtonsBuild(
-    buttons: NonNullable<ConnectorMessage["buttons"]>
-): TelegramBot.InlineKeyboardMarkup {
+function messageButtonsBuild(buttons: NonNullable<ConnectorMessage["buttons"]>): TelegramBot.InlineKeyboardMarkup {
     return {
         inline_keyboard: buttons.map((button) => [
             {

@@ -1,11 +1,34 @@
 import { Octicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Avatar } from "@/components/Avatar";
 
-export type AppMode = "agents" | "chat" | "settings";
+export type AppMode =
+    | "agents"
+    | "people"
+    | "email"
+    | "inbox"
+    | "todos"
+    | "routines"
+    | "inventory"
+    | "workflows"
+    | "coaching"
+    | "costs";
+
+const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
+    { mode: "agents", icon: "device-desktop", label: "Agents" },
+    { mode: "people", icon: "people", label: "People" },
+    { mode: "email", icon: "mail", label: "Email" },
+    { mode: "inbox", icon: "inbox", label: "Inbox" },
+    { mode: "todos", icon: "checklist", label: "Todos" },
+    { mode: "routines", icon: "clock", label: "Routines" },
+    { mode: "inventory", icon: "package", label: "Inventory" },
+    { mode: "workflows", icon: "workflow", label: "Workflows" },
+    { mode: "coaching", icon: "mortar-board", label: "Coaching" },
+    { mode: "costs", icon: "credit-card", label: "Costs" }
+];
 
 type AppHeaderProps = {
     selectedMode: AppMode;
@@ -33,89 +56,33 @@ export const AppHeader = React.memo<AppHeaderProps>(({ selectedMode, onModeChang
                     <Text style={[styles.appHeaderTitle, { color: theme.colors.onSurface }]}>Daycare</Text>
                 </View>
 
-                <View style={[styles.segmentedControl, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
-                    <Pressable
-                        testID="segment-agents"
-                        onPress={() => onModeChange("agents")}
-                        style={[
-                            styles.segmentButton,
-                            selectedMode === "agents" && { backgroundColor: theme.colors.surfaceContainer }
-                        ]}
-                    >
-                        <Octicons
-                            name="device-desktop"
-                            size={16}
-                            color={selectedMode === "agents" ? theme.colors.onSurface : theme.colors.onSurfaceVariant}
-                        />
-                        <Text
-                            style={[
-                                styles.segmentButtonText,
-                                {
-                                    color:
-                                        selectedMode === "agents"
-                                            ? theme.colors.onSurface
-                                            : theme.colors.onSurfaceVariant
-                                }
-                            ]}
-                        >
-                            Agents
-                        </Text>
-                    </Pressable>
-
-                    <Pressable
-                        testID="segment-chat"
-                        onPress={() => onModeChange("chat")}
-                        style={[
-                            styles.segmentButton,
-                            selectedMode === "chat" && { backgroundColor: theme.colors.surfaceContainer }
-                        ]}
-                    >
-                        <Octicons
-                            name="comment-discussion"
-                            size={16}
-                            color={selectedMode === "chat" ? theme.colors.onSurface : theme.colors.onSurfaceVariant}
-                        />
-                        <Text
-                            style={[
-                                styles.segmentButtonText,
-                                {
-                                    color:
-                                        selectedMode === "chat" ? theme.colors.onSurface : theme.colors.onSurfaceVariant
-                                }
-                            ]}
-                        >
-                            Chat
-                        </Text>
-                    </Pressable>
-
-                    <Pressable
-                        testID="segment-settings"
-                        onPress={() => onModeChange("settings")}
-                        style={[
-                            styles.segmentButton,
-                            selectedMode === "settings" && { backgroundColor: theme.colors.surfaceContainer }
-                        ]}
-                    >
-                        <Octicons
-                            name="gear"
-                            size={16}
-                            color={selectedMode === "settings" ? theme.colors.onSurface : theme.colors.onSurfaceVariant}
-                        />
-                        <Text
-                            style={[
-                                styles.segmentButtonText,
-                                {
-                                    color:
-                                        selectedMode === "settings"
-                                            ? theme.colors.onSurface
-                                            : theme.colors.onSurfaceVariant
-                                }
-                            ]}
-                        >
-                            Settings
-                        </Text>
-                    </Pressable>
-                </View>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={[
+                        styles.segmentedControl,
+                        { backgroundColor: theme.colors.surfaceContainerHighest }
+                    ]}
+                >
+                    {segments.map((seg) => {
+                        const isSelected = selectedMode === seg.mode;
+                        const color = isSelected ? theme.colors.onSurface : theme.colors.onSurfaceVariant;
+                        return (
+                            <Pressable
+                                key={seg.mode}
+                                testID={`segment-${seg.mode}`}
+                                onPress={() => onModeChange(seg.mode)}
+                                style={[
+                                    styles.segmentButton,
+                                    isSelected && { backgroundColor: theme.colors.surfaceContainer }
+                                ]}
+                            >
+                                <Octicons name={seg.icon} size={16} color={color} />
+                                <Text style={[styles.segmentButtonText, { color }]}>{seg.label}</Text>
+                            </Pressable>
+                        );
+                    })}
+                </ScrollView>
 
                 <View style={styles.rightSide}>
                     <Avatar id="daycare-user" size={32} />
@@ -159,7 +126,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 16,
         gap: 6
