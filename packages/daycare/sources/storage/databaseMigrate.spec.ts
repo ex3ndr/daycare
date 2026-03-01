@@ -121,4 +121,89 @@ describe("databaseMigrate", () => {
             db.close();
         }
     });
+
+    it("closes duplicate active agent paths before enforcing path uniqueness", async () => {
+        const db = databaseOpenTest();
+        try {
+            await db.exec(`
+                CREATE TABLE IF NOT EXISTS _migrations (
+                    name text PRIMARY KEY NOT NULL,
+                    applied_at bigint NOT NULL
+                );
+            `);
+
+            const agentPathsIndex = migrations.findIndex((entry) => entry.name === "20260301_agent_paths");
+            if (agentPathsIndex < 0) {
+                throw new Error("Agent paths migration not found.");
+            }
+
+            const beforeAgentPaths = migrations.slice(0, agentPathsIndex);
+            let appliedAt = 1;
+            for (const migration of beforeAgentPaths) {
+                const migrationSql = readFileSync(
+                    new URL(`./migrations/${migration.fileName}`, import.meta.url),
+                    "utf8"
+                );
+                await db.exec(migrationSql);
+                await db
+                    .prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)")
+                    .run(migration.name, appliedAt);
+                appliedAt += 1;
+            }
+
+            await db
+                .prepare(
+                    "INSERT INTO agents (id, version, valid_from, valid_to, type, descriptor, active_session_id, permissions, tokens, stats, lifecycle, created_at, updated_at, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .run(
+                    "system-task-1",
+                    1,
+                    10,
+                    null,
+                    "system",
+                    '{"tag":"task"}',
+                    null,
+                    "{}",
+                    null,
+                    "{}",
+                    "active",
+                    10,
+                    10,
+                    "system",
+                    "system-task-2",
+                    1,
+                    20,
+                    null,
+                    "system",
+                    '{"tag":"task"}',
+                    null,
+                    "{}",
+                    null,
+                    "{}",
+                    "active",
+                    20,
+                    20,
+                    "system"
+                );
+
+            const applied = await databaseMigrate(db);
+            expect(applied).toContain("20260301_agent_paths");
+            expect(applied).toContain("20260301_agents_remove_descriptors");
+
+            const systemRows = (await db
+                .prepare("SELECT id, path, valid_to FROM agents WHERE path = '/system/task' ORDER BY updated_at DESC")
+                .all()) as Array<{ id: string; path: string; valid_to: number | null }>;
+            expect(systemRows).toEqual([
+                { id: "system-task-2", path: "/system/task", valid_to: null },
+                { id: "system-task-1", path: "/system/task", valid_to: 10 }
+            ]);
+
+            const duplicates = (await db
+                .prepare("SELECT path FROM agents WHERE valid_to IS NULL GROUP BY path HAVING COUNT(*) > 1")
+                .all()) as Array<{ path: string }>;
+            expect(duplicates).toEqual([]);
+        } finally {
+            db.close();
+        }
+    });
 });

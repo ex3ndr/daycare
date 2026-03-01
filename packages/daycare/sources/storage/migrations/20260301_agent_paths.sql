@@ -22,4 +22,27 @@ UPDATE agents
 SET config = descriptor
 WHERE config IS NULL;
 --> statement-breakpoint
+WITH active_ranked AS (
+    SELECT
+        id,
+        version,
+        ROW_NUMBER() OVER (
+            PARTITION BY path
+            ORDER BY updated_at DESC, created_at DESC, version DESC, id DESC
+        ) AS row_num
+    FROM agents
+    WHERE valid_to IS NULL AND path IS NOT NULL AND trim(path) <> ''
+),
+duplicates AS (
+    SELECT id, version
+    FROM active_ranked
+    WHERE row_num > 1
+)
+UPDATE agents AS agent
+SET valid_to = GREATEST(agent.valid_from, agent.updated_at)
+FROM duplicates
+WHERE agent.id = duplicates.id
+  AND agent.version = duplicates.version
+  AND agent.valid_to IS NULL;
+--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_path_active ON agents (path) WHERE valid_to IS NULL;
