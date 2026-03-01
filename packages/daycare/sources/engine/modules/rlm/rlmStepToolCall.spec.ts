@@ -120,7 +120,8 @@ function resolverBuild(handler: (name: string, args: unknown) => Promise<ToolExe
     return {
         listTools: () => tools,
         listToolsForAgent: () => tools,
-        execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments))
+        execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments)),
+        deferredHandlerFor: () => undefined
     };
 }
 

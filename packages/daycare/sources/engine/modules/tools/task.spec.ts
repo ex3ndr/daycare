@@ -539,7 +539,8 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         listToolsForAgent: () => [],
         execute: vi.fn(async () => {
             throw new Error("not used");
-        })
+        }),
+        deferredHandlerFor: () => undefined
     };
 
     const crons = new Crons({

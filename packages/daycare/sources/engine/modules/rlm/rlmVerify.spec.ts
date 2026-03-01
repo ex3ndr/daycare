@@ -41,7 +41,8 @@ function createContext(): ToolExecutionContext {
         listToolsForAgent: () => tools,
         execute: vi.fn(async () => {
             throw new Error("not used");
-        })
+        }),
+        deferredHandlerFor: () => undefined
     };
 
     return {

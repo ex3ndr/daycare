@@ -74,6 +74,91 @@ describe("agentLoopPendingPhaseResolve", () => {
         }
     });
 
+    it("collects persisted deferred entries from rlm_tool_result records", () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "assistant_message",
+                at: 5,
+                tokens: null,
+                content: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "x()" } }]
+            },
+            {
+                type: "rlm_start",
+                at: 6,
+                toolCallId: "tool-1",
+                code: "x()",
+                preamble: "..."
+            },
+            {
+                type: "rlm_tool_call",
+                at: 7,
+                toolCallId: "tool-1",
+                snapshotId: "snap-1",
+                printOutput: [],
+                toolCallCount: 0,
+                toolName: "say",
+                toolArgs: { text: "hello" }
+            },
+            {
+                type: "rlm_tool_result",
+                at: 8,
+                toolCallId: "tool-1",
+                toolName: "say",
+                toolResult: "deferred",
+                toolIsError: false,
+                deferredPayload: { connector: "telegram", targetId: "ch-1", text: "hello" }
+            },
+            {
+                type: "rlm_tool_call",
+                at: 9,
+                toolCallId: "tool-1",
+                snapshotId: "snap-2",
+                printOutput: [],
+                toolCallCount: 1,
+                toolName: "send_file",
+                toolArgs: { path: "/tmp/f" }
+            },
+            {
+                type: "rlm_tool_result",
+                at: 10,
+                toolCallId: "tool-1",
+                toolName: "send_file",
+                toolResult: "deferred",
+                toolIsError: false,
+                deferredPayload: { connector: "telegram", targetId: "ch-1", file: "data" }
+            },
+            {
+                type: "rlm_tool_call",
+                at: 11,
+                toolCallId: "tool-1",
+                snapshotId: "snap-3",
+                printOutput: [],
+                toolCallCount: 2,
+                toolName: "read_file",
+                toolArgs: { path: "/x" }
+            },
+            {
+                type: "rlm_tool_result",
+                at: 12,
+                toolCallId: "tool-1",
+                toolName: "read_file",
+                toolResult: "ok",
+                toolIsError: false
+                // no deferredPayload — not a deferred tool
+            }
+        ];
+
+        const pending = agentLoopPendingPhaseResolve(records);
+
+        expect(pending?.type).toBe("tool_call");
+        if (pending?.type === "tool_call") {
+            expect(pending.persistedDeferredEntries).toEqual([
+                { toolName: "say", payload: { connector: "telegram", targetId: "ch-1", text: "hello" } },
+                { toolName: "send_file", payload: { connector: "telegram", targetId: "ch-1", file: "data" } }
+            ]);
+        }
+    });
+
     it("returns error phase when pending rlm start has no snapshot", () => {
         const records: AgentHistoryRecord[] = [
             {

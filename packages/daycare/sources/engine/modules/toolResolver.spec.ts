@@ -541,6 +541,39 @@ describe("ToolResolver", () => {
         expect(messageText(result)).toContain("does not match its return schema");
     });
 
+    it("returns executeDeferred handler for registered tools", () => {
+        const resolver = new ToolResolver();
+        const handler = vi.fn(async () => {});
+        resolver.register("test", {
+            tool: {
+                name: "say",
+                description: "Say.",
+                parameters: Type.Object({ text: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: async () => okResult("say", "ok"),
+            executeDeferred: handler
+        });
+
+        expect(resolver.deferredHandlerFor("say")).toBe(handler);
+        expect(resolver.deferredHandlerFor("nonexistent")).toBeUndefined();
+    });
+
+    it("returns undefined for tools without executeDeferred", () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "read_file",
+                description: "Read file.",
+                parameters: Type.Object({ path: Type.String() }, { additionalProperties: false })
+            },
+            returns: textReturns,
+            execute: async () => okResult("read_file", "ok")
+        });
+
+        expect(resolver.deferredHandlerFor("read_file")).toBeUndefined();
+    });
+
     it("throws AbortError when execution signal is already aborted", async () => {
         const resolver = new ToolResolver();
         resolver.register("test", {

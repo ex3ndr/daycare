@@ -88,6 +88,8 @@ export type AgentHistoryRlmToolResultRecord = {
     toolName: string;
     toolResult: string;
     toolIsError: boolean;
+    /** Opaque payload for deferred tool execution (persisted for restart recovery). */
+    deferredPayload?: unknown;
 };
 
 export type AgentHistoryRlmCompleteRecord = {

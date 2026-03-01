@@ -214,7 +214,8 @@ describe("agentLoopRun", () => {
                 listToolsForAgentCalls += 1;
                 return listToolsForAgentCalls <= 3 ? toolsWithTransient : baseTools;
             },
-            execute
+            execute,
+            deferredHandlerFor: () => undefined
         };
         let sawNonErrorComplete = false;
         const appendHistoryRecord = vi.fn(async (record: { type: string; isError?: boolean }) => {
@@ -453,7 +454,8 @@ function toolResolverBuild(
                 return execute(toolCall);
             }
             return toolResultBuild(toolCall.id, toolCall.name, "ok");
-        })
+        }),
+        deferredHandlerFor: () => undefined
     };
 }
 

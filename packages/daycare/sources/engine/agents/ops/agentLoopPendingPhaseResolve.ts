@@ -1,8 +1,19 @@
-import type { AgentHistoryRecord, AgentHistoryRlmStartRecord, AgentHistoryRlmToolCallRecord } from "@/types";
+import type {
+    AgentHistoryRecord,
+    AgentHistoryRlmStartRecord,
+    AgentHistoryRlmToolCallRecord,
+    AgentHistoryRlmToolResultRecord
+} from "@/types";
 import { messageContentExtractText } from "../../messages/messageContentExtractText.js";
 import { messageContentExtractToolCalls } from "../../messages/messageContentExtractToolCalls.js";
 import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
+
+/** Persisted deferred entry without handler — handler is resolved at runtime from tool definitions. */
+export type PersistedDeferredEntry = {
+    toolName: string;
+    payload: unknown;
+};
 
 type AssistantRunPythonContext = {
     assistantAt: number;
@@ -33,6 +44,8 @@ export type AgentLoopPendingPhase =
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;
+          /** Deferred tool payloads from completed tool calls in this block (for restart recovery). */
+          persistedDeferredEntries: PersistedDeferredEntry[];
       }
     | {
           type: "error";
@@ -88,6 +101,17 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
                 message: "Daycare server was restarted during executing this command before any tool call"
             };
         }
+
+        // Collect persisted deferred payloads from completed tool results in this block
+        const persistedDeferredEntries = records
+            .filter(
+                (record): record is AgentHistoryRlmToolResultRecord =>
+                    record.type === "rlm_tool_result" &&
+                    record.toolCallId === pendingStart.toolCallId &&
+                    record.deferredPayload !== undefined
+            )
+            .map((record) => ({ toolName: record.toolName, payload: record.deferredPayload }));
+
         return {
             type: "tool_call",
             start: pendingStart,
@@ -96,7 +120,8 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
             blockToolCallIds,
             blockIndex,
             assistantAt: assistantContext?.assistantAt ?? pendingStart.at,
-            historyResponseText: assistantContext?.historyResponseText ?? ""
+            historyResponseText: assistantContext?.historyResponseText ?? "",
+            persistedDeferredEntries
         };
     }
 

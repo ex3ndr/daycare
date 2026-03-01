@@ -43,6 +43,11 @@ export class ToolResolver {
         return Array.from(this.tools.values()).map((entry) => toolExpose(entry));
     }
 
+    /** Returns the executeDeferred handler for a tool, or undefined if not registered or not deferred. */
+    deferredHandlerFor(toolName: string): ToolDefinition["executeDeferred"] {
+        return this.tools.get(toolName)?.executeDeferred;
+    }
+
     listToolsForAgent(context: ToolVisibilityContext): Tool[] {
         return Array.from(this.tools.values())
             .filter((entry) => toolVisibleByDefault(entry, context))
@@ -114,7 +119,7 @@ export class ToolResolver {
     }
 }
 
-export type ToolResolverApi = Pick<ToolResolver, "listTools" | "listToolsForAgent" | "execute">;
+export type ToolResolverApi = Pick<ToolResolver, "listTools" | "listToolsForAgent" | "execute" | "deferredHandlerFor">;
 
 function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
     const toolMessage: ToolResultMessage = {

@@ -103,7 +103,8 @@ describe("rlmExecute", () => {
         const resolver: ToolResolverApi = {
             listTools: () => baseTools,
             listToolsForAgent: () => baseTools,
-            execute
+            execute,
+            deferredHandlerFor: () => undefined
         };
 
         const result = await rlmExecute(
@@ -131,7 +132,8 @@ describe("rlmExecute", () => {
         const resolver: ToolResolverApi = {
             listTools: () => baseTools,
             listToolsForAgent: () => baseTools,
-            execute
+            execute,
+            deferredHandlerFor: () => undefined
         };
 
         const result = await rlmExecute(
@@ -257,7 +259,8 @@ describe("rlmExecute", () => {
         const resolver: ToolResolverApi = {
             listTools: () => toolsWithoutSkip,
             listToolsForAgent: () => toolsWithoutSkip,
-            execute: vi.fn(async (toolCall) => okResult(toolCall.name, "unexpected"))
+            execute: vi.fn(async (toolCall) => okResult(toolCall.name, "unexpected")),
+            deferredHandlerFor: () => undefined
         };
 
         const result = await rlmExecute(
@@ -321,7 +324,8 @@ function createResolver(handler: (name: string, args: unknown) => Promise<ToolEx
     return {
         listTools: () => baseTools,
         listToolsForAgent: () => baseTools,
-        execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments))
+        execute: vi.fn(async (toolCall) => handler(toolCall.name, toolCall.arguments)),
+        deferredHandlerFor: () => undefined
     };
 }
 

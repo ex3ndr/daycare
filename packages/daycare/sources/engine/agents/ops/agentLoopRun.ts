@@ -37,14 +37,18 @@ import { rlmWorkerKeyResolve } from "../../modules/rlm/rlmWorkerKeyResolve.js";
 import { taskParameterPreambleStubs } from "../../modules/tasks/taskParameterCodegen.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
-import { deferredToolFlush, deferredToolStatusBuild } from "../../modules/tools/deferredToolFlush.js";
+import {
+    type DeferredToolEntry,
+    deferredToolFlush,
+    deferredToolStatusBuild
+} from "../../modules/tools/deferredToolFlush.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
 import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
-import type { AgentLoopPendingPhase } from "./agentLoopPendingPhaseResolve.js";
+import type { AgentLoopPendingPhase, PersistedDeferredEntry } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
@@ -192,6 +196,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         const trackingToolResolver: ToolResolverApi = {
             listTools: () => toolResolver.listTools(),
             listToolsForAgent: (resolverContext) => toolResolver.listToolsForAgent(resolverContext),
+            deferredHandlerFor: (toolName) => toolResolver.deferredHandlerFor(toolName),
             execute: async (toolCall, toolContext) => {
                 if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
                     const args = toolCall.arguments as { agentId?: string; text?: string };
@@ -352,6 +357,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     assistantRecordAt: initialPhase.assistantAt,
                     historyResponseText: initialPhase.historyResponseText
                 });
+                const restoredDeferred = deferredEntriesRestore(initialPhase.persistedDeferredEntries, toolResolver);
                 const printOutput = [...initialPhase.snapshot.printOutput];
                 const printCapture = rlmPrintCaptureCreate(printOutput);
                 const printCallback = (...values: unknown[]): void => {
@@ -395,7 +401,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             printCapture,
                             printCallback,
                             toolCallCount: initialPhase.snapshot.toolCallCount,
-                            deferredEntries: []
+                            deferredEntries: restoredDeferred
                         };
                     } else {
                         rlmPrintCaptureFlushTrailing(printCapture);
@@ -407,14 +413,15 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 printOutput,
                                 toolCallCount: initialPhase.snapshot.toolCallCount
                             },
-                            deferredEntries: []
+                            deferredEntries: restoredDeferred
                         };
                     }
                 } catch (error) {
                     rlmPrintCaptureFlushTrailing(printCapture);
                     await runPythonFailureHandle(blockState, error, {
                         printOutput,
-                        toolCallCount: initialPhase.snapshot.toolCallCount
+                        toolCallCount: initialPhase.snapshot.toolCallCount,
+                        deferredDiscardCount: restoredDeferred.length
                     });
                     phase = restoreOnly ? { type: "done", reason: "complete" } : { type: "inference", iteration: 1 };
                 }
@@ -851,7 +858,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             toolCallId: blockState.toolCallId,
                             toolName: stepResult.toolName,
                             toolResult: stepResult.toolResult,
-                            toolIsError: stepResult.toolIsError
+                            toolIsError: stepResult.toolIsError,
+                            ...(stepResult.deferredPayload !== undefined
+                                ? { deferredPayload: stepResult.deferredPayload }
+                                : {})
                         });
 
                         // Accumulate deferred tool entries for flush after block success
@@ -1320,6 +1330,24 @@ function abortErrorBuild(): Error {
     const error = new Error("Operation aborted.");
     error.name = "AbortError";
     return error;
+}
+
+/**
+ * Resolves persisted deferred entries to full DeferredToolEntry objects by looking up handlers.
+ * Entries whose tools are no longer registered (or have no executeDeferred) are silently dropped.
+ */
+function deferredEntriesRestore(
+    persisted: PersistedDeferredEntry[],
+    toolResolver: ToolResolverApi
+): DeferredToolEntry[] {
+    const entries: DeferredToolEntry[] = [];
+    for (const entry of persisted) {
+        const handler = toolResolver.deferredHandlerFor(entry.toolName);
+        if (handler) {
+            entries.push({ toolName: entry.toolName, payload: entry.payload, handler });
+        }
+    }
+    return entries;
 }
 
 function isInferenceAbortError(error: unknown, signal?: AbortSignal): boolean {

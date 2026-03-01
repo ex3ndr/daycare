@@ -96,6 +96,7 @@ function resolverBuild(functions: {
     return {
         listTools: functions.listTools,
         listToolsForAgent: functions.listToolsForAgent,
-        execute: vi.fn()
+        execute: vi.fn(),
+        deferredHandlerFor: () => undefined
     };
 }
