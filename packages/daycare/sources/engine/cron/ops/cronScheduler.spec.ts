@@ -89,6 +89,39 @@ describe("CronScheduler", () => {
         scheduler.stop();
     });
 
+    it("executes a trigger immediately when requested out of line", async () => {
+        const created = await cronTaskInsert(storage, {
+            id: "manual-exec",
+            name: "Manual Exec",
+            schedule: "0 0 1 1 *",
+            code: "Run now"
+        });
+        const onTask = vi.fn();
+        const scheduler = new CronScheduler({
+            config: configModule(tempDir),
+            repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
+            usersRepository: storage.users,
+            onTask
+        });
+
+        await scheduler.start();
+        await scheduler.triggerTaskNow("manual-exec");
+
+        expect(onTask).toHaveBeenCalledTimes(1);
+        expect(onTask).toHaveBeenCalledWith(
+            expect.objectContaining({
+                triggerId: "manual-exec",
+                taskId: created.taskId,
+                taskName: "Manual Exec",
+                code: "Run now"
+            }),
+            expect.any(Object)
+        );
+
+        scheduler.stop();
+    });
+
     it("acquires read lock only for task execution", async () => {
         vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
 
@@ -224,6 +257,32 @@ describe("CronScheduler", () => {
         await vi.advanceTimersByTimeAsync(60 * 1000);
 
         expect(onError).toHaveBeenCalledWith(expect.any(Error), "error-task");
+
+        scheduler.stop();
+    });
+
+    it("reports and rethrows out-of-line execution errors", async () => {
+        await cronTaskInsert(storage, {
+            id: "manual-fail",
+            name: "Manual Fail",
+            schedule: "0 0 1 1 *",
+            code: "Will fail"
+        });
+        const onError = vi.fn();
+        const scheduler = new CronScheduler({
+            config: configModule(tempDir),
+            repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
+            usersRepository: storage.users,
+            onTask: () => {
+                throw new Error("Manual failure");
+            },
+            onError
+        });
+
+        await scheduler.start();
+        await expect(scheduler.triggerTaskNow("manual-fail")).rejects.toThrow("Manual failure");
+        expect(onError).toHaveBeenCalledWith(expect.any(Error), "manual-fail");
 
         scheduler.stop();
     });

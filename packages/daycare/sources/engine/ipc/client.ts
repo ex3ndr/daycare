@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { Channel, ChannelMessage, SignalSource } from "@/types";
+import type { AgentDescriptor, Channel, ChannelMessage, MessageContext, SignalSource } from "@/types";
 
 import { resolveEngineSocketPath } from "./socket.js";
 
@@ -139,6 +139,50 @@ export async function sendEngineSignal(
     });
     if (response.statusCode < 200 || response.statusCode >= 300) {
         throw new Error(response.body || "Signal send failed.");
+    }
+}
+
+export async function sendEngineAgentMessage(
+    input: {
+        text: string;
+        userId?: string;
+        agentId?: string;
+        descriptor?: AgentDescriptor;
+        context?: MessageContext;
+        awaitResponse?: boolean;
+    },
+    socketPathOverride?: string
+): Promise<{ agentId: string; responseText?: string | null }> {
+    const socketPath = resolveEngineSocketPath(socketPathOverride);
+    const response = await requestSocket({
+        socketPath,
+        path: "/v1/engine/agents/message",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input)
+    });
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(response.body || "Agent message send failed.");
+    }
+    const payload = JSON.parse(response.body) as { agentId?: string; responseText?: string | null };
+    if (!payload.agentId) {
+        throw new Error("Agent message send failed.");
+    }
+    return {
+        agentId: payload.agentId,
+        responseText: payload.responseText
+    };
+}
+
+export async function triggerEngineCronTask(triggerId: string, socketPathOverride?: string): Promise<void> {
+    const socketPath = resolveEngineSocketPath(socketPathOverride);
+    const response = await requestSocket({
+        socketPath,
+        path: `/v1/engine/cron/tasks/${encodeURIComponent(triggerId)}/trigger`,
+        method: "POST"
+    });
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(response.body || "Cron trigger failed.");
     }
 }
 

@@ -3,6 +3,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
+import type { AgentDescriptor, Context, MessageContext } from "@/types";
 
 import { getLogger } from "../../log.js";
 import {
@@ -119,6 +120,103 @@ const systemPromptUpdateSchema = z.object({
     prompt: z.string().min(1).optional(),
     enabled: z.boolean().optional()
 });
+const agentDescriptorSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("user"),
+        connector: z.string().min(1),
+        userId: z.string().min(1),
+        channelId: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("cron"),
+        id: z.string().min(1),
+        name: z.string().min(1).optional()
+    }),
+    z.object({
+        type: z.literal("task"),
+        id: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("system"),
+        tag: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("subagent"),
+        id: z.string().min(1),
+        parentAgentId: z.string().min(1),
+        name: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("app"),
+        id: z.string().min(1),
+        parentAgentId: z.string().min(1),
+        name: z.string().min(1),
+        systemPrompt: z.string().min(1),
+        appId: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("permanent"),
+        id: z.string().min(1),
+        name: z.string().min(1),
+        description: z.string().min(1),
+        systemPrompt: z.string().min(1),
+        username: z.string().min(1).optional(),
+        workspaceDir: z.string().min(1).optional()
+    }),
+    z.object({
+        type: z.literal("memory-agent"),
+        id: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("memory-search"),
+        id: z.string().min(1),
+        parentAgentId: z.string().min(1),
+        name: z.string().min(1)
+    }),
+    z.object({
+        type: z.literal("subuser"),
+        id: z.string().min(1),
+        name: z.string().min(1),
+        systemPrompt: z.string().min(1)
+    })
+]);
+const messageContextSchema = z.object({
+    messageId: z.string().min(1).optional(),
+    timezone: z.string().min(1).optional(),
+    enrichments: z
+        .array(
+            z.object({
+                key: z.string().min(1),
+                value: z.string()
+            })
+        )
+        .optional()
+});
+const agentMessageSchema = z
+    .object({
+        userId: z.string().min(1).optional(),
+        agentId: z.string().min(1).optional(),
+        descriptor: agentDescriptorSchema.optional(),
+        text: z.string().min(1),
+        context: messageContextSchema.optional(),
+        awaitResponse: z.boolean().optional()
+    })
+    .superRefine((value, refinementContext) => {
+        const hasAgentId = typeof value.agentId === "string" && value.agentId.trim().length > 0;
+        const hasDescriptor = value.descriptor !== undefined;
+        if (hasAgentId === hasDescriptor) {
+            refinementContext.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Provide exactly one of agentId or descriptor."
+            });
+        }
+        if (hasDescriptor && (!value.userId || value.userId.trim().length === 0)) {
+            refinementContext.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "userId is required when targeting a descriptor."
+            });
+        }
+    });
 
 export async function startEngineServer(options: EngineServerOptions): Promise<EngineServer> {
     const logger = getLogger("engine.server");
@@ -156,6 +254,27 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         const tasks = options.runtime.crons.listScheduledTasks();
         logger.debug(`event: Cron tasks retrieved taskCount=${tasks.length}`);
         return reply.send({ ok: true, tasks });
+    });
+
+    app.post("/v1/engine/cron/tasks/:triggerId/trigger", async (request, reply) => {
+        const triggerId = (request.params as { triggerId: string }).triggerId.trim();
+        logger.debug(`event: POST /v1/engine/cron/tasks/:triggerId/trigger triggerId=${triggerId}`);
+        if (!triggerId) {
+            return reply.status(400).send({ ok: false, error: "Cron trigger id is required." });
+        }
+        try {
+            await options.runtime.crons.triggerTask(triggerId);
+            return reply.send({ ok: true, triggerId });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Cron trigger failed";
+            if (message.startsWith("Cron trigger not found:")) {
+                return reply.status(404).send({ ok: false, error: message });
+            }
+            if (message.startsWith("Cron trigger is already running:")) {
+                return reply.status(409).send({ ok: false, error: message });
+            }
+            return reply.status(500).send({ ok: false, error: message });
+        }
     });
 
     app.get("/v1/engine/processes", async (_request, reply) => {
@@ -419,6 +538,48 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         );
         logger.info({ agentId }, "event: Agent reset");
         return reply.send({ ok: true });
+    });
+
+    app.post("/v1/engine/agents/message", async (request, reply) => {
+        logger.debug("event: POST /v1/engine/agents/message");
+        const payload = parseBody(agentMessageSchema, request.body, reply);
+        if (!payload) {
+            return;
+        }
+        try {
+            const target = await messageTargetResolve(options.runtime, payload);
+            const item = {
+                type: "message" as const,
+                message: { text: payload.text },
+                context: (payload.context ?? {}) as MessageContext
+            };
+            const awaitResponse = payload.awaitResponse !== false;
+            if (!awaitResponse) {
+                await options.runtime.agentSystem.post(target.ctx, { agentId: target.agentId }, item);
+                return reply.send({ ok: true, agentId: target.agentId });
+            }
+            const result = await options.runtime.agentSystem.postAndAwait(
+                target.ctx,
+                { agentId: target.agentId },
+                item
+            );
+            if (result.type !== "message") {
+                return reply.status(500).send({
+                    ok: false,
+                    error: `Unexpected message response type: ${result.type}`
+                });
+            }
+            return reply.send({ ok: true, agentId: target.agentId, responseText: result.responseText });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Agent message send failed";
+            if (message.startsWith("Agent not found:")) {
+                return reply.status(404).send({ ok: false, error: message });
+            }
+            if (message.startsWith("Message target user mismatch for agent:")) {
+                return reply.status(400).send({ ok: false, error: message });
+            }
+            return reply.status(500).send({ ok: false, error: message });
+        }
     });
 
     app.get("/v1/engine/plugins", async (_request, reply) => {
@@ -760,4 +921,30 @@ async function closeServer(app: FastifyInstance): Promise<void> {
 
 async function reloadRuntime(runtime: Engine): Promise<void> {
     await runtime.reload();
+}
+
+async function messageTargetResolve(
+    runtime: Engine,
+    payload: z.infer<typeof agentMessageSchema>
+): Promise<{ ctx: Context; agentId: string }> {
+    if (payload.agentId) {
+        const targetContext = await runtime.agentSystem.contextForAgentId(payload.agentId);
+        if (!targetContext) {
+            throw new Error(`Agent not found: ${payload.agentId}`);
+        }
+        if (payload.userId && payload.userId !== targetContext.userId) {
+            throw new Error(`Message target user mismatch for agent: ${payload.agentId}`);
+        }
+        return {
+            ctx: contextForUser({ userId: targetContext.userId }),
+            agentId: payload.agentId
+        };
+    }
+    if (!payload.descriptor || !payload.userId) {
+        throw new Error("Invalid message target.");
+    }
+    const ctx = contextForUser({ userId: payload.userId });
+    const descriptor = payload.descriptor as AgentDescriptor;
+    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { descriptor });
+    return { ctx, agentId };
 }

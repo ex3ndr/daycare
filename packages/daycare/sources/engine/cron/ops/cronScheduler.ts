@@ -203,6 +203,33 @@ export class CronScheduler {
         };
     }
 
+    /**
+     * Executes a cron trigger immediately, outside normal schedule evaluation.
+     * Expects: trigger id exists in storage.
+     */
+    async triggerTaskNow(triggerId: string): Promise<void> {
+        const normalizedTriggerId = triggerId.trim();
+        if (!normalizedTriggerId) {
+            throw new Error("Cron trigger id is required.");
+        }
+        if (this.runningTasks.has(normalizedTriggerId)) {
+            throw new Error(`Cron trigger is already running: ${normalizedTriggerId}`);
+        }
+
+        const scheduled = this.tasks.get(normalizedTriggerId);
+        const task = scheduled?.task ?? (await this.repository.findById(normalizedTriggerId));
+        if (!task) {
+            throw new Error(`Cron trigger not found: ${normalizedTriggerId}`);
+        }
+
+        this.runningTasks.add(normalizedTriggerId);
+        try {
+            await this.executeTask(task, true);
+        } finally {
+            this.runningTasks.delete(normalizedTriggerId);
+        }
+    }
+
     private scheduleTask(task: CronTaskDbRecord): void {
         const nextRun = cronTimeGetNext(task.schedule, undefined, task.timezone);
         if (!nextRun) {
@@ -228,11 +255,11 @@ export class CronScheduler {
         this.tasks.set(task.id, { task: cronTaskClone(task), nextRun, timer: null });
     }
 
-    private async executeTask(task: CronTaskDbRecord): Promise<void> {
-        await this.config.inReadLock(async () => this.executeTaskUnlocked(task));
+    private async executeTask(task: CronTaskDbRecord, rethrowErrors = false): Promise<void> {
+        await this.config.inReadLock(async () => this.executeTaskUnlocked(task, rethrowErrors));
     }
 
-    private async executeTaskUnlocked(task: CronTaskDbRecord): Promise<void> {
+    private async executeTaskUnlocked(task: CronTaskDbRecord, rethrowErrors: boolean): Promise<void> {
         logger.debug(`event: executeTask() called taskId=${task.id}`);
 
         if (this.stopped) {
@@ -281,6 +308,9 @@ export class CronScheduler {
         } catch (error) {
             logger.warn({ taskId: task.id, error }, "error: Cron task execution failed");
             await this.reportError(error, task.id);
+            if (rethrowErrors) {
+                throw error instanceof Error ? error : new Error(String(error));
+            }
         } finally {
             task.lastRunAt = runAtMs;
             task.updatedAt = runAtMs;

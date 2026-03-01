@@ -173,6 +173,10 @@ export class Crons {
         return this.scheduler.loadTask(taskId);
     }
 
+    async triggerTask(triggerId: string): Promise<void> {
+        await this.scheduler.triggerTaskNow(triggerId);
+    }
+
     async addTrigger(
         ctx: Context,
         input: {
