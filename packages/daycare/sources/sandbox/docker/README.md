@@ -73,6 +73,8 @@ All sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/run` as writa
 - `HostConfig.Tmpfs["/var/run"] = "rw"`
 - Containers are also created with `HostConfig.ShmSize = 1073741824` (1 GiB) so headless Chrome has enough shared memory.
 - Docker `Sandbox.exec()` includes `/tmp`, `/run`, and `/var/tmp` in `sandbox-runtime` `allowWrite`.
+- Docker `Sandbox.exec()` includes `/home/.tmp` in `sandbox-runtime` `allowWrite` so the sandbox shim can persist
+  temp artifacts under the mounted home.
 - `Sandbox.exec()` intentionally excludes `/var/run` because `sandbox-runtime` already maps `/run` and fails when
   `/var/run` is explicitly listed.
 - Docker execution normalizes `TMPDIR`, `TMP`, and `TEMP` to `/tmp` so headless Chrome does not attempt to create
