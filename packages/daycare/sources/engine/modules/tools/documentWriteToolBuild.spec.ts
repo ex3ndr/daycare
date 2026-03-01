@@ -1,21 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
+import { documentReadToolBuild } from "./documentReadToolBuild.js";
 import { documentWriteToolBuild } from "./documentWriteToolBuild.js";
 
 const toolCall = { id: "tc1", name: "document_write" };
+const readToolCall = { id: "tc-read", name: "document_read" };
 
-function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>) {
+function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, readVersions: Map<string, number>) {
     return {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         storage,
-        agentSystem: { storage }
+        agentSystem: { storage },
+        agent: {
+            documentChainReadMark: (entries: Array<{ id: string; version: number }>) => {
+                for (const entry of entries) {
+                    readVersions.set(entry.id, entry.version);
+                }
+            },
+            documentVersionLastRead: (documentId: string) => readVersions.get(documentId) ?? null
+        }
     } as never;
 }
 
 describe("documentWriteToolBuild", () => {
     it("creates a document when documentId is omitted", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
@@ -25,7 +36,7 @@ describe("documentWriteToolBuild", () => {
                     description: "Memory root",
                     body: "Root body"
                 },
-                contextBuild(storage),
+                contextBuild(storage, readVersions),
                 toolCall
             );
 
@@ -44,6 +55,7 @@ describe("documentWriteToolBuild", () => {
 
     it("updates a document when documentId is provided", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
             await storage.documents.create(ctx, {
@@ -65,7 +77,7 @@ describe("documentWriteToolBuild", () => {
                     description: "Memory root updated",
                     body: "v2"
                 },
-                contextBuild(storage),
+                contextBuild(storage, readVersions),
                 toolCall
             );
 
@@ -81,6 +93,7 @@ describe("documentWriteToolBuild", () => {
 
     it("creates with parentPath", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
             await storage.documents.create(ctx, {
@@ -93,6 +106,9 @@ describe("documentWriteToolBuild", () => {
                 updatedAt: 1
             });
 
+            const readTool = documentReadToolBuild();
+            await readTool.execute({ path: "~/memory" }, contextBuild(storage, readVersions), readToolCall);
+
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
                 {
@@ -102,7 +118,7 @@ describe("documentWriteToolBuild", () => {
                     body: "Prefers concise answers.",
                     parentPath: "~/memory"
                 },
-                contextBuild(storage),
+                contextBuild(storage, readVersions),
                 toolCall
             );
 
@@ -115,6 +131,7 @@ describe("documentWriteToolBuild", () => {
 
     it("returns validation errors for invalid parent arguments", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
             await storage.documents.create(ctx, {
@@ -137,7 +154,7 @@ describe("documentWriteToolBuild", () => {
                         body: "x",
                         parentPath: "~/missing"
                     },
-                    contextBuild(storage),
+                    contextBuild(storage, readVersions),
                     toolCall
                 )
             ).rejects.toThrow("Parent path not found");
@@ -152,7 +169,7 @@ describe("documentWriteToolBuild", () => {
                         parentId: "different-parent",
                         parentPath: "~/memory"
                     },
-                    contextBuild(storage),
+                    contextBuild(storage, readVersions),
                     toolCall
                 )
             ).rejects.toThrow("different parent documents");
@@ -163,6 +180,7 @@ describe("documentWriteToolBuild", () => {
 
     it("rejects path-unsafe slugs", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const tool = documentWriteToolBuild();
             await expect(
@@ -173,10 +191,104 @@ describe("documentWriteToolBuild", () => {
                         description: "User facts",
                         body: "x"
                     },
-                    contextBuild(storage),
+                    contextBuild(storage, readVersions),
                     toolCall
                 )
             ).rejects.toThrow("cannot contain '/'");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects attach when the parent chain was not read", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "user",
+                slug: "user",
+                title: "User",
+                description: "User node",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "memory"
+            });
+
+            // Simulate a partial read marker: parent read but root missing.
+            readVersions.set("user", 1);
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        slug: "prefs",
+                        title: "Prefs",
+                        description: "Prefs",
+                        body: "",
+                        parentPath: "~/memory/user"
+                    },
+                    contextBuild(storage, readVersions),
+                    toolCall
+                )
+            ).rejects.toThrow("Parent chain must be read before attach");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects attach when a chain document changed after read", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "user",
+                slug: "user",
+                title: "User",
+                description: "User node",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "memory"
+            });
+
+            const readTool = documentReadToolBuild();
+            await readTool.execute({ path: "~/memory/user" }, contextBuild(storage, readVersions), readToolCall);
+            await storage.documents.update(ctx, "user", { body: "changed", updatedAt: 3 });
+
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        slug: "prefs",
+                        title: "Prefs",
+                        description: "Prefs",
+                        body: "",
+                        parentPath: "~/memory/user"
+                    },
+                    contextBuild(storage, readVersions),
+                    toolCall
+                )
+            ).rejects.toThrow("Parent chain changed since last read");
         } finally {
             storage.connection.close();
         }

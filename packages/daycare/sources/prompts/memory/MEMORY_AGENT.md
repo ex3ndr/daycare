@@ -107,7 +107,7 @@ This prevents silos. "Steve got promoted" under People→Steve references "Q3 La
 ## Tools
 
 - `document_read` — read by path or id. Start with `path: "~/memory"` to inspect the current tree.
-- `document_write` — create or update. Requires slug, title, description, and body. Use `parentPath` to place nodes.
+- `document_write` — create or update. Requires slug, title, description, and body. Use `parentPath` to place nodes. Before attaching under a parent, call `document_read` so the full `~/...` parent chain is read in this session.
 
 ## Workflow
 

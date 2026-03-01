@@ -3,6 +3,7 @@ import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { DocumentDbRecord, DocumentReferenceDbRecord } from "../../../storage/databaseTypes.js";
+import { documentChainResolve } from "../../../storage/documentChainResolve.js";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
 import { documentPathResolve } from "../../../storage/documentPathResolve.js";
 
@@ -87,6 +88,12 @@ export function documentReadToolBuild(): ToolDefinition {
             if (!document) {
                 const summary = `Document not found: ${targetDocumentId}`;
                 return toolResultBuild(toolCall, { found: false, summary });
+            }
+            const chain = await documentChainResolve(toolContext.ctx, document.id, storage.documents);
+            if (chain) {
+                toolContext.agent.documentChainReadMark(
+                    chain.map((entry) => ({ id: entry.id, version: entry.version }))
+                );
             }
 
             const summary = await documentSummaryBuild(toolContext.ctx, storage.documents, document);

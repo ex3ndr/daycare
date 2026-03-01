@@ -80,6 +80,7 @@ export class Agent {
     private readonly userHome: UserHome;
     readonly sandbox: Sandbox;
     private endTurnCount = 0;
+    private readonly documentLastReadVersions = new Map<string, number>();
 
     private constructor(
         ctx: Context,
@@ -203,6 +204,32 @@ export class Agent {
 
     get userId(): string {
         return this.ctx.userId;
+    }
+
+    /**
+     * Remembers the latest read version for each document in the active session.
+     * Expects: entries are from a resolved root-to-target chain.
+     */
+    documentChainReadMark(entries: Array<{ id: string; version: number }>): void {
+        for (const entry of entries) {
+            const id = entry.id.trim();
+            if (!id) {
+                continue;
+            }
+            this.documentLastReadVersions.set(id, entry.version);
+        }
+    }
+
+    /**
+     * Returns the last read version for a document in this session.
+     * Expects: documentId belongs to the same user scope as this agent.
+     */
+    documentVersionLastRead(documentId: string): number | null {
+        const id = documentId.trim();
+        if (!id) {
+            return null;
+        }
+        return this.documentLastReadVersions.get(id) ?? null;
     }
 
     start(): void {
@@ -876,6 +903,7 @@ export class Agent {
         });
         this.state.tokens = null;
         this.state.updatedAt = now;
+        this.documentLastReadVersions.clear();
         await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         this.agentSystem.eventBus.emit("agent.reset", {
             agentId: this.id,
@@ -1339,6 +1367,7 @@ export class Agent {
             resetMessage
         });
         this.state.tokens = null;
+        this.documentLastReadVersions.clear();
         await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         await agentHistoryAppend(this.agentSystem.storage, this.ctx, {
             type: "user_message",

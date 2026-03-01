@@ -5,17 +5,26 @@ import { documentReadToolBuild } from "./documentReadToolBuild.js";
 
 const toolCall = { id: "tc1", name: "document_read" };
 
-function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>) {
+function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, readVersions: Map<string, number>) {
     return {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         storage,
-        agentSystem: { storage }
+        agentSystem: { storage },
+        agent: {
+            documentChainReadMark: (entries: Array<{ id: string; version: number }>) => {
+                for (const entry of entries) {
+                    readVersions.set(entry.id, entry.version);
+                }
+            },
+            documentVersionLastRead: (documentId: string) => readVersions.get(documentId) ?? null
+        }
     } as never;
 }
 
 describe("documentReadToolBuild", () => {
     it("reads a document by id with children preview", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
             await storage.documents.create(ctx, {
@@ -39,7 +48,7 @@ describe("documentReadToolBuild", () => {
             });
 
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ documentId: "memory" }, contextBuild(storage), toolCall);
+            const result = await tool.execute({ documentId: "memory" }, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.documentId).toBe("memory");
@@ -55,6 +64,7 @@ describe("documentReadToolBuild", () => {
 
     it("reads by path and includes full tree for ~/memory", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
             await storage.documents.create(ctx, {
@@ -78,7 +88,7 @@ describe("documentReadToolBuild", () => {
             });
 
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ path: "~/memory" }, contextBuild(storage), toolCall);
+            const result = await tool.execute({ path: "~/memory" }, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.summary).toContain("## Memory Tree");
@@ -91,6 +101,7 @@ describe("documentReadToolBuild", () => {
 
     it("lists root documents when no selector is provided", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
             await storage.documents.create(ctx, {
@@ -113,7 +124,7 @@ describe("documentReadToolBuild", () => {
             });
 
             const tool = documentReadToolBuild();
-            const result = await tool.execute({}, contextBuild(storage), toolCall);
+            const result = await tool.execute({}, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.summary).toContain("# Root Documents");
@@ -126,12 +137,63 @@ describe("documentReadToolBuild", () => {
 
     it("returns not found for unknown path", async () => {
         const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
         try {
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ path: "~/missing" }, contextBuild(storage), toolCall);
+            const result = await tool.execute({ path: "~/missing" }, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(false);
             expect(result.typedResult.summary).toContain("not found");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("marks the full root-to-target chain as read", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "user",
+                slug: "user",
+                title: "User",
+                description: "User",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "memory"
+            });
+            await storage.documents.create(ctx, {
+                id: "prefs",
+                slug: "prefs",
+                title: "Prefs",
+                description: "Prefs",
+                body: "",
+                createdAt: 3,
+                updatedAt: 3,
+                parentId: "user"
+            });
+
+            const tool = documentReadToolBuild();
+            const result = await tool.execute(
+                { path: "~/memory/user/prefs" },
+                contextBuild(storage, readVersions),
+                toolCall
+            );
+            expect(result.typedResult.found).toBe(true);
+            expect(readVersions.get("memory")).toBe(1);
+            expect(readVersions.get("user")).toBe(1);
+            expect(readVersions.get("prefs")).toBe(1);
         } finally {
             storage.connection.close();
         }

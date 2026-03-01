@@ -2,7 +2,8 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import { documentChainResolve } from "../../../storage/documentChainResolve.js";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
 import { documentSlugNormalize } from "../../../storage/documentSlugNormalize.js";
 
@@ -47,7 +48,8 @@ export function documentWriteToolBuild(): ToolDefinition {
             name: "document_write",
             description:
                 "Create or update a document. Omit documentId to create. " +
-                "Provide parentId or parentPath (~/a/b) to place the document in the tree.",
+                "Provide parentId or parentPath (~/a/b) to place the document in the tree. " +
+                "When setting a parent, first call document_read for the full parent chain in this session.",
             parameters: schema
         },
         returns,
@@ -79,6 +81,9 @@ export function documentWriteToolBuild(): ToolDefinition {
             }
 
             const parentId = parentIdFromPath !== undefined ? parentIdFromPath : parentIdFromArgs;
+            if (parentId) {
+                await parentChainReadAssert(toolContext, storage.documents, parentId);
+            }
             const now = Date.now();
             const documentId = payload.documentId?.trim();
 
@@ -146,6 +151,46 @@ async function parentIdFromPathResolve(
         throw new Error(`Parent path not found: ${normalized}`);
     }
     return parentId;
+}
+
+async function parentChainReadAssert(
+    toolContext: ToolExecutionContext,
+    documents: {
+        findById: (
+            ctx: ToolExecutionContext["ctx"],
+            id: string
+        ) => Promise<{
+            id: string;
+            slug: string;
+            version?: number | null;
+        } | null>;
+        findParentId: (ctx: ToolExecutionContext["ctx"], id: string) => Promise<string | null>;
+    },
+    parentId: string
+): Promise<void> {
+    const chain = await documentChainResolve(toolContext.ctx, parentId, documents);
+    if (!chain || chain.length === 0) {
+        throw new Error(`Parent document not found: ${parentId}`);
+    }
+    for (let index = 0; index < chain.length; index++) {
+        const entry = chain[index];
+        if (!entry) {
+            continue;
+        }
+        const path = `~/${chain
+            .slice(0, index + 1)
+            .map((item) => item.slug)
+            .join("/")}`;
+        const readVersion = toolContext.agent.documentVersionLastRead(entry.id);
+        if (readVersion == null) {
+            throw new Error(`Parent chain must be read before attach. Missing read: ${path}`);
+        }
+        if (readVersion !== entry.version) {
+            throw new Error(
+                `Parent chain changed since last read: ${path} was version ${readVersion}, current is version ${entry.version}.`
+            );
+        }
+    }
 }
 
 function toolResultBuild(
