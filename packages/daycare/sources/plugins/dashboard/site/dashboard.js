@@ -9,8 +9,6 @@ const elements = {
   agentsBody: document.getElementById("agents-body"),
   cronCount: document.getElementById("cron-count"),
   cronList: document.getElementById("cron-list"),
-  heartbeatCount: document.getElementById("heartbeat-count"),
-  heartbeatList: document.getElementById("heartbeat-list"),
   processesCount: document.getElementById("processes-count"),
   processList: document.getElementById("process-list"),
   statusMessage: document.getElementById("status-message"),
@@ -63,9 +61,6 @@ function escapeHtml(value) {
 function formatAgentType(descriptor) {
   if (!descriptor || typeof descriptor !== "object") {
     return "unknown";
-  }
-  if (descriptor.type === "system" && descriptor.tag === "heartbeat") {
-    return "heartbeat";
   }
   return descriptor.type ?? "unknown";
 }
@@ -154,11 +149,10 @@ async function refreshDashboard() {
   setStatus("Syncing engine state...");
 
   try {
-    const [statusPayload, agentsPayload, cronPayload, heartbeatPayload, processesPayload] = await Promise.all([
+    const [statusPayload, agentsPayload, cronPayload, processesPayload] = await Promise.all([
       fetchJson("/api/v1/engine/status"),
       fetchJson("/api/v1/engine/agents"),
       fetchJson("/api/v1/engine/cron/tasks"),
-      fetchJson("/api/v1/engine/heartbeat/tasks"),
       fetchJson("/api/v1/engine/processes")
     ]);
 
@@ -170,13 +164,6 @@ async function refreshDashboard() {
       cronPayload.tasks ?? [],
       "No cron tasks.",
       "name"
-    );
-    renderTaskList(
-      elements.heartbeatList,
-      elements.heartbeatCount,
-      heartbeatPayload.tasks ?? [],
-      "No heartbeat tasks.",
-      "title"
     );
     renderProcesses(processesPayload.processes ?? []);
 
@@ -220,8 +207,7 @@ function connectEventStream() {
       type === "agent.dead" ||
       type === "plugin.loaded" ||
       type === "plugin.unloaded" ||
-      type === "cron.updated" ||
-      type === "heartbeat.updated"
+      type === "cron.updated"
     ) {
       void refreshDashboard();
     }
