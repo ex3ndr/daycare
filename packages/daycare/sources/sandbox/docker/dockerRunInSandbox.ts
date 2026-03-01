@@ -121,7 +121,7 @@ function runtimeConfigPathRewrite(
             "/tmp",
             "/run",
             "/var/tmp",
-            "/home/.tmp"
+            "/dev/shm"
         ])
     );
 
