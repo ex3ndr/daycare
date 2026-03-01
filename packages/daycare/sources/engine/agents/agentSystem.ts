@@ -29,6 +29,7 @@ import type { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { Secrets } from "../secrets/secrets.js";
 import type { Signals } from "../signals/signals.js";
+import type { TaskExecutions } from "../tasks/taskExecutions.js";
 import { UserHome } from "../users/userHome.js";
 import type { Webhooks } from "../webhook/webhooks.js";
 import { Agent } from "./agent.js";
@@ -105,6 +106,7 @@ export class AgentSystem {
     private _crons: Crons | null = null;
     private _webhooks: Webhooks | null = null;
     private _signals: Signals | null = null;
+    private _taskExecutions: TaskExecutions | null = null;
     private entries = new Map<string, AgentEntry>();
     private keyMap = new Map<string, string>();
     private stage: "idle" | "loaded" | "running" = "idle";
@@ -173,6 +175,17 @@ export class AgentSystem {
 
     setSignals(signals: Signals): void {
         this._signals = signals;
+    }
+
+    get taskExecutions(): TaskExecutions {
+        if (!this._taskExecutions) {
+            throw new Error("TaskExecutions not set");
+        }
+        return this._taskExecutions;
+    }
+
+    setTaskExecutions(taskExecutions: TaskExecutions): void {
+        this._taskExecutions = taskExecutions;
     }
 
     async load(): Promise<void> {

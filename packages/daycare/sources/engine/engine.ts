@@ -104,6 +104,7 @@ import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { Subusers } from "./subusers/subusers.js";
+import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
@@ -131,6 +132,7 @@ export class Engine {
     readonly appServer: AppServer;
     readonly signals: Signals;
     readonly delayedSignals: DelayedSignals;
+    readonly taskExecutions: TaskExecutions;
     readonly channels: Channels;
     readonly processes: Processes;
     readonly inferenceRouter: InferenceRouter;
@@ -365,6 +367,10 @@ export class Engine {
         });
 
         this.memoryWorker.setPostFn((ctx, target, item) => this.agentSystem.post(ctx, target, item));
+        this.taskExecutions = new TaskExecutions({
+            agentSystem: this.agentSystem
+        });
+        this.agentSystem.setTaskExecutions(this.taskExecutions);
 
         this.crons = new Crons({
             config: this.config,
@@ -548,6 +554,7 @@ export class Engine {
     getStatus() {
         const plugins = this.pluginManager.listLoadedDetails();
         const pluginByInstance = new Map(plugins.map((plugin) => [plugin.id, plugin]));
+        const taskExecutionSummary = this.taskExecutions.summary();
 
         return {
             plugins,
@@ -577,6 +584,10 @@ export class Engine {
                     label: provider.label
                 };
             }),
+            taskExecutions: {
+                summary: taskExecutionSummary,
+                tasks: this.taskExecutions.listStats()
+            },
             tools: []
         };
     }

@@ -8,11 +8,11 @@ describe("Webhooks", () => {
     it("adds, lists, and deletes triggers with ctx scoping", async () => {
         const storage = await storageOpenTest();
         try {
-            const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
+            const dispatch = vi.fn();
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
-                    postAndAwait
+                    taskExecutions: { dispatch }
                 } as unknown as WebhooksOptions["agentSystem"]
             });
 
@@ -39,7 +39,7 @@ describe("Webhooks", () => {
             await expect(webhooks.deleteTrigger(contextBuild("user-b"), "hook-a")).resolves.toBe(false);
             await expect(webhooks.deleteTrigger(contextBuild("user-a"), "hook-a")).resolves.toBe(true);
             await expect(storage.tasks.findById(contextBuild("user-a"), "task-a")).resolves.toBeNull();
-            expect(postAndAwait).not.toHaveBeenCalled();
+            expect(dispatch).not.toHaveBeenCalled();
             const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["webhook:added", "webhook:deleted"])
@@ -55,14 +55,14 @@ describe("Webhooks", () => {
         }
     });
 
-    it("executes task code via agentSystem when webhook is triggered", async () => {
+    it("routes webhook triggers through shared taskExecutions facade", async () => {
         const storage = await storageOpenTest();
         try {
-            const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
+            const dispatch = vi.fn();
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
-                    postAndAwait
+                    taskExecutions: { dispatch }
                 } as unknown as WebhooksOptions["agentSystem"]
             });
 
@@ -84,22 +84,22 @@ describe("Webhooks", () => {
 
             await webhooks.trigger("hook-exec", { event: "push" });
 
-            expect(postAndAwait).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "user-1" }),
-                { agentId: "agent-target" },
-                expect.objectContaining({
-                    type: "system_message",
-                    origin: "webhook",
-                    context: {
-                        enrichments: [
-                            {
-                                key: "webhook_payload",
-                                value: '{"event":"push"}'
-                            }
-                        ]
-                    }
-                })
-            );
+            expect(dispatch).toHaveBeenCalledWith({
+                userId: "user-1",
+                source: "webhook",
+                taskId: "task-exec",
+                taskVersion: 1,
+                target: { agentId: "agent-target" },
+                text: '[webhook]\ntriggerId: hook-exec\ntaskId: task-exec\ntaskTitle: Task Exec\npayload: {"event":"push"}',
+                context: {
+                    enrichments: [
+                        {
+                            key: "webhook_payload",
+                            value: '{"event":"push"}'
+                        }
+                    ]
+                }
+            });
             const updatedTrigger = await storage.webhookTasks.findById("hook-exec");
             expect(updatedTrigger?.lastRunAt).toBeTypeOf("number");
         } finally {
@@ -110,11 +110,11 @@ describe("Webhooks", () => {
     it("uses task descriptor target when webhook trigger has no agentId", async () => {
         const storage = await storageOpenTest();
         try {
-            const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
+            const dispatch = vi.fn();
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
-                    postAndAwait
+                    taskExecutions: { dispatch }
                 } as unknown as WebhooksOptions["agentSystem"]
             });
 
@@ -135,54 +135,12 @@ describe("Webhooks", () => {
 
             await webhooks.trigger("hook-default-target");
 
-            expect(postAndAwait).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "user-1" }),
-                { descriptor: { type: "task", id: "task-default-target" } },
+            expect(dispatch).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    type: "system_message",
-                    origin: "webhook"
+                    target: { descriptor: { type: "task", id: "task-default-target" } },
+                    source: "webhook"
                 })
             );
-        } finally {
-            storage.connection.close();
-        }
-    });
-
-    it("throws when executable webhook execution reports responseError", async () => {
-        const storage = await storageOpenTest();
-        try {
-            const postAndAwait = vi.fn(async () => ({
-                type: "system_message" as const,
-                responseText: "ignored",
-                responseError: true,
-                executionErrorText: "boom"
-            }));
-            const webhooks = new Webhooks({
-                storage,
-                agentSystem: {
-                    postAndAwait
-                } as unknown as WebhooksOptions["agentSystem"]
-            });
-
-            await storage.tasks.create({
-                id: "task-failed-webhook",
-                userId: "user-1",
-                title: "Task failed webhook",
-                description: null,
-                code: "print('run')",
-                parameters: null,
-                createdAt: 1,
-                updatedAt: 1
-            });
-            await webhooks.addTrigger(contextBuild("user-1"), {
-                taskId: "task-failed-webhook",
-                id: "hook-failed-webhook"
-            });
-
-            await expect(webhooks.trigger("hook-failed-webhook")).rejects.toThrow("boom");
-
-            const updatedTrigger = await storage.webhookTasks.findById("hook-failed-webhook");
-            expect(updatedTrigger?.lastRunAt).toBeNull();
         } finally {
             storage.connection.close();
         }
@@ -194,7 +152,7 @@ describe("Webhooks", () => {
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
-                    postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
+                    taskExecutions: { dispatch: vi.fn() }
                 } as unknown as WebhooksOptions["agentSystem"]
             });
             await expect(webhooks.trigger("missing")).rejects.toThrow("Webhook trigger not found: missing");

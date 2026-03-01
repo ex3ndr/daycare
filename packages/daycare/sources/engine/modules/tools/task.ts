@@ -5,7 +5,6 @@ import { appJwtSecretResolve } from "../../../api/app-server/appJwtSecretResolve
 import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_TASKS, topographyObservationEmit } from "../../observations/topographyEvents.js";
@@ -457,7 +456,7 @@ export function buildTaskRunTool(): ToolDefinition {
     return {
         tool: {
             name: "task_run",
-            description: "Execute a task's Python code immediately via the system task agent or a specific agentId.",
+            description: "Execute a task's Python code immediately via the task agent or a specific agentId.",
             parameters: taskRunSchema
         },
         returns: taskReturns,
@@ -466,7 +465,7 @@ export function buildTaskRunTool(): ToolDefinition {
             const task = await taskResolveForUser(toolContext, payload.taskId);
             const target = payload.agentId
                 ? { agentId: payload.agentId }
-                : { descriptor: { type: "system" as const, tag: "task" } };
+                : { descriptor: { type: "task" as const, id: task.id } };
 
             // Validate parameters and pass as native inputs
             let inputValues: Record<string, unknown> | undefined;
@@ -483,48 +482,59 @@ export function buildTaskRunTool(): ToolDefinition {
             }
 
             const text = ["[task]", `taskId: ${task.id}`, `taskTitle: ${task.title}`].join("\n");
-            const result = await toolContext.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
-                type: "system_message",
-                text,
-                code: task.code,
-                inputs: inputValues ?? undefined,
-                inputSchemas: task.parameters?.length ? task.parameters : undefined,
-                origin: "task",
-                sync: payload.sync === true,
-                context: toolContext.messageContext
-            });
-
-            if (payload.sync === true && result.type === "system_message") {
-                const responseText = result.responseText ?? "";
-                const success = !result.responseError;
-                const summary = success
-                    ? `Task ${task.id} completed successfully.`
-                    : `Task ${task.id} execution failed.`;
+            if (payload.sync !== true) {
+                toolContext.agentSystem.taskExecutions.dispatch({
+                    userId: task.userId,
+                    source: "manual",
+                    taskId: task.id,
+                    taskVersion: task.version ?? null,
+                    origin: "task",
+                    target,
+                    text,
+                    parameters: inputValues ?? undefined,
+                    context: toolContext.messageContext
+                });
+                const summary = `Task ${task.id} queued.`;
                 const typedResult: TaskResult = {
                     summary,
-                    taskId: task.id,
-                    success,
-                    output: responseText
+                    taskId: task.id
                 };
                 return {
                     toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
                         taskId: task.id,
-                        success,
-                        output: responseText
+                        target
                     }),
                     typedResult
                 };
             }
 
-            const summary = `Task ${task.id} executed.`;
+            const result = await toolContext.agentSystem.taskExecutions.dispatchAndAwait({
+                userId: task.userId,
+                source: "manual",
+                taskId: task.id,
+                taskVersion: task.version ?? null,
+                origin: "task",
+                target,
+                text,
+                parameters: inputValues ?? undefined,
+                sync: true,
+                context: toolContext.messageContext
+            });
+
+            const responseText = result.responseText ?? "";
+            const success = !result.responseError;
+            const summary = success ? `Task ${task.id} completed successfully.` : `Task ${task.id} execution failed.`;
             const typedResult: TaskResult = {
                 summary,
-                taskId: task.id
+                taskId: task.id,
+                success,
+                output: responseText
             };
             return {
                 toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
                     taskId: task.id,
-                    target
+                    success,
+                    output: responseText
                 }),
                 typedResult
             };
@@ -686,6 +696,7 @@ async function taskResolveForUser(
 ): Promise<{
     id: string;
     userId: string;
+    version?: number;
     title: string;
     description: string | null;
     code: string;

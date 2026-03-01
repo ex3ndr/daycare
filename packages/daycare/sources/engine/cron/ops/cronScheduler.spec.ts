@@ -81,7 +81,7 @@ describe("CronScheduler", () => {
                 triggerId: "exec-test",
                 taskId: created.taskId,
                 taskName: "Exec Test",
-                code: "Execute me"
+                taskVersion: 1
             }),
             expect.any(Object)
         );
@@ -114,7 +114,7 @@ describe("CronScheduler", () => {
                 triggerId: "manual-exec",
                 taskId: created.taskId,
                 taskName: "Manual Exec",
-                code: "Run now"
+                taskVersion: 1
             }),
             expect.any(Object)
         );

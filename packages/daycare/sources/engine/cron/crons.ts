@@ -2,7 +2,6 @@ import type { Context } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
-import { contextForUser } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_CRONS, topographyObservationEmit } from "../observations/topographyEvents.js";
@@ -45,26 +44,17 @@ export class Crons {
                     `event: CronScheduler.onTask triggered triggerId=${task.triggerId} taskId=${task.taskId} agentId=${task.agentId ?? `task:${task.taskId}`}`
                 );
 
-                const built = cronTaskPromptBuild(task);
-                const result = await this.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
-                    type: "system_message",
-                    text: built.text,
-                    code: built.code,
-                    inputs: task.inputs ?? undefined,
-                    inputSchemas: task.inputSchema ?? undefined,
-                    origin: "cron",
+                const text = cronTaskPromptBuild(task);
+                this.agentSystem.taskExecutions.dispatch({
+                    userId: task.userId,
+                    source: "cron",
+                    taskId: task.taskId,
+                    taskVersion: task.taskVersion ?? null,
+                    target,
+                    text,
+                    parameters: task.inputs ?? undefined,
                     context: messageContext
                 });
-                if (result.type !== "system_message") {
-                    throw new Error(`Unexpected cron execution result type: ${result.type}`);
-                }
-                if (result.responseError) {
-                    const output = result.executionErrorText?.trim() ?? result.responseText?.trim();
-                    if (output && output.length > 0) {
-                        throw new Error(output);
-                    }
-                    throw new Error(`Cron trigger failed: ${task.triggerId}`);
-                }
             },
             onError: async (error, triggerId) => {
                 logger.warn({ triggerId, error }, "error: Cron task failed");
@@ -265,16 +255,7 @@ export class Crons {
     }
 }
 
-function cronTaskPromptBuild(task: {
-    code: string;
-    triggerId: string;
-    taskId: string;
-    taskName: string;
-    timezone: string;
-}): {
-    text: string;
-    code: string;
-} {
+function cronTaskPromptBuild(task: { triggerId: string; taskId: string; taskName: string; timezone: string }): string {
     const text = [
         "[cron]",
         `triggerId: ${task.triggerId}`,
@@ -282,5 +263,5 @@ function cronTaskPromptBuild(task: {
         `taskName: ${task.taskName}`,
         `timezone: ${task.timezone}`
     ].join("\n");
-    return { text, code: task.code };
+    return text;
 }

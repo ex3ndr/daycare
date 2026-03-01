@@ -158,26 +158,18 @@ export class Webhooks {
             : { descriptor: { type: "task" as const, id: trigger.taskId } };
         const text = webhookPromptBuild(trigger, task.title, data);
         const messageContext = webhookMessageContextBuild(data);
-        const result = await this.agentSystem.postAndAwait(ctx, target, {
-            type: "system_message",
+        this.agentSystem.taskExecutions.dispatch({
+            userId: trigger.userId,
+            source: "webhook",
+            taskId: trigger.taskId,
+            taskVersion: task.version ?? null,
+            target,
             text,
-            code: task.code,
-            origin: "webhook",
             ...(messageContext ? { context: messageContext } : {})
         });
-        if (result.type !== "system_message") {
-            throw new Error(`Unexpected webhook execution result type: ${result.type}`);
-        }
-        if (result.responseError) {
-            const output = result.executionErrorText?.trim() ?? result.responseText?.trim();
-            if (output && output.length > 0) {
-                throw new Error(output);
-            }
-            throw new Error(`Webhook trigger failed: ${normalizedId}`);
-        }
         await this.storage.webhookTasks.recordRun(trigger.id, Date.now());
 
-        logger.info({ triggerId: trigger.id, taskId: task.id }, "event: Webhook trigger executed");
+        logger.info({ triggerId: trigger.id, taskId: task.id }, "event: Webhook trigger queued");
     }
 
     private async taskDeleteIfOrphan(ctx: Context, taskId: string): Promise<void> {

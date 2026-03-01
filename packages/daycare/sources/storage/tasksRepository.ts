@@ -79,6 +79,31 @@ export class TasksRepository {
         });
     }
 
+    /**
+     * Finds a specific historical or active task version for a user.
+     * Returns null when the requested version does not exist.
+     */
+    async findByVersion(ctx: Context, id: string, version: number): Promise<TaskDbRecord | null> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            return null;
+        }
+        const normalizedVersion = Math.trunc(version);
+        if (!Number.isFinite(normalizedVersion) || normalizedVersion <= 0) {
+            return null;
+        }
+        const loaded = await this.taskLoadByVersion(userId, id, normalizedVersion);
+        if (!loaded) {
+            return null;
+        }
+        if (loaded.validTo == null) {
+            await this.cacheLock.inLock(() => {
+                this.taskCacheSet(loaded);
+            });
+        }
+        return taskClone(loaded);
+    }
+
     async findMany(ctx: Context): Promise<TaskDbRecord[]> {
         const rows = await this.db
             .select()
@@ -317,6 +342,19 @@ export class TasksRepository {
             .from(tasksTable)
             .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id)))
             .orderBy(desc(tasksTable.version))
+            .limit(1);
+        const row = rows[0];
+        if (!row) {
+            return null;
+        }
+        return taskParse(row);
+    }
+
+    private async taskLoadByVersion(userId: string, id: string, version: number): Promise<TaskDbRecord | null> {
+        const rows = await this.db
+            .select()
+            .from(tasksTable)
+            .where(and(eq(tasksTable.userId, userId), eq(tasksTable.id, id), eq(tasksTable.version, version)))
             .limit(1);
         const row = rows[0];
         if (!row) {

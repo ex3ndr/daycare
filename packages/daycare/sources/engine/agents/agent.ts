@@ -770,7 +770,22 @@ export class Agent {
         let systemText = item.text;
         let executionHasError = false;
         let executionErrorText: string | null = null;
+        let executableCode: string | null = null;
+        let inputSchema = item.inputSchemas;
         const rawCode = item.code as unknown;
+        const taskReference = item.task;
+        if (taskReference !== undefined && rawCode !== undefined) {
+            const errorText = "Executable system_message must include either code or task reference, not both.";
+            logger.warn(
+                { agentId: this.id, origin: item.origin ?? "system", errorText },
+                "error: Invalid code payload"
+            );
+            return {
+                responseText: item.sync ? `<exec_error>${errorText}</exec_error>` : null,
+                responseError: true,
+                executionErrorText: errorText
+            };
+        }
         if (rawCode !== undefined && typeof rawCode !== "string") {
             const errorText = Array.isArray(rawCode)
                 ? `Executable system_message requires exactly one code block, got ${rawCode.length}.`
@@ -785,15 +800,62 @@ export class Agent {
                 executionErrorText: errorText
             };
         }
-
         if (typeof rawCode === "string") {
+            executableCode = rawCode;
+        } else if (taskReference) {
+            const taskId = taskReference.id.trim();
+            if (!taskId) {
+                const errorText = "Executable system_message task.id is required.";
+                logger.warn(
+                    { agentId: this.id, origin: item.origin ?? "system", errorText },
+                    "error: Invalid task reference payload"
+                );
+                return {
+                    responseText: item.sync ? `<exec_error>${errorText}</exec_error>` : null,
+                    responseError: true,
+                    executionErrorText: errorText
+                };
+            }
+            const requestedVersion = taskReference.version;
+            const taskRecord =
+                typeof requestedVersion === "number" && Number.isFinite(requestedVersion)
+                    ? await this.agentSystem.storage.tasks.findByVersion(this.ctx, taskId, requestedVersion)
+                    : await this.agentSystem.storage.tasks.findById(this.ctx, taskId);
+            if (!taskRecord) {
+                const errorText =
+                    typeof requestedVersion === "number" && Number.isFinite(requestedVersion)
+                        ? `Task not found: ${taskId}@${Math.trunc(requestedVersion)}`
+                        : `Task not found: ${taskId}`;
+                logger.warn(
+                    {
+                        agentId: this.id,
+                        origin: item.origin ?? "system",
+                        taskId,
+                        taskVersion: requestedVersion,
+                        errorText
+                    },
+                    "error: Task reference lookup failed"
+                );
+                return {
+                    responseText: item.sync ? `<exec_error>${errorText}</exec_error>` : null,
+                    responseError: true,
+                    executionErrorText: errorText
+                };
+            }
+            executableCode = taskRecord.code;
+            if ((!inputSchema || inputSchema.length === 0) && taskRecord.parameters?.length) {
+                inputSchema = taskRecord.parameters;
+            }
+        }
+
+        if (typeof executableCode === "string") {
             const startedAt = Date.now();
             const run = await this.executableBlocksRun({
-                code: rawCode,
+                code: executableCode,
                 source: item.origin ?? "system",
                 messageContext: item.context ?? {},
                 inputValues: item.inputs,
-                inputSchema: item.inputSchemas
+                inputSchema
             });
             if (run.skipTurn) {
                 logger.info(

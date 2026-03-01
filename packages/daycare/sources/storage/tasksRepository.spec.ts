@@ -127,4 +127,40 @@ describe("TasksRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("loads specific historical task versions", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new TasksRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await repo.create({
+                id: "task-history",
+                userId: "user-1",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
+                title: "Task v1",
+                description: null,
+                code: "print('v1')",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.update(ctx, "task-history", {
+                title: "Task v2",
+                code: "print('v2')",
+                updatedAt: 2
+            });
+
+            const version1 = await repo.findByVersion(ctx, "task-history", 1);
+            const version2 = await repo.findByVersion(ctx, "task-history", 2);
+            const version3 = await repo.findByVersion(ctx, "task-history", 3);
+
+            expect(version1?.code).toBe("print('v1')");
+            expect(version2?.code).toBe("print('v2')");
+            expect(version3).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

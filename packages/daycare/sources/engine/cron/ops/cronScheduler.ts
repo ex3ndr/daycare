@@ -290,8 +290,8 @@ export class CronScheduler {
             const taskContext: CronTaskContext = {
                 triggerId: task.id,
                 taskId: runtimeTask.taskId,
+                taskVersion: runtimeTask.taskVersion,
                 taskName: runtimeTask.taskTitle,
-                code: runtimeTask.code,
                 timezone: task.timezone,
                 agentId: task.agentId,
                 userId: task.userId,
@@ -331,7 +331,7 @@ export class CronScheduler {
 
     private async taskRuntimeResolve(
         task: CronTaskDbRecord
-    ): Promise<{ taskId: string; taskTitle: string; code: string; parameterSchema: TaskParameter[] | null }> {
+    ): Promise<{ taskId: string; taskVersion: number; taskTitle: string; parameterSchema: TaskParameter[] | null }> {
         const linkedTask = await this.tasksRepository.findById(
             { userId: task.userId, agentId: task.agentId ?? "system:cron" },
             task.taskId
@@ -341,8 +341,8 @@ export class CronScheduler {
         }
         return {
             taskId: linkedTask.id,
+            taskVersion: linkedTask.version ?? 1,
             taskTitle: linkedTask.title,
-            code: linkedTask.code,
             parameterSchema: linkedTask.parameters
         };
     }

@@ -23,6 +23,7 @@ describe("inboxItemSerialize", () => {
                 type: "system_message",
                 text: "sync now",
                 origin: "cron",
+                taskId: "task-1",
                 silent: true,
                 code: "print('hello')",
                 context: { messageId: "m-2" }

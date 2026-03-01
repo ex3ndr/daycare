@@ -22,8 +22,8 @@ export type CronTaskDefinition = {
 export type CronTaskContext = {
     triggerId: string;
     taskId: string;
+    taskVersion?: number;
     taskName: string;
-    code: string;
     timezone: string;
     agentId: string | null;
     userId: string;

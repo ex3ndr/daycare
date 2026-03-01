@@ -12,6 +12,7 @@ import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
 import { contextForAgent } from "../../agents/context.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
+import { TaskExecutions } from "../../tasks/taskExecutions.js";
 import { Webhooks } from "../../webhook/webhooks.js";
 import {
     buildTaskCreateTool,
@@ -81,12 +82,12 @@ describe("task tools", () => {
 
         const runTool = buildTaskRunTool();
         await runTool.execute({ taskId }, runtime.context, toolCall("task_run"));
-        expect(runtime.postAndAwait).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "user-1" }),
-            { descriptor: { type: "system", tag: "task" } },
+        expect(runtime.dispatch).toHaveBeenCalledWith(
             expect.objectContaining({
-                type: "system_message",
-                origin: "task"
+                userId: "user-1",
+                source: "manual",
+                taskId,
+                target: { descriptor: { type: "task", id: taskId } }
             })
         );
 
@@ -493,11 +494,11 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
     webhooks: Webhooks;
     webhookSecret: string;
     context: ToolExecutionContext;
-    postAndAwait: (...args: unknown[]) => Promise<unknown>;
+    dispatch: ReturnType<typeof vi.fn>;
 }> {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-task-tools-"));
     const storage = await storageOpenTest();
-    const postAndAwait = vi.fn(async () => ({ status: "completed" }));
+    const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
     const eventBus = { emit: vi.fn() };
     const config = new ConfigModule(
         configResolve(
@@ -529,6 +530,9 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         storage,
         postAndAwait
     } as unknown as ToolExecutionContext["agentSystem"] & { crons: Crons };
+    const taskExecutions = new TaskExecutions({
+        agentSystem: agentSystem as unknown as ConstructorParameters<typeof TaskExecutions>[0]["agentSystem"]
+    });
 
     const toolResolver = {
         listTools: () => [],
@@ -549,7 +553,10 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         agentSystem: agentSystem as never
     });
 
-    Object.assign(agentSystem, { crons, webhooks, toolResolver });
+    const dispatch = vi.fn();
+    vi.spyOn(taskExecutions, "dispatch").mockImplementation(dispatch);
+
+    Object.assign(agentSystem, { crons, webhooks, toolResolver, taskExecutions });
 
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -566,5 +573,5 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         toolResolver: toolResolver as ToolExecutionContext["toolResolver"]
     };
 
-    return { dir, storage, crons, webhooks, webhookSecret, context, postAndAwait };
+    return { dir, storage, crons, webhooks, webhookSecret, context, dispatch };
 }
