@@ -84,20 +84,10 @@ describe("agentPromptResolve", () => {
         });
     });
 
-    it("resolves registered system prompt metadata", async () => {
+    it("returns empty prompt for system tags without bundled prompts", async () => {
         const resolved = await agentPromptResolve({
             type: "system",
-            tag: "heartbeat"
-        });
-
-        expect(resolved.agentPrompt.length).toBeGreaterThan(0);
-        expect(resolved.replaceSystemPrompt).toBe(false);
-    });
-
-    it("returns empty prompt for unknown system tags", async () => {
-        const resolved = await agentPromptResolve({
-            type: "system",
-            tag: "unknown"
+            tag: "status"
         });
 
         expect(resolved).toEqual({

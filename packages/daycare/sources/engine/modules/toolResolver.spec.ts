@@ -609,7 +609,6 @@ function toolExecutionContextCreate(overrides: Partial<ToolExecutionContext> = {
         source: "test",
         messageContext: {},
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"],
         ...overrides
     };
 }

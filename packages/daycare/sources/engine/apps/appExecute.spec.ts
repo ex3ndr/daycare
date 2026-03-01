@@ -103,8 +103,7 @@ describe("appExecute", () => {
                 userHomeForUserId: () => ({ apps: path.join(rootDir, "apps") }),
                 inferenceRouter: {} as unknown,
                 toolResolver
-            } as unknown as ToolExecutionContext["agentSystem"],
-            heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+            } as unknown as ToolExecutionContext["agentSystem"]
         } as ToolExecutionContext;
 
         const app: AppDescriptor = {
@@ -257,8 +256,7 @@ describe("appExecute", () => {
                 userHomeForUserId: () => ({ apps: path.join(rootDir, "apps") }),
                 inferenceRouter: {} as unknown,
                 toolResolver
-            } as unknown as ToolExecutionContext["agentSystem"],
-            heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+            } as unknown as ToolExecutionContext["agentSystem"]
         } as ToolExecutionContext;
 
         const app: AppDescriptor = {

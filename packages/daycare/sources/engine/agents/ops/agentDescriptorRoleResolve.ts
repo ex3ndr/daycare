@@ -21,9 +21,6 @@ export function agentDescriptorRoleResolve(descriptor: AgentDescriptor): ModelRo
         case "task":
             return "task";
         case "system":
-            if (descriptor.tag === "heartbeat") {
-                return "heartbeat";
-            }
             return null;
         default:
             return null;

@@ -118,8 +118,7 @@ function contextBuild(workspaceDir: string): ToolExecutionContext {
             toolResolver: new ToolResolver(),
             config: { current: { usersDir } },
             userHomeForUserId: () => ({ apps: path.join(usersDir, "user-1", "apps") })
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }
 

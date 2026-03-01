@@ -20,7 +20,7 @@ Append-only event log scoped per user and arbitrary entity IDs. Serves both agen
 
 `<category>:<identifier>`:
 - `plugin:<pluginId>` — plugin events
-- `system:<subsystem>` — system events (cron, heartbeat)
+- `system:<subsystem>` — system events (cron, webhook)
 - `agent:<agentId>` — agent events
 - `memory:<agentId>` — memory system events
 

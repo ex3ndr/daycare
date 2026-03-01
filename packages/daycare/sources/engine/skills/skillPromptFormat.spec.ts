@@ -9,7 +9,7 @@ describe("skillPromptFormat", () => {
             {
                 id: "core:deploy",
                 name: "deploy",
-                description: "Use <cron> & heartbeat",
+                description: "Use <cron> & webhook",
                 sourcePath: "/tmp/deploy/SKILL.md",
                 source: "core",
                 sandbox: true
@@ -25,7 +25,7 @@ describe("skillPromptFormat", () => {
             {
                 id: "core:deploy",
                 name: "deploy",
-                description: "Use <cron> & heartbeat",
+                description: "Use <cron> & webhook",
                 sourcePath: "/tmp/deploy/SKILL.md",
                 source: "core"
             }
@@ -36,7 +36,7 @@ describe("skillPromptFormat", () => {
         expect(prompt).toContain("<available_skills>");
         expect(prompt).toContain("</available_skills>");
         expect(prompt).toContain("<name>deploy</name>");
-        expect(prompt).toContain("Use &lt;cron&gt; &amp; heartbeat");
+        expect(prompt).toContain("Use &lt;cron&gt; &amp; webhook");
         expect(prompt).toContain("<source>plugin:alpha</source>");
         expect(prompt).toContain("<sandbox>true</sandbox>");
         expect(prompt).not.toContain("/tmp/deploy/SKILL.md");

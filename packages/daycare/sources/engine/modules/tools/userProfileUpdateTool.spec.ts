@@ -130,7 +130,6 @@ function contextBuild(userId: string, storage: Storage): ToolExecutionContext {
         messageContext: {},
         agentSystem: {
             storage
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

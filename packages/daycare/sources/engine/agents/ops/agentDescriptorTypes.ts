@@ -44,4 +44,4 @@ export type AgentDescriptor =
           systemPrompt: string;
       };
 
-export type AgentFetchStrategy = "most-recent-foreground" | "heartbeat";
+export type AgentFetchStrategy = "most-recent-foreground";

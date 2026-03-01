@@ -56,13 +56,8 @@ describe("agentDescriptorRoleResolve", () => {
         expect(agentDescriptorRoleResolve(d)).toBe("subagent");
     });
 
-    it("maps system heartbeat descriptor to 'heartbeat'", () => {
-        const d: AgentDescriptor = { type: "system", tag: "heartbeat" };
-        expect(agentDescriptorRoleResolve(d)).toBe("heartbeat");
-    });
-
-    it("returns null for non-heartbeat system descriptor", () => {
-        const d: AgentDescriptor = { type: "system", tag: "other" };
+    it("returns null for system descriptor", () => {
+        const d: AgentDescriptor = { type: "system", tag: "status" };
         expect(agentDescriptorRoleResolve(d)).toBeNull();
     });
 

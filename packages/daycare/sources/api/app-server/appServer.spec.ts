@@ -403,7 +403,6 @@ describe("AppServer authenticated routes", () => {
                                 lastExecutedAt: 100
                             }
                         ],
-                        heartbeat: [],
                         webhook: []
                     }
                 }

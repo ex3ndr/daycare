@@ -186,8 +186,7 @@ function createContext(permissions: SessionPermissions): ToolExecutionContext {
         ctx: { agentId: "agent-1", userId: "user-1" } as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
     };
 }
 

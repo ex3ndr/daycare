@@ -107,7 +107,7 @@ const taskRunSchema = Type.Object(
 const taskTriggerAddSchema = Type.Object(
     {
         taskId: Type.String({ minLength: 1 }),
-        type: Type.Union([Type.Literal("cron"), Type.Literal("heartbeat"), Type.Literal("webhook")]),
+        type: Type.Union([Type.Literal("cron"), Type.Literal("webhook")]),
         schedule: Type.Optional(Type.String({ minLength: 1 })),
         timezone: Type.Optional(Type.String({ minLength: 1 })),
         agentId: Type.Optional(
@@ -128,7 +128,7 @@ const taskTriggerAddSchema = Type.Object(
 const taskTriggerRemoveSchema = Type.Object(
     {
         taskId: Type.String({ minLength: 1 }),
-        type: Type.Union([Type.Literal("cron"), Type.Literal("heartbeat"), Type.Literal("webhook")])
+        type: Type.Union([Type.Literal("cron"), Type.Literal("webhook")])
     },
     { additionalProperties: false }
 );
@@ -146,7 +146,6 @@ const taskResultSchema = Type.Object(
         summary: Type.String(),
         taskId: Type.String(),
         cronTriggerId: Type.Optional(Type.String()),
-        heartbeatTriggerId: Type.Optional(Type.String()),
         webhookTriggerId: Type.Optional(Type.String()),
         webhookPath: Type.Optional(Type.String()),
         deleted: Type.Optional(Type.Boolean()),
@@ -231,22 +230,20 @@ export function buildTaskReadTool(): ToolDefinition {
     return {
         tool: {
             name: "task_read",
-            description: "Read a task and list its linked cron/heartbeat/webhook triggers.",
+            description: "Read a task and list its linked cron/webhook triggers.",
             parameters: taskReadSchema
         },
         returns: taskReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskReadArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
-            const [cronTriggers, heartbeatTriggers, webhookTriggers] = await Promise.all([
+            const [cronTriggers, webhookTriggers] = await Promise.all([
                 toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, task.id),
-                toolContext.heartbeats.listTriggersForTask(toolContext.ctx, task.id),
                 taskWebhooksResolve(toolContext).listTriggersForTask(toolContext.ctx, task.id)
             ]);
             const cronLines = cronTriggers.map(
                 (trigger) => `  - ${trigger.id} (cron: ${trigger.schedule}, timezone: ${trigger.timezone})`
             );
-            const heartbeatLines = heartbeatTriggers.map((trigger) => `  - ${trigger.id} (heartbeat)`);
             const webhookLines = await Promise.all(
                 webhookTriggers.map(async (trigger) => {
                     const endpoint = await taskWebhookEndpointBuild(toolContext, trigger.id);
@@ -264,8 +261,6 @@ export function buildTaskReadTool(): ToolDefinition {
                 ...parameterLines,
                 `Cron triggers: ${cronTriggers.length}`,
                 ...(cronLines.length > 0 ? cronLines : ["  - (none)"]),
-                `Heartbeat triggers: ${heartbeatTriggers.length}`,
-                ...(heartbeatLines.length > 0 ? heartbeatLines : ["  - (none)"]),
                 `Webhook triggers: ${webhookTriggers.length}`,
                 ...(webhookLines.length > 0 ? webhookLines : ["  - (none)"]),
                 "",
@@ -277,7 +272,6 @@ export function buildTaskReadTool(): ToolDefinition {
                 toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
                     task,
                     cronTriggers,
-                    heartbeatTriggers,
                     webhookTriggers
                 }),
                 typedResult: {
@@ -328,20 +322,14 @@ export function buildTaskUpdateTool(): ToolDefinition {
 
                 // Validate existing trigger parameter values against the new schema
                 if (nextParams?.length) {
-                    const [cronTriggers, heartbeatTriggers] = await Promise.all([
-                        toolContext.agentSystem.crons.listTriggersForTask(toolContext.ctx, task.id),
-                        toolContext.heartbeats.listTriggersForTask(toolContext.ctx, task.id)
-                    ]);
+                    const cronTriggers = await toolContext.agentSystem.crons.listTriggersForTask(
+                        toolContext.ctx,
+                        task.id
+                    );
                     for (const trigger of cronTriggers) {
                         const error = taskParameterValidate(nextParams, trigger.parameters ?? {});
                         if (error) {
                             throw new Error(`Cron trigger ${trigger.id} has incompatible parameters: ${error}`);
-                        }
-                    }
-                    for (const trigger of heartbeatTriggers) {
-                        const error = taskParameterValidate(nextParams, trigger.parameters ?? {});
-                        if (error) {
-                            throw new Error(`Heartbeat trigger ${trigger.id} has incompatible parameters: ${error}`);
                         }
                     }
                 }
@@ -371,7 +359,7 @@ export function buildTaskDeleteTool(): ToolDefinition {
     return {
         tool: {
             name: "task_delete",
-            description: "Delete a task and all linked cron/heartbeat/webhook triggers.",
+            description: "Delete a task and all linked cron/webhook triggers.",
             parameters: taskDeleteSchema
         },
         returns: taskReturns,
@@ -379,9 +367,8 @@ export function buildTaskDeleteTool(): ToolDefinition {
             const payload = args as TaskDeleteArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
 
-            const [removedCron, removedHeartbeat, removedWebhook] = await Promise.all([
+            const [removedCron, removedWebhook] = await Promise.all([
                 toolContext.agentSystem.crons.deleteTriggersForTask(toolContext.ctx, task.id),
-                toolContext.heartbeats.deleteTriggersForTask(toolContext.ctx, task.id),
                 taskWebhooksResolve(toolContext).deleteTriggersForTask(toolContext.ctx, task.id)
             ]);
             const deletedDirect = await toolContext.agentSystem.storage.tasks.delete(toolContext.ctx, task.id);
@@ -389,14 +376,13 @@ export function buildTaskDeleteTool(): ToolDefinition {
                 deletedDirect ||
                 (await toolContext.agentSystem.storage.tasks.findById(toolContext.ctx, task.id)) === null;
             const summary = deleted
-                ? `Deleted task ${task.id} with ${removedCron} cron trigger(s), ${removedHeartbeat} heartbeat trigger(s), and ${removedWebhook} webhook trigger(s).`
+                ? `Deleted task ${task.id} with ${removedCron} cron trigger(s) and ${removedWebhook} webhook trigger(s).`
                 : `Task already removed: ${task.id}.`;
 
             return {
                 toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
                     taskId: task.id,
                     removedCron,
-                    removedHeartbeat,
                     removedWebhook,
                     deleted
                 }),
@@ -494,7 +480,7 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
     return {
         tool: {
             name: "task_trigger_add",
-            description: "Attach a cron, heartbeat, or webhook trigger to an existing task.",
+            description: "Attach a cron or webhook trigger to an existing task.",
             parameters: taskTriggerAddSchema
         },
         returns: taskReturns,
@@ -568,40 +554,7 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
                 };
             }
 
-            // Validate trigger parameters against task schema
-            if (payload.parameters && !task.parameters?.length) {
-                throw new Error("Task has no parameter schema. Remove parameters or define a schema on the task.");
-            }
-            if (task.parameters?.length) {
-                const error = taskParameterValidate(
-                    task.parameters,
-                    (payload.parameters as Record<string, unknown>) ?? {}
-                );
-                if (error) {
-                    throw new Error(error);
-                }
-            }
-            const ensured = await taskHeartbeatTriggerEnsure(
-                toolContext,
-                task.id,
-                payload.parameters as Record<string, unknown> | undefined
-            );
-            const summary = ensured.duplicate
-                ? `Heartbeat trigger already exists on task ${task.id} (${ensured.id}).`
-                : `Added heartbeat trigger ${ensured.id} to task ${task.id}.`;
-            const typedResult: TaskResult = {
-                summary,
-                taskId: task.id,
-                heartbeatTriggerId: ensured.id
-            };
-            return {
-                toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
-                    taskId: task.id,
-                    heartbeatTriggerId: ensured.id,
-                    duplicate: ensured.duplicate
-                }),
-                typedResult
-            };
+            throw new Error(`Unsupported trigger type: ${payload.type}`);
         }
     };
 }
@@ -610,7 +563,7 @@ export function buildTaskTriggerRemoveTool(): ToolDefinition {
     return {
         tool: {
             name: "task_trigger_remove",
-            description: "Remove a cron, heartbeat, or webhook trigger from a task.",
+            description: "Remove a cron or webhook trigger from a task.",
             parameters: taskTriggerRemoveSchema
         },
         returns: taskReturns,
@@ -666,24 +619,7 @@ export function buildTaskTriggerRemoveTool(): ToolDefinition {
                 };
             }
 
-            const removedCount = await toolContext.heartbeats.deleteTriggersForTask(toolContext.ctx, task.id);
-            const removed = removedCount > 0;
-            const summary = removed
-                ? `Removed ${removedCount} heartbeat trigger(s) from task ${task.id}.`
-                : `No heartbeat trigger found for task ${task.id}.`;
-            return {
-                toolMessage: toolMessageBuild(toolCall.id, toolCall.name, summary, {
-                    taskId: task.id,
-                    removed,
-                    removedCount
-                }),
-                typedResult: {
-                    summary,
-                    taskId: task.id,
-                    removed,
-                    removedCount
-                }
-            };
+            throw new Error(`Unsupported trigger type: ${payload.type}`);
         }
     };
 }
@@ -774,20 +710,6 @@ async function taskCronTriggerEnsure(
         parameters
     });
     return { id: created.id, duplicate: false, timezone: normalizedTimezone };
-}
-
-async function taskHeartbeatTriggerEnsure(
-    toolContext: Parameters<ToolDefinition["execute"]>[1],
-    taskId: string,
-    parameters?: Record<string, unknown>
-): Promise<{ id: string; duplicate: boolean }> {
-    const existing = await toolContext.heartbeats.listTriggersForTask(toolContext.ctx, taskId);
-    if (existing.length > 0) {
-        return { id: existing[0]!.id, duplicate: true };
-    }
-
-    const created = await toolContext.heartbeats.addTrigger(toolContext.ctx, { taskId, parameters });
-    return { id: created.id, duplicate: false };
 }
 
 async function taskWebhookTriggerEnsure(

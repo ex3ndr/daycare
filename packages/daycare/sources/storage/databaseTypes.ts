@@ -120,34 +120,6 @@ export type CronTaskDbRecord = {
     updatedAt: number;
 };
 
-export type DatabaseHeartbeatTaskRow = {
-    id: string;
-    version: number;
-    valid_from: number;
-    valid_to: number | null;
-    task_id: string;
-    user_id: string;
-    title: string;
-    parameters: string | null;
-    last_run_at: number | null;
-    created_at: number;
-    updated_at: number;
-};
-
-export type HeartbeatTaskDbRecord = {
-    id: string;
-    version?: number;
-    validFrom?: number;
-    validTo?: number | null;
-    taskId: string;
-    userId: string;
-    title: string;
-    parameters: Record<string, unknown> | null;
-    lastRunAt: number | null;
-    createdAt: number;
-    updatedAt: number;
-};
-
 export type DatabaseWebhookTaskRow = {
     id: string;
     version: number;

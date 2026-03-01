@@ -15,7 +15,7 @@ describe("agentDescriptorTargetResolve", () => {
     });
 
     it("returns null for non-user descriptors", () => {
-        const result = agentDescriptorTargetResolve({ type: "system", tag: "heartbeat" });
+        const result = agentDescriptorTargetResolve({ type: "system", tag: "status" });
 
         expect(result).toBeNull();
     });

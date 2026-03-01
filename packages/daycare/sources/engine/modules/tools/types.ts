@@ -8,7 +8,6 @@ import type { AssistantSettings } from "../../../settings.js";
 import type { Agent } from "../../agents/agent.js";
 import type { AgentSystem } from "../../agents/agentSystem.js";
 import type { AgentHistoryRecord } from "../../agents/ops/agentTypes.js";
-import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { Memory } from "../../memory/memory.js";
 import type { Secrets } from "../../secrets/secrets.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
@@ -32,7 +31,6 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     source: string;
     messageContext: MessageContext;
     agentSystem: AgentSystem;
-    heartbeats: Heartbeats;
     webhooks?: Webhooks;
     memory?: Memory;
     secrets?: Secrets;

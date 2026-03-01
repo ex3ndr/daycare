@@ -64,7 +64,6 @@ function contextBuild(options: {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         source: "telegram",
         messageContext: { messageId: "message-1" },
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
     };
 }

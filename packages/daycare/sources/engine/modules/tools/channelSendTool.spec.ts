@@ -57,7 +57,6 @@ function contextBuild(): ToolExecutionContext {
         ctx: { agentId: "agent-caller", userId: "user-1" } as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
     };
 }

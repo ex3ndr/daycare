@@ -18,7 +18,6 @@ import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
-import type { Heartbeats } from "../heartbeat/heartbeats.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
@@ -343,7 +342,6 @@ async function harnessCreate(
     agentSystem.setCrons({
         listTasks: async () => []
     } as unknown as Crons);
-    agentSystem.setHeartbeats({} as unknown as Heartbeats);
     agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
     agentSystem.setSignals(signals);
     return { config, storage, eventBus, signals, agentSystem };

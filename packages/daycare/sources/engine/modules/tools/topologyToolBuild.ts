@@ -40,17 +40,6 @@ const topologyCronTriggerSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const topologyHeartbeatTriggerSchema = Type.Object(
-    {
-        id: Type.String(),
-        taskId: Type.String(),
-        userId: Type.String(),
-        title: Type.String(),
-        lastRunAt: Type.Union([Type.Number(), Type.Null()])
-    },
-    { additionalProperties: false }
-);
-
 const topologyTaskSchema = Type.Object(
     {
         id: Type.String(),
@@ -60,8 +49,7 @@ const topologyTaskSchema = Type.Object(
         updatedAt: Type.Union([Type.Number(), Type.Null()]),
         triggers: Type.Object(
             {
-                cron: Type.Array(topologyCronTriggerSchema),
-                heartbeat: Type.Array(topologyHeartbeatTriggerSchema)
+                cron: Type.Array(topologyCronTriggerSchema)
             },
             { additionalProperties: false }
         )
@@ -166,7 +154,6 @@ const topologyResultSchema = Type.Object(
         agentCount: Type.Number(),
         taskCount: Type.Number(),
         cronCount: Type.Number(),
-        heartbeatCount: Type.Number(),
         signalSubscriptionCount: Type.Number(),
         channelCount: Type.Number(),
         exposeCount: Type.Number(),
@@ -198,14 +185,6 @@ type TopologyCronTrigger = {
     isYou: boolean;
 };
 
-type TopologyHeartbeatTrigger = {
-    id: string;
-    taskId: string;
-    userId: string;
-    title: string;
-    lastRunAt: number | null;
-};
-
 type TopologyTask = {
     id: string;
     userId: string;
@@ -214,7 +193,6 @@ type TopologyTask = {
     updatedAt: number | null;
     triggers: {
         cron: TopologyCronTrigger[];
-        heartbeat: TopologyHeartbeatTrigger[];
     };
 };
 
@@ -285,7 +263,6 @@ type TopologyResult = {
     agentCount: number;
     taskCount: number;
     cronCount: number;
-    heartbeatCount: number;
     signalSubscriptionCount: number;
     channelCount: number;
     exposeCount: number;
@@ -300,7 +277,7 @@ const topologyReturns: ToolResultContract<TopologyResult> = {
 
 /**
  * Builds the topology tool that returns structured topology data for the caller scope.
- * Expects: tasks include nested cron/heartbeat triggers keyed by taskId.
+ * Expects: tasks include nested cron triggers keyed by taskId.
  */
 export function topologyTool(
     crons: Crons,
@@ -313,7 +290,7 @@ export function topologyTool(
         tool: {
             name: "topology",
             description:
-                "Return structured topology for your visible user scope. Agents exclude memory and dead entries by default. Tasks include nested cron and heartbeat triggers. Secrets include metadata only (no values).",
+                "Return structured topology for your visible user scope. Agents exclude memory and dead entries by default. Tasks include nested cron triggers. Secrets include metadata only (no values).",
             parameters: schema
         },
         returns: topologyReturns,
@@ -333,10 +310,9 @@ export function topologyTool(
                 : [callerUserId, ...ownerSubusers.map((subuser) => subuser.id)];
             const visibleUserIdSet = new Set(visibleUserIds);
 
-            const [allAgentRecords, cronTasks, heartbeatTasks, signalSubscriptions] = await Promise.all([
+            const [allAgentRecords, cronTasks, signalSubscriptions] = await Promise.all([
                 storage.agents.findMany(),
                 crons.listTasks(),
-                toolContext.heartbeats.listTasks(),
                 signals.listSubscriptions()
             ]);
             const channelEntries = channels.listForUserIds(visibleUserIds);
@@ -374,18 +350,6 @@ export function topologyTool(
                     isYou: task.agentId === callerAgentId
                 }));
 
-            const heartbeatTriggers: TopologyHeartbeatTrigger[] = heartbeatTasks
-                .filter((task) => visibleUserIdSet.has(task.userId))
-                .slice()
-                .sort((left, right) => left.id.localeCompare(right.id))
-                .map((task) => ({
-                    id: task.id,
-                    taskId: task.taskId,
-                    userId: task.userId,
-                    title: task.title,
-                    lastRunAt: task.lastRunAt
-                }));
-
             const visibleTaskChunks = await Promise.all(
                 visibleUserIds.map((userId) => storage.tasks.findMany(contextForUser({ userId })))
             );
@@ -400,8 +364,7 @@ export function topologyTool(
                     description: task.description,
                     updatedAt: task.updatedAt,
                     triggers: {
-                        cron: [],
-                        heartbeat: []
+                        cron: []
                     }
                 });
             }
@@ -415,16 +378,6 @@ export function topologyTool(
                 );
                 task.triggers.cron.push(trigger);
             }
-            for (const trigger of heartbeatTriggers) {
-                const task = topologyTaskRequire(
-                    taskByKey,
-                    trigger.userId,
-                    trigger.taskId,
-                    `heartbeat trigger ${trigger.id}`
-                );
-                task.triggers.heartbeat.push(trigger);
-            }
-
             const tasks = Array.from(taskByKey.values())
                 .sort((left, right) => {
                     const leftAt = left.updatedAt ?? -1;
@@ -440,10 +393,7 @@ export function topologyTool(
                 .map((task) => ({
                     ...task,
                     triggers: {
-                        cron: task.triggers.cron.slice().sort((left, right) => left.id.localeCompare(right.id)),
-                        heartbeat: task.triggers.heartbeat
-                            .slice()
-                            .sort((left, right) => left.id.localeCompare(right.id))
+                        cron: task.triggers.cron.slice().sort((left, right) => left.id.localeCompare(right.id))
                     }
                 }));
 
@@ -550,7 +500,6 @@ export function topologyTool(
                 agentCount: agents.length,
                 taskCount: tasks.length,
                 cronCount: cronTriggers.length,
-                heartbeatCount: heartbeatTriggers.length,
                 signalSubscriptionCount: signalSubscriptionsSummary.length,
                 channelCount: channelsSummary.length,
                 exposeCount: exposeSummary.length,

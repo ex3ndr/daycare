@@ -1,6 +1,6 @@
 ---
 name: task-creation
-description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) with minimal Python orchestration, explicit parameter schemas, strict allowedDomains for every networked exec/process call, and performance-first skip() behavior. Use when users ask for cron/heartbeat/webhook automation, recurring checks, scheduled reports, or resilient background task workflows.
+description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) with minimal Python orchestration, explicit parameter schemas, strict allowedDomains for every networked exec/process call, and performance-first skip() behavior. Use when users ask for cron/webhook automation, recurring checks, scheduled reports, or resilient background task workflows.
 sandbox: true
 permissions:
   - "@read:~/"
@@ -25,7 +25,7 @@ Build task workflows that are small, deterministic, and cheap to run repeatedly.
 Use these tools as the default flow:
 
 1. `task_create` or `task_update`
-2. `task_trigger_add` (cron, heartbeat, or webhook)
+2. `task_trigger_add` (cron or webhook)
 3. `task_read` to verify saved code and triggers
 4. `task_run` (usually `sync: true`) for a fast validation pass
 
@@ -34,11 +34,10 @@ Use these tools as the default flow:
 Choose trigger type by behavior:
 
 - `cron`: strict schedule (exact minute/hour/day rules).
-- `heartbeat`: periodic monitoring with approximate cadence.
 - `webhook`: event-driven run via HTTP callback.
 
 If the user gives an exact time/schedule, default to `cron`.
-If the user asks for periodic monitoring/check-ins, default to `heartbeat`.
+If the user asks for periodic monitoring/check-ins, default to `cron`.
 
 ## Authoring Pattern
 
@@ -137,7 +136,7 @@ Before finishing:
 2. Expensive logic is offloaded to scripts.
 3. All networked `exec` calls include exact `allowedDomains`.
 4. No-op path calls `skip()` early.
-5. Trigger type matches user intent (cron vs heartbeat vs webhook).
+5. Trigger type matches user intent (cron vs webhook).
 6. `task_run` validation succeeded.
 7. `task_read` confirms the stored task and trigger state.
 

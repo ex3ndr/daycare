@@ -111,7 +111,6 @@ function contextBuild(ctx: ToolExecutionContext["ctx"], secrets: Secrets): ToolE
         source: "test",
         messageContext: {},
         agentSystem: {} as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"],
         secrets
     };
 }

@@ -231,8 +231,7 @@ function buildContext(
             inferenceRouter: {
                 complete: completeMock
             }
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }
 

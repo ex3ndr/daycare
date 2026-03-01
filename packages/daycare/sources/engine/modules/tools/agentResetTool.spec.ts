@@ -80,7 +80,6 @@ function contextBuild(agentSystem: {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-source" }),
         source: "test",
         messageContext: {},
-        agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"]
     };
 }

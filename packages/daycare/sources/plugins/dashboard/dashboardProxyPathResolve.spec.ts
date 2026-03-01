@@ -4,7 +4,7 @@ import { dashboardProxyPathResolve } from "./dashboardProxyPathResolve.js";
 
 describe("dashboardProxyPathResolve", () => {
     it("strips /api prefix for engine routes", () => {
-        expect(dashboardProxyPathResolve("/api/v1/engine/heartbeat/tasks", "")).toBe("/v1/engine/heartbeat/tasks");
+        expect(dashboardProxyPathResolve("/api/v1/engine/cron/tasks", "")).toBe("/v1/engine/cron/tasks");
     });
 
     it("preserves already-normalized engine routes", () => {

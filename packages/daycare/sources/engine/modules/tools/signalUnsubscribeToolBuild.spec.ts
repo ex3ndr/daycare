@@ -141,7 +141,6 @@ function contextBuild(agentId: string, exists: boolean, targetUserId: string): T
                           userId: targetUserId
                       } as unknown as ToolExecutionContext["ctx"])
                     : null
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

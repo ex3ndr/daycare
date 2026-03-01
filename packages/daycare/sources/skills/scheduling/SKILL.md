@@ -5,7 +5,7 @@ description: Schedule recurring or time-based tasks. Use for alarms, reminders, 
 
 # Scheduling
 
-Daycare uses unified **tasks** with optional **cron** and **heartbeat** triggers.
+Daycare uses unified **tasks** with optional **cron** and **webhook** triggers.
 
 ## When to Use Cron
 
@@ -22,15 +22,14 @@ Use cron triggers when:
 Cron triggers run through `system:cron` by default. Use `task_trigger_add` with
 `type: "cron"` to attach a cron schedule after creating the task.
 
-## When to Use Heartbeats
+## When to Use Webhooks
 
-Use heartbeat triggers when:
-- Approximate timing is acceptable (~30 minute intervals)
-- Tasks need periodic checks with approximate timing
-- Prompts evolve over time and need periodic review
-- Lightweight status checks or reminders
+Use webhook triggers when:
+- External events should trigger execution
+- You need an HTTP callback endpoint
+- A third-party service should invoke the task on demand
 
-**Heartbeat tools:** use `task_trigger_add`/`task_trigger_remove` with `type: "heartbeat"` and inspect with `task_read`/`topology`
+**Webhook tools:** use `task_trigger_add`/`task_trigger_remove` with `type: "webhook"` and inspect with `task_read`/`topology`
 
 ## Examples
 
@@ -56,26 +55,22 @@ Use heartbeat triggers when:
 | "Every 15 minutes, poll the API for updates" | Precise interval timing |
 | "On the 1st of each month, generate a report" | Calendar-based schedule |
 
-### Choose Heartbeats
+### Choose Webhooks (Event-Driven)
 
-| User Input | Why Heartbeat |
+| User Input | Why Webhook |
 |------------|---------------|
-| "Periodically check on my project status" | Ongoing review, flexible timing |
-| "Keep an eye on my git branches" | Continuous monitoring, evolving context |
-| "Remind me about my todos from time to time" | Lightweight, approximate timing |
-| "Check in on code quality occasionally" | Periodic review that needs reasoning |
-| "Monitor my open PRs and update me" | Ongoing task that evolves |
-| "Review my notes and suggest improvements" | Needs main agent context |
-| "Periodically summarize what I've been working on" | Flexible interval, ongoing |
-| "Keep track of my daily progress" | Continuous, evolving check-in |
+| "Run this when my CI webhook fires" | External callback drives execution |
+| "Trigger this from GitHub/Stripe/Slack" | Event source is a webhook sender |
+| "Execute when my service posts to a URL" | HTTP-triggered task is required |
+| "I need a callback endpoint for this workflow" | Webhook endpoint is explicit |
 
 ### Ambiguous Cases
 
 | User Input | Resolution |
 |------------|------------|
-| "Remind me about X regularly" | Ask: need exact times? Cron. Flexible? Heartbeat. |
-| "Check something every day" | Ask: specific time? Cron. Anytime during day? Heartbeat. |
-| "Monitor Y" | Heartbeat (monitoring implies ongoing, evolving context) |
+| "Remind me about X regularly" | Cron (regular reminders are schedule-based). |
+| "Check something every day" | Cron (daily schedule). |
+| "Monitor Y" | Cron unless the user explicitly wants external event triggers. |
 | "Schedule Z" | Cron (scheduling implies specific timing) |
 
 ## Workflow
@@ -85,21 +80,21 @@ Use heartbeat triggers when:
 2. Attach a cron schedule with `task_trigger_add` (type: "cron", schedule, timezone)
 3. Use `task_read` or `topology` to verify triggers
 
-**For heartbeat triggers:**
+**For webhook triggers:**
 1. Run `topology` or `task_read` to inspect existing triggers
-2. Use `task_trigger_add` with `type: "heartbeat"`
+2. Use `task_trigger_add` with `type: "webhook"`
 3. Use `task_run` to trigger immediately
 4. Use `task_trigger_remove` for cleanup
 
 ## Executable Prompts
 
-Both cron and heartbeat prompts support **executable prompts** — `<run_python>` blocks
+Both cron and webhook prompts support **executable prompts** — `<run_python>` blocks
 that are expanded before the prompt reaches the LLM. This lets you embed dynamic data
 (API responses, file contents, computed values) directly in the scheduled prompt.
 
 ### How It Works
 
-1. Write `<run_python>...</run_python>` blocks inside your cron or heartbeat prompt.
+1. Write `<run_python>...</run_python>` blocks inside your cron or webhook prompt.
 2. When the task fires, the system expands each block by executing the Python code
    via the RLM runtime **before** the prompt is sent to inference.
 3. Each block is replaced with its output. On failure, the block becomes
@@ -139,7 +134,7 @@ Revenue: $56789.00
 Summarize the metrics above and flag anything unusual.
 ```
 
-### Heartbeat Example with Executable Prompt
+### Webhook Example with Executable Prompt
 
 ```
 <run_python>
@@ -167,7 +162,7 @@ The rest of the prompt is still sent to the LLM, which can see and report the er
 
 ## The `skip` Tool
 
-Both cron and heartbeat prompts land in an agent that has access to the **`skip`** tool.
+Both cron and webhook prompts land in an agent that has access to the **`skip`** tool.
 The model should call `skip` when there is nothing useful to do for the current run.
 
 When `skip` is called:
@@ -176,7 +171,7 @@ When `skip` is called:
 - This keeps costs low and avoids unnecessary LLM output.
 
 **When to call `skip`:**
-- The cron or heartbeat prompt describes a condition that isn't met (e.g., "notify if
+- The cron or webhook prompt describes a condition that isn't met (e.g., "notify if
   there are errors" but executable prompt output shows no errors).
 - A monitoring task finds nothing to report.
 
@@ -201,12 +196,12 @@ Otherwise, summarize the errors and suggest fixes.
 
 ## Key Differences
 
-| Feature | Cron | Heartbeats |
+| Feature | Cron | Webhook |
 |---------|------|------------|
-| Timing | Exact (cron expression) | ~30 minute intervals |
-| Agent | Isolated per task | Shared main agent |
-| Memory | Persistent `MEMORY.md` | Main agent context |
-| Workspace | Dedicated `files/` dir | None |
+| Timing | Exact (cron expression) | Event-driven (HTTP request) |
+| Agent | Isolated per task | Isolated per task or explicit `agentId` |
+| Memory | Task-agent context | Task-agent context |
+| Workspace | Task workspace | Task workspace |
 | One-off | Yes (`deleteAfterRun`) | No |
 | Executable prompts | Yes | Yes |
-| Best for | Time-sensitive tasks | Ongoing reviews |
+| Best for | Time-sensitive recurring tasks | External event callbacks |

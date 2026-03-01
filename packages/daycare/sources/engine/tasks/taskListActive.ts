@@ -10,12 +10,6 @@ export type TaskActiveCronTrigger = {
     lastExecutedAt: number | null;
 };
 
-export type TaskActiveHeartbeatTrigger = {
-    id: string;
-    title: string;
-    lastExecutedAt: number | null;
-};
-
 export type TaskActiveWebhookTrigger = {
     id: string;
     agentId: string | null;
@@ -31,7 +25,6 @@ export type TaskActiveSummary = {
     lastExecutedAt: number | null;
     triggers: {
         cron: TaskActiveCronTrigger[];
-        heartbeat: TaskActiveHeartbeatTrigger[];
         webhook: TaskActiveWebhookTrigger[];
     };
 };
@@ -47,10 +40,9 @@ type TaskActiveMutable = Omit<TaskActiveSummary, "lastExecutedAt"> & {
  * Expects: ctx.userId is normalized and storage repositories are initialized.
  */
 export async function taskListActive(options: { storage: Storage; ctx: Context }): Promise<TaskActiveSummary[]> {
-    const [tasks, cronTriggers, heartbeatTriggers, webhookTriggers] = await Promise.all([
+    const [tasks, cronTriggers, webhookTriggers] = await Promise.all([
         options.storage.tasks.findMany(options.ctx),
         options.storage.cronTasks.findMany(options.ctx),
-        options.storage.heartbeatTasks.findMany(options.ctx),
         options.storage.webhookTasks.findMany(options.ctx)
     ]);
 
@@ -67,21 +59,6 @@ export async function taskListActive(options: { storage: Storage; ctx: Context }
             schedule: trigger.schedule,
             timezone: trigger.timezone,
             agentId: trigger.agentId,
-            lastExecutedAt: trigger.lastRunAt
-        });
-        if (typeof trigger.lastRunAt === "number") {
-            active.lastExecutedCandidates.push(trigger.lastRunAt);
-        }
-    }
-
-    for (const trigger of heartbeatTriggers) {
-        const active = taskActiveEnsure(activeById, taskById, trigger.taskId);
-        if (!active) {
-            continue;
-        }
-        active.triggers.heartbeat.push({
-            id: trigger.id,
-            title: trigger.title,
             lastExecutedAt: trigger.lastRunAt
         });
         if (typeof trigger.lastRunAt === "number") {
@@ -115,7 +92,6 @@ export async function taskListActive(options: { storage: Storage; ctx: Context }
             lastExecutedAt: taskLastExecutedAtResolve(task.lastExecutedCandidates),
             triggers: {
                 cron: task.triggers.cron.slice().sort((left, right) => left.id.localeCompare(right.id)),
-                heartbeat: task.triggers.heartbeat.slice().sort((left, right) => left.id.localeCompare(right.id)),
                 webhook: task.triggers.webhook.slice().sort((left, right) => left.id.localeCompare(right.id))
             }
         }));
@@ -145,7 +121,6 @@ function taskActiveEnsure(
         lastExecutedCandidates: [],
         triggers: {
             cron: [],
-            heartbeat: [],
             webhook: []
         }
     };

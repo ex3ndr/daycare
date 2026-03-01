@@ -10,7 +10,6 @@ Core concepts and systems that power Daycare.
 
 - [Agents](concepts/agents.md) - Per-channel message sequencing, agent types, persistence
 - [Cron](concepts/cron.md) - Scheduled task execution with cron expressions
-- [Heartbeats](concepts/heartbeats.md) - Batch-executed periodic prompts
 - [Signals](concepts/signals.md) - Broadcast event system for multi-agent coordination
 - [Apps](concepts/apps.md) - LLM-reviewed sandboxed app tools discovered from workspace
 - [Sandboxes](concepts/sandboxes.md) - Filesystem and network sandboxing, durable processes

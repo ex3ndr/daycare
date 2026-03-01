@@ -3,14 +3,7 @@ import { describe, expect, it } from "vitest";
 import { systemAgentPromptResolve } from "./systemAgentPromptResolve.js";
 
 describe("systemAgentPromptResolve", () => {
-    it("resolves heartbeat prompt without replacing base system prompt", async () => {
-        const heartbeat = await systemAgentPromptResolve("heartbeat");
-        expect(heartbeat?.tag).toBe("heartbeat");
-        expect(heartbeat?.systemPrompt.length).toBeGreaterThan(0);
-        expect(heartbeat?.replaceSystemPrompt).toBe(false);
-    });
-
-    it("returns null for unknown tags", async () => {
-        await expect(systemAgentPromptResolve("unknown")).resolves.toBeNull();
+    it("returns null when no built-in system agent prompts are registered", async () => {
+        await expect(systemAgentPromptResolve("status")).resolves.toBeNull();
     });
 });

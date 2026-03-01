@@ -131,7 +131,6 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     memory: z.string().min(1).optional(),
                     memorySearch: z.string().min(1).optional(),
                     subagent: z.string().min(1).optional(),
-                    heartbeat: z.string().min(1).optional(),
                     task: z.string().min(1).optional()
                 })
                 .partial()

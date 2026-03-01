@@ -8,7 +8,7 @@ Agents provide per-channel sequencing of messages. Each agent processes one mess
 |------|-------------|
 | `user` | Foreground connector conversation (Telegram/WhatsApp user) |
 | `cron` | Scheduled task agent |
-| `system` | Built-in tag-addressable agent (e.g. `heartbeat`) |
+| `system` | Built-in tag-addressable agent |
 | `subagent` | Background agent with a parent |
 | `app` | App sandbox agent with reviewed tool calls |
 | `permanent` | Background agent with stable name and system prompt |
@@ -18,7 +18,7 @@ Agents provide per-channel sequencing of messages. Each agent processes one mess
 Agent ids are cuid2 values mapped to:
 - User descriptors (`connector + channelId + userId`) for foreground agents
 - Cron trigger id for scheduled tasks
-- System tags (e.g. `heartbeat`) for system agents
+- System tags for system agents
 
 ## Message flow
 
@@ -86,4 +86,3 @@ On restart, agents are loaded from disk and context is reconstructed from histor
 | Strategy | Resolution |
 |----------|------------|
 | `most-recent-foreground` | Most recent agent with a `user` descriptor |
-| `heartbeat` | Agent with `type: "system"` and `tag: "heartbeat"` |

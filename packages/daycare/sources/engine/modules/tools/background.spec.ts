@@ -196,8 +196,7 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
             agentFor: agentSystem.agentFor ?? (vi.fn(() => "foreground-agent") as AgentSystemStub["agentFor"]),
             agentExists: agentSystem.agentExists ?? (vi.fn(async () => true) as AgentSystemStub["agentExists"]),
             steer: agentSystem.steer ?? (vi.fn(async () => {}) as AgentSystemStub["steer"])
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }
 

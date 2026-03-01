@@ -10,7 +10,7 @@
 
 ## What It Is
 
-Daycare runs persistent agents behind connectors like Telegram and WhatsApp, with schedulers (cron + heartbeat), permissions, sandboxed shell/process tools, and pluggable providers/tools.
+Daycare runs persistent agents behind connectors like Telegram and WhatsApp, with schedulers (cron + webhook), permissions, sandboxed shell/process tools, and pluggable providers/tools.
 
 The core lives in `packages/daycare`. A monitoring UI lives in `packages/daycare-dashboard`.
 

@@ -269,9 +269,6 @@ describe("Engine startup plugin hooks", () => {
             vi.spyOn(engine.crons, "start").mockImplementation(async () => {
                 order.push("crons.start");
             });
-            vi.spyOn(engine.heartbeats, "start").mockImplementation(async () => {
-                order.push("heartbeats.start");
-            });
             vi.spyOn(engine.delayedSignals, "start").mockImplementation(async () => {
                 order.push("delayedSignals.start");
             });
@@ -284,7 +281,6 @@ describe("Engine startup plugin hooks", () => {
                 "preStart",
                 "agentSystem.start",
                 "crons.start",
-                "heartbeats.start",
                 "delayedSignals.start",
                 "postStart"
             ]);

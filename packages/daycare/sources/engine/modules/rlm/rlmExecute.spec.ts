@@ -347,8 +347,7 @@ function createContext(options?: { activeSessionId?: string | null; agentsDir?: 
                 }
             },
             storage: {}
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }
 

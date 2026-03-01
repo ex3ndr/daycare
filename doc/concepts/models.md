@@ -4,7 +4,7 @@
 
 Daycare supports two persistent model configuration layers in `settings.json`:
 
-- `models`: role-specific overrides (`user`, `memory`, `memorySearch`, `subagent`, `heartbeat`)
+- `models`: role-specific overrides (`user`, `memory`, `memorySearch`, `subagent`, `task`)
 - `modelFlavors`: flavor mappings used by `set_agent_model`
 
 Role overrides use `<providerId>/<modelName>` values.
@@ -19,7 +19,7 @@ Flavor mappings use `{ model, description }`.
         "memory": "openai/gpt-5-mini",
         "memorySearch": "openai/gpt-5-mini",
         "subagent": "anthropic/claude-haiku-4-5",
-        "heartbeat": "openai/gpt-5-mini"
+        "task": "openai/gpt-5-mini"
     },
     "modelFlavors": {
         "coding": {
@@ -45,9 +45,9 @@ If a built-in flavor is not mapped in `modelFlavors`, Daycare resolves it from p
 | `memory` | `memory-agent` | Agents that extract observations from transcripts |
 | `memorySearch` | `memory-search` | Agents that search the memory graph |
 | `subagent` | `subagent`, `app` | Background child agents |
-| `heartbeat` | `system` (tag: `heartbeat`) | Periodic heartbeat agents |
+| `task` | `task` | Task execution agents |
 
-Cron agents and non-heartbeat system agents have no dedicated role and always use the provider default.
+Cron agents and system-tag agents have no dedicated role and always use the provider default.
 
 ## Precedence
 

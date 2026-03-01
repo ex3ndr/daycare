@@ -84,7 +84,6 @@ function contextBuild(opts: {
         agentSystem: {
             post: opts.post,
             agentFor: (_ctx: unknown) => opts.foregroundAgentId ?? undefined
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

@@ -158,13 +158,6 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         return reply.send({ ok: true, tasks });
     });
 
-    app.get("/v1/engine/heartbeat/tasks", async (_request, reply) => {
-        logger.debug("event: GET /v1/engine/heartbeat/tasks");
-        const tasks = await options.runtime.heartbeats.listTasks();
-        logger.debug(`event: Heartbeat tasks retrieved taskCount=${tasks.length}`);
-        return reply.send({ ok: true, tasks });
-    });
-
     app.get("/v1/engine/processes", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/processes");
         const processes = await options.runtime.processes.list();
@@ -645,7 +638,6 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             payload: {
                 status: options.runtime.getStatus(),
                 cron: options.runtime.crons.listScheduledTasks(),
-                heartbeat: await options.runtime.heartbeats.listTasks(),
                 backgroundAgents: await agentBackgroundList(options.runtime.storage)
             },
             timestamp: new Date().toISOString()

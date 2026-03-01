@@ -64,7 +64,7 @@ describe("agentDescriptorLabel", () => {
                 id: "task-1"
             })
         ).toBe("task task-1");
-        expect(agentDescriptorLabel({ type: "system", tag: "heartbeat" })).toBe("heartbeat");
+        expect(agentDescriptorLabel({ type: "system", tag: "status" })).toBe("status");
     });
 
     it("labels subuser agents", () => {

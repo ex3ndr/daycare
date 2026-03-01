@@ -71,16 +71,6 @@ describe("taskListActive", () => {
                 createdAt: 30,
                 updatedAt: 30
             });
-            await storage.heartbeatTasks.create({
-                id: "heartbeat-active",
-                taskId: "task-active",
-                userId: "user-1",
-                title: "Heartbeat",
-                parameters: null,
-                lastRunAt: 200,
-                createdAt: 10,
-                updatedAt: 10
-            });
             await storage.webhookTasks.create({
                 id: "webhook-active",
                 taskId: "task-active",
@@ -105,10 +95,9 @@ describe("taskListActive", () => {
             expect(result.map((task) => task.id)).toEqual(["task-active", "task-webhook"]);
             expect(result[0]).toMatchObject({
                 id: "task-active",
-                lastExecutedAt: 200,
+                lastExecutedAt: 150,
                 triggers: {
                     cron: [{ id: "cron-active", lastExecutedAt: 100 }],
-                    heartbeat: [{ id: "heartbeat-active", lastExecutedAt: 200 }],
                     webhook: [{ id: "webhook-active", lastExecutedAt: 150 }]
                 }
             });
@@ -117,7 +106,6 @@ describe("taskListActive", () => {
                 lastExecutedAt: null,
                 triggers: {
                     cron: [],
-                    heartbeat: [],
                     webhook: [{ id: "webhook-only", lastExecutedAt: null }]
                 }
             });

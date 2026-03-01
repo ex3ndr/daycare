@@ -8,8 +8,6 @@ export function agentDescriptorMatchesStrategy(descriptor: AgentDescriptor, stra
     switch (strategy) {
         case "most-recent-foreground":
             return descriptor.type === "user";
-        case "heartbeat":
-            return descriptor.type === "system" && descriptor.tag === "heartbeat";
         default:
             return false;
     }

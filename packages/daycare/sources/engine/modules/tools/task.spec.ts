@@ -12,7 +12,6 @@ import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
 import { contextForAgent } from "../../agents/context.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
-import { Heartbeats } from "../../heartbeat/heartbeats.js";
 import { Webhooks } from "../../webhook/webhooks.js";
 import {
     buildTaskCreateTool,
@@ -238,23 +237,6 @@ describe("task tools", () => {
         );
         expect((await runtime.crons.listTriggersForTask(runtime.context.ctx, "task-one")).length).toBe(2);
 
-        const heartbeatAddResult = await addTool.execute(
-            { taskId: "task-one", type: "heartbeat" },
-            runtime.context,
-            toolCall("task_trigger_add")
-        );
-        const heartbeatTriggerId = String(heartbeatAddResult.typedResult.heartbeatTriggerId ?? "");
-        expect(heartbeatTriggerId).not.toBe("");
-
-        // Duplicate heartbeat trigger add should be ignored and return the existing trigger.
-        const duplicateHeartbeatAddResult = await addTool.execute(
-            { taskId: "task-one", type: "heartbeat" },
-            runtime.context,
-            toolCall("task_trigger_add")
-        );
-        expect(String(duplicateHeartbeatAddResult.typedResult.heartbeatTriggerId ?? "")).toBe(heartbeatTriggerId);
-        expect((await runtime.heartbeats.listTriggersForTask(runtime.context.ctx, "task-one")).length).toBe(1);
-
         const webhookAddResult = await addTool.execute(
             { taskId: "task-one", type: "webhook" },
             runtime.context,
@@ -288,12 +270,6 @@ describe("task tools", () => {
             toolCall("task_trigger_remove")
         );
         expect(cronRemoveResult.typedResult.removed).toBe(true);
-        const heartbeatRemoveResult = await removeTool.execute(
-            { taskId: "task-one", type: "heartbeat" },
-            runtime.context,
-            toolCall("task_trigger_remove")
-        );
-        expect(heartbeatRemoveResult.typedResult.removed).toBe(true);
         const webhookRemoveResult = await removeTool.execute(
             { taskId: "task-one", type: "webhook" },
             runtime.context,
@@ -505,48 +481,12 @@ describe("task tools", () => {
             )
         ).rejects.toThrow(/Cron trigger .*incompatible parameters: Required parameter "city" is missing\./);
     });
-
-    it("rejects task_update when existing heartbeat trigger has null parameters and new schema requires values", async () => {
-        const runtime = await runtimeBuild();
-        tempDirs.push(runtime.dir);
-        storages.push(runtime.storage);
-
-        const now = Date.now();
-        await runtime.storage.tasks.create({
-            id: "task-null-heartbeat-params",
-            userId: "user-1",
-            title: "Task with null heartbeat params",
-            description: null,
-            code: "print('ok')",
-            parameters: null,
-            createdAt: now,
-            updatedAt: now
-        });
-
-        // Existing trigger from old schema migration path with null stored parameters.
-        await runtime.heartbeats.addTrigger(runtime.context.ctx, {
-            taskId: "task-null-heartbeat-params"
-        });
-
-        const updateTool = buildTaskUpdateTool();
-        await expect(
-            updateTool.execute(
-                {
-                    taskId: "task-null-heartbeat-params",
-                    parameters: [{ name: "city", type: "string", nullable: false }]
-                },
-                runtime.context,
-                toolCall("task_update")
-            )
-        ).rejects.toThrow(/Heartbeat trigger .*incompatible parameters: Required parameter "city" is missing\./);
-    });
 });
 
 async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Promise<{
     dir: string;
     storage: Storage;
     crons: Crons;
-    heartbeats: Heartbeats;
     webhooks: Webhooks;
     webhookSecret: string;
     context: ToolExecutionContext;
@@ -585,7 +525,7 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         config,
         storage,
         postAndAwait
-    } as unknown as ToolExecutionContext["agentSystem"] & { crons: Crons; heartbeats: Heartbeats };
+    } as unknown as ToolExecutionContext["agentSystem"] & { crons: Crons };
 
     const toolResolver = {
         listTools: () => [],
@@ -601,19 +541,12 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         eventBus: eventBus as never,
         agentSystem: agentSystem as never
     });
-    const heartbeats = new Heartbeats({
-        config,
-        storage,
-        eventBus: eventBus as never,
-        intervalMs: 60_000,
-        agentSystem: agentSystem as never
-    });
     const webhooks = new Webhooks({
         storage,
         agentSystem: agentSystem as never
     });
 
-    Object.assign(agentSystem, { crons, heartbeats, webhooks, toolResolver });
+    Object.assign(agentSystem, { crons, webhooks, toolResolver });
 
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -626,10 +559,9 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         source: "test",
         messageContext: { messageId: "msg-1" },
         agentSystem: agentSystem as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats,
         webhooks,
         toolResolver: toolResolver as ToolExecutionContext["toolResolver"]
     };
 
-    return { dir, storage, crons, heartbeats, webhooks, webhookSecret, context, postAndAwait };
+    return { dir, storage, crons, webhooks, webhookSecret, context, postAndAwait };
 }

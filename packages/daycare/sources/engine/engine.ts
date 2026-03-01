@@ -30,7 +30,6 @@ import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
 import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
-import { Heartbeats } from "./heartbeat/heartbeats.js";
 import type { EngineEventBus } from "./ipc/events.js";
 import { Memory } from "./memory/memory.js";
 import { MemoryWorker } from "./memory/memoryWorker.js";
@@ -126,7 +125,6 @@ export class Engine {
     readonly storage: Storage;
     readonly agentSystem: AgentSystem;
     readonly crons: Crons;
-    readonly heartbeats: Heartbeats;
     readonly webhooks: Webhooks;
     readonly appServer: AppServer;
     readonly signals: Signals;
@@ -363,16 +361,6 @@ export class Engine {
         });
         this.agentSystem.setCrons(this.crons);
         this.agentSystem.setSignals(this.signals);
-
-        const heartbeats = new Heartbeats({
-            config: this.config,
-            storage: this.storage,
-            eventBus: this.eventBus,
-            intervalMs: 30 * 60 * 1000,
-            agentSystem: this.agentSystem
-        });
-        this.heartbeats = heartbeats;
-        this.agentSystem.setHeartbeats(heartbeats);
         this.webhooks = new Webhooks({
             storage: this.storage,
             agentSystem: this.agentSystem
@@ -515,8 +503,6 @@ export class Engine {
 
         logger.debug("start: Starting cron scheduler");
         await this.crons.start();
-        logger.debug("start: Starting heartbeat scheduler");
-        await this.heartbeats.start();
         logger.debug("start: Starting delayed signal scheduler");
         await this.delayedSignals.start();
         logger.debug("start: Starting memory worker");
@@ -535,7 +521,6 @@ export class Engine {
         await this.modules.connectors.unregisterAll("shutdown");
         await this.incomingMessages.flush();
         this.crons.stop();
-        this.heartbeats.stop();
         this.webhooks.stop();
         this.delayedSignals.stop();
         this.processes.unload();

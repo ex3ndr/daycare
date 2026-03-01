@@ -20,7 +20,6 @@ import { AsyncLock } from "../../util/lock.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
-import type { Heartbeats } from "../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import { Memory } from "../memory/memory.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
@@ -107,7 +106,6 @@ export class AgentSystem {
     readonly secrets: Secrets;
     private readonly delayedSignals: DelayedSignalsFacade | null;
     private _crons: Crons | null = null;
-    private _heartbeats: Heartbeats | null = null;
     private _webhooks: Webhooks | null = null;
     private _signals: Signals | null = null;
     private entries = new Map<string, AgentEntry>();
@@ -152,17 +150,6 @@ export class AgentSystem {
 
     setCrons(crons: Crons): void {
         this._crons = crons;
-    }
-
-    get heartbeats(): Heartbeats {
-        if (!this._heartbeats) {
-            throw new Error("Heartbeats not set");
-        }
-        return this._heartbeats;
-    }
-
-    setHeartbeats(heartbeats: Heartbeats): void {
-        this._heartbeats = heartbeats;
     }
 
     get webhooks(): Webhooks {

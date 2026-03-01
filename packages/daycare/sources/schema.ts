@@ -232,30 +232,6 @@ export const tasksCronTable = pgTable(
     ]
 );
 
-export const tasksHeartbeatTable = pgTable(
-    "tasks_heartbeat",
-    {
-        id: text("id").notNull(),
-        version: integer("version").notNull().default(1),
-        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
-        validTo: bigint("valid_to", { mode: "number" }),
-        taskId: text("task_id").notNull(),
-        userId: text("user_id").notNull(),
-        title: text("title").notNull(),
-        parameters: text("parameters"),
-        lastRunAt: bigint("last_run_at", { mode: "number" }),
-        createdAt: bigint("created_at", { mode: "number" }).notNull(),
-        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
-    },
-    (table) => [
-        primaryKey({ columns: [table.id, table.version] }),
-        index("idx_tasks_heartbeat_task_id").on(table.userId, table.taskId),
-        index("idx_tasks_heartbeat_updated_at").on(table.updatedAt),
-        index("idx_tasks_heartbeat_user_id").on(table.userId),
-        index("idx_tasks_heartbeat_id_valid_to").on(table.id, table.validTo)
-    ]
-);
-
 export const tasksWebhookTable = pgTable(
     "tasks_webhook",
     {
@@ -554,7 +530,6 @@ export const schema = {
     documentsTable,
     documentReferencesTable,
     tasksCronTable,
-    tasksHeartbeatTable,
     tasksWebhookTable,
     signalsEventsTable,
     signalsSubscriptionsTable,

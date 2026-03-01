@@ -189,7 +189,6 @@ function contextBuild(input: { skillsPersonalRoot?: string; homeDir: string }): 
         messageContext: {},
         skills: [],
         skillsPersonalRoot: input?.skillsPersonalRoot,
-        agentSystem: {} as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        agentSystem: {} as unknown as ToolExecutionContext["agentSystem"]
     };
 }

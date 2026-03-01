@@ -32,7 +32,7 @@ Notes:
 - `PUT /prompts/:filename`: update prompt file content (`{ "content": "..." }`)
 
 ### Tasks (authenticated via `Authorization: Bearer <token>`)
-- `GET /tasks/active`: list active tasks with cron/heartbeat/webhook triggers and last execution timestamps
+- `GET /tasks/active`: list active tasks with cron/webhook triggers and last execution timestamps
 
 Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
 

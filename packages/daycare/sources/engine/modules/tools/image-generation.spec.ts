@@ -91,7 +91,6 @@ function contextBuild(workingDir: string): ToolExecutionContext {
         ctx: null as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {} as unknown as ToolExecutionContext["messageContext"],
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
     };
 }

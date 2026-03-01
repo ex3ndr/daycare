@@ -36,11 +36,10 @@ const ROLE_LABELS: Record<ModelRoleKey, string> = {
     memory: "Memory agent",
     memorySearch: "Memory search agent",
     subagent: "Subagents",
-    heartbeat: "Heartbeat agent",
     task: "Task agents"
 };
 
-const ROLE_KEYS: ModelRoleKey[] = ["user", "memory", "memorySearch", "subagent", "heartbeat", "task"];
+const ROLE_KEYS: ModelRoleKey[] = ["user", "memory", "memorySearch", "subagent", "task"];
 const BUILTIN_FLAVOR_KEYS: BuiltinModelFlavor[] = ["small", "normal", "large"];
 
 const ADD_CUSTOM_FLAVOR_CHOICE = "__add_custom_flavor__";

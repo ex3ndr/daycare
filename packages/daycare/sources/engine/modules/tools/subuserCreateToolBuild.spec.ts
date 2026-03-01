@@ -123,7 +123,6 @@ function contextBuild(
         agentSystem: {
             ...agentSystem,
             userHomeForUserId: (uid: string) => new UserHome(agentSystem.config.current.usersDir, uid)
-        } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"]
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

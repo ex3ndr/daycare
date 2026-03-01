@@ -13,7 +13,6 @@ import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord }
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 import { DocumentsRepository } from "./documentsRepository.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
-import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
 import { ObservationLogRepository } from "./observationLogRepository.js";
@@ -38,7 +37,6 @@ export class Storage {
     readonly history: HistoryRepository;
     readonly inbox: InboxRepository;
     readonly cronTasks: CronTasksRepository;
-    readonly heartbeatTasks: HeartbeatTasksRepository;
     readonly webhookTasks: WebhookTasksRepository;
     readonly tasks: TasksRepository;
     readonly documents: DocumentsRepository;
@@ -68,7 +66,6 @@ export class Storage {
         this.history = new HistoryRepository(db);
         this.inbox = new InboxRepository(db);
         this.cronTasks = new CronTasksRepository(db);
-        this.heartbeatTasks = new HeartbeatTasksRepository(db);
         this.webhookTasks = new WebhookTasksRepository(db);
         this.tasks = new TasksRepository(db);
         this.documents = new DocumentsRepository(db);

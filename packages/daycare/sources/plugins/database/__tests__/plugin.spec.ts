@@ -131,8 +131,7 @@ describe("database plugin", () => {
             ctx: ctxUser1,
             source: "test",
             messageContext,
-            agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],
-            heartbeats: null as unknown as Parameters<typeof modules.tools.execute>[1]["heartbeats"]
+            agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"]
         });
 
         expect(result.toolMessage.isError).toBe(false);
@@ -183,8 +182,7 @@ describe("database plugin", () => {
             ctx: ctxUser2,
             source: "test",
             messageContext,
-            agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"],
-            heartbeats: null as unknown as Parameters<typeof modules.tools.execute>[1]["heartbeats"]
+            agentSystem: null as unknown as Parameters<typeof modules.tools.execute>[1]["agentSystem"]
         });
         expect(user2Result.toolMessage.isError).toBe(true);
         expect(user2Result.toolMessage.content).toEqual([

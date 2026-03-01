@@ -6,7 +6,6 @@ import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
-import type { Heartbeats } from "../../heartbeat/heartbeats.js";
 import type { EngineEventBus } from "../../ipc/events.js";
 import type { Memory } from "../../memory/memory.js";
 import { messageContentClone } from "../../messages/messageContentClone.js";
@@ -67,7 +66,6 @@ type AgentLoopRunOptions = {
     eventBus: EngineEventBus;
     assistant: AssistantSettings | null;
     agentSystem: AgentSystem;
-    heartbeats: Heartbeats;
     webhooks: Webhooks;
     memory: Memory;
     skills: Skills;
@@ -122,7 +120,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         eventBus,
         assistant,
         agentSystem,
-        heartbeats,
         webhooks,
         memory,
         skills,
@@ -181,7 +178,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             source,
             messageContext: entry.context,
             agentSystem,
-            heartbeats,
             webhooks,
             memory,
             secrets: agentSystem.secrets,

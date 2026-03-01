@@ -130,7 +130,6 @@ export type { AgentSkill } from "./engine/skills/skillTypes.js";
 // Tasks
 export type {
     TaskActiveCronTrigger,
-    TaskActiveHeartbeatTrigger,
     TaskActiveSummary,
     TaskActiveWebhookTrigger
 } from "./engine/tasks/taskListActive.js";

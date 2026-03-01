@@ -57,7 +57,6 @@ function createContext(): ToolExecutionContext {
         agentSystem: {
             toolResolver
         } as unknown as ToolExecutionContext["agentSystem"],
-        heartbeats: null as unknown as ToolExecutionContext["heartbeats"],
         toolResolver: toolResolver as ToolExecutionContext["toolResolver"]
     };
 }
