@@ -655,6 +655,171 @@ describe("Agent", () => {
         }
     });
 
+    it("runs pre-turn compaction from provider usage tokens before inference", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const connectorRegistry = new ConnectorRegistry({
+                onMessage: async () => undefined
+            });
+            const sendMessage = vi.fn(async () => undefined);
+            const connector: Connector = {
+                capabilities: { sendText: true, typing: true },
+                onMessage: () => () => undefined,
+                sendMessage,
+                startTyping: () => () => undefined
+            };
+            const registerResult = connectorRegistry.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
+
+            let nonCompactionCallCount = 0;
+            const complete = vi.fn(async (context: { messages?: Array<{ role?: string; content?: unknown }> }) => {
+                const isCompactionRequest = (context.messages ?? []).some((message) => {
+                    if (message.role !== "user") {
+                        return false;
+                    }
+                    const contentText =
+                        typeof message.content === "string" ? message.content : JSON.stringify(message.content ?? "");
+                    return contentText.includes("Summarize the conversation above into a compact context checkpoint.");
+                });
+                if (isCompactionRequest) {
+                    return {
+                        providerId: "openai",
+                        modelId: "gpt-4.1",
+                        message: {
+                            role: "assistant",
+                            content: [{ type: "text", text: "Compacted summary" }],
+                            api: "openai-responses",
+                            provider: "openai",
+                            model: "gpt-4.1",
+                            usage: {
+                                input: 10,
+                                output: 5,
+                                cacheRead: 0,
+                                cacheWrite: 0,
+                                totalTokens: 15,
+                                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                            },
+                            stopReason: "stop",
+                            timestamp: Date.now()
+                        }
+                    };
+                }
+                if (nonCompactionCallCount === 0) {
+                    nonCompactionCallCount += 1;
+                    return {
+                        providerId: "openai",
+                        modelId: "gpt-4.1",
+                        message: {
+                            role: "assistant",
+                            content: [{ type: "text", text: "seed response" }],
+                            api: "openai-responses",
+                            provider: "openai",
+                            model: "gpt-4.1",
+                            usage: {
+                                input: 175_000,
+                                output: 5_000,
+                                cacheRead: 18_000,
+                                cacheWrite: 1_000,
+                                totalTokens: 199_000,
+                                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                            },
+                            stopReason: "stop",
+                            timestamp: Date.now()
+                        }
+                    };
+                }
+                nonCompactionCallCount += 1;
+                return {
+                    providerId: "openai",
+                    modelId: "gpt-4.1",
+                    message: {
+                        role: "assistant",
+                        content: [{ type: "text", text: "after compaction" }],
+                        api: "openai-responses",
+                        provider: "openai",
+                        model: "gpt-4.1",
+                        usage: {
+                            input: 10,
+                            output: 5,
+                            cacheRead: 0,
+                            cacheWrite: 0,
+                            totalTokens: 15,
+                            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                        },
+                        stopReason: "stop",
+                        timestamp: Date.now()
+                    }
+                };
+            });
+            const inferenceRouter: InferenceRouter = {
+                complete
+            } as unknown as InferenceRouter;
+
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry,
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({} as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                channelId: "channel-1",
+                userId: "user-1"
+            };
+
+            await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "seed context" });
+            await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "message",
+                    message: { text: "seed usage" },
+                    context: { messageId: "89" }
+                }
+            );
+
+            const result = await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "message",
+                    message: { text: "please continue" },
+                    context: { messageId: "90" }
+                }
+            );
+
+            expect(result).toEqual({ type: "message", responseText: "after compaction" });
+            expect(complete).toHaveBeenCalledTimes(3);
+            expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+                text: "⏳ Compacting session context. I'll continue shortly.",
+                replyToMessageId: "90"
+            });
+
+            await connectorRegistry.unregisterAll("test");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("drops queued signals after unsubscribe before agent handles inbox", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {

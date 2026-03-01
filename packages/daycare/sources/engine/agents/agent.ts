@@ -43,6 +43,7 @@ import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
+import { agentTokenPromptUsedFromUsage } from "./ops/agentTokenPromptUsedFromUsage.js";
 import { agentToolExecutionAllowlistResolve } from "./ops/agentToolExecutionAllowlistResolve.js";
 import type {
     AgentHistoryRecord,
@@ -502,10 +503,12 @@ export class Agent {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
         const contextTools: InferenceContext["tools"] = [];
+        const usagePromptTokens = agentTokenPromptUsedFromUsage(this.state.tokens);
         const compactionStatus = contextCompactionStatus(
             history,
             this.agentSystem.config.current.settings.agents.emergencyContextLimit,
             {
+                minimumTokens: usagePromptTokens ?? undefined,
                 extras: {
                     systemPrompt,
                     tools: contextTools,

@@ -39,4 +39,22 @@ describe("contextCompactionStatus", () => {
         expect(status.estimatedTokens).toBe(12);
         expect(status.extraTokens).toBe(12);
     });
+
+    it("uses minimumTokens as a floor for severity checks", () => {
+        const history = buildHistory(0);
+        const status = contextCompactionStatus(history, 100, {
+            minimumTokens: 95
+        });
+        expect(status.estimatedTokens).toBe(95);
+        expect(status.severity).toBe("critical");
+    });
+
+    it("ignores invalid minimumTokens values", () => {
+        const history = buildHistory(0);
+        const status = contextCompactionStatus(history, 100, {
+            minimumTokens: Number.NaN
+        });
+        expect(status.estimatedTokens).toBe(0);
+        expect(status.severity).toBe("ok");
+    });
 });

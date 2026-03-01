@@ -31,6 +31,12 @@ export type AgentTokenSnapshotSize = AgentTokenSize;
 export type AgentTokenEntry = {
     provider: string;
     model: string;
+    /**
+     * Token accounting source:
+     * - usage: provider-reported usage from inference response
+     * - estimate: local heuristic fallback
+     */
+    source?: "usage" | "estimate";
     size: AgentTokenSnapshotSize;
 };
 

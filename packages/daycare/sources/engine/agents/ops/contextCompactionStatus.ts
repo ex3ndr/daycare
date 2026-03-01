@@ -20,6 +20,7 @@ export type ContextCompactionStatus = {
 
 export type ContextCompactionStatusOptions = {
     extras?: ContextEstimateTokensExtras;
+    minimumTokens?: number;
 };
 
 /**
@@ -32,7 +33,10 @@ export function contextCompactionStatus(
     options: ContextCompactionStatusOptions = {}
 ): ContextCompactionStatus {
     const baseTokens = contextEstimateTokens(history);
-    const estimatedTokens = contextEstimateTokensWithExtras(history, options.extras);
+    const estimatedTokens = Math.max(
+        contextEstimateTokensWithExtras(history, options.extras),
+        minimumTokensNormalize(options.minimumTokens)
+    );
     const extraTokens = Math.max(0, estimatedTokens - baseTokens);
     const warningLimit = Math.max(1, Math.floor(emergencyLimit * WARNING_RATIO));
     const criticalLimit = Math.max(warningLimit + 1, Math.floor(emergencyLimit * CRITICAL_RATIO));
@@ -48,4 +52,11 @@ export function contextCompactionStatus(
         utilization,
         severity
     };
+}
+
+function minimumTokensNormalize(value: number | undefined): number {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+        return 0;
+    }
+    return Math.floor(value);
 }

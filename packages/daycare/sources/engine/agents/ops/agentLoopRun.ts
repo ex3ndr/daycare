@@ -480,6 +480,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             : {
                                   provider: response.providerId,
                                   model: response.modelId,
+                                  source: tokenUsage.source,
                                   size: tokenUsage.size
                               };
                     if (tokenUsage.source === "usage" && tokensEntry) {
