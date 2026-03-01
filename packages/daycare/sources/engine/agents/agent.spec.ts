@@ -10,6 +10,7 @@ import type {
     AgentHistoryRecord,
     AgentInboxItem,
     AgentInboxResult,
+    AgentPath,
     AgentPostTarget,
     AgentState,
     Connector,
@@ -48,7 +49,6 @@ import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentPathMemory } from "./ops/agentPathBuild.js";
 import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
-import { agentPathUserId } from "./ops/agentPathParse.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 
 describe("Agent", () => {
@@ -2432,7 +2432,7 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         return contextForUser({ userId: targetCtx.userId });
     }
     if ("path" in target) {
-        const userId = agentPathUserId(target.path);
+        const userId = pathUserIdResolve(target.path);
         if (userId) {
             return contextForUser({ userId });
         }
@@ -2463,6 +2463,17 @@ async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: strin
         throw new Error(`Agent not found: ${agentId}`);
     }
     return ctx;
+}
+
+function pathUserIdResolve(path: AgentPath): string | null {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    const first = segments[0]?.trim() ?? "";
+    if (!first || first === "system") {
+        return null;
+    }
+    return first;
 }
 
 async function signalsBuild(

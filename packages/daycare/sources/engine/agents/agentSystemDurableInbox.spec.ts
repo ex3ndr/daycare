@@ -8,6 +8,7 @@ import type {
     AgentHistoryRecord,
     AgentInboxItem,
     AgentInboxResult,
+    AgentPath,
     AgentPostTarget,
     Context
 } from "@/types";
@@ -31,7 +32,6 @@ import { contextForUser } from "./context.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentPathChildAllocate } from "./ops/agentPathChildAllocate.js";
 import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
-import { agentPathUserId } from "./ops/agentPathParse.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { inboxItemDeserialize } from "./ops/inboxItemDeserialize.js";
@@ -473,7 +473,7 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         return contextForUser({ userId: targetCtx.userId });
     }
     if ("path" in target) {
-        const userId = agentPathUserId(target.path);
+        const userId = pathUserIdResolve(target.path);
         if (userId) {
             return contextForUser({ userId });
         }
@@ -496,6 +496,17 @@ function targetNormalize(target: AgentTargetInput, ctx: Context): AgentPostTarge
         return target;
     }
     return { path: agentPathFromDescriptor(target.descriptor, { userId: ctx.userId }) };
+}
+
+function pathUserIdResolve(path: AgentPath): string | null {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    const first = segments[0]?.trim() ?? "";
+    if (!first || first === "system") {
+        return null;
+    }
+    return first;
 }
 
 async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {

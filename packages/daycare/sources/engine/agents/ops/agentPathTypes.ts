@@ -1,16 +1,5 @@
 export type AgentPath = string & { readonly __brand: unique symbol };
 
-export type AgentPathKind =
-    | "connector"
-    | "agent"
-    | "cron"
-    | "task"
-    | "subuser"
-    | "system"
-    | "sub"
-    | "memory"
-    | "search";
-
 /**
  * Casts a validated path string to the AgentPath branded type.
  * Expects: raw is an absolute slash-prefixed path with at least two segments.

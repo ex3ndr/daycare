@@ -37,14 +37,13 @@ import type { Webhooks } from "../webhook/webhooks.js";
 import { Agent } from "./agent.js";
 import { contextForAgent, contextForUser } from "./context.js";
 import { agentConfigFromDescriptor } from "./ops/agentConfigFromDescriptor.js";
+import { agentDescriptorMatchesStrategy } from "./ops/agentDescriptorMatchesStrategy.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
 import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
-import { agentPathMatchesStrategy } from "./ops/agentPathMatchesStrategy.js";
-import { agentPathConnectorName, agentPathKind, agentPathUserId } from "./ops/agentPathParse.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentTimestampGet } from "./ops/agentTimestampGet.js";
@@ -296,12 +295,7 @@ export class AgentSystem {
      */
     async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void> {
         const records = await this.storage.agents.findByUserId(targetUserId);
-        const frontendAgents = records.filter((record) => {
-            if (!record.path) {
-                return false;
-            }
-            return agentPathKind(record.path) === "connector";
-        });
+        const frontendAgents = records.filter((record) => record.descriptor.type === "user");
         await Promise.all(
             frontendAgents.map(async (record) => {
                 const targetCtx = contextForAgent({ userId: targetUserId, agentId: record.id });
@@ -493,7 +487,7 @@ export class AgentSystem {
 
     agentFor(ctx: Context, strategy: AgentFetchStrategy): string | null {
         const candidates = Array.from(this.entries.values()).filter((entry) => {
-            return entry.ctx.userId === ctx.userId && agentPathMatchesStrategy(entry.path, strategy);
+            return entry.ctx.userId === ctx.userId && agentDescriptorMatchesStrategy(entry.descriptor, strategy);
         });
         if (candidates.length === 0) {
             return null;
@@ -1116,13 +1110,11 @@ export class AgentSystem {
     }
 
     private async descriptorForPath(ctx: Context, path: AgentPath): Promise<AgentDescriptor> {
-        const kind = agentPathKind(path);
-        const segments = String(path)
-            .split("/")
-            .filter((segment) => segment.length > 0);
+        const segments = pathSegments(path);
+        const kind = pathKindResolve(path, segments);
         if (kind === "connector") {
-            const connector = agentPathConnectorName(path);
-            const userId = agentPathUserId(path);
+            const connector = segments[1]?.trim() ?? "";
+            const userId = segments[0]?.trim() ?? "";
             if (!connector || !userId) {
                 throw new Error(`Invalid connector path: ${path}`);
             }
@@ -1384,10 +1376,51 @@ export class AgentSystem {
     }
 }
 
-function pathTrimSegments(path: AgentPath, count: number): AgentPath {
-    const segments = String(path)
+type AgentPathKindLocal = "connector" | "agent" | "cron" | "task" | "subuser" | "system" | "sub" | "memory" | "search";
+
+const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser"]);
+
+function pathSegments(path: AgentPath): string[] {
+    return String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
+}
+
+function pathKindResolve(path: AgentPath, segments = pathSegments(path)): AgentPathKindLocal {
+    const raw = String(path);
+    if (raw.startsWith("/system/")) {
+        return "system";
+    }
+    if (raw.endsWith("/memory")) {
+        return "memory";
+    }
+    if (/\/search\/\d+$/.test(raw)) {
+        return "search";
+    }
+    if (/\/sub\/\d+$/.test(raw)) {
+        return "sub";
+    }
+    const scope = segments[1]?.trim() ?? "";
+    if (scope === "agent") {
+        return "agent";
+    }
+    if (scope === "cron") {
+        return "cron";
+    }
+    if (scope === "task") {
+        return "task";
+    }
+    if (scope === "subuser") {
+        return "subuser";
+    }
+    if (scope && !RESERVED_USER_SCOPE_SEGMENTS.has(scope)) {
+        return "connector";
+    }
+    throw new Error(`Unknown path pattern: ${path}`);
+}
+
+function pathTrimSegments(path: AgentPath, count: number): AgentPath {
+    const segments = pathSegments(path);
     if (count <= 0 || count >= segments.length) {
         throw new Error(`Cannot trim ${count} segments from path: ${path}`);
     }

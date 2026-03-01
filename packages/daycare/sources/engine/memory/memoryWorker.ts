@@ -4,7 +4,6 @@ import type { Storage } from "../../storage/storage.js";
 import { type Context, contextForAgent } from "../agents/context.js";
 import { agentPathMemory } from "../agents/ops/agentPathBuild.js";
 import { agentPathFromDescriptor } from "../agents/ops/agentPathFromDescriptor.js";
-import { agentPathKind } from "../agents/ops/agentPathParse.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { formatHistoryMessages } from "./infer/utils/formatHistoryMessages.js";
 import { memoryRootDocumentEnsure } from "./memoryRootDocumentEnsure.js";
@@ -119,16 +118,10 @@ export class MemoryWorker {
                     continue;
                 }
                 const sourcePath = agent.path ?? agentPathFromDescriptor(agent.descriptor, { userId: agent.userId });
-                const sourceKind = agentPathKind(sourcePath);
                 const descriptorType = agent.descriptor.type;
 
                 // Skip sessions belonging to memory-agents and memory-search agents
-                if (
-                    sourceKind === "memory" ||
-                    sourceKind === "search" ||
-                    descriptorType === "memory-agent" ||
-                    descriptorType === "memory-search"
-                ) {
+                if (descriptorType === "memory-agent" || descriptorType === "memory-search") {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }
@@ -146,10 +139,7 @@ export class MemoryWorker {
                 }
 
                 const isForeground =
-                    sourceKind === "connector" ||
-                    descriptorType === "user" ||
-                    descriptorType === "swarm" ||
-                    agentUser?.isSwarm === true;
+                    descriptorType === "user" || descriptorType === "swarm" || agentUser?.isSwarm === true;
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);

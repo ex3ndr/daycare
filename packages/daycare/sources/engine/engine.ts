@@ -30,7 +30,6 @@ import { stringSlugify } from "../utils/stringSlugify.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
-import { agentPathConnectorName, agentPathKind, agentPathUserId } from "./agents/ops/agentPathParse.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
@@ -197,9 +196,8 @@ export class Engine {
                 await this.runConnectorCallback("message", async () => {
                     for (const item of items) {
                         const resolved = await this.pathCanonicalize(item.path);
-                        const connector = agentPathConnectorName(resolved.path) ?? "unknown";
                         logger.debug(
-                            `receive: Connector message received: connector=${connector} path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
+                            `receive: Connector message received: path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
                         await this.agentSystem.post(
                             resolved.ctx,
@@ -230,18 +228,16 @@ export class Engine {
             onCommand: async (command, context, target) =>
                 this.runConnectorCallback("command", async () => {
                     const resolved = await this.targetCanonicalize(target);
-                    const connector = agentPathConnectorName(resolved.path) ?? "unknown";
-                    const kind = agentPathKind(resolved.path);
-                    let messageContext = context;
-                    if (kind === "connector" || kind === "subuser") {
-                        messageContext = await this.messageContextWithTimezone(resolved.ctx, context);
-                    }
+                    const connectorTarget = await this.connectorTargetResolve(resolved.path);
+                    const isConnector = connectorTarget !== null;
+                    const connector = connectorTarget?.connector ?? "unknown";
+                    const messageContext = await this.messageContextWithTimezone(resolved.ctx, context);
                     const parsed = parseCommand(command);
                     if (!parsed) {
                         return;
                     }
                     if (parsed.name === "reset") {
-                        if (kind !== "connector") {
+                        if (!isConnector) {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "receive: Reset command received");
@@ -249,7 +245,7 @@ export class Engine {
                         return;
                     }
                     if (parsed.name === "context") {
-                        if (kind !== "connector") {
+                        if (!isConnector) {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "receive: Context command received");
@@ -257,7 +253,7 @@ export class Engine {
                         return;
                     }
                     if (parsed.name === "compact") {
-                        if (kind !== "connector") {
+                        if (!isConnector) {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "receive: Compact command received");
@@ -265,14 +261,14 @@ export class Engine {
                         return;
                     }
                     if (parsed.name === "abort") {
-                        if (kind !== "connector") {
+                        if (!isConnector) {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "stop: Abort command received");
                         await this.handleStopCommand(resolved.path, messageContext);
                         return;
                     }
-                    if (kind !== "connector") {
+                    if (!isConnector) {
                         return;
                     }
                     const pluginCommand = this.modules.commands.get(parsed.name);
@@ -862,19 +858,25 @@ export class Engine {
      */
     private async pathCanonicalize(path: AgentPath): Promise<{ ctx: Context; path: AgentPath }> {
         await this.migrationReady;
-        const kind = agentPathKind(path);
-        if (kind !== "connector") {
+        const connectorPath = connectorPathResolve(path);
+        if (!connectorPath) {
             const ctx = await this.pathContextResolve(path);
             return { ctx, path };
         }
-        const connector = agentPathConnectorName(path);
-        const externalId = agentPathUserId(path);
-        if (!connector || !externalId) {
-            throw new Error(`Invalid connector path: ${path}`);
+
+        // Canonical connector paths already use internal user ids.
+        const canonicalTarget = await this.connectorTargetResolve(path);
+        if (canonicalTarget) {
+            return {
+                ctx: contextForUser({ userId: connectorPath.ownerId }),
+                path
+            };
         }
-        const connectorKey = userConnectorKeyCreate(connector, externalId);
+
+        // Connector callbacks may still arrive with external ids; normalize them.
+        const connectorKey = userConnectorKeyCreate(connectorPath.connector, connectorPath.ownerId);
         const user = await this.storage.resolveUserByConnectorKey(connectorKey);
-        const canonicalPath = agentPathConnector(user.id, connector);
+        const canonicalPath = agentPathConnector(user.id, connectorPath.connector);
         return {
             ctx: contextForUser({ userId: user.id }),
             path: canonicalPath
@@ -887,7 +889,7 @@ export class Engine {
      */
     private async pathContextResolve(path: AgentPath) {
         await this.migrationReady;
-        const userId = agentPathUserId(path);
+        const userId = pathUserIdResolve(path);
         if (!userId) {
             throw new Error(`Path does not resolve to a user context: ${path}`);
         }
@@ -895,19 +897,15 @@ export class Engine {
     }
 
     private async connectorTargetResolve(path: AgentPath): Promise<{ connector: string; targetId: string } | null> {
-        if (agentPathKind(path) !== "connector") {
+        const connectorPath = connectorPathResolve(path);
+        if (!connectorPath) {
             return null;
         }
-        const connector = agentPathConnectorName(path);
-        const userId = agentPathUserId(path);
-        if (!connector || !userId) {
-            return null;
-        }
-        const user = await this.storage.users.findById(userId);
+        const user = await this.storage.users.findById(connectorPath.ownerId);
         if (!user) {
             return null;
         }
-        const keyPrefix = `${connector}:`;
+        const keyPrefix = `${connectorPath.connector}:`;
         const connectorKey = user.connectorKeys.find((entry) => entry.connectorKey.startsWith(keyPrefix));
         if (!connectorKey) {
             return null;
@@ -916,7 +914,7 @@ export class Engine {
         if (!targetId) {
             return null;
         }
-        return { connector, targetId };
+        return { connector: connectorPath.connector, targetId };
     }
 
     /**
@@ -1021,6 +1019,39 @@ export class Engine {
             logger.info("reload: Runtime configuration reloaded");
         });
     }
+}
+
+const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser", "app"]);
+
+function pathSegments(path: AgentPath): string[] {
+    return String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+}
+
+function pathUserIdResolve(path: AgentPath): string | null {
+    const segments = pathSegments(path);
+    const first = segments[0]?.trim() ?? "";
+    if (!first || first === "system") {
+        return null;
+    }
+    return first;
+}
+
+function connectorPathResolve(path: AgentPath): { ownerId: string; connector: string } | null {
+    const segments = pathSegments(path);
+    if (segments.length !== 2) {
+        return null;
+    }
+    const ownerId = segments[0]?.trim() ?? "";
+    const connector = segments[1]?.trim() ?? "";
+    if (!ownerId || !connector || ownerId === "system") {
+        return null;
+    }
+    if (RESERVED_USER_SCOPE_SEGMENTS.has(connector)) {
+        return null;
+    }
+    return { ownerId, connector };
 }
 
 function parseCommand(command: string): { name: string; args: string[] } | null {

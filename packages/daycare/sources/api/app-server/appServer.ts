@@ -2,7 +2,6 @@ import http from "node:http";
 import type { AgentPath, AgentSkill, ConnectorMessage, ConnectorTarget, Context, TaskActiveSummary } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
-import { agentPathConnectorName, agentPathKind, agentPathUserId } from "../../engine/agents/ops/agentPathParse.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
@@ -290,12 +289,9 @@ export class AppServer {
                 if (!path) {
                     return;
                 }
-                if (agentPathKind(path) !== "connector") {
-                    return;
-                }
-                const userId = agentPathUserId(path);
-                const connector = agentPathConnectorName(path);
-                if (!userId || !connector) {
+                const userId = pathUserIdResolve(path);
+                const connectorTarget = userId ? await this.connectorTargetResolve(path) : null;
+                if (!userId || !connectorTarget) {
                     return;
                 }
                 const link = await appAuthLinkGenerate({
@@ -307,6 +303,7 @@ export class AppServer {
                     secret: await this.secretResolve(),
                     expiresInSeconds: APP_AUTH_LINK_EXPIRES_IN_SECONDS
                 });
+                const connector = connectorTarget.connector;
                 if (connector === "telegram") {
                     await this.messageSend(path, context, {
                         text: "Open your Daycare app using the button below.",
@@ -380,6 +377,17 @@ function webhookTokenResolve(pathname: string): string | null {
     const webhookToken = parts[2] ?? "";
     const normalized = webhookToken.trim();
     return normalized.length > 0 ? normalized : null;
+}
+
+function pathUserIdResolve(path: AgentPath): string | null {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    const first = segments[0]?.trim() ?? "";
+    if (!first || first === "system") {
+        return null;
+    }
+    return first;
 }
 
 function appServerSettingsEqual(left: AppServerResolvedSettings, right: AppServerResolvedSettings): boolean {

@@ -1,5 +1,4 @@
 import type { AgentConfig } from "./agentConfigTypes.js";
-import { agentPathKind } from "./agentPathParse.js";
 import type { AgentPath } from "./agentPathTypes.js";
 
 /**
@@ -7,7 +6,7 @@ import type { AgentPath } from "./agentPathTypes.js";
  * Expects: pathValue is a validated AgentPath.
  */
 export function agentPathLabel(pathValue: AgentPath, config?: AgentConfig | null): string {
-    const kind = agentPathKind(pathValue);
+    const kind = pathClassResolve(pathValue);
     const fallback = pathTail(pathValue);
 
     if (kind === "system") {
@@ -38,6 +37,32 @@ export function agentPathLabel(pathValue: AgentPath, config?: AgentConfig | null
         return "subagent";
     }
     return fallback;
+}
+
+function pathClassResolve(
+    pathValue: AgentPath
+): "connector" | "task" | "cron" | "memory" | "search" | "sub" | "system" {
+    const raw = String(pathValue);
+    if (raw.startsWith("/system/")) {
+        return "system";
+    }
+    if (raw.endsWith("/memory")) {
+        return "memory";
+    }
+    if (/\/search\/\d+$/.test(raw)) {
+        return "search";
+    }
+    if (/\/sub\/\d+$/.test(raw)) {
+        return "sub";
+    }
+    const segments = raw.split("/").filter((segment) => segment.length > 0);
+    if (segments[1] === "task") {
+        return "task";
+    }
+    if (segments[1] === "cron") {
+        return "cron";
+    }
+    return "connector";
 }
 
 function pathTail(pathValue: AgentPath): string {

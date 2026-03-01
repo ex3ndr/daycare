@@ -3,7 +3,6 @@ import type { Static } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
 import { z } from "zod";
 import type { AgentPath, ConnectorTarget, MessageContext, ToolDefinition, ToolResultContract } from "@/types";
-import { agentPathKind } from "../../engine/agents/ops/agentPathParse.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 import { upgradePm2ProcessDetect } from "./upgradePm2ProcessDetect.js";
 import { upgradeRestartPendingClear } from "./upgradeRestartPendingClear.js";
@@ -112,9 +111,6 @@ export const plugin = definePlugin({
             if (!path) {
                 return;
             }
-            if (agentPathKind(path) !== "connector") {
-                return;
-            }
 
             const sendStatus = async (text: string): Promise<void> => {
                 try {
@@ -159,9 +155,6 @@ export const plugin = definePlugin({
         ): Promise<void> => {
             const path = pathFromTarget(target);
             if (!path) {
-                return;
-            }
-            if (agentPathKind(path) !== "connector") {
                 return;
             }
 
