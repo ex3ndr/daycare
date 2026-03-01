@@ -91,4 +91,46 @@ describe("formatHistoryMessages", () => {
         const result = formatHistoryMessages(records, false);
         expect(result).toBe("## System Message\n\nrun task\n\n## Agent\n\nDone.");
     });
+
+    it("rewrites wrapped system_message text to avoid nested tags", () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "user_message",
+                at: 1000,
+                text: '<system_message origin="cron">[cron]\ntriggerId: test-1</system_message>',
+                files: []
+            }
+        ];
+        const result = formatHistoryMessages(records, false);
+        expect(result).toContain("## System Message");
+        expect(result).toContain("> System message (origin: cron)");
+        expect(result).toContain("[cron]\ntriggerId: test-1");
+        expect(result).not.toContain("<system_message");
+    });
+
+    it("rewrites wrapped system_message_silent text and keeps inner content", () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "user_message",
+                at: 1000,
+                text: "<system_message_silent>quiet update</system_message_silent>",
+                files: []
+            }
+        ];
+        const result = formatHistoryMessages(records);
+        expect(result).toBe("## User\n\n> Silent system message\n\nquiet update");
+    });
+
+    it("adds line breaks between adjacent tags inside wrapped system messages", () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "user_message",
+                at: 1000,
+                text: '<system_message origin="cron"><timezone>UTC</timezone><time>12:00</time><message>run</message></system_message>',
+                files: []
+            }
+        ];
+        const result = formatHistoryMessages(records, false);
+        expect(result).toContain("<timezone>UTC</timezone>\n<time>12:00</time>\n<message>run</message>");
+    });
 });
