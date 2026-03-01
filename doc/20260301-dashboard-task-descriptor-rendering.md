@@ -22,4 +22,3 @@ flowchart TD
     Switch -->|other known type| Existing[Existing formatter path]
     Switch -->|unknown| Fallback[Fallback: system]
 ```
-```
