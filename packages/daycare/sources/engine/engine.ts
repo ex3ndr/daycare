@@ -799,7 +799,8 @@ export class Engine {
 
     private async handleCompactCommand(path: AgentPath, context: MessageContext): Promise<void> {
         const ctx = await this.pathContextResolve(path);
-        await this.agentSystem.post(ctx, { path }, { type: "compact", context });
+        const agentId = await this.agentSystem.agentIdForTarget(ctx, { path });
+        await this.agentSystem.post(ctx, { agentId }, { type: "compact", context });
     }
 
     private async handleResetCommand(path: AgentPath, context: MessageContext): Promise<void> {
@@ -808,9 +809,10 @@ export class Engine {
             logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
         }
         const ctx = await this.pathContextResolve(path);
+        const agentId = await this.agentSystem.agentIdForTarget(ctx, { path });
         await this.agentSystem.post(
             ctx,
-            { path },
+            { agentId },
             { type: "reset", message: "Manual reset requested by the user.", context }
         );
     }

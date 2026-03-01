@@ -281,6 +281,12 @@ export class AgentSystem {
             const agentType = "path" in target ? "path" : "agent";
             logger.warn({ agentType }, "load: AgentSystem received message before load");
         }
+        if ("path" in target && !creationConfig) {
+            logger.warn(
+                { path: target.path },
+                "prefer: Path target posted without creationConfig; using existing agent only"
+            );
+        }
         const targetLabel = "path" in target ? `path:${target.path}` : `agent:${target.agentId}`;
         logger.debug(`receive: post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
         const entry = await this.resolveEntry(ctx, target, item, creationConfig);
@@ -295,6 +301,12 @@ export class AgentSystem {
         item: AgentInboxItem,
         creationConfig?: AgentCreationConfig
     ): Promise<AgentInboxResult> {
+        if ("path" in target && !creationConfig) {
+            logger.warn(
+                { path: target.path },
+                "prefer: Path target posted without creationConfig; using existing agent only"
+            );
+        }
         const entry = await this.resolveEntry(ctx, target, item, creationConfig);
         const completion = this.createCompletion();
         await this.enqueueEntry(entry, item, completion.completion);
@@ -669,38 +681,13 @@ export class AgentSystem {
         }
 
         const path = target.path;
-        const existingAgentId = this.pathMap.get(path);
-        if (existingAgentId) {
-            const existing = this.entries.get(existingAgentId);
-            if (existing) {
-                if (existing.agent.state.state === "dead" || existing.terminating) {
-                    throw new Error(`Agent is dead: ${existingAgentId}`);
-                }
-                if (existing.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
-                }
-                return existing;
-            }
-            const restored = await this.restoreAgent(existingAgentId, { allowSleeping: true });
-            if (restored) {
-                if (restored.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
-                }
-                return restored;
-            }
+        const existing = await this.pathEntryResolve(ctx, path);
+        if (existing) {
+            return existing;
         }
-
-        const persistedByPath = await this.storage.agents.findByPath(path);
-        if (persistedByPath) {
-            const restored = await this.restoreAgent(persistedByPath.id, { allowSleeping: true });
-            if (restored) {
-                if (restored.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${persistedByPath.id}`);
-                }
-                return restored;
-            }
+        if (!creationConfig) {
+            throw new Error(`Agent not found for path: ${path}`);
         }
-
         const config = configForCreation(path, creationConfig);
         const stablePathId = stableAgentIdForPath(path, config.kind);
         const agentId = stablePathId ?? createId();
@@ -723,6 +710,46 @@ export class AgentSystem {
         });
         logger.debug(`register: Agent entry registered agentId=${agentId}`);
         return entry;
+    }
+
+    /**
+     * Resolves an existing path-targeted agent from memory or persisted storage.
+     * Returns null when no existing agent is found for the path.
+     */
+    private async pathEntryResolve(ctx: Context, path: AgentPath): Promise<AgentEntry | null> {
+        const existingAgentId = this.pathMap.get(path);
+        if (existingAgentId) {
+            const existing = this.entries.get(existingAgentId);
+            if (existing) {
+                if (existing.agent.state.state === "dead" || existing.terminating) {
+                    throw new Error(`Agent is dead: ${existingAgentId}`);
+                }
+                if (existing.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
+                }
+                return existing;
+            }
+            const restored = await this.restoreAgent(existingAgentId, { allowSleeping: true });
+            if (restored) {
+                if (restored.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
+                }
+                return restored;
+            }
+        }
+
+        const persistedByPath = await this.storage.agents.findByPath(path);
+        if (!persistedByPath) {
+            return null;
+        }
+        const restored = await this.restoreAgent(persistedByPath.id, { allowSleeping: true });
+        if (restored) {
+            if (restored.ctx.userId !== ctx.userId) {
+                throw new Error(`Cannot resolve agent from another user: ${persistedByPath.id}`);
+            }
+            return restored;
+        }
+        return null;
     }
 
     private registerEntry(input: {

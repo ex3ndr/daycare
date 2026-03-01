@@ -5,6 +5,7 @@ import { TaskExecutions } from "./taskExecutions.js";
 describe("TaskExecutions", () => {
     it("records success for fire-and-forget dispatch", async () => {
         let resolveCall: ((value: unknown) => void) | null = null;
+        const agentIdForTarget = vi.fn(async () => "task-agent-1");
         const postAndAwait = vi.fn(
             () =>
                 new Promise<unknown>((resolve) => {
@@ -13,6 +14,7 @@ describe("TaskExecutions", () => {
         );
         const facade = new TaskExecutions({
             agentSystem: {
+                agentIdForTarget,
                 postAndAwait
             } as never
         });
@@ -25,6 +27,7 @@ describe("TaskExecutions", () => {
             target: { path: agentPathTask("user-1", "task-1") },
             text: "[cron]"
         });
+        await tick();
 
         const before = facade.listStats();
         expect(before).toHaveLength(1);
@@ -39,9 +42,14 @@ describe("TaskExecutions", () => {
         resolvePending({ type: "system_message", responseText: "ok" });
         await tick();
 
-        expect(postAndAwait).toHaveBeenCalledWith(
+        expect(agentIdForTarget).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "user-1" }),
             { path: agentPathTask("user-1", "task-1") },
+            undefined
+        );
+        expect(postAndAwait).toHaveBeenCalledWith(
+            expect.objectContaining({ userId: "user-1" }),
+            { agentId: "task-agent-1" },
             expect.objectContaining({
                 type: "system_message",
                 taskId: "task-1",
@@ -59,12 +67,14 @@ describe("TaskExecutions", () => {
     });
 
     it("records failures for responseError and thrown dispatch errors", async () => {
+        const agentIdForTarget = vi.fn(async () => "task-agent-1");
         const postAndAwait = vi
             .fn()
             .mockResolvedValueOnce({ type: "system_message", responseText: "boom", responseError: true })
             .mockRejectedValueOnce(new Error("network"));
         const facade = new TaskExecutions({
             agentSystem: {
+                agentIdForTarget,
                 postAndAwait
             } as never
         });
@@ -92,9 +102,11 @@ describe("TaskExecutions", () => {
     });
 
     it("waits for completion in dispatchAndAwait and returns system_message result", async () => {
+        const agentIdForTarget = vi.fn(async () => "task-agent-1");
         const postAndAwait = vi.fn(async () => ({ type: "system_message" as const, responseText: "done" }));
         const facade = new TaskExecutions({
             agentSystem: {
+                agentIdForTarget,
                 postAndAwait
             } as never
         });

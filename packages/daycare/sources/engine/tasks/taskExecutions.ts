@@ -71,8 +71,8 @@ export class TaskExecutions {
         const stats = this.statsQueueRecord(prepared.userId, prepared.taskId, prepared.source);
         const item = taskExecutionItemBuild(prepared);
         const ctx = contextForUser({ userId: prepared.userId });
-        void this.agentSystem
-            .postAndAwait(ctx, prepared.target, item, prepared.creationConfig)
+        void this.targetForDispatchResolve(prepared, ctx)
+            .then((target) => this.agentSystem.postAndAwait(ctx, target, item, prepared.creationConfig))
             .then((result) => {
                 if (result.type !== "system_message") {
                     this.statsFailureRecord(stats, prepared.source);
@@ -111,12 +111,9 @@ export class TaskExecutions {
         const stats = this.statsQueueRecord(prepared.userId, prepared.taskId, prepared.source);
         try {
             const item = taskExecutionItemBuild(prepared);
-            const result = await this.agentSystem.postAndAwait(
-                contextForUser({ userId: prepared.userId }),
-                prepared.target,
-                item,
-                prepared.creationConfig
-            );
+            const ctx = contextForUser({ userId: prepared.userId });
+            const target = await this.targetForDispatchResolve(prepared, ctx);
+            const result = await this.agentSystem.postAndAwait(ctx, target, item, prepared.creationConfig);
             if (result.type !== "system_message") {
                 this.statsFailureRecord(stats, prepared.source);
                 throw new Error(`Unexpected task execution result type: ${result.type}`);
@@ -216,6 +213,18 @@ export class TaskExecutions {
         };
         this.stats.set(key, created);
         return created;
+    }
+
+    /** Resolves dispatch target to agentId when callers provide a path target. */
+    private async targetForDispatchResolve(
+        input: ReturnType<typeof taskExecutionPrepare>,
+        ctx: ReturnType<typeof contextForUser>
+    ): Promise<AgentPostTarget> {
+        if ("agentId" in input.target) {
+            return input.target;
+        }
+        const agentId = await this.agentSystem.agentIdForTarget(ctx, input.target, input.creationConfig);
+        return { agentId };
     }
 }
 

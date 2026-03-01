@@ -21,6 +21,7 @@ describe("Engine reset command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const agentIdForTargetSpy = vi.spyOn(engine.agentSystem, "agentIdForTarget").mockResolvedValue("agent-1");
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
@@ -55,10 +56,12 @@ describe("Engine reset command", () => {
                 throw new Error("Expected reset post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const postTarget = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { agentId: string };
             const payload = postCall[2] as { type: string; message: string; context: MessageContext };
-            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
+            expect(agentIdForTargetSpy).toHaveBeenCalledWith(ctx, {
+                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+            });
+            expect(postTarget.agentId).toBe("agent-1");
             expect(payload).toEqual({
                 type: "reset",
                 message: "Manual reset requested by the user.",
@@ -80,6 +83,7 @@ describe("Engine reset command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const agentIdForTargetSpy = vi.spyOn(engine.agentSystem, "agentIdForTarget").mockResolvedValue("agent-1");
             const state: {
                 messageHandler?: (
                     message: ConnectorMessage,
@@ -122,10 +126,12 @@ describe("Engine reset command", () => {
                 throw new Error("Expected reset post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const postTarget = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { agentId: string };
             const payload = postCall[2] as { type: string; message: string; context: MessageContext };
-            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
+            expect(agentIdForTargetSpy).toHaveBeenCalledWith(ctx, {
+                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+            });
+            expect(postTarget.agentId).toBe("agent-1");
             expect(payload).toEqual({
                 type: "reset",
                 message: "Manual reset requested by the user.",
@@ -510,6 +516,7 @@ describe("Engine compact command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const agentIdForTargetSpy = vi.spyOn(engine.agentSystem, "agentIdForTarget").mockResolvedValue("agent-1");
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
@@ -544,10 +551,12 @@ describe("Engine compact command", () => {
                 throw new Error("Expected compact post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const postTarget = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { agentId: string };
             const payload = postCall[2] as { type: string; context: MessageContext };
-            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
+            expect(agentIdForTargetSpy).toHaveBeenCalledWith(ctx, {
+                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+            });
+            expect(postTarget.agentId).toBe("agent-1");
             expect(payload).toEqual({ type: "compact", context: expect.objectContaining(context) });
             expect(sendMessage).not.toHaveBeenCalled();
 
