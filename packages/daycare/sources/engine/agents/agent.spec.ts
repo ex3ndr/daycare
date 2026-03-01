@@ -342,6 +342,104 @@ describe("Agent", () => {
         }
     });
 
+    it("runs inference after task-referenced executable failures", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-task-failure-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const complete = vi.fn(async () => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant" as const,
+                    content: [{ type: "text" as const, text: "handled task failure" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const ownerCtx = await agentSystem.ownerCtxEnsure();
+            const taskId = createId();
+            const now = Date.now();
+            await agentSystem.storage.tasks.create({
+                id: taskId,
+                userId: ownerCtx.userId,
+                title: "Broken task",
+                description: null,
+                code: "def broken(",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now,
+                version: 1,
+                validFrom: now,
+                validTo: null
+            });
+
+            const result = await postAndAwait(
+                agentSystem,
+                { descriptor: { type: "task", id: taskId } },
+                {
+                    type: "system_message",
+                    text: "[cron]\ntask run",
+                    task: { id: taskId, version: 1 },
+                    origin: "cron"
+                }
+            );
+            if (result.type !== "system_message") {
+                throw new Error("Expected system_message result");
+            }
+            expect(result.responseError).toBe(true);
+            expect(complete).toHaveBeenCalledTimes(1);
+
+            const agentId = await agentIdForTarget(agentSystem, { descriptor: { type: "task", id: taskId } });
+            const history = await agentHistoryLoadAll(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
+            const userRecord = history.find((record) => record.type === "user_message");
+            if (!userRecord || userRecord.type !== "user_message") {
+                throw new Error("Expected user_message history record");
+            }
+            expect(userRecord.text).toContain("<exec_error>");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("writes rlm history for executable skip() without adding context history", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {
