@@ -138,8 +138,8 @@ export class MemoryWorker {
                 // Prepend memory-graph update instruction so each batch reminds the
                 // memory agent to persist any new knowledge found in the transcript.
                 const preamble = isForeground
-                    ? "> Review the following transcript and update the memory graph with any new facts, relationships, or events."
-                    : "> Source: This transcript is from an automated agent performing background work. There is no human participant.\n> Review the following transcript and update the memory graph with any new facts about what was done, what succeeded/failed, and what was learned about systems and processes.";
+                    ? "> Review the following transcript and update the memory graph with any new facts, relationships, or events. Do NOT reply with summaries — only use tools to update the graph."
+                    : "> Source: This transcript is from an automated agent performing background work. There is no human participant.\n> Review the following transcript and update the memory graph with any new facts about what was done, what succeeded/failed, and what was learned about systems and processes. Do NOT reply with summaries — only use tools to update the graph.";
                 const text = `${preamble}\n\n${transcript}`;
 
                 const descriptor: AgentDescriptor = { type: "memory-agent", id: session.agentId };
