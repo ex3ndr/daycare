@@ -480,27 +480,16 @@ export const observationLogTable = pgTable(
         message: text("message").notNull(),
         details: text("details"),
         data: text("data"),
+        scopeIds: text("scope_ids").array().notNull().default([]),
         createdAt: bigint("created_at", { mode: "number" }).notNull()
     },
     (table) => [
         index("idx_observation_log_user").on(table.userId),
         index("idx_observation_log_type").on(table.type),
         index("idx_observation_log_created").on(table.createdAt),
-        index("idx_observation_log_user_created").on(table.userId, table.createdAt)
-    ]
-);
-
-export const observationLogScopesTable = pgTable(
-    "observation_log_scopes",
-    {
-        observationId: text("observation_id")
-            .notNull()
-            .references(() => observationLogTable.id, { onDelete: "cascade" }),
-        scopeId: text("scope_id").notNull()
-    },
-    (table) => [
-        primaryKey({ columns: [table.observationId, table.scopeId] }),
-        index("idx_observation_log_scopes_scope").on(table.scopeId)
+        index("idx_observation_log_user_created").on(table.userId, table.createdAt),
+        // Actual index is GIN (created via migration SQL); declared here for schema matcher
+        index("idx_observation_log_scopes").on(table.scopeIds)
     ]
 );
 
@@ -527,8 +516,7 @@ export const schema = {
     connectionsTable,
     systemPromptsTable,
     tokenStatsHourlyTable,
-    observationLogTable,
-    observationLogScopesTable
+    observationLogTable
 };
 
 /**

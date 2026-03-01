@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, gte, inArray, like, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, like, lt, sql } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
-import { observationLogScopesTable, observationLogTable } from "../schema.js";
+import { observationLogTable } from "../schema.js";
 import type {
     ObservationLogDbRecord,
     ObservationLogFindOptions,
@@ -11,7 +11,8 @@ import type {
 /**
  * Append-only observation log repository backed by Drizzle.
  * No in-memory caching — queries always hit the database.
- * Expects: schema migrations already applied for observation_log tables.
+ * Scope IDs stored as a native PG text[] column with GIN index for fast overlap queries.
+ * Expects: schema migrations already applied for observation_log table.
  */
 export class ObservationLogRepository {
     private readonly db: DaycareDb;
@@ -20,69 +21,30 @@ export class ObservationLogRepository {
         this.db = db;
     }
 
-    /** Appends a single observation with its scope IDs in one transaction. */
+    /** Appends a single observation. */
     async append(record: ObservationLogDbRecord): Promise<void> {
-        await this.db.transaction(async (tx) => {
-            await tx.insert(observationLogTable).values({
-                id: record.id,
-                userId: record.userId,
-                type: record.type,
-                source: record.source,
-                message: record.message,
-                details: record.details,
-                data: record.data === undefined || record.data === null ? null : JSON.stringify(record.data),
-                createdAt: record.createdAt
-            });
-
-            if (record.scopeIds.length > 0) {
-                await tx.insert(observationLogScopesTable).values(
-                    record.scopeIds.map((scopeId) => ({
-                        observationId: record.id,
-                        scopeId
-                    }))
-                );
-            }
+        await this.db.insert(observationLogTable).values({
+            id: record.id,
+            userId: record.userId,
+            type: record.type,
+            source: record.source,
+            message: record.message,
+            details: record.details,
+            data: record.data === undefined || record.data === null ? null : JSON.stringify(record.data),
+            scopeIds: record.scopeIds,
+            createdAt: record.createdAt
         });
     }
 
     /**
      * Queries observations for a user with optional filters.
-     * scopeIds filter matches events tagged with ANY of the provided IDs.
+     * scopeIds filter uses PG array overlap (&&) — matches events tagged with ANY of the provided IDs.
      * source filter uses prefix match (e.g. "agent:" matches all agent sources).
      */
     async findMany(ctx: Context, options: ObservationLogFindOptions = {}): Promise<ObservationLogDbRecord[]> {
         const limit = numberLimitResolve(options.limit);
         const offset = numberOffsetResolve(options.offset);
-
-        // When filtering by scope, we need a subquery for matching observation IDs
-        let scopeSubqueryIds: string[] | null = null;
-        if (options.scopeIds && options.scopeIds.length > 0) {
-            const scopeRows = await this.db
-                .select({ observationId: observationLogScopesTable.observationId })
-                .from(observationLogScopesTable)
-                .where(inArray(observationLogScopesTable.scopeId, options.scopeIds));
-            scopeSubqueryIds = [...new Set(scopeRows.map((row) => row.observationId))];
-            if (scopeSubqueryIds.length === 0) {
-                return [];
-            }
-        }
-
-        const conditions = [eq(observationLogTable.userId, ctx.userId)];
-        if (options.type) {
-            conditions.push(eq(observationLogTable.type, options.type));
-        }
-        if (options.source) {
-            conditions.push(like(observationLogTable.source, `${options.source}%`));
-        }
-        if (scopeSubqueryIds) {
-            conditions.push(inArray(observationLogTable.id, scopeSubqueryIds));
-        }
-        if (options.afterDate !== undefined) {
-            conditions.push(gte(observationLogTable.createdAt, options.afterDate));
-        }
-        if (options.beforeDate !== undefined) {
-            conditions.push(lt(observationLogTable.createdAt, options.beforeDate));
-        }
+        const conditions = conditionsBuild(ctx.userId, options);
 
         let query = this.db
             .select()
@@ -99,7 +61,7 @@ export class ObservationLogRepository {
         }
 
         const rows = await query;
-        return this.rowsPopulateScopeIds(rows);
+        return rows.map(rowParse);
     }
 
     /**
@@ -108,29 +70,7 @@ export class ObservationLogRepository {
      */
     async findRecent(ctx: Context, options: ObservationLogRecentOptions = {}): Promise<ObservationLogDbRecord[]> {
         const limit = Math.min(1000, Math.max(1, Math.floor(options.limit ?? 100)));
-
-        let scopeSubqueryIds: string[] | null = null;
-        if (options.scopeIds && options.scopeIds.length > 0) {
-            const scopeRows = await this.db
-                .select({ observationId: observationLogScopesTable.observationId })
-                .from(observationLogScopesTable)
-                .where(inArray(observationLogScopesTable.scopeId, options.scopeIds));
-            scopeSubqueryIds = [...new Set(scopeRows.map((row) => row.observationId))];
-            if (scopeSubqueryIds.length === 0) {
-                return [];
-            }
-        }
-
-        const conditions = [eq(observationLogTable.userId, ctx.userId)];
-        if (options.type) {
-            conditions.push(eq(observationLogTable.type, options.type));
-        }
-        if (options.source) {
-            conditions.push(like(observationLogTable.source, `${options.source}%`));
-        }
-        if (scopeSubqueryIds) {
-            conditions.push(inArray(observationLogTable.id, scopeSubqueryIds));
-        }
+        const conditions = conditionsBuild(ctx.userId, options);
 
         const rows = await this.db
             .select()
@@ -141,59 +81,44 @@ export class ObservationLogRepository {
 
         // Reverse so results are chronological (oldest first)
         rows.reverse();
-        return this.rowsPopulateScopeIds(rows);
-    }
-
-    /** Populates scopeIds on a set of observation log rows by batch-loading from the scopes table. */
-    private async rowsPopulateScopeIds(
-        rows: {
-            id: string;
-            userId: string;
-            type: string;
-            source: string;
-            message: string;
-            details: string | null;
-            data: string | null;
-            createdAt: number;
-        }[]
-    ): Promise<ObservationLogDbRecord[]> {
-        if (rows.length === 0) {
-            return [];
-        }
-
-        const ids = rows.map((row) => row.id);
-        const scopeRows = await this.db
-            .select()
-            .from(observationLogScopesTable)
-            .where(inArray(observationLogScopesTable.observationId, ids));
-
-        const scopeMap = new Map<string, string[]>();
-        for (const scope of scopeRows) {
-            const existing = scopeMap.get(scope.observationId);
-            if (existing) {
-                existing.push(scope.scopeId);
-            } else {
-                scopeMap.set(scope.observationId, [scope.scopeId]);
-            }
-        }
-
-        return rows.map((row) => rowParse(row, scopeMap.get(row.id) ?? []));
+        return rows.map(rowParse);
     }
 }
 
-function rowParse(
-    row: {
-        id: string;
-        userId: string;
-        type: string;
-        source: string;
-        message: string;
-        details: string | null;
-        data: string | null;
-        createdAt: number;
-    },
-    scopeIds: string[]
-): ObservationLogDbRecord {
+/** Builds WHERE conditions from userId and filter options. */
+function conditionsBuild(userId: string, options: ObservationLogFindOptions & ObservationLogRecentOptions) {
+    const conditions = [eq(observationLogTable.userId, userId)];
+    if (options.type) {
+        conditions.push(eq(observationLogTable.type, options.type));
+    }
+    if (options.source) {
+        conditions.push(like(observationLogTable.source, `${options.source}%`));
+    }
+    if (options.scopeIds && options.scopeIds.length > 0) {
+        // PG array overlap: scope_ids && ARRAY['id1','id2']::text[]
+        const arrayLiteral = `{${options.scopeIds.map((id) => `"${id.replace(/["\\]/g, "")}"`).join(",")}}`;
+        conditions.push(sql`${observationLogTable.scopeIds} && ${arrayLiteral}::text[]`);
+    }
+    if (options.afterDate !== undefined) {
+        conditions.push(gte(observationLogTable.createdAt, options.afterDate));
+    }
+    if (options.beforeDate !== undefined) {
+        conditions.push(lt(observationLogTable.createdAt, options.beforeDate));
+    }
+    return conditions;
+}
+
+function rowParse(row: {
+    id: string;
+    userId: string;
+    type: string;
+    source: string;
+    message: string;
+    details: string | null;
+    data: string | null;
+    scopeIds: string[] | null;
+    createdAt: number;
+}): ObservationLogDbRecord {
     return {
         id: row.id,
         userId: row.userId,
@@ -202,7 +127,7 @@ function rowParse(
         message: row.message,
         details: row.details,
         data: dataParse(row.data),
-        scopeIds,
+        scopeIds: row.scopeIds ?? [],
         createdAt: row.createdAt
     };
 }

@@ -56,18 +56,12 @@ The `observation_query` tool is available to agents. It supports:
 graph TD
     A[Plugin / Agent / System] -->|observationEmit| B[ObservationLogRepository.append]
     B --> C[observation_log table]
-    B --> D[observation_log_scopes table]
     E[Agent tool: observation_query] --> F[ObservationLogRepository.findMany]
     F --> C
-    F --> D
     F --> G[observationLogFormat]
     G --> H[LLM context text]
 ```
 
 ## Database Schema
 
-Two tables:
-- `observation_log` — main event rows (PK: `id`)
-- `observation_log_scopes` — junction table for scope IDs (PK: `observation_id, scope_id`)
-
-Scope queries use a subquery join: find observation IDs matching any requested scope, then filter the main table.
+Single table `observation_log` with a native PG `text[]` column for scope IDs, indexed with GIN for fast overlap (`&&`) queries. No junction table needed — scope filtering uses `scope_ids && ARRAY[...]::text[]`.
