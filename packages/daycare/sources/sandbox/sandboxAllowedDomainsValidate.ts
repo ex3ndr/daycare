@@ -3,7 +3,7 @@
  * Expects: allowedDomains is already normalized and deduped.
  * A global wildcard ("*") disables domain restrictions entirely.
  */
-export function sandboxAllowedDomainsValidate(allowedDomains: string[]): string[] {
+export function sandboxAllowedDomainsValidate(_allowedDomains: string[]): string[] {
     const issues: string[] = [];
     return issues;
 }
