@@ -1081,6 +1081,24 @@ export class AgentSystem {
         path?: AgentPath | null;
         config?: AgentConfig | null;
     }): Promise<AgentPath> {
+        if (record.path && record.descriptor.type === "swarm") {
+            const canonicalPath = agentPathFromDescriptor(record.descriptor, { userId: record.userId });
+            if (record.path !== canonicalPath) {
+                try {
+                    await this.storage.agents.update(record.id, {
+                        path: canonicalPath,
+                        config: record.config ?? agentConfigFromDescriptor(record.descriptor),
+                        updatedAt: Date.now()
+                    });
+                    return canonicalPath;
+                } catch (error) {
+                    logger.warn(
+                        { agentId: record.id, path: canonicalPath, error },
+                        "warn: Failed to persist canonical swarm path"
+                    );
+                }
+            }
+        }
         if (record.path) {
             return record.path;
         }
@@ -1154,6 +1172,16 @@ export class AgentSystem {
             const name = segments[2]?.trim() ?? "";
             if (!name) {
                 throw new Error(`Invalid agent path: ${path}`);
+            }
+            const userId = segments[0]?.trim() ?? "";
+            if (name === "swarm" && userId) {
+                const user = await this.storage.users.findById(userId);
+                if (user?.isSwarm) {
+                    return {
+                        type: "swarm",
+                        id: user.id
+                    };
+                }
             }
             return {
                 type: "permanent",

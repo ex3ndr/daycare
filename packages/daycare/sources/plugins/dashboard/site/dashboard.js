@@ -91,6 +91,9 @@ function formatAgentType(path) {
     return "task";
   }
   if (segments[1] === "agent") {
+    if (segments[2] === "swarm") {
+      return "subuser";
+    }
     return "permanent";
   }
   if (segments[1] === "subuser") {

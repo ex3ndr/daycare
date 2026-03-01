@@ -515,6 +515,63 @@ describe("AgentSystem", () => {
         }
     });
 
+    it("creates swarm descriptors for swarm user paths", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            await harness.storage.users.create({ id: "swarm-user-1", isSwarm: true, nametag: "swarm-user-1" });
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const swarmCtx = contextForUser({ userId: "swarm-user-1" });
+            const swarmPath = agentPath("/swarm-user-1/agent/swarm");
+            await postAndAwait(harness.agentSystem, swarmCtx, { path: swarmPath }, { type: "reset", message: "swarm" });
+            const swarmAgentId = await agentIdForTarget(harness.agentSystem, swarmCtx, { path: swarmPath });
+            const persisted = await harness.storage.agents.findById(swarmAgentId);
+
+            expect(persisted?.descriptor.type).toBe("swarm");
+            if (persisted?.descriptor.type === "swarm") {
+                expect(persisted.descriptor.id).toBe("swarm-user-1");
+            }
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("canonicalizes legacy swarm paths during load", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            await harness.storage.users.create({ id: "swarm-user-2", isSwarm: true, nametag: "swarm-user-2" });
+            await harness.storage.agents.create({
+                id: "legacy-swarm-agent",
+                userId: "swarm-user-2",
+                type: "swarm",
+                descriptor: { type: "swarm", id: "swarm-user-2" },
+                path: agentPath("/swarm-user-2/agent/legacy-swarm-agent"),
+                activeSessionId: null,
+                permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const swarmCtx = contextForUser({ userId: "swarm-user-2" });
+            const canonicalPath = agentPath("/swarm-user-2/agent/swarm");
+            const swarmAgentId = await agentIdForTarget(harness.agentSystem, swarmCtx, { path: canonicalPath });
+            const persisted = await harness.storage.agents.findById("legacy-swarm-agent");
+
+            expect(swarmAgentId).toBe("legacy-swarm-agent");
+            expect(persisted?.path).toBe(canonicalPath);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("keeps executable system-message failures inline without follow-up re-post", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
