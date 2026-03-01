@@ -25,6 +25,7 @@
 - Node remains supported for running built output (`dist/*`) and production installs.
 - Lint/style check: `yarn lint` (Biome)
 - Lint/style fix: `yarn lint:fix` (Biome `--write`)
+- Always run lint for your changes and fix all lint issues before finishing.
 - Type-check/build: `yarn typecheck` (tsc)
 - Tests: `yarn test` (vitest);
 
@@ -70,6 +71,7 @@
 - **Device checks:** before testing, verify connected real devices (iOS/Android) before reaching for simulators/emulators.
 - **Multi-agent safety:** do **not** create/apply/drop `git stash` entries unless explicitly requested (this includes `git pull --rebase --autostash`). Assume other agents may be working; keep unrelated WIP untouched and avoid cross-cutting state changes.
 - **Multi-agent safety:** when the user says "push", you may `git pull --rebase` to integrate latest changes (never discard other agents' work). When the user says "commit", scope to your changes only. When the user says "commit all", commit everything in grouped chunks.
+- **Lint discipline:** after every rebase, always run `yarn lint`; if it reports issues, run `yarn lint:fix` and manually fix anything remaining. Do not leave lint issues unresolved.
 - **Multi-agent safety:** do **not** create/remove/modify `git worktree` checkouts (or edit `.worktrees/*`) unless explicitly requested.
 - **Multi-agent safety:** do **not** switch branches / check out a different branch unless explicitly requested.
 - **Multi-agent safety:** running multiple agents is OK as long as each agent has its own agent directory.
