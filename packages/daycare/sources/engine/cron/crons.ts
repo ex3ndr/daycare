@@ -226,7 +226,7 @@ export class Crons {
 
         const target = trigger.agentId
             ? { agentId: trigger.agentId }
-            : { descriptor: { type: "system" as const, tag: "cron" } };
+            : { descriptor: { type: "task" as const, id: trigger.taskId } };
         const text = cronTaskFailurePromptBuild({
             triggerId: trigger.id,
             taskId: trigger.taskId,
