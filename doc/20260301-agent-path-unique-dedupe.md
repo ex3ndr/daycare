@@ -2,7 +2,7 @@
 
 ## Summary
 
-`20260301_agent_paths.sql` now closes duplicate active rows that resolve to the same `agents.path` before creating `idx_agents_path_active`.
+`20260301_agents_unified.sql` closes duplicate active rows that resolve to the same `agents.path` before creating `idx_agents_path_active`.
 
 This prevents migration failure on legacy data where multiple active agents map to one logical path (for example `/system/task`).
 

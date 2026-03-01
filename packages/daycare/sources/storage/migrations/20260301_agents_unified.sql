@@ -1,3 +1,6 @@
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS path text;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS config text;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS next_sub_index integer NOT NULL DEFAULT 0;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS kind text;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS model_role text;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS connector_name text;
@@ -7,7 +10,7 @@ ALTER TABLE agents ADD COLUMN IF NOT EXISTS name text;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS description text;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS system_prompt text;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS workspace_dir text;
-
+--> statement-breakpoint
 UPDATE agents
 SET path = CASE
     WHEN path IS NOT NULL AND trim(path) <> '' THEN path
@@ -24,7 +27,36 @@ SET path = CASE
     ELSE '/' || user_id || '/agent/' || id
 END
 WHERE path IS NULL OR trim(path) = '';
-
+--> statement-breakpoint
+UPDATE agents
+SET config = descriptor
+WHERE config IS NULL;
+--> statement-breakpoint
+WITH active_ranked AS (
+    SELECT
+        id,
+        version,
+        ROW_NUMBER() OVER (
+            PARTITION BY path
+            ORDER BY updated_at DESC, created_at DESC, version DESC, id DESC
+        ) AS row_num
+    FROM agents
+    WHERE valid_to IS NULL AND path IS NOT NULL AND trim(path) <> ''
+),
+duplicates AS (
+    SELECT id, version
+    FROM active_ranked
+    WHERE row_num > 1
+)
+UPDATE agents AS agent
+SET valid_to = GREATEST(agent.valid_from, agent.updated_at)
+FROM duplicates
+WHERE agent.id = duplicates.id
+  AND agent.version = duplicates.version
+  AND agent.valid_to IS NULL;
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_path_active ON agents (path) WHERE valid_to IS NULL;
+--> statement-breakpoint
 WITH prepared AS (
     SELECT
         id,
@@ -127,7 +159,7 @@ SET
 FROM resolved AS r
 WHERE a.id = r.id
   AND a.version = r.version;
-
+--> statement-breakpoint
 UPDATE agents
 SET kind = 'agent'
 WHERE kind IS NULL OR trim(kind) = '';
@@ -145,6 +177,16 @@ WHERE model_role IS NULL;
 
 UPDATE agents
 SET connector_name = NULL
+WHERE connector_name IS NOT NULL
+  AND trim(connector_name) = '';
+
+UPDATE agents
+SET parent_agent_id = NULL
+WHERE parent_agent_id IS NOT NULL
+  AND trim(parent_agent_id) = '';
+
+UPDATE agents
+SET connector_name = NULL
 WHERE kind <> 'connector';
 
 UPDATE agents
@@ -154,13 +196,15 @@ WHERE kind NOT IN ('sub', 'search', 'memory');
 UPDATE agents
 SET foreground = 0
 WHERE foreground IS NULL;
-
+--> statement-breakpoint
 ALTER TABLE agents ALTER COLUMN path SET NOT NULL;
 ALTER TABLE agents ALTER COLUMN kind SET DEFAULT 'agent';
 ALTER TABLE agents ALTER COLUMN kind SET NOT NULL;
 ALTER TABLE agents ALTER COLUMN foreground SET DEFAULT 0;
 ALTER TABLE agents ALTER COLUMN foreground SET NOT NULL;
-
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS idx_agents_parent_agent_id ON agents (parent_agent_id) WHERE valid_to IS NULL;
+--> statement-breakpoint
 ALTER TABLE agents DROP COLUMN IF EXISTS type;
 ALTER TABLE agents DROP COLUMN IF EXISTS descriptor;
 ALTER TABLE agents DROP COLUMN IF EXISTS config;

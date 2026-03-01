@@ -132,9 +132,9 @@ describe("databaseMigrate", () => {
                 );
             `);
 
-            const agentPathsIndex = migrations.findIndex((entry) => entry.name === "20260301_agent_paths");
+            const agentPathsIndex = migrations.findIndex((entry) => entry.name === "20260301_agents_unified");
             if (agentPathsIndex < 0) {
-                throw new Error("Agent paths migration not found.");
+                throw new Error("Unified agents migration not found.");
             }
 
             const beforeAgentPaths = migrations.slice(0, agentPathsIndex);
@@ -187,8 +187,7 @@ describe("databaseMigrate", () => {
                 );
 
             const applied = await databaseMigrate(db);
-            expect(applied).toContain("20260301_agent_paths");
-            expect(applied).toContain("20260301_agents_remove_descriptors");
+            expect(applied).toContain("20260301_agents_unified");
 
             const systemRows = (await db
                 .prepare("SELECT id, path, valid_to FROM agents WHERE path = '/system/task' ORDER BY updated_at DESC")
