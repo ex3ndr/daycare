@@ -217,6 +217,15 @@ Allowed prompt filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`.
 ## Costs Routes
 - `GET /costs/token-stats?from=<ms>&to=<ms>&agentId=<id>&model=<name>&limit=<n>`
 
+Costs rows are always scoped to the authenticated `ctx.userId`.
+
+```mermaid
+flowchart LR
+    A[Bearer token] --> B[ctx.userId]
+    B --> C[tokenStats.findMany(ctx, options)]
+    C --> D[/costs/token-stats rows]
+```
+
 ## Public Webhook Route
 - `POST /v1/webhooks/:token`
 

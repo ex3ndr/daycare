@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentPath, Connector, ConnectorMessage, MessageContext } from "@/types";
+import type { AgentPath, Connector, ConnectorMessage, Context, MessageContext } from "@/types";
 import { configResolve } from "../config/configResolve.js";
 import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
 import { storageOpen } from "../storage/storageOpen.js";
@@ -157,6 +157,33 @@ describe("Engine context tool list", () => {
 
             const status = engine.getStatus();
             expect(status.tools).toEqual([]);
+
+            await engine.shutdown();
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("Engine app costs wiring", () => {
+    it("scopes token stats fetch to ctx user", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+
+            const findManySpy = vi.spyOn(engine.storage.tokenStats, "findMany").mockResolvedValue([]);
+            const findAllSpy = vi.spyOn(engine.storage.tokenStats, "findAll").mockResolvedValue([]);
+
+            const appServer = engine.appServer as unknown as {
+                tokenStatsFetch: (ctx: Context, options: { from?: number; to?: number }) => Promise<unknown[]>;
+            };
+            const ctx = { userId: "user-1" } as Context;
+            const options = { from: 100, to: 200 };
+            await appServer.tokenStatsFetch(ctx, options);
+
+            expect(findManySpy).toHaveBeenCalledWith(ctx, options);
+            expect(findAllSpy).not.toHaveBeenCalled();
 
             await engine.shutdown();
         } finally {

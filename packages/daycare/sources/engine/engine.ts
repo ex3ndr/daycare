@@ -574,7 +574,7 @@ export class Engine {
                     }),
                 webhookTriggerRemove: (ctx, taskId) => this.webhooks.deleteTriggersForTask(ctx, taskId)
             },
-            tokenStatsFetch: (_ctx, options) => this.storage.tokenStats.findAll(options),
+            tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findMany(ctx, options),
             documents: this.storage.documents,
             connectorTargetResolve: (path) => this.connectorTargetResolve(path)
         });
