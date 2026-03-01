@@ -12,6 +12,9 @@ Changes:
   - `taskId`
   - failure detail
   - instruction to try fixing the task before the next run
+- Failure report routing now matches execution routing:
+  - explicit `agentId` when set on the trigger
+  - otherwise task descriptor `{ type: "task", id: taskId }`
 
 ## Flow
 
@@ -22,6 +25,7 @@ flowchart TD
     C -->|No| D[Run succeeds]
     C -->|Yes| E[CronScheduler onError]
     E --> F[Load trigger from tasks_cron]
-    F --> G[Post cron:failure system_message]
-    G --> H[Message includes triggerId + taskId and fix instruction]
+    F --> G[Resolve target: agentId or task descriptor]
+    G --> H[Post cron:failure system_message]
+    H --> I[Message includes triggerId + taskId and fix instruction]
 ```

@@ -235,7 +235,7 @@ describe("Crons", () => {
         }
     });
 
-    it("reports cron failures via system message with triggerId and taskId", async () => {
+    it("reports cron failures via task-scoped system message with triggerId and taskId", async () => {
         const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-failure-report-"));
         tempDirs.push(dir);
 
@@ -285,7 +285,7 @@ describe("Crons", () => {
 
             expect(agentSystemMock.post).toHaveBeenCalledWith(
                 expect.objectContaining({ userId: "user-1", hasAgentId: false }),
-                { descriptor: { type: "system", tag: "cron" } },
+                { descriptor: { type: "task", id: "task-failure" } },
                 expect.objectContaining({
                     type: "system_message",
                     origin: "cron:failure"
