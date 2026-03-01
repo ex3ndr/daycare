@@ -17,7 +17,7 @@ describe("agentToolExecutionAllowlistResolve", () => {
     it("returns memory-only tools for memory-agent descriptors", () => {
         const allowlist = agentToolExecutionAllowlistResolve({ type: "memory-agent", id: "agent-1" });
 
-        expect(allowlist ? [...allowlist] : []).toEqual(["memory_node_read", "memory_node_write"]);
+        expect(allowlist ? [...allowlist] : []).toEqual(["document_read", "document_write"]);
     });
 
     it("returns read+report tools for memory-search descriptors", () => {
@@ -28,6 +28,6 @@ describe("agentToolExecutionAllowlistResolve", () => {
             name: "query"
         });
 
-        expect(allowlist ? [...allowlist] : []).toEqual(["memory_node_read", "send_agent_message"]);
+        expect(allowlist ? [...allowlist] : []).toEqual(["document_read", "send_agent_message"]);
     });
 });

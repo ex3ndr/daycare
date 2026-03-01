@@ -6,12 +6,12 @@ import type { AgentDescriptor } from "@/types";
  */
 export function agentToolExecutionAllowlistResolve(descriptor: AgentDescriptor): ReadonlySet<string> | undefined {
     if (descriptor.type === "memory-search") {
-        return new Set<string>(["memory_node_read", "send_agent_message"]);
+        return new Set<string>(["document_read", "send_agent_message"]);
     }
 
     if (descriptor.type !== "memory-agent") {
         return undefined;
     }
 
-    return new Set<string>(["memory_node_read", "memory_node_write"]);
+    return new Set<string>(["document_read", "document_write"]);
 }

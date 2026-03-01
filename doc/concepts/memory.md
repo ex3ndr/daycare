@@ -1,6 +1,6 @@
 # Memory
 
-The memory system processes agent conversations and persists durable knowledge to the graph for cross-session recall.
+The memory system processes agent conversations and persists durable knowledge to the document tree for cross-session recall.
 
 ## Architecture
 
@@ -10,14 +10,15 @@ sequenceDiagram
     participant S as Session Storage
     participant MW as MemoryWorker
     participant MA as Memory-Agent
-    participant G as Graph Storage
+    participant D as DocumentsRepository
 
     A->>S: Session invalidated (sleep/reset/threshold)
     MW->>S: Poll findInvalidated()
+    MW->>D: Ensure ~/memory root
     MW->>S: Load history records
     MW->>MA: Post formatted transcript
-    MA->>G: Read existing graph nodes
-    MA->>G: Write new/updated documents
+    MA->>D: document_read(path=\"~/memory\")
+    MA->>D: document_write(new/updated memory docs)
     MW->>S: markProcessed()
 ```
 
@@ -26,9 +27,9 @@ sequenceDiagram
 | Component | File | Role |
 |-----------|------|------|
 | MemoryWorker | `engine/memory/memoryWorker.ts` | Timer-based poller (30s) that routes invalidated sessions |
-| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and updates graph documents |
+| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and updates memory documents |
 | formatHistoryMessages | `engine/memory/infer/utils/formatHistoryMessages.ts` | Converts history records to markdown transcript |
-| Graph Store | `engine/memory/graph/` | Markdown files with YAML frontmatter for structured knowledge |
+| Documents Store | `storage/documentsRepository.ts` | Versioned document storage with parent/link/body references |
 
 ### Memory-Agent Descriptor
 
@@ -41,7 +42,7 @@ sequenceDiagram
 - **System prompt**: `prompts/memory/MEMORY_AGENT.md` (full replacement, no standard sections)
 - **Sessions never invalidated** — prevents recursive memory processing
 - **Cache key**: `/memory-agent/<sourceAgentId>`
-- **Purpose**: reads transcripts, reads existing graph, writes new/updated documents
+- **Purpose**: reads transcripts, reads existing memory documents, writes new/updated documents
 
 ### Session Invalidation Flow
 
@@ -68,28 +69,8 @@ Each 30-second tick:
 
 ## Storage Layout
 
-Memory graph files live under `<usersDir>/<userId>/memory/`.
+Memory documents are stored in the `documents` and `document_references` tables.
 
-Each graph node is a markdown file with YAML frontmatter:
-
-```markdown
----
-title: "Node Title"
-description: "Short description"
-path: ["category", "subcategory"]
-createdAt: 1708000000000
-updatedAt: 1708000000000
----
-
-Document content here.
-```
-
-## Memory Files
-
-| File | Purpose |
-|------|---------|
-| `USER.md` | User facts, preferences, timezone, communication style |
-| `SOUL.md` | Agent personality and behavioral refinements |
-| `AGENTS.md` | Workspace operating rules, session routines |
-| `TOOLS.md` | Learned tool knowledge, pitfalls, patterns |
-| `memory/*.md` | Graph nodes for topics, people, projects |
+- Root memory node path: `~/memory`
+- Child memory nodes: `~/memory/<slug>/...`
+- Writes go through `document_write`; reads go through `document_read`

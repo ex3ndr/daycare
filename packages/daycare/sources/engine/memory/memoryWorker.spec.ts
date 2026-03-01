@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SessionPermissions } from "@/types";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { contextForAgent } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { MemoryWorker, type MemoryWorkerPostFn } from "./memoryWorker.js";
 
@@ -53,6 +54,32 @@ afterEach(() => {
     vi.useRealTimers();
 });
 
+async function expectEventually(assertion: () => void): Promise<void> {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+        try {
+            assertion();
+            return;
+        } catch {
+            await vi.advanceTimersByTimeAsync(20);
+        }
+    }
+    assertion();
+}
+
+async function expectEventuallyReal(assertion: () => void): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+        try {
+            assertion();
+            return;
+        } catch (error) {
+            lastError = error;
+            await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+    }
+    throw lastError;
+}
+
 describe("MemoryWorker", () => {
     it("routes invalidated sessions to memory-agent via postFn", async () => {
         vi.useFakeTimers();
@@ -69,8 +96,10 @@ describe("MemoryWorker", () => {
             worker.start();
 
             await vi.advanceTimersByTimeAsync(150);
+            await expectEventually(() => {
+                expect(postFn).toHaveBeenCalledOnce();
+            });
 
-            expect(postFn).toHaveBeenCalledOnce();
             const [ctx, target, item] = postFn.mock.calls[0];
             expect(ctx.userId).toBeTypeOf("string");
             expect(ctx.agentId).toBe("agent-1");
@@ -81,6 +110,13 @@ describe("MemoryWorker", () => {
             expect(item.text).toContain("## System Message");
             expect(item.text).toContain("> Source:");
             expect(item.origin).toContain(sessionId);
+
+            const memoryRoot = await storage.documents.findBySlugAndParent(
+                contextForAgent({ userId: ctx.userId, agentId: "agent-1" }),
+                "memory",
+                null
+            );
+            expect(memoryRoot?.slug).toBe("memory");
 
             const session = await storage.sessions.findById(sessionId);
             expect(session?.invalidatedAt).toBeNull();
@@ -120,8 +156,10 @@ describe("MemoryWorker", () => {
             worker.start();
 
             await vi.advanceTimersByTimeAsync(150);
+            await expectEventually(() => {
+                expect(postFn).toHaveBeenCalledOnce();
+            });
 
-            expect(postFn).toHaveBeenCalledOnce();
             const [, , item] = postFn.mock.calls[0];
             // Foreground agent (user) gets standard labels and no preamble
             expect(item.text).toContain("## User");
@@ -245,7 +283,6 @@ describe("MemoryWorker", () => {
     });
 
     it("processes multiple sessions in one tick", async () => {
-        vi.useFakeTimers();
         const { storage } = await createTestStorage();
         try {
             const s1 = await storage.sessions.create({ agentId: "agent-1", createdAt: 1000 });
@@ -268,12 +305,12 @@ describe("MemoryWorker", () => {
             await storage.sessions.invalidate(s2, id2);
 
             const postFn = vi.fn().mockResolvedValue(undefined);
-            const worker = createWorker(storage, postFn);
+            const worker = createWorker(storage, postFn, 20);
             worker.start();
 
-            await vi.advanceTimersByTimeAsync(150);
-
-            expect(postFn).toHaveBeenCalledTimes(2);
+            await expectEventuallyReal(() => {
+                expect(postFn).toHaveBeenCalledTimes(2);
+            });
 
             const session1 = await storage.sessions.findById(s1);
             const session2 = await storage.sessions.findById(s2);

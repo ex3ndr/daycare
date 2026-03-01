@@ -21,7 +21,6 @@ import { cuid2Is } from "../../utils/cuid2Is.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { EngineEventBus } from "../ipc/events.js";
-import { Memory } from "../memory/memory.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
@@ -86,7 +85,6 @@ export type AgentSystemOptions = {
     pluginManager: PluginManager;
     inferenceRouter: InferenceRouter;
     authStore: AuthStore;
-    memory?: Memory;
     secrets?: Secrets;
     delayedSignals?: DelayedSignalsFacade;
 };
@@ -102,7 +100,6 @@ export class AgentSystem {
     readonly pluginManager: PluginManager;
     readonly inferenceRouter: InferenceRouter;
     readonly authStore: AuthStore;
-    readonly memory: Memory;
     readonly secrets: Secrets;
     private readonly delayedSignals: DelayedSignalsFacade | null;
     private _crons: Crons | null = null;
@@ -123,7 +120,6 @@ export class AgentSystem {
         this.pluginManager = options.pluginManager;
         this.inferenceRouter = options.inferenceRouter;
         this.authStore = options.authStore;
-        this.memory = options.memory ?? new Memory({ usersDir: this.config.current.usersDir });
         this.secrets =
             options.secrets ??
             new Secrets({

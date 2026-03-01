@@ -7,7 +7,6 @@ import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import type { EngineEventBus } from "../../ipc/events.js";
-import type { Memory } from "../../memory/memory.js";
 import { messageContentClone } from "../../messages/messageContentClone.js";
 import { messageExtractText } from "../../messages/messageExtractText.js";
 import { messageExtractToolCalls } from "../../messages/messageExtractToolCalls.js";
@@ -67,7 +66,6 @@ type AgentLoopRunOptions = {
     assistant: AssistantSettings | null;
     agentSystem: AgentSystem;
     webhooks: Webhooks;
-    memory: Memory;
     skills: Skills;
     skillsActiveRoot?: string;
     skillsPersonalRoot?: string;
@@ -121,7 +119,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         assistant,
         agentSystem,
         webhooks,
-        memory,
         skills,
         providersForAgent,
         logger,
@@ -178,8 +175,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             source,
             messageContext: entry.context,
             agentSystem,
+            storage: agentSystem.storage,
             webhooks,
-            memory,
             secrets: agentSystem.secrets,
             skills: activeSkills,
             skillsPersonalRoot: options.skillsPersonalRoot,

@@ -32,7 +32,7 @@ import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Friends } from "./friends/friends.js";
 import type { EngineEventBus } from "./ipc/events.js";
-import { Memory } from "./memory/memory.js";
+import { memoryRootDocumentEnsure } from "./memory/memoryRootDocumentEnsure.js";
 import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { messageContextEnrichIncoming } from "./messages/messageContextEnrichIncoming.js";
@@ -46,6 +46,9 @@ import { channelCreateToolBuild } from "./modules/tools/channelCreateTool.js";
 import { channelHistoryToolBuild } from "./modules/tools/channelHistoryTool.js";
 import { channelAddMemberToolBuild, channelRemoveMemberToolBuild } from "./modules/tools/channelMemberTool.js";
 import { channelSendToolBuild } from "./modules/tools/channelSendTool.js";
+import { documentReadToolBuild } from "./modules/tools/documentReadToolBuild.js";
+import { documentSearchToolBuild } from "./modules/tools/documentSearchToolBuild.js";
+import { documentWriteToolBuild } from "./modules/tools/documentWriteToolBuild.js";
 import { exposeCreateToolBuild } from "./modules/tools/exposeCreateToolBuild.js";
 import { exposeListToolBuild } from "./modules/tools/exposeListToolBuild.js";
 import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js";
@@ -59,9 +62,6 @@ import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
 import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
 import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
-import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
-import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
-import { memorySearchToolBuild } from "./modules/tools/memorySearchToolBuild.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
@@ -136,7 +136,6 @@ export class Engine {
     readonly inferenceRouter: InferenceRouter;
     readonly eventBus: EngineEventBus;
     readonly apps: Apps;
-    readonly memory: Memory;
     readonly secrets: Secrets;
     readonly exposes: Exposes;
     readonly subusers: Subusers;
@@ -336,9 +335,6 @@ export class Engine {
             inferenceRegistry: this.modules.inference,
             imageRegistry: this.modules.images
         });
-        this.memory = new Memory({
-            usersDir: this.config.current.usersDir
-        });
         this.secrets = new Secrets({
             usersDir: this.config.current.usersDir,
             observationLog: this.storage.observationLog
@@ -355,7 +351,6 @@ export class Engine {
             pluginManager: this.pluginManager,
             inferenceRouter: this.inferenceRouter,
             authStore: this.authStore,
-            memory: this.memory,
             secrets: this.secrets,
             delayedSignals: this.delayedSignals
         });
@@ -413,6 +408,7 @@ export class Engine {
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
         const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
         await userHomeEnsure(ownerUserHome);
+        await memoryRootDocumentEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
         if (this.config.current.docker.enabled) {
             const imageRef = `${this.config.current.docker.image}:${this.config.current.docker.tag}`;
@@ -454,7 +450,7 @@ export class Engine {
         this.modules.tools.register("core", buildTaskTriggerRemoveTool());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
-        this.modules.tools.register("core", memorySearchToolBuild());
+        this.modules.tools.register("core", documentSearchToolBuild());
         this.modules.tools.register("core", inferenceSummaryToolBuild(this.inferenceRouter, this.config));
         this.modules.tools.register("core", inferenceClassifyToolBuild(this.inferenceRouter, this.config));
         this.modules.tools.register("core", agentModelSetToolBuild());
@@ -506,8 +502,8 @@ export class Engine {
         this.modules.tools.register("core", exposeUpdateToolBuild(this.exposes));
         this.modules.tools.register("core", exposeListToolBuild(this.exposes));
         this.modules.tools.register("core", observationQueryToolBuild(this.storage.observationLog));
-        this.modules.tools.register("core", memoryNodeReadToolBuild());
-        this.modules.tools.register("core", memoryNodeWriteToolBuild());
+        this.modules.tools.register("core", documentReadToolBuild());
+        this.modules.tools.register("core", documentWriteToolBuild());
         await this.apps.discover();
         this.apps.registerTools(this.modules.tools);
         logger.debug(

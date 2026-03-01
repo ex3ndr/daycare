@@ -17,7 +17,7 @@ const searchSchema = Type.Object(
     { additionalProperties: false }
 );
 
-type SearchMemoryArgs = Static<typeof searchSchema>;
+type DocumentSearchArgs = Static<typeof searchSchema>;
 
 const searchResultSchema = Type.Object(
     {
@@ -36,22 +36,22 @@ const searchReturns: ToolResultContract<SearchResult> = {
 };
 
 /**
- * Builds the search_memory tool that queries the memory graph.
+ * Builds the document_search tool that delegates retrieval to memory-search agents.
  * Default mode is async; sync mode waits for the answer before returning.
  */
-export function memorySearchToolBuild(): ToolDefinition {
+export function documentSearchToolBuild(): ToolDefinition {
     return {
         tool: {
-            name: "search_memory",
+            name: "document_search",
             description:
-                "Search the memory graph to answer a question. By default, returns a query ID immediately and " +
+                "Search persistent documents to answer a question. By default, returns a query ID immediately and " +
                 "delivers results asynchronously. Set sync=true to wait for the answer before continuing " +
                 "(recommended for background agents).",
             parameters: searchSchema
         },
         returns: searchReturns,
         execute: async (args, toolContext, toolCall) => {
-            const payload = args as SearchMemoryArgs;
+            const payload = args as DocumentSearchArgs;
             const query = payload.query.trim();
             const sync = payload.sync === true;
             if (!query) {
@@ -68,17 +68,17 @@ export function memorySearchToolBuild(): ToolDefinition {
             const message = { type: "message" as const, message: { text: query }, context: {} };
             let summary = "";
             if (sync) {
-                // Background agents often need memory before they can continue; sync mode blocks for that response.
+                // Background agents often need retrieved context before continuing.
                 const result = await toolContext.agentSystem.postAndAwait(toolContext.ctx, { agentId }, message);
                 const responseText = "responseText" in result ? (result.responseText?.trim() ?? "") : "";
-                const summaryPrefix = `Memory query completed in sync mode. Query ID: ${agentId}.`;
+                const summaryPrefix = `Document query completed in sync mode. Query ID: ${agentId}.`;
                 summary =
                     responseText.length > 0
                         ? `${summaryPrefix}\n\n${responseText}`
                         : `${summaryPrefix} No response text returned.`;
             } else {
                 await toolContext.agentSystem.post(toolContext.ctx, { agentId }, message);
-                summary = `Memory query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
+                summary = `Document query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
             }
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
