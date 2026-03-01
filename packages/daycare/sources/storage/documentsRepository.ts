@@ -38,6 +38,7 @@ export class DocumentsRepository {
     private readonly db: DaycareDb;
     private readonly documentsById = new Map<string, DocumentDbRecord>();
     private readonly documentLocks = new Map<string, AsyncLock>();
+    private readonly documentSlugScopeLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
 
@@ -245,38 +246,41 @@ export class DocumentsRepository {
                 linkTargetIds: normalized.linkTargetIds ?? []
             });
 
-            const clash = await this.documentLoadBySlugAndParent(userId, normalized.slug, refs.parentId);
-            if (clash) {
-                throw new Error(`Document slug is already used under the same parent: ${normalized.slug}`);
-            }
-
-            const next: DocumentDbRecord = {
-                id: normalized.id,
-                userId,
-                version: 1,
-                validFrom: normalized.createdAt,
-                validTo: null,
-                slug: normalized.slug,
-                title: normalized.title,
-                description: normalized.description,
-                body: normalized.body,
-                createdAt: normalized.createdAt,
-                updatedAt: normalized.updatedAt
-            };
-
-            await this.db.transaction(async (tx) => {
-                await tx.insert(documentsTable).values(documentRowInsert(next));
-                const refRows = documentReferenceRowsBuild(userId, next.id, next.version ?? 1, refs);
-                if (refRows.length > 0) {
-                    await tx.insert(documentReferencesTable).values(refRows);
+            const slugScopeLock = this.documentSlugScopeLockFor(userId, refs.parentId, normalized.slug);
+            return slugScopeLock.inLock(async () => {
+                const clash = await this.documentLoadBySlugAndParent(userId, normalized.slug, refs.parentId);
+                if (clash) {
+                    throw new Error(`Document slug is already used under the same parent: ${normalized.slug}`);
                 }
-            });
 
-            await this.cacheLock.inLock(() => {
-                this.documentCacheSet(next);
-            });
+                const next: DocumentDbRecord = {
+                    id: normalized.id,
+                    userId,
+                    version: 1,
+                    validFrom: normalized.createdAt,
+                    validTo: null,
+                    slug: normalized.slug,
+                    title: normalized.title,
+                    description: normalized.description,
+                    body: normalized.body,
+                    createdAt: normalized.createdAt,
+                    updatedAt: normalized.updatedAt
+                };
 
-            return documentClone(next);
+                await this.db.transaction(async (tx) => {
+                    await tx.insert(documentsTable).values(documentRowInsert(next));
+                    const refRows = documentReferenceRowsBuild(userId, next.id, next.version ?? 1, refs);
+                    if (refRows.length > 0) {
+                        await tx.insert(documentReferencesTable).values(refRows);
+                    }
+                });
+
+                await this.cacheLock.inLock(() => {
+                    this.documentCacheSet(next);
+                });
+
+                return documentClone(next);
+            });
         });
     }
 
@@ -320,55 +324,58 @@ export class DocumentsRepository {
                 linkTargetIds: nextLinks
             });
 
-            const clash = await this.documentLoadBySlugAndParent(userId, merged.slug, refs.parentId);
-            if (clash && clash.id !== current.id) {
-                throw new Error(`Document slug is already used under the same parent: ${merged.slug}`);
-            }
+            const slugScopeLock = this.documentSlugScopeLockFor(userId, refs.parentId, merged.slug);
+            return slugScopeLock.inLock(async () => {
+                const clash = await this.documentLoadBySlugAndParent(userId, merged.slug, refs.parentId);
+                if (clash && clash.id !== current.id) {
+                    throw new Error(`Document slug is already used under the same parent: ${merged.slug}`);
+                }
 
-            const advanced = await this.db.transaction(async (tx) => {
-                const next = await versionAdvance<DocumentDbRecord>({
-                    changes: {
-                        userId,
-                        slug: merged.slug,
-                        title: merged.title,
-                        description: merged.description,
-                        body: merged.body,
-                        createdAt: merged.createdAt,
-                        updatedAt: merged.updatedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        const closedRows = await tx
-                            .update(documentsTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(documentsTable.userId, row.userId),
-                                    eq(documentsTable.id, row.id),
-                                    eq(documentsTable.version, row.version ?? 1),
-                                    isNull(documentsTable.validTo)
+                const advanced = await this.db.transaction(async (tx) => {
+                    const next = await versionAdvance<DocumentDbRecord>({
+                        changes: {
+                            userId,
+                            slug: merged.slug,
+                            title: merged.title,
+                            description: merged.description,
+                            body: merged.body,
+                            createdAt: merged.createdAt,
+                            updatedAt: merged.updatedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            const closedRows = await tx
+                                .update(documentsTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(documentsTable.userId, row.userId),
+                                        eq(documentsTable.id, row.id),
+                                        eq(documentsTable.version, row.version ?? 1),
+                                        isNull(documentsTable.validTo)
+                                    )
                                 )
-                            )
-                            .returning({ version: documentsTable.version });
-                        return closedRows.length;
-                    },
-                    insertNext: async (row) => {
-                        await tx.insert(documentsTable).values(documentRowInsert(row));
+                                .returning({ version: documentsTable.version });
+                            return closedRows.length;
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(documentsTable).values(documentRowInsert(row));
+                        }
+                    });
+
+                    const refRows = documentReferenceRowsBuild(userId, next.id, next.version ?? 1, refs);
+                    if (refRows.length > 0) {
+                        await tx.insert(documentReferencesTable).values(refRows);
                     }
+                    return next;
                 });
 
-                const refRows = documentReferenceRowsBuild(userId, next.id, next.version ?? 1, refs);
-                if (refRows.length > 0) {
-                    await tx.insert(documentReferencesTable).values(refRows);
-                }
-                return next;
-            });
+                await this.cacheLock.inLock(() => {
+                    this.documentCacheSet(advanced);
+                });
 
-            await this.cacheLock.inLock(() => {
-                this.documentCacheSet(advanced);
+                return documentClone(advanced);
             });
-
-            return documentClone(advanced);
         });
     }
 
@@ -447,6 +454,7 @@ export class DocumentsRepository {
 
         if (input.parentId) {
             await this.documentTargetEnsureExists(input.userId, input.parentId);
+            await this.documentParentCycleEnsure(input.userId, input.documentId, input.parentId);
         }
 
         for (const targetId of input.linkTargetIds) {
@@ -628,6 +636,22 @@ export class DocumentsRepository {
         return row.targetId;
     }
 
+    private async documentParentCycleEnsure(userId: string, documentId: string, parentId: string): Promise<void> {
+        const visited = new Set<string>();
+        let currentId: string | null = parentId;
+        while (currentId) {
+            if (currentId === documentId || visited.has(currentId)) {
+                throw new Error(`Document parent cycle detected for ${documentId}.`);
+            }
+            visited.add(currentId);
+            const parent = await this.documentLoadById(userId, currentId);
+            if (!parent) {
+                throw new Error(`Document target not found: ${currentId}`);
+            }
+            currentId = await this.documentParentIdLoad(userId, parent.id, parent.version ?? 1);
+        }
+    }
+
     private documentCacheSet(record: DocumentDbRecord): void {
         this.documentsById.set(documentKey(record.userId, record.id), documentClone(record));
     }
@@ -639,6 +663,17 @@ export class DocumentsRepository {
         }
         const lock = new AsyncLock();
         this.documentLocks.set(key, lock);
+        return lock;
+    }
+
+    private documentSlugScopeLockFor(userId: string, parentId: string | null, slug: string): AsyncLock {
+        const key = documentSlugScopeKey(userId, parentId, slug);
+        const existing = this.documentSlugScopeLocks.get(key);
+        if (existing) {
+            return existing;
+        }
+        const lock = new AsyncLock();
+        this.documentSlugScopeLocks.set(key, lock);
         return lock;
     }
 }
@@ -764,6 +799,10 @@ function documentRowInsert(record: DocumentDbRecord): typeof documentsTable.$inf
 
 function documentKey(userId: string, id: string): string {
     return `${userId}\u0000${id}`;
+}
+
+function documentSlugScopeKey(userId: string, parentId: string | null, slug: string): string {
+    return `${userId}\u0000${parentId ?? "__root__"}\u0000${slug}`;
 }
 
 function documentIdNormalizeOptional(id: string | null | undefined): string | null {

@@ -223,4 +223,89 @@ describe("DocumentsRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("serializes concurrent updates to enforce sibling slug uniqueness", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new DocumentsRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            await repo.create(ctx, {
+                id: "root",
+                slug: "root",
+                title: "Root",
+                description: "Root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create(ctx, {
+                id: "a",
+                slug: "a",
+                title: "A",
+                description: "A",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "root"
+            });
+            await repo.create(ctx, {
+                id: "b",
+                slug: "b",
+                title: "B",
+                description: "B",
+                body: "",
+                createdAt: 3,
+                updatedAt: 3,
+                parentId: "root"
+            });
+
+            const results = await Promise.allSettled([
+                repo.update(ctx, "a", { slug: "same", updatedAt: 10 }),
+                repo.update(ctx, "b", { slug: "same", updatedAt: 11 })
+            ]);
+
+            expect(results.filter((entry) => entry.status === "fulfilled")).toHaveLength(1);
+            expect(results.filter((entry) => entry.status === "rejected")).toHaveLength(1);
+
+            const siblings = await repo.findChildren(ctx, "root");
+            expect(siblings.filter((entry) => entry.slug === "same")).toHaveLength(1);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects updates that would introduce parent cycles", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new DocumentsRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            await repo.create(ctx, {
+                id: "a",
+                slug: "a",
+                title: "A",
+                description: "A",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create(ctx, {
+                id: "b",
+                slug: "b",
+                title: "B",
+                description: "B",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "a"
+            });
+
+            await expect(repo.update(ctx, "a", { parentId: "b", updatedAt: 3 })).rejects.toThrow("cycle");
+            const parentOfA = await repo.findParentId(ctx, "a");
+            expect(parentOfA).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

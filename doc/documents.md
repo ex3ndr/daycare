@@ -69,3 +69,5 @@ sequenceDiagram
 - Updating a document creates a new version and a new set of refs.
 - Old reference rows remain tied to old versions.
 - Delete is blocked when an active document has `parent` or `link` reference to the target.
+- Parent links are validated as acyclic before writes; cycle-creating updates are rejected.
+- Concurrent writes to the same `(user, parent, slug)` scope are serialized to preserve sibling slug uniqueness.

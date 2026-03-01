@@ -5,17 +5,16 @@ export type DocumentBodyRefsRepo = DocumentPathFindRepo & {
     findById: (ctx: Context, id: string) => Promise<{ id: string } | null>;
 };
 
-const BODY_REF_PATTERN = /\[\[([^[\]]+)\]\]/g;
-
 /**
  * Extracts and resolves document references from markdown wiki links (`[[...]]`).
  * Expects: unresolved references are ignored and duplicates are returned once.
  */
 export async function documentBodyRefs(body: string, ctx: Context, repo: DocumentBodyRefsRepo): Promise<string[]> {
     const resolved = new Set<string>();
+    const pattern = /\[\[([^[\]]+)\]\]/g;
 
     while (true) {
-        const match = BODY_REF_PATTERN.exec(body);
+        const match = pattern.exec(body);
         if (!match) {
             break;
         }

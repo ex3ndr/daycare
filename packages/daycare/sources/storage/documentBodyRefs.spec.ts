@@ -38,4 +38,22 @@ describe("documentBodyRefs", () => {
         const refs = await documentBodyRefs("No refs here [[ ]].", ctx, repo);
         expect(refs).toEqual([]);
     });
+
+    it("does not leak regex state across calls after an error", async () => {
+        const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+        let throwOnDoc2 = true;
+        const repo: DocumentBodyRefsRepo = {
+            findById: async (_ctx, id) => {
+                if (id === "doc2" && throwOnDoc2) {
+                    throw new Error("boom");
+                }
+                return { id };
+            },
+            findBySlugAndParent: async () => null
+        };
+
+        await expect(documentBodyRefs("[[doc1]] [[doc2]]", ctx, repo)).rejects.toThrow("boom");
+        throwOnDoc2 = false;
+        await expect(documentBodyRefs("[[doc1]]", ctx, repo)).resolves.toEqual(["doc1"]);
+    });
 });
