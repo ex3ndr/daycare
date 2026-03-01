@@ -659,6 +659,7 @@ export class Agent {
         item: AgentInboxSystemMessage
     ): Promise<{ responseText: string | null; responseError?: boolean }> {
         let systemText = item.text;
+        let executionHasError = false;
         if (item.execute) {
             if (item.code && item.code.length > 0) {
                 // Execute code blocks directly via rlmExecute
@@ -699,6 +700,7 @@ export class Agent {
                         outputs.push(`<exec_error>${message}</exec_error>`);
                     }
                 }
+                executionHasError = hasError;
                 if (skipTurn) {
                     logger.info(
                         {
@@ -765,6 +767,7 @@ export class Agent {
                 }
                 systemText = expandResult.expanded;
                 const errorTagCount = tagExtractAll(systemText, "exec_error").length;
+                executionHasError = errorTagCount > 0;
                 logger.info(
                     {
                         agentId: this.id,
@@ -805,7 +808,7 @@ export class Agent {
             this.state.context.messages.push(userMessage);
             this.state.updatedAt = receivedAt;
             await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
-            return { responseText: null };
+            return { responseText: null, ...(executionHasError ? { responseError: true } : {}) };
         }
 
         const messageItem: AgentInboxMessage = {
@@ -814,7 +817,7 @@ export class Agent {
             context: item.context ?? {}
         };
         const responseText = await this.handleMessage(messageItem);
-        return { responseText };
+        return { responseText, ...(executionHasError ? { responseError: true } : {}) };
     }
 
     private async handleSignal(item: AgentInboxSignal): Promise<{ delivered: boolean; responseText: string | null }> {

@@ -24,6 +24,7 @@ describe("Crons", () => {
         const agentSystem = {
             ownerUserIdEnsure: vi.fn(async () => "owner"),
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            post: vi.fn(async () => {}),
             postAndAwait: vi.fn(async () => ({ status: "completed" }))
         } as unknown as CronsOptions["agentSystem"];
         const storage = await storageOpenTest();
@@ -65,6 +66,7 @@ describe("Crons", () => {
         const agentSystemMock = {
             ownerUserIdEnsure: vi.fn(async () => "owner"),
             userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            post: vi.fn(async () => {}),
             postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
         };
         const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
@@ -120,6 +122,135 @@ describe("Crons", () => {
                     context: messageContext
                 })
             );
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("surfaces responseError from cron system message execution", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-response-error-"));
+        tempDirs.push(dir);
+
+        const agentSystemMock = {
+            ownerUserIdEnsure: vi.fn(async () => "owner"),
+            userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            post: vi.fn(async () => {}),
+            postAndAwait: vi.fn(async () => ({
+                type: "system_message",
+                responseText: null,
+                responseError: true
+            }))
+        };
+        const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
+        const storage = await storageOpenTest();
+        try {
+            const crons = new Crons({
+                config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
+                storage,
+                eventBus: { emit: vi.fn() } as unknown as CronsOptions["eventBus"],
+                agentSystem
+            });
+
+            const callback = (
+                crons as unknown as {
+                    scheduler: {
+                        onTask?: (
+                            task: {
+                                triggerId: string;
+                                taskId: string;
+                                taskName: string;
+                                code: string;
+                                timezone: string;
+                                agentId?: string;
+                                userId?: string;
+                            },
+                            messageContext: { messageId?: string; timezone?: string }
+                        ) => Promise<void>;
+                    };
+                }
+            ).scheduler.onTask;
+            expect(callback).toBeTypeOf("function");
+
+            await expect(
+                callback!(
+                    {
+                        triggerId: "trigger-err",
+                        taskId: "task-err",
+                        taskName: "Task with error",
+                        code: "raise RuntimeError('boom')",
+                        timezone: "UTC",
+                        userId: "user-1"
+                    },
+                    {}
+                )
+            ).rejects.toThrow("Cron execution failed with code errors");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("reports cron failures via system message with triggerId and taskId", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-failure-report-"));
+        tempDirs.push(dir);
+
+        const agentSystemMock = {
+            ownerUserIdEnsure: vi.fn(async () => "owner"),
+            userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            post: vi.fn(async () => {}),
+            postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
+        };
+        const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
+        const storage = await storageOpenTest();
+        try {
+            const now = Date.now();
+            await storage.tasks.create({
+                id: "task-failure",
+                userId: "user-1",
+                title: "Failure task",
+                description: null,
+                code: "print('hello')",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now
+            });
+
+            const crons = new Crons({
+                config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
+                storage,
+                eventBus: { emit: vi.fn() } as unknown as CronsOptions["eventBus"],
+                agentSystem
+            });
+            const created = await crons.addTask(contextBuild("user-1"), {
+                id: "trigger-failure",
+                taskId: "task-failure",
+                schedule: "* * * * *"
+            });
+
+            const errorCallback = (
+                crons as unknown as {
+                    scheduler: {
+                        onError?: (error: unknown, triggerId: string) => Promise<void>;
+                    };
+                }
+            ).scheduler.onError;
+            expect(errorCallback).toBeTypeOf("function");
+
+            await errorCallback!(new Error("boom"), created.id);
+
+            expect(agentSystemMock.post).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1", hasAgentId: false }),
+                { descriptor: { type: "system", tag: "cron" } },
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "cron:failure"
+                })
+            );
+
+            const postCalls = agentSystemMock.post.mock.calls as unknown[][];
+            const postedMessage = postCalls[0]?.[2] as { text?: string } | undefined;
+            expect(postedMessage?.text).toContain("triggerId: trigger-failure");
+            expect(postedMessage?.text).toContain("taskId: task-failure");
+            expect(postedMessage?.text).toContain("Try to fix the task before the next run.");
         } finally {
             storage.connection.close();
         }
