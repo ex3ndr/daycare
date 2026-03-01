@@ -18,6 +18,7 @@ import { Storage } from "../storage/storage.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { InvalidateSync } from "../util/sync.js";
 import { valueDeepEqual } from "../util/valueDeepEqual.js";
+import { stringSlugify } from "../utils/stringSlugify.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
 import { agentDescriptorTargetResolve } from "./agents/ops/agentDescriptorTargetResolve.js";
@@ -35,6 +36,8 @@ import { IncomingMessages } from "./messages/incomingMessages.js";
 import { messageContextEnrichIncoming } from "./messages/messageContextEnrichIncoming.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
+import { taskParameterInputsNormalize } from "./modules/tasks/taskParameterInputsNormalize.js";
+import { taskParameterValidate } from "./modules/tasks/taskParameterValidate.js";
 import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
 import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
 import { agentResetToolBuild } from "./modules/tools/agentResetTool.js";
@@ -95,6 +98,7 @@ import { Processes } from "./processes/processes.js";
 import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
+import { Skills } from "./skills/skills.js";
 import { swarmCreateToolBuild } from "./swarms/swarmCreateToolBuild.js";
 import { Swarms } from "./swarms/swarms.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
@@ -385,7 +389,192 @@ export class Engine {
             connectorRegistry: this.modules.connectors,
             toolResolver: this.modules.tools,
             webhooks: this.webhooks,
+            users: this.storage.users,
+            agentCallbacks: {
+                agentList: async (ctx) => {
+                    const records = await this.storage.agents.findByUserId(ctx.userId);
+                    return records.map((record) => ({
+                        agentId: record.id,
+                        descriptor: record.descriptor,
+                        lifecycle: record.lifecycle,
+                        updatedAt: record.updatedAt,
+                        userId: record.userId
+                    }));
+                },
+                agentHistoryLoad: async (ctx, agentId, limit) => {
+                    const normalizedAgentId = agentId.trim();
+                    if (!normalizedAgentId) {
+                        return [];
+                    }
+                    const agent = await this.storage.agents.findById(normalizedAgentId);
+                    if (!agent || agent.userId !== ctx.userId) {
+                        return [];
+                    }
+                    return this.storage.history.findByAgentId(normalizedAgentId, limit);
+                },
+                agentPost: (ctx, target, item) => this.agentSystem.post(ctx, target, item)
+            },
+            eventBus: this.eventBus,
+            skills: async (ctx) => {
+                const userHome = this.agentSystem.userHomeForUserId(ctx.userId);
+                const configSkillsRoot = path.join(this.config.current.configDir, "skills");
+                const skills = new Skills({
+                    configRoot: configSkillsRoot,
+                    pluginManager: this.pluginManager,
+                    userPersonalRoot: userHome.skillsPersonal,
+                    userActiveRoot: userHome.skillsActive
+                });
+                return skills.list();
+            },
             tasksListActive: (ctx) => taskListActive({ storage: this.storage, ctx }),
+            taskCallbacks: {
+                tasksCreate: async (ctx, input) => {
+                    const taskId = await taskIdGenerateFromTitle(this.storage, ctx, input.title);
+                    const now = Date.now();
+                    await this.storage.tasks.create({
+                        id: taskId,
+                        userId: ctx.userId,
+                        title: input.title,
+                        description: input.description ?? null,
+                        code: input.code,
+                        parameters: input.parameters ?? null,
+                        createdAt: now,
+                        updatedAt: now
+                    });
+                    const created = await this.storage.tasks.findById(ctx, taskId);
+                    if (!created) {
+                        throw new Error(`Task not found after create: ${taskId}`);
+                    }
+                    return created;
+                },
+                tasksRead: async (ctx, taskId) => {
+                    const normalizedTaskId = taskId.trim();
+                    if (!normalizedTaskId) {
+                        return null;
+                    }
+                    const task = await this.storage.tasks.findById(ctx, normalizedTaskId);
+                    if (!task) {
+                        return null;
+                    }
+                    const [cron, webhook] = await Promise.all([
+                        this.storage.cronTasks.findManyByTaskId(ctx, normalizedTaskId),
+                        this.storage.webhookTasks.findManyByTaskId(ctx, normalizedTaskId)
+                    ]);
+                    return {
+                        task,
+                        triggers: { cron, webhook }
+                    };
+                },
+                tasksUpdate: async (ctx, taskId, input) => {
+                    const normalizedTaskId = taskId.trim();
+                    if (!normalizedTaskId) {
+                        return null;
+                    }
+                    const existing = await this.storage.tasks.findById(ctx, normalizedTaskId);
+                    if (!existing) {
+                        return null;
+                    }
+                    await this.storage.tasks.update(ctx, normalizedTaskId, {
+                        title: input.title ?? existing.title,
+                        code: input.code ?? existing.code,
+                        description: input.description === undefined ? existing.description : input.description,
+                        parameters: input.parameters === undefined ? existing.parameters : input.parameters,
+                        updatedAt: Date.now()
+                    });
+                    return this.storage.tasks.findById(ctx, normalizedTaskId);
+                },
+                tasksDelete: async (ctx, taskId) => {
+                    const normalizedTaskId = taskId.trim();
+                    if (!normalizedTaskId) {
+                        return false;
+                    }
+                    const existing = await this.storage.tasks.findById(ctx, normalizedTaskId);
+                    if (!existing) {
+                        return false;
+                    }
+                    await Promise.all([
+                        this.crons.deleteTriggersForTask(ctx, normalizedTaskId),
+                        this.webhooks.deleteTriggersForTask(ctx, normalizedTaskId)
+                    ]);
+                    return this.storage.tasks.delete(ctx, normalizedTaskId);
+                },
+                tasksRun: async (ctx, taskId, input) => {
+                    const normalizedTaskId = taskId.trim();
+                    if (!normalizedTaskId) {
+                        throw new Error("taskId is required.");
+                    }
+
+                    const task = await this.storage.tasks.findById(ctx, normalizedTaskId);
+                    if (!task) {
+                        throw new Error("Task not found.");
+                    }
+
+                    let inputValues: Record<string, unknown> | undefined;
+                    if (input.parameters && !task.parameters?.length) {
+                        throw new Error(
+                            "Task has no parameter schema. Remove parameters or define a schema on the task."
+                        );
+                    }
+                    if (task.parameters?.length) {
+                        const values = input.parameters ?? {};
+                        const error = taskParameterValidate(task.parameters, values);
+                        if (error) {
+                            throw new Error(error);
+                        }
+                        inputValues = taskParameterInputsNormalize(task.parameters, values);
+                    }
+
+                    const target = input.agentId
+                        ? { agentId: input.agentId }
+                        : { descriptor: { type: "task" as const, id: task.id } };
+                    const text = ["[task]", `taskId: ${task.id}`, `taskTitle: ${task.title}`].join("\n");
+
+                    if (input.sync === true) {
+                        const result = await this.taskExecutions.dispatchAndAwait({
+                            userId: task.userId,
+                            source: "manual",
+                            taskId: task.id,
+                            taskVersion: task.version ?? null,
+                            origin: "task",
+                            target,
+                            text,
+                            parameters: inputValues,
+                            sync: true
+                        });
+                        if (result.responseError) {
+                            throw new Error(result.executionErrorText ?? "Task execution failed.");
+                        }
+                        return { output: result.responseText ?? "" };
+                    }
+
+                    this.taskExecutions.dispatch({
+                        userId: task.userId,
+                        source: "manual",
+                        taskId: task.id,
+                        taskVersion: task.version ?? null,
+                        origin: "task",
+                        target,
+                        text,
+                        parameters: inputValues
+                    });
+                    return { queued: true };
+                },
+                cronTriggerAdd: (ctx, taskId, input) =>
+                    this.crons.addTrigger(ctx, {
+                        taskId,
+                        schedule: input.schedule,
+                        timezone: input.timezone,
+                        agentId: input.agentId,
+                        parameters: input.parameters
+                    }),
+                cronTriggerRemove: (ctx, taskId) => this.crons.deleteTriggersForTask(ctx, taskId),
+                webhookTriggerAdd: (ctx, taskId, input) =>
+                    this.webhooks.addTrigger(ctx, {
+                        taskId,
+                        agentId: input.agentId
+                    }),
+                webhookTriggerRemove: (ctx, taskId) => this.webhooks.deleteTriggersForTask(ctx, taskId)
+            },
             tokenStatsFetch: (_ctx, options) => this.storage.tokenStats.findAll(options),
             documents: this.storage.documents
         });
@@ -832,4 +1021,17 @@ function pathWithin(parentDir: string, targetPath: string): boolean {
     const resolvedParent = path.resolve(parentDir);
     const resolvedTarget = path.resolve(targetPath);
     return resolvedTarget === resolvedParent || resolvedTarget.startsWith(`${resolvedParent}${path.sep}`);
+}
+
+async function taskIdGenerateFromTitle(storage: Storage, ctx: Context, title: string): Promise<string> {
+    const base = stringSlugify(title) || "task";
+    let candidate = base;
+    let suffix = 2;
+
+    while (await storage.tasks.findAnyById(ctx, candidate)) {
+        candidate = `${base}-${suffix}`;
+        suffix += 1;
+    }
+
+    return candidate;
 }

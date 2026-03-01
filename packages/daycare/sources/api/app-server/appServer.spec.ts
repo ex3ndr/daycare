@@ -142,12 +142,17 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                     throw new Error("Webhook runtime unavailable.");
                 })
         } as never,
+        users: null,
+        agentCallbacks: null,
+        eventBus: null,
+        skills: null,
         tasksListActive: async (ctx) => {
             if (!options.tasksListActive) {
                 return [];
             }
             return options.tasksListActive(ctx.userId);
         },
+        taskCallbacks: null,
         tokenStatsFetch: async () => [],
         documents: null
     });

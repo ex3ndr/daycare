@@ -1,9 +1,10 @@
 import http from "node:http";
-import type { ConnectorMessage, Context, TaskActiveSummary } from "@/types";
+import type { AgentSkill, ConnectorMessage, Context, TaskActiveSummary } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import { agentDescriptorTargetResolve } from "../../engine/agents/ops/agentDescriptorTargetResolve.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
+import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
@@ -11,8 +12,11 @@ import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
+import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
+import { eventsRouteHandle } from "../routes/events/eventsRoutes.js";
 import { apiRouteHandle } from "../routes/routes.js";
+import type { RouteAgentCallbacks, RouteTaskCallbacks } from "../routes/routeTypes.js";
 import { appAuthExtract } from "./appAuthExtract.js";
 import { APP_AUTH_LINK_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
@@ -33,7 +37,12 @@ export type AppServerOptions = {
     connectorRegistry: ConnectorRegistry;
     toolResolver: ToolResolver;
     webhooks: Webhooks;
+    users: UsersRepository | null;
+    agentCallbacks: RouteAgentCallbacks | null;
+    eventBus: EngineEventBus | null;
+    skills: ((ctx: Context) => Promise<AgentSkill[]>) | null;
     tasksListActive: (ctx: Context) => Promise<TaskActiveSummary[]>;
+    taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
 };
@@ -51,7 +60,12 @@ export class AppServer {
     private readonly connectorRegistry: ConnectorRegistry;
     private readonly toolResolver: ToolResolver;
     private readonly webhooks: Webhooks;
+    private readonly users: UsersRepository | null;
+    private readonly agentCallbacks: RouteAgentCallbacks | null;
+    private readonly eventBus: EngineEventBus | null;
+    private readonly skills: ((ctx: Context) => Promise<AgentSkill[]>) | null;
     private readonly tasksListActive: AppServerOptions["tasksListActive"];
+    private readonly taskCallbacks: RouteTaskCallbacks | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
     private readonly logger = getLogger("api.app-server");
@@ -67,7 +81,12 @@ export class AppServer {
         this.connectorRegistry = options.connectorRegistry;
         this.toolResolver = options.toolResolver;
         this.webhooks = options.webhooks;
+        this.users = options.users;
+        this.agentCallbacks = options.agentCallbacks;
+        this.eventBus = options.eventBus;
+        this.skills = options.skills;
         this.tasksListActive = options.tasksListActive;
+        this.taskCallbacks = options.taskCallbacks;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
     }
@@ -177,12 +196,30 @@ export class AppServer {
         }
 
         const ctx = contextForUser({ userId: auth.userId });
+        const eventsHandled = await eventsRouteHandle(request, response, pathname, {
+            eventBus: this.eventBus,
+            sendJson: appSendJson
+        });
+        if (eventsHandled) {
+            return;
+        }
+
+        const skillsList = this.skills;
         const handled = await apiRouteHandle(request, response, pathname, {
             ctx,
             usersDir: this.config.current.usersDir,
             sendJson: appSendJson,
             readJsonBody: appReadJsonBody,
+            users: this.users,
+            agentCallbacks: this.agentCallbacks,
+            eventBus: this.eventBus,
+            skills: skillsList
+                ? {
+                      list: () => skillsList(ctx)
+                  }
+                : null,
             tasksListActive: this.tasksListActive,
+            taskCallbacks: this.taskCallbacks,
             tokenStatsFetch: this.tokenStatsFetch,
             documents: this.documents
         });
