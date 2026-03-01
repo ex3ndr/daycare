@@ -117,4 +117,110 @@ describe("CronTasksRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("updates run metadata in place without advancing version", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new CronTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-runtime-task",
+                userId: "user-1",
+                title: "Runtime",
+                description: null,
+                code: "Prompt",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "runtime-task",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
+                taskId: "task-runtime-task",
+                userId: "user-1",
+                name: "Runtime",
+                description: null,
+                schedule: "* * * * *",
+                timezone: "UTC",
+                agentId: null,
+                enabled: true,
+                deleteAfterRun: false,
+                parameters: null,
+                lastRunAt: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            await repo.update("runtime-task", {
+                lastRunAt: 20,
+                updatedAt: 20
+            });
+
+            const current = await repo.findById("runtime-task");
+            expect(current?.version).toBe(1);
+            expect(current?.lastRunAt).toBe(20);
+            expect(current?.updatedAt).toBe(20);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to, last_run_at FROM tasks_cron WHERE id = ? ORDER BY version ASC")
+                .all("runtime-task")) as Array<{
+                version: number;
+                valid_to: number | null;
+                last_run_at: number | null;
+            }>;
+            expect(rows).toEqual([{ version: 1, valid_to: null, last_run_at: 20 }]);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("skips no-op updates without advancing version", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new CronTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-noop-task",
+                userId: "user-1",
+                title: "Noop",
+                description: null,
+                code: "Prompt",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "noop-task",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
+                taskId: "task-noop-task",
+                userId: "user-1",
+                name: "Noop",
+                description: null,
+                schedule: "* * * * *",
+                timezone: "UTC",
+                agentId: null,
+                enabled: true,
+                deleteAfterRun: false,
+                parameters: null,
+                lastRunAt: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            await repo.update("noop-task", {});
+
+            const current = await repo.findById("noop-task");
+            expect(current?.version).toBe(1);
+            expect(current?.updatedAt).toBe(1);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to FROM tasks_cron WHERE id = ? ORDER BY version ASC")
+                .all("noop-task")) as Array<{ version: number; valid_to: number | null }>;
+            expect(rows).toEqual([{ version: 1, valid_to: null }]);
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

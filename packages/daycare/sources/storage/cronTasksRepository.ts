@@ -239,12 +239,39 @@ export class CronTasksRepository {
             if (!next.taskId.trim()) {
                 throw new Error("Cron trigger taskId is required.");
             }
+            next.taskId = next.taskId.trim();
             next.timezone = timezoneNormalize(next.timezone);
+            if (cronTaskNoChangesIs(current, next)) {
+                await this.cacheLock.inLock(() => {
+                    this.taskCacheSet(current);
+                });
+                return;
+            }
+
+            if (cronTaskRuntimeOnlyChangeIs(current, next)) {
+                await this.db
+                    .update(tasksCronTable)
+                    .set({
+                        lastRunAt: next.lastRunAt,
+                        updatedAt: next.updatedAt
+                    })
+                    .where(
+                        and(
+                            eq(tasksCronTable.id, current.id),
+                            eq(tasksCronTable.version, current.version ?? 1),
+                            isNull(tasksCronTable.validTo)
+                        )
+                    );
+                await this.cacheLock.inLock(() => {
+                    this.taskCacheSet(next);
+                });
+                return;
+            }
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<CronTaskDbRecord>({
                     changes: {
-                        taskId: next.taskId.trim(),
+                        taskId: next.taskId,
                         userId: next.userId,
                         name: next.name,
                         description: next.description,
@@ -398,4 +425,64 @@ function timezoneNormalize(value: string): string {
         return "UTC";
     }
     return normalized;
+}
+
+/**
+ * Resolves whether the effective update changes only runtime metadata.
+ * Expects: `next` is merged from the current record and incoming partial changes.
+ */
+function cronTaskRuntimeOnlyChangeIs(current: CronTaskDbRecord, next: CronTaskDbRecord): boolean {
+    const lastRunAtChanged = (current.lastRunAt ?? null) !== (next.lastRunAt ?? null);
+    const updatedAtChanged = current.updatedAt !== next.updatedAt;
+    if (!lastRunAtChanged && !updatedAtChanged) {
+        return false;
+    }
+
+    return (
+        current.id === next.id &&
+        (current.version ?? 1) === (next.version ?? 1) &&
+        (current.validFrom ?? current.createdAt) === (next.validFrom ?? next.createdAt) &&
+        (current.validTo ?? null) === (next.validTo ?? null) &&
+        current.taskId === next.taskId &&
+        current.userId === next.userId &&
+        current.name === next.name &&
+        current.description === next.description &&
+        current.schedule === next.schedule &&
+        current.timezone === next.timezone &&
+        current.agentId === next.agentId &&
+        current.enabled === next.enabled &&
+        current.deleteAfterRun === next.deleteAfterRun &&
+        cronTaskJsonEqual(current.parameters, next.parameters) &&
+        current.createdAt === next.createdAt
+    );
+}
+
+/**
+ * Resolves whether merged state is fully unchanged.
+ * Expects: both records are normalized (trimmed task id, normalized timezone).
+ */
+function cronTaskNoChangesIs(current: CronTaskDbRecord, next: CronTaskDbRecord): boolean {
+    return (
+        current.id === next.id &&
+        (current.version ?? 1) === (next.version ?? 1) &&
+        (current.validFrom ?? current.createdAt) === (next.validFrom ?? next.createdAt) &&
+        (current.validTo ?? null) === (next.validTo ?? null) &&
+        current.taskId === next.taskId &&
+        current.userId === next.userId &&
+        current.name === next.name &&
+        current.description === next.description &&
+        current.schedule === next.schedule &&
+        current.timezone === next.timezone &&
+        current.agentId === next.agentId &&
+        current.enabled === next.enabled &&
+        current.deleteAfterRun === next.deleteAfterRun &&
+        cronTaskJsonEqual(current.parameters, next.parameters) &&
+        (current.lastRunAt ?? null) === (next.lastRunAt ?? null) &&
+        current.createdAt === next.createdAt &&
+        current.updatedAt === next.updatedAt
+    );
+}
+
+function cronTaskJsonEqual(left: unknown, right: unknown): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
 }
