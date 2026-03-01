@@ -299,6 +299,46 @@ describe("telegram plugin system prompt", () => {
         expect(result).toBeNull();
     });
 
+    it("uses trailing user id for channel/user connector targets", async () => {
+        const dataDir = await tempDirCreate();
+        const built = pluginApiBuild(dataDir);
+        const instance = await plugin.create(built.api as never);
+        await instance.load?.();
+        const systemPrompt = systemPromptRequire(instance);
+        const connector = connectorInstances[0];
+        expect(connector).toBeDefined();
+        connector!.bot.getChat.mockResolvedValue({
+            id: 456,
+            type: "private",
+            first_name: "Group User"
+        });
+        connector!.bot.getUserProfilePhotos.mockResolvedValue({
+            total_count: 0,
+            photos: []
+        });
+
+        const result = await systemPrompt({
+            ctx: contextForUser({ userId: "user-1" }),
+            path: "/user-1/telegram/channel-1/456",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            },
+            connectorTargetId: "channel-1/456",
+            userDownloadsDir: path.join(dataDir, "downloads")
+        });
+
+        expect(systemPromptResultRequire(result).text).toContain("Name: Group User");
+        expect(connector!.bot.getChat).toHaveBeenCalledWith("456");
+    });
+
     it("blocks on first fetch and copies avatar to user downloads", async () => {
         const dataDir = await tempDirCreate();
         const built = pluginApiBuild(dataDir);

@@ -48,7 +48,8 @@ export function buildReactionTool(): ToolDefinition {
             const target = await agentPathTargetResolve(
                 toolContext.agentSystem.storage,
                 toolContext.ctx.userId,
-                toolContext.agent.config
+                toolContext.agent.config,
+                toolContext.agent.path
             );
             if (!target) {
                 throw new Error("Reactions require a user agent.");

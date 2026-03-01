@@ -4,6 +4,7 @@ import path from "node:path";
 import TelegramBot from "node-telegram-bot-api";
 
 import type {
+    AgentPath,
     CommandHandler,
     Connector,
     ConnectorCapabilities,
@@ -14,7 +15,7 @@ import type {
     MessageHandler,
     SlashCommandEntry
 } from "@/types";
-import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
+import { agentPath } from "../../engine/agents/ops/agentPathTypes.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
@@ -148,8 +149,9 @@ export class TelegramConnector implements Connector {
             const trimmedText = rawText?.trim() ?? "";
             const isCommand = trimmedText.startsWith("/");
 
-            const externalTargetId = String(message.chat.id);
-            const path = agentPathConnector(externalTargetId, "telegram");
+            const channelId = String(message.chat.id);
+            const telegramUserId = String(senderId);
+            const path = telegramPathBuild(channelId, telegramUserId);
             const context: MessageContext = {
                 messageId: message.message_id ? String(message.message_id) : undefined
             };
@@ -1014,6 +1016,23 @@ function connectorStateParse(value: unknown): TelegramConnectorState | null {
     }
 
     return state;
+}
+
+function telegramPathBuild(channelId: string, telegramUserId: string): AgentPath {
+    const normalizedChannelId = telegramSegmentRequire(channelId, "channelId");
+    const normalizedTelegramUserId = telegramSegmentRequire(telegramUserId, "telegramUserId");
+    return agentPath(`/${normalizedChannelId}/telegram/${normalizedChannelId}/${normalizedTelegramUserId}`);
+}
+
+function telegramSegmentRequire(value: string, label: string): string {
+    const normalized = value.trim();
+    if (!normalized) {
+        throw new Error(`${label} is required`);
+    }
+    if (normalized.includes("/")) {
+        throw new Error(`${label} must not include '/'`);
+    }
+    return normalized;
 }
 
 function connectorStateFilesParse(value: unknown): Record<string, FileReference> | null {

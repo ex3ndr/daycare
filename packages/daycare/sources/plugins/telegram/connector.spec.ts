@@ -100,7 +100,38 @@ describe("TelegramConnector commands", () => {
         const [command, context, target] = commandHandler.mock.calls[0] as [string, MessageContext, string];
         expect(command).toBe("/reset");
         expect(context).toMatchObject({ messageId: "55" });
-        expect(target).toBe("/123/telegram");
+        expect(target).toBe("/123/telegram/123/123");
+    });
+
+    it("routes group commands with channel/user target suffix", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["456"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        const commandHandler = vi.fn(async (_command, _context, _target) => undefined);
+        connector.onCommand(commandHandler);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const botMessageHandler = bot!.handlers.get("message")?.[0];
+        await botMessageHandler?.({
+            message_id: 57,
+            chat: { id: -100321, type: "group" },
+            from: { id: 456 },
+            text: "/reset"
+        });
+
+        expect(commandHandler).toHaveBeenCalledTimes(1);
+        const target = commandHandler.mock.calls[0]?.[2] as string;
+        expect(target).toBe("/-100321/telegram/-100321/456");
     });
 });
 
@@ -164,7 +195,7 @@ describe("TelegramConnector incoming documents", () => {
             }
         ]);
         expect(context).toMatchObject({ messageId: "55" });
-        expect(target).toBe("/123/telegram");
+        expect(target).toBe("/123/telegram/123/123");
     });
 
     it("adds fallback text when document download fails", async () => {
@@ -269,7 +300,7 @@ describe("TelegramConnector incoming voice", () => {
             }
         ]);
         expect(context).toMatchObject({ messageId: "57" });
-        expect(target).toBe("/123/telegram");
+        expect(target).toBe("/123/telegram/123/123");
     });
 });
 

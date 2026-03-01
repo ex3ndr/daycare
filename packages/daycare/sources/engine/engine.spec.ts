@@ -684,6 +684,62 @@ describe("Engine message batching", () => {
         }
     });
 
+    it("canonicalizes connector path with channel/user suffix", async () => {
+        vi.useFakeTimers();
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const messageState: {
+                handler?: (
+                    message: ConnectorMessage,
+                    context: MessageContext,
+                    target: AgentPath
+                ) => void | Promise<void>;
+            } = {};
+
+            const connector: Connector = {
+                capabilities: { sendText: true },
+                onMessage: (handler) => {
+                    messageState.handler = handler;
+                    return () => undefined;
+                },
+                sendMessage: async () => undefined
+            };
+
+            const registerResult = engine.modules.connectors.register("telegram", connector);
+            expect(registerResult).toEqual({ ok: true, status: "loaded" });
+            const handler = messageState.handler;
+            if (!handler) {
+                throw new Error("Expected message handler to be registered");
+            }
+
+            await handler({ text: "hello" }, { messageId: "1" }, "/channel-1/telegram/channel-1/user-7" as AgentPath);
+            await vi.advanceTimersByTimeAsync(100);
+
+            expect(postSpy).toHaveBeenCalledTimes(1);
+            const call = postSpy.mock.calls[0];
+            if (!call) {
+                throw new Error("Expected post call");
+            }
+            const ctx = call[0] as { userId: string };
+            const target = call[1] as { path: string };
+            expect(target.path).toBe(`/${ctx.userId}/telegram/channel-1/user-7`);
+
+            const user = await engine.storage.resolveUserByConnectorKey(
+                userConnectorKeyCreate("telegram", "channel-1/user-7")
+            );
+            expect(user.id).toBe(ctx.userId);
+
+            await engine.modules.connectors.unregisterAll("test");
+            await engine.shutdown();
+        } finally {
+            vi.useRealTimers();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("ignores empty connector messages", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));

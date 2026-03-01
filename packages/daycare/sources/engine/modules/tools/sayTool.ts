@@ -56,7 +56,8 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
             const target = await agentPathTargetResolve(
                 context.agentSystem.storage,
                 context.ctx.userId,
-                context.agent.config
+                context.agent.config,
+                context.agent.path
             );
             if (!target) {
                 throw new Error("say is only available for foreground user agents.");

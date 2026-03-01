@@ -30,6 +30,7 @@ import { stringSlugify } from "../utils/stringSlugify.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
+import { agentPath } from "./agents/ops/agentPathTypes.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
@@ -884,9 +885,18 @@ export class Engine {
         }
 
         // Connector callbacks may still arrive with external ids; normalize them.
-        const connectorKey = userConnectorKeyCreate(connectorPath.connector, connectorPath.ownerId);
-        const user = await this.storage.resolveUserByConnectorKey(connectorKey);
-        const canonicalPath = agentPathConnector(user.id, connectorPath.connector);
+        const lookupTargetIds = connectorPathLookupTargetIds(connectorPath);
+        const existing = await connectorPathUserFindByTargets(this.storage, connectorPath.connector, lookupTargetIds);
+        const primaryTargetId = lookupTargetIds[0];
+        if (!primaryTargetId) {
+            throw new Error(`Connector target is required for path: ${path}`);
+        }
+        const user =
+            existing?.user ??
+            (await this.storage.resolveUserByConnectorKey(
+                userConnectorKeyCreate(connectorPath.connector, primaryTargetId)
+            ));
+        const canonicalPath = connectorPathCanonicalize(user.id, connectorPath.connector, connectorPath.targetId);
         return {
             ctx: contextForUser({ userId: user.id }),
             path: canonicalPath
@@ -916,6 +926,21 @@ export class Engine {
             return null;
         }
         const keyPrefix = `${connectorPath.connector}:`;
+        if (connectorPath.targetId) {
+            const exactKey = `${keyPrefix}${connectorPath.targetId}`;
+            const exact = user.connectorKeys.find((entry) => entry.connectorKey === exactKey);
+            if (exact) {
+                return { connector: connectorPath.connector, targetId: connectorPath.targetId };
+            }
+            const legacyFallback = connectorPathLegacyTargetFallback(connectorPath.targetId);
+            if (legacyFallback) {
+                const fallbackKey = `${keyPrefix}${legacyFallback}`;
+                const fallback = user.connectorKeys.find((entry) => entry.connectorKey === fallbackKey);
+                if (fallback) {
+                    return { connector: connectorPath.connector, targetId: legacyFallback };
+                }
+            }
+        }
         const connectorKey = user.connectorKeys.find((entry) => entry.connectorKey.startsWith(keyPrefix));
         if (!connectorKey) {
             return null;
@@ -1033,6 +1058,14 @@ export class Engine {
 
 const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser", "app"]);
 
+type ConnectorPath = {
+    ownerId: string;
+    connector: string;
+    targetId: string | null;
+};
+
+type ConnectorPathUser = NonNullable<Awaited<ReturnType<Storage["users"]["findByConnectorKey"]>>>;
+
 function pathSegments(path: AgentPath): string[] {
     return String(path)
         .split("/")
@@ -1048,9 +1081,9 @@ function pathUserIdResolve(path: AgentPath): string | null {
     return first;
 }
 
-function connectorPathResolve(path: AgentPath): { ownerId: string; connector: string } | null {
+function connectorPathResolve(path: AgentPath): ConnectorPath | null {
     const segments = pathSegments(path);
-    if (segments.length !== 2) {
+    if (segments.length < 2) {
         return null;
     }
     const ownerId = segments[0]?.trim() ?? "";
@@ -1061,7 +1094,73 @@ function connectorPathResolve(path: AgentPath): { ownerId: string; connector: st
     if (RESERVED_USER_SCOPE_SEGMENTS.has(connector)) {
         return null;
     }
-    return { ownerId, connector };
+    const targetSegments = segments
+        .slice(2)
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+    const targetId = targetSegments.length > 0 ? targetSegments.join("/") : null;
+    return { ownerId, connector, targetId };
+}
+
+async function connectorPathUserFindByTargets(
+    storage: Storage,
+    connector: string,
+    targetIds: string[]
+): Promise<{ user: ConnectorPathUser; targetId: string } | null> {
+    for (const targetId of targetIds) {
+        const connectorKey = userConnectorKeyCreate(connector, targetId);
+        const user = await storage.users.findByConnectorKey(connectorKey);
+        if (user) {
+            return { user, targetId };
+        }
+    }
+    return null;
+}
+
+function connectorPathLookupTargetIds(connectorPath: ConnectorPath): string[] {
+    const targetIds: string[] = [];
+    const targetId = connectorPath.targetId?.trim() ?? "";
+    if (!targetId) {
+        const ownerId = connectorPath.ownerId.trim();
+        if (ownerId) {
+            targetIds.push(ownerId);
+        }
+        return targetIds;
+    }
+    targetIds.push(targetId);
+    const legacyFallback = connectorPathLegacyTargetFallback(targetId);
+    if (legacyFallback && !targetIds.includes(legacyFallback)) {
+        targetIds.push(legacyFallback);
+    }
+    return targetIds;
+}
+
+function connectorPathLegacyTargetFallback(targetId: string): string | null {
+    const segments = targetId
+        .split("/")
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+    const channelId = segments[0] ?? "";
+    const senderUserId = segments[1] ?? "";
+    if (!channelId || !senderUserId) {
+        return null;
+    }
+    return channelId === senderUserId ? channelId : null;
+}
+
+function connectorPathCanonicalize(ownerId: string, connector: string, targetId: string | null): AgentPath {
+    const base = agentPathConnector(ownerId, connector);
+    if (!targetId) {
+        return base;
+    }
+    const targetSegments = targetId
+        .split("/")
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+    if (targetSegments.length === 0) {
+        return base;
+    }
+    return agentPath(`${base}/${targetSegments.join("/")}`);
 }
 
 function parseCommand(command: string): { name: string; args: string[] } | null {

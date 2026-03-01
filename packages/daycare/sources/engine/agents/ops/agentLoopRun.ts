@@ -151,7 +151,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const isChildAgent = kind === "sub" || kind === "search";
     let childAgentNudged = false;
     let childAgentMessageSent = false;
-    const target = await agentPathTargetResolve(agentSystem.storage, agent.ctx.userId, agent.config);
+    const target = await agentPathTargetResolve(agentSystem.storage, agent.ctx.userId, agent.config, agent.path);
     const parentAgentId = isChildAgent ? agent.config.parentAgentId : null;
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {

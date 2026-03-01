@@ -339,7 +339,8 @@ async function skillNotifyConnector(skillName: string, toolContext: ToolExecutio
         const target = await agentPathTargetResolve(
             toolContext.agentSystem.storage,
             toolContext.ctx.userId,
-            toolContext.agent.config
+            toolContext.agent.config,
+            toolContext.agent.path
         );
         if (!target) {
             return;

@@ -97,7 +97,8 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             const target = await agentPathTargetResolve(
                 context.agentSystem.storage,
                 context.ctx.userId,
-                context.agent.config
+                context.agent.config,
+                context.agent.path
             );
             if (payload.source && target && payload.source !== target.connector && !payload.channelId) {
                 throw new Error("Override source requires an explicit channelId.");

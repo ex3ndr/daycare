@@ -1,6 +1,7 @@
 import os from "node:os";
 
 import Handlebars from "handlebars";
+import { agentPathTargetResolve } from "./agentPathTargetResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
@@ -36,25 +37,16 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
 }
 
 async function connectorTargetResolve(context: AgentSystemPromptContext, connector: string | null): Promise<string> {
-    if (!connector || !context.agentSystem) {
+    if (!connector || !context.agentSystem || !context.config) {
         return "unknown";
     }
-    const users = context.agentSystem.storage?.users;
-    if (!users) {
-        return "unknown";
-    }
-    const user = await users.findById(context.ctx.userId);
-    if (!user) {
-        return "unknown";
-    }
-    const prefix = `${connector}:`;
-    const connectorKeys = Array.isArray(user.connectorKeys) ? user.connectorKeys : [];
-    const connectorKey = connectorKeys.find((entry) => entry.connectorKey.startsWith(prefix))?.connectorKey;
-    if (!connectorKey) {
-        return "unknown";
-    }
-    const targetId = connectorKey.slice(prefix.length).trim();
-    return targetId || "unknown";
+    const resolved = await agentPathTargetResolve(
+        context.agentSystem.storage,
+        context.ctx.userId,
+        context.config,
+        context.path
+    );
+    return resolved?.targetId?.trim() || "unknown";
 }
 
 /** Looks up structured user profile fields from storage. */

@@ -382,7 +382,7 @@ export class Agent {
         if (!this.config.foreground) {
             return;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
         if (!target) {
             return;
         }
@@ -462,8 +462,9 @@ export class Agent {
 
         await agentPromptFilesEnsure(agentPromptPathsResolve(this.userHome));
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
-        const connectorTargetId = (await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config))
-            ?.targetId;
+        const connectorTargetId = (
+            await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path)
+        )?.targetId;
         const pluginPrompts =
             typeof pluginManager.getSystemPrompts === "function"
                 ? await pluginManager.getSystemPrompts({
@@ -512,8 +513,8 @@ export class Agent {
         );
         if (compactionStatus.severity !== "ok") {
             const targetId =
-                (await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config))?.targetId ??
-                null;
+                (await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path))
+                    ?.targetId ?? null;
             if (agentKind === "foreground" && connector?.capabilities.sendText && targetId) {
                 await connector.sendMessage(targetId, {
                     text: messageContextReset({ kind: "compaction" }),
@@ -1026,7 +1027,7 @@ export class Agent {
             return true;
         }
 
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
         if (!target) {
             return true;
         }
@@ -1051,7 +1052,7 @@ export class Agent {
         if (!this.config.foreground) {
             return result.ok;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
         if (!target) {
             return result.ok;
         }
@@ -1095,7 +1096,7 @@ export class Agent {
             return;
         }
 
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
         if (!target) {
             return;
         }
@@ -1141,7 +1142,7 @@ export class Agent {
         if (this.resolveAgentKind() !== "foreground") {
             return;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
         if (!target) {
             return;
         }
@@ -1448,7 +1449,7 @@ export class Agent {
         if (!this.config.foreground) {
             return null;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
         if (!target) {
             return null;
         }
