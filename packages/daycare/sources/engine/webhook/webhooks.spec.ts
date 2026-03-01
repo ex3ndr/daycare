@@ -90,7 +90,6 @@ describe("Webhooks", () => {
                 expect.objectContaining({
                     type: "system_message",
                     origin: "webhook",
-                    execute: true,
                     context: {
                         enrichments: [
                             {
@@ -141,8 +140,7 @@ describe("Webhooks", () => {
                 { descriptor: { type: "task", id: "task-default-target" } },
                 expect.objectContaining({
                     type: "system_message",
-                    origin: "webhook",
-                    execute: true
+                    origin: "webhook"
                 })
             );
         } finally {

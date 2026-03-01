@@ -161,9 +161,8 @@ export class Webhooks {
         const result = await this.agentSystem.postAndAwait(ctx, target, {
             type: "system_message",
             text,
-            code: [task.code],
+            code: task.code,
             origin: "webhook",
-            execute: true,
             ...(messageContext ? { context: messageContext } : {})
         });
         if (result.type !== "system_message") {

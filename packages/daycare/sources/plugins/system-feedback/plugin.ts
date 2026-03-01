@@ -151,8 +151,7 @@ export const plugin = definePlugin({
                                         type: "system_message",
                                         text: messageText,
                                         origin: SYSTEM_FEEDBACK_ORIGIN,
-                                        silent: false,
-                                        execute: false
+                                        silent: false
                                     }
                                 );
 

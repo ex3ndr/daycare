@@ -50,10 +50,9 @@ export class Crons {
                     type: "system_message",
                     text: built.text,
                     code: built.code,
-                    inputs: task.inputs ? [task.inputs] : undefined,
-                    inputSchemas: task.inputSchema ? [task.inputSchema] : undefined,
+                    inputs: task.inputs ?? undefined,
+                    inputSchemas: task.inputSchema ?? undefined,
                     origin: "cron",
-                    execute: true,
                     context: messageContext
                 });
                 if (result.type !== "system_message") {
@@ -274,7 +273,7 @@ function cronTaskPromptBuild(task: {
     timezone: string;
 }): {
     text: string;
-    code: string[];
+    code: string;
 } {
     const text = [
         "[cron]",
@@ -283,5 +282,5 @@ function cronTaskPromptBuild(task: {
         `taskName: ${task.taskName}`,
         `timezone: ${task.timezone}`
     ].join("\n");
-    return { text, code: [task.code] };
+    return { text, code: task.code };
 }

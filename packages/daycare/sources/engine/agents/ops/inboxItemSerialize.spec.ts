@@ -24,8 +24,7 @@ describe("inboxItemSerialize", () => {
                 text: "sync now",
                 origin: "cron",
                 silent: true,
-                execute: true,
-                code: ["print('hello')"],
+                code: "print('hello')",
                 context: { messageId: "m-2" }
             },
             {

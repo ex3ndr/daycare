@@ -86,8 +86,7 @@ describe("task tools", () => {
             { descriptor: { type: "system", tag: "task" } },
             expect.objectContaining({
                 type: "system_message",
-                origin: "task",
-                execute: true
+                origin: "task"
             })
         );
 

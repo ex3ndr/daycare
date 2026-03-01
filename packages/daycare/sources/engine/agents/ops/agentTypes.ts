@@ -145,12 +145,11 @@ export type AgentInboxItem =
           text: string;
           origin?: string;
           silent?: boolean;
-          execute?: boolean;
-          code?: string[];
-          /** Per-code-block input variables injected natively into Monty VM. */
-          inputs?: Array<Record<string, unknown> | null>;
-          /** Per-code-block parameter schemas for input variable type annotations. */
-          inputSchemas?: Array<TaskParameter[] | null>;
+          code?: string;
+          /** Input variables injected natively into Monty VM for executable system messages. */
+          inputs?: Record<string, unknown> | null;
+          /** Parameter schema for executable system message input variable type annotations. */
+          inputSchemas?: TaskParameter[] | null;
           context?: MessageContext;
           /** When true, return code execution output directly without LLM inference. */
           sync?: boolean;

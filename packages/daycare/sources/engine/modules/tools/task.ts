@@ -486,11 +486,10 @@ export function buildTaskRunTool(): ToolDefinition {
             const result = await toolContext.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
                 type: "system_message",
                 text,
-                code: [task.code],
-                inputs: inputValues ? [inputValues] : undefined,
-                inputSchemas: task.parameters?.length ? [task.parameters] : undefined,
+                code: task.code,
+                inputs: inputValues ?? undefined,
+                inputSchemas: task.parameters?.length ? task.parameters : undefined,
                 origin: "task",
-                execute: true,
                 sync: payload.sync === true,
                 context: toolContext.messageContext
             });

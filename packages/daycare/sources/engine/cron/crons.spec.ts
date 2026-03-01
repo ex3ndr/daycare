@@ -164,7 +164,6 @@ describe("Crons", () => {
                 expect.objectContaining({
                     type: "system_message",
                     origin: "cron",
-                    execute: true,
                     context: messageContext
                 })
             );

@@ -109,8 +109,7 @@ describe("system-feedback plugin tool", () => {
                     "The search tool times out on large queries"
                 ].join("\n"),
                 origin: "plugin:system-feedback",
-                silent: false,
-                execute: false
+                silent: false
             }
         );
 

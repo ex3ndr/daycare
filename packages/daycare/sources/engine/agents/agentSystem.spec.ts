@@ -529,8 +529,7 @@ describe("AgentSystem", () => {
                 {
                     type: "system_message",
                     text: "[cron]\ntriggerId: trigger-1\ntaskId: task-1",
-                    code: ["raise Exception('boom')"],
-                    execute: true,
+                    code: "raise Exception('boom')",
                     origin: "cron"
                 }
             );

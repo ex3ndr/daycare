@@ -8,7 +8,6 @@ import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
 import { Sandbox } from "../../sandbox/sandbox.js";
-import { tagExtractAll } from "../../util/tagExtract.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
 import { messageBuildSystemSilentText } from "../messages/messageBuildSystemSilentText.js";
@@ -16,7 +15,6 @@ import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
-import { executablePromptTagReplace } from "../modules/executablePrompts/executablePromptTagReplace.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
 import type { TaskParameter } from "../modules/tasks/taskParameterTypes.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
@@ -682,19 +680,15 @@ export class Agent {
     }
 
     private async executableBlocksRun(input: {
-        blocks: string[];
+        code: string;
         source: string;
         messageContext: MessageContext;
-        blockInputs?: Array<Record<string, unknown> | null>;
-        blockInputSchemas?: Array<TaskParameter[] | null>;
-    }): Promise<{ outputs: string[]; errorMessages: string[]; skipTurn: boolean }> {
-        if (input.blocks.length === 0) {
-            return { outputs: [], errorMessages: [], skipTurn: false };
-        }
-
+        inputValues?: Record<string, unknown> | null;
+        inputSchema?: TaskParameter[] | null;
+    }): Promise<{ output: string; errorMessage: string | null; skipTurn: boolean }> {
         const now = Date.now();
         const source = input.source.trim().length > 0 ? input.source : "system";
-        const blockToolCallIds = input.blocks.map(() => createId());
+        const toolCallId = createId();
         const connector = this.agentSystem.connectorRegistry.get(source);
         const { providers, providerId } = this.inferenceProvidersResolve();
         const providersForAgent = providersForAgentResolve(providers, providerId);
@@ -733,10 +727,10 @@ export class Agent {
             notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error),
             initialPhase: {
                 type: "vm_start",
-                blocks: input.blocks,
-                blockToolCallIds,
-                ...(input.blockInputs ? { blockInputs: input.blockInputs } : {}),
-                ...(input.blockInputSchemas ? { blockInputSchemas: input.blockInputSchemas } : {}),
+                blocks: [input.code],
+                blockToolCallIds: [toolCallId],
+                ...(input.inputValues !== undefined ? { blockInputs: [input.inputValues] } : {}),
+                ...(input.inputSchema !== undefined ? { blockInputSchemas: [input.inputSchema] } : {}),
                 blockIndex: 0,
                 assistantAt: now,
                 historyResponseText: ""
@@ -746,41 +740,28 @@ export class Agent {
         });
 
         const persistedHistory = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
-        const completions = new Map<string, Extract<AgentHistoryRecord, { type: "rlm_complete" }>>();
+        let completion: Extract<AgentHistoryRecord, { type: "rlm_complete" }> | null = null;
         for (const record of persistedHistory) {
-            if (record.type !== "rlm_complete") {
+            if (record.type !== "rlm_complete" || record.toolCallId !== toolCallId) {
                 continue;
             }
-            if (!blockToolCallIds.includes(record.toolCallId)) {
-                continue;
-            }
-            completions.set(record.toolCallId, record);
+            completion = record;
         }
 
-        const outputs: string[] = [];
-        const errorMessages: string[] = [];
-        for (const toolCallId of blockToolCallIds) {
-            const completion = completions.get(toolCallId);
-            if (!completion) {
-                const missing = "Python execution failed before completion.";
-                errorMessages.push(missing);
-                outputs.push(`<exec_error>${missing}</exec_error>`);
-                continue;
-            }
-            if (!completion.isError && completion.output === "Turn skipped") {
-                return { outputs, errorMessages, skipTurn: true };
-            }
-            if (completion.isError) {
-                const message = completion.error?.trim() ?? "";
-                const errorText = message.length > 0 ? message : "Python execution failed.";
-                errorMessages.push(errorText);
-                outputs.push(`<exec_error>${errorText}</exec_error>`);
-                continue;
-            }
-            const output = completion.printOutput.length > 0 ? completion.printOutput.join("\n") : completion.output;
-            outputs.push(output);
+        if (!completion) {
+            const missing = "Python execution failed before completion.";
+            return { output: `<exec_error>${missing}</exec_error>`, errorMessage: missing, skipTurn: false };
         }
-        return { outputs, errorMessages, skipTurn: false };
+        if (!completion.isError && completion.output === "Turn skipped") {
+            return { output: "", errorMessage: null, skipTurn: true };
+        }
+        if (completion.isError) {
+            const message = completion.error?.trim() ?? "";
+            const errorText = message.length > 0 ? message : "Python execution failed.";
+            return { output: `<exec_error>${errorText}</exec_error>`, errorMessage: errorText, skipTurn: false };
+        }
+        const output = completion.printOutput.length > 0 ? completion.printOutput.join("\n") : completion.output;
+        return { output, errorMessage: null, skipTurn: false };
     }
 
     private async handleSystemMessage(
@@ -789,119 +770,79 @@ export class Agent {
         let systemText = item.text;
         let executionHasError = false;
         let executionErrorText: string | null = null;
-        if (item.execute) {
-            if (item.code && item.code.length > 0) {
-                const startedAt = Date.now();
-                const run = await this.executableBlocksRun({
-                    blocks: item.code,
-                    source: item.origin ?? "system",
-                    messageContext: item.context ?? {},
-                    blockInputs: item.inputs,
-                    blockInputSchemas: item.inputSchemas
-                });
-                if (run.skipTurn) {
-                    logger.info(
-                        {
-                            agentId: this.id,
-                            origin: item.origin ?? "system",
-                            codeBlockCount: item.code.length,
-                            durationMs: Date.now() - startedAt
-                        },
-                        "event: Code execution skipped via skip()"
-                    );
-                    return { responseText: null };
-                }
-                executionHasError = run.errorMessages.length > 0;
-                if (run.errorMessages.length > 0) {
-                    executionErrorText = run.errorMessages.join("\n");
-                }
+        const rawCode = item.code as unknown;
+        if (rawCode !== undefined && typeof rawCode !== "string") {
+            const errorText = Array.isArray(rawCode)
+                ? `Executable system_message requires exactly one code block, got ${rawCode.length}.`
+                : "Executable system_message code must be a string.";
+            logger.warn(
+                { agentId: this.id, origin: item.origin ?? "system", errorText },
+                "error: Invalid code payload"
+            );
+            return {
+                responseText: item.sync ? `<exec_error>${errorText}</exec_error>` : null,
+                responseError: true,
+                executionErrorText: errorText
+            };
+        }
 
-                // Sync mode: return code output directly without LLM inference
-                if (item.sync) {
-                    const output = run.outputs.join("\n\n");
-                    logger.info(
-                        {
-                            agentId: this.id,
-                            origin: item.origin ?? "system",
-                            codeBlockCount: item.code.length,
-                            outputCount: run.outputs.length,
-                            hasError: executionHasError,
-                            durationMs: Date.now() - startedAt
-                        },
-                        "event: Sync code execution completed"
-                    );
-                    return {
-                        responseText: output,
-                        responseError: executionHasError,
-                        ...(executionHasError ? { executionErrorText: executionErrorText ?? undefined } : {})
-                    };
-                }
-
-                systemText = [systemText, ...run.outputs].filter((s) => s.trim().length > 0).join("\n\n");
+        if (typeof rawCode === "string") {
+            const startedAt = Date.now();
+            const run = await this.executableBlocksRun({
+                code: rawCode,
+                source: item.origin ?? "system",
+                messageContext: item.context ?? {},
+                inputValues: item.inputs,
+                inputSchema: item.inputSchemas
+            });
+            if (run.skipTurn) {
                 logger.info(
                     {
                         agentId: this.id,
                         origin: item.origin ?? "system",
-                        codeBlockCount: item.code.length,
-                        outputCount: run.outputs.length,
+                        codeBlockCount: 1,
                         durationMs: Date.now() - startedAt
                     },
-                    "event: Code blocks executed"
+                    "event: Code execution skipped via skip()"
                 );
-            } else {
-                const startedAt = Date.now();
-                const runPythonTagCount = tagExtractAll(systemText, "run_python").length;
-                const tagMatches = [...systemText.matchAll(/<run_python(\s[^>]*)?>[\s\S]*?<\/run_python\s*>/gi)];
-                if (runPythonTagCount > 0 && tagMatches.length > 0) {
-                    const run = await this.executableBlocksRun({
-                        blocks: tagExtractAll(systemText, "run_python"),
-                        source: item.origin ?? "system",
-                        messageContext: item.context ?? {}
-                    });
-                    if (run.skipTurn) {
-                        logger.info(
-                            {
-                                agentId: this.id,
-                                origin: item.origin ?? "system",
-                                durationMs: Date.now() - startedAt
-                            },
-                            "event: Executable system message skipped via skip()"
-                        );
-                        return { responseText: null };
-                    }
-                    executionHasError = run.errorMessages.length > 0;
-                    if (run.errorMessages.length > 0) {
-                        executionErrorText = run.errorMessages.join("\n");
-                    }
-
-                    let expanded = systemText;
-                    const replacementCount = Math.min(tagMatches.length, run.outputs.length);
-                    for (let index = replacementCount - 1; index >= 0; index -= 1) {
-                        const tagMatch = tagMatches[index]!;
-                        expanded = executablePromptTagReplace(expanded, tagMatch, run.outputs[index] ?? "");
-                    }
-                    systemText = expanded;
-                } else if (runPythonTagCount > 0) {
-                    logger.info(
-                        {
-                            agentId: this.id,
-                            origin: item.origin ?? "system",
-                            durationMs: Date.now() - startedAt
-                        },
-                        "event: Executable system message tags detected but no matches were replaced"
-                    );
-                }
-                logger.info(
-                    {
-                        agentId: this.id,
-                        origin: item.origin ?? "system",
-                        runPythonTagCount,
-                        errorTagCount: executionHasError ? tagExtractAll(systemText, "exec_error").length : 0,
-                        durationMs: Date.now() - startedAt
-                    },
-                    "event: Executable system message expanded"
-                );
+                return { responseText: null };
             }
+            executionHasError = run.errorMessage !== null;
+            if (run.errorMessage) {
+                executionErrorText = run.errorMessage;
+            }
+
+            // Sync mode: return code output directly without LLM inference
+            if (item.sync) {
+                logger.info(
+                    {
+                        agentId: this.id,
+                        origin: item.origin ?? "system",
+                        codeBlockCount: 1,
+                        outputCount: 1,
+                        hasError: executionHasError,
+                        durationMs: Date.now() - startedAt
+                    },
+                    "event: Sync code execution completed"
+                );
+                return {
+                    responseText: run.output,
+                    responseError: executionHasError,
+                    ...(executionHasError ? { executionErrorText: executionErrorText ?? undefined } : {})
+                };
+            }
+
+            systemText = [systemText, run.output].filter((s) => s.trim().length > 0).join("\n\n");
+            logger.info(
+                {
+                    agentId: this.id,
+                    origin: item.origin ?? "system",
+                    codeBlockCount: 1,
+                    outputCount: 1,
+                    durationMs: Date.now() - startedAt
+                },
+                "event: Code block executed"
+            );
         }
 
         const text = item.silent

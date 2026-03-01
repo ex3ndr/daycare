@@ -41,9 +41,9 @@ flowchart TD
   Scheduler --> Repo[cronTasksRepository.findMany]
   Scheduler --> Tick[Compute next runs]
   Tick --> Resolve["Resolve task code from tasksRepository by task_id"]
-  Resolve --> Build["cronTaskPromptBuild: { text, code[] }"]
-  Build --> AgentSystem["post system_message with code[] array"]
-  AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
+  Resolve --> Build["cronTaskPromptBuild: { text, code }"]
+  Build --> AgentSystem["post system_message with single code string"]
+  AgentSystem --> RLM["handleSystemMessage: agentLoopRun restore-only VM"]
   RLM --> Record[repo.update last_run_at]
 ```
 

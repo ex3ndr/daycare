@@ -205,7 +205,7 @@ describe("Agent", () => {
         }
     });
 
-    it("expands executable system messages", async () => {
+    it("executes system messages when code is present", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {
             const config = configResolve(
@@ -244,9 +244,9 @@ describe("Agent", () => {
                 { descriptor },
                 {
                     type: "system_message",
-                    text: "Check: <run_python>1 + 1</run_python>",
-                    origin: "cron",
-                    execute: true
+                    text: "Check:",
+                    code: "1 + 1",
+                    origin: "cron"
                 }
             );
 
@@ -259,14 +259,14 @@ describe("Agent", () => {
             if (!userRecord || userRecord.type !== "user_message") {
                 throw new Error("Expected user_message history record");
             }
-            expect(userRecord.text).toContain("Check: 2");
-            expect(userRecord.text).not.toContain("<run_python>");
+            expect(userRecord.text).toContain("Check:");
+            expect(userRecord.text).toContain("2");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
     });
 
-    it("injects exec_error blocks when executable system message expansion fails", async () => {
+    it("injects exec_error blocks when executable system message code fails", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {
             const config = configResolve(
@@ -305,9 +305,9 @@ describe("Agent", () => {
                 { descriptor },
                 {
                     type: "system_message",
-                    text: "Check: <run_python>def broken(</run_python>",
-                    origin: "cron",
-                    execute: true
+                    text: "Check:",
+                    code: "def broken(",
+                    origin: "cron"
                 }
             );
             if (result.type !== "system_message") {
@@ -325,7 +325,6 @@ describe("Agent", () => {
                 throw new Error("Expected user_message history record");
             }
             expect(userRecord.text).toContain("<exec_error>");
-            expect(userRecord.text).not.toContain("<run_python>");
             const starts = history.filter(
                 (record): record is Extract<AgentHistoryRecord, { type: "rlm_start" }> => record.type === "rlm_start"
             );
@@ -383,9 +382,8 @@ describe("Agent", () => {
                 {
                     type: "system_message",
                     text: "run skip",
-                    code: ["skip()"],
-                    origin: "cron",
-                    execute: true
+                    code: "skip()",
+                    origin: "cron"
                 }
             );
             if (result.type !== "system_message") {
@@ -420,7 +418,7 @@ describe("Agent", () => {
         }
     });
 
-    it("continues sync executable blocks after per-block failures", async () => {
+    it("rejects executable system messages with multiple code blocks", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {
             const config = configResolve(
@@ -454,25 +452,19 @@ describe("Agent", () => {
                 id: createId(),
                 name: "Executable prompt cron"
             };
-            const result = await postAndAwait(
-                agentSystem,
-                { descriptor },
-                {
-                    type: "system_message",
-                    text: "sync run",
-                    code: ["raise Exception('boom')", "1 + 1"],
-                    origin: "cron",
-                    execute: true,
-                    sync: true
-                }
-            );
+            const result = await postAndAwait(agentSystem, { descriptor }, {
+                type: "system_message",
+                text: "sync run",
+                code: ["raise Exception('boom')", "1 + 1"],
+                origin: "cron",
+                sync: true
+            } as unknown as AgentInboxItem);
             if (result.type !== "system_message") {
                 throw new Error("Expected system_message result");
             }
             expect(result.responseError).toBe(true);
-            expect(result.executionErrorText).toContain("boom");
+            expect(result.executionErrorText).toContain("requires exactly one code block");
             expect(result.responseText).toContain("<exec_error>");
-            expect(result.responseText).toContain("2");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
