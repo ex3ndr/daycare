@@ -1,4 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
+import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,6 +7,20 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Avatar } from "@/components/Avatar";
 
 export type AppMode = "agents" | "people" | "email" | "inbox" | "todos" | "routines" | "costs" | "documents";
+
+export const appModes: AppMode[] = [
+    "agents",
+    "people",
+    "email",
+    "inbox",
+    "todos",
+    "routines",
+    "inventory",
+    "workflows",
+    "coaching",
+    "costs",
+    "documents"
+];
 
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
     { mode: "agents", icon: "device-desktop", label: "Agents" },
@@ -18,14 +33,32 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "documents", icon: "file", label: "Documents" }
 ];
 
-type AppHeaderProps = {
-    selectedMode: AppMode;
-    onModeChange: (mode: AppMode) => void;
-};
+/**
+ * Extracts the current AppMode from the pathname.
+ * E.g. "/agents" -> "agents", "/agents/a1" -> "agents".
+ */
+function extractModeFromPath(pathname: string): AppMode {
+    const segment = pathname.split("/").filter(Boolean)[0];
+    if (segment && appModes.includes(segment as AppMode)) {
+        return segment as AppMode;
+    }
+    return "agents";
+}
 
-export const AppHeader = React.memo<AppHeaderProps>(({ selectedMode, onModeChange }) => {
+export const AppHeader = React.memo(() => {
     const { theme } = useUnistyles();
     const safeAreaInsets = useSafeAreaInsets();
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const selectedMode = extractModeFromPath(pathname);
+
+    const handleModeChange = React.useCallback(
+        (mode: AppMode) => {
+            router.replace(`/${mode}` as `/${string}`);
+        },
+        [router]
+    );
 
     return (
         <View
@@ -44,33 +77,35 @@ export const AppHeader = React.memo<AppHeaderProps>(({ selectedMode, onModeChang
                     <Text style={[styles.appHeaderTitle, { color: theme.colors.onSurface }]}>Daycare</Text>
                 </View>
 
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={[
-                        styles.segmentedControl,
-                        { backgroundColor: theme.colors.surfaceContainerHighest }
-                    ]}
-                >
-                    {segments.map((seg) => {
-                        const isSelected = selectedMode === seg.mode;
-                        const color = isSelected ? theme.colors.onSurface : theme.colors.onSurfaceVariant;
-                        return (
-                            <Pressable
-                                key={seg.mode}
-                                testID={`segment-${seg.mode}`}
-                                onPress={() => onModeChange(seg.mode)}
-                                style={[
-                                    styles.segmentButton,
-                                    isSelected && { backgroundColor: theme.colors.surfaceContainer }
-                                ]}
-                            >
-                                <Octicons name={seg.icon} size={16} color={color} />
-                                <Text style={[styles.segmentButtonText, { color }]}>{seg.label}</Text>
-                            </Pressable>
-                        );
-                    })}
-                </ScrollView>
+                <View style={styles.segmentedControlContainer}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={[
+                            styles.segmentedControl,
+                            { backgroundColor: theme.colors.surfaceContainerHighest }
+                        ]}
+                    >
+                        {segments.map((seg) => {
+                            const isSelected = selectedMode === seg.mode;
+                            const color = isSelected ? theme.colors.onSurface : theme.colors.onSurfaceVariant;
+                            return (
+                                <Pressable
+                                    key={seg.mode}
+                                    testID={`segment-${seg.mode}`}
+                                    onPress={() => handleModeChange(seg.mode)}
+                                    style={[
+                                        styles.segmentButton,
+                                        isSelected && { backgroundColor: theme.colors.surfaceContainer }
+                                    ]}
+                                >
+                                    <Octicons name={seg.icon} size={16} color={color} />
+                                    <Text style={[styles.segmentButtonText, { color }]}>{seg.label}</Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
 
                 <View style={styles.rightSide}>
                     <Avatar id="daycare-user" size={32} />
@@ -88,7 +123,6 @@ const styles = StyleSheet.create({
         height: 56,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
         paddingLeft: 24,
         paddingRight: 24
     },
@@ -101,6 +135,11 @@ const styles = StyleSheet.create({
     appHeaderTitle: {
         fontSize: 18,
         fontWeight: "600"
+    },
+    segmentedControlContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center"
     },
     segmentedControl: {
         flexDirection: "row",

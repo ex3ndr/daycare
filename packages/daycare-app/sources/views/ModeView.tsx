@@ -1,0 +1,176 @@
+import { createId } from "@paralleldrive/cuid2";
+import { useRouter } from "expo-router";
+import * as React from "react";
+import type { AppMode } from "@/components/AppHeader";
+import { Item } from "@/components/Item";
+import { ItemGroup } from "@/components/ItemGroup";
+import { ItemListStatic } from "@/components/ItemList";
+import { TreePanelLayout } from "@/components/layout/TreePanelLayout";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { AgentsView } from "@/views/AgentsView";
+import { CoachingView } from "@/views/CoachingView";
+import { CostsView } from "@/views/CostsView";
+import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
+import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
+import { DocumentsView } from "@/views/documents/DocumentsView";
+import { DocumentTreePanel } from "@/views/documents/DocumentTreePanel";
+import { EmailView } from "@/views/EmailView";
+import { InboxView } from "@/views/InboxView";
+import { InventoryView } from "@/views/InventoryView";
+import { PeopleView } from "@/views/PeopleView";
+import { RoutinesView } from "@/views/RoutinesView";
+import { TodosView } from "@/views/TodosView";
+import { WorkflowsView } from "@/views/WorkflowsView";
+
+const leftItems: Record<Exclude<AppMode, "documents">, Array<{ id: string; title: string; subtitle: string }>> = {
+    agents: [
+        { id: "a1", title: "Scout", subtitle: "General helper" },
+        { id: "a2", title: "Builder", subtitle: "Code specialist" },
+        { id: "a3", title: "Operator", subtitle: "Runtime ops" }
+    ],
+    people: [
+        { id: "p1", title: "Team", subtitle: "4 members" },
+        { id: "p2", title: "External", subtitle: "3 contacts" }
+    ],
+    email: [
+        { id: "e1", title: "Inbox", subtitle: "3 unread" },
+        { id: "e2", title: "Sent", subtitle: "12 messages" },
+        { id: "e3", title: "Archive", subtitle: "Older mail" }
+    ],
+    inbox: [
+        { id: "i1", title: "Action Required", subtitle: "3 items" },
+        { id: "i2", title: "Notifications", subtitle: "4 items" }
+    ],
+    todos: [
+        { id: "t1", title: "Today", subtitle: "3 tasks" },
+        { id: "t2", title: "This Week", subtitle: "2 tasks" },
+        { id: "t3", title: "Completed", subtitle: "3 done" }
+    ],
+    routines: [
+        { id: "r1", title: "Active", subtitle: "4 routines" },
+        { id: "r2", title: "Disabled", subtitle: "2 routines" }
+    ],
+    inventory: [
+        { id: "inv1", title: "API Keys", subtitle: "3 keys" },
+        { id: "inv2", title: "Compute", subtitle: "3 resources" },
+        { id: "inv3", title: "Storage", subtitle: "3 stores" },
+        { id: "inv4", title: "Integrations", subtitle: "4 connected" }
+    ],
+    workflows: [
+        { id: "wf1", title: "Recent", subtitle: "3 workflows" },
+        { id: "wf2", title: "Completed", subtitle: "2 workflows" }
+    ],
+    coaching: [
+        { id: "ch1", title: "Training", subtitle: "4 active" },
+        { id: "ch2", title: "Feedback", subtitle: "3 recent" },
+        { id: "ch3", title: "Completed", subtitle: "3 lessons" }
+    ],
+    costs: [
+        { id: "co1", title: "This Month", subtitle: "$142.50" },
+        { id: "co2", title: "Last Month", subtitle: "$161.80" }
+    ]
+};
+
+const viewComponents: Record<AppMode, React.ComponentType> = {
+    agents: AgentsView,
+    people: PeopleView,
+    email: EmailView,
+    inbox: InboxView,
+    todos: TodosView,
+    routines: RoutinesView,
+    inventory: InventoryView,
+    workflows: WorkflowsView,
+    coaching: CoachingView,
+    costs: CostsView,
+    documents: DocumentsView
+};
+
+type ModeViewProps = {
+    mode: AppMode;
+    selectedItem?: string;
+};
+
+/**
+ * Renders the TreePanelLayout for a given mode with the appropriate panels.
+ * Handles both generic modes (with static panel1 items) and documents mode (with DocumentTreePanel).
+ */
+export function ModeView({ mode, selectedItem }: ModeViewProps) {
+    const router = useRouter();
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+    const selectedId = useDocumentsStore((s) => s.selectedId);
+    const fetchDocuments = useDocumentsStore((s) => s.fetch);
+    const createDocument = useDocumentsStore((s) => s.createDocument);
+    const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
+    const [createParentId, setCreateParentId] = React.useState<string | null>(null);
+
+    const isDocuments = mode === "documents";
+
+    React.useEffect(() => {
+        if (isDocuments && baseUrl && token) {
+            void fetchDocuments(baseUrl, token);
+        }
+    }, [isDocuments, baseUrl, token, fetchDocuments]);
+
+    const handleCreatePress = React.useCallback((parentId?: string | null) => {
+        setCreateParentId(parentId ?? null);
+        setCreateDialogVisible(true);
+    }, []);
+
+    const handleCreate = React.useCallback(
+        (input: { title: string; slug: string; parentId: string | null }) => {
+            if (!baseUrl || !token) return;
+            void createDocument(baseUrl, token, { id: createId(), ...input });
+        },
+        [baseUrl, token, createDocument]
+    );
+
+    const handleItemPress = React.useCallback(
+        (itemId: string) => {
+            router.replace(`/${mode}/${itemId}` as `/${string}`);
+        },
+        [mode, router]
+    );
+
+    const ViewComponent = viewComponents[mode];
+
+    const panel1 = isDocuments ? (
+        <DocumentTreePanel onCreatePress={handleCreatePress} />
+    ) : (
+        <ItemListStatic>
+            <ItemGroup>
+                {leftItems[mode].map((item) => (
+                    <Item
+                        key={item.id}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        showChevron={false}
+                        onPress={() => handleItemPress(item.id)}
+                        selected={selectedItem === item.id}
+                    />
+                ))}
+            </ItemGroup>
+        </ItemListStatic>
+    );
+
+    return (
+        <>
+            <TreePanelLayout
+                panel1={panel1}
+                panel2={<ViewComponent />}
+                panel3={isDocuments && selectedId ? <DocumentMetadataPanel /> : undefined}
+                panel3Placeholder={undefined}
+                keepPanel1={isDocuments}
+            />
+            {isDocuments && (
+                <DocumentCreateDialog
+                    visible={createDialogVisible}
+                    parentId={createParentId}
+                    onClose={() => setCreateDialogVisible(false)}
+                    onCreate={handleCreate}
+                />
+            )}
+        </>
+    );
+}

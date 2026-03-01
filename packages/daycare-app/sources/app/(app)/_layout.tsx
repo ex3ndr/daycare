@@ -1,37 +1,23 @@
-import { Stack } from "expo-router";
-import { useUnistyles } from "react-native-unistyles";
+import { Slot } from "expo-router";
+import { View } from "react-native";
+import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { AppHeader } from "@/components/AppHeader";
 
 export default function AppLayout() {
     const { theme } = useUnistyles();
 
     return (
-        <Stack
-            screenOptions={{
-                headerShown: true,
-                headerLargeTitle: false,
-                headerStyle: {
-                    backgroundColor: theme.colors.surface
-                },
-                headerTintColor: theme.colors.onSurface,
-                headerTitleStyle: {
-                    color: theme.colors.onSurface
-                },
-                headerShadowVisible: false,
-                contentStyle: {
-                    backgroundColor: theme.colors.surface
-                }
-            }}
-        >
-            <Stack.Screen
-                name="index"
-                options={{
-                    title: "Daycare",
-                    headerShown: false,
-                    contentStyle: {
-                        backgroundColor: theme.colors.surface
-                    }
-                }}
-            />
-        </Stack>
+        <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+            <AppHeader />
+            <Slot />
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    root: {
+        flexGrow: 1,
+        flexBasis: 0,
+        flexDirection: "column"
+    }
+});
