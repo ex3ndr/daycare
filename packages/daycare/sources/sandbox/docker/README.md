@@ -71,7 +71,9 @@ All sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/run` as writa
 - `HostConfig.Tmpfs["/run"] = "rw"`
 - `HostConfig.Tmpfs["/var/tmp"] = "rw"`
 - `HostConfig.Tmpfs["/var/run"] = "rw"`
-- Docker `Sandbox.exec()` always includes `/tmp`, `/run`, `/var/tmp`, and `/var/run` in `sandbox-runtime` `allowWrite`.
+- Docker `Sandbox.exec()` includes `/tmp`, `/run`, and `/var/tmp` in `sandbox-runtime` `allowWrite`.
+- `Sandbox.exec()` intentionally excludes `/var/run` because `sandbox-runtime` already maps `/run` and fails when
+  `/var/run` is explicitly listed.
 
 When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
 

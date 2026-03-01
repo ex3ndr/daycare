@@ -120,8 +120,7 @@ function runtimeConfigPathRewrite(
             ...config.filesystem.allowWrite.map((entry) => containerPathRewrite(entry, mounts)),
             "/tmp",
             "/run",
-            "/var/tmp",
-            "/var/run"
+            "/var/tmp"
         ])
     );
 

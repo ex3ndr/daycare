@@ -9,7 +9,9 @@ Daycare Docker sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/ru
 - Containers are labeled with `daycare.tmpfs.tmp = "1"`, `daycare.tmpfs.run = "1"`,
   `daycare.tmpfs.var_tmp = "1"`, and `daycare.tmpfs.var_run = "1"` to track these runtime requirements.
 - Existing containers missing any required tmpfs label are treated as stale and recreated.
-- Docker `exec` runtime config always includes `/tmp`, `/run`, `/var/tmp`, and `/var/run` in sandbox `allowWrite`.
+- Docker `exec` runtime config includes `/tmp`, `/run`, and `/var/tmp` in sandbox `allowWrite`.
+- `"/var/run"` is intentionally not appended to `allowWrite` because `sandbox-runtime` already maps `/run` and errors
+  when `/var/run` is also present.
 
 This guarantees writable temporary space in Docker mode even when rootfs constraints are enabled.
 
@@ -21,5 +23,6 @@ flowchart TD
     C --> E[createContainer HostConfig.Tmpfs for temp and run paths]
     E --> F[label tmpfs flags for /tmp /run /var/tmp /var/run]
     D --> G[dockerRunInSandbox rewrites runtime config]
-    G --> H[append /tmp /run /var/tmp /var/run to allowWrite]
+    G --> H[append /tmp /run /var/tmp to allowWrite]
+    H --> I[exclude /var/run to avoid bwrap bind-mount failure]
 ```
