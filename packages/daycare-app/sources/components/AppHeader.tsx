@@ -6,18 +6,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Avatar } from "@/components/Avatar";
 
-export type AppMode = "agents" | "people" | "email" | "inbox" | "todos" | "routines" | "costs" | "documents";
+export type AppMode = "home" | "agents" | "people" | "email" | "inbox" | "todos" | "routines" | "costs" | "documents";
 
 export const appModes: AppMode[] = [
+    "home",
     "agents",
     "people",
     "email",
     "inbox",
     "todos",
     "routines",
-    "inventory",
-    "workflows",
-    "coaching",
     "costs",
     "documents"
 ];

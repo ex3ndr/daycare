@@ -16,6 +16,7 @@ import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { DocumentTreePanel } from "@/views/documents/DocumentTreePanel";
 import { EmailView } from "@/views/EmailView";
+import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
 import { InventoryView } from "@/views/InventoryView";
 import { PeopleView } from "@/views/PeopleView";
@@ -23,7 +24,10 @@ import { RoutinesView } from "@/views/RoutinesView";
 import { TodosView } from "@/views/TodosView";
 import { WorkflowsView } from "@/views/WorkflowsView";
 
-const leftItems: Record<Exclude<AppMode, "documents">, Array<{ id: string; title: string; subtitle: string }>> = {
+const leftItems: Record<
+    Exclude<AppMode, "documents" | "home">,
+    Array<{ id: string; title: string; subtitle: string }>
+> = {
     agents: [
         { id: "a1", title: "Scout", subtitle: "General helper" },
         { id: "a2", title: "Builder", subtitle: "Code specialist" },
@@ -73,6 +77,7 @@ const leftItems: Record<Exclude<AppMode, "documents">, Array<{ id: string; title
 };
 
 const viewComponents: Record<AppMode, React.ComponentType> = {
+    home: HomeView,
     agents: AgentsView,
     people: PeopleView,
     email: EmailView,
@@ -135,12 +140,14 @@ export function ModeView({ mode, selectedItem }: ModeViewProps) {
 
     const ViewComponent = viewComponents[mode];
 
+    const items = mode in leftItems ? leftItems[mode as keyof typeof leftItems] : [];
+
     const panel1 = isDocuments ? (
         <DocumentTreePanel onCreatePress={handleCreatePress} />
     ) : (
         <ItemListStatic>
             <ItemGroup>
-                {leftItems[mode].map((item) => (
+                {items.map((item) => (
                     <Item
                         key={item.id}
                         title={item.title}

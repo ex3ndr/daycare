@@ -1,13 +1,13 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { type AppMode, appModes } from "@/components/AppHeader";
-import { ModeView } from "@/views/ModeView";
+import { SidebarModeView } from "@/views/SidebarModeView";
 
 export default function ModeItemScreen() {
-    const { mode, item } = useLocalSearchParams<{ mode: string; item: string }>();
+    const { mode } = useLocalSearchParams<{ mode: string }>();
 
     if (!mode || !appModes.includes(mode as AppMode)) {
-        return <Redirect href="/agents" />;
+        return <Redirect href="/home" />;
     }
 
-    return <ModeView mode={mode as AppMode} selectedItem={item} />;
+    return <SidebarModeView mode={mode as AppMode} />;
 }
