@@ -262,7 +262,9 @@ export class AgentSystem {
         const completion = this.createCompletion();
         await this.enqueueEntry(entry, item, completion.completion);
         this.startEntryIfRunning(entry);
-        return completion.promise;
+        const result = await completion.promise;
+        await this.executableFailureFollowupPost(ctx, target, item, result);
+        return result;
     }
 
     /**
@@ -278,6 +280,83 @@ export class AgentSystem {
                 await this.post(targetCtx, { agentId: record.id }, item);
             })
         );
+    }
+
+    /**
+     * Posts a follow-up system message when executable prompt expansion fails.
+     * Expects: called after the originating postAndAwait completion resolves.
+     */
+    private async executableFailureFollowupPost(
+        ctx: Context,
+        target: AgentPostTarget,
+        item: AgentInboxItem,
+        result: AgentInboxResult
+    ): Promise<void> {
+        if (item.type !== "system_message" || !item.execute || item.sync) {
+            return;
+        }
+        if (result.type !== "system_message" || !result.responseError) {
+            return;
+        }
+        const originValue = (item.origin ?? "system").trim();
+        const baseOrigin = originValue.length > 0 ? originValue : "system";
+        if (baseOrigin.endsWith(":failure")) {
+            return;
+        }
+
+        const followupText = this.executableFailureMessageText(item, result);
+        const followupItem: AgentInboxItem = {
+            type: "system_message",
+            text: followupText,
+            origin: `${baseOrigin}:failure`,
+            context: item.context ?? {}
+        };
+        try {
+            await this.post(ctx, target, followupItem);
+            logger.info(
+                {
+                    origin: baseOrigin,
+                    target: "descriptor" in target ? target.descriptor.type : target.agentId
+                },
+                "event: Executable prompt failure follow-up queued"
+            );
+        } catch (error) {
+            logger.warn({ origin: baseOrigin, error }, "error: Failed to queue executable prompt failure follow-up");
+        }
+    }
+
+    /**
+     * Formats a generic failure follow-up so the agent can self-heal executable prompts.
+     * Expects: result.responseError is true for the originating executable system message.
+     */
+    private executableFailureMessageText(
+        item: Extract<AgentInboxItem, { type: "system_message" }>,
+        result: Extract<AgentInboxResult, { type: "system_message" }>
+    ): string {
+        const origin = (item.origin ?? "system").trim();
+        const normalizedOrigin = origin.length > 0 ? origin : "system";
+        const sourceText = item.text.trim();
+        const responseText = result.responseText?.trim() ?? "";
+        const executionErrorText = result.executionErrorText?.trim() ?? "";
+        const lines = [
+            "[executable_prompt_failed]",
+            `origin: ${normalizedOrigin}`,
+            "The executable prompt failed. Fix the underlying task/prompt before the next run."
+        ];
+        if (sourceText.length > 0) {
+            lines.push("source:");
+            lines.push(sourceText);
+        }
+        lines.push("execution_output:");
+        if (executionErrorText.length > 0) {
+            lines.push(executionErrorText);
+        } else {
+            lines.push(responseText.length > 0 ? responseText : "Execution failed without output.");
+        }
+        if (sourceText.includes("triggerId:") || sourceText.includes("taskId:")) {
+            lines.push("When reporting the outcome, include triggerId/taskId when present.");
+        }
+        return lines.join("\n");
     }
 
     /**

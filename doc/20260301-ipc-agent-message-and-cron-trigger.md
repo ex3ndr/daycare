@@ -10,7 +10,19 @@ Added two IPC APIs for runtime debugging and integration testing:
   - Optional `awaitResponse` returns the assistant response text for end-to-end checks.
 - `POST /v1/engine/cron/tasks/:triggerId/trigger`
   - Executes a cron trigger immediately, outside schedule timing.
-  - Preserves existing cron error reporting behavior (`onError` + failure follow-up message flow).
+  - Returns trigger execution failures while failure follow-up is now handled by the agent layer.
+
+## Executable Prompt Failure Routing
+
+Failure remediation moved from cron-specific code into shared agent execution:
+
+- Any `system_message` with `execute: true` and `responseError: true` now queues a generic follow-up message to the same target with origin `<origin>:failure`.
+- Follow-up text includes:
+  - original origin (`cron`, `webhook`, `task`, etc.)
+  - original source payload text
+  - extracted execution error text when available
+- `Crons` no longer posts `cron:failure` directly.
+- `Webhooks` now treats `responseError` as execution failure and throws.
 
 ## Flow
 
@@ -23,8 +35,10 @@ flowchart TD
     B -->|cron/tasks/:id/trigger| F[Crons.triggerTask]
     F --> G[CronScheduler.triggerTaskNow]
     G --> H[Execute linked task code immediately]
-    H --> I{Error?}
-    I -->|No| J[Return ok]
-    I -->|Yes| K[Report via cron onError]
-    K --> L[Post cron:failure system message to task/agent target]
+    H --> I[agentSystem.postAndAwait system_message execute=true]
+    I --> J{responseError?}
+    J -->|No| K[Return ok]
+    J -->|Yes| L[Return execution failure to caller]
+    L --> M[agentSystem queues generic <origin>:failure follow-up]
+    M --> N[Same task/agent receives failure context and can self-fix]
 ```

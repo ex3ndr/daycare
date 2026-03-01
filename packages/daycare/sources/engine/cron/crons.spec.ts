@@ -235,7 +235,7 @@ describe("Crons", () => {
         }
     });
 
-    it("reports cron failures via task-scoped system message with triggerId and taskId", async () => {
+    it("does not post cron-specific failure messages from cron facade", async () => {
         const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-failure-report-"));
         tempDirs.push(dir);
 
@@ -248,30 +248,12 @@ describe("Crons", () => {
         const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
         const storage = await storageOpenTest();
         try {
-            const now = Date.now();
-            await storage.tasks.create({
-                id: "task-failure",
-                userId: "user-1",
-                title: "Failure task",
-                description: null,
-                code: "print('hello')",
-                parameters: null,
-                createdAt: now,
-                updatedAt: now
-            });
-
             const crons = new Crons({
                 config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
                 storage,
                 eventBus: { emit: vi.fn() } as unknown as CronsOptions["eventBus"],
                 agentSystem
             });
-            const created = await crons.addTask(contextBuild("user-1"), {
-                id: "trigger-failure",
-                taskId: "task-failure",
-                schedule: "* * * * *"
-            });
-
             const errorCallback = (
                 crons as unknown as {
                     scheduler: {
@@ -281,22 +263,8 @@ describe("Crons", () => {
             ).scheduler.onError;
             expect(errorCallback).toBeTypeOf("function");
 
-            await errorCallback!(new Error("boom"), created.id);
-
-            expect(agentSystemMock.post).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "user-1", hasAgentId: false }),
-                { descriptor: { type: "task", id: "task-failure" } },
-                expect.objectContaining({
-                    type: "system_message",
-                    origin: "cron:failure"
-                })
-            );
-
-            const postCalls = agentSystemMock.post.mock.calls as unknown[][];
-            const postedMessage = postCalls[0]?.[2] as { text?: string } | undefined;
-            expect(postedMessage?.text).toContain("triggerId: trigger-failure");
-            expect(postedMessage?.text).toContain("taskId: task-failure");
-            expect(postedMessage?.text).toContain("Try to fix the task before the next run.");
+            await errorCallback!(new Error("boom"), "trigger-failure");
+            expect(agentSystemMock.post).not.toHaveBeenCalled();
         } finally {
             storage.connection.close();
         }

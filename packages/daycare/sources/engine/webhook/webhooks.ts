@@ -158,7 +158,7 @@ export class Webhooks {
             : { descriptor: { type: "task" as const, id: trigger.taskId } };
         const text = webhookPromptBuild(trigger, task.title, data);
         const messageContext = webhookMessageContextBuild(data);
-        await this.agentSystem.postAndAwait(ctx, target, {
+        const result = await this.agentSystem.postAndAwait(ctx, target, {
             type: "system_message",
             text,
             code: [task.code],
@@ -166,6 +166,16 @@ export class Webhooks {
             execute: true,
             ...(messageContext ? { context: messageContext } : {})
         });
+        if (result.type !== "system_message") {
+            throw new Error(`Unexpected webhook execution result type: ${result.type}`);
+        }
+        if (result.responseError) {
+            const output = result.executionErrorText?.trim() ?? result.responseText?.trim();
+            if (output && output.length > 0) {
+                throw new Error(output);
+            }
+            throw new Error(`Webhook trigger failed: ${normalizedId}`);
+        }
         await this.storage.webhookTasks.recordRun(trigger.id, Date.now());
 
         logger.info({ triggerId: trigger.id, taskId: task.id }, "event: Webhook trigger executed");

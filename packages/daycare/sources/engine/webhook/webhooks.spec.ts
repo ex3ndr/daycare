@@ -8,7 +8,7 @@ describe("Webhooks", () => {
     it("adds, lists, and deletes triggers with ctx scoping", async () => {
         const storage = await storageOpenTest();
         try {
-            const postAndAwait = vi.fn(async () => ({ status: "completed" }));
+            const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
@@ -58,7 +58,7 @@ describe("Webhooks", () => {
     it("executes task code via agentSystem when webhook is triggered", async () => {
         const storage = await storageOpenTest();
         try {
-            const postAndAwait = vi.fn(async () => ({ status: "completed" }));
+            const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
@@ -111,7 +111,7 @@ describe("Webhooks", () => {
     it("uses task descriptor target when webhook trigger has no agentId", async () => {
         const storage = await storageOpenTest();
         try {
-            const postAndAwait = vi.fn(async () => ({ status: "completed" }));
+            const postAndAwait = vi.fn(async () => ({ type: "system_message", responseText: null }));
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
@@ -150,13 +150,53 @@ describe("Webhooks", () => {
         }
     });
 
+    it("throws when executable webhook execution reports responseError", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const postAndAwait = vi.fn(async () => ({
+                type: "system_message" as const,
+                responseText: "ignored",
+                responseError: true,
+                executionErrorText: "boom"
+            }));
+            const webhooks = new Webhooks({
+                storage,
+                agentSystem: {
+                    postAndAwait
+                } as unknown as WebhooksOptions["agentSystem"]
+            });
+
+            await storage.tasks.create({
+                id: "task-failed-webhook",
+                userId: "user-1",
+                title: "Task failed webhook",
+                description: null,
+                code: "print('run')",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await webhooks.addTrigger(contextBuild("user-1"), {
+                taskId: "task-failed-webhook",
+                id: "hook-failed-webhook"
+            });
+
+            await expect(webhooks.trigger("hook-failed-webhook")).rejects.toThrow("boom");
+
+            const updatedTrigger = await storage.webhookTasks.findById("hook-failed-webhook");
+            expect(updatedTrigger?.lastRunAt).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("throws on missing webhook id", async () => {
         const storage = await storageOpenTest();
         try {
             const webhooks = new Webhooks({
                 storage,
                 agentSystem: {
-                    postAndAwait: vi.fn(async () => ({ status: "completed" }))
+                    postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
                 } as unknown as WebhooksOptions["agentSystem"]
             });
             await expect(webhooks.trigger("missing")).rejects.toThrow("Webhook trigger not found: missing");

@@ -367,7 +367,8 @@ export class Agent {
                 return {
                     type: "system_message",
                     responseText: systemResult.responseText,
-                    responseError: systemResult.responseError
+                    responseError: systemResult.responseError,
+                    ...(systemResult.executionErrorText ? { executionErrorText: systemResult.executionErrorText } : {})
                 };
             }
             case "signal": {
@@ -682,9 +683,10 @@ export class Agent {
 
     private async handleSystemMessage(
         item: AgentInboxSystemMessage
-    ): Promise<{ responseText: string | null; responseError?: boolean }> {
+    ): Promise<{ responseText: string | null; responseError?: boolean; executionErrorText?: string }> {
         let systemText = item.text;
         let executionHasError = false;
+        let executionErrorText: string | null = null;
         if (item.execute) {
             if (item.code && item.code.length > 0) {
                 // Execute code blocks directly via rlmExecute
@@ -697,6 +699,7 @@ export class Agent {
                 const outputs: string[] = [];
                 let skipTurn = false;
                 let hasError = false;
+                const errorMessages: string[] = [];
                 for (let codeIdx = 0; codeIdx < item.code.length; codeIdx++) {
                     const code = item.code[codeIdx]!;
                     const codeInputs = item.inputs?.[codeIdx] ?? undefined;
@@ -722,10 +725,14 @@ export class Agent {
                     } catch (error) {
                         hasError = true;
                         const message = error instanceof Error ? error.message : String(error);
+                        errorMessages.push(message);
                         outputs.push(`<exec_error>${message}</exec_error>`);
                     }
                 }
                 executionHasError = hasError;
+                if (errorMessages.length > 0) {
+                    executionErrorText = errorMessages.join("\n");
+                }
                 if (skipTurn) {
                     logger.info(
                         {
@@ -753,7 +760,11 @@ export class Agent {
                         },
                         "event: Sync code execution completed"
                     );
-                    return { responseText: output, responseError: hasError };
+                    return {
+                        responseText: output,
+                        responseError: hasError,
+                        ...(hasError ? { executionErrorText: executionErrorText ?? undefined } : {})
+                    };
                 }
 
                 systemText = [systemText, ...outputs].filter((s) => s.trim().length > 0).join("\n\n");
@@ -791,8 +802,14 @@ export class Agent {
                     return { responseText: null };
                 }
                 systemText = expandResult.expanded;
-                const errorTagCount = tagExtractAll(systemText, "exec_error").length;
+                const execErrors = tagExtractAll(systemText, "exec_error")
+                    .map((entry) => entry.trim())
+                    .filter(Boolean);
+                const errorTagCount = execErrors.length;
                 executionHasError = runPythonTagCount > 0 && errorTagCount > 0;
+                if (executionHasError) {
+                    executionErrorText = execErrors.join("\n");
+                }
                 logger.info(
                     {
                         agentId: this.id,
@@ -833,7 +850,12 @@ export class Agent {
             this.state.context.messages.push(userMessage);
             this.state.updatedAt = receivedAt;
             await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
-            return { responseText: null, ...(executionHasError ? { responseError: true } : {}) };
+            return {
+                responseText: null,
+                ...(executionHasError
+                    ? { responseError: true, executionErrorText: executionErrorText ?? undefined }
+                    : {})
+            };
         }
 
         const messageItem: AgentInboxMessage = {
@@ -842,7 +864,10 @@ export class Agent {
             context: item.context ?? {}
         };
         const responseText = await this.handleMessage(messageItem);
-        return { responseText, ...(executionHasError ? { responseError: true } : {}) };
+        return {
+            responseText,
+            ...(executionHasError ? { responseError: true, executionErrorText: executionErrorText ?? undefined } : {})
+        };
     }
 
     private async handleSignal(item: AgentInboxSignal): Promise<{ delivered: boolean; responseText: string | null }> {

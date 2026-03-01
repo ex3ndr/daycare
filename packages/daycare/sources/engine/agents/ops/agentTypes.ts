@@ -191,6 +191,7 @@ export type AgentInboxResult =
           type: "system_message";
           responseText: string | null;
           responseError?: boolean;
+          executionErrorText?: string;
       }
     | {
           type: "signal";

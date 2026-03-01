@@ -60,7 +60,7 @@ export class Crons {
                     throw new Error(`Unexpected cron execution result type: ${result.type}`);
                 }
                 if (result.responseError) {
-                    const output = result.responseText?.trim();
+                    const output = result.executionErrorText?.trim() ?? result.responseText?.trim();
                     if (output && output.length > 0) {
                         throw new Error(output);
                     }
@@ -69,7 +69,6 @@ export class Crons {
             },
             onError: async (error, triggerId) => {
                 logger.warn({ triggerId, error }, "error: Cron task failed");
-                await this.failureMessagePost(triggerId, error);
             },
             onTaskComplete: (task, runAt) => {
                 this.eventBus.emit("cron.task.ran", { taskId: task.id, runAt: runAt.toISOString() });
@@ -221,36 +220,6 @@ export class Crons {
         return removed;
     }
 
-    private async failureMessagePost(triggerId: string, error: unknown): Promise<void> {
-        const trigger = await this.storage.cronTasks.findById(triggerId);
-        if (!trigger) {
-            logger.warn({ triggerId }, "error: Failed to report cron failure; trigger not found");
-            return;
-        }
-
-        const target = trigger.agentId
-            ? { agentId: trigger.agentId }
-            : { descriptor: { type: "task" as const, id: trigger.taskId } };
-        const text = cronTaskFailurePromptBuild({
-            triggerId: trigger.id,
-            taskId: trigger.taskId,
-            errorText: errorTextBuild(error)
-        });
-
-        try {
-            await this.agentSystem.post(contextForUser({ userId: trigger.userId }), target, {
-                type: "system_message",
-                text,
-                origin: "cron:failure"
-            });
-        } catch (reportError) {
-            logger.warn(
-                { triggerId: trigger.id, taskId: trigger.taskId, reportError },
-                "error: Failed to deliver cron failure system message"
-            );
-        }
-    }
-
     private async taskDeleteIfOrphan(ctx: Context, taskId: string): Promise<void> {
         const [cronTriggers, webhookTriggers] = await Promise.all([
             this.storage.cronTasks.findManyByTaskId(ctx, taskId),
@@ -315,25 +284,4 @@ function cronTaskPromptBuild(task: {
         `timezone: ${task.timezone}`
     ].join("\n");
     return { text, code: [task.code] };
-}
-
-function cronTaskFailurePromptBuild(input: { triggerId: string; taskId: string; errorText: string }): string {
-    return [
-        "[cron_failed]",
-        `triggerId: ${input.triggerId}`,
-        `taskId: ${input.taskId}`,
-        `error: ${input.errorText}`,
-        "This cron execution failed. Try to fix the task before the next run.",
-        "When you report the outcome, include both triggerId and taskId."
-    ].join("\n");
-}
-
-function errorTextBuild(error: unknown): string {
-    if (error instanceof Error && error.message.trim().length > 0) {
-        return error.message.trim();
-    }
-    if (typeof error === "string" && error.trim().length > 0) {
-        return error.trim();
-    }
-    return "Unknown cron failure.";
 }
