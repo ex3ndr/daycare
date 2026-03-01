@@ -56,8 +56,6 @@ import { friendSendToolBuild } from "./modules/tools/friendSendToolBuild.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
 import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
-import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
-import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
 import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
@@ -97,9 +95,9 @@ import { Processes } from "./processes/processes.js";
 import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
-import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { swarmCreateToolBuild } from "./swarms/swarmCreateToolBuild.js";
 import { Swarms } from "./swarms/swarms.js";
+import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
@@ -497,8 +495,6 @@ export class Engine {
         this.modules.tools.register("core", observationQueryToolBuild(this.storage.observationLog));
         this.modules.tools.register("core", documentReadToolBuild());
         this.modules.tools.register("core", documentWriteToolBuild());
-        this.modules.tools.register("core", memoryNodeReadToolBuild());
-        this.modules.tools.register("core", memoryNodeWriteToolBuild());
         logger.debug(
             "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, swarms, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe"
         );
