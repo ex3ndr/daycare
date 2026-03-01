@@ -218,13 +218,27 @@ describe("friendAddToolBuild", () => {
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "u1", agentId: "a1" }),
-                descriptor: { type: "user", connector: "telegram", userId: "u1", channelId: "c1" }
+                path: "/u1/telegram",
+                config: {
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
             })
         ).toBe(true);
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "u1", agentId: "a1" }),
-                descriptor: { type: "subagent", id: "s1", parentAgentId: "a1", name: "worker" }
+                path: "/u1/sub/s1",
+                config: {
+                    foreground: false,
+                    name: "worker",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
             })
         ).toBe(false);
     });

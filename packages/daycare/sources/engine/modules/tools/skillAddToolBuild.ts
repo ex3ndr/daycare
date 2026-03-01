@@ -48,7 +48,7 @@ export function skillAddToolBuild(): ToolDefinition {
             parameters: schema
         },
         returns,
-        visibleByDefault: (context) => context.descriptor.type === "user",
+        visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SkillAddArgs;
             const personalRoot = toolContext.skillsPersonalRoot;

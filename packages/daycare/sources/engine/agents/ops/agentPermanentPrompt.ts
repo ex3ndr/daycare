@@ -11,7 +11,7 @@ export function agentPermanentPrompt(agents: PermanentAgentSummary[]): string {
     }
 
     const ordered = [...agents].sort((a, b) => {
-        const nameCompare = a.descriptor.name.localeCompare(b.descriptor.name, "en", {
+        const nameCompare = a.name.localeCompare(b.name, "en", {
             sensitivity: "base"
         });
         if (nameCompare !== 0) {
@@ -33,10 +33,10 @@ export function agentPermanentPrompt(agents: PermanentAgentSummary[]): string {
     for (const agent of ordered) {
         lines.push("    <agent>");
         lines.push(`      <id>${xmlEscape(agent.agentId)}</id>`);
-        lines.push(`      <name>${xmlEscape(agent.descriptor.name)}</name>`);
-        lines.push(`      <description>${xmlEscape(agent.descriptor.description)}</description>`);
-        if (agent.descriptor.workspaceDir) {
-            lines.push(`      <workspace>${xmlEscape(agent.descriptor.workspaceDir)}</workspace>`);
+        lines.push(`      <name>${xmlEscape(agent.name)}</name>`);
+        lines.push(`      <description>${xmlEscape(agent.description)}</description>`);
+        if (agent.workspaceDir) {
+            lines.push(`      <workspace>${xmlEscape(agent.workspaceDir)}</workspace>`);
         }
         lines.push("    </agent>");
     }

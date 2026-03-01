@@ -563,12 +563,6 @@ function createContext(
 ): ToolExecutionContext {
     const agentId = createId();
     const messageContext = {};
-    const descriptor = {
-        type: "subagent",
-        id: agentId,
-        parentAgentId: "system",
-        name: "system"
-    } as const;
     const now = Date.now();
     const state: AgentState = {
         context: { messages: [] },
@@ -582,12 +576,19 @@ function createContext(
     const ctx = contextForAgent({ userId: "user-1", agentId });
     const agent = Agent.restore(
         ctx,
-        descriptor,
+        `/user-1/sub/${agentId}`,
+        {
+            foreground: false,
+            name: "system",
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        },
         state,
         new AgentInbox(agentId),
         {
             extraMountsForUserId: () => []
-        } as unknown as Parameters<typeof Agent.restore>[4],
+        } as unknown as Parameters<typeof Agent.restore>[5],
         new UserHome(path.join(workingDir, "users"), "user-1")
     );
     const sandbox = new Sandbox({

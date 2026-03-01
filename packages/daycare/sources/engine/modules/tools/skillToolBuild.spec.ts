@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentDescriptor, AgentSkill, SessionPermissions, ToolExecutionContext } from "@/types";
+import type { AgentSkill, SessionPermissions, ToolExecutionContext } from "@/types";
 import { Sandbox } from "../../../sandbox/sandbox.js";
 import { contextForAgent } from "../../agents/context.js";
 import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
@@ -98,12 +98,18 @@ describe("skillToolBuild", () => {
             const result = await tool.execute({ name: "deploy", prompt: "Deploy version 1.2.3" }, context, toolCall);
 
             expect(agentIdForTarget).toHaveBeenCalledTimes(1);
-            expect(agentIdForTarget).toHaveBeenNthCalledWith(1, context.ctx, expect.any(Object));
+            expect(agentIdForTarget).toHaveBeenNthCalledWith(
+                1,
+                context.ctx,
+                expect.any(Object),
+                expect.objectContaining({ kind: "sub", parentAgentId: "agent-parent", name: "deploy" })
+            );
             expect(agentIdForTarget).toHaveBeenCalledWith(
                 context.ctx,
                 expect.objectContaining({
                     path: expect.stringContaining("/sub/0")
-                })
+                }),
+                expect.objectContaining({ kind: "sub", parentAgentId: "agent-parent", name: "deploy" })
             );
             expect(postAndAwait).toHaveBeenCalledWith(
                 context.ctx,
@@ -271,7 +277,19 @@ describe("skillToolBuild", () => {
                 skills: [skill],
                 activeRoot: dirs.activeRoot,
                 homeDir: dirs.homeDir,
-                descriptor: { type: "user", connector: "telegram", userId: "u1", channelId: "c1" },
+                path: "/u1/telegram",
+                config: {
+                    kind: "connector",
+                    modelRole: "user",
+                    connectorName: "telegram",
+                    parentAgentId: null,
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                },
+                connectorTargetId: "c1",
                 connectorRegistry: {
                     get: () => ({ capabilities: { sendText: true }, sendMessage })
                 }
@@ -298,7 +316,18 @@ describe("skillToolBuild", () => {
                 skills: [skill],
                 activeRoot: dirs.activeRoot,
                 homeDir: dirs.homeDir,
-                descriptor: { type: "cron", id: "cron-1" },
+                path: "/u1/cron/cron-1",
+                config: {
+                    kind: "cron",
+                    modelRole: null,
+                    connectorName: null,
+                    parentAgentId: null,
+                    foreground: false,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                },
                 connectorRegistry: {
                     get: () => ({ capabilities: { sendText: true }, sendMessage })
                 }
@@ -349,7 +378,9 @@ function contextBuild(input?: {
     activeRoot?: string;
     homeDir?: string;
     dockerEnabled?: boolean;
-    descriptor?: AgentDescriptor;
+    path?: string;
+    config?: ToolExecutionContext["agent"]["config"];
+    connectorTargetId?: string;
     connectorRegistry?: { get: (id: string) => unknown };
     agentSystem?: {
         agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
@@ -391,12 +422,36 @@ function contextBuild(input?: {
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        agent: { id: "agent-parent", descriptor: input?.descriptor } as unknown as ToolExecutionContext["agent"],
+        agent: {
+            id: "agent-parent",
+            path: input?.path ?? "/user-1/telegram",
+            config: input?.config ?? {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
+        } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-parent" }),
         source: "test",
         messageContext: {},
         skills: input?.skills ?? [],
         agentSystem: {
+            storage: {
+                users: {
+                    findById: async () => ({
+                        id: "user-1",
+                        connectorKeys: input?.connectorTargetId
+                            ? [{ connectorKey: `telegram:${input.connectorTargetId}` }]
+                            : []
+                    })
+                }
+            },
             agentIdForTarget,
             postAndAwait
         } as unknown as ToolExecutionContext["agentSystem"]

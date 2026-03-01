@@ -4,7 +4,14 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentDescriptor, AgentInboxItem, AgentInboxResult, AgentPath, AgentPostTarget, Context } from "@/types";
+import type {
+    AgentCreationConfig,
+    AgentInboxItem,
+    AgentInboxResult,
+    AgentPath,
+    AgentPostTarget,
+    Context
+} from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import type { Storage } from "../../storage/storage.js";
@@ -21,10 +28,14 @@ import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
 import { Signals } from "../signals/signals.js";
+import {
+    type AgentLegacyDescriptor,
+    agentCreationConfigFromLegacyDescriptor,
+    agentPathFromLegacyDescriptor
+} from "./agentLegacyDescriptorTestUtils.js";
 import { AgentSystem } from "./agentSystem.js";
 import { contextForAgent, contextForUser } from "./context.js";
 import { agentPathChildAllocate } from "./ops/agentPathChildAllocate.js";
-import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentPath } from "./ops/agentPathTypes.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
@@ -98,7 +109,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.start();
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
             await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init cron" });
 
             expect(delayedSignals.list().some((event) => event.type === `agent:${agentId}:poison-pill`)).toBe(false);
@@ -116,7 +127,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const descriptor: AgentDescriptor = { type: "task", id: createId() };
+            const descriptor: AgentLegacyDescriptor = { type: "task", id: createId() };
             const ownerCtx = await harness.agentSystem.ownerCtxEnsure();
             await postAndAwait(harness.agentSystem, ownerCtx, { descriptor }, { type: "reset", message: "task init" });
             const firstAgentId = await agentIdForTarget(harness.agentSystem, ownerCtx, { descriptor });
@@ -169,7 +180,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.start();
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
             await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init cron" });
             await harness.signals.generate({
                 type: `agent:${agentId}:poison-pill`,
@@ -381,7 +392,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-user-1",
@@ -406,7 +417,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-user-scope",
@@ -443,13 +454,13 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const first: AgentDescriptor = {
+            const first: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-user-2",
                 channelId: "channel-a"
             };
-            const second: AgentDescriptor = {
+            const second: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-user-2",
@@ -477,7 +488,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const parentDescriptor: AgentDescriptor = {
+            const parentDescriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-user-3",
@@ -588,7 +599,7 @@ describe("AgentSystem", () => {
         }
     });
 
-    it("creates swarm descriptors for swarm user paths", async () => {
+    it("creates swarm agents for swarm user paths", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
             const harness = await harnessCreate(dir);
@@ -602,10 +613,8 @@ describe("AgentSystem", () => {
             const swarmAgentId = await agentIdForTarget(harness.agentSystem, swarmCtx, { path: swarmPath });
             const persisted = await harness.storage.agents.findById(swarmAgentId);
 
-            expect(persisted?.descriptor.type).toBe("swarm");
-            if (persisted?.descriptor.type === "swarm") {
-                expect(persisted.descriptor.id).toBe("swarm-user-1");
-            }
+            expect(persisted?.path).toBe("/swarm-user-1/agent/swarm");
+            expect(persisted?.foreground).toBe(true);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -636,9 +645,7 @@ describe("AgentSystem", () => {
             const swarmCtx = contextForUser({ userId: "swarm-user-2" });
             const canonicalPath = agentPath("/swarm-user-2/agent/swarm");
             const swarmAgentId = await agentIdForTarget(harness.agentSystem, swarmCtx, { path: canonicalPath });
-            const persisted = await harness.storage.agents.findById("legacy-swarm-agent");
-
-            expect(swarmAgentId).toBe("legacy-swarm-agent");
+            const persisted = await harness.storage.agents.findById(swarmAgentId);
             expect(persisted?.path).toBe(canonicalPath);
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -653,7 +660,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.start();
 
             const postSpy = vi.spyOn(harness.agentSystem, "post");
-            const descriptor: AgentDescriptor = { type: "task", id: createId() };
+            const descriptor: AgentLegacyDescriptor = { type: "task", id: createId() };
             const result = await postAndAwait(
                 harness.agentSystem,
                 { descriptor },
@@ -758,13 +765,13 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const firstDescriptor: AgentDescriptor = {
+            const firstDescriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-a",
                 channelId: "channel-a"
             };
-            const secondDescriptor: AgentDescriptor = {
+            const secondDescriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 userId: "connector-b",
@@ -876,7 +883,7 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
         }
     });
     try {
-        const parentDescriptor: AgentDescriptor = {
+        const parentDescriptor: AgentLegacyDescriptor = {
             type: "cron",
             id: createId(),
             name: `parent-${createId()}`
@@ -929,15 +936,23 @@ async function postAndAwait(
     maybeItem?: AgentInboxItem
 ): Promise<AgentInboxResult> {
     if (maybeItem) {
+        const normalizedTarget = targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context);
         return agentSystem.postAndAwait(
             ctxOrTarget as Context,
-            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
-            maybeItem
+            normalizedTarget,
+            maybeItem,
+            creationConfigResolve(targetOrItem as AgentTargetInput, ctxOrTarget as Context)
         );
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    return agentSystem.postAndAwait(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
+    const normalizedTarget = targetNormalize(target, ctx);
+    return agentSystem.postAndAwait(
+        ctx,
+        normalizedTarget,
+        targetOrItem as AgentInboxItem,
+        creationConfigResolve(target, ctx)
+    );
 }
 
 async function post(
@@ -947,16 +962,19 @@ async function post(
     maybeItem?: AgentInboxItem
 ): Promise<void> {
     if (maybeItem) {
+        const normalizedTarget = targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context);
         await agentSystem.post(
             ctxOrTarget as Context,
-            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
-            maybeItem
+            normalizedTarget,
+            maybeItem,
+            creationConfigResolve(targetOrItem as AgentTargetInput, ctxOrTarget as Context)
         );
         return;
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    await agentSystem.post(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
+    const normalizedTarget = targetNormalize(target, ctx);
+    await agentSystem.post(ctx, normalizedTarget, targetOrItem as AgentInboxItem, creationConfigResolve(target, ctx));
 }
 
 async function agentIdForTarget(
@@ -965,17 +983,20 @@ async function agentIdForTarget(
     maybeTarget?: AgentTargetInput
 ): Promise<string> {
     if (maybeTarget) {
+        const normalizedTarget = targetNormalize(maybeTarget, ctxOrTarget as Context);
         return agentSystem.agentIdForTarget(
             ctxOrTarget as Context,
-            targetNormalize(maybeTarget, ctxOrTarget as Context)
+            normalizedTarget,
+            creationConfigResolve(maybeTarget, ctxOrTarget as Context)
         );
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    return agentSystem.agentIdForTarget(ctx, targetNormalize(target, ctx));
+    const normalizedTarget = targetNormalize(target, ctx);
+    return agentSystem.agentIdForTarget(ctx, normalizedTarget, creationConfigResolve(target, ctx));
 }
 
-type AgentTargetInput = AgentPostTarget | { descriptor: AgentDescriptor };
+type AgentTargetInput = AgentPostTarget | { descriptor: AgentLegacyDescriptor };
 
 async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInput): Promise<Context> {
     if ("agentId" in target) {
@@ -1008,7 +1029,21 @@ function targetNormalize(target: AgentTargetInput, ctx: Context): AgentPostTarge
     if ("agentId" in target || "path" in target) {
         return target;
     }
-    return { path: agentPathFromDescriptor(target.descriptor, { userId: ctx.userId }) };
+    return { path: agentPathFromLegacyDescriptor(target.descriptor, { userId: ctx.userId }) };
+}
+
+function creationConfigResolve(target: AgentTargetInput, ctx: Context): AgentCreationConfig | undefined {
+    if ("agentId" in target) {
+        return undefined;
+    }
+    if ("path" in target) {
+        return creationConfigFromPath(target.path);
+    }
+    const config = agentCreationConfigFromLegacyDescriptor(target.descriptor);
+    if ((config.kind === "sub" || config.kind === "search" || config.kind === "memory") && !config.parentAgentId) {
+        config.parentAgentId = ctx.agentId ?? null;
+    }
+    return config;
 }
 
 function pathUserIdResolve(path: AgentPath): string | null {
@@ -1020,6 +1055,50 @@ function pathUserIdResolve(path: AgentPath): string | null {
         return null;
     }
     return first;
+}
+
+function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    if (segments[0] === "system") {
+        return { kind: "system", name: segments[1] ?? null };
+    }
+    if (segments[1] === "agent" && segments[2] === "swarm") {
+        return { kind: "swarm", foreground: true, name: "swarm" };
+    }
+    if (segments[1] === "agent") {
+        if (segments.at(-2) === "sub") {
+            return { kind: "sub", name: "subagent" };
+        }
+        if (segments.at(-2) === "search") {
+            return { kind: "search", name: "memory-search" };
+        }
+        return { kind: "agent" };
+    }
+    if (segments[1] === "sub" || segments.at(-2) === "sub") {
+        return { kind: "sub", name: "subagent" };
+    }
+    if (segments[1] === "search" || segments.at(-2) === "search") {
+        return { kind: "search", name: "memory-search" };
+    }
+    if (segments[1] === "memory" || segments.at(-1) === "memory") {
+        return { kind: "memory", name: "memory-agent" };
+    }
+    if (segments[1] === "cron") {
+        return { kind: "cron", name: segments[2] ?? null };
+    }
+    if (segments[1] === "task") {
+        return { kind: "task", name: segments[2] ?? null };
+    }
+    if (segments[1] === "subuser") {
+        return { kind: "subuser", name: segments[2] ?? null };
+    }
+    return {
+        kind: "connector",
+        foreground: true,
+        connectorName: segments[1] ?? null
+    };
 }
 
 async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {

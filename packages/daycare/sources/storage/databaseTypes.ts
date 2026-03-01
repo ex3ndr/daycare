@@ -1,6 +1,5 @@
 import type {
-    AgentConfig,
-    AgentDescriptor,
+    AgentKind,
     AgentLifecycleState,
     AgentPath,
     AgentTokenEntry,
@@ -12,6 +11,7 @@ import type {
 } from "@/types";
 import type { TaskParameter } from "../engine/modules/tasks/taskParameterTypes.js";
 import type { SignalSource } from "../engine/signals/signalTypes.js";
+import type { ModelRoleKey } from "../settings.js";
 
 export type DatabaseAgentRow = {
     id: string;
@@ -19,10 +19,16 @@ export type DatabaseAgentRow = {
     valid_from: number;
     valid_to: number | null;
     user_id: string;
-    type: AgentDescriptor["type"];
-    descriptor: string;
-    path: string | null;
-    config: string | null;
+    path: string;
+    kind: AgentKind;
+    model_role: ModelRoleKey | null;
+    connector_name: string | null;
+    parent_agent_id: string | null;
+    foreground: number;
+    name: string | null;
+    description: string | null;
+    system_prompt: string | null;
+    workspace_dir: string | null;
     next_sub_index: number;
     active_session_id: string | null;
     permissions: string;
@@ -66,10 +72,16 @@ export type AgentDbRecord = {
     validFrom?: number;
     validTo?: number | null;
     userId: string;
-    type: AgentDescriptor["type"];
-    descriptor: AgentDescriptor;
-    path?: AgentPath | null;
-    config?: AgentConfig | null;
+    path: AgentPath;
+    kind: AgentKind;
+    modelRole: ModelRoleKey | null;
+    connectorName: string | null;
+    parentAgentId: string | null;
+    foreground: boolean;
+    name: string | null;
+    description: string | null;
+    systemPrompt: string | null;
+    workspaceDir: string | null;
     nextSubIndex?: number;
     activeSessionId: string | null;
     permissions: SessionPermissions;
@@ -78,6 +90,12 @@ export type AgentDbRecord = {
     lifecycle: AgentLifecycleState;
     createdAt: number;
     updatedAt: number;
+    /** @deprecated Legacy fixture compatibility only. */
+    type?: string;
+    /** @deprecated Legacy fixture compatibility only. */
+    descriptor?: unknown;
+    /** @deprecated Legacy fixture compatibility only. */
+    config?: unknown;
 };
 
 export type InboxDbRecord = {

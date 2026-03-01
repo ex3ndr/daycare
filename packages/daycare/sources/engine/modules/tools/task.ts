@@ -5,7 +5,7 @@ import { appJwtSecretResolve } from "../../../api/app-server/appJwtSecretResolve
 import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
-import { agentPathTask } from "../../agents/ops/agentPathBuild.js";
+import { agentPathSystem, agentPathTask } from "../../agents/ops/agentPathBuild.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_TASKS, topographyObservationEmit } from "../../observations/topographyEvents.js";
@@ -194,7 +194,14 @@ export function buildTaskCreateTool(): ToolDefinition {
             const verifyContext: Parameters<ToolDefinition["execute"]>[1] = {
                 ...toolContext,
                 agent: {
-                    descriptor: { type: "system", tag: "task" }
+                    path: agentPathSystem("task"),
+                    config: {
+                        foreground: false,
+                        name: null,
+                        description: null,
+                        systemPrompt: null,
+                        workspaceDir: null
+                    }
                 } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
             };
             rlmVerify(payload.code, verifyContext, paramPreamble);
@@ -330,7 +337,14 @@ export function buildTaskUpdateTool(): ToolDefinition {
                 const verifyContext: Parameters<ToolDefinition["execute"]>[1] = {
                     ...toolContext,
                     agent: {
-                        descriptor: { type: "system", tag: "task" }
+                        path: agentPathSystem("task"),
+                        config: {
+                            foreground: false,
+                            name: null,
+                            description: null,
+                            systemPrompt: null,
+                            workspaceDir: null
+                        }
                     } as unknown as Parameters<ToolDefinition["execute"]>[1]["agent"]
                 };
                 rlmVerify(nextCode, verifyContext, paramPreamble);
@@ -491,6 +505,12 @@ export function buildTaskRunTool(): ToolDefinition {
                     taskVersion: task.version ?? null,
                     origin: "task",
                     target,
+                    creationConfig: payload.agentId
+                        ? undefined
+                        : {
+                              kind: "task",
+                              name: task.title
+                          },
                     text,
                     parameters: inputValues ?? undefined,
                     context: toolContext.messageContext
@@ -516,6 +536,12 @@ export function buildTaskRunTool(): ToolDefinition {
                 taskVersion: task.version ?? null,
                 origin: "task",
                 target,
+                creationConfig: payload.agentId
+                    ? undefined
+                    : {
+                          kind: "task",
+                          name: task.title
+                      },
                 text,
                 parameters: inputValues ?? undefined,
                 sync: true,

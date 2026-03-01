@@ -1,9 +1,8 @@
-import type { AgentDescriptor } from "./agentDescriptorTypes.js";
-
-export type PermanentAgentDescriptor = Extract<AgentDescriptor, { type: "permanent" }>;
-
 export type PermanentAgentSummary = {
     agentId: string;
-    descriptor: PermanentAgentDescriptor;
+    name: string;
+    description: string;
+    systemPrompt: string;
+    workspaceDir: string | null;
     updatedAt: number;
 };

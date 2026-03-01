@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
-import type { Context, MessageContext } from "@/types";
+import type { AgentConfig, AgentKind, AgentPath, Context, MessageContext } from "@/types";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
@@ -23,10 +23,6 @@ import { Skills } from "../skills/skills.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
-import { agentDescriptorRoleResolve } from "./ops/agentDescriptorRoleResolve.js";
-import { agentDescriptorTargetResolve } from "./ops/agentDescriptorTargetResolve.js";
-import type { AgentDescriptor } from "./ops/agentDescriptorTypes.js";
-import { agentDescriptorWrite } from "./ops/agentDescriptorWrite.js";
 import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
@@ -34,6 +30,7 @@ import type { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
 import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
+import { agentPathTargetResolve } from "./ops/agentPathTargetResolve.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
 import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
@@ -53,6 +50,7 @@ import type {
     AgentMessage,
     AgentState
 } from "./ops/agentTypes.js";
+import { agentWrite } from "./ops/agentWrite.js";
 import { bundledExamplesDirResolve } from "./ops/bundledExamplesDirResolve.js";
 import { contextCompact } from "./ops/contextCompact.js";
 import { contextCompactionStatus } from "./ops/contextCompactionStatus.js";
@@ -65,7 +63,8 @@ const RESTORE_FAILURE_RESET_MESSAGE = "Session restore failed - starting from sc
 
 export class Agent {
     readonly ctx: Context;
-    readonly descriptor: AgentDescriptor;
+    readonly path: AgentPath;
+    readonly config: AgentConfig;
     readonly inbox: AgentInbox;
     readonly state: AgentState;
     private readonly agentSystem: AgentSystem;
@@ -80,7 +79,8 @@ export class Agent {
 
     private constructor(
         ctx: Context,
-        descriptor: AgentDescriptor,
+        path: AgentPath,
+        config: AgentConfig,
         state: AgentState,
         inbox: AgentInbox,
         agentSystem: AgentSystem,
@@ -90,7 +90,8 @@ export class Agent {
             throw new Error("Agent user home is required.");
         }
         this.ctx = ctx;
-        this.descriptor = descriptor;
+        this.path = path;
+        this.config = config;
         this.state = state;
         this.inbox = inbox;
         this.agentSystem = agentSystem;
@@ -99,12 +100,13 @@ export class Agent {
     }
 
     /**
-     * Creates a new agent and persists descriptor + state + initial session row.
-     * Expects: ctx.agentId is a cuid2 value; descriptor is validated.
+     * Creates a new agent and persists path/config + state + initial session row.
+     * Expects: ctx.agentId is a cuid2 value and path/config are validated.
      */
     static async create(
         ctx: Context,
-        descriptor: AgentDescriptor,
+        path: AgentPath,
+        config: AgentConfig,
         inbox: AgentInbox,
         agentSystem: AgentSystem,
         userHome: UserHome
@@ -127,8 +129,13 @@ export class Agent {
             state: "active"
         };
 
-        const agent = new Agent(ctx, descriptor, state, inbox, agentSystem, userHome);
-        await agentDescriptorWrite(agentSystem.storage, ctx, descriptor, basePermissions);
+        const permissions =
+            config.workspaceDir && config.workspaceDir.trim().length > 0
+                ? { ...basePermissions, workingDir: config.workspaceDir }
+                : basePermissions;
+        state.permissions = permissions;
+        const agent = new Agent(ctx, path, config, state, inbox, agentSystem, userHome);
+        await agentWrite(agentSystem.storage, ctx, path, config, basePermissions);
         await agentStateWrite(agentSystem.storage, ctx, state);
         state.activeSessionId = await agentSystem.storage.sessions.create({
             agentId: ctx.agentId,
@@ -146,13 +153,14 @@ export class Agent {
     }
 
     /**
-     * Rehydrates an agent from persisted descriptor + state.
+     * Rehydrates an agent from persisted path/config + state.
      * Rebuilds permissions from userHome to avoid stale legacy paths.
-     * Expects: state and descriptor already validated.
+     * Expects: state, path, and config already validated.
      */
     static restore(
         ctx: Context,
-        descriptor: AgentDescriptor,
+        path: AgentPath,
+        config: AgentConfig,
         state: AgentState,
         inbox: AgentInbox,
         agentSystem: AgentSystem,
@@ -160,11 +168,11 @@ export class Agent {
     ): Agent {
         const basePermissions = permissionBuildUser(userHome);
         const permissions =
-            descriptor.type === "permanent" && descriptor.workspaceDir
-                ? { ...basePermissions, workingDir: descriptor.workspaceDir }
+            config.workspaceDir && config.workspaceDir.trim().length > 0
+                ? { ...basePermissions, workingDir: config.workspaceDir }
                 : basePermissions;
         const refreshedState: AgentState = { ...state, permissions };
-        return new Agent(ctx, descriptor, refreshedState, inbox, agentSystem, userHome);
+        return new Agent(ctx, path, config, refreshedState, inbox, agentSystem, userHome);
     }
 
     get id(): string {
@@ -206,7 +214,7 @@ export class Agent {
             return;
         }
         this.started = true;
-        logger.debug(`start: Agent loop starting agentId=${this.id} type=${this.descriptor.type}`);
+        logger.debug(`start: Agent loop starting agentId=${this.id} kind=${this.agentKindResolve()}`);
         void this.runLoop().catch((error) => {
             this.started = false;
             this.agentSystem.markStopped(this.id, error);
@@ -311,7 +319,8 @@ export class Agent {
             return;
         }
         // Memory-agents and memory-search agents must never trigger the memory worker
-        if (this.descriptor.type === "memory-agent" || this.descriptor.type === "memory-search") {
+        const kind = this.agentKindResolve();
+        if (kind === "memory" || kind === "search") {
             return;
         }
         const sessionId = this.state.activeSessionId;
@@ -370,15 +379,19 @@ export class Agent {
     }
 
     private async sendUnexpectedError(item: AgentInboxMessage): Promise<void> {
-        if (this.descriptor.type !== "user") {
+        if (!this.config.foreground) {
             return;
         }
-        const connector = this.agentSystem.connectorRegistry.get(this.descriptor.connector);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        if (!target) {
+            return;
+        }
+        const connector = this.agentSystem.connectorRegistry.get(target.connector);
         if (!connector?.capabilities.sendText) {
             return;
         }
         try {
-            await connector.sendMessage(this.descriptor.channelId, {
+            await connector.sendMessage(target.targetId, {
                 text: "Unexpected error",
                 replyToMessageId: item.context.messageId
             });
@@ -436,7 +449,7 @@ export class Agent {
 
         // First-message prompts are user-facing guidance and should not alter
         // internal/background agent inputs (memory-agent, cron, subagent, app, etc.).
-        const shouldPrependFirstMessagePrompt = this.descriptor.type === "user" || this.descriptor.type === "swarm";
+        const shouldPrependFirstMessagePrompt = this.config.foreground;
         if (shouldPrependFirstMessagePrompt && resolvedPrompts.firstMessagePrompt && entry.message.text !== null) {
             entry.message.text = `${resolvedPrompts.firstMessagePrompt}\n\n${entry.message.text}`;
             pendingUserRecord = {
@@ -449,11 +462,15 @@ export class Agent {
 
         await agentPromptFilesEnsure(agentPromptPathsResolve(this.userHome));
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
+        const connectorTargetId = (await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config))
+            ?.targetId;
         const pluginPrompts =
             typeof pluginManager.getSystemPrompts === "function"
                 ? await pluginManager.getSystemPrompts({
                       ctx: this.ctx,
-                      descriptor: this.descriptor,
+                      path: this.path,
+                      config: this.config,
+                      connectorTargetId,
                       userDownloadsDir: this.userHome.downloads
                   })
                 : [];
@@ -461,7 +478,8 @@ export class Agent {
             provider: providerSettings?.id,
             model: providerSettings?.model,
             permissions: this.state.permissions,
-            descriptor: this.descriptor,
+            path: this.path,
+            config: this.config,
             ctx: this.ctx,
             agentSystem: this.agentSystem,
             userHome: this.userHome,
@@ -493,15 +511,16 @@ export class Agent {
             }
         );
         if (compactionStatus.severity !== "ok") {
-            const target = agentDescriptorTargetResolve(this.descriptor);
-            const targetId = target?.targetId ?? null;
+            const targetId =
+                (await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config))?.targetId ??
+                null;
             if (agentKind === "foreground" && connector?.capabilities.sendText && targetId) {
                 await connector.sendMessage(targetId, {
                     text: messageContextReset({ kind: "compaction" }),
                     replyToMessageId: entry.context.messageId
                 });
             }
-            const stopCompactionTyping = this.startCompactionTypingIndicator();
+            const stopCompactionTyping = await this.startCompactionTypingIndicator();
             const compactionAbortController = new AbortController();
             this.inferenceAbortController = compactionAbortController;
             let compactionAborted = false;
@@ -969,7 +988,7 @@ export class Agent {
         if (oldSessionId) {
             await this.agentSystem.storage.sessions.endSession(oldSessionId, now);
             // Memory-agents must never trigger the memory worker
-            if (this.descriptor.type !== "memory-agent") {
+            if (this.agentKindResolve() !== "memory") {
                 const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
                 if (maxHistoryId !== null) {
                     await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
@@ -1000,20 +1019,24 @@ export class Agent {
             context: item.context ?? {}
         });
 
-        if (this.descriptor.type !== "user") {
+        if (!this.config.foreground) {
             return true;
         }
         if (!item.context) {
             return true;
         }
 
-        const connector = this.agentSystem.connectorRegistry.get(this.descriptor.connector);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        if (!target) {
+            return true;
+        }
+        const connector = this.agentSystem.connectorRegistry.get(target.connector);
         if (!connector?.capabilities.sendText) {
             return true;
         }
 
         try {
-            await connector.sendMessage(this.descriptor.channelId, {
+            await connector.sendMessage(target.targetId, {
                 text: messageContextReset({ kind: "manual" }),
                 replyToMessageId: item.context?.messageId
             });
@@ -1025,16 +1048,20 @@ export class Agent {
 
     private async handleCompaction(item: AgentInboxCompact): Promise<boolean> {
         const result = await this.runManualCompaction();
-        if (this.descriptor.type !== "user") {
+        if (!this.config.foreground) {
             return result.ok;
         }
-        const connector = this.agentSystem.connectorRegistry.get(this.descriptor.connector);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        if (!target) {
+            return result.ok;
+        }
+        const connector = this.agentSystem.connectorRegistry.get(target.connector);
         if (!connector?.capabilities.sendText) {
             return result.ok;
         }
         const text = this.compactionResultText(result);
         try {
-            await connector.sendMessage(this.descriptor.channelId, {
+            await connector.sendMessage(target.targetId, {
                 text,
                 replyToMessageId: item.context?.messageId
             });
@@ -1068,19 +1095,18 @@ export class Agent {
             return;
         }
 
-        const target = agentDescriptorTargetResolve(this.descriptor);
-        const targetId = target?.targetId ?? null;
-        if (!targetId) {
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        if (!target) {
             return;
         }
 
-        const connector = this.agentSystem.connectorRegistry.get(source);
+        const connector = this.agentSystem.connectorRegistry.get(source || target.connector);
         if (!connector?.capabilities.sendText) {
             return;
         }
 
         try {
-            await connector.sendMessage(targetId, {
+            await connector.sendMessage(target.targetId, {
                 text: messageContextReset({ kind: "overflow", estimatedTokens }),
                 replyToMessageId: entry.context.messageId
             });
@@ -1115,12 +1141,8 @@ export class Agent {
         if (this.resolveAgentKind() !== "foreground") {
             return;
         }
-        const target = agentDescriptorTargetResolve(this.descriptor);
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
         if (!target) {
-            return;
-        }
-        const targetId = target?.targetId ?? null;
-        if (!targetId) {
             return;
         }
         const connector = this.agentSystem.connectorRegistry.get(target.connector);
@@ -1128,7 +1150,7 @@ export class Agent {
             return;
         }
         try {
-            await connector.sendMessage(targetId, { text });
+            await connector.sendMessage(target.targetId, { text });
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to send restore failure notification");
         }
@@ -1143,7 +1165,7 @@ export class Agent {
         if (providers.length === 0) {
             return { ok: false, reason: "no_provider" };
         }
-        const stopCompactionTyping = this.startCompactionTypingIndicator();
+        const stopCompactionTyping = await this.startCompactionTypingIndicator();
         const compactionAbortController = new AbortController();
         this.inferenceAbortController = compactionAbortController;
         try {
@@ -1289,16 +1311,17 @@ export class Agent {
      * Expects: parent agent exists.
      */
     async notifySubagentFailure(reason: string, error?: unknown): Promise<void> {
-        if (this.descriptor.type !== "subagent") {
+        if (this.agentKindResolve() !== "sub") {
             return;
         }
-        const parentAgentId = this.descriptor.parentAgentId ?? null;
+        const parentAgentId = this.config.parentAgentId ?? null;
         if (!parentAgentId) {
             logger.warn({ agentId: this.id }, "event: Child agent missing parent agent");
             return;
         }
-        const name = this.descriptor.name ?? this.descriptor.type;
-        const descriptorType = this.descriptor.type;
+        const kind = this.agentKindResolve();
+        const name = this.config.name ?? kind;
+        const pathKind = kind;
         const errorText = error instanceof Error ? error.message : error ? String(error) : "";
         const detail = errorText ? `${reason} (${errorText})` : reason;
         try {
@@ -1307,7 +1330,7 @@ export class Agent {
                 { agentId: parentAgentId },
                 {
                     type: "system_message",
-                    text: `${descriptorType} ${name} (${this.id}) failed: ${detail}.`,
+                    text: `${pathKind} ${name} (${this.id}) failed: ${detail}.`,
                     origin: this.id
                 }
             );
@@ -1320,18 +1343,23 @@ export class Agent {
     }
 
     private resolveAgentKind(): "background" | "foreground" {
-        if (this.descriptor.type === "user" || this.descriptor.type === "swarm") {
-            return "foreground";
-        }
-        return "background";
+        return this.config.foreground ? "foreground" : "background";
+    }
+
+    private agentKindResolve(): AgentKind {
+        return this.config.kind ?? "agent";
     }
 
     private sourceResolve(): string {
-        return this.descriptor.type === "user"
-            ? this.descriptor.connector
-            : this.descriptor.type === "system"
-              ? this.descriptor.tag
-              : this.descriptor.type;
+        const connector = this.config.connectorName?.trim() ?? "";
+        if (connector) {
+            return connector;
+        }
+        const kind = this.agentKindResolve();
+        if (kind === "system") {
+            return this.config.name?.trim() || "system";
+        }
+        return kind;
     }
 
     private sandboxBuild(): Sandbox {
@@ -1372,7 +1400,7 @@ export class Agent {
         providerId: string | null;
     } {
         const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
-        const roleKey = agentDescriptorRoleResolve(this.descriptor);
+        const roleKey = this.config.modelRole ?? null;
         const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
         const roleApplied = modelRoleApply(rawProviders, roleConfig);
         const roleProviders = roleApplied.providers;
@@ -1416,12 +1444,12 @@ export class Agent {
      * Starts typing indication for foreground user agents during long compaction operations.
      * Expects: connector supports startTyping for the active target.
      */
-    private startCompactionTypingIndicator(): (() => void) | null {
-        if (this.descriptor.type !== "user") {
+    private async startCompactionTypingIndicator(): Promise<(() => void) | null> {
+        if (!this.config.foreground) {
             return null;
         }
-        const target = agentDescriptorTargetResolve(this.descriptor);
-        if (!target?.targetId) {
+        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config);
+        if (!target) {
             return null;
         }
         const connector = this.agentSystem.connectorRegistry.get(target.connector);
@@ -1442,7 +1470,7 @@ export class Agent {
         if (oldSessionId) {
             await this.agentSystem.storage.sessions.endSession(oldSessionId, compactionAt);
             // Memory-agents must never trigger the memory worker
-            if (this.descriptor.type !== "memory-agent") {
+            if (this.agentKindResolve() !== "memory") {
                 const maxHistoryId = await this.agentSystem.storage.history.maxId(oldSessionId);
                 if (maxHistoryId !== null) {
                     await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);

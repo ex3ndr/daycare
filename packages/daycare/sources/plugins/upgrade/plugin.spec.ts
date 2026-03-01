@@ -420,7 +420,18 @@ describe("upgrade plugin commands", () => {
         const result = (await selfUpgradeTool.execute(
             {},
             {
-                agent: { descriptor: { type: "user", userId: "user-a" } },
+                agent: {
+                    id: "agent-1",
+                    userId: "user-a",
+                    path: "/user-a/telegram",
+                    config: {
+                        foreground: true,
+                        name: null,
+                        description: null,
+                        systemPrompt: null,
+                        workspaceDir: null
+                    }
+                },
                 ctx: { userId: "user-b" },
                 messageContext: {}
             },

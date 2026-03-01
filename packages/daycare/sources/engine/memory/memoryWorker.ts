@@ -1,9 +1,8 @@
-import type { AgentPath } from "@/types";
+import type { AgentCreationConfig, AgentPath } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import { type Context, contextForAgent } from "../agents/context.js";
 import { agentPathMemory } from "../agents/ops/agentPathBuild.js";
-import { agentPathFromDescriptor } from "../agents/ops/agentPathFromDescriptor.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { formatHistoryMessages } from "./infer/utils/formatHistoryMessages.js";
 import { memoryRootDocumentEnsure } from "./memoryRootDocumentEnsure.js";
@@ -16,7 +15,8 @@ const DEFAULT_BATCH_SIZE = 10;
 export type MemoryWorkerPostFn = (
     ctx: Context,
     target: { path: AgentPath },
-    item: { type: "system_message"; text: string; origin: string }
+    item: { type: "system_message"; text: string; origin: string },
+    creationConfig: AgentCreationConfig
 ) => Promise<void>;
 
 export type MemoryWorkerOptions = {
@@ -117,11 +117,11 @@ export class MemoryWorker {
                     );
                     continue;
                 }
-                const sourcePath = agent.path ?? agentPathFromDescriptor(agent.descriptor, { userId: agent.userId });
-                const descriptorType = agent.descriptor.type;
+                const sourcePath = agent.path;
+                const kind = agent.kind;
 
                 // Skip sessions belonging to memory-agents and memory-search agents
-                if (descriptorType === "memory-agent" || descriptorType === "memory-search") {
+                if (kind === "memory" || kind === "search") {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }
@@ -138,8 +138,7 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const isForeground =
-                    descriptorType === "user" || descriptorType === "swarm" || agentUser?.isSwarm === true;
+                const isForeground = agent.foreground || agent.kind === "swarm" || agentUser?.isSwarm === true;
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
@@ -163,6 +162,11 @@ export class MemoryWorker {
                         type: "system_message",
                         text,
                         origin: `memory-worker:${session.id}`
+                    },
+                    {
+                        kind: "memory",
+                        parentAgentId: agent.id,
+                        name: "memory-agent"
                     }
                 );
 

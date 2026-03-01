@@ -1,7 +1,7 @@
 import type { Tool, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 import type { Logger } from "pino";
-import type { AgentDescriptor, Context, MessageContext } from "@/types";
+import type { AgentConfig, AgentPath, Context, MessageContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { Sandbox } from "../../../sandbox/sandbox.js";
 import type { AssistantSettings } from "../../../settings.js";
@@ -17,7 +17,8 @@ import type { ToolResolverApi } from "../toolResolver.js";
 
 export type ToolVisibilityContext = {
     ctx: Context;
-    descriptor: AgentDescriptor;
+    path: AgentPath;
+    config: AgentConfig;
 };
 
 export type ToolExecutionContext<_State = Record<string, unknown>> = {

@@ -131,7 +131,7 @@ Suffix patterns override root type:
 
 | Path pattern | Model role |
 |---|---|
-| `/<userId>/<connector>` (telegram, whatsapp, etc.) | `"user"` |
+| `foreground === true` (connectors, etc.) | `"user"` |
 | `/<userId>/agent/*` | `"user"` |
 | `/<userId>/subuser/*` | `"user"` |
 | `*/sub/*` (any subagent) | `"subagent"` |
@@ -140,6 +140,8 @@ Suffix patterns override root type:
 | `/<userId>/task/*` | `"task"` |
 | `/<userId>/cron/*` | `null` |
 | `/system/*` | `null` |
+
+**Foreground detection:** Connectors set `foreground: true` as a dedicated field (separate DB column) at creation time. This is an explicit declaration, not inferred from path patterns and not part of `AgentConfig`.
 
 ### Path → Connector Target Resolution
 
@@ -157,20 +159,21 @@ Each agent record gets a `nextSubIndex` integer (default 0). When spawning a sub
 2. New subagent path = `<parentPath>/sub/<nextSubIndex>`
 3. Increment parent's `nextSubIndex`
 
-### Agent Config (Metadata)
+### AgentConfig (Metadata)
 
-Path is identity. Everything else goes into a `config` JSON column:
+Path is identity. Everything else is stored in `AgentConfig`, which is flattened to direct columns on the `agents` table (no JSON blob):
 
 ```typescript
 type AgentConfig = {
-    name?: string;
-    username?: string;
-    description?: string;
-    systemPrompt?: string;
-    workspaceDir?: string;
-    connectorUserId?: string;   // external connector user ID (for user agents)
+    foreground: boolean;        // true for connector/user-facing agents
+    name: string | null;        // display name
+    description: string | null; // agent description
+    systemPrompt: string | null;
+    workspaceDir: string | null;
 };
 ```
+
+`appId`, `connectorUserId`, and `username` are removed entirely.
 
 ## Development Approach
 - **Testing approach**: Regular (code first, then tests)

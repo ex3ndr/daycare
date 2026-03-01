@@ -1,9 +1,10 @@
 import type { AssistantMessage, Context, Tool } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
-import type { AgentDescriptor, Connector, ToolExecutionResult } from "@/types";
+import type { Connector, ToolExecutionResult } from "@/types";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
+import { type AgentLegacyDescriptor, agentPathFromLegacyDescriptor } from "../agentLegacyDescriptorTestUtils.js";
 import { contextForAgent } from "../context.js";
 import { agentLoopRun } from "./agentLoopRun.js";
 import type { AgentMessage } from "./agentTypes.js";
@@ -191,11 +192,13 @@ describe("agentLoopRun", () => {
         const inferenceRouter = inferenceRouterBuild(responses);
         const baseTools = toolResolverBuild().listToolsForAgent({
             ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                channelId: "channel-1",
-                userId: "user-1"
+            path: "/user-1/telegram",
+            config: {
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             }
         });
         const toolsWithTransient = [
@@ -328,18 +331,20 @@ describe("agentLoopRun", () => {
 });
 
 function optionsBuild(params?: {
-    descriptor?: AgentDescriptor;
+    descriptor?: AgentLegacyDescriptor;
     source?: string;
     connector?: Connector | null;
     inferenceRouter?: InferenceRouter;
     toolResolver?: ToolResolverApi;
 }) {
-    const descriptor: AgentDescriptor = params?.descriptor ?? {
+    const descriptor: AgentLegacyDescriptor = params?.descriptor ?? {
         type: "user",
         connector: "telegram",
         channelId: "channel-1",
         userId: "user-1"
     };
+    const path = agentPathFromLegacyDescriptor(descriptor, { userId: "user-1" });
+    const config = configFromLegacyDescriptor(descriptor);
     const connector = params?.connector ?? connectorBuild(vi.fn(async () => undefined));
     const inferenceRouter = params?.inferenceRouter ?? inferenceRouterBuild([assistantMessageBuild("ok")]);
     const toolResolver =
@@ -359,7 +364,8 @@ function optionsBuild(params?: {
     const agent = {
         id: "agent-1",
         ctx,
-        descriptor,
+        path,
+        config,
         state: {
             inferenceSessionId: "agent-1"
         },
@@ -385,7 +391,24 @@ function optionsBuild(params?: {
         eventBus: { emit: () => undefined } as unknown as Parameters<typeof agentLoopRun>[0]["eventBus"],
         assistant: null,
         agentSystem: {
-            config: { current: { settings: { assistant: null } } }
+            config: { current: { settings: { assistant: null } } },
+            storage: {
+                users: {
+                    findById: async () => ({
+                        id: "user-1",
+                        connectorKeys: [{ connectorKey: "telegram:channel-1" }]
+                    })
+                },
+                agents: {
+                    findByPath: async (pathValue: string) => {
+                        const parts = String(pathValue)
+                            .split("/")
+                            .filter((segment) => segment.length > 0);
+                        const id = parts.at(-1) ?? null;
+                        return id ? { id } : null;
+                    }
+                }
+            }
         } as unknown as Parameters<typeof agentLoopRun>[0]["agentSystem"],
         webhooks: {} as Parameters<typeof agentLoopRun>[0]["webhooks"],
         skills: {
@@ -400,6 +423,121 @@ function optionsBuild(params?: {
         } as unknown as Parameters<typeof agentLoopRun>[0]["logger"],
         notifySubagentFailure: async () => undefined
     } as Parameters<typeof agentLoopRun>[0];
+}
+
+function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
+    kind?: string;
+    modelRole?: string | null;
+    connectorName?: string | null;
+    parentAgentId?: string | null;
+    foreground: boolean;
+    name: string | null;
+    description: string | null;
+    systemPrompt: string | null;
+    workspaceDir: string | null;
+} {
+    if (descriptor.type === "user") {
+        return {
+            kind: "connector",
+            modelRole: "user",
+            connectorName: descriptor.connector,
+            parentAgentId: null,
+            foreground: true,
+            name: null,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    if (descriptor.type === "swarm") {
+        return {
+            kind: "swarm",
+            modelRole: "user",
+            connectorName: null,
+            parentAgentId: null,
+            foreground: true,
+            name: null,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    if (descriptor.type === "permanent") {
+        return {
+            kind: "agent",
+            modelRole: "user",
+            connectorName: null,
+            parentAgentId: null,
+            foreground: false,
+            name: descriptor.name,
+            description: descriptor.description,
+            systemPrompt: descriptor.systemPrompt,
+            workspaceDir: descriptor.workspaceDir ?? null
+        };
+    }
+    if (descriptor.type === "subagent" || descriptor.type === "memory-search") {
+        return {
+            kind: descriptor.type === "subagent" ? "sub" : "search",
+            modelRole: descriptor.type === "subagent" ? "subagent" : "memorySearch",
+            connectorName: null,
+            parentAgentId: descriptor.parentAgentId,
+            foreground: false,
+            name: descriptor.name,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    if (descriptor.type === "cron") {
+        return {
+            kind: "cron",
+            modelRole: null,
+            connectorName: null,
+            parentAgentId: null,
+            foreground: false,
+            name: descriptor.name ?? null,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    if (descriptor.type === "memory-agent") {
+        return {
+            kind: "memory",
+            modelRole: "memory",
+            connectorName: null,
+            parentAgentId: null,
+            foreground: false,
+            name: "memory-agent",
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    if (descriptor.type === "task") {
+        return {
+            kind: "task",
+            modelRole: "task",
+            connectorName: null,
+            parentAgentId: null,
+            foreground: false,
+            name: null,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    return {
+        kind: "agent",
+        modelRole: "user",
+        connectorName: null,
+        parentAgentId: null,
+        foreground: false,
+        name: null,
+        description: null,
+        systemPrompt: null,
+        workspaceDir: null
+    };
 }
 
 function inferenceRouterBuild(messages: AssistantMessage[]): InferenceRouter & { complete: ReturnType<typeof vi.fn> } {

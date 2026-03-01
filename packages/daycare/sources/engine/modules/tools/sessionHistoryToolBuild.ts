@@ -6,7 +6,6 @@ import type { AgentHistoryRecord, ToolDefinition, ToolExecutionContext, ToolResu
 import { getProviderDefinition, listActiveInferenceProviders } from "../../../providers/catalog.js";
 import { providerModelSelectBySize } from "../../../providers/providerModelSelectBySize.js";
 import { stringTruncate } from "../../../utils/stringTruncate.js";
-import { agentDescriptorRead } from "../../agents/ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "../../agents/ops/agentHistoryLoad.js";
 import { agentHistorySummary } from "../../agents/ops/agentHistorySummary.js";
 import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.js";
@@ -78,8 +77,8 @@ export function sessionHistoryToolBuild(): ToolDefinition {
             if (!targetCtx || targetCtx.userId !== toolContext.ctx.userId) {
                 throw new Error(`Agent session not found: ${agentId}`);
             }
-            const descriptor = await agentDescriptorRead(storage, targetCtx);
-            if (!descriptor) {
+            const record = await storage.agents.findById(agentId);
+            if (!record) {
                 throw new Error(`Agent session not found: ${agentId}`);
             }
 

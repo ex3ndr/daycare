@@ -18,7 +18,14 @@ describe("agentModelSetToolBuild", () => {
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-                descriptor: { type: "user", connector: "telegram", userId: "user-1", channelId: "channel-1" }
+                path: "/user-1/telegram",
+                config: {
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
             })
         ).toBe(true);
     });
@@ -27,7 +34,14 @@ describe("agentModelSetToolBuild", () => {
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-                descriptor: { type: "subagent", id: "sub-1", parentAgentId: "parent-1", name: "sub" }
+                path: "/user-1/sub/sub-1",
+                config: {
+                    foreground: false,
+                    name: "sub",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
             })
         ).toBe(false);
     });
@@ -36,12 +50,13 @@ describe("agentModelSetToolBuild", () => {
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-                descriptor: {
-                    type: "permanent",
-                    id: "perm-1",
+                path: "/user-1/agent/bot",
+                config: {
+                    foreground: false,
                     name: "bot",
                     description: "test",
-                    systemPrompt: "you are a bot"
+                    systemPrompt: "you are a bot",
+                    workspaceDir: null
                 }
             })
         ).toBe(false);
@@ -51,7 +66,14 @@ describe("agentModelSetToolBuild", () => {
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-                descriptor: { type: "cron", id: "cron-1" }
+                path: "/user-1/cron/cron-1",
+                config: {
+                    foreground: false,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
             })
         ).toBe(false);
     });

@@ -199,10 +199,16 @@ export class Engine {
                         logger.debug(
                             `receive: Connector message received: path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
+                        const connectorPath = connectorPathResolve(resolved.path);
                         await this.agentSystem.post(
                             resolved.ctx,
                             { path: resolved.path },
-                            { type: "message", message: item.message, context: item.context }
+                            { type: "message", message: item.message, context: item.context },
+                            {
+                                kind: "connector",
+                                foreground: true,
+                                connectorName: connectorPath?.connector ?? null
+                            }
                         );
                     }
                 });
@@ -357,7 +363,9 @@ export class Engine {
         });
         this.agentSystem.setExtraMountsForUserId((userId) => this.swarms.mountsForOwner(userId));
 
-        this.memoryWorker.setPostFn((ctx, target, item) => this.agentSystem.post(ctx, target, item));
+        this.memoryWorker.setPostFn((ctx, target, item, creationConfig) =>
+            this.agentSystem.post(ctx, target, item, creationConfig)
+        );
         this.taskExecutions = new TaskExecutions({
             agentSystem: this.agentSystem
         });

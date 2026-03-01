@@ -14,7 +14,7 @@ import { bundledExamplesDirResolve } from "./bundledExamplesDirResolve.js";
 export async function agentSystemPromptSectionToolCalling(context: AgentSystemPromptContext): Promise<string> {
     const availableTools = toolListVisibleResolve(context);
     const filteredTools = toolListAllowlistApply(availableTools, context);
-    const isForeground = context.descriptor?.type === "user";
+    const isForeground = context.config?.foreground === true;
     const preferSayTool = isForeground && filteredTools.some((tool) => tool.name === "say");
     const dockerEnabled = context.agentSystem?.config?.current?.docker?.enabled ?? false;
     const examplesDir = dockerEnabled ? "/shared/examples" : bundledExamplesDirResolve();
@@ -33,10 +33,11 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
     if (!toolResolver) {
         return [];
     }
-    if (context.descriptor) {
+    if (context.path && context.config) {
         return toolResolver.listToolsForAgent({
             ctx: context.ctx,
-            descriptor: context.descriptor
+            path: context.path,
+            config: context.config
         });
     }
     return toolResolver.listTools();
@@ -48,10 +49,11 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
  * in the system prompt, preventing RLM from generating stubs for inaccessible tools.
  */
 function toolListAllowlistApply(tools: Tool[], context: AgentSystemPromptContext): Tool[] {
-    if (!context.descriptor) {
+    const kind = context.config?.kind;
+    if (!kind) {
         return tools;
     }
-    const allowlist = agentToolExecutionAllowlistResolve(context.descriptor);
+    const allowlist = agentToolExecutionAllowlistResolve(kind);
     if (!allowlist) {
         return tools;
     }

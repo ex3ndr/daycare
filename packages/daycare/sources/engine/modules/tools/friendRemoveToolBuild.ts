@@ -40,7 +40,7 @@ export function friendRemoveToolBuild(friends: Pick<Friends, "remove">): ToolDef
             parameters: schema
         },
         returns,
-        visibleByDefault: (context) => context.descriptor.type === "user",
+        visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendRemoveArgs;
             const result = await friends.remove(toolContext.ctx, { nametag: payload.nametag });

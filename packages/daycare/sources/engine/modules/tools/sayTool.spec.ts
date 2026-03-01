@@ -74,11 +74,33 @@ describe("sayTool", () => {
         const tool = sayTool();
         const isUserVisible = tool.visibleByDefault?.({
             ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-            descriptor: { type: "user", connector: "telegram", channelId: "channel-1", userId: "user-1" }
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         });
         const isSubagentVisible = tool.visibleByDefault?.({
             ctx: contextForAgent({ userId: "user-1", agentId: "agent-2" }),
-            descriptor: { type: "subagent", id: "sub-1", parentAgentId: "agent-1", name: "subagent" }
+            path: "/user-1/sub/sub-1",
+            config: {
+                kind: "sub",
+                modelRole: "subagent",
+                connectorName: null,
+                parentAgentId: "agent-1",
+                foreground: false,
+                name: "subagent",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         });
 
         expect(isUserVisible).toBe(true);
@@ -103,16 +125,31 @@ function contextBuild(options: {
         assistant: null,
         agent: {
             id: "agent-1",
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                channelId: "channel-1",
-                userId: "user-1"
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             }
         } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         source: "telegram",
         messageContext: { messageId: "message-1" },
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
+        agentSystem: {
+            storage: {
+                users: {
+                    findById: async () => ({
+                        id: "user-1",
+                        connectorKeys: [{ connectorKey: "telegram:channel-1" }]
+                    })
+                }
+            }
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

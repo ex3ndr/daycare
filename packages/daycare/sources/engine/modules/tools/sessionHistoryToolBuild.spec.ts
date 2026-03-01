@@ -10,8 +10,8 @@ import { configResolve } from "../../../config/configResolve.js";
 import { storageOpen } from "../../../storage/storageOpen.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
 import { contextForAgent } from "../../agents/context.js";
-import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
 import { agentHistoryAppend } from "../../agents/ops/agentHistoryAppend.js";
+import { agentWrite } from "../../agents/ops/agentWrite.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { sessionHistoryToolBuild } from "./sessionHistoryToolBuild.js";
@@ -35,14 +35,16 @@ describe("sessionHistoryToolBuild", () => {
             const storage = await storageOpen(config.db.path);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
-            await agentDescriptorWrite(
+            await agentWrite(
                 storage,
                 targetCtx,
+                `/${userId}/sub/${targetAgentId}`,
                 {
-                    type: "subagent",
-                    id: targetAgentId,
-                    parentAgentId: currentAgentId,
-                    name: "worker"
+                    foreground: false,
+                    name: "worker",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );
@@ -99,14 +101,16 @@ describe("sessionHistoryToolBuild", () => {
             const storage = await storageOpen(config.db.path);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
-            await agentDescriptorWrite(
+            await agentWrite(
                 storage,
                 targetCtx,
+                `/${userId}/sub/${targetAgentId}`,
                 {
-                    type: "subagent",
-                    id: targetAgentId,
-                    parentAgentId: currentAgentId,
-                    name: "worker"
+                    foreground: false,
+                    name: "worker",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );
@@ -172,14 +176,16 @@ describe("sessionHistoryToolBuild", () => {
             const storage = await storageOpen(config.db.path);
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const targetCtx = contextForAgent({ userId, agentId: targetAgentId });
-            await agentDescriptorWrite(
+            await agentWrite(
                 storage,
                 targetCtx,
+                `/${userId}/sub/${targetAgentId}`,
                 {
-                    type: "subagent",
-                    id: targetAgentId,
-                    parentAgentId: currentAgentId,
-                    name: "worker"
+                    foreground: false,
+                    name: "worker",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );

@@ -1,4 +1,4 @@
-export type AgentPath = string & { readonly __brand: unique symbol };
+export type AgentPath = string;
 
 /**
  * Casts a validated path string to the AgentPath branded type.

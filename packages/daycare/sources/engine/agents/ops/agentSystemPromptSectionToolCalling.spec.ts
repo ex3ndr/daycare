@@ -35,7 +35,18 @@ function buildContext(overrides: Partial<AgentSystemPromptContext> = {}): AgentS
 describe("agentSystemPromptSectionToolCalling", () => {
     it("filters tools by allowlist for memory-search agents", async () => {
         const context = buildContext({
-            descriptor: { type: "memory-search", id: "ms-1", parentAgentId: "parent-1", name: "search query" }
+            path: "/user-1/search/ms-1",
+            config: {
+                kind: "search",
+                modelRole: "memorySearch",
+                connectorName: null,
+                parentAgentId: null,
+                foreground: false,
+                name: "memory-search",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         });
 
         const section = await agentSystemPromptSectionToolCalling(context);
@@ -49,7 +60,18 @@ describe("agentSystemPromptSectionToolCalling", () => {
 
     it("filters tools by allowlist for memory-agent", async () => {
         const context = buildContext({
-            descriptor: { type: "memory-agent", id: "ma-1" }
+            path: "/user-1/memory/ma-1",
+            config: {
+                kind: "memory",
+                modelRole: "memory",
+                connectorName: null,
+                parentAgentId: null,
+                foreground: false,
+                name: "memory-agent",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         });
 
         const section = await agentSystemPromptSectionToolCalling(context);
@@ -63,7 +85,18 @@ describe("agentSystemPromptSectionToolCalling", () => {
 
     it("shows all tools for regular agents without allowlist", async () => {
         const context = buildContext({
-            descriptor: { type: "user", connector: "telegram", channelId: "ch-1", userId: "u-1" }
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         });
 
         const section = await agentSystemPromptSectionToolCalling(context);

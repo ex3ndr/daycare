@@ -1,5 +1,4 @@
 import Handlebars from "handlebars";
-
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentPromptResolve } from "./agentPromptResolve.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
@@ -9,17 +8,24 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionAutonomousOperation(context: AgentSystemPromptContext): Promise<string> {
-    const descriptor = context.descriptor;
-    const parentAgentId =
-        descriptor && (descriptor.type === "subagent" || descriptor.type === "memory-search")
-            ? (descriptor.parentAgentId ?? "")
-            : "";
-    const agentPrompt = descriptor ? (await agentPromptResolve(descriptor)).agentPrompt : "";
+    const parentAgentId = await parentAgentIdResolve(context);
+    const agentPrompt = context.path ? (await agentPromptResolve(context.path, context.config)).agentPrompt : "";
     const template = await agentPromptBundledRead("SYSTEM_AGENCY.md");
     const section = Handlebars.compile(template)({
-        isForeground: descriptor?.type === "user" || descriptor?.type === "swarm",
+        isForeground: context.config?.foreground ?? false,
         parentAgentId,
         agentPrompt
     });
     return section.trim();
+}
+
+async function parentAgentIdResolve(context: AgentSystemPromptContext): Promise<string> {
+    if (!context.config) {
+        return "";
+    }
+    const kind = context.config.kind ?? "agent";
+    if (kind !== "sub" && kind !== "search") {
+        return "";
+    }
+    return context.config.parentAgentId ?? "";
 }

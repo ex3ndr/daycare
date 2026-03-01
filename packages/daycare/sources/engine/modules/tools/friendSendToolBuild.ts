@@ -41,7 +41,7 @@ export function friendSendToolBuild(): ToolDefinition {
             parameters: schema
         },
         returns,
-        visibleByDefault: (context) => context.descriptor.type === "user",
+        visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendSendArgs;
             const targetNametag = nametagNormalize(payload.nametag);

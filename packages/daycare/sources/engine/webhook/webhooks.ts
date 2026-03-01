@@ -165,6 +165,12 @@ export class Webhooks {
             taskId: trigger.taskId,
             taskVersion: task.version ?? null,
             target,
+            creationConfig: trigger.agentId
+                ? undefined
+                : {
+                      kind: "task",
+                      name: task.title
+                  },
             text,
             ...(messageContext ? { context: messageContext } : {})
         });

@@ -4,8 +4,8 @@ import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { SandboxReadResult } from "../../../sandbox/sandboxTypes.js";
-import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
 import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
+import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
 import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import { toolMessageTextExtract } from "./toolReturnOutcome.js";
@@ -89,7 +89,15 @@ export function skillToolBuild(): ToolDefinition {
                     parentAgentId: toolContext.agent.id,
                     kind: "sub"
                 });
-                const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { path });
+                const agentId = await toolContext.agentSystem.agentIdForTarget(
+                    toolContext.ctx,
+                    { path },
+                    {
+                        kind: "sub",
+                        parentAgentId: toolContext.agent.id,
+                        name: skill.name
+                    }
+                );
 
                 const sandboxPrompt = skillSandboxPromptBuild(skillBodyDecorated, prompt);
                 const result = await toolContext.agentSystem.postAndAwait(
@@ -328,7 +336,11 @@ function toolMessageBuild(toolCallId: string, toolName: string, text: string): T
  */
 async function skillNotifyConnector(skillName: string, toolContext: ToolExecutionContext): Promise<void> {
     try {
-        const target = agentDescriptorTargetResolve(toolContext.agent.descriptor);
+        const target = await agentPathTargetResolve(
+            toolContext.agentSystem.storage,
+            toolContext.ctx.userId,
+            toolContext.agent.config
+        );
         if (!target) {
             return;
         }

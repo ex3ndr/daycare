@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
-import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
+import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
 
 const schema = Type.Object(
     {
@@ -50,10 +50,14 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
             parameters: schema
         },
         returns: sayReturns,
-        visibleByDefault: (context) => context.descriptor.type === "user",
+        visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, context, toolCall) => {
             const payload = args as SayArgs;
-            const target = agentDescriptorTargetResolve(context.agent.descriptor);
+            const target = await agentPathTargetResolve(
+                context.agentSystem.storage,
+                context.ctx.userId,
+                context.agent.config
+            );
             if (!target) {
                 throw new Error("say is only available for foreground user agents.");
             }

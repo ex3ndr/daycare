@@ -27,12 +27,12 @@ describe("permanentAgentToolBuild", () => {
                 path.join(dir, "settings.json")
             );
             const storage = await storageOpenTest();
-            const updateAgentDescriptor = vi.fn();
+            const updateAgentConfig = vi.fn();
             const updateAgentPermissions = vi.fn();
             const context = contextBuild({
                 config: { current: config },
                 storage,
-                updateAgentDescriptor,
+                updateAgentConfig,
                 updateAgentPermissions
             });
             const tool = permanentAgentToolBuild();
@@ -48,7 +48,7 @@ describe("permanentAgentToolBuild", () => {
             );
 
             const agents = await agentPermanentList(storage);
-            const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
+            const created = agents.find((entry) => entry.name === "ops") ?? null;
             expect(created).not.toBeNull();
             const state = await agentStateRead(
                 storage,
@@ -57,7 +57,7 @@ describe("permanentAgentToolBuild", () => {
             expect(state?.permissions.writeDirs).toContain(
                 path.resolve(path.join(dir, "users", "creator-user", "home"))
             );
-            expect(updateAgentDescriptor).toHaveBeenCalledTimes(1);
+            expect(updateAgentConfig).toHaveBeenCalledTimes(1);
             expect(updateAgentPermissions).toHaveBeenCalledTimes(1);
             storage.connection.close();
         } finally {
@@ -65,7 +65,7 @@ describe("permanentAgentToolBuild", () => {
         }
     });
 
-    it("stores username on permanent agent descriptor when provided", async () => {
+    it("stores permanent agent fields from tool input", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-permanent-tool-username-"));
         try {
             const config = configResolve(
@@ -79,14 +79,13 @@ describe("permanentAgentToolBuild", () => {
             const context = contextBuild({
                 config: { current: config },
                 storage,
-                updateAgentDescriptor: vi.fn(),
+                updateAgentConfig: vi.fn(),
                 updateAgentPermissions: vi.fn()
             });
 
             await tool.execute(
                 {
                     name: "ops",
-                    username: "opsbot",
                     description: "Operations agent",
                     systemPrompt: "Run operations tasks"
                 },
@@ -95,8 +94,9 @@ describe("permanentAgentToolBuild", () => {
             );
 
             const agents = await agentPermanentList(storage);
-            const created = agents.find((entry) => entry.descriptor.name === "ops") ?? null;
-            expect(created?.descriptor.username).toBe("opsbot");
+            const created = agents.find((entry) => entry.name === "ops") ?? null;
+            expect(created?.description).toBe("Operations agent");
+            expect(created?.systemPrompt).toBe("Run operations tasks");
             storage.connection.close();
         } finally {
             await rm(dir, { recursive: true, force: true });
@@ -118,7 +118,7 @@ describe("permanentAgentToolBuild", () => {
                 ...contextBuild({
                     config: { current: config },
                     storage,
-                    updateAgentDescriptor: vi.fn(),
+                    updateAgentConfig: vi.fn(),
                     updateAgentPermissions: vi.fn()
                 }),
                 ctx: null as unknown as ToolExecutionContext["ctx"]
@@ -145,7 +145,7 @@ describe("permanentAgentToolBuild", () => {
 function contextBuild(agentSystem: {
     config: { current: ReturnType<typeof configResolve> };
     storage: Storage;
-    updateAgentDescriptor: (agentId: string, descriptor: unknown) => void;
+    updateAgentConfig: (agentId: string, config: unknown) => void;
     updateAgentPermissions: (agentId: string, nextPermissions: SessionPermissions, updatedAt: number) => void;
     userHomeForUserId?: (userId: string) => UserHome;
 }): ToolExecutionContext {

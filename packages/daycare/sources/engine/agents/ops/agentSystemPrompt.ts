@@ -24,8 +24,8 @@ export type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  */
 export async function agentSystemPrompt(context: AgentSystemPromptContext): Promise<string> {
     context.systemPromptImages = agentSystemPromptImagesResolve(context);
-    const agentPromptSection = context.descriptor
-        ? await agentPromptResolve(context.descriptor)
+    const agentPromptSection = context.path
+        ? await agentPromptResolve(context.path, context.config)
         : { agentPrompt: "", replaceSystemPrompt: false };
     if (agentPromptSection.replaceSystemPrompt) {
         const replaced = agentPromptSection.agentPrompt.trim();

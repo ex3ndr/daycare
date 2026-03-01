@@ -63,7 +63,15 @@ export function documentSearchToolBuild(): ToolDefinition {
                 parentAgentId: toolContext.agent.id,
                 kind: "search"
             });
-            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { path });
+            const agentId = await toolContext.agentSystem.agentIdForTarget(
+                toolContext.ctx,
+                { path },
+                {
+                    kind: "search",
+                    parentAgentId: toolContext.agent.id,
+                    name: "memory-search"
+                }
+            );
             const message = { type: "message" as const, message: { text: query }, context: {} };
             let summary = "";
             if (sync) {

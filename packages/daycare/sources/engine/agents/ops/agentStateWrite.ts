@@ -6,12 +6,12 @@ import {
     TOPO_SOURCE_AGENTS,
     topographyObservationEmit
 } from "../../observations/topographyEvents.js";
-import { agentDescriptorLabel } from "./agentDescriptorLabel.js";
+import type { AgentConfig } from "./agentConfigTypes.js";
 import type { AgentState } from "./agentTypes.js";
 
 /**
  * Writes agent state to SQLite storage.
- * Expects: descriptor has been persisted before state writes.
+ * Expects: agent identity has been persisted before state writes.
  */
 export async function agentStateWrite(
     storageOrConfig: Storage | Config,
@@ -21,7 +21,7 @@ export async function agentStateWrite(
     const storage = storageResolve(storageOrConfig);
     const existing = await storage.agents.findById(ctx.agentId);
     if (!existing) {
-        throw new Error(`Agent descriptor missing for state write: ${ctx.agentId}`);
+        throw new Error(`Agent identity missing for state write: ${ctx.agentId}`);
     }
 
     await storage.agents.update(ctx.agentId, {
@@ -37,8 +37,8 @@ export async function agentStateWrite(
     if (existing.lifecycle === state.state) {
         return;
     }
-    const label = agentDescriptorLabel(existing.descriptor);
-    const parentAgentId = "parentAgentId" in existing.descriptor ? existing.descriptor.parentAgentId : undefined;
+    const label = agentLabelResolve(existing);
+    const parentAgentId = existing.parentAgentId ?? undefined;
     const scopeIds = parentAgentId ? [ctx.userId, parentAgentId] : [ctx.userId];
     await topographyObservationEmit(storage.observationLog, {
         userId: ctx.userId,
@@ -54,4 +54,29 @@ export async function agentStateWrite(
         },
         scopeIds
     });
+}
+
+function agentLabelResolve(config: Pick<AgentConfig, "kind" | "name">): string {
+    if (config.kind === "connector") {
+        return "user";
+    }
+    if (config.kind === "cron") {
+        return config.name?.trim() || "cron task";
+    }
+    if (config.kind === "task") {
+        return `task ${config.name?.trim() || "task"}`;
+    }
+    if (config.kind === "memory") {
+        return "memory-agent";
+    }
+    if (config.kind === "search") {
+        return config.name?.trim() || "memory-search";
+    }
+    if (config.kind === "sub") {
+        return config.name?.trim() || "subagent";
+    }
+    if (config.kind === "system") {
+        return config.name?.trim() || "system";
+    }
+    return config.name?.trim() || "agent";
 }

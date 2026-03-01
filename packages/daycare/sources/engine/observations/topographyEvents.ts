@@ -63,7 +63,7 @@ export type TopographyObservationType = (typeof TOPO_EVENT_TYPES)[keyof typeof T
 export type AgentCreatedData = {
     agentId: string;
     userId: string;
-    descriptorType: string;
+    pathKind: string;
     label: string;
     parentAgentId?: string;
 };
@@ -71,7 +71,7 @@ export type AgentCreatedData = {
 export type AgentUpdatedData = {
     agentId: string;
     userId: string;
-    descriptorType: string;
+    pathKind: string;
     label: string;
 };
 

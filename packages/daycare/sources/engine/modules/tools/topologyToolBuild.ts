@@ -3,7 +3,6 @@ import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
-import { agentDescriptorLabel } from "../../agents/ops/agentDescriptorLabel.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
 import type { Exposes } from "../../expose/exposes.js";
@@ -324,13 +323,16 @@ export function topologyTool(
             const agents: TopologyAgent[] = visibleAgentRecords
                 .slice()
                 .sort((left, right) => right.updatedAt - left.updatedAt)
-                .map((record) => ({
-                    id: record.id,
-                    type: record.descriptor.type,
-                    label: agentDescriptorLabel(record.descriptor),
-                    lifecycle: record.lifecycle,
-                    isYou: record.id === callerAgentId
-                }));
+                .map((record) => {
+                    const kind = topologyAgentKindResolve(record);
+                    return {
+                        id: record.id,
+                        type: kind,
+                        label: topologyAgentLabelResolve(kind, record.name),
+                        lifecycle: record.lifecycle,
+                        isYou: record.id === callerAgentId
+                    };
+                });
 
             const cronTriggers: TopologyCronTrigger[] = cronTasks
                 .filter((task) => visibleUserIdSet.has(task.userId))
@@ -475,7 +477,7 @@ export function topologyTool(
                 ? []
                 : ownerSubusers.map((subuser) => {
                       const gateway = allAgentRecords.find(
-                          (agent) => agent.descriptor.type === "swarm" && agent.descriptor.id === subuser.id
+                          (agent) => topologyAgentKindResolve(agent) === "swarm" && agent.userId === subuser.id
                       );
                       return {
                           id: subuser.id,
@@ -567,7 +569,7 @@ async function friendsListBuild(
             } | null>;
         };
     },
-    agents: Array<{ id: string; descriptor: { type: string; id?: string } }>
+    agents: Array<{ id: string; kind?: string | null; userId: string; path: string }>
 ): Promise<TopologyFriend[]> {
     const friendConnections = await storage.connections.findFriends(callerUserId);
     const userCache = new Map<
@@ -623,11 +625,10 @@ async function friendsListBuild(
             return leftTag.localeCompare(rightTag);
         });
 
-    const gatewayBySubuserId = new Map(
-        agents
-            .filter((agent) => agent.descriptor.type === "swarm" && typeof agent.descriptor.id === "string")
-            .map((agent) => [agent.descriptor.id as string, agent.id])
-    );
+    const gatewayEntries: Array<[string, string]> = agents
+        .filter((agent) => topologyAgentKindResolve(agent) === "swarm")
+        .map((agent) => [agent.userId, agent.id] as [string, string]);
+    const gatewayBySubuserId = new Map<string, string>(gatewayEntries);
 
     const friends: TopologyFriend[] = [];
     for (const friend of friendUsers) {
@@ -732,10 +733,41 @@ function userDisplayName(user: {
     return user.nametag ?? null;
 }
 
-function topologyAgentVisibleByDefault(record: { descriptor: { type: string }; lifecycle: string }): boolean {
+function topologyAgentVisibleByDefault(record: { kind?: string | null; path: string; lifecycle: string }): boolean {
     if (record.lifecycle === "dead") {
         return false;
     }
+    const kind = topologyAgentKindResolve(record);
+    return kind !== "memory" && kind !== "search";
+}
 
-    return record.descriptor.type !== "memory-agent" && record.descriptor.type !== "memory-search";
+function topologyAgentLabelResolve(kind: string, name: string | null): string {
+    const normalizedName = name?.trim();
+    if (kind === "connector") {
+        return "user";
+    }
+    if (kind === "task") {
+        return `task ${normalizedName || "task"}`;
+    }
+    if (kind === "memory") {
+        return "memory-agent";
+    }
+    if (kind === "search") {
+        return normalizedName || "memory-search";
+    }
+    if (kind === "sub") {
+        return normalizedName || "subagent";
+    }
+    if (kind === "cron") {
+        return normalizedName || "cron";
+    }
+    return normalizedName || kind || "agent";
+}
+
+function topologyAgentKindResolve(record: { kind?: string | null; path: string }): string {
+    const explicitKind = record.kind?.trim();
+    if (explicitKind) {
+        return explicitKind;
+    }
+    return "agent";
 }

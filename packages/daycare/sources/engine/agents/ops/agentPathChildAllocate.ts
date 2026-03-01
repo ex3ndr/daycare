@@ -1,7 +1,6 @@
 import type { AgentPath } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { agentPathSearch, agentPathSub } from "./agentPathBuild.js";
-import { agentPathFromDescriptor } from "./agentPathFromDescriptor.js";
 import { agentPath } from "./agentPathTypes.js";
 
 type AgentPathChildAllocateInput = {
@@ -29,10 +28,9 @@ export async function agentPathChildAllocate(input: AgentPathChildAllocateInput)
     if (!parent) {
         throw new Error(`Parent agent not found: ${input.parentAgentId}`);
     }
-    const parentPath = parent.path ?? agentPathFromDescriptor(parent.descriptor, { userId: parent.userId });
+    const parentPath = parent.path;
     const nextIndex = parent.nextSubIndex ?? 0;
     await agents.update(parent.id, {
-        path: parentPath,
         nextSubIndex: nextIndex + 1,
         updatedAt: Date.now()
     });

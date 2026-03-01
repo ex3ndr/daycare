@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { AgentsRepository } from "./agentsRepository.js";
-import type { AgentDbRecord } from "./databaseTypes.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
 const permissions: SessionPermissions = {
@@ -20,22 +19,28 @@ describe("AgentsRepository", () => {
                 throw new Error("Owner user missing");
             }
             const repo = new AgentsRepository(storage.db);
-            const record: AgentDbRecord = {
+            const record = {
                 id: "agent-1",
                 version: 1,
                 validFrom: 1,
                 validTo: null,
                 userId: ownerUser.id,
-                type: "cron",
-                descriptor: { type: "cron", id: "agent-1", name: "cron" },
-                path: null,
-                config: null,
+                path: `/${ownerUser.id}/cron/agent-1`,
+                kind: "cron" as const,
+                modelRole: null,
+                connectorName: null,
+                parentAgentId: null,
+                foreground: false,
+                name: "cron",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
                 nextSubIndex: 0,
                 activeSessionId: null,
                 permissions,
                 tokens: null,
                 stats: {},
-                lifecycle: "active",
+                lifecycle: "active" as const,
                 createdAt: 1,
                 updatedAt: 1
             };
@@ -71,6 +76,12 @@ describe("AgentsRepository", () => {
             await repo.create({
                 id: "agent-cache",
                 userId: ownerUser.id,
+                path: `/${ownerUser.id}/cron/agent-cache`,
+                foreground: false,
+                name: "cache",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
                 type: "cron",
                 descriptor: { type: "cron", id: "agent-cache", name: "cache" },
                 activeSessionId: null,
@@ -110,8 +121,13 @@ describe("AgentsRepository", () => {
                     valid_from,
                     valid_to,
                     user_id,
-                    type,
-                    descriptor,
+                    path,
+                    foreground,
+                    name,
+                    description,
+                    system_prompt,
+                    workspace_dir,
+                    next_sub_index,
                     active_session_id,
                     permissions,
                     tokens,
@@ -119,7 +135,7 @@ describe("AgentsRepository", () => {
                     lifecycle,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `
                 )
                 .run(
@@ -128,8 +144,13 @@ describe("AgentsRepository", () => {
                     1,
                     null,
                     ownerUser.id,
-                    "cron",
-                    JSON.stringify({ type: "cron", id: "agent-db", name: "db" }),
+                    `/${ownerUser.id}/cron/agent-db`,
+                    0,
+                    "db",
+                    null,
+                    null,
+                    null,
+                    0,
                     null,
                     JSON.stringify(permissions),
                     null,
@@ -161,6 +182,12 @@ describe("AgentsRepository", () => {
             await repo.create({
                 id: "agent-owner",
                 userId: ownerUser.id,
+                path: `/${ownerUser.id}/cron/agent-owner`,
+                foreground: false,
+                name: "owner",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
                 type: "cron",
                 descriptor: { type: "cron", id: "agent-owner", name: "owner" },
                 activeSessionId: null,
@@ -174,6 +201,12 @@ describe("AgentsRepository", () => {
             await repo.create({
                 id: "agent-other",
                 userId: otherUser.id,
+                path: `/${otherUser.id}/cron/agent-other`,
+                foreground: false,
+                name: "other",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
                 type: "cron",
                 descriptor: { type: "cron", id: "agent-other", name: "other" },
                 activeSessionId: null,

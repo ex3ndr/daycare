@@ -17,11 +17,13 @@ describe("agentSystemPromptSectionEnvironment", () => {
 
             const section = await agentSystemPromptSectionEnvironment({
                 ctx: contextForUser({ userId: "user-1" }),
-                descriptor: {
-                    type: "user",
-                    connector: "telegram",
-                    channelId: "channel-1",
-                    userId: "telegram-1"
+                path: "/user-1/telegram",
+                config: {
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 agentSystem: {
                     storage
@@ -44,11 +46,13 @@ describe("agentSystemPromptSectionEnvironment", () => {
 
             const section = await agentSystemPromptSectionEnvironment({
                 ctx: contextForUser({ userId: "user-1" }),
-                descriptor: {
-                    type: "user",
-                    connector: "telegram",
-                    channelId: "channel-1",
-                    userId: "telegram-1"
+                path: "/user-1/telegram",
+                config: {
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 agentSystem: {
                     storage

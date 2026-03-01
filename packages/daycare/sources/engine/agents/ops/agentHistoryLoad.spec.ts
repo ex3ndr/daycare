@@ -10,11 +10,11 @@ import { storageUpgrade } from "../../../storage/storageUpgrade.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent } from "../context.js";
-import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentHistoryAppend } from "./agentHistoryAppend.js";
 import { agentHistoryLoad } from "./agentHistoryLoad.js";
 import { agentStateRead } from "./agentStateRead.js";
 import { agentStateWrite } from "./agentStateWrite.js";
+import { agentWrite } from "./agentWrite.js";
 
 describe("agentHistoryLoad", () => {
     it("returns records from the active session only", async () => {
@@ -26,13 +26,16 @@ describe("agentHistoryLoad", () => {
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const ctx = contextForAgent({ userId, agentId });
-            await agentDescriptorWrite(
+            await agentWrite(
                 storageResolve(config),
                 ctx,
+                `/${userId}/cron/${agentId}`,
                 {
-                    type: "cron",
-                    id: agentId,
-                    name: "history"
+                    foreground: false,
+                    name: "history",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );

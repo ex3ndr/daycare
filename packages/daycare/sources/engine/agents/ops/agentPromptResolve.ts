@@ -1,5 +1,6 @@
 import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
-import type { AgentDescriptor } from "./agentDescriptorTypes.js";
+import type { AgentConfig } from "./agentConfigTypes.js";
+import type { AgentPath } from "./agentPathTypes.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 
 export type AgentPromptResolved = {
@@ -8,38 +9,50 @@ export type AgentPromptResolved = {
 };
 
 /**
- * Resolves prompt overrides for a descriptor before building the final system prompt.
- * Expects: descriptor is a validated agent descriptor.
+ * Resolves prompt overrides for a path before building the final system prompt.
+ * Expects: pathValue is validated.
  */
-export async function agentPromptResolve(descriptor: AgentDescriptor): Promise<AgentPromptResolved> {
-    if (descriptor.type === "permanent") {
+export async function agentPromptResolve(
+    _pathValue: AgentPath,
+    config?: AgentConfig | null
+): Promise<AgentPromptResolved> {
+    const kind = config?.kind ?? "agent";
+    if (kind === "agent") {
         return {
-            agentPrompt: descriptor.systemPrompt.trim(),
+            agentPrompt: config?.systemPrompt?.trim() ?? "",
             replaceSystemPrompt: false
         };
     }
-    if (descriptor.type === "memory-agent") {
+    if (kind === "memory") {
         const prompt = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
         return {
             agentPrompt: prompt,
             replaceSystemPrompt: true
         };
     }
-    if (descriptor.type === "memory-search") {
+    if (kind === "search") {
         const prompt = (await agentPromptBundledRead("memory/MEMORY_SEARCH.md")).trim();
         return {
             agentPrompt: prompt,
             replaceSystemPrompt: true
         };
     }
-    if (descriptor.type !== "system") {
+    if (kind !== "system") {
         return {
             agentPrompt: "",
             replaceSystemPrompt: false
         };
     }
 
-    const resolved = await systemAgentPromptResolve(descriptor.tag);
+    const tag = config?.name?.trim();
+    if (!tag) {
+        return {
+            agentPrompt: "",
+            replaceSystemPrompt: false
+        };
+    }
+
+    const resolved = await systemAgentPromptResolve(tag);
     if (!resolved) {
         return {
             agentPrompt: "",

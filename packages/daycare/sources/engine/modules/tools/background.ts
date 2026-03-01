@@ -76,7 +76,15 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
                 parentAgentId: toolContext.agent.id,
                 kind: "sub"
             });
-            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { path });
+            const agentId = await toolContext.agentSystem.agentIdForTarget(
+                toolContext.ctx,
+                { path },
+                {
+                    kind: "sub",
+                    parentAgentId: toolContext.agent.id,
+                    name: requestedName || null
+                }
+            );
             await toolContext.agentSystem.post(
                 toolContext.ctx,
                 { agentId },
@@ -124,25 +132,26 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SendAgentMessageArgs;
             const outbound = await agentMessageOverflowHandle(payload.text, toolContext);
-            const descriptor = toolContext.agent.descriptor;
             const origin = toolContext.agent.id;
-            const defaultSwarmContactTarget = await swarmContactDefaultTargetResolve(descriptor, toolContext);
+            const kind = agentKindResolve(toolContext);
+            const parentAgentId = await parentAgentIdResolve(toolContext);
+            const defaultSwarmContactTarget = await swarmContactDefaultTargetResolve(kind, toolContext);
             const targetAgentId =
                 payload.agentId ??
-                (descriptor.type === "subagent" || descriptor.type === "memory-search"
-                    ? descriptor.parentAgentId
+                (kind === "sub" || kind === "search"
+                    ? (parentAgentId ?? undefined)
                     : (defaultSwarmContactTarget ?? undefined));
             const resolvedTarget =
                 targetAgentId ?? toolContext.agentSystem.agentFor(toolContext.ctx, "most-recent-foreground");
             if (!resolvedTarget) {
-                if (descriptor.type === "swarm") {
+                if (swarmAgentIs(toolContext)) {
                     throw new Error("No known swarm contacts found. Provide agentId or wait for an inbound message.");
                 }
                 throw new Error("No recent foreground agent found.");
             }
-            const deliveryContext = await agentMessageDeliveryContextResolve(descriptor, toolContext, resolvedTarget);
+            const deliveryContext = await agentMessageDeliveryContextResolve(kind, toolContext, resolvedTarget);
             const swarmContactTarget = await swarmContactTargetResolve(
-                descriptor,
+                kind,
                 toolContext,
                 resolvedTarget,
                 deliveryContext
@@ -328,11 +337,11 @@ function writeOutputPathResolve(value: unknown): string {
 }
 
 async function agentMessageDeliveryContextResolve(
-    descriptor: ToolExecutionContext["agent"]["descriptor"],
+    sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
     toolContext: ToolExecutionContext,
     targetAgentId: string
 ): Promise<ToolExecutionContext["ctx"]> {
-    if (descriptor.type !== "swarm") {
+    if (sourceKind !== "swarm") {
         return toolContext.ctx;
     }
     const targetContext = await toolContext.agentSystem.contextForAgentId(targetAgentId);
@@ -343,10 +352,10 @@ async function agentMessageDeliveryContextResolve(
 }
 
 async function swarmContactDefaultTargetResolve(
-    descriptor: ToolExecutionContext["agent"]["descriptor"],
+    sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
     toolContext: ToolExecutionContext
 ): Promise<string | null> {
-    if (descriptor.type !== "swarm") {
+    if (sourceKind !== "swarm") {
         return null;
     }
     const contacts = await toolContext.agentSystem.storage.swarmContacts.listContacts(toolContext.agent.userId);
@@ -354,12 +363,12 @@ async function swarmContactDefaultTargetResolve(
 }
 
 async function swarmContactTargetResolve(
-    descriptor: ToolExecutionContext["agent"]["descriptor"],
+    sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
     toolContext: ToolExecutionContext,
     targetAgentId: string,
     deliveryContext: ToolExecutionContext["ctx"]
 ): Promise<string | null> {
-    if (descriptor.type !== "swarm") {
+    if (sourceKind !== "swarm") {
         return null;
     }
     if (deliveryContext.userId === toolContext.ctx.userId) {
@@ -373,4 +382,18 @@ async function swarmContactTargetResolve(
         throw new Error("Can only message agents that have contacted this swarm");
     }
     return targetAgentId;
+}
+
+async function parentAgentIdResolve(toolContext: ToolExecutionContext): Promise<string | null> {
+    return toolContext.agent.config.parentAgentId ?? null;
+}
+
+function swarmAgentIs(toolContext: ToolExecutionContext): boolean {
+    return agentKindResolve(toolContext) === "swarm";
+}
+
+function agentKindResolve(
+    toolContext: ToolExecutionContext
+): NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> {
+    return toolContext.agent.config.kind ?? "agent";
 }

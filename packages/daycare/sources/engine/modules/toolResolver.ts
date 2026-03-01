@@ -151,7 +151,7 @@ function toolVisibleByDefault(entry: RegisteredTool, context: ToolVisibilityCont
         return entry.visibleByDefault(context);
     } catch (error) {
         logger.warn(
-            { tool: entry.tool.name, descriptorType: context.descriptor.type, error },
+            { tool: entry.tool.name, path: context.path, error },
             "error: Tool visibleByDefault callback failed"
         );
         return false;

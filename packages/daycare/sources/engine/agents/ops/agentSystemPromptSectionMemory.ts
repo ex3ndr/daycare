@@ -12,8 +12,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionMemory(context: AgentSystemPromptContext): Promise<string> {
-    const descriptor = context.descriptor;
-    const isForeground = descriptor?.type === "user";
+    const isForeground = context.config?.foreground === true;
     if (!context.userHome) {
         throw new Error("User home is required to render memory section.");
     }

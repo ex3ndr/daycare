@@ -3,7 +3,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
-import type { AgentPath, Context, MessageContext } from "@/types";
+import type { AgentCreationConfig, AgentPath, Context, MessageContext } from "@/types";
 
 import { getLogger } from "../../log.js";
 import {
@@ -882,6 +882,46 @@ async function messageTargetResolve(
         throw new Error("Message path must include user scope.");
     }
     const ctx = contextForUser({ userId });
-    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { path });
+    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { path }, creationConfigFromPath(path));
     return { ctx, agentId };
+}
+
+function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    if (segments[0] === "system") {
+        return { kind: "system" };
+    }
+    if (segments[1] === "agent" && segments[2] === "swarm") {
+        return { kind: "swarm", foreground: true };
+    }
+    if (segments[1] === "agent") {
+        if (segments.at(-2) === "sub") {
+            return { kind: "sub" };
+        }
+        if (segments.at(-2) === "search") {
+            return { kind: "search" };
+        }
+        return { kind: "agent" };
+    }
+    if (segments[1] === "sub" || segments.at(-2) === "sub") {
+        return { kind: "sub" };
+    }
+    if (segments[1] === "search" || segments.at(-2) === "search") {
+        return { kind: "search" };
+    }
+    if (segments[1] === "memory" || segments.at(-1) === "memory") {
+        return { kind: "memory" };
+    }
+    if (segments[1] === "cron") {
+        return { kind: "cron" };
+    }
+    if (segments[1] === "task") {
+        return { kind: "task" };
+    }
+    if (segments[1] === "subuser") {
+        return { kind: "subuser" };
+    }
+    return { kind: "connector", connectorName: segments[1] ?? null, foreground: true };
 }

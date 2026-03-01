@@ -3,30 +3,20 @@ import { describe, expect, it } from "vitest";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 
 describe("agentToolExecutionAllowlistResolve", () => {
-    it("returns undefined for non-memory descriptors", () => {
-        const allowlist = agentToolExecutionAllowlistResolve({
-            type: "user",
-            connector: "telegram",
-            userId: "user-1",
-            channelId: "channel-1"
-        });
+    it("returns undefined for non-memory kinds", () => {
+        const allowlist = agentToolExecutionAllowlistResolve("connector");
 
         expect(allowlist).toBeUndefined();
     });
 
-    it("returns memory-only tools for memory-agent descriptors", () => {
-        const allowlist = agentToolExecutionAllowlistResolve({ type: "memory-agent", id: "agent-1" });
+    it("returns memory-only tools for memory-agents", () => {
+        const allowlist = agentToolExecutionAllowlistResolve("memory");
 
         expect(allowlist ? [...allowlist] : []).toEqual(["document_read", "document_write"]);
     });
 
-    it("returns read+report tools for memory-search descriptors", () => {
-        const allowlist = agentToolExecutionAllowlistResolve({
-            type: "memory-search",
-            id: "ms-1",
-            parentAgentId: "parent-1",
-            name: "query"
-        });
+    it("returns read+report tools for memory-search agents", () => {
+        const allowlist = agentToolExecutionAllowlistResolve("search");
 
         expect(allowlist ? [...allowlist] : []).toEqual(["document_read", "send_agent_message"]);
     });

@@ -320,7 +320,7 @@ describe("ToolResolver", () => {
         expect(tools).toEqual([]);
     });
 
-    it("supports descriptor-aware visibility callbacks", () => {
+    it("supports path-aware visibility callbacks", () => {
         const resolver = new ToolResolver();
         resolver.register("test", {
             tool: {
@@ -329,12 +329,21 @@ describe("ToolResolver", () => {
                 parameters: Type.Object({}, { additionalProperties: false })
             },
             returns: textReturns,
-            visibleByDefault: (context) => context.descriptor.type === "memory-agent",
+            visibleByDefault: (context) => context.path.endsWith("/memory/agent-1"),
             execute: async () => okResult("memory_node_read", "ok")
         });
 
         const memoryTools = resolver.listToolsForAgent(
-            toolVisibilityContextCreate({ descriptor: { type: "memory-agent", id: "agent-1" } })
+            toolVisibilityContextCreate({
+                path: "/user-1/memory/agent-1",
+                config: {
+                    foreground: false,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
+            })
         );
         const userTools = resolver.listToolsForAgent(toolVisibilityContextCreate());
 
@@ -649,11 +658,13 @@ function toolExecutionContextCreate(overrides: Partial<ToolExecutionContext> = {
 function toolVisibilityContextCreate(overrides: Partial<ToolVisibilityContext> = {}): ToolVisibilityContext {
     return {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
-        descriptor: {
-            type: "user",
-            connector: "telegram",
-            userId: "user-1",
-            channelId: "channel-1"
+        path: "/user-1/telegram",
+        config: {
+            foreground: true,
+            name: null,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
         },
         ...overrides
     };

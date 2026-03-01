@@ -52,6 +52,12 @@ export class Crons {
                     taskId: task.taskId,
                     taskVersion: task.taskVersion ?? null,
                     target,
+                    creationConfig: task.agentId
+                        ? undefined
+                        : {
+                              kind: "task",
+                              name: task.taskName
+                          },
                     text,
                     parameters: task.inputs ?? undefined,
                     context: messageContext

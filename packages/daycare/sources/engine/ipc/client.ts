@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { AgentDescriptor, Channel, ChannelMessage, MessageContext, SignalSource } from "@/types";
+import type { AgentPath, Channel, ChannelMessage, MessageContext, SignalSource } from "@/types";
 
 import { resolveEngineSocketPath } from "./socket.js";
 
@@ -147,7 +147,7 @@ export async function sendEngineAgentMessage(
         text: string;
         userId?: string;
         agentId?: string;
-        descriptor?: AgentDescriptor;
+        path?: AgentPath;
         context?: MessageContext;
         awaitResponse?: boolean;
     },

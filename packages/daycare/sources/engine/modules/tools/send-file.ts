@@ -10,7 +10,7 @@ import type {
     ToolResultContract
 } from "@/types";
 import { sanitizeFilename } from "../../../util/filename.js";
-import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
+import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
 
 const schema = Type.Object(
     {
@@ -94,7 +94,11 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 throw new Error("Connector registry unavailable");
             }
 
-            const target = agentDescriptorTargetResolve(context.agent.descriptor);
+            const target = await agentPathTargetResolve(
+                context.agentSystem.storage,
+                context.ctx.userId,
+                context.agent.config
+            );
             if (payload.source && target && payload.source !== target.connector && !payload.channelId) {
                 throw new Error("Override source requires an explicit channelId.");
             }

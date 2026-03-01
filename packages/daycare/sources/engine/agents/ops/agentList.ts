@@ -1,7 +1,6 @@
 import type { AgentConfig, AgentPath, Config } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
-import type { AgentDescriptor } from "./agentDescriptorTypes.js";
 import type { AgentLifecycleState } from "./agentTypes.js";
 
 /**
@@ -11,9 +10,8 @@ import type { AgentLifecycleState } from "./agentTypes.js";
 export async function agentList(storageOrConfig: Storage | Config): Promise<
     Array<{
         agentId: string;
-        path: AgentPath | null;
-        config: AgentConfig | null;
-        descriptor: AgentDescriptor;
+        path: AgentPath;
+        config: AgentConfig;
         lifecycle: AgentLifecycleState;
         updatedAt: number;
     }>
@@ -22,9 +20,18 @@ export async function agentList(storageOrConfig: Storage | Config): Promise<
     const records = await storage.agents.findMany();
     return records.map((record) => ({
         agentId: record.id,
-        path: record.path ?? null,
-        config: record.config ?? null,
-        descriptor: record.descriptor,
+        path: record.path,
+        config: {
+            kind: record.kind,
+            modelRole: record.modelRole,
+            connectorName: record.connectorName,
+            parentAgentId: record.parentAgentId,
+            foreground: record.foreground,
+            name: record.name,
+            description: record.description,
+            systemPrompt: record.systemPrompt,
+            workspaceDir: record.workspaceDir
+        },
         lifecycle: record.lifecycle,
         updatedAt: record.updatedAt
     }));

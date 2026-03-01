@@ -1,5 +1,4 @@
 import Handlebars from "handlebars";
-
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
@@ -8,9 +7,8 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionFormatting(context: AgentSystemPromptContext): Promise<string> {
-    const descriptor = context.descriptor;
-    const isForeground = descriptor?.type === "user";
-    const connector = isForeground ? descriptor.connector : "";
+    const connector = context.config?.connectorName?.trim() ?? null;
+    const isForeground = Boolean(context.config?.foreground && connector);
     const messageFormatPrompt = connector
         ? (context.agentSystem?.connectorRegistry?.get(connector)?.capabilities.messageFormatPrompt ?? "")
         : "";

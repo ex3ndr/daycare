@@ -1,6 +1,7 @@
 import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 
 import type {
+    AgentConfig,
     AgentPath,
     ConnectorMessage,
     FileReference,
@@ -235,6 +236,8 @@ export type AgentInboxEntry = {
 };
 
 export type AgentPostTarget = { agentId: string } | { path: AgentPath };
+export type AgentFetchStrategy = "most-recent-foreground";
+export type AgentCreationConfig = Pick<AgentConfig, "kind"> & Partial<Omit<AgentConfig, "kind">>;
 
 export type BackgroundAgentState = {
     agentId: string;

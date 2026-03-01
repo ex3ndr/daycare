@@ -3,8 +3,8 @@ import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent } from "../context.js";
-import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentStateWrite } from "./agentStateWrite.js";
+import { agentWrite } from "./agentWrite.js";
 
 describe("agentStateWrite", () => {
     it("emits agent lifecycle observations when lifecycle changes", async () => {
@@ -17,12 +17,20 @@ describe("agentStateWrite", () => {
             const ctx = contextForAgent({ userId, agentId });
             const now = Date.now();
 
-            await agentDescriptorWrite(
+            await agentWrite(
                 storage,
                 ctx,
+                "/system/cron",
                 {
-                    type: "system",
-                    tag: "cron"
+                    kind: "system",
+                    modelRole: null,
+                    connectorName: null,
+                    parentAgentId: null,
+                    foreground: false,
+                    name: "cron",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );

@@ -7,17 +7,17 @@ import type { AgentState, SessionPermissions, ToolDefinition, ToolResultContract
 import { pathResolveSecure } from "../../../sandbox/pathResolveSecure.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import { contextForAgent } from "../../agents/context.js";
-import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
+import { agentPathAgent } from "../../agents/ops/agentPathBuild.js";
 import { agentPermanentList } from "../../agents/ops/agentPermanentList.js";
 import type { PermanentAgentSummary } from "../../agents/ops/agentPermanentTypes.js";
 import { agentStateRead } from "../../agents/ops/agentStateRead.js";
 import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
+import { agentWrite } from "../../agents/ops/agentWrite.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 
 const schema = Type.Object(
     {
         name: Type.String({ minLength: 1 }),
-        username: Type.Optional(Type.String({ minLength: 1 })),
         description: Type.String({ minLength: 1 }),
         systemPrompt: Type.String({ minLength: 1 }),
         workspaceDir: Type.Optional(Type.String({ minLength: 1 })),
@@ -67,10 +67,6 @@ export function permanentAgentToolBuild(): ToolDefinition {
             if (!description) {
                 throw new Error("Permanent agent description is required.");
             }
-            const username = payload.username?.trim();
-            if (payload.username !== undefined && !username) {
-                throw new Error("Permanent agent username must be non-empty when provided.");
-            }
             const systemPrompt = payload.systemPrompt.trim();
             if (!systemPrompt) {
                 throw new Error("Permanent agent system prompt is required.");
@@ -85,26 +81,23 @@ export function permanentAgentToolBuild(): ToolDefinition {
             const targetCtx = contextForAgent({ userId: ownerUserId, agentId });
             const resolvedWorkspaceDir = payload.workspaceDir
                 ? await resolveWorkspaceDir(ownerUserHome.home, payload.workspaceDir)
-                : (resolvedAgent?.descriptor.workspaceDir ?? null);
-
-            const descriptor = {
-                type: "permanent" as const,
-                id: agentId,
-                name,
-                ...(username
-                    ? { username }
-                    : resolvedAgent?.descriptor.username
-                      ? { username: resolvedAgent.descriptor.username }
-                      : {}),
-                description,
-                systemPrompt,
-                ...(resolvedWorkspaceDir ? { workspaceDir: resolvedWorkspaceDir } : {})
-            };
+                : (resolvedAgent?.workspaceDir ?? null);
             const basePermissions = permissionBuildUser(ownerUserHome);
 
             if (resolvedAgent) {
-                await agentDescriptorWrite(storage, targetCtx, descriptor, basePermissions);
-                toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
+                await storage.agents.update(agentId, {
+                    name,
+                    description,
+                    systemPrompt,
+                    workspaceDir: resolvedWorkspaceDir,
+                    updatedAt: Date.now()
+                });
+                toolContext.agentSystem.updateAgentConfig(agentId, {
+                    name,
+                    description,
+                    systemPrompt,
+                    workspaceDir: resolvedWorkspaceDir
+                });
 
                 const state = await agentStateRead(storage, targetCtx);
                 if (!state) {
@@ -132,7 +125,19 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     updatedAt: now,
                     state: "active"
                 };
-                await agentDescriptorWrite(storage, targetCtx, descriptor, basePermissions);
+                await agentWrite(
+                    storage,
+                    targetCtx,
+                    agentPathAgent(ownerUserId, name),
+                    {
+                        foreground: false,
+                        name,
+                        description,
+                        systemPrompt,
+                        workspaceDir: resolvedWorkspaceDir
+                    },
+                    basePermissions
+                );
                 await agentStateWrite(storage, targetCtx, state);
                 state.activeSessionId = await storage.sessions.create({
                     agentId,
@@ -140,7 +145,13 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     createdAt: now
                 });
                 await agentStateWrite(storage, targetCtx, state);
-                toolContext.agentSystem.updateAgentDescriptor(agentId, descriptor);
+                toolContext.agentSystem.updateAgentConfig(agentId, {
+                    foreground: false,
+                    name,
+                    description,
+                    systemPrompt,
+                    workspaceDir: resolvedWorkspaceDir
+                });
                 toolContext.agentSystem.updateAgentPermissions(agentId, permissions, now);
             }
 
@@ -191,7 +202,7 @@ function resolveExistingAgent(
     }
 
     const normalized = normalizeName(name);
-    const matches = agents.filter((entry) => normalizeName(entry.descriptor.name) === normalized);
+    const matches = agents.filter((entry) => normalizeName(entry.name) === normalized);
     if (matches.length === 0) {
         return null;
     }

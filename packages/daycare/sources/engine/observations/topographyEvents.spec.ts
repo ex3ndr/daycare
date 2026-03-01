@@ -55,7 +55,7 @@ describe("topographyObservationEmit", () => {
                     data: {
                         agentId: "agent-1",
                         userId: "user-1",
-                        descriptorType: "subagent",
+                        pathKind: "sub",
                         label: "worker",
                         parentAgentId: "parent-1"
                     },
@@ -69,7 +69,7 @@ describe("topographyObservationEmit", () => {
                     data: {
                         agentId: "agent-1",
                         userId: "user-1",
-                        descriptorType: "subagent",
+                        pathKind: "sub",
                         label: "worker"
                     },
                     scopeIds: ["user-1"]

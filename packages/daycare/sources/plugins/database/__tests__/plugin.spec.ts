@@ -43,12 +43,14 @@ describe("database plugin", () => {
             writeDirs: []
         };
         const messageContext = {};
-        const descriptor = {
-            type: "subagent",
-            id: agentId,
-            parentAgentId: "system",
-            name: "system"
-        } as const;
+        const agentPath = `/user-1/sub/${agentId}`;
+        const agentConfig = {
+            foreground: false,
+            name: "system",
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
         const ctxUser1 = contextForAgent({ userId: "user-1", agentId });
         const state: AgentState = {
             context: { messages: [] },
@@ -61,12 +63,13 @@ describe("database plugin", () => {
         };
         const agent = Agent.restore(
             ctxUser1,
-            descriptor,
+            agentPath,
+            agentConfig,
             state,
             new AgentInbox(agentId),
             {
                 extraMountsForUserId: () => []
-            } as unknown as Parameters<typeof Agent.restore>[4],
+            } as unknown as Parameters<typeof Agent.restore>[5],
             new UserHome(path.join(baseDir, "users"), "user-1")
         );
         const api = {
@@ -157,12 +160,19 @@ describe("database plugin", () => {
         const ctxUser2 = contextForAgent({ userId: "user-2", agentId: user2AgentId });
         const user2Agent = Agent.restore(
             ctxUser2,
-            descriptor,
+            `/user-2/sub/${user2AgentId}`,
+            {
+                foreground: false,
+                name: "system",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            },
             state,
             new AgentInbox(user2AgentId),
             {
                 extraMountsForUserId: () => []
-            } as unknown as Parameters<typeof Agent.restore>[4],
+            } as unknown as Parameters<typeof Agent.restore>[5],
             new UserHome(path.join(baseDir, "users"), "user-2")
         );
         const selectToolCall: ToolCall = {

@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
-import type { AgentDescriptor, ToolDefinition, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import type { Channels } from "../../channels/channels.js";
 
 const schema = Type.Object(
@@ -42,7 +42,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
         returns: channelSendReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelSendArgs;
-            const senderUsername = senderUsernameResolve(toolContext.agent.descriptor);
+            const senderUsername = senderUsernameResolve(toolContext);
             const sent = await channels.send(
                 toolContext.ctx,
                 payload.channelName,
@@ -85,32 +85,34 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
     };
 }
 
-function senderUsernameResolve(descriptor: AgentDescriptor): string {
-    if (descriptor.type === "permanent") {
-        return usernameNormalize(descriptor.username ?? descriptor.name);
+function senderUsernameResolve(context: ToolExecutionContext): string {
+    const config = context.agent.config;
+    const kind = config.kind ?? "agent";
+    if (kind === "agent") {
+        return usernameNormalize(config.name ?? "agent");
     }
-    if (descriptor.type === "subagent") {
-        return usernameNormalize(descriptor.name);
+    if (kind === "swarm") {
+        return usernameNormalize(`swarm-${context.ctx.userId}`);
     }
-    if (descriptor.type === "cron") {
-        return usernameNormalize(descriptor.name ?? descriptor.id);
+    if (kind === "sub") {
+        return usernameNormalize(config.name ?? "subagent");
     }
-    if (descriptor.type === "system") {
-        return usernameNormalize(descriptor.tag);
+    if (kind === "cron") {
+        return usernameNormalize(config.name ?? "cron");
     }
-    if (descriptor.type === "memory-agent") {
+    if (kind === "system") {
+        return usernameNormalize(config.name ?? "system");
+    }
+    if (kind === "memory") {
         return usernameNormalize("memory-agent");
     }
-    if (descriptor.type === "memory-search") {
-        return usernameNormalize(descriptor.name);
+    if (kind === "search") {
+        return usernameNormalize(config.name ?? "memory-search");
     }
-    if (descriptor.type === "task") {
-        return usernameNormalize(descriptor.id);
+    if (kind === "task") {
+        return usernameNormalize(config.name ?? "task");
     }
-    if (descriptor.type === "swarm") {
-        return usernameNormalize(`swarm-${descriptor.id}`);
-    }
-    return usernameNormalize(descriptor.userId);
+    return usernameNormalize(context.ctx.userId || "user");
 }
 
 function usernameNormalize(value: string): string {

@@ -40,7 +40,15 @@ export async function swarmAgentResolve(input: SwarmAgentResolveInput): Promise<
 
     const path = agentPathAgent(swarmUser.id, "swarm");
     const swarmCtx = contextForUser({ userId: swarmUserId });
-    const swarmAgentId = await input.agentSystem.agentIdForTarget(swarmCtx, { path });
+    const swarmAgentId = await input.agentSystem.agentIdForTarget(
+        swarmCtx,
+        { path },
+        {
+            kind: "swarm",
+            foreground: true,
+            name: "swarm"
+        }
+    );
     await input.agentSystem.storage.swarmContacts.findOrCreate(swarmUserId, contactAgentId, swarmAgentId);
 
     return {

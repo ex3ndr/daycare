@@ -205,7 +205,6 @@ export const plugin = definePlugin({
             returns: selfUpgradeReturns,
             execute: async (args, toolContext, toolCall) => {
                 const payload = args as SelfUpgradeArgs;
-                const descriptor = toolContext.agent.descriptor;
 
                 // Check if self-upgrade is enabled in configuration
                 if (!selfUpgradeEnabled) {
@@ -229,7 +228,7 @@ export const plugin = definePlugin({
                 }
 
                 // Only allow in foreground (user) sessions
-                if (descriptor.type !== "user") {
+                if (!toolContext.agent.config.foreground) {
                     const message = "Self-upgrade is only available in foreground sessions (direct user chat).";
                     const toolMessage: ToolResultMessage = {
                         role: "toolResult",

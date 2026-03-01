@@ -4,11 +4,12 @@
 // Config
 export type { Config } from "./config/configTypes.js";
 export { Context, contextForAgent, contextForUser } from "./engine/agents/context.js";
-export type { AgentConfig } from "./engine/agents/ops/agentConfigTypes.js";
-export type { AgentDescriptor, AgentFetchStrategy } from "./engine/agents/ops/agentDescriptorTypes.js";
+export type { AgentConfig, AgentKind } from "./engine/agents/ops/agentConfigTypes.js";
 export type { AgentPath } from "./engine/agents/ops/agentPathTypes.js";
 // Agents
 export type {
+    AgentCreationConfig,
+    AgentFetchStrategy,
     AgentHistoryAssistantRewriteRecord,
     AgentHistoryRecord,
     AgentHistoryRlmCompleteRecord,

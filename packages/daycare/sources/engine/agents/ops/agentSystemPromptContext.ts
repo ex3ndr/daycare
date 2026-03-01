@@ -1,4 +1,4 @@
-import type { AgentDescriptor, Context, PluginSystemPromptResult, SessionPermissions } from "@/types";
+import type { AgentConfig, AgentPath, Context, PluginSystemPromptResult, SessionPermissions } from "@/types";
 import type { UserHome } from "../../users/userHome.js";
 import type { AgentSystem } from "../agentSystem.js";
 
@@ -13,7 +13,8 @@ export type AgentSystemPromptContext = {
     ctx: Context;
     permissions?: SessionPermissions;
     agentSystem?: AgentSystemPromptAgentSystem;
-    descriptor?: AgentDescriptor;
+    path?: AgentPath;
+    config?: AgentConfig;
     userHome?: UserHome;
     pluginPrompts?: PluginSystemPromptResult[];
     /**

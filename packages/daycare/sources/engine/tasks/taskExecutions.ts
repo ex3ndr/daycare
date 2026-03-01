@@ -1,4 +1,4 @@
-import type { MessageContext } from "@/types";
+import type { AgentCreationConfig, MessageContext } from "@/types";
 import { getLogger } from "../../log.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForUser } from "../agents/context.js";
@@ -36,6 +36,7 @@ export type TaskExecutionDispatchInput = {
     parameters?: Record<string, unknown>;
     context?: MessageContext;
     sync?: boolean;
+    creationConfig?: AgentCreationConfig;
 };
 
 export type TaskExecutionsOptions = {
@@ -71,7 +72,7 @@ export class TaskExecutions {
         const item = taskExecutionItemBuild(prepared);
         const ctx = contextForUser({ userId: prepared.userId });
         void this.agentSystem
-            .postAndAwait(ctx, prepared.target, item)
+            .postAndAwait(ctx, prepared.target, item, prepared.creationConfig)
             .then((result) => {
                 if (result.type !== "system_message") {
                     this.statsFailureRecord(stats, prepared.source);
@@ -113,7 +114,8 @@ export class TaskExecutions {
             const result = await this.agentSystem.postAndAwait(
                 contextForUser({ userId: prepared.userId }),
                 prepared.target,
-                item
+                item,
+                prepared.creationConfig
             );
             if (result.type !== "system_message") {
                 this.statsFailureRecord(stats, prepared.source);
@@ -228,6 +230,7 @@ function taskExecutionPrepare(input: TaskExecutionDispatchInput): {
     parameters?: Record<string, unknown>;
     context?: MessageContext;
     sync: boolean;
+    creationConfig?: AgentCreationConfig;
 } {
     const userId = input.userId.trim();
     if (!userId) {
@@ -251,7 +254,8 @@ function taskExecutionPrepare(input: TaskExecutionDispatchInput): {
         taskVersion,
         parameters: input.parameters,
         context: input.context,
-        sync: input.sync === true
+        sync: input.sync === true,
+        creationConfig: input.creationConfig
     };
 }
 

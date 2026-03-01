@@ -170,12 +170,15 @@ export const plugin = definePlugin({
                 profileMemory.clear();
             },
             systemPrompt: async (context) => {
-                const descriptor = context.descriptor;
-                if (!descriptor || descriptor.type !== "user" || descriptor.connector !== "telegram") {
+                const connector = context.config?.connectorName?.trim() ?? null;
+                if (!context.config?.foreground || connector !== "telegram") {
                     return null;
                 }
 
-                const telegramUserId = descriptor.userId;
+                const telegramUserId = context.connectorTargetId?.trim();
+                if (!telegramUserId) {
+                    return null;
+                }
                 let profile = await profileCachedLoad(telegramUserId);
                 if (!profile) {
                     profile = await profileRefresh(telegramUserId);

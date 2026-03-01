@@ -7,21 +7,22 @@ import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 describe("rlmToolsForContextResolve", () => {
-    it("uses contextual tool listing when ctx and descriptor are present", () => {
+    it("uses contextual tool listing when ctx and agent path/config are present", () => {
         const listTools = vi.fn(() => [toolBuild("global_only")]);
         const listToolsForAgent = vi.fn(() => [toolBuild("memory_node_read"), toolBuild("memory_node_write")]);
         const resolver = resolverBuild({ listTools, listToolsForAgent });
-        const descriptor = descriptorBuild();
+        const path = "/u1/memory/agent-1";
+        const config = configBuild();
         const ctx = contextForAgent({ userId: "u1", agentId: "a1" });
         const context = contextBuild({
             ctx,
-            agent: agentBuild(descriptor)
+            agent: agentBuild(path, config)
         });
 
         const resolved = rlmToolsForContextResolve(resolver, context);
 
         expect(resolved.map((tool) => tool.name)).toEqual(["memory_node_read", "memory_node_write"]);
-        expect(listToolsForAgent).toHaveBeenCalledWith({ ctx, descriptor });
+        expect(listToolsForAgent).toHaveBeenCalledWith({ ctx, path, config });
         expect(listTools).not.toHaveBeenCalled();
     });
 
@@ -48,7 +49,7 @@ describe("rlmToolsForContextResolve", () => {
         const resolver = resolverBuild({ listTools, listToolsForAgent });
         const context = contextBuild({
             ctx: contextForAgent({ userId: "u1", agentId: "a1" }),
-            agent: agentBuild(descriptorBuild()),
+            agent: agentBuild("/u1/memory/agent-1", configBuild()),
             allowedToolNames: new Set(["memory_node_read", "memory_node_write", "run_python", "skip"])
         });
 
@@ -66,16 +67,20 @@ function toolBuild(name: string): Tool {
     } as unknown as Tool;
 }
 
-function descriptorBuild(): ToolExecutionContext["agent"]["descriptor"] {
+function configBuild(): ToolExecutionContext["agent"]["config"] {
     return {
-        type: "memory-agent",
-        parentAgentId: "parent-agent"
-    } as unknown as ToolExecutionContext["agent"]["descriptor"];
+        foreground: false,
+        name: null,
+        description: null,
+        systemPrompt: null,
+        workspaceDir: null
+    } as unknown as ToolExecutionContext["agent"]["config"];
 }
 
-function agentBuild(descriptor: ToolExecutionContext["agent"]["descriptor"]): ToolExecutionContext["agent"] {
+function agentBuild(path: string, config: ToolExecutionContext["agent"]["config"]): ToolExecutionContext["agent"] {
     return {
-        descriptor
+        path,
+        config
     } as unknown as ToolExecutionContext["agent"];
 }
 

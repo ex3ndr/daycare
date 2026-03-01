@@ -69,7 +69,6 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         returns: sendUserMessageReturns,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SendUserMessageArgs;
-            const descriptor = toolContext.agent.descriptor;
             const origin = toolContext.agent.id;
             const targetNametag = payload.nametag?.trim().toLowerCase() ?? "";
 
@@ -85,10 +84,9 @@ export function sendUserMessageToolBuild(): ToolDefinition {
             }
 
             // Resolve target: parent agent for child agents, most recent foreground otherwise
-            const targetAgentId =
-                descriptor.type === "subagent" || descriptor.type === "memory-search"
-                    ? descriptor.parentAgentId
-                    : undefined;
+            const kind = toolContext.agent.config.kind ?? "agent";
+            const parentAgentId = await parentAgentIdResolve(toolContext, kind);
+            const targetAgentId = kind === "sub" || kind === "search" ? (parentAgentId ?? undefined) : undefined;
             const resolvedTarget =
                 targetAgentId ?? toolContext.agentSystem.agentFor(toolContext.ctx, "most-recent-foreground");
             if (!resolvedTarget) {
@@ -187,6 +185,13 @@ export function sendUserMessageToolBuild(): ToolDefinition {
             }
         }
     };
+}
+
+async function parentAgentIdResolve(
+    toolContext: Parameters<NonNullable<ToolDefinition["execute"]>>[1],
+    kind: string
+): Promise<string | null> {
+    return kind === "sub" || kind === "search" ? (toolContext.agent.config.parentAgentId ?? null) : null;
 }
 
 type SendSwarmMessageInput = {

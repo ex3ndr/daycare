@@ -65,7 +65,7 @@ export function swarmCreateToolBuild(swarms: SwarmsFacade): ToolDefinition {
             parameters: schema
         },
         returns: swarmCreateToolReturns,
-        visibleByDefault: (context) => context.descriptor.type === "user",
+        visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const caller = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
             if (!caller?.isOwner) {

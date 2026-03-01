@@ -6,7 +6,7 @@ import { channelSendToolBuild } from "./channelSendTool.js";
 const toolCall = { id: "tool-1", name: "channel_send" };
 
 describe("channelSendToolBuild", () => {
-    it("sends messages with sender resolved from agent descriptor", async () => {
+    it("sends messages with sender resolved from agent path and config", async () => {
         const send = vi.fn(async () => ({
             message: {
                 id: "m1",
@@ -45,13 +45,13 @@ function contextBuild(): ToolExecutionContext {
         assistant: null,
         agent: {
             id: "agent-caller",
-            descriptor: {
-                type: "permanent",
-                id: "agent-caller",
-                name: "Ops",
-                username: "opsbot",
+            path: "/user-1/agent/ops",
+            config: {
+                foreground: false,
+                name: "opsbot",
                 description: "desc",
-                systemPrompt: "prompt"
+                systemPrompt: "prompt",
+                workspaceDir: null
             }
         } as unknown as ToolExecutionContext["agent"],
         ctx: { agentId: "agent-caller", userId: "user-1" } as unknown as ToolExecutionContext["ctx"],

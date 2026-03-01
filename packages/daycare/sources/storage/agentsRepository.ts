@@ -5,6 +5,41 @@ import { AsyncLock } from "../util/lock.js";
 import type { AgentDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
+type AgentCreateInput = Omit<
+    AgentDbRecord,
+    | "path"
+    | "kind"
+    | "modelRole"
+    | "connectorName"
+    | "parentAgentId"
+    | "foreground"
+    | "name"
+    | "description"
+    | "systemPrompt"
+    | "workspaceDir"
+    | "version"
+    | "validFrom"
+    | "validTo"
+> &
+    Partial<
+        Pick<
+            AgentDbRecord,
+            | "path"
+            | "kind"
+            | "modelRole"
+            | "connectorName"
+            | "parentAgentId"
+            | "foreground"
+            | "name"
+            | "description"
+            | "systemPrompt"
+            | "workspaceDir"
+            | "version"
+            | "validFrom"
+            | "validTo"
+        >
+    >;
+
 /**
  * Agents repository backed by Drizzle with write-through caching.
  * Expects: schema migrations already applied for agents.
@@ -56,7 +91,7 @@ export class AgentsRepository {
             return null;
         }
         if (this.allAgentsLoaded) {
-            const match = Array.from(this.agentsById.values()).find((record) => (record.path ?? "") === normalized);
+            const match = Array.from(this.agentsById.values()).find((record) => record.path === normalized);
             return match ? agentClone(match) : null;
         }
 
@@ -119,15 +154,16 @@ export class AgentsRepository {
         return parsed.map((record) => agentClone(record));
     }
 
-    async create(record: AgentDbRecord): Promise<void> {
+    async create(record: AgentCreateInput): Promise<void> {
         await this.createLock.inLock(async () => {
             const current = this.agentsById.get(record.id) ?? (await this.agentLoadById(record.id));
+            const normalized = agentCreateInputNormalize(record, current);
             let next: AgentDbRecord;
             if (!current) {
                 next = {
-                    ...record,
+                    ...normalized,
                     version: 1,
-                    validFrom: record.createdAt,
+                    validFrom: normalized.createdAt,
                     validTo: null
                 };
                 await this.db.insert(agentsTable).values({
@@ -136,10 +172,16 @@ export class AgentsRepository {
                     validFrom: next.validFrom ?? next.createdAt,
                     validTo: next.validTo ?? null,
                     userId: next.userId,
-                    type: next.type,
-                    descriptor: JSON.stringify(next.descriptor),
-                    path: next.path ?? null,
-                    config: next.config ? JSON.stringify(next.config) : null,
+                    path: next.path,
+                    kind: next.kind,
+                    modelRole: next.modelRole,
+                    connectorName: next.connectorName,
+                    parentAgentId: next.parentAgentId,
+                    foreground: next.foreground ? 1 : 0,
+                    name: next.name,
+                    description: next.description,
+                    systemPrompt: next.systemPrompt,
+                    workspaceDir: next.workspaceDir,
                     nextSubIndex: next.nextSubIndex ?? 0,
                     activeSessionId: next.activeSessionId,
                     permissions: JSON.stringify(next.permissions),
@@ -153,19 +195,25 @@ export class AgentsRepository {
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<AgentDbRecord>({
                         changes: {
-                            userId: record.userId,
-                            type: record.type,
-                            descriptor: record.descriptor,
-                            path: record.path,
-                            config: record.config,
-                            nextSubIndex: record.nextSubIndex,
-                            activeSessionId: record.activeSessionId,
-                            permissions: record.permissions,
-                            tokens: record.tokens,
-                            stats: record.stats,
-                            lifecycle: record.lifecycle,
-                            createdAt: record.createdAt,
-                            updatedAt: record.updatedAt
+                            userId: normalized.userId,
+                            path: normalized.path,
+                            kind: normalized.kind,
+                            modelRole: normalized.modelRole,
+                            connectorName: normalized.connectorName,
+                            parentAgentId: normalized.parentAgentId,
+                            foreground: normalized.foreground,
+                            name: normalized.name,
+                            description: normalized.description,
+                            systemPrompt: normalized.systemPrompt,
+                            workspaceDir: normalized.workspaceDir,
+                            nextSubIndex: normalized.nextSubIndex,
+                            activeSessionId: normalized.activeSessionId,
+                            permissions: normalized.permissions,
+                            tokens: normalized.tokens,
+                            stats: normalized.stats,
+                            lifecycle: normalized.lifecycle,
+                            createdAt: normalized.createdAt,
+                            updatedAt: normalized.updatedAt
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
@@ -189,10 +237,16 @@ export class AgentsRepository {
                                 validFrom: row.validFrom ?? row.createdAt,
                                 validTo: row.validTo ?? null,
                                 userId: row.userId,
-                                type: row.type,
-                                descriptor: JSON.stringify(row.descriptor),
-                                path: row.path ?? null,
-                                config: row.config ? JSON.stringify(row.config) : null,
+                                path: row.path,
+                                kind: row.kind,
+                                modelRole: row.modelRole,
+                                connectorName: row.connectorName,
+                                parentAgentId: row.parentAgentId,
+                                foreground: row.foreground ? 1 : 0,
+                                name: row.name,
+                                description: row.description,
+                                systemPrompt: row.systemPrompt,
+                                workspaceDir: row.workspaceDir,
                                 nextSubIndex: row.nextSubIndex ?? 0,
                                 activeSessionId: row.activeSessionId,
                                 permissions: JSON.stringify(row.permissions),
@@ -224,9 +278,16 @@ export class AgentsRepository {
                 ...current,
                 ...data,
                 id: current.id,
-                descriptor: data.descriptor ?? current.descriptor,
-                path: data.path === undefined ? current.path : data.path,
-                config: data.config === undefined ? current.config : data.config,
+                path: data.path ?? current.path,
+                kind: data.kind ?? current.kind,
+                modelRole: data.modelRole === undefined ? current.modelRole : data.modelRole,
+                connectorName: data.connectorName === undefined ? current.connectorName : data.connectorName,
+                parentAgentId: data.parentAgentId === undefined ? current.parentAgentId : data.parentAgentId,
+                foreground: data.foreground ?? current.foreground,
+                name: data.name === undefined ? current.name : data.name,
+                description: data.description === undefined ? current.description : data.description,
+                systemPrompt: data.systemPrompt === undefined ? current.systemPrompt : data.systemPrompt,
+                workspaceDir: data.workspaceDir === undefined ? current.workspaceDir : data.workspaceDir,
                 nextSubIndex: data.nextSubIndex ?? current.nextSubIndex ?? 0,
                 permissions: data.permissions ?? current.permissions,
                 stats: data.stats ?? current.stats,
@@ -237,10 +298,16 @@ export class AgentsRepository {
                 versionAdvance<AgentDbRecord>({
                     changes: {
                         userId: next.userId,
-                        type: next.type,
-                        descriptor: next.descriptor,
                         path: next.path,
-                        config: next.config,
+                        kind: next.kind,
+                        modelRole: next.modelRole,
+                        connectorName: next.connectorName,
+                        parentAgentId: next.parentAgentId,
+                        foreground: next.foreground,
+                        name: next.name,
+                        description: next.description,
+                        systemPrompt: next.systemPrompt,
+                        workspaceDir: next.workspaceDir,
                         nextSubIndex: next.nextSubIndex,
                         activeSessionId: next.activeSessionId,
                         permissions: next.permissions,
@@ -272,10 +339,16 @@ export class AgentsRepository {
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
                             userId: row.userId,
-                            type: row.type,
-                            descriptor: JSON.stringify(row.descriptor),
-                            path: row.path ?? null,
-                            config: row.config ? JSON.stringify(row.config) : null,
+                            path: row.path,
+                            kind: row.kind,
+                            modelRole: row.modelRole,
+                            connectorName: row.connectorName,
+                            parentAgentId: row.parentAgentId,
+                            foreground: row.foreground ? 1 : 0,
+                            name: row.name,
+                            description: row.description,
+                            systemPrompt: row.systemPrompt,
+                            workspaceDir: row.workspaceDir,
                             nextSubIndex: row.nextSubIndex ?? 0,
                             activeSessionId: row.activeSessionId,
                             permissions: JSON.stringify(row.permissions),
@@ -330,6 +403,183 @@ export class AgentsRepository {
     }
 }
 
+function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbRecord | null): AgentDbRecord {
+    const legacyType = agentLegacyTypeResolve(input);
+    const path =
+        (typeof input.path === "string" ? input.path.trim() : "") ||
+        current?.path ||
+        agentLegacyPathResolve({
+            id: input.id,
+            userId: input.userId,
+            type: legacyType,
+            descriptor: input.descriptor
+        });
+    if (!path) {
+        throw new Error(`Agent path is required: ${input.id}`);
+    }
+    const kind = input.kind ?? current?.kind ?? agentKindFromLegacyType(legacyType);
+    if (!kind) {
+        throw new Error(`Agent kind is required: ${input.id}`);
+    }
+    const foreground = input.foreground ?? current?.foreground ?? (legacyType === "user" || legacyType === "swarm");
+    const modelRole =
+        input.modelRole === undefined ? (current?.modelRole ?? agentModelRoleFromKind(kind)) : input.modelRole;
+    const connectorName =
+        input.connectorName === undefined
+            ? (current?.connectorName ?? agentLegacyConnectorNameResolve(input.descriptor, legacyType))
+            : input.connectorName;
+    const parentAgentId =
+        input.parentAgentId === undefined
+            ? (current?.parentAgentId ?? agentLegacyParentAgentIdResolve(input.descriptor))
+            : input.parentAgentId;
+    const name = input.name === undefined ? (current?.name ?? null) : input.name;
+    const description = input.description === undefined ? (current?.description ?? null) : input.description;
+    const systemPrompt = input.systemPrompt === undefined ? (current?.systemPrompt ?? null) : input.systemPrompt;
+    const workspaceDir = input.workspaceDir === undefined ? (current?.workspaceDir ?? null) : input.workspaceDir;
+    return {
+        ...(current ?? {}),
+        ...input,
+        path,
+        kind,
+        modelRole,
+        connectorName,
+        parentAgentId,
+        foreground,
+        name,
+        description,
+        systemPrompt,
+        workspaceDir
+    } as AgentDbRecord;
+}
+
+function agentLegacyTypeResolve(input: AgentCreateInput): string | null {
+    if (typeof input.type === "string" && input.type.trim().length > 0) {
+        return input.type.trim();
+    }
+    if (typeof input.descriptor !== "object" || !input.descriptor) {
+        return null;
+    }
+    const value = input.descriptor as { type?: unknown };
+    return typeof value.type === "string" ? value.type : null;
+}
+
+function agentKindFromLegacyType(type: string | null): AgentDbRecord["kind"] {
+    if (type === "user") {
+        return "connector";
+    }
+    if (type === "cron") {
+        return "cron";
+    }
+    if (type === "task") {
+        return "task";
+    }
+    if (type === "subuser") {
+        return "subuser";
+    }
+    if (type === "system") {
+        return "system";
+    }
+    if (type === "subagent") {
+        return "sub";
+    }
+    if (type === "memory-agent") {
+        return "memory";
+    }
+    if (type === "memory-search") {
+        return "search";
+    }
+    if (type === "swarm") {
+        return "swarm";
+    }
+    return "agent";
+}
+
+function agentModelRoleFromKind(kind: AgentDbRecord["kind"]): AgentDbRecord["modelRole"] {
+    if (kind === "connector" || kind === "agent" || kind === "subuser" || kind === "swarm") {
+        return "user";
+    }
+    if (kind === "sub") {
+        return "subagent";
+    }
+    if (kind === "memory") {
+        return "memory";
+    }
+    if (kind === "search") {
+        return "memorySearch";
+    }
+    if (kind === "task") {
+        return "task";
+    }
+    return null;
+}
+
+function agentLegacyPathResolve(input: {
+    id: string;
+    userId: string;
+    type: string | null;
+    descriptor: unknown;
+}): string {
+    const type = input.type;
+    const descriptor = (typeof input.descriptor === "object" && input.descriptor ? input.descriptor : {}) as Record<
+        string,
+        unknown
+    >;
+    const descriptorId = typeof descriptor.id === "string" && descriptor.id.length > 0 ? descriptor.id : input.id;
+    if (type === "system") {
+        const tag = typeof descriptor.tag === "string" && descriptor.tag.length > 0 ? descriptor.tag : descriptorId;
+        return `/system/${tag}`;
+    }
+    if (type === "user") {
+        const connector =
+            typeof descriptor.connector === "string" && descriptor.connector.length > 0 ? descriptor.connector : "user";
+        return `/${input.userId}/${connector}`;
+    }
+    if (type === "cron") {
+        return `/${input.userId}/cron/${descriptorId}`;
+    }
+    if (type === "task") {
+        return `/${input.userId}/task/${descriptorId}`;
+    }
+    if (type === "subagent") {
+        return `/${input.userId}/sub/${descriptorId}`;
+    }
+    if (type === "memory-agent") {
+        return `/${input.userId}/memory/${descriptorId}`;
+    }
+    if (type === "memory-search") {
+        return `/${input.userId}/search/${descriptorId}`;
+    }
+    if (type === "permanent") {
+        const name = typeof descriptor.name === "string" && descriptor.name.length > 0 ? descriptor.name : descriptorId;
+        return `/${input.userId}/agent/${name}`;
+    }
+    if (type === "swarm") {
+        return `/${input.userId}/agent/swarm`;
+    }
+    return `/${input.userId}/agent/${descriptorId}`;
+}
+
+function agentLegacyConnectorNameResolve(descriptorInput: unknown, type: string | null): string | null {
+    if (type !== "user") {
+        return null;
+    }
+    if (typeof descriptorInput !== "object" || !descriptorInput) {
+        return null;
+    }
+    const descriptor = descriptorInput as Record<string, unknown>;
+    const connector = descriptor.connector;
+    return typeof connector === "string" && connector.trim().length > 0 ? connector.trim() : null;
+}
+
+function agentLegacyParentAgentIdResolve(descriptorInput: unknown): string | null {
+    if (typeof descriptorInput !== "object" || !descriptorInput) {
+        return null;
+    }
+    const descriptor = descriptorInput as Record<string, unknown>;
+    const parentAgentId = descriptor.parentAgentId;
+    return typeof parentAgentId === "string" && parentAgentId.trim().length > 0 ? parentAgentId.trim() : null;
+}
+
 function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
     return {
         id: row.id,
@@ -337,10 +587,16 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
         validFrom: row.validFrom ?? row.createdAt,
         validTo: row.validTo ?? null,
         userId: row.userId,
-        type: row.type as AgentDbRecord["type"],
-        descriptor: JSON.parse(row.descriptor) as AgentDbRecord["descriptor"],
-        path: (row.path ?? null) as AgentDbRecord["path"],
-        config: row.config ? (JSON.parse(row.config) as AgentDbRecord["config"]) : null,
+        path: row.path as AgentDbRecord["path"],
+        kind: row.kind as AgentDbRecord["kind"],
+        modelRole: row.modelRole as AgentDbRecord["modelRole"],
+        connectorName: row.connectorName,
+        parentAgentId: row.parentAgentId,
+        foreground: row.foreground > 0,
+        name: row.name,
+        description: row.description,
+        systemPrompt: row.systemPrompt,
+        workspaceDir: row.workspaceDir,
         nextSubIndex: row.nextSubIndex ?? 0,
         activeSessionId: row.activeSessionId,
         permissions: JSON.parse(row.permissions) as AgentDbRecord["permissions"],
@@ -355,8 +611,6 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
 function agentClone(record: AgentDbRecord): AgentDbRecord {
     return {
         ...record,
-        descriptor: JSON.parse(JSON.stringify(record.descriptor)) as AgentDbRecord["descriptor"],
-        config: record.config ? (JSON.parse(JSON.stringify(record.config)) as AgentDbRecord["config"]) : null,
         permissions: JSON.parse(JSON.stringify(record.permissions)) as AgentDbRecord["permissions"],
         stats: JSON.parse(JSON.stringify(record.stats)) as AgentDbRecord["stats"],
         tokens: record.tokens ? (JSON.parse(JSON.stringify(record.tokens)) as AgentDbRecord["tokens"]) : null

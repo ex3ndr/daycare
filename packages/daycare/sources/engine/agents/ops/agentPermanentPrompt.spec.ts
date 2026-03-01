@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import { agentPermanentPrompt } from "./agentPermanentPrompt.js";
 
 const baseAgent = {
-    type: "permanent" as const,
-    id: "agent-id",
     name: "",
     systemPrompt: "",
-    description: ""
+    description: "",
+    workspaceDir: null as string | null
 };
 
 describe("agentPermanentPrompt", () => {
@@ -19,25 +18,19 @@ describe("agentPermanentPrompt", () => {
         const result = agentPermanentPrompt([
             {
                 agentId: "b-id",
-                descriptor: {
-                    ...baseAgent,
-                    id: "b-id",
-                    name: "Beta",
-                    systemPrompt: "Use <tags>",
-                    description: "Handles & checks"
-                },
+                ...baseAgent,
+                name: "Beta",
+                systemPrompt: "Use <tags>",
+                description: "Handles & checks",
                 updatedAt: 2
             },
             {
                 agentId: "a-id",
-                descriptor: {
-                    ...baseAgent,
-                    id: "a-id",
-                    name: "alpha",
-                    systemPrompt: "Stay & calm",
-                    description: "Tracks <releases>",
-                    workspaceDir: "/workspace/alpha"
-                },
+                ...baseAgent,
+                name: "alpha",
+                systemPrompt: "Stay & calm",
+                description: "Tracks <releases>",
+                workspaceDir: "/workspace/alpha",
                 updatedAt: 1
             }
         ]);

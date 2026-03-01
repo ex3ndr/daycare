@@ -4,7 +4,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it, vi } from "vitest";
 import type {
-    AgentDescriptor,
+    AgentCreationConfig,
     AgentHistoryRecord,
     AgentInboxItem,
     AgentInboxResult,
@@ -27,11 +27,15 @@ import { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
 import { ToolResolver } from "../modules/toolResolver.js";
 import type { PluginManager } from "../plugins/manager.js";
 import { Signals } from "../signals/signals.js";
+import {
+    type AgentLegacyDescriptor,
+    agentCreationConfigFromLegacyDescriptor,
+    agentPathFromLegacyDescriptor
+} from "./agentLegacyDescriptorTestUtils.js";
 import { AgentSystem } from "./agentSystem.js";
 import { contextForUser } from "./context.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentPathChildAllocate } from "./ops/agentPathChildAllocate.js";
-import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { inboxItemDeserialize } from "./ops/inboxItemDeserialize.js";
@@ -43,7 +47,7 @@ describe("AgentSystem durable inboxes", () => {
             const harness = await harnessCreate(dir);
             await harness.agentSystem.load();
 
-            const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-merge" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "durable-merge" };
             await post(
                 harness.agentSystem,
                 { descriptor },
@@ -76,7 +80,7 @@ describe("AgentSystem durable inboxes", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-delete" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "durable-delete" };
             await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "seed" });
             const agentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             const rows = await harness.storage.inbox.findByAgentId(agentId);
@@ -93,7 +97,7 @@ describe("AgentSystem durable inboxes", () => {
         try {
             const first = await harnessCreate(dir, { storage: sharedStorage });
             await first.agentSystem.load();
-            const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-replay" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "durable-replay" };
             await post(
                 first.agentSystem,
                 { descriptor },
@@ -134,7 +138,11 @@ describe("AgentSystem durable inboxes", () => {
             });
             await first.agentSystem.load();
             await first.agentSystem.start();
-            const descriptor: AgentDescriptor = { type: "cron", id: createId(), name: "durable-pending-recovery" };
+            const descriptor: AgentLegacyDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "durable-pending-recovery"
+            };
             await postAndAwait(first.agentSystem, { descriptor }, { type: "reset", message: "seed" });
             const agentId = await agentIdForTarget(first.agentSystem, { descriptor });
             const startedAt = Date.now();
@@ -363,7 +371,7 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
         }
     });
     try {
-        const parentDescriptor: AgentDescriptor = {
+        const parentDescriptor: AgentLegacyDescriptor = {
             type: "cron",
             id: createId(),
             name: `parent-${createId()}`
@@ -416,15 +424,23 @@ async function postAndAwait(
     maybeItem?: AgentInboxItem
 ): Promise<AgentInboxResult> {
     if (maybeItem) {
+        const normalizedTarget = targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context);
         return agentSystem.postAndAwait(
             ctxOrTarget as Context,
-            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
-            maybeItem
+            normalizedTarget,
+            maybeItem,
+            creationConfigResolve(targetOrItem as AgentTargetInput, ctxOrTarget as Context)
         );
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    return agentSystem.postAndAwait(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
+    const normalizedTarget = targetNormalize(target, ctx);
+    return agentSystem.postAndAwait(
+        ctx,
+        normalizedTarget,
+        targetOrItem as AgentInboxItem,
+        creationConfigResolve(target, ctx)
+    );
 }
 
 async function post(
@@ -434,16 +450,19 @@ async function post(
     maybeItem?: AgentInboxItem
 ): Promise<void> {
     if (maybeItem) {
+        const normalizedTarget = targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context);
         await agentSystem.post(
             ctxOrTarget as Context,
-            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
-            maybeItem
+            normalizedTarget,
+            maybeItem,
+            creationConfigResolve(targetOrItem as AgentTargetInput, ctxOrTarget as Context)
         );
         return;
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    await agentSystem.post(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
+    const normalizedTarget = targetNormalize(target, ctx);
+    await agentSystem.post(ctx, normalizedTarget, targetOrItem as AgentInboxItem, creationConfigResolve(target, ctx));
 }
 
 async function agentIdForTarget(
@@ -452,17 +471,20 @@ async function agentIdForTarget(
     maybeTarget?: AgentTargetInput
 ): Promise<string> {
     if (maybeTarget) {
+        const normalizedTarget = targetNormalize(maybeTarget, ctxOrTarget as Context);
         return agentSystem.agentIdForTarget(
             ctxOrTarget as Context,
-            targetNormalize(maybeTarget, ctxOrTarget as Context)
+            normalizedTarget,
+            creationConfigResolve(maybeTarget, ctxOrTarget as Context)
         );
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    return agentSystem.agentIdForTarget(ctx, targetNormalize(target, ctx));
+    const normalizedTarget = targetNormalize(target, ctx);
+    return agentSystem.agentIdForTarget(ctx, normalizedTarget, creationConfigResolve(target, ctx));
 }
 
-type AgentTargetInput = AgentPostTarget | { descriptor: AgentDescriptor };
+type AgentTargetInput = AgentPostTarget | { descriptor: AgentLegacyDescriptor };
 
 async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInput): Promise<Context> {
     if ("agentId" in target) {
@@ -495,7 +517,21 @@ function targetNormalize(target: AgentTargetInput, ctx: Context): AgentPostTarge
     if ("agentId" in target || "path" in target) {
         return target;
     }
-    return { path: agentPathFromDescriptor(target.descriptor, { userId: ctx.userId }) };
+    return { path: agentPathFromLegacyDescriptor(target.descriptor, { userId: ctx.userId }) };
+}
+
+function creationConfigResolve(target: AgentTargetInput, ctx: Context): AgentCreationConfig | undefined {
+    if ("agentId" in target) {
+        return undefined;
+    }
+    if ("path" in target) {
+        return creationConfigFromPath(target.path);
+    }
+    const config = agentCreationConfigFromLegacyDescriptor(target.descriptor);
+    if ((config.kind === "sub" || config.kind === "search" || config.kind === "memory") && !config.parentAgentId) {
+        config.parentAgentId = ctx.agentId ?? null;
+    }
+    return config;
 }
 
 function pathUserIdResolve(path: AgentPath): string | null {
@@ -507,6 +543,50 @@ function pathUserIdResolve(path: AgentPath): string | null {
         return null;
     }
     return first;
+}
+
+function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    if (segments[0] === "system") {
+        return { kind: "system", name: segments[1] ?? null };
+    }
+    if (segments[1] === "agent" && segments[2] === "swarm") {
+        return { kind: "swarm", foreground: true, name: "swarm" };
+    }
+    if (segments[1] === "agent") {
+        if (segments.at(-2) === "sub") {
+            return { kind: "sub", name: "subagent" };
+        }
+        if (segments.at(-2) === "search") {
+            return { kind: "search", name: "memory-search" };
+        }
+        return { kind: "agent" };
+    }
+    if (segments[1] === "sub" || segments.at(-2) === "sub") {
+        return { kind: "sub", name: "subagent" };
+    }
+    if (segments[1] === "search" || segments.at(-2) === "search") {
+        return { kind: "search", name: "memory-search" };
+    }
+    if (segments[1] === "memory" || segments.at(-1) === "memory") {
+        return { kind: "memory", name: "memory-agent" };
+    }
+    if (segments[1] === "cron") {
+        return { kind: "cron", name: segments[2] ?? null };
+    }
+    if (segments[1] === "task") {
+        return { kind: "task", name: segments[2] ?? null };
+    }
+    if (segments[1] === "subuser") {
+        return { kind: "subuser", name: segments[2] ?? null };
+    }
+    return {
+        kind: "connector",
+        foreground: true,
+        connectorName: segments[1] ?? null
+    };
 }
 
 async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {

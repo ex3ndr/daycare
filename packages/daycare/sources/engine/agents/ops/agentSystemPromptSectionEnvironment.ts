@@ -1,7 +1,6 @@
 import os from "node:os";
 
 import Handlebars from "handlebars";
-
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
@@ -10,8 +9,10 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionEnvironment(context: AgentSystemPromptContext): Promise<string> {
-    const descriptor = context.descriptor;
-    const isForeground = descriptor?.type === "user";
+    const connector = context.config?.connectorName?.trim() ?? null;
+    const isForeground = Boolean(context.config?.foreground && connector);
+    const targetId = await connectorTargetResolve(context, connector);
+    const targetUserId = context.ctx.userId;
     const profile = await profileResolve(context);
     const template = await agentPromptBundledRead("SYSTEM_ENVIRONMENT.md");
     const dockerEnabled = context.agentSystem?.config?.current?.docker?.enabled ?? false;
@@ -22,9 +23,9 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
         docker: dockerEnabled,
         model: context.model ?? "unknown",
         provider: context.provider ?? "unknown",
-        connector: isForeground ? descriptor.connector : "unknown",
-        channelId: isForeground ? descriptor.channelId : "unknown",
-        userId: isForeground ? descriptor.userId : "unknown",
+        connector: isForeground ? connector : "unknown",
+        channelId: isForeground ? targetId : "unknown",
+        userId: isForeground ? targetUserId : "unknown",
         nametag: profile?.nametag ?? null,
         firstName: profile?.firstName ?? null,
         lastName: profile?.lastName ?? null,
@@ -32,6 +33,28 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
         timezone: profile?.timezone ?? null
     });
     return section.trim();
+}
+
+async function connectorTargetResolve(context: AgentSystemPromptContext, connector: string | null): Promise<string> {
+    if (!connector || !context.agentSystem) {
+        return "unknown";
+    }
+    const users = context.agentSystem.storage?.users;
+    if (!users) {
+        return "unknown";
+    }
+    const user = await users.findById(context.ctx.userId);
+    if (!user) {
+        return "unknown";
+    }
+    const prefix = `${connector}:`;
+    const connectorKeys = Array.isArray(user.connectorKeys) ? user.connectorKeys : [];
+    const connectorKey = connectorKeys.find((entry) => entry.connectorKey.startsWith(prefix))?.connectorKey;
+    if (!connectorKey) {
+        return "unknown";
+    }
+    const targetId = connectorKey.slice(prefix.length).trim();
+    return targetId || "unknown";
 }
 
 /** Looks up structured user profile fields from storage. */

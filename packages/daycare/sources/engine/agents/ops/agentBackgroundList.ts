@@ -1,6 +1,7 @@
 import type { Config } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageResolve } from "../../../storage/storageResolve.js";
+import type { AgentKind } from "./agentConfigTypes.js";
 import type { BackgroundAgentState } from "./agentTypes.js";
 
 /**
@@ -13,31 +14,11 @@ export async function agentBackgroundList(storageOrConfig: Storage | Config): Pr
     const results: BackgroundAgentState[] = [];
 
     for (const record of records) {
-        const descriptor = record.descriptor;
-        if (descriptor.type === "user") {
+        if (record.foreground) {
             continue;
         }
-
-        const name =
-            descriptor.type === "subagent"
-                ? (descriptor.name ?? "subagent")
-                : descriptor.type === "permanent"
-                  ? (descriptor.name ?? "permanent")
-                  : descriptor.type === "cron"
-                    ? (descriptor.name ?? "cron task")
-                    : descriptor.type === "task"
-                      ? `task ${descriptor.id}`
-                      : descriptor.type === "memory-agent"
-                        ? "memory-agent"
-                        : descriptor.type === "memory-search"
-                          ? (descriptor.name ?? "memory-search")
-                          : descriptor.type === "swarm"
-                            ? `swarm ${descriptor.id}`
-                            : descriptor.tag;
-        const parentAgentId =
-            descriptor.type === "subagent" || descriptor.type === "memory-search"
-                ? (descriptor.parentAgentId ?? null)
-                : null;
+        const name = agentNameResolve(record.kind, record.name);
+        const parentAgentId = record.parentAgentId ?? null;
 
         results.push({
             agentId: record.id,
@@ -51,4 +32,23 @@ export async function agentBackgroundList(storageOrConfig: Storage | Config): Pr
     }
 
     return results;
+}
+
+function agentNameResolve(kind: AgentKind, name: string | null): string | null {
+    if (name?.trim()) {
+        return name.trim();
+    }
+    if (kind === "memory") {
+        return "memory-agent";
+    }
+    if (kind === "search") {
+        return "memory-search";
+    }
+    if (kind === "sub") {
+        return "subagent";
+    }
+    if (kind === "connector") {
+        return "user";
+    }
+    return null;
 }

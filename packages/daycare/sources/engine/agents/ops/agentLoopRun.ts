@@ -46,11 +46,11 @@ import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
-import { agentDescriptorTargetResolve } from "./agentDescriptorTargetResolve.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import type { AgentLoopPendingPhase, PersistedDeferredEntry } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
+import { agentPathTargetResolve } from "./agentPathTargetResolve.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
@@ -147,16 +147,19 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const historyRecords: AgentHistoryRecord[] = [];
     const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
     let activeSkills: AgentSkill[] = [];
-    const isChildAgent = agent.descriptor.type === "subagent" || agent.descriptor.type === "memory-search";
+    const kind = agent.config.kind ?? "agent";
+    const isChildAgent = kind === "sub" || kind === "search";
     let childAgentNudged = false;
     let childAgentMessageSent = false;
-    const target = agentDescriptorTargetResolve(agent.descriptor);
+    const target = await agentPathTargetResolve(agentSystem.storage, agent.ctx.userId, agent.config);
+    const parentAgentId = isChildAgent ? agent.config.parentAgentId : null;
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {
         ctx: agent.ctx,
-        descriptor: agent.descriptor
+        path: agent.path,
+        config: agent.config
     };
-    const allowedToolNames = agentToolExecutionAllowlistResolve(agent.descriptor);
+    const allowedToolNames = agentToolExecutionAllowlistResolve(kind);
     const restoreOnly = Boolean(initialPhase && stopAfterPendingPhase);
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
     const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
@@ -200,11 +203,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             execute: async (toolCall, toolContext) => {
                 if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
                     const args = toolCall.arguments as { agentId?: string; text?: string };
-                    const parentId =
-                        "parentAgentId" in agent.descriptor
-                            ? (agent.descriptor as { parentAgentId?: string }).parentAgentId
-                            : undefined;
-                    if (!args.agentId || args.agentId === parentId) {
+                    if (!args.agentId || args.agentId === parentAgentId) {
                         childAgentMessageSent = true;
                         if (args.text) {
                             finalResponseText = args.text;

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentDescriptor, MessageContext } from "@/types";
+import type { MessageContext } from "@/types";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
 
 type Handler = (payload: unknown) => void | Promise<void>;
@@ -203,7 +203,7 @@ describe("TelegramConnector incoming documents", () => {
         const [message] = messageHandlerMock.mock.calls[0] as [
             { text: string | null; files?: unknown[] },
             MessageContext,
-            AgentDescriptor
+            string
         ];
         expect(message.text).toBe("Document received: notes.txt (download failed).");
         expect(message.files).toBeUndefined();
@@ -338,7 +338,7 @@ describe("TelegramConnector incoming stickers", () => {
         const [message] = messageHandlerMock.mock.calls[0] as [
             { text: string | null; files?: Array<{ name: string; mimeType: string; path: string; size: number }> },
             MessageContext,
-            AgentDescriptor
+            string
         ];
         expect(message.text).toBeNull();
         expect(message.files).toEqual([
@@ -498,7 +498,7 @@ describe("TelegramConnector incoming stickers", () => {
         const [message] = secondMessageHandler.mock.calls[0] as [
             { files?: Array<{ id: string; name: string; mimeType: string; path: string; size: number }> },
             MessageContext,
-            AgentDescriptor
+            string
         ];
         expect(message.files).toEqual([
             {

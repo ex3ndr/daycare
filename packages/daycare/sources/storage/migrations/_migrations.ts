@@ -56,5 +56,13 @@ export const migrations: Migration[] = [
     {
         name: "20260301_agent_paths",
         fileName: "20260301_agent_paths.sql"
+    },
+    {
+        name: "20260301_agents_remove_descriptors",
+        fileName: "20260301_agents_remove_descriptors.sql"
+    },
+    {
+        name: "20260301_agents_config_semantics",
+        fileName: "20260301_agents_config_semantics.sql"
     }
 ];

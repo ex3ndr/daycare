@@ -154,11 +154,31 @@ function contextBuild(options: {
         assistant: null,
         agent: {
             id: "agent-1",
-            descriptor: { type: "user", connector: "telegram", userId: "123", channelId: "123" }
+            path: "/123/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "123", agentId: "agent-1" }),
         source: "telegram",
         messageContext: {},
-        agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
+        agentSystem: {
+            storage: {
+                users: {
+                    findById: async () => ({
+                        id: "123",
+                        connectorKeys: [{ connectorKey: "telegram:123" }]
+                    })
+                }
+            }
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

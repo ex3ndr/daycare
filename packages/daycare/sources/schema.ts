@@ -72,10 +72,16 @@ export const agentsTable = pgTable(
         version: integer("version").notNull().default(1),
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
-        type: text("type").notNull(),
-        descriptor: text("descriptor").notNull(),
-        path: text("path"),
-        config: text("config"),
+        path: text("path").notNull(),
+        kind: text("kind").notNull().default("agent"),
+        modelRole: text("model_role"),
+        connectorName: text("connector_name"),
+        parentAgentId: text("parent_agent_id"),
+        foreground: integer("foreground").notNull().default(0),
+        name: text("name"),
+        description: text("description"),
+        systemPrompt: text("system_prompt"),
+        workspaceDir: text("workspace_dir"),
         nextSubIndex: integer("next_sub_index").notNull().default(0),
         activeSessionId: text("active_session_id"),
         permissions: text("permissions").notNull(),
@@ -90,6 +96,7 @@ export const agentsTable = pgTable(
         primaryKey({ columns: [table.id, table.version] }),
         index("idx_agents_user_id").on(table.userId),
         uniqueIndex("idx_agents_path_active").on(table.path).where(sql`${table.validTo} IS NULL`),
+        index("idx_agents_parent_agent_id").on(table.parentAgentId).where(sql`${table.validTo} IS NULL`),
         index("idx_agents_id_valid_to").on(table.id, table.validTo)
     ]
 );

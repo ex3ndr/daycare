@@ -6,7 +6,8 @@ import { createId } from "@paralleldrive/cuid2";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 import type {
-    AgentDescriptor,
+    AgentConfig,
+    AgentCreationConfig,
     AgentHistoryRecord,
     AgentInboxItem,
     AgentInboxResult,
@@ -41,14 +42,17 @@ import { DelayedSignals } from "../signals/delayedSignals.js";
 import { Signals } from "../signals/signals.js";
 import { UserHome } from "../users/userHome.js";
 import { Agent } from "./agent.js";
+import {
+    type AgentLegacyDescriptor,
+    agentCreationConfigFromLegacyDescriptor,
+    agentPathFromLegacyDescriptor
+} from "./agentLegacyDescriptorTestUtils.js";
 import { AgentSystem } from "./agentSystem.js";
 import { contextForAgent, contextForUser } from "./context.js";
-import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentPathMemory } from "./ops/agentPathBuild.js";
-import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 
 describe("Agent", () => {
@@ -73,7 +77,7 @@ describe("Agent", () => {
             agentSystem.setCrons({} as unknown as Crons);
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "slack",
                 channelId: "channel-1",
@@ -82,10 +86,24 @@ describe("Agent", () => {
             const userId = createId();
             const userHome = agentSystem.userHomeForUserId(userId);
             const ctx = contextForAgent({ userId, agentId });
-            await Agent.create(ctx, descriptor, new AgentInbox(agentId), agentSystem, userHome);
+            const agentPathValue = agentPathFromLegacyDescriptor(descriptor, { userId });
+            await Agent.create(
+                ctx,
+                agentPathValue,
+                {
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                },
+                new AgentInbox(agentId),
+                agentSystem,
+                userHome
+            );
 
-            const restoredDescriptor = await agentDescriptorRead(agentSystem.storage, ctx);
-            expect(restoredDescriptor).toEqual(descriptor);
+            const persistedAgent = await agentSystem.storage.agents.findById(agentId);
+            expect(persistedAgent?.path).toBe(agentPathValue);
 
             const state = await agentStateRead(agentSystem.storage, ctx);
             if (!state) {
@@ -133,7 +151,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -183,7 +201,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "cron",
                 id: createId(),
                 name: "Reset Session Agent"
@@ -237,7 +255,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "cron",
                 id: createId(),
                 name: "Executable prompt cron"
@@ -298,7 +316,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "cron",
                 id: createId(),
                 name: "Executable prompt cron"
@@ -472,7 +490,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "cron",
                 id: createId(),
                 name: "Executable prompt cron"
@@ -548,7 +566,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "cron",
                 id: createId(),
                 name: "Executable prompt cron"
@@ -621,7 +639,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const sourceDescriptor: AgentDescriptor = {
+            const sourceDescriptor: AgentLegacyDescriptor = {
                 type: "cron",
                 id: createId(),
                 name: "memory-source"
@@ -755,7 +773,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -873,7 +891,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -1023,7 +1041,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -1091,7 +1109,7 @@ describe("Agent", () => {
             await agentSystem.load();
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
             await post(agentSystem, { descriptor }, { type: "reset", message: "init" });
             const ctx = await agentSystem.contextForAgentId(agentId);
             if (!ctx) {
@@ -1145,7 +1163,7 @@ describe("Agent", () => {
             await agentSystem.load();
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
             await post(agentSystem, { descriptor }, { type: "reset", message: "init" });
             const ctx = await agentSystem.contextForAgentId(agentId);
             if (!ctx) {
@@ -1302,7 +1320,7 @@ describe("Agent", () => {
             });
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Lifecycle agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Lifecycle agent" };
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init lifecycle" });
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "wake lifecycle" });
@@ -1357,7 +1375,7 @@ describe("Agent", () => {
             });
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Idle agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Idle agent" };
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init idle lifecycle" });
 
@@ -1409,7 +1427,7 @@ describe("Agent", () => {
             await agentSystem.start();
 
             const agentId = createId();
-            const descriptor: AgentDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "initial sleep" });
             const signalType = `agent:${agentId}:idle`;
@@ -1442,7 +1460,7 @@ describe("Agent", () => {
             const agentId = createId();
             const userId = createId();
             const userHome = new UserHome(config.usersDir, userId);
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "slack",
                 channelId: "ch-1",
@@ -1464,7 +1482,8 @@ describe("Agent", () => {
 
             const agent = Agent.restore(
                 contextForAgent({ userId, agentId }),
-                descriptor,
+                agentPathFromLegacyDescriptor(descriptor, { userId }),
+                agentConfigFromLegacyDescriptor(descriptor),
                 staleState,
                 new AgentInbox(agentId),
                 agentSystem,
@@ -1529,7 +1548,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "slack",
                 channelId: "channel-1",
@@ -1714,7 +1733,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -1834,7 +1853,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "slack",
                 channelId: "channel-1",
@@ -1980,7 +1999,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "slack",
                 channelId: "channel-1",
@@ -2110,7 +2129,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -2263,7 +2282,7 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "user",
                 connector: "telegram",
                 channelId: "channel-1",
@@ -2329,7 +2348,7 @@ describe("Agent", () => {
             const userId = createId();
             const userHome = new UserHome(config.usersDir, userId);
             const workspaceDir = path.join(userHome.home, "custom-workspace");
-            const descriptor: AgentDescriptor = {
+            const descriptor: AgentLegacyDescriptor = {
                 type: "permanent",
                 id: agentId,
                 name: "test-perm",
@@ -2353,7 +2372,8 @@ describe("Agent", () => {
 
             const agent = Agent.restore(
                 contextForAgent({ userId, agentId }),
-                descriptor,
+                agentPathFromLegacyDescriptor(descriptor, { userId }),
+                agentConfigFromLegacyDescriptor(descriptor),
                 staleState,
                 new AgentInbox(agentId),
                 agentSystem,
@@ -2375,15 +2395,23 @@ async function postAndAwait(
     maybeItem?: AgentInboxItem
 ): Promise<AgentInboxResult> {
     if (maybeItem) {
+        const normalizedTarget = targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context);
         return agentSystem.postAndAwait(
             ctxOrTarget as Context,
-            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
-            maybeItem
+            normalizedTarget,
+            maybeItem,
+            creationConfigResolve(targetOrItem as AgentTargetInput, ctxOrTarget as Context)
         );
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    return agentSystem.postAndAwait(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
+    const normalizedTarget = targetNormalize(target, ctx);
+    return agentSystem.postAndAwait(
+        ctx,
+        normalizedTarget,
+        targetOrItem as AgentInboxItem,
+        creationConfigResolve(target, ctx)
+    );
 }
 
 async function post(
@@ -2393,16 +2421,19 @@ async function post(
     maybeItem?: AgentInboxItem
 ): Promise<void> {
     if (maybeItem) {
+        const normalizedTarget = targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context);
         await agentSystem.post(
             ctxOrTarget as Context,
-            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
-            maybeItem
+            normalizedTarget,
+            maybeItem,
+            creationConfigResolve(targetOrItem as AgentTargetInput, ctxOrTarget as Context)
         );
         return;
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    await agentSystem.post(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
+    const normalizedTarget = targetNormalize(target, ctx);
+    await agentSystem.post(ctx, normalizedTarget, targetOrItem as AgentInboxItem, creationConfigResolve(target, ctx));
 }
 
 async function agentIdForTarget(
@@ -2411,17 +2442,20 @@ async function agentIdForTarget(
     maybeTarget?: AgentTargetInput
 ): Promise<string> {
     if (maybeTarget) {
+        const normalizedTarget = targetNormalize(maybeTarget, ctxOrTarget as Context);
         return agentSystem.agentIdForTarget(
             ctxOrTarget as Context,
-            targetNormalize(maybeTarget, ctxOrTarget as Context)
+            normalizedTarget,
+            creationConfigResolve(maybeTarget, ctxOrTarget as Context)
         );
     }
     const target = ctxOrTarget as AgentTargetInput;
     const ctx = await callerCtxResolve(agentSystem, target);
-    return agentSystem.agentIdForTarget(ctx, targetNormalize(target, ctx));
+    const normalizedTarget = targetNormalize(target, ctx);
+    return agentSystem.agentIdForTarget(ctx, normalizedTarget, creationConfigResolve(target, ctx));
 }
 
-type AgentTargetInput = AgentPostTarget | { descriptor: AgentDescriptor };
+type AgentTargetInput = AgentPostTarget | { descriptor: AgentLegacyDescriptor };
 
 async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInput): Promise<Context> {
     if ("agentId" in target) {
@@ -2454,7 +2488,21 @@ function targetNormalize(target: AgentTargetInput, ctx: Context): AgentPostTarge
     if ("agentId" in target || "path" in target) {
         return target;
     }
-    return { path: agentPathFromDescriptor(target.descriptor, { userId: ctx.userId }) };
+    return { path: agentPathFromLegacyDescriptor(target.descriptor, { userId: ctx.userId }) };
+}
+
+function creationConfigResolve(target: AgentTargetInput, ctx: Context): AgentCreationConfig | undefined {
+    if ("agentId" in target) {
+        return undefined;
+    }
+    if ("path" in target) {
+        return creationConfigFromPath(target.path);
+    }
+    const config = agentCreationConfigFromLegacyDescriptor(target.descriptor);
+    if ((config.kind === "sub" || config.kind === "search" || config.kind === "memory") && !config.parentAgentId) {
+        config.parentAgentId = ctx.agentId ?? null;
+    }
+    return config;
 }
 
 async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {
@@ -2474,6 +2522,65 @@ function pathUserIdResolve(path: AgentPath): string | null {
         return null;
     }
     return first;
+}
+
+function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    if (segments[0] === "system") {
+        return { kind: "system", name: segments[1] ?? null };
+    }
+    if (segments[1] === "agent" && segments[2] === "swarm") {
+        return { kind: "swarm", foreground: true, name: "swarm" };
+    }
+    if (segments[1] === "agent") {
+        if (segments.at(-2) === "sub") {
+            return { kind: "sub", name: "subagent" };
+        }
+        if (segments.at(-2) === "search") {
+            return { kind: "search", name: "memory-search" };
+        }
+        return { kind: "agent" };
+    }
+    if (segments[1] === "sub" || segments.at(-2) === "sub") {
+        return { kind: "sub", name: "subagent" };
+    }
+    if (segments[1] === "search" || segments.at(-2) === "search") {
+        return { kind: "search", name: "memory-search" };
+    }
+    if (segments[1] === "memory" || segments.at(-1) === "memory") {
+        return { kind: "memory", name: "memory-agent" };
+    }
+    if (segments[1] === "cron") {
+        return { kind: "cron", name: segments[2] ?? null };
+    }
+    if (segments[1] === "task") {
+        return { kind: "task", name: segments[2] ?? null };
+    }
+    if (segments[1] === "subuser") {
+        return { kind: "subuser", name: segments[2] ?? null };
+    }
+    return {
+        kind: "connector",
+        foreground: true,
+        connectorName: segments[1] ?? null
+    };
+}
+
+function agentConfigFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): AgentConfig {
+    const creation = agentCreationConfigFromLegacyDescriptor(descriptor);
+    return {
+        kind: creation.kind,
+        modelRole: creation.modelRole ?? null,
+        connectorName: creation.connectorName ?? null,
+        parentAgentId: creation.parentAgentId ?? null,
+        foreground: creation.foreground ?? (creation.kind === "connector" || creation.kind === "swarm"),
+        name: creation.name ?? null,
+        description: creation.description ?? null,
+        systemPrompt: creation.systemPrompt ?? null,
+        workspaceDir: creation.workspaceDir ?? null
+    };
 }
 
 async function signalsBuild(

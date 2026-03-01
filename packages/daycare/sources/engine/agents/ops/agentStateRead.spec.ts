@@ -9,10 +9,10 @@ import { storageOpen } from "../../../storage/storageOpen.js";
 import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent } from "../context.js";
-import { agentDescriptorWrite } from "./agentDescriptorWrite.js";
 import { agentStateRead } from "./agentStateRead.js";
 import { agentStateWrite } from "./agentStateWrite.js";
 import type { AgentState } from "./agentTypes.js";
+import { agentWrite } from "./agentWrite.js";
 
 describe("agentStateRead", () => {
     it("reads persisted state and resolves inference session id from active session", async () => {
@@ -24,13 +24,16 @@ describe("agentStateRead", () => {
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const ctx = contextForAgent({ userId, agentId });
-            await agentDescriptorWrite(
+            await agentWrite(
                 storage,
                 ctx,
+                `/${userId}/cron/${agentId}`,
                 {
-                    type: "cron",
-                    id: agentId,
-                    name: "state"
+                    foreground: false,
+                    name: "state",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );
@@ -88,13 +91,16 @@ describe("agentStateRead", () => {
             const userId = createId();
             const permissions = permissionBuildUser(new UserHome(config.usersDir, userId));
             const ctx = contextForAgent({ userId, agentId });
-            await agentDescriptorWrite(
+            await agentWrite(
                 storage,
                 ctx,
+                `/${userId}/cron/${agentId}`,
                 {
-                    type: "cron",
-                    id: agentId,
-                    name: "state"
+                    foreground: false,
+                    name: "state",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 permissions
             );

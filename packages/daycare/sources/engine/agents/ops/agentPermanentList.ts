@@ -4,7 +4,7 @@ import { storageResolve } from "../../../storage/storageResolve.js";
 import type { PermanentAgentSummary } from "./agentPermanentTypes.js";
 
 /**
- * Lists persisted permanent agents with descriptors and timestamps.
+ * Lists persisted permanent agents with config metadata and timestamps.
  * Expects: storage migrations are applied before listing.
  */
 export async function agentPermanentList(storageOrConfig: Storage | Config): Promise<PermanentAgentSummary[]> {
@@ -13,20 +13,18 @@ export async function agentPermanentList(storageOrConfig: Storage | Config): Pro
     const results: PermanentAgentSummary[] = [];
 
     for (const record of records) {
-        const descriptor = record.descriptor;
-        if (descriptor.type !== "permanent") {
+        if (record.kind !== "agent") {
+            continue;
+        }
+        if (!record.name || !record.systemPrompt) {
             continue;
         }
         results.push({
             agentId: record.id,
-            descriptor: {
-                ...descriptor,
-                name: descriptor.name.trim(),
-                ...(descriptor.username ? { username: descriptor.username.trim() } : {}),
-                description: descriptor.description.trim(),
-                systemPrompt: descriptor.systemPrompt.trim(),
-                ...(descriptor.workspaceDir ? { workspaceDir: descriptor.workspaceDir } : {})
-            },
+            name: record.name.trim(),
+            description: record.description?.trim() ?? "",
+            systemPrompt: record.systemPrompt.trim(),
+            workspaceDir: record.workspaceDir ?? null,
             updatedAt: record.updatedAt
         });
     }
