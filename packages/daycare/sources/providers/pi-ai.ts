@@ -150,10 +150,9 @@ function resolveModelId(providerId: string, models: ProviderModelInfo[], preferr
     }
 
     if (preferred) {
-        const match = models.find((model) => model.id === preferred);
-        if (match) {
-            return match.id;
-        }
+        // Preserve explicit model selections from role overrides/settings.
+        // Unknown ids should fail in getModel() instead of silently falling back.
+        return preferred;
     }
 
     return (
