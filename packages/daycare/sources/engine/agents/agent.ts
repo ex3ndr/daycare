@@ -429,8 +429,10 @@ export class Agent {
         // Resolve configured system prompts (global, per-user, conditional)
         const resolvedPrompts = await systemPromptResolve(this.agentSystem.storage, this.ctx.userId, isFirstMessage);
 
-        // Prepend first-message prompt to user message text if applicable
-        if (resolvedPrompts.firstMessagePrompt && entry.message.text !== null) {
+        // First-message prompts are user-facing guidance and should not alter
+        // internal/background agent inputs (memory-agent, cron, subagent, app, etc.).
+        const shouldPrependFirstMessagePrompt = this.descriptor.type === "user" || this.descriptor.type === "subuser";
+        if (shouldPrependFirstMessagePrompt && resolvedPrompts.firstMessagePrompt && entry.message.text !== null) {
             entry.message.text = `${resolvedPrompts.firstMessagePrompt}\n\n${entry.message.text}`;
             pendingUserRecord = {
                 ...pendingUserRecord!,

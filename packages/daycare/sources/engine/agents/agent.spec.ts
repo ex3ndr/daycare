@@ -330,6 +330,117 @@ describe("Agent", () => {
         }
     });
 
+    it("uses memory-agent system prompt and skips first-message prepend", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-memory-prompt-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const complete = vi.fn(async (_context: unknown, _sessionId: string) => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant",
+                    content: [{ type: "text", text: "ok" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setHeartbeats({} as Parameters<AgentSystem["setHeartbeats"]>[0]);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const sourceDescriptor: AgentDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "memory-source"
+            };
+            await postAndAwait(
+                agentSystem,
+                { descriptor: sourceDescriptor },
+                { type: "reset", message: "seed source" }
+            );
+            const sourceAgentId = await agentIdForTarget(agentSystem, { descriptor: sourceDescriptor });
+            const sourceCtx = await contextForAgentIdRequire(agentSystem, sourceAgentId);
+
+            const firstMessageSentinel = "FIRST_MESSAGE_PROMPT_SHOULD_NOT_APPEAR";
+            const now = Date.now();
+            await agentSystem.storage.systemPrompts.create({
+                id: createId(),
+                scope: "user",
+                userId: sourceCtx.userId,
+                kind: "first_message",
+                condition: null,
+                prompt: firstMessageSentinel,
+                enabled: true,
+                createdAt: now,
+                updatedAt: now
+            });
+
+            await postAndAwait(
+                agentSystem,
+                { descriptor: { type: "memory-agent", id: sourceAgentId } },
+                {
+                    type: "system_message",
+                    text: "PostgreSQL in production was upgraded to version 16.",
+                    origin: "memory-worker:test"
+                }
+            );
+
+            expect(complete).toHaveBeenCalledOnce();
+            const firstCall = complete.mock.calls[0];
+            if (!firstCall) {
+                throw new Error("Expected inference call");
+            }
+            const inferenceContext = firstCall[0] as {
+                systemPrompt?: string;
+                messages?: Array<{ role?: string; content?: unknown }>;
+            };
+            expect(inferenceContext.systemPrompt ?? "").toContain("You are a memory processing agent.");
+
+            const userMessage = (inferenceContext.messages ?? []).find((message) => message.role === "user");
+            const userText =
+                typeof userMessage?.content === "string"
+                    ? userMessage.content
+                    : JSON.stringify(userMessage?.content ?? "");
+            expect(userText).toContain("<system_message");
+            expect(userText).not.toContain(firstMessageSentinel);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("shows typing and writes compaction logs for manual compaction", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
