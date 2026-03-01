@@ -6,3 +6,4 @@ packages/daycare-dashboard/out
 .daycare
 .data
 *.tsbuildinfo
+:memory:
