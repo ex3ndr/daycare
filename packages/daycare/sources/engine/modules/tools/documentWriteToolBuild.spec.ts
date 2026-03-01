@@ -160,4 +160,25 @@ describe("documentWriteToolBuild", () => {
             storage.connection.close();
         }
     });
+
+    it("rejects path-unsafe slugs", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        slug: "user/profile",
+                        title: "User",
+                        description: "User facts",
+                        body: "x"
+                    },
+                    contextBuild(storage),
+                    toolCall
+                )
+            ).rejects.toThrow("cannot contain '/'");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

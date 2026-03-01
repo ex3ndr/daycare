@@ -28,10 +28,11 @@ print(result["path"])  # e.g. ~/outputs/20250615103045-step-1-results.md
 
 Loops with tool calls are supported — up to ~100 iterations is fine. The runtime cannot be interrupted mid-execution, so always use a bounded loop (`for item in items[:100]`), never an open-ended `while True`.
 ```python
-nodes = memory_search(query="status")
-for node in nodes["results"][:50]:
-    data = memory_node_read(node["id"])
-    print(data["content"])
+paths = ["~/memory", "~/memory/user", "~/memory/projects"]
+for path in paths[:50]:
+    data = document_read(path=path)
+    if data["found"]:
+        print(data["summary"])
 ```
 
 Tool output shown to the model is truncated. Prefer `exec` + `write_output` for larger shell results:

@@ -308,4 +308,75 @@ describe("DocumentsRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("rejects path-unsafe slugs in repository create/update and lookup", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new DocumentsRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            await expect(
+                repo.create(ctx, {
+                    id: "bad-create",
+                    slug: "bad/create",
+                    title: "Bad",
+                    description: "Bad",
+                    body: "",
+                    createdAt: 1,
+                    updatedAt: 1
+                })
+            ).rejects.toThrow("cannot contain '/'");
+
+            await repo.create(ctx, {
+                id: "good",
+                slug: "good",
+                title: "Good",
+                description: "Good",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2
+            });
+
+            await expect(repo.update(ctx, "good", { slug: "bad/update", updatedAt: 3 })).rejects.toThrow(
+                "cannot contain '/'"
+            );
+            await expect(repo.findBySlugAndParent(ctx, "bad/lookup", null)).rejects.toThrow("cannot contain '/'");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("round-trips path-safe slugs through resolve/find", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new DocumentsRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            await repo.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create(ctx, {
+                id: "user-doc",
+                slug: "user_profile-1.2",
+                title: "User",
+                description: "User",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "memory"
+            });
+
+            const path = await documentPathResolve(ctx, "user-doc", repo);
+            expect(path).toBe("~/memory/user_profile-1.2");
+            expect(await documentPathFind(ctx, String(path ?? ""), repo)).toBe("user-doc");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

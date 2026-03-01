@@ -5,6 +5,7 @@ import { documentReferencesTable, documentsTable } from "../schema.js";
 import { AsyncLock } from "../util/lock.js";
 import type { DocumentDbRecord, DocumentReferenceDbRecord, DocumentReferenceKind } from "./databaseTypes.js";
 import { documentBodyRefs } from "./documentBodyRefs.js";
+import { documentSlugNormalize } from "./documentSlugNormalize.js";
 import { versionAdvance } from "./versionAdvance.js";
 
 export type DocumentCreateInput = {
@@ -109,10 +110,7 @@ export class DocumentsRepository {
         if (!userId) {
             return null;
         }
-        const normalizedSlug = slug.trim();
-        if (!normalizedSlug) {
-            return null;
-        }
+        const normalizedSlug = documentSlugNormalize(slug);
         return this.documentLoadBySlugAndParent(userId, normalizedSlug, documentIdNormalizeOptional(parentId));
     }
 
@@ -305,10 +303,11 @@ export class DocumentsRepository {
                 input.linkTargetIds === undefined
                     ? currentRefs.linkTargetIds
                     : documentIdsNormalize(input.linkTargetIds);
+            const nextSlug = input.slug === undefined ? current.slug : documentSlugNormalize(input.slug);
 
             const merged: DocumentDbRecord = {
                 ...current,
-                slug: input.slug?.trim() || current.slug,
+                slug: nextSlug,
                 title: input.title?.trim() || current.title,
                 description: input.description === undefined ? current.description : input.description.trim(),
                 body: input.body === undefined ? current.body : input.body,
@@ -684,10 +683,7 @@ function documentCreateNormalize(input: DocumentCreateInput): DocumentCreateInpu
         throw new Error("Document id is required.");
     }
 
-    const normalizedSlug = input.slug.trim();
-    if (!normalizedSlug) {
-        throw new Error("Document slug is required.");
-    }
+    const normalizedSlug = documentSlugNormalize(input.slug);
 
     const normalizedTitle = input.title.trim();
     if (!normalizedTitle) {

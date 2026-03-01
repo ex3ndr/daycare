@@ -4,6 +4,7 @@ import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
+import { documentSlugNormalize } from "../../../storage/documentSlugNormalize.js";
 
 const schema = Type.Object(
     {
@@ -57,10 +58,7 @@ export function documentWriteToolBuild(): ToolDefinition {
             }
 
             const payload = args as DocumentWriteArgs;
-            const slug = payload.slug.trim();
-            if (!slug) {
-                throw new Error("Document slug is required.");
-            }
+            const slug = documentSlugNormalize(payload.slug);
             const title = payload.title.trim();
             if (!title) {
                 throw new Error("Document title is required.");
