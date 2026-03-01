@@ -95,6 +95,7 @@ import {
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
 import { buildVoiceListTool } from "./modules/tools/voice-list.js";
+import { observationQueryToolBuild } from "./observations/observationQueryToolBuild.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -497,6 +498,7 @@ export class Engine {
         this.modules.tools.register("core", exposeRemoveToolBuild(this.exposes));
         this.modules.tools.register("core", exposeUpdateToolBuild(this.exposes));
         this.modules.tools.register("core", exposeListToolBuild(this.exposes));
+        this.modules.tools.register("core", observationQueryToolBuild(this.storage.observationLog));
         this.modules.tools.register("core", memoryNodeReadToolBuild());
         this.modules.tools.register("core", memoryNodeWriteToolBuild());
         await this.apps.discover();

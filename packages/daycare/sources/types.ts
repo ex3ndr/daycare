@@ -98,6 +98,9 @@ export type {
     ToolResultValue,
     ToolVisibilityContext
 } from "./engine/modules/tools/types.js";
+// Observations
+export { type ObservationEmitInput, observationEmit } from "./engine/observations/observationEmit.js";
+export { type ObservationLogFormatMode, observationLogFormat } from "./engine/observations/observationLogFormat.js";
 // Permissions
 export type { SessionPermissions } from "./engine/permissions.js";
 // Plugins
@@ -147,6 +150,9 @@ export type {
 } from "./sandbox/sandboxTypes.js";
 // Storage
 export type {
+    ObservationLogDbRecord,
+    ObservationLogFindOptions,
+    ObservationLogRecentOptions,
     UserConnectorKeyDbRecord,
     UserDbRecord
 } from "./storage/databaseTypes.js";
