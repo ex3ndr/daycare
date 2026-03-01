@@ -17,7 +17,6 @@ import {
   fetchAgentSessions,
   fetchAgents,
   fetchSignalSubscriptions,
-  type AgentDescriptor,
   type AgentHistoryRecord,
   type AgentSummary,
   type AssistantContentBlock,
@@ -26,7 +25,7 @@ import {
   type SessionSummary,
   type SignalSubscription
 } from "@/lib/engine-client";
-import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
+import { buildAgentType, formatAgentIdentity, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
 
 export default function AgentDetailPage() {
   const searchParams = useSearchParams();
@@ -304,8 +303,8 @@ export default function AgentDetailPage() {
                 <MessageSquare className="h-5 w-5" />
               </div>
             </CardHeader>
-            <CardContent className="truncate text-xs text-muted-foreground" title={summary ? formatAgentDescriptor(summary.descriptor) : "Unknown"}>
-              Descriptor: {summary ? formatAgentDescriptor(summary.descriptor) : "Unknown"}
+            <CardContent className="truncate text-xs text-muted-foreground" title={summary ? formatAgentIdentity(summary) : "Unknown"}>
+              Path: {summary ? formatAgentIdentity(summary) : "Unknown"}
             </CardContent>
           </Card>
           <Card className="overflow-hidden bg-gradient-to-br from-accent/10 via-card to-card/80">
@@ -1114,33 +1113,6 @@ function truncateText(text: string, maxLength: number) {
     return text;
   }
   return `${text.slice(0, maxLength - 3)}...`;
-}
-
-function formatAgentDescriptor(descriptor: AgentDescriptor) {
-  switch (descriptor.type) {
-    case "user":
-      return `${descriptor.connector}:${descriptor.userId} / ${descriptor.channelId}`;
-    case "cron":
-      return `cron:${descriptor.id}`;
-    case "task":
-      return `task:${descriptor.id}`;
-    case "system":
-      return `system:${descriptor.tag}`;
-    case "subagent":
-      return descriptor.name ? `${descriptor.name} / ${descriptor.id}` : descriptor.id;
-    case "app":
-      return `${descriptor.name} / ${descriptor.appId}`;
-    case "permanent":
-      return `${descriptor.name} / ${descriptor.id}`;
-    case "memory-agent":
-      return `memory-agent:${descriptor.id}`;
-    case "memory-search":
-      return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
-    case "subuser":
-      return `subuser:${descriptor.name} / ${descriptor.id}`;
-    default:
-      return "system";
-  }
 }
 
 function formatDateTime(timestamp: number) {

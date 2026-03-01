@@ -52,13 +52,12 @@ import {
   type EngineStatus,
   type HeartbeatTask,
   type AgentSummary,
-  type AgentDescriptor,
   type SignalEvent,
   type SignalSource,
   type SignalSubscription,
   type TokenStatsRow
 } from "@/lib/engine-client";
-import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
+import { buildAgentType, formatAgentIdentity, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
 import type { LucideIcon } from "lucide-react";
 
 type InventoryItem = {
@@ -1033,7 +1032,7 @@ function AgentsTable({ agents }: { agents: AgentSummary[] }) {
               <TableRow>
                 <TableHead>Agent</TableHead>
                 <TableHead className="hidden md:table-cell">Updated</TableHead>
-                <TableHead className="hidden lg:table-cell">Descriptor</TableHead>
+                <TableHead className="hidden lg:table-cell">Path</TableHead>
                 <TableHead className="hidden xl:table-cell">Type</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -1051,7 +1050,7 @@ function AgentsTable({ agents }: { agents: AgentSummary[] }) {
                         {agent.agentId}
                       </Link>
                       <div className="text-xs text-muted-foreground lg:hidden">
-                        {formatAgentDescriptor(agent.descriptor)}
+                        {formatAgentIdentity(agent)}
                       </div>
                       <div className="mt-1 text-[11px] text-muted-foreground lg:hidden">
                         {formatAgentTypeLabel(agentType)}
@@ -1061,7 +1060,7 @@ function AgentsTable({ agents }: { agents: AgentSummary[] }) {
                       {formatAgentTime(agent)}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <span className="text-xs text-muted-foreground">{formatAgentDescriptor(agent.descriptor)}</span>
+                      <span className="text-xs text-muted-foreground">{formatAgentIdentity(agent)}</span>
                     </TableCell>
                     <TableCell className="hidden xl:table-cell">
                       <div className="flex flex-col gap-1">
@@ -1142,33 +1141,6 @@ function buildActivitySeries(range: string, agentCount: number, cronCount: numbe
       cron: cronValue
     };
   });
-}
-
-function formatAgentDescriptor(descriptor: AgentDescriptor) {
-  switch (descriptor.type) {
-    case "user":
-      return `${descriptor.connector}:${descriptor.userId} / ${descriptor.channelId}`;
-    case "cron":
-      return `cron:${descriptor.id}`;
-    case "task":
-      return `task:${descriptor.id}`;
-    case "system":
-      return `system:${descriptor.tag}`;
-    case "subagent":
-      return descriptor.name ? `${descriptor.name} / ${descriptor.id}` : descriptor.id;
-    case "app":
-      return `${descriptor.name} / ${descriptor.appId}`;
-    case "permanent":
-      return `${descriptor.name} / ${descriptor.id}`;
-    case "memory-agent":
-      return `memory-agent:${descriptor.id}`;
-    case "memory-search":
-      return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
-    case "subuser":
-      return `subuser:${descriptor.name} / ${descriptor.id}`;
-    default:
-      return "system";
-  }
 }
 
 function formatInterval(ms?: number) {

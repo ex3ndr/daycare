@@ -12,11 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   fetchAgents,
-  type AgentDescriptor,
   type AgentSummary,
   type EngineEvent
 } from "@/lib/engine-client";
-import { buildAgentType, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
+import { buildAgentType, formatAgentIdentity, formatAgentTypeLabel, formatAgentTypeObject } from "@/lib/agent-types";
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentSummary[]>([]);
@@ -233,7 +232,7 @@ export default function AgentsPage() {
                   <TableRow>
                     <TableHead>Agent</TableHead>
                     <TableHead className="hidden md:table-cell">Updated</TableHead>
-                    <TableHead className="hidden lg:table-cell">Descriptor</TableHead>
+                    <TableHead className="hidden lg:table-cell">Path</TableHead>
                     <TableHead className="hidden xl:table-cell">Type</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -251,7 +250,7 @@ export default function AgentsPage() {
                             {agent.agentId}
                           </Link>
                           <div className="text-xs text-muted-foreground lg:hidden">
-                            {formatAgentDescriptor(agent.descriptor)}
+                            {formatAgentIdentity(agent)}
                           </div>
                           <div className="mt-1 text-[11px] text-muted-foreground lg:hidden">
                             {formatAgentTypeLabel(agentType)}
@@ -261,9 +260,7 @@ export default function AgentsPage() {
                           {formatAgentTime(agent)}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
-                          <span className="text-xs text-muted-foreground">
-                            {formatAgentDescriptor(agent.descriptor)}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{formatAgentIdentity(agent)}</span>
                         </TableCell>
                         <TableCell className="hidden xl:table-cell">
                           <div className="flex flex-col gap-1">
@@ -315,35 +312,8 @@ function formatAgentTime(agent: AgentSummary) {
   return new Date(agent.updatedAt).toLocaleString();
 }
 
-function formatAgentDescriptor(descriptor: AgentDescriptor) {
-  switch (descriptor.type) {
-    case "user":
-      return `${descriptor.connector}:${descriptor.userId} / ${descriptor.channelId}`;
-    case "cron":
-      return `cron:${descriptor.id}`;
-    case "task":
-      return `task:${descriptor.id}`;
-    case "system":
-      return `system:${descriptor.tag}`;
-    case "subagent":
-      return descriptor.name ? `${descriptor.name} / ${descriptor.id}` : descriptor.id;
-    case "app":
-      return `${descriptor.name} / ${descriptor.appId}`;
-    case "permanent":
-      return `${descriptor.name} / ${descriptor.id}`;
-    case "memory-agent":
-      return `memory-agent:${descriptor.id}`;
-    case "memory-search":
-      return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
-    case "subuser":
-      return `subuser:${descriptor.name} / ${descriptor.id}`;
-    default:
-      return "system";
-  }
-}
-
 function buildAgentSearchText(agent: AgentSummary, agentType = buildAgentType(agent)) {
-  return `${agent.agentId} ${formatAgentDescriptor(agent.descriptor)} ${formatAgentTypeLabel(agentType)} ${agent.lifecycle}`.toLowerCase();
+  return `${agent.agentId} ${formatAgentIdentity(agent)} ${formatAgentTypeLabel(agentType)} ${agent.lifecycle}`.toLowerCase();
 }
 
 function formatAgentTypeKey(type: string) {

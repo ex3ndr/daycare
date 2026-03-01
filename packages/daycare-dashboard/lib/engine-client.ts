@@ -104,9 +104,19 @@ export type AgentDescriptor =
   | { type: "memory-search"; id: string; parentAgentId: string; name: string }
   | { type: "subuser"; id: string; name: string };
 
+export type AgentConfig = {
+  name?: string;
+  username?: string;
+  description?: string;
+  systemPrompt?: string;
+  workspaceDir?: string;
+};
+
 export type AgentSummary = {
   agentId: string;
-  descriptor: AgentDescriptor;
+  path: string | null;
+  config: AgentConfig | null;
+  descriptor?: AgentDescriptor;
   lifecycle: "active" | "sleeping" | "dead";
   updatedAt: number;
 };

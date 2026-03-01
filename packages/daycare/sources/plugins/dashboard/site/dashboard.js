@@ -58,11 +58,45 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function formatAgentType(descriptor) {
-  if (!descriptor || typeof descriptor !== "object") {
+function pathSegments(path) {
+  return String(path)
+    .split("/")
+    .filter((segment) => segment.length > 0);
+}
+
+function formatAgentType(path) {
+  if (typeof path !== "string" || path.trim().length === 0) {
     return "unknown";
   }
-  return descriptor.type ?? "unknown";
+  const segments = pathSegments(path);
+  if (segments.length === 0) {
+    return "unknown";
+  }
+  if (segments[0] === "system") {
+    return segments[1] === "heartbeat" ? "heartbeat" : "system";
+  }
+  if (path.endsWith("/memory")) {
+    return "memory-agent";
+  }
+  if (segments.length >= 2 && segments[segments.length - 2] === "search") {
+    return "memory-search";
+  }
+  if (segments.length >= 2 && segments[segments.length - 2] === "sub") {
+    return "subagent";
+  }
+  if (segments[1] === "cron") {
+    return "cron";
+  }
+  if (segments[1] === "task") {
+    return "task";
+  }
+  if (segments[1] === "agent") {
+    return "permanent";
+  }
+  if (segments[1] === "subuser") {
+    return "subuser";
+  }
+  return "connection";
 }
 
 function formatTimestamp(ms) {
@@ -92,7 +126,7 @@ function renderAgents(agents) {
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     .slice(0, MAX_AGENTS)
     .map((agent) => {
-      const type = formatAgentType(agent.descriptor);
+      const type = formatAgentType(agent.path);
       const state = agent.lifecycle ?? "unknown";
       const updated = formatTimestamp(agent.updatedAt);
       return `<tr>
