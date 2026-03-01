@@ -470,6 +470,40 @@ export const tokenStatsHourlyTable = pgTable(
     ]
 );
 
+export const observationLogTable = pgTable(
+    "observation_log",
+    {
+        id: text("id").primaryKey(),
+        userId: text("user_id").notNull(),
+        type: text("type").notNull(),
+        source: text("source").notNull(),
+        message: text("message").notNull(),
+        details: text("details"),
+        data: text("data"),
+        createdAt: bigint("created_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        index("idx_observation_log_user").on(table.userId),
+        index("idx_observation_log_type").on(table.type),
+        index("idx_observation_log_created").on(table.createdAt),
+        index("idx_observation_log_user_created").on(table.userId, table.createdAt)
+    ]
+);
+
+export const observationLogScopesTable = pgTable(
+    "observation_log_scopes",
+    {
+        observationId: text("observation_id")
+            .notNull()
+            .references(() => observationLogTable.id, { onDelete: "cascade" }),
+        scopeId: text("scope_id").notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.observationId, table.scopeId] }),
+        index("idx_observation_log_scopes_scope").on(table.scopeId)
+    ]
+);
+
 export const schema = {
     migrationsTable,
     usersTable,
@@ -492,7 +526,9 @@ export const schema = {
     processesTable,
     connectionsTable,
     systemPromptsTable,
-    tokenStatsHourlyTable
+    tokenStatsHourlyTable,
+    observationLogTable,
+    observationLogScopesTable
 };
 
 /**

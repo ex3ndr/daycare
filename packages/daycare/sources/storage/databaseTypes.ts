@@ -540,6 +540,35 @@ export type TokenStatsHourlyDbRecord = {
     cost: number;
 };
 
+export type ObservationLogDbRecord = {
+    id: string;
+    userId: string;
+    type: string;
+    source: string;
+    message: string;
+    details: string | null;
+    data: unknown;
+    scopeIds: string[];
+    createdAt: number;
+};
+
+export type ObservationLogFindOptions = {
+    type?: string;
+    source?: string;
+    scopeIds?: string[];
+    afterDate?: number;
+    beforeDate?: number;
+    limit?: number;
+    offset?: number;
+};
+
+export type ObservationLogRecentOptions = {
+    type?: string;
+    source?: string;
+    scopeIds?: string[];
+    limit?: number;
+};
+
 export type CreateUserInput = {
     id?: string;
     isOwner?: boolean;

@@ -15,6 +15,7 @@ import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
+import { ObservationLogRepository } from "./observationLogRepository.js";
 import { ProcessesRepository } from "./processesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
@@ -49,6 +50,7 @@ export class Storage {
     readonly processes: ProcessesRepository;
     readonly systemPrompts: SystemPromptsRepository;
     readonly tokenStats: TokenStatsRepository;
+    readonly observationLog: ObservationLogRepository;
 
     readonly db: DaycareDb;
     readonly connection: StorageDatabase;
@@ -77,6 +79,7 @@ export class Storage {
         this.processes = new ProcessesRepository(db);
         this.systemPrompts = new SystemPromptsRepository(db);
         this.tokenStats = new TokenStatsRepository(db);
+        this.observationLog = new ObservationLogRepository(db);
     }
 
     static fromDatabase(rawDb: StorageDatabase): Storage {

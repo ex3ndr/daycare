@@ -36,5 +36,9 @@ export const migrations: Migration[] = [
     {
         name: "20260228_user_connector_keys_cleanup",
         fileName: "20260228_user_connector_keys_cleanup.sql"
+    },
+    {
+        name: "20260228_observation_log",
+        fileName: "20260228_observation_log.sql"
     }
 ];
