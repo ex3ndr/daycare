@@ -22,7 +22,7 @@ import type { PluginManager } from "../plugins/manager.js";
 import { DelayedSignals } from "../signals/delayedSignals.js";
 import { Signals } from "../signals/signals.js";
 import { AgentSystem } from "./agentSystem.js";
-import { contextForUser } from "./context.js";
+import { contextForAgent, contextForUser } from "./context.js";
 import { agentPathChildAllocate } from "./ops/agentPathChildAllocate.js";
 import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentPath } from "./ops/agentPathTypes.js";
@@ -509,6 +509,80 @@ describe("AgentSystem", () => {
             const subagentContext = await harness.agentSystem.contextForAgentId(subagentId);
 
             expect(subagentContext?.userId).toBe(parentContext.userId);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("prefers active telegram foreground agents for most-recent-foreground strategy", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            const ownerCtx = await harness.agentSystem.ownerCtxEnsure();
+            const now = Date.now();
+            const permissions = { workingDir: "/tmp", writeDirs: ["/tmp"] };
+
+            await harness.storage.agents.create({
+                id: "tg-agent",
+                userId: ownerCtx.userId,
+                type: "user",
+                descriptor: { type: "user", connector: "telegram", userId: "tg-ext", channelId: "tg-ext" },
+                path: agentPath(`/${ownerCtx.userId}/telegram`),
+                config: null,
+                nextSubIndex: 0,
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: now - 10_000,
+                updatedAt: now - 10_000
+            });
+            await agentStateWrite(harness.storage, contextForAgent({ userId: ownerCtx.userId, agentId: "tg-agent" }), {
+                context: { messages: [] },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                createdAt: now - 10_000,
+                updatedAt: now - 10_000,
+                state: "active",
+                modelOverride: null
+            });
+
+            await harness.storage.agents.create({
+                id: "wa-agent",
+                userId: ownerCtx.userId,
+                type: "user",
+                descriptor: { type: "user", connector: "whatsapp", userId: "wa-ext", channelId: "wa-ext" },
+                path: agentPath(`/${ownerCtx.userId}/whatsapp`),
+                config: null,
+                nextSubIndex: 0,
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: now - 1_000,
+                updatedAt: now - 1_000
+            });
+            await agentStateWrite(harness.storage, contextForAgent({ userId: ownerCtx.userId, agentId: "wa-agent" }), {
+                context: { messages: [] },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                createdAt: now - 1_000,
+                updatedAt: now - 1_000,
+                state: "active",
+                modelOverride: null
+            });
+
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const target = harness.agentSystem.agentFor(ownerCtx, "most-recent-foreground");
+            expect(target).toBe("tg-agent");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

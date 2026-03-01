@@ -493,6 +493,18 @@ export class AgentSystem {
             return null;
         }
         candidates.sort((a, b) => {
+            const aPrefix = foregroundPriorityPrefix(a.descriptor);
+            const bPrefix = foregroundPriorityPrefix(b.descriptor);
+            if (aPrefix !== bPrefix) {
+                return aPrefix.localeCompare(bPrefix);
+            }
+
+            const aStateRank = statePriorityRank(a.agent.state.state);
+            const bStateRank = statePriorityRank(b.agent.state.state);
+            if (aStateRank !== bStateRank) {
+                return aStateRank - bStateRank;
+            }
+
             const aTime = agentTimestampGet(a.agent.state.updatedAt);
             const bTime = agentTimestampGet(b.agent.state.updatedAt);
             return bTime - aTime;
@@ -1417,6 +1429,29 @@ function pathKindResolve(path: AgentPath, segments = pathSegments(path)): AgentP
         return "connector";
     }
     throw new Error(`Unknown path pattern: ${path}`);
+}
+
+function foregroundPriorityPrefix(descriptor: AgentDescriptor): string {
+    if (descriptor.type === "user" && descriptor.connector === "telegram") {
+        return "aa-telegram";
+    }
+    if (descriptor.type === "user") {
+        return "bb-user";
+    }
+    if (descriptor.type === "swarm") {
+        return "cc-swarm";
+    }
+    return "zz-other";
+}
+
+function statePriorityRank(state: "active" | "sleeping" | "dead"): number {
+    if (state === "active") {
+        return 0;
+    }
+    if (state === "sleeping") {
+        return 1;
+    }
+    return 2;
 }
 
 function pathTrimSegments(path: AgentPath, count: number): AgentPath {
