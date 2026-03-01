@@ -178,8 +178,62 @@ describe("WebhookTasksRepository", () => {
             await repo.recordRun("hook-run", 50);
 
             const updated = await repo.findById("hook-run");
+            expect(updated?.version).toBe(1);
             expect(updated?.lastRunAt).toBe(50);
             expect(updated?.updatedAt).toBe(50);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to, last_run_at FROM tasks_webhook WHERE id = ? ORDER BY version ASC")
+                .all("hook-run")) as Array<{
+                version: number;
+                valid_to: number | null;
+                last_run_at: number | null;
+            }>;
+            expect(rows).toEqual([{ version: 1, valid_to: null, last_run_at: 50 }]);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("skips no-op webhook run updates", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new WebhookTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-run-noop",
+                userId: "user-1",
+                title: "Run noop",
+                description: null,
+                code: "Prompt",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "hook-run-noop",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
+                taskId: "task-run-noop",
+                userId: "user-1",
+                agentId: null,
+                lastRunAt: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            await repo.recordRun("hook-run-noop", 77);
+            await repo.recordRun("hook-run-noop", 77);
+
+            const current = await repo.findById("hook-run-noop");
+            expect(current?.version).toBe(1);
+            expect(current?.lastRunAt).toBe(77);
+            expect(current?.updatedAt).toBe(77);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to FROM tasks_webhook WHERE id = ? ORDER BY version ASC")
+                .all("hook-run-noop")) as Array<{ version: number; valid_to: number | null }>;
+            expect(rows).toEqual([{ version: 1, valid_to: null }]);
         } finally {
             storage.connection.close();
         }

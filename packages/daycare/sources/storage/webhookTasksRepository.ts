@@ -183,42 +183,31 @@ export class WebhookTasksRepository {
                 if (!current) {
                     return;
                 }
+                const next: WebhookTaskDbRecord = {
+                    ...current,
+                    lastRunAt: runAt,
+                    updatedAt: runAt
+                };
+                if (webhookTaskNoChangesIs(current, next)) {
+                    await this.cacheLock.inLock(() => {
+                        this.taskCacheSet(current);
+                    });
+                    return;
+                }
 
-                const next = await this.db.transaction(async (tx) =>
-                    versionAdvance<WebhookTaskDbRecord>({
-                        now: runAt,
-                        changes: { lastRunAt: runAt, updatedAt: runAt },
-                        findCurrent: async () => current,
-                        closeCurrent: async (row, now) => {
-                            const closedRows = await tx
-                                .update(tasksWebhookTable)
-                                .set({ validTo: now })
-                                .where(
-                                    and(
-                                        eq(tasksWebhookTable.id, row.id),
-                                        eq(tasksWebhookTable.version, row.version ?? 1),
-                                        isNull(tasksWebhookTable.validTo)
-                                    )
-                                )
-                                .returning({ version: tasksWebhookTable.version });
-                            return closedRows.length;
-                        },
-                        insertNext: async (row) => {
-                            await tx.insert(tasksWebhookTable).values({
-                                id: row.id,
-                                version: row.version ?? 1,
-                                validFrom: row.validFrom ?? row.createdAt,
-                                validTo: row.validTo ?? null,
-                                taskId: row.taskId,
-                                userId: row.userId,
-                                agentId: row.agentId,
-                                lastRunAt: row.lastRunAt,
-                                createdAt: row.createdAt,
-                                updatedAt: row.updatedAt
-                            });
-                        }
+                await this.db
+                    .update(tasksWebhookTable)
+                    .set({
+                        lastRunAt: next.lastRunAt,
+                        updatedAt: next.updatedAt
                     })
-                );
+                    .where(
+                        and(
+                            eq(tasksWebhookTable.id, current.id),
+                            eq(tasksWebhookTable.version, current.version ?? 1),
+                            isNull(tasksWebhookTable.validTo)
+                        )
+                    );
 
                 await this.cacheLock.inLock(() => {
                     this.taskCacheSet(next);
@@ -307,4 +296,23 @@ function webhookTaskClone(record: WebhookTaskDbRecord): WebhookTaskDbRecord {
 
 function webhookTasksSort(records: WebhookTaskDbRecord[]): WebhookTaskDbRecord[] {
     return records.slice().sort((left, right) => left.updatedAt - right.updatedAt);
+}
+
+/**
+ * Resolves whether merged runtime state is unchanged.
+ * Expects: `next` is derived from `current` with runtime-only updates.
+ */
+function webhookTaskNoChangesIs(current: WebhookTaskDbRecord, next: WebhookTaskDbRecord): boolean {
+    return (
+        current.id === next.id &&
+        (current.version ?? 1) === (next.version ?? 1) &&
+        (current.validFrom ?? current.createdAt) === (next.validFrom ?? next.createdAt) &&
+        (current.validTo ?? null) === (next.validTo ?? null) &&
+        current.taskId === next.taskId &&
+        current.userId === next.userId &&
+        current.agentId === next.agentId &&
+        (current.lastRunAt ?? null) === (next.lastRunAt ?? null) &&
+        current.createdAt === next.createdAt &&
+        current.updatedAt === next.updatedAt
+    );
 }
