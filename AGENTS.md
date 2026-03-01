@@ -6,6 +6,7 @@
 
 ## Conventions
 - single workspace package at `packages/daycare`
+- "app" always means `packages/daycare-app` and nothing else
 - typescript only, esm output
 - sources live in `sources/`
 - tests use `*.spec.ts`
