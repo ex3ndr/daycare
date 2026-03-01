@@ -101,6 +101,7 @@ import { Signals } from "./signals/signals.js";
 import { Skills } from "./skills/skills.js";
 import { swarmCreateToolBuild } from "./swarms/swarmCreateToolBuild.js";
 import { Swarms } from "./swarms/swarms.js";
+import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
@@ -496,7 +497,9 @@ export class Engine {
                         this.crons.deleteTriggersForTask(ctx, normalizedTaskId),
                         this.webhooks.deleteTriggersForTask(ctx, normalizedTaskId)
                     ]);
-                    return this.storage.tasks.delete(ctx, normalizedTaskId);
+                    const deletedDirect = await this.storage.tasks.delete(ctx, normalizedTaskId);
+                    const taskAfterCleanup = await this.storage.tasks.findById(ctx, normalizedTaskId);
+                    return taskDeleteSuccessResolve(deletedDirect, taskAfterCleanup);
                 },
                 tasksRun: async (ctx, taskId, input) => {
                     const normalizedTaskId = taskId.trim();

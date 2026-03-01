@@ -106,9 +106,8 @@ export async function tasksTriggerAdd(input: TasksTriggerAddInput): Promise<Task
             return { ok: false, error: parameters.error };
         }
 
-        const timezone = cronTimezoneResolve({ timezone: timezoneResult.value });
-
         try {
+            const timezone = cronTimezoneResolve({ timezone: timezoneResult.value });
             const trigger = await input.cronTriggerAdd(input.ctx, taskId, {
                 schedule,
                 timezone,

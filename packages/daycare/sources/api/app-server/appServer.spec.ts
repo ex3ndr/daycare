@@ -9,6 +9,7 @@ import { configResolve } from "../../config/configResolve.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
 import { ModuleRegistry } from "../../engine/modules/moduleRegistry.js";
 import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../util/jwt.js";
+import type { RouteTaskCallbacks } from "../routes/routeTypes.js";
 import { APP_AUTH_SEED_KEY } from "./appJwtSecretResolve.js";
 import { AppServer } from "./appServer.js";
 
@@ -45,7 +46,29 @@ type AppServerCreateTestOptions = {
     webhookTrigger?: (webhookId: string, data?: unknown) => Promise<void>;
     appServerEnabled?: boolean;
     tasksListActive?: (userId: string) => Promise<TaskActiveSummary[]>;
+    taskCallbacks?: RouteTaskCallbacks;
 };
+
+function taskCallbacksBuild(overrides: Partial<RouteTaskCallbacks> = {}): RouteTaskCallbacks {
+    return {
+        tasksCreate: async () => {
+            throw new Error("not implemented");
+        },
+        tasksRead: async () => null,
+        tasksUpdate: async () => null,
+        tasksDelete: async () => false,
+        tasksRun: async () => ({ queued: true }),
+        cronTriggerAdd: async () => {
+            throw new Error("not implemented");
+        },
+        cronTriggerRemove: async () => 0,
+        webhookTriggerAdd: async () => {
+            throw new Error("not implemented");
+        },
+        webhookTriggerRemove: async () => 0,
+        ...overrides
+    };
+}
 
 function telegramInitDataBuild(options: { botToken: string; userId: string; authDateSeconds: number }): string {
     const params = new URLSearchParams();
@@ -152,7 +175,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
             }
             return options.tasksListActive(ctx.userId);
         },
-        taskCallbacks: null,
+        taskCallbacks: options.taskCallbacks ?? null,
         tokenStatsFetch: async () => [],
         documents: null
     });
@@ -432,6 +455,34 @@ describe("AppServer authenticated routes", () => {
                     }
                 }
             ]
+        });
+    });
+
+    it("returns structured 400 for invalid cron timezone", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({
+            secret,
+            taskCallbacks: taskCallbacksBuild()
+        });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/tasks/task-1/triggers/add`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                type: "cron",
+                schedule: "0 * * * *",
+                timezone: "Not/AZone"
+            })
+        });
+
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toEqual({
+            ok: false,
+            error: "Invalid cron timezone: Not/AZone"
         });
     });
 });

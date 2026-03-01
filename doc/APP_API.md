@@ -11,6 +11,10 @@ Response envelope convention:
 - Success: `{ ok: true, ... }`
 - Failure: `{ ok: false, error: string }`
 
+Mutation convention:
+- New app mutations use `POST` action paths.
+- Legacy compatibility exceptions remain on prompts/documents routes listed below.
+
 ## API Flow
 ```mermaid
 flowchart TD
@@ -200,12 +204,15 @@ Trigger remove body:
 - `PUT /documents/:id`
 - `DELETE /documents/:id`
 
+Note: `PUT`/`DELETE` document mutations are legacy compatibility routes.
+
 ## Prompt Routes
 - `GET /prompts`
 - `GET /prompts/:filename`
 - `PUT /prompts/:filename`
 
 Allowed prompt filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`.
+`PUT /prompts/:filename` is a legacy compatibility route.
 
 ## Costs Routes
 - `GET /costs/token-stats?from=<ms>&to=<ms>&agentId=<id>&model=<name>&limit=<n>`

@@ -118,4 +118,25 @@ describe("tasksTriggerAdd", () => {
 
         expect(result).toEqual({ ok: false, error: "schedule is required for cron triggers." });
     });
+
+    it("returns validation error for invalid timezone", async () => {
+        const ctx = contextForUser({ userId: "u1" });
+        const result = await tasksTriggerAdd({
+            ctx,
+            taskId: "task-1",
+            body: {
+                type: "cron",
+                schedule: "0 * * * *",
+                timezone: "Not/AZone"
+            },
+            cronTriggerAdd: async () => {
+                throw new Error("not used");
+            },
+            webhookTriggerAdd: async () => {
+                throw new Error("not used");
+            }
+        });
+
+        expect(result).toEqual({ ok: false, error: "Invalid cron timezone: Not/AZone" });
+    });
 });
