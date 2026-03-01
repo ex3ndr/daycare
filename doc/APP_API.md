@@ -54,6 +54,19 @@ sequenceDiagram
 - `POST /auth/refresh`
 - `POST /auth/telegram`
 
+## Web App Auth Logging
+The web app logs the authenticated user id to the browser console after token validation during:
+- login
+- bootstrap from stored session
+- bootstrap from resolved session
+
+```mermaid
+flowchart LR
+    A[Token] --> B[/auth/validate]
+    B --> C{ok + userId}
+    C -->|yes| D[console.info userId]
+```
+
 Example:
 ```json
 { "token": "<jwt>" }

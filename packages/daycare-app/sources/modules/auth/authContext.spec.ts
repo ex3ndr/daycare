@@ -3,6 +3,7 @@ import { authStoreCreate } from "@/modules/auth/authStoreCreate";
 
 describe("authStoreCreate", () => {
     it("transitions unauthenticated -> authenticated -> logout", async () => {
+        const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
         const storage = {
             read: vi.fn(async () => null),
             write: vi.fn(async () => undefined),
@@ -21,15 +22,18 @@ describe("authStoreCreate", () => {
         expect(store.getState().baseUrl).toBe("http://localhost:7332");
         expect(store.getState().token).toBe("jwt-token");
         expect(store.getState().userId).toBe("user-1");
+        expect(infoSpy).toHaveBeenCalledWith("[daycare-app] auth userId=user-1 source=login");
 
         await store.getState().logout();
         expect(store.getState().state).toBe("unauthenticated");
         expect(store.getState().baseUrl).toBeNull();
         expect(store.getState().token).toBeNull();
         expect(store.getState().userId).toBeNull();
+        infoSpy.mockRestore();
     });
 
     it("restores persisted session on bootstrap", async () => {
+        const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
         const storage = {
             read: vi.fn(async () => ({ baseUrl: "http://localhost:7332", token: "stored-token" })),
             write: vi.fn(async () => undefined),
@@ -48,9 +52,12 @@ describe("authStoreCreate", () => {
         expect(store.getState().baseUrl).toBe("http://localhost:7332");
         expect(store.getState().token).toBe("stored-token");
         expect(store.getState().userId).toBe("user-2");
+        expect(infoSpy).toHaveBeenCalledWith("[daycare-app] auth userId=user-2 source=bootstrap-storage");
+        infoSpy.mockRestore();
     });
 
     it("prefers resolved session on bootstrap", async () => {
+        const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
         const storage = {
             read: vi.fn(async () => ({ baseUrl: "http://localhost:7332", token: "stored-token" })),
             write: vi.fn(async () => undefined),
@@ -75,9 +82,12 @@ describe("authStoreCreate", () => {
             token: "telegram-token"
         });
         expect(storage.read).not.toHaveBeenCalled();
+        expect(infoSpy).toHaveBeenCalledWith("[daycare-app] auth userId=user-3 source=bootstrap-resolved");
+        infoSpy.mockRestore();
     });
 
     it("stores replacement token returned by validateToken", async () => {
+        const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
         const storage = {
             read: vi.fn(async () => null),
             write: vi.fn(async () => undefined),
@@ -96,5 +106,7 @@ describe("authStoreCreate", () => {
             baseUrl: "http://localhost:7332",
             token: "session-token"
         });
+        expect(infoSpy).toHaveBeenCalledWith("[daycare-app] auth userId=user-4 source=login");
+        infoSpy.mockRestore();
     });
 });

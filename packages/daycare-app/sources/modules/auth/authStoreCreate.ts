@@ -50,6 +50,7 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
                         typeof result.token === "string" && result.token.trim().length > 0
                             ? result.token.trim()
                             : resolvedSession.token;
+                    authUserIdLog(result.userId, "bootstrap-resolved");
                     await dependencies.storage.write({
                         baseUrl: resolvedSession.baseUrl,
                         token: resolvedToken
@@ -81,6 +82,7 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
                 typeof result.token === "string" && result.token.trim().length > 0
                     ? result.token.trim()
                     : storedSession.token;
+            authUserIdLog(result.userId, "bootstrap-storage");
             if (resolvedToken !== storedSession.token) {
                 await dependencies.storage.write({
                     baseUrl: storedSession.baseUrl,
@@ -106,6 +108,7 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
             const resolvedToken =
                 typeof result.token === "string" && result.token.trim().length > 0 ? result.token.trim() : trimmedToken;
 
+            authUserIdLog(result.userId, "login");
             await dependencies.storage.write({
                 baseUrl: trimmedBaseUrl,
                 token: resolvedToken
@@ -129,4 +132,8 @@ export function authStoreCreate(dependencies: AuthStoreDependencies) {
             });
         }
     }));
+}
+
+function authUserIdLog(userId: string, source: "bootstrap-resolved" | "bootstrap-storage" | "login"): void {
+    console.info(`[daycare-app] auth userId=${userId} source=${source}`);
 }
