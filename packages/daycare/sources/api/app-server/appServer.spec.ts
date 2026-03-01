@@ -148,7 +148,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
             }
             return options.tasksListActive(ctx.userId);
         },
-        tokenStatsFetch: async () => []
+        tokenStatsFetch: async () => [],
+        documents: null
     });
 
     await appServer.start();

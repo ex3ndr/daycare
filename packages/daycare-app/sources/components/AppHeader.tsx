@@ -15,7 +15,8 @@ export type AppMode =
     | "inventory"
     | "workflows"
     | "coaching"
-    | "costs";
+    | "costs"
+    | "documents";
 
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
     { mode: "agents", icon: "device-desktop", label: "Agents" },
@@ -27,7 +28,8 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "inventory", icon: "package", label: "Inventory" },
     { mode: "workflows", icon: "workflow", label: "Workflows" },
     { mode: "coaching", icon: "mortar-board", label: "Coaching" },
-    { mode: "costs", icon: "credit-card", label: "Costs" }
+    { mode: "costs", icon: "credit-card", label: "Costs" },
+    { mode: "documents", icon: "file", label: "Documents" }
 ];
 
 type AppHeaderProps = {

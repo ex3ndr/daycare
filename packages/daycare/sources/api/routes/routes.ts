@@ -1,8 +1,10 @@
 import type http from "node:http";
 import type { Context, TaskActiveSummary } from "@/types";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
+import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
+import { documentsRouteHandle } from "./documents/documentsRoutes.js";
 import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 
@@ -13,6 +15,7 @@ export type ApiRouteContext = {
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     tasksListActive: ((ctx: Context) => Promise<TaskActiveSummary[]>) | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
+    documents: DocumentsRepository | null;
 };
 
 /**
@@ -38,6 +41,14 @@ export async function apiRouteHandle(
             ctx: context.ctx,
             sendJson: context.sendJson,
             tokenStatsFetch: context.tokenStatsFetch
+        });
+    }
+    if (pathname.startsWith("/documents") && context.documents) {
+        return documentsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            documents: context.documents
         });
     }
 

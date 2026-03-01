@@ -10,6 +10,7 @@ import type { ToolResolver } from "../../engine/modules/toolResolver.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
+import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
 import { apiRouteHandle } from "../routes/routes.js";
 import { appAuthExtract } from "./appAuthExtract.js";
@@ -34,6 +35,7 @@ export type AppServerOptions = {
     webhooks: Webhooks;
     tasksListActive: (ctx: Context) => Promise<TaskActiveSummary[]>;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
+    documents: DocumentsRepository | null;
 };
 
 /**
@@ -51,6 +53,7 @@ export class AppServer {
     private readonly webhooks: Webhooks;
     private readonly tasksListActive: AppServerOptions["tasksListActive"];
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
+    private readonly documents: DocumentsRepository | null;
     private readonly logger = getLogger("api.app-server");
 
     private server: http.Server | null = null;
@@ -66,6 +69,7 @@ export class AppServer {
         this.webhooks = options.webhooks;
         this.tasksListActive = options.tasksListActive;
         this.tokenStatsFetch = options.tokenStatsFetch;
+        this.documents = options.documents;
     }
 
     async start(): Promise<void> {
@@ -179,7 +183,8 @@ export class AppServer {
             sendJson: appSendJson,
             readJsonBody: appReadJsonBody,
             tasksListActive: this.tasksListActive,
-            tokenStatsFetch: this.tokenStatsFetch
+            tokenStatsFetch: this.tokenStatsFetch,
+            documents: this.documents
         });
         if (handled) {
             return;
