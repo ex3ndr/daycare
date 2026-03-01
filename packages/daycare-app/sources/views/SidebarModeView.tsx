@@ -14,6 +14,7 @@ import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
 import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
+import { SettingsView } from "@/views/SettingsView";
 import { TodosView } from "@/views/TodosView";
 
 const viewComponents: Record<AppMode, React.ComponentType> = {
@@ -25,7 +26,8 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     todos: TodosView,
     routines: RoutinesView,
     costs: CostsView,
-    documents: DocumentsView
+    documents: DocumentsView,
+    settings: SettingsView
 };
 
 type SidebarModeViewProps = {

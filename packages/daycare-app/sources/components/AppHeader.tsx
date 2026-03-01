@@ -6,7 +6,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Avatar } from "@/components/Avatar";
 
-export type AppMode = "home" | "agents" | "people" | "email" | "inbox" | "todos" | "routines" | "costs" | "documents";
+export type AppMode =
+    | "home"
+    | "agents"
+    | "people"
+    | "email"
+    | "inbox"
+    | "todos"
+    | "routines"
+    | "costs"
+    | "documents"
+    | "settings";
 
 export const appModes: AppMode[] = [
     "home",
@@ -17,7 +27,8 @@ export const appModes: AppMode[] = [
     "todos",
     "routines",
     "costs",
-    "documents"
+    "documents",
+    "settings"
 ];
 
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
@@ -28,7 +39,8 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "todos", icon: "checklist", label: "Todos" },
     { mode: "routines", icon: "clock", label: "Routines" },
     { mode: "costs", icon: "credit-card", label: "Costs" },
-    { mode: "documents", icon: "file", label: "Documents" }
+    { mode: "documents", icon: "file", label: "Documents" },
+    { mode: "settings", icon: "gear", label: "Settings" }
 ];
 
 /**

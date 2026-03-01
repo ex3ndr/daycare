@@ -17,7 +17,8 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "todos", icon: "checklist", label: "Todos" },
     { mode: "routines", icon: "clock", label: "Routines" },
     { mode: "costs", icon: "credit-card", label: "Costs" },
-    { mode: "documents", icon: "file", label: "Documents" }
+    { mode: "documents", icon: "file", label: "Documents" },
+    { mode: "settings", icon: "gear", label: "Settings" }
 ];
 
 /** Sub-items for each mode that expand when the mode is active. */
@@ -54,7 +55,8 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
         { id: "co1", title: "This Month" },
         { id: "co2", title: "Last Month" }
     ],
-    documents: []
+    documents: [],
+    settings: []
 };
 
 /**

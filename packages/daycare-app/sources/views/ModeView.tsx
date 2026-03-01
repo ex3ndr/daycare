@@ -19,10 +19,11 @@ import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
 import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
+import { SettingsView } from "@/views/SettingsView";
 import { TodosView } from "@/views/TodosView";
 
 const leftItems: Record<
-    Exclude<AppMode, "documents" | "home">,
+    Exclude<AppMode, "documents" | "home" | "settings">,
     Array<{ id: string; title: string; subtitle: string }>
 > = {
     agents: [
@@ -67,7 +68,8 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     todos: TodosView,
     routines: RoutinesView,
     costs: CostsView,
-    documents: DocumentsView
+    documents: DocumentsView,
+    settings: SettingsView
 };
 
 type ModeViewProps = {
