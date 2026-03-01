@@ -153,6 +153,55 @@ export const tasksTable = pgTable(
     ]
 );
 
+export const documentsTable = pgTable(
+    "documents",
+    {
+        id: text("id").notNull(),
+        userId: text("user_id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
+        slug: text("slug").notNull(),
+        title: text("title").notNull(),
+        description: text("description").notNull(),
+        body: text("body").notNull().default(""),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.userId, table.id, table.version] }),
+        index("idx_documents_user_id").on(table.userId),
+        index("idx_documents_updated_at").on(table.updatedAt),
+        index("idx_documents_id_valid_to").on(table.id, table.validTo),
+        index("idx_documents_slug_active").on(table.userId, table.slug).where(sql`${table.validTo} IS NULL`)
+    ]
+);
+
+export const documentReferencesTable = pgTable(
+    "document_references",
+    {
+        id: serial("id").primaryKey(),
+        userId: text("user_id").notNull(),
+        sourceId: text("source_id").notNull(),
+        sourceVersion: integer("source_version").notNull(),
+        targetId: text("target_id").notNull(),
+        kind: text("kind").notNull()
+    },
+    (table) => [
+        check("document_references_kind_valid", sql`${table.kind} IN ('parent', 'link', 'body')`),
+        uniqueIndex("idx_doc_refs_unique").on(
+            table.userId,
+            table.sourceId,
+            table.sourceVersion,
+            table.targetId,
+            table.kind
+        ),
+        index("idx_doc_refs_target").on(table.userId, table.targetId),
+        index("idx_doc_refs_source").on(table.userId, table.sourceId, table.sourceVersion),
+        index("idx_doc_refs_parent").on(table.userId, table.targetId).where(sql`${table.kind} = 'parent'`)
+    ]
+);
+
 export const tasksCronTable = pgTable(
     "tasks_cron",
     {
@@ -502,6 +551,8 @@ export const schema = {
     sessionHistoryTable,
     inboxTable,
     tasksTable,
+    documentsTable,
+    documentReferencesTable,
     tasksCronTable,
     tasksHeartbeatTable,
     tasksWebhookTable,

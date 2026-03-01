@@ -11,6 +11,7 @@ import { CronTasksRepository } from "./cronTasksRepository.js";
 import type { StorageDatabase } from "./databaseOpen.js";
 import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
+import { DocumentsRepository } from "./documentsRepository.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { HeartbeatTasksRepository } from "./heartbeatTasksRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
@@ -40,6 +41,7 @@ export class Storage {
     readonly heartbeatTasks: HeartbeatTasksRepository;
     readonly webhookTasks: WebhookTasksRepository;
     readonly tasks: TasksRepository;
+    readonly documents: DocumentsRepository;
     readonly signalEvents: SignalEventsRepository;
     readonly signalSubscriptions: SignalSubscriptionsRepository;
     readonly delayedSignals: DelayedSignalsRepository;
@@ -69,6 +71,7 @@ export class Storage {
         this.heartbeatTasks = new HeartbeatTasksRepository(db);
         this.webhookTasks = new WebhookTasksRepository(db);
         this.tasks = new TasksRepository(db);
+        this.documents = new DocumentsRepository(db);
         this.signalEvents = new SignalEventsRepository(db);
         this.signalSubscriptions = new SignalSubscriptionsRepository(db);
         this.delayedSignals = new DelayedSignalsRepository(db);

@@ -202,6 +202,54 @@ export type TaskDbRecord = {
     updatedAt: number;
 };
 
+export type DocumentReferenceKind = "parent" | "link" | "body";
+
+export type DatabaseDocumentRow = {
+    id: string;
+    user_id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
+    slug: string;
+    title: string;
+    description: string;
+    body: string;
+    created_at: number;
+    updated_at: number;
+};
+
+export type DocumentDbRecord = {
+    id: string;
+    userId: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
+    slug: string;
+    title: string;
+    description: string;
+    body: string;
+    createdAt: number;
+    updatedAt: number;
+};
+
+export type DatabaseDocumentReferenceRow = {
+    id: number;
+    user_id: string;
+    source_id: string;
+    source_version: number;
+    target_id: string;
+    kind: DocumentReferenceKind;
+};
+
+export type DocumentReferenceDbRecord = {
+    id: number;
+    userId: string;
+    sourceId: string;
+    sourceVersion: number;
+    targetId: string;
+    kind: DocumentReferenceKind;
+};
+
 export type DatabaseSignalEventRow = {
     id: string;
     user_id: string;

@@ -6,12 +6,15 @@ import { createId } from "@paralleldrive/cuid2";
 import { describe, expect, it } from "vitest";
 
 import { configResolve } from "../config/configResolve.js";
+import { contextForAgent } from "../engine/agents/context.js";
 import { rlmSnapshotLoad } from "../engine/modules/rlm/rlmSnapshotLoad.js";
 import { rlmSnapshotSave } from "../engine/modules/rlm/rlmSnapshotSave.js";
 import { permissionBuildUser } from "../engine/permissions/permissionBuildUser.js";
 import { UserHome } from "../engine/users/userHome.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
 import { databaseOpenTest } from "./databaseOpenTest.js";
+import { documentPathFind } from "./documentPathFind.js";
+import { documentPathResolve } from "./documentPathResolve.js";
 import { Storage } from "./storage.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
@@ -42,9 +45,52 @@ describe("Storage", () => {
             .all()) as Array<{ name?: string }>;
         expect(tables.some((entry) => entry.name === "agents")).toBe(true);
         expect(tables.some((entry) => entry.name === "users")).toBe(true);
+        expect(tables.some((entry) => entry.name === "documents")).toBe(true);
+        expect(tables.some((entry) => entry.name === "document_references")).toBe(true);
         storage.connection.close();
 
         await expect(storage.connection.prepare("SELECT 1").get()).rejects.toThrow();
+    });
+
+    it("exposes documents repository with hierarchical path helpers", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Root memory",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "daily",
+                slug: "daily",
+                title: "Daily",
+                description: "Daily notes",
+                body: "",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "memory"
+            });
+            await storage.documents.create(ctx, {
+                id: "events",
+                slug: "events",
+                title: "Events",
+                description: "Event notes",
+                body: "",
+                createdAt: 3,
+                updatedAt: 3,
+                parentId: "daily"
+            });
+
+            expect(await documentPathResolve(ctx, "events", storage.documents)).toBe("~/memory/daily/events");
+            expect(await documentPathFind(ctx, "~/memory/daily/events", storage.documents)).toBe("events");
+        } finally {
+            storage.connection.close();
+        }
     });
 
     it("resolves user by connector key under concurrent requests", async () => {

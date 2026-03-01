@@ -40,5 +40,9 @@ export const migrations: Migration[] = [
     {
         name: "20260228_observation_log",
         fileName: "20260228_observation_log.sql"
+    },
+    {
+        name: "20260228_documents",
+        fileName: "20260228_documents.sql"
     }
 ];
