@@ -294,11 +294,15 @@ export class AgentsRepository {
                 tokens: data.tokens === undefined ? current.tokens : data.tokens
             };
 
-            if (agentLifecycleOnlyChangeIs(current, next)) {
+            if (agentRuntimeOnlyChangeIs(current, next)) {
                 await this.db
                     .update(agentsTable)
                     .set({
                         lifecycle: next.lifecycle,
+                        nextSubIndex: next.nextSubIndex ?? 0,
+                        activeSessionId: next.activeSessionId,
+                        tokens: next.tokens ? JSON.stringify(next.tokens) : null,
+                        stats: JSON.stringify(next.stats),
                         updatedAt: next.updatedAt
                     })
                     .where(
@@ -576,11 +580,16 @@ function agentsSort(records: AgentDbRecord[]): AgentDbRecord[] {
 }
 
 /**
- * Resolves whether the effective update only changes lifecycle metadata.
+ * Resolves whether the effective update only changes runtime metadata.
  * Expects: `next` is merged from `current` and user-provided patch data.
  */
-function agentLifecycleOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): boolean {
-    if (current.lifecycle === next.lifecycle) {
+function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): boolean {
+    const lifecycleChanged = current.lifecycle !== next.lifecycle;
+    const nextSubIndexChanged = (current.nextSubIndex ?? 0) !== (next.nextSubIndex ?? 0);
+    const activeSessionIdChanged = (current.activeSessionId ?? null) !== (next.activeSessionId ?? null);
+    const tokensChanged = !agentJsonEqual(current.tokens, next.tokens);
+    const statsChanged = !agentJsonEqual(current.stats, next.stats);
+    if (!lifecycleChanged && !nextSubIndexChanged && !activeSessionIdChanged && !tokensChanged && !statsChanged) {
         return false;
     }
     return (
@@ -599,11 +608,7 @@ function agentLifecycleOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord)
         current.description === next.description &&
         current.systemPrompt === next.systemPrompt &&
         current.workspaceDir === next.workspaceDir &&
-        (current.nextSubIndex ?? 0) === (next.nextSubIndex ?? 0) &&
-        (current.activeSessionId ?? null) === (next.activeSessionId ?? null) &&
         agentJsonEqual(current.permissions, next.permissions) &&
-        agentJsonEqual(current.tokens, next.tokens) &&
-        agentJsonEqual(current.stats, next.stats) &&
         current.createdAt === next.createdAt
     );
 }
