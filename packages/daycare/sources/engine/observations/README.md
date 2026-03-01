@@ -1,20 +1,74 @@
 # Observation Log
 
-Append-only event log scoped per user and arbitrary entity IDs. Serves both agent reasoning ("what happened to task X?") and human debugging/audit.
+Append-only event log scoped per user and arbitrary entity IDs. It supports agent reasoning ("what changed?") and audit/debug views.
 
 ## Event Structure
 
-| Field      | Type       | Description                                              |
-|------------|------------|----------------------------------------------------------|
-| id         | string     | Unique cuid2 identifier                                  |
-| userId     | string     | Owner user                                               |
-| type       | string     | Event classification (e.g. `task.updated`)               |
-| source     | string     | Colon-delimited origin (`agent:abc`, `plugin:telegram`)  |
-| message    | string     | Short one-line summary                                   |
-| details    | string?    | Full multi-line description                              |
-| data       | unknown?   | Arbitrary JSON payload                                   |
-| scopeIds   | string[]   | Entity IDs this event relates to                         |
-| createdAt  | number     | Unix ms timestamp                                        |
+| Field | Type | Description |
+| --- | --- | --- |
+| id | string | Unique cuid2 identifier |
+| userId | string | Owner user |
+| type | string | Event type (`<domain>:<action>`) |
+| source | string | Origin (`system:*`, `plugin:*`, `agent:*`, ...) |
+| message | string | Short summary |
+| details | string \| null | Long-form details |
+| data | unknown | JSON payload |
+| scopeIds | string[] | Related entity IDs for scope queries |
+| createdAt | number | Unix milliseconds |
+
+## Topography Event Catalog
+
+Topography events are defined in `observations/topographyEvents.ts` and emitted through `topographyObservationEmit(...)`.
+
+### `system:agents`
+- `agent:created` — `{ agentId, userId, descriptorType, label, parentAgentId? }`
+- `agent:updated` — `{ agentId, userId, descriptorType, label }`
+- `agent:lifecycle` — `{ agentId, userId, lifecycle, label }`
+
+### `system:tasks`
+- `task:created` — `{ taskId, userId, title, description }`
+- `task:updated` — `{ taskId, userId, title, description, changes }`
+- `task:deleted` — `{ taskId, userId, title }`
+
+### `system:crons`
+- `cron:added` — `{ cronId, taskId, userId, name, schedule, timezone }`
+- `cron:deleted` — `{ cronId, taskId, userId, name }`
+- `cron:enabled` — `{ cronId, taskId, userId, name }`
+- `cron:disabled` — `{ cronId, taskId, userId, name }`
+
+### `system:webhooks`
+- `webhook:added` — `{ webhookId, taskId, userId, name, path }`
+- `webhook:deleted` — `{ webhookId, taskId, userId, name }`
+
+### `system:signals`
+- `signal:subscribed` — `{ agentId, userId, pattern, silent }`
+- `signal:unsubscribed` — `{ agentId, userId, pattern }`
+
+### `system:channels`
+- `channel:created` — `{ channelId, userId, name, leader }`
+- `channel:deleted` — `{ channelId, userId, name, memberCount }`
+- `channel:member_joined` — `{ channelId, userId, name, agentId, username }`
+- `channel:member_left` — `{ channelId, userId, name, agentId, username }`
+
+### `system:exposes`
+- `expose:created` — `{ exposeId, userId, domain, target, provider, mode, authenticated }`
+- `expose:removed` — `{ exposeId, userId, domain }`
+- `expose:updated` — `{ exposeId, userId, domain, target, provider, mode, authenticated }`
+
+### `system:secrets`
+- `secret:added` — `{ userId, name, displayName, variableNames }`
+- `secret:removed` — `{ userId, name, displayName }`
+
+### `system:subusers`
+- `subuser:created` — `{ subuserId, ownerUserId, name, nametag, gatewayAgentId }`
+- `subuser:configured` — `{ subuserId, ownerUserId, name, gatewayAgentId }`
+
+### `system:friends`
+- `friend:requested` — `{ fromUserId, toUserId, toNametag }`
+- `friend:accepted` — `{ userAId, userBId, nametag }`
+- `friend:removed` — `{ userAId, userBId, nametag }`
+- `friend:subuser_shared` — `{ subuserId, subuserName, ownerUserId, friendUserId, friendNametag }`
+- `friend:subuser_unshared` — `{ subuserId, subuserName, ownerUserId, friendUserId, friendNametag }`
 
 ## Source Format
 
@@ -42,26 +96,22 @@ await observationEmit(storage.observationLog, {
 
 ## Querying
 
-The `observation_query` tool is available to agents. It supports:
-- **scopeIds**: filter events by entity (matches ANY)
-- **type**: exact event type match
-- **source**: prefix match (`agent:` matches all agent sources)
-- **afterDate/beforeDate**: date range (unix ms)
-- **limit/offset**: pagination
-- **mode**: output format — `short` (default), `full`, or `json`
+The `observation_query` tool supports:
+- `scopeIds`: overlap query against `scope_ids`
+- `type`: exact match
+- `source`: prefix match
+- `afterDate` / `beforeDate`: unix ms range
+- `limit` / `offset`: pagination
+- `mode`: `short` (default), `full`, `json`
 
 ## Data Flow
 
 ```mermaid
 graph TD
-    A[Plugin / Agent / System] -->|observationEmit| B[ObservationLogRepository.append]
-    B --> C[observation_log table]
-    E[Agent tool: observation_query] --> F[ObservationLogRepository.findMany]
-    F --> C
+    A[Facade or tool mutation] -->|topographyObservationEmit| B[observationEmit]
+    B --> C[ObservationLogRepository.append]
+    C --> D[(observation_log)]
+    E[observation_query tool] --> F[ObservationLogRepository.findMany]
+    F --> D
     F --> G[observationLogFormat]
-    G --> H[LLM context text]
 ```
-
-## Database Schema
-
-Single table `observation_log` with a native PG `text[]` column for scope IDs, indexed with GIN for fast overlap (`&&`) queries. No junction table needed — scope filtering uses `scope_ids && ARRAY[...]::text[]`.

@@ -1,12 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
-import { contextForAgent } from "../../agents/context.js";
-import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
-import { agentStateWrite } from "../../agents/ops/agentStateWrite.js";
-import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
-import { userHomeEnsure } from "../../users/userHomeEnsure.js";
+import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { Subusers } from "../../subusers/subusers.js";
 
 const schema = Type.Object(
     {
@@ -39,7 +34,7 @@ const returns: ToolResultContract<SubuserCreateResult> = {
  * Builds the subuser_create tool that provisions an isolated child user with a gateway agent.
  * Expects: caller is the owner user; name and systemPrompt are non-empty.
  */
-export function subuserCreateToolBuild(): ToolDefinition {
+export function subuserCreateToolBuild(subusers: Pick<Subusers, "create">): ToolDefinition {
     return {
         tool: {
             name: "subuser_create",
@@ -60,62 +55,9 @@ export function subuserCreateToolBuild(): ToolDefinition {
             if (!systemPrompt) {
                 throw new Error("Subuser system prompt is required.");
             }
+            const created = await subusers.create(toolContext.ctx, { name, systemPrompt });
 
-            await assertCallerIsOwner(toolContext);
-
-            const storage = toolContext.agentSystem.storage;
-            const subuserId = createId();
-            const now = Date.now();
-
-            // Create child user
-            await storage.users.create({
-                id: subuserId,
-                parentUserId: toolContext.ctx.userId,
-                name,
-                createdAt: now,
-                updatedAt: now
-            });
-
-            // Ensure subuser home directories
-            const subuserHome = toolContext.agentSystem.userHomeForUserId(subuserId);
-            await userHomeEnsure(subuserHome);
-
-            // Create gateway agent belonging to the subuser
-            const gatewayAgentId = createId();
-            const descriptor = {
-                type: "subuser" as const,
-                id: subuserId,
-                name,
-                systemPrompt
-            };
-            const permissions = permissionBuildUser(subuserHome);
-            await agentDescriptorWrite(
-                storage,
-                contextForAgent({ userId: subuserId, agentId: gatewayAgentId }),
-                descriptor,
-                permissions
-            );
-
-            // Create a session and write agent state in one step
-            const inferenceSessionId = createId();
-            const sessionId = await storage.sessions.create({
-                agentId: gatewayAgentId,
-                inferenceSessionId,
-                createdAt: now
-            });
-            await agentStateWrite(storage, contextForAgent({ userId: subuserId, agentId: gatewayAgentId }), {
-                context: { messages: [] },
-                activeSessionId: sessionId,
-                inferenceSessionId,
-                permissions,
-                tokens: null,
-                stats: {},
-                createdAt: now,
-                updatedAt: now,
-                state: "active"
-            });
-
-            const summary = `Subuser created: ${subuserId} (name: ${name}). Gateway agent: ${gatewayAgentId}.`;
+            const summary = `Subuser created: ${created.subuserId} (name: ${name}). Gateway agent: ${created.gatewayAgentId}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -129,22 +71,11 @@ export function subuserCreateToolBuild(): ToolDefinition {
                 toolMessage,
                 typedResult: {
                     summary,
-                    subuserId,
-                    gatewayAgentId,
+                    subuserId: created.subuserId,
+                    gatewayAgentId: created.gatewayAgentId,
                     name
                 }
             };
         }
     };
-}
-
-async function assertCallerIsOwner(toolContext: ToolExecutionContext): Promise<void> {
-    const userId = toolContext.ctx.userId;
-    if (!userId) {
-        throw new Error("Tool context userId is required.");
-    }
-    const user = await toolContext.agentSystem.storage.users.findById(userId);
-    if (!user || !user.isOwner) {
-        throw new Error("Only the owner user can create subusers.");
-    }
 }

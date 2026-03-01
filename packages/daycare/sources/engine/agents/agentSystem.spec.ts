@@ -609,6 +609,7 @@ async function harnessCreate(
     const eventBus = new EngineEventBus();
     const signals = new Signals({
         eventBus,
+        observationLog: storage.observationLog,
         signalEvents: storage.signalEvents,
         signalSubscriptions: storage.signalSubscriptions
     });

@@ -4,6 +4,7 @@ import type { ToolExecutionContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
+import { Friends } from "../../friends/friends.js";
 import { friendAddToolBuild } from "./friendAddToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_add" };
@@ -15,7 +16,7 @@ describe("friendAddToolBuild", () => {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendAddToolBuild();
+            const tool = friendAddToolBuild(new Friends({ storage, postToUserAgents }));
 
             const requestResult = await tool.execute(
                 { nametag: "swift-fox-42" },
@@ -74,7 +75,7 @@ describe("friendAddToolBuild", () => {
             await storage.connections.upsertRequest(subuser.id, bob.id, 300);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendAddToolBuild();
+            const tool = friendAddToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "cool-cat-11" },
                 contextBuild(bob.id, storage, postToUserAgents),
@@ -111,7 +112,12 @@ describe("friendAddToolBuild", () => {
             });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
-            const tool = friendAddToolBuild();
+            const tool = friendAddToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
 
             await expect(
                 tool.execute(
@@ -141,7 +147,12 @@ describe("friendAddToolBuild", () => {
                 nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
-            const tool = friendAddToolBuild();
+            const tool = friendAddToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
 
             await expect(
                 tool.execute(
@@ -164,7 +175,12 @@ describe("friendAddToolBuild", () => {
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
-            const tool = friendAddToolBuild();
+            const tool = friendAddToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
 
             await storage.connections.upsertRequest(alice.id, bob.id, Date.now() - 1_000);
             await storage.connections.clearSide(alice.id, bob.id);
@@ -186,7 +202,11 @@ describe("friendAddToolBuild", () => {
     });
 
     it("is visible only to user agents", () => {
-        const tool = friendAddToolBuild();
+        const tool = friendAddToolBuild({
+            add: async () => {
+                throw new Error("not called");
+            }
+        });
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "u1", agentId: "a1" }),

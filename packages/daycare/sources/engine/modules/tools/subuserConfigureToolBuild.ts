@@ -1,9 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
-import { contextForAgent } from "../../agents/context.js";
-import { agentDescriptorWrite } from "../../agents/ops/agentDescriptorWrite.js";
-import { permissionBuildUser } from "../../permissions/permissionBuildUser.js";
+import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { Subusers } from "../../subusers/subusers.js";
 
 const schema = Type.Object(
     {
@@ -35,7 +33,7 @@ const returns: ToolResultContract<SubuserConfigureResult> = {
  * Builds the subuser_configure tool that updates a subuser gateway agent's system prompt.
  * Expects: caller is the owner user; subuserId references an existing child user.
  */
-export function subuserConfigureToolBuild(): ToolDefinition {
+export function subuserConfigureToolBuild(subusers: Pick<Subusers, "configure">): ToolDefinition {
     return {
         tool: {
             name: "subuser_configure",
@@ -55,45 +53,9 @@ export function subuserConfigureToolBuild(): ToolDefinition {
             if (!systemPrompt) {
                 throw new Error("System prompt is required.");
             }
+            const configured = await subusers.configure(toolContext.ctx, { subuserId, systemPrompt });
 
-            await assertCallerIsOwner(toolContext);
-
-            const storage = toolContext.agentSystem.storage;
-
-            // Verify subuser exists and belongs to the caller
-            const subuser = await storage.users.findById(subuserId);
-            if (!subuser) {
-                throw new Error("Subuser not found.");
-            }
-            if (subuser.parentUserId !== toolContext.ctx.userId) {
-                throw new Error("Subuser does not belong to the calling user.");
-            }
-
-            // Find the gateway agent (type "subuser" with descriptor.id matching subuserId)
-            const agents = await storage.agents.findMany();
-            const gatewayAgent = agents.find(
-                (agent) => agent.descriptor.type === "subuser" && agent.descriptor.id === subuserId
-            );
-            if (!gatewayAgent) {
-                throw new Error("Gateway agent not found for this subuser.");
-            }
-
-            // Update descriptor with new system prompt
-            const updatedDescriptor = {
-                ...gatewayAgent.descriptor,
-                systemPrompt
-            };
-            const subuserHome = toolContext.agentSystem.userHomeForUserId(subuserId);
-            const permissions = permissionBuildUser(subuserHome);
-            await agentDescriptorWrite(
-                storage,
-                contextForAgent({ userId: subuserId, agentId: gatewayAgent.id }),
-                updatedDescriptor,
-                permissions
-            );
-            toolContext.agentSystem.updateAgentDescriptor(gatewayAgent.id, updatedDescriptor);
-
-            const summary = `Subuser ${subuserId} gateway agent ${gatewayAgent.id} system prompt updated.`;
+            const summary = `Subuser ${subuserId} gateway agent ${configured.gatewayAgentId} system prompt updated.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -108,20 +70,9 @@ export function subuserConfigureToolBuild(): ToolDefinition {
                 typedResult: {
                     summary,
                     subuserId,
-                    gatewayAgentId: gatewayAgent.id
+                    gatewayAgentId: configured.gatewayAgentId
                 }
             };
         }
     };
-}
-
-async function assertCallerIsOwner(toolContext: ToolExecutionContext): Promise<void> {
-    const userId = toolContext.ctx.userId;
-    if (!userId) {
-        throw new Error("Tool context userId is required.");
-    }
-    const user = await toolContext.agentSystem.storage.users.findById(userId);
-    if (!user || !user.isOwner) {
-        throw new Error("Only the owner user can configure subusers.");
-    }
 }

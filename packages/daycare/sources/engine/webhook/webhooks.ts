@@ -4,6 +4,7 @@ import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForUser } from "../agents/context.js";
+import { TOPO_EVENT_TYPES, TOPO_SOURCE_WEBHOOKS, topographyObservationEmit } from "../observations/topographyEvents.js";
 import type { WebhookDefinition } from "./webhookTypes.js";
 
 const logger = getLogger("webhook.facade");
@@ -72,6 +73,22 @@ export class Webhooks {
             updatedAt: now
         };
         await this.storage.webhookTasks.create(created);
+        const path = `/v1/webhooks/${created.id}`;
+        await topographyObservationEmit(this.storage.observationLog, {
+            userId,
+            type: TOPO_EVENT_TYPES.WEBHOOK_ADDED,
+            source: TOPO_SOURCE_WEBHOOKS,
+            message: `Webhook added: ${task.title}`,
+            details: `Webhook trigger ${created.id} added for task ${created.taskId}, path "${path}"`,
+            data: {
+                webhookId: created.id,
+                taskId: created.taskId,
+                userId,
+                name: task.title,
+                path
+            },
+            scopeIds: [userId]
+        });
         return created;
     }
 
@@ -98,6 +115,22 @@ export class Webhooks {
 
         const deleted = await this.storage.webhookTasks.delete(triggerId);
         if (deleted) {
+            const task = await this.storage.tasks.findById(ctx, existing.taskId);
+            const name = task?.title ?? existing.taskId;
+            await topographyObservationEmit(this.storage.observationLog, {
+                userId: ctx.userId,
+                type: TOPO_EVENT_TYPES.WEBHOOK_DELETED,
+                source: TOPO_SOURCE_WEBHOOKS,
+                message: `Webhook deleted: ${name}`,
+                details: `Webhook trigger ${existing.id} deleted for task ${existing.taskId}`,
+                data: {
+                    webhookId: existing.id,
+                    taskId: existing.taskId,
+                    userId: existing.userId,
+                    name
+                },
+                scopeIds: [ctx.userId]
+            });
             await this.taskDeleteIfOrphan(ctx, existing.taskId);
         }
         return deleted;

@@ -95,6 +95,10 @@ describe("task tools", () => {
         const deleteResult = await deleteTool.execute({ taskId }, runtime.context, toolCall("task_delete"));
         expect(deleteResult.typedResult.deleted).toBe(true);
         expect(await runtime.storage.tasks.findById(runtime.context.ctx, taskId)).toBeNull();
+        const observations = await runtime.storage.observationLog.findMany({ userId: "user-1", agentId: "agent-1" });
+        expect(observations.map((entry) => entry.type)).toEqual(
+            expect.arrayContaining(["task:created", "task:updated", "task:deleted"])
+        );
     });
 
     it("uses slug task ids from title and appends numeric suffix on collisions", async () => {

@@ -8,6 +8,7 @@ import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { Subusers } from "../../subusers/subusers.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserConfigureToolBuild } from "./subuserConfigureToolBuild.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
@@ -31,7 +32,12 @@ describe("subuserConfigureToolBuild", () => {
             });
 
             // First create a subuser
-            const createTool = subuserCreateToolBuild();
+            const subusers = new Subusers({
+                storage,
+                userHomeForUserId: (uid) => new UserHome(config.usersDir, uid),
+                updateAgentDescriptor
+            });
+            const createTool = subuserCreateToolBuild(subusers);
             const createResult = await createTool.execute(
                 { name: "my-app", systemPrompt: "Initial prompt." },
                 context,
@@ -42,7 +48,7 @@ describe("subuserConfigureToolBuild", () => {
             const gatewayAgentId = createTyped.gatewayAgentId;
 
             // Now configure it
-            const configureTool = subuserConfigureToolBuild();
+            const configureTool = subuserConfigureToolBuild(subusers);
             const configureResult = await configureTool.execute(
                 { subuserId, systemPrompt: "Updated prompt." },
                 context,
@@ -76,7 +82,13 @@ describe("subuserConfigureToolBuild", () => {
             const storage = await storageOpenTest();
             await storage.users.create({ id: "regular-user" });
 
-            const tool = subuserConfigureToolBuild();
+            const tool = subuserConfigureToolBuild(
+                new Subusers({
+                    storage,
+                    userHomeForUserId: (uid) => new UserHome(config.usersDir, uid),
+                    updateAgentDescriptor: vi.fn()
+                })
+            );
             const context = contextBuild("regular-user", {
                 config: { current: config },
                 storage,

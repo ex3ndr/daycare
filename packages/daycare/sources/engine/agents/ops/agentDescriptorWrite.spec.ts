@@ -66,6 +66,10 @@ describe("agentDescriptorWrite", () => {
                 id: agentId,
                 name: "second"
             });
+            const observations = await storage.observationLog.findMany({ userId, agentId });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining(["agent:created", "agent:updated"])
+            );
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

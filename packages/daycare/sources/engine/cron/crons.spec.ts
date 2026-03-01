@@ -54,6 +54,52 @@ describe("Crons", () => {
 
             await expect(crons.deleteTask(ctxB, task.id)).resolves.toBe(false);
             await expect(crons.deleteTask(ctxA, task.id)).resolves.toBe(true);
+            const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining(["cron:added", "cron:deleted"])
+            );
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("emits cron enabled/disabled observations", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-enabled-disabled-"));
+        tempDirs.push(dir);
+        const storage = await storageOpenTest();
+        const agentSystem = {
+            ownerUserIdEnsure: vi.fn(async () => "owner"),
+            userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            postAndAwait: vi.fn(async () => ({ status: "completed" }))
+        } as unknown as CronsOptions["agentSystem"];
+        try {
+            const crons = new Crons({
+                config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
+                storage,
+                eventBus: { emit: vi.fn() } as unknown as CronsOptions["eventBus"],
+                agentSystem
+            });
+            const ctx = contextBuild("user-a");
+            await storage.tasks.create({
+                id: "task-enabled",
+                userId: "user-a",
+                title: "enabled-task",
+                description: null,
+                code: "run",
+                parameters: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            const created = await crons.addTask(ctx, {
+                taskId: "task-enabled",
+                schedule: "*/5 * * * *"
+            });
+            await expect(crons.disableTask(ctx, created.id)).resolves.toBe(true);
+            await expect(crons.enableTask(ctx, created.id)).resolves.toBe(true);
+            const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining(["cron:disabled", "cron:enabled"])
+            );
         } finally {
             storage.connection.close();
         }

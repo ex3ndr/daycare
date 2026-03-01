@@ -17,6 +17,7 @@ describe("Signals", () => {
             const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus,
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions
             });
@@ -66,6 +67,7 @@ describe("Signals", () => {
             const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions
             });
@@ -90,6 +92,7 @@ describe("Signals", () => {
             const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions
             });
@@ -114,6 +117,7 @@ describe("Signals", () => {
             }> = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions,
                 onDeliver: (signal, subscriptions) => {
@@ -164,6 +168,7 @@ describe("Signals", () => {
             const delivered: string[] = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions,
                 onDeliver: (_signal, subscriptions) => {
@@ -191,6 +196,10 @@ describe("Signals", () => {
             await expect(
                 signals.unsubscribe({ ctx: { userId: "user-1", agentId: "agent-a" }, pattern: "build:*:done" })
             ).resolves.toBe(false);
+            const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-a" });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining(["signal:subscribed", "signal:unsubscribed"])
+            );
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -203,6 +212,7 @@ describe("Signals", () => {
             const delivered: Array<{ userId: string; agentId: string }> = [];
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions,
                 onDeliver: (_signal, subscriptions) => {

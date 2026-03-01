@@ -12,8 +12,10 @@ import type {
 import { getLogger } from "../../log.js";
 import type { ChannelMessagesRepository } from "../../storage/channelMessagesRepository.js";
 import type { ChannelsRepository } from "../../storage/channelsRepository.js";
+import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "../agents/context.js";
+import { TOPO_EVENT_TYPES, TOPO_SOURCE_CHANNELS, topographyObservationEmit } from "../observations/topographyEvents.js";
 import type { Signals } from "../signals/signals.js";
 import { channelNameNormalize } from "./channelNameNormalize.js";
 
@@ -30,6 +32,7 @@ export type ChannelsOptions = {
     channelMessages: Pick<ChannelMessagesRepository, "create" | "findRecent">;
     signals: Pick<Signals, "subscribe" | "unsubscribe">;
     agentSystem: Pick<AgentSystem, "agentExists" | "post" | "contextForAgentId">;
+    observationLog: ObservationLogRepository;
 };
 
 export class Channels {
@@ -40,6 +43,7 @@ export class Channels {
     private readonly channelMessages: Pick<ChannelMessagesRepository, "create" | "findRecent">;
     private readonly signals: Pick<Signals, "subscribe" | "unsubscribe">;
     private readonly agentSystem: Pick<AgentSystem, "agentExists" | "post" | "contextForAgentId">;
+    private readonly observationLog: ObservationLogRepository;
     private readonly items = new Map<string, ChannelRuntimeRecord>();
 
     constructor(options: ChannelsOptions) {
@@ -47,6 +51,7 @@ export class Channels {
         this.channelMessages = options.channelMessages;
         this.signals = options.signals;
         this.agentSystem = options.agentSystem;
+        this.observationLog = options.observationLog;
     }
 
     async ensureDir(): Promise<void> {
@@ -157,6 +162,20 @@ export class Channels {
             updatedAt: channel.updatedAt
         });
         this.items.set(channelName, cloneRuntimeChannel(channel));
+        await topographyObservationEmit(this.observationLog, {
+            userId: callerUserId,
+            type: TOPO_EVENT_TYPES.CHANNEL_CREATED,
+            source: TOPO_SOURCE_CHANNELS,
+            message: `Channel created: ${channel.name}`,
+            details: `Channel "${channel.name}" created with leader ${channel.leader}`,
+            data: {
+                channelId: channel.id,
+                userId: callerUserId,
+                name: channel.name,
+                leader: channel.leader
+            },
+            scopeIds: [callerUserId, channel.id]
+        });
         return cloneChannel(channel);
     }
 
@@ -180,6 +199,20 @@ export class Channels {
 
         await this.channels.delete(channel.id);
         this.items.delete(channelName);
+        await topographyObservationEmit(this.observationLog, {
+            userId: channel.userId,
+            type: TOPO_EVENT_TYPES.CHANNEL_DELETED,
+            source: TOPO_SOURCE_CHANNELS,
+            message: `Channel deleted: ${channel.name}`,
+            details: `Channel "${channel.name}" deleted, ${channel.members.length} members removed`,
+            data: {
+                channelId: channel.id,
+                userId: channel.userId,
+                name: channel.name,
+                memberCount: channel.members.length
+            },
+            scopeIds: [channel.userId, channel.id]
+        });
         return true;
     }
 
@@ -241,6 +274,21 @@ export class Channels {
             pattern: channelPatternBuild(channel.name),
             silent: false
         });
+        await topographyObservationEmit(this.observationLog, {
+            userId: normalizedUserId,
+            type: TOPO_EVENT_TYPES.CHANNEL_MEMBER_JOINED,
+            source: TOPO_SOURCE_CHANNELS,
+            message: `Channel member joined: ${normalizedUsername} -> ${channel.name}`,
+            details: `Agent ${normalizedAgentId} joined channel "${channel.name}" as ${normalizedUsername}`,
+            data: {
+                channelId: channel.id,
+                userId: normalizedUserId,
+                name: channel.name,
+                agentId: normalizedAgentId,
+                username: normalizedUsername
+            },
+            scopeIds: [normalizedUserId, channel.id]
+        });
         return cloneChannel(channel);
     }
 
@@ -250,6 +298,7 @@ export class Channels {
         if (!normalizedAgentId) {
             throw new Error("Channel member agent id is required.");
         }
+        const removedMember = channel.members.find((member) => member.agentId === normalizedAgentId) ?? null;
         const nextMembers = channel.members.filter((member) => member.agentId !== normalizedAgentId);
         if (nextMembers.length === channel.members.length) {
             return false;
@@ -265,6 +314,21 @@ export class Channels {
         await this.signals.unsubscribe({
             ctx: contextForAgent({ userId: normalizedUserId, agentId: normalizedAgentId }),
             pattern: channelPatternBuild(channel.name)
+        });
+        await topographyObservationEmit(this.observationLog, {
+            userId: normalizedUserId,
+            type: TOPO_EVENT_TYPES.CHANNEL_MEMBER_LEFT,
+            source: TOPO_SOURCE_CHANNELS,
+            message: `Channel member left: ${removedMember?.username ?? normalizedAgentId} -> ${channel.name}`,
+            details: `Agent ${normalizedAgentId} left channel "${channel.name}"`,
+            data: {
+                channelId: channel.id,
+                userId: normalizedUserId,
+                name: channel.name,
+                agentId: normalizedAgentId,
+                username: removedMember?.username ?? normalizedAgentId
+            },
+            scopeIds: [normalizedUserId, channel.id]
         });
         return true;
     }

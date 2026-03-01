@@ -30,6 +30,7 @@ import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
 import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
+import { Friends } from "./friends/friends.js";
 import type { EngineEventBus } from "./ipc/events.js";
 import { Memory } from "./memory/memory.js";
 import { MemoryWorker } from "./memory/memoryWorker.js";
@@ -102,6 +103,7 @@ import { Processes } from "./processes/processes.js";
 import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
+import { Subusers } from "./subusers/subusers.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
@@ -137,6 +139,8 @@ export class Engine {
     readonly memory: Memory;
     readonly secrets: Secrets;
     readonly exposes: Exposes;
+    readonly subusers: Subusers;
+    readonly friends: Friends;
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
     private readonly incomingMessages: IncomingMessages;
@@ -160,6 +164,7 @@ export class Engine {
         this.eventBus = options.eventBus;
         this.signals = new Signals({
             eventBus: this.eventBus,
+            observationLog: this.storage.observationLog,
             signalEvents: this.storage.signalEvents,
             signalSubscriptions: this.storage.signalSubscriptions,
             onDeliver: async (signal, subscriptions) => {
@@ -202,7 +207,8 @@ export class Engine {
         this.exposes = new Exposes({
             config: this.config,
             eventBus: this.eventBus,
-            exposeEndpoints: this.storage.exposeEndpoints
+            exposeEndpoints: this.storage.exposeEndpoints,
+            observationLog: this.storage.observationLog
         });
 
         this.modules = new ModuleRegistry({
@@ -333,7 +339,10 @@ export class Engine {
         this.memory = new Memory({
             usersDir: this.config.current.usersDir
         });
-        this.secrets = new Secrets(this.config.current.usersDir);
+        this.secrets = new Secrets({
+            usersDir: this.config.current.usersDir,
+            observationLog: this.storage.observationLog
+        });
 
         this.agentSystem = new AgentSystem({
             config: this.config,
@@ -349,6 +358,15 @@ export class Engine {
             memory: this.memory,
             secrets: this.secrets,
             delayedSignals: this.delayedSignals
+        });
+        this.subusers = new Subusers({
+            storage: this.storage,
+            userHomeForUserId: (userId) => this.agentSystem.userHomeForUserId(userId),
+            updateAgentDescriptor: (agentId, descriptor) => this.agentSystem.updateAgentDescriptor(agentId, descriptor)
+        });
+        this.friends = new Friends({
+            storage: this.storage,
+            postToUserAgents: (userId, item) => this.agentSystem.postToUserAgents(userId, item)
         });
 
         this.memoryWorker.setPostFn((ctx, target, item) => this.agentSystem.post(ctx, target, item));
@@ -381,7 +399,8 @@ export class Engine {
             channels: this.storage.channels,
             channelMessages: this.storage.channelMessages,
             signals: this.signals,
-            agentSystem: this.agentSystem
+            agentSystem: this.agentSystem,
+            observationLog: this.storage.observationLog
         });
         this.apps = new Apps({
             usersDir: this.config.current.usersDir
@@ -454,19 +473,19 @@ export class Engine {
         );
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
-        this.modules.tools.register("core", subuserCreateToolBuild());
-        this.modules.tools.register("core", subuserConfigureToolBuild());
+        this.modules.tools.register("core", subuserCreateToolBuild(this.subusers));
+        this.modules.tools.register("core", subuserConfigureToolBuild(this.subusers));
         this.modules.tools.register("core", subuserListToolBuild());
         this.modules.tools.register("core", channelCreateToolBuild(this.channels));
         this.modules.tools.register("core", channelSendToolBuild(this.channels));
         this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
         this.modules.tools.register("core", channelAddMemberToolBuild(this.channels));
         this.modules.tools.register("core", channelRemoveMemberToolBuild(this.channels));
-        this.modules.tools.register("core", friendAddToolBuild());
-        this.modules.tools.register("core", friendRemoveToolBuild());
+        this.modules.tools.register("core", friendAddToolBuild(this.friends));
+        this.modules.tools.register("core", friendRemoveToolBuild(this.friends));
         this.modules.tools.register("core", friendSendToolBuild());
-        this.modules.tools.register("core", friendShareSubuserToolBuild());
-        this.modules.tools.register("core", friendUnshareSubuserToolBuild());
+        this.modules.tools.register("core", friendShareSubuserToolBuild(this.friends));
+        this.modules.tools.register("core", friendUnshareSubuserToolBuild(this.friends));
         this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
         this.modules.tools.register("core", buildSpeechGenerationTool(this.modules.speech));
         this.modules.tools.register("core", buildVoiceListTool(this.modules.speech));

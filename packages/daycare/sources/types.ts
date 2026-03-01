@@ -101,6 +101,24 @@ export type {
 // Observations
 export { type ObservationEmitInput, observationEmit } from "./engine/observations/observationEmit.js";
 export { type ObservationLogFormatMode, observationLogFormat } from "./engine/observations/observationLogFormat.js";
+export {
+    TOPO_EVENT_TYPES,
+    TOPO_SOURCE_AGENTS,
+    TOPO_SOURCE_CHANNELS,
+    TOPO_SOURCE_CRONS,
+    TOPO_SOURCE_EXPOSES,
+    TOPO_SOURCE_FRIENDS,
+    TOPO_SOURCE_SECRETS,
+    TOPO_SOURCE_SIGNALS,
+    TOPO_SOURCE_SUBUSERS,
+    TOPO_SOURCE_TASKS,
+    TOPO_SOURCE_WEBHOOKS,
+    type TopographyObservationDataByType,
+    type TopographyObservationEmitInput,
+    type TopographyObservationSource,
+    type TopographyObservationType,
+    topographyObservationEmit
+} from "./engine/observations/topographyEvents.js";
 // Permissions
 export type { SessionPermissions } from "./engine/permissions.js";
 // Plugins

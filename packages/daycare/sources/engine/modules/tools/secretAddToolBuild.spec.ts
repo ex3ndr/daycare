@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForUser } from "../../agents/context.js";
 import { Secrets } from "../../secrets/secrets.js";
 import { secretAddToolBuild } from "./secretAddToolBuild.js";
@@ -11,16 +12,23 @@ const toolCall = { id: "tool-1", name: "secret_add" };
 
 describe("secretAddToolBuild", () => {
     const dirs: string[] = [];
+    const storages: Array<{ connection: { close: () => void } }> = [];
 
     afterEach(async () => {
         await Promise.all(dirs.map((entry) => fs.rm(entry, { recursive: true, force: true })));
         dirs.length = 0;
+        for (const storage of storages) {
+            storage.connection.close();
+        }
+        storages.length = 0;
     });
 
     it("creates a secret and hides variable values in response", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
         dirs.push(usersDir);
-        const secrets = new Secrets(usersDir);
+        const storage = await storageOpenTest();
+        storages.push(storage);
+        const secrets = new Secrets({ usersDir, observationLog: storage.observationLog });
         const ctx = contextForUser({ userId: "user-1" });
         const tool = secretAddToolBuild();
 
@@ -71,7 +79,9 @@ describe("secretAddToolBuild", () => {
     it("updates an existing secret", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
         dirs.push(usersDir);
-        const secrets = new Secrets(usersDir);
+        const storage = await storageOpenTest();
+        storages.push(storage);
+        const secrets = new Secrets({ usersDir, observationLog: storage.observationLog });
         const ctx = contextForUser({ userId: "user-1" });
         await secrets.add(ctx, {
             name: "openai-key",

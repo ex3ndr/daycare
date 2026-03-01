@@ -8,6 +8,7 @@ import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { contextForUser } from "../../agents/context.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
+import { TOPO_EVENT_TYPES, TOPO_SOURCE_TASKS, topographyObservationEmit } from "../../observations/topographyEvents.js";
 import { rlmVerify } from "../rlm/rlmVerify.js";
 import { taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
 import { taskParameterInputsNormalize } from "../tasks/taskParameterInputsNormalize.js";
@@ -211,6 +212,20 @@ export function buildTaskCreateTool(): ToolDefinition {
                 createdAt: now,
                 updatedAt: now
             });
+            await topographyObservationEmit(storage.observationLog, {
+                userId,
+                type: TOPO_EVENT_TYPES.TASK_CREATED,
+                source: TOPO_SOURCE_TASKS,
+                message: `Task created: ${payload.title}`,
+                details: `Task ${taskId} created for user ${userId}: "${payload.title}"`,
+                data: {
+                    taskId,
+                    userId,
+                    title: payload.title,
+                    description: payload.description ?? null
+                },
+                scopeIds: [userId]
+            });
 
             const summary = `Created task ${taskId}.`;
             const typedResult: TaskResult = {
@@ -342,6 +357,33 @@ export function buildTaskUpdateTool(): ToolDefinition {
                 parameters: nextParams,
                 updatedAt: Date.now()
             });
+            const nextTitle = payload.title ?? task.title;
+            const nextDescription = payload.description === undefined ? task.description : payload.description;
+            const changes = taskChangesResolve({
+                beforeTitle: task.title,
+                beforeCode: task.code,
+                beforeDescription: task.description,
+                beforeParameters: task.parameters,
+                afterTitle: nextTitle,
+                afterCode: nextCode,
+                afterDescription: nextDescription,
+                afterParameters: nextParams
+            });
+            await topographyObservationEmit(toolContext.agentSystem.storage.observationLog, {
+                userId: toolContext.ctx.userId,
+                type: TOPO_EVENT_TYPES.TASK_UPDATED,
+                source: TOPO_SOURCE_TASKS,
+                message: `Task updated: ${nextTitle}`,
+                details: `Task ${task.id} updated for user ${toolContext.ctx.userId}: "${nextTitle}"`,
+                data: {
+                    taskId: task.id,
+                    userId: toolContext.ctx.userId,
+                    title: nextTitle,
+                    description: nextDescription,
+                    changes
+                },
+                scopeIds: [toolContext.ctx.userId]
+            });
 
             const summary = `Updated task ${task.id}.`;
             return {
@@ -375,6 +417,21 @@ export function buildTaskDeleteTool(): ToolDefinition {
             const deleted =
                 deletedDirect ||
                 (await toolContext.agentSystem.storage.tasks.findById(toolContext.ctx, task.id)) === null;
+            if (deleted) {
+                await topographyObservationEmit(toolContext.agentSystem.storage.observationLog, {
+                    userId: toolContext.ctx.userId,
+                    type: TOPO_EVENT_TYPES.TASK_DELETED,
+                    source: TOPO_SOURCE_TASKS,
+                    message: `Task deleted: ${task.title}`,
+                    details: `Task ${task.id} deleted for user ${toolContext.ctx.userId}: "${task.title}"`,
+                    data: {
+                        taskId: task.id,
+                        userId: toolContext.ctx.userId,
+                        title: task.title
+                    },
+                    scopeIds: [toolContext.ctx.userId]
+                });
+            }
             const summary = deleted
                 ? `Deleted task ${task.id} with ${removedCron} cron trigger(s) and ${removedWebhook} webhook trigger(s).`
                 : `Task already removed: ${task.id}.`;
@@ -678,6 +735,32 @@ async function taskIdGenerateFromTitle(
     }
 
     return candidate;
+}
+
+function taskChangesResolve(input: {
+    beforeTitle: string;
+    beforeCode: string;
+    beforeDescription: string | null;
+    beforeParameters: TaskParameter[] | null;
+    afterTitle: string;
+    afterCode: string;
+    afterDescription: string | null;
+    afterParameters: TaskParameter[] | null;
+}): string[] {
+    const changes: string[] = [];
+    if (input.beforeTitle !== input.afterTitle) {
+        changes.push("title");
+    }
+    if (input.beforeCode !== input.afterCode) {
+        changes.push("code");
+    }
+    if (input.beforeDescription !== input.afterDescription) {
+        changes.push("description");
+    }
+    if (JSON.stringify(input.beforeParameters) !== JSON.stringify(input.afterParameters)) {
+        changes.push("parameters");
+    }
+    return changes;
 }
 
 async function taskCronTriggerEnsure(

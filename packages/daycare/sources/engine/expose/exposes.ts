@@ -5,9 +5,11 @@ import bcrypt from "bcryptjs";
 
 import { getLogger } from "../../log.js";
 import type { ExposeEndpointsRepository } from "../../storage/exposeEndpointsRepository.js";
+import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import { AsyncLock } from "../../util/lock.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
+import { TOPO_EVENT_TYPES, TOPO_SOURCE_EXPOSES, topographyObservationEmit } from "../observations/topographyEvents.js";
 import { ExposeProxy } from "./exposeProxy.js";
 import {
     type ExposeCreateInput,
@@ -29,6 +31,7 @@ export type ExposesOptions = {
     config: ConfigModule;
     eventBus: EngineEventBus;
     exposeEndpoints: Pick<ExposeEndpointsRepository, "create" | "findAll" | "update" | "delete">;
+    observationLog: ObservationLogRepository;
 };
 
 /**
@@ -39,6 +42,7 @@ export class Exposes implements ExposeProviderRegistrationApi {
     private readonly lock = new AsyncLock();
     private readonly proxy = new ExposeProxy();
     private readonly exposeEndpoints: Pick<ExposeEndpointsRepository, "create" | "findAll" | "update" | "delete">;
+    private readonly observationLog: ObservationLogRepository;
     private readonly providers = new Map<string, ExposeTunnelProvider>();
     private readonly endpoints = new Map<string, ExposeRuntimeEndpoint>();
     private readonly activeDomains = new Map<string, string>();
@@ -48,6 +52,7 @@ export class Exposes implements ExposeProviderRegistrationApi {
     constructor(options: ExposesOptions) {
         void options.eventBus;
         this.exposeEndpoints = options.exposeEndpoints;
+        this.observationLog = options.observationLog;
     }
 
     async start(): Promise<void> {
@@ -191,6 +196,23 @@ export class Exposes implements ExposeProviderRegistrationApi {
                 this.endpoints.set(id, cloneRuntimeEndpoint(endpoint));
                 this.activeDomains.set(id, normalizedDomain);
                 await this.exposeEndpoints.create(endpointRecordBuild(endpoint));
+                await topographyObservationEmit(this.observationLog, {
+                    userId: normalizedUserId,
+                    type: TOPO_EVENT_TYPES.EXPOSE_CREATED,
+                    source: TOPO_SOURCE_EXPOSES,
+                    message: `Expose created: ${endpoint.domain}`,
+                    details: `Expose endpoint ${endpoint.id} created for domain "${endpoint.domain}" via ${endpoint.provider} (${endpoint.mode})`,
+                    data: {
+                        exposeId: endpoint.id,
+                        userId: normalizedUserId,
+                        domain: endpoint.domain,
+                        target: JSON.stringify(endpoint.target),
+                        provider: endpoint.provider,
+                        mode: endpoint.mode,
+                        authenticated: endpoint.auth !== null
+                    },
+                    scopeIds: [normalizedUserId]
+                });
                 return {
                     endpoint: cloneEndpoint(endpoint),
                     password: auth?.password
@@ -225,6 +247,19 @@ export class Exposes implements ExposeProviderRegistrationApi {
             await this.endpointDeactivate(endpoint.id);
             this.endpoints.delete(endpoint.id);
             await this.exposeEndpoints.delete(endpoint.id);
+            await topographyObservationEmit(this.observationLog, {
+                userId: endpoint.userId,
+                type: TOPO_EVENT_TYPES.EXPOSE_REMOVED,
+                source: TOPO_SOURCE_EXPOSES,
+                message: `Expose removed: ${endpoint.domain}`,
+                details: `Expose endpoint ${endpoint.id} removed for domain "${endpoint.domain}"`,
+                data: {
+                    exposeId: endpoint.id,
+                    userId: endpoint.userId,
+                    domain: endpoint.domain
+                },
+                scopeIds: [endpoint.userId]
+            });
         });
     }
 
@@ -271,6 +306,23 @@ export class Exposes implements ExposeProviderRegistrationApi {
             }
             this.endpoints.set(updated.id, cloneRuntimeEndpoint(updated));
             await this.exposeEndpoints.update(updated.id, endpointRecordBuild(updated));
+            await topographyObservationEmit(this.observationLog, {
+                userId: updated.userId,
+                type: TOPO_EVENT_TYPES.EXPOSE_UPDATED,
+                source: TOPO_SOURCE_EXPOSES,
+                message: `Expose updated: ${updated.domain}`,
+                details: `Expose endpoint ${updated.id} updated for domain "${updated.domain}"`,
+                data: {
+                    exposeId: updated.id,
+                    userId: updated.userId,
+                    domain: updated.domain,
+                    target: JSON.stringify(updated.target),
+                    provider: updated.provider,
+                    mode: updated.mode,
+                    authenticated: updated.auth !== null
+                },
+                scopeIds: [updated.userId]
+            });
 
             return {
                 endpoint: cloneEndpoint(updated),

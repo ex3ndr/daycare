@@ -5,6 +5,7 @@ import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForUser } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
+import { TOPO_EVENT_TYPES, TOPO_SOURCE_CRONS, topographyObservationEmit } from "../observations/topographyEvents.js";
 import type { CronTaskDefinition } from "./cronTypes.js";
 import { CronScheduler } from "./ops/cronScheduler.js";
 
@@ -114,6 +115,22 @@ export class Crons {
             ...definition
         });
         this.eventBus.emit("cron.task.added", { task });
+        await topographyObservationEmit(this.storage.observationLog, {
+            userId: ctx.userId,
+            type: TOPO_EVENT_TYPES.CRON_ADDED,
+            source: TOPO_SOURCE_CRONS,
+            message: `Cron added: ${task.name}`,
+            details: `Cron trigger ${task.id} added for task ${task.taskId}, schedule "${task.schedule}" tz ${task.timezone}`,
+            data: {
+                cronId: task.id,
+                taskId: task.taskId,
+                userId: task.userId,
+                name: task.name,
+                schedule: task.schedule,
+                timezone: task.timezone
+            },
+            scopeIds: [ctx.userId]
+        });
         return task;
     }
 
@@ -126,8 +143,30 @@ export class Crons {
         const deleted = await this.scheduler.deleteTask(ctx, taskId);
         if (deleted && existing.taskId) {
             await this.taskDeleteIfOrphan(ctx, existing.taskId);
+            await topographyObservationEmit(this.storage.observationLog, {
+                userId: ctx.userId,
+                type: TOPO_EVENT_TYPES.CRON_DELETED,
+                source: TOPO_SOURCE_CRONS,
+                message: `Cron deleted: ${existing.name}`,
+                details: `Cron trigger ${existing.id} deleted for task ${existing.taskId}`,
+                data: {
+                    cronId: existing.id,
+                    taskId: existing.taskId,
+                    userId: existing.userId,
+                    name: existing.name
+                },
+                scopeIds: [ctx.userId]
+            });
         }
         return deleted;
+    }
+
+    async enableTask(ctx: Context, taskId: string): Promise<boolean> {
+        return this.cronEnabledSet(ctx, taskId, true);
+    }
+
+    async disableTask(ctx: Context, taskId: string): Promise<boolean> {
+        return this.cronEnabledSet(ctx, taskId, false);
     }
 
     async loadTask(taskId: string) {
@@ -217,6 +256,40 @@ export class Crons {
             return;
         }
         await this.storage.tasks.delete(ctx, taskId);
+    }
+
+    private async cronEnabledSet(ctx: Context, taskId: string, enabled: boolean): Promise<boolean> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            return false;
+        }
+        const existing = await this.storage.cronTasks.findById(taskId);
+        if (!existing || existing.userId !== userId) {
+            return false;
+        }
+        if (existing.enabled === enabled) {
+            return true;
+        }
+        await this.storage.cronTasks.update(taskId, {
+            enabled,
+            updatedAt: Date.now()
+        });
+        await this.scheduler.reload();
+        await topographyObservationEmit(this.storage.observationLog, {
+            userId,
+            type: enabled ? TOPO_EVENT_TYPES.CRON_ENABLED : TOPO_EVENT_TYPES.CRON_DISABLED,
+            source: TOPO_SOURCE_CRONS,
+            message: `${enabled ? "Cron enabled" : "Cron disabled"}: ${existing.name}`,
+            details: `Cron trigger ${existing.id} ${enabled ? "enabled" : "disabled"} for task ${existing.taskId}`,
+            data: {
+                cronId: existing.id,
+                taskId: existing.taskId,
+                userId: existing.userId,
+                name: existing.name
+            },
+            scopeIds: [userId]
+        });
+        return true;
     }
 }
 

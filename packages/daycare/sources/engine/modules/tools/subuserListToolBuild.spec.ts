@@ -8,6 +8,7 @@ import type { ToolExecutionContext } from "@/types";
 import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { Subusers } from "../../subusers/subusers.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
 import { subuserListToolBuild } from "./subuserListToolBuild.js";
@@ -29,7 +30,13 @@ describe("subuserListToolBuild", () => {
             });
 
             // Create two subusers
-            const createTool = subuserCreateToolBuild();
+            const createTool = subuserCreateToolBuild(
+                new Subusers({
+                    storage,
+                    userHomeForUserId: (uid) => new UserHome(config.usersDir, uid),
+                    updateAgentDescriptor: () => undefined
+                })
+            );
             await createTool.execute({ name: "app-one", systemPrompt: "Prompt 1." }, context, createToolCall);
             await createTool.execute({ name: "app-two", systemPrompt: "Prompt 2." }, context, createToolCall);
 

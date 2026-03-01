@@ -19,6 +19,7 @@ describe("buildSignalSubscribeTool", () => {
             const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions
             });
@@ -58,6 +59,7 @@ describe("buildSignalSubscribeTool", () => {
             const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions
             });
@@ -81,6 +83,7 @@ describe("buildSignalSubscribeTool", () => {
             const storage = await storageOpenTest();
             const signals = new Signals({
                 eventBus: new EngineEventBus(),
+                observationLog: storage.observationLog,
                 signalEvents: storage.signalEvents,
                 signalSubscriptions: storage.signalSubscriptions
             });

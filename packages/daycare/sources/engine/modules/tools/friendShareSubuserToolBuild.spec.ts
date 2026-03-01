@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { Friends } from "../../friends/friends.js";
 import { friendShareSubuserToolBuild } from "./friendShareSubuserToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_share_subuser" };
@@ -24,7 +25,7 @@ describe("friendShareSubuserToolBuild", () => {
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendShareSubuserToolBuild();
+            const tool = friendShareSubuserToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { friendNametag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
@@ -62,7 +63,12 @@ describe("friendShareSubuserToolBuild", () => {
                 name: "helper",
                 nametag: "cool-cat-11"
             });
-            const tool = friendShareSubuserToolBuild();
+            const tool = friendShareSubuserToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
 
             await expect(
                 tool.execute(
@@ -94,7 +100,12 @@ describe("friendShareSubuserToolBuild", () => {
             });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
-            const tool = friendShareSubuserToolBuild();
+            const tool = friendShareSubuserToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
 
             await expect(
                 tool.execute(
@@ -129,7 +140,12 @@ describe("friendShareSubuserToolBuild", () => {
             await storage.connections.upsertRequest(subuser.id, bob.id, 300);
             await storage.connections.upsertRequest(bob.id, subuser.id, 400);
 
-            const tool = friendShareSubuserToolBuild();
+            const tool = friendShareSubuserToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
             await expect(
                 tool.execute(
                     { friendNametag: "swift-fox-42", subuserId: subuser.id },

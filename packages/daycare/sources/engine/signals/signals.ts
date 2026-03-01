@@ -3,9 +3,11 @@ import type { Context } from "@/types";
 
 import { getLogger } from "../../log.js";
 import type { SignalEventDbRecord, SignalSubscriptionDbRecord } from "../../storage/databaseTypes.js";
+import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { SignalEventsRepository } from "../../storage/signalEventsRepository.js";
 import type { SignalSubscriptionsRepository } from "../../storage/signalSubscriptionsRepository.js";
 import type { EngineEventBus } from "../ipc/events.js";
+import { TOPO_EVENT_TYPES, TOPO_SOURCE_SIGNALS, topographyObservationEmit } from "../observations/topographyEvents.js";
 import type {
     Signal,
     SignalGenerateInput,
@@ -27,6 +29,7 @@ type SignalsRepositoryOptions = {
 
 export type SignalsOptions = {
     eventBus: EngineEventBus;
+    observationLog: ObservationLogRepository;
     onDeliver?: (signal: Signal, subscriptions: SignalSubscription[]) => Promise<void> | void;
 } & SignalsRepositoryOptions;
 
@@ -37,12 +40,14 @@ export class Signals {
         SignalSubscriptionsRepository,
         "create" | "delete" | "findByUserAndAgent" | "findMany" | "findMatching"
     >;
+    private readonly observationLog: ObservationLogRepository;
     private readonly onDeliver: SignalsOptions["onDeliver"];
 
     constructor(options: SignalsOptions) {
         this.eventBus = options.eventBus;
         this.signalEvents = options.signalEvents;
         this.signalSubscriptions = options.signalSubscriptions;
+        this.observationLog = options.observationLog;
         this.onDeliver = options.onDeliver;
     }
 
@@ -120,6 +125,20 @@ export class Signals {
             createdAt: subscription.createdAt,
             updatedAt: subscription.updatedAt
         });
+        await topographyObservationEmit(this.observationLog, {
+            userId: subscription.ctx.userId,
+            type: TOPO_EVENT_TYPES.SIGNAL_SUBSCRIBED,
+            source: TOPO_SOURCE_SIGNALS,
+            message: `Signal subscribed: ${subscription.pattern}`,
+            details: `Agent ${subscription.ctx.agentId} subscribed to signal pattern "${subscription.pattern}" (silent: ${subscription.silent})`,
+            data: {
+                agentId: subscription.ctx.agentId,
+                userId: subscription.ctx.userId,
+                pattern: subscription.pattern,
+                silent: subscription.silent
+            },
+            scopeIds: [subscription.ctx.userId, subscription.ctx.agentId]
+        });
         return { ...subscription };
     }
 
@@ -139,7 +158,23 @@ export class Signals {
      */
     async unsubscribe(input: SignalUnsubscribeInput): Promise<boolean> {
         const { ctx, pattern } = signalSubscriptionInputNormalize(input);
-        return this.signalSubscriptions.delete(ctx, pattern);
+        const removed = await this.signalSubscriptions.delete(ctx, pattern);
+        if (removed) {
+            await topographyObservationEmit(this.observationLog, {
+                userId: ctx.userId,
+                type: TOPO_EVENT_TYPES.SIGNAL_UNSUBSCRIBED,
+                source: TOPO_SOURCE_SIGNALS,
+                message: `Signal unsubscribed: ${pattern}`,
+                details: `Agent ${ctx.agentId} unsubscribed from signal pattern "${pattern}"`,
+                data: {
+                    agentId: ctx.agentId,
+                    userId: ctx.userId,
+                    pattern
+                },
+                scopeIds: [ctx.userId, ctx.agentId]
+            });
+        }
+        return removed;
     }
 
     /**

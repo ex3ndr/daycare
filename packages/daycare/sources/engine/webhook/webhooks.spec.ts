@@ -40,6 +40,10 @@ describe("Webhooks", () => {
             await expect(webhooks.deleteTrigger(contextBuild("user-a"), "hook-a")).resolves.toBe(true);
             await expect(storage.tasks.findById(contextBuild("user-a"), "task-a")).resolves.toBeNull();
             expect(postAndAwait).not.toHaveBeenCalled();
+            const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining(["webhook:added", "webhook:deleted"])
+            );
         } finally {
             storage.connection.close();
         }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { Friends } from "../../friends/friends.js";
 import { friendUnshareSubuserToolBuild } from "./friendUnshareSubuserToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_unshare_subuser" };
@@ -23,7 +24,7 @@ describe("friendUnshareSubuserToolBuild", () => {
             await storage.connections.upsertRequest(bob.id, subuser.id, 200);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendUnshareSubuserToolBuild();
+            const tool = friendUnshareSubuserToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { friendNametag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
@@ -63,7 +64,7 @@ describe("friendUnshareSubuserToolBuild", () => {
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendUnshareSubuserToolBuild();
+            const tool = friendUnshareSubuserToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { friendNametag: "swift-fox-42", subuserId: subuser.id },
                 contextBuild(alice.id, storage, postToUserAgents),
@@ -95,7 +96,12 @@ describe("friendUnshareSubuserToolBuild", () => {
                 name: "helper",
                 nametag: "cool-cat-11"
             });
-            const tool = friendUnshareSubuserToolBuild();
+            const tool = friendUnshareSubuserToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents: vi.fn(async () => undefined)
+                })
+            );
 
             await expect(
                 tool.execute(

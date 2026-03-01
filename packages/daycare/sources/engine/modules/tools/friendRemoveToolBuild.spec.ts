@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { Friends } from "../../friends/friends.js";
 import { friendRemoveToolBuild } from "./friendRemoveToolBuild.js";
 
 const toolCall = { id: "tool-1", name: "friend_remove" };
@@ -17,7 +18,7 @@ describe("friendRemoveToolBuild", () => {
             await storage.connections.upsertRequest(bob.id, alice.id, 200);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendRemoveToolBuild();
+            const tool = friendRemoveToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "swift-fox-42" },
                 contextBuild(alice.id, storage, postToUserAgents),
@@ -46,7 +47,7 @@ describe("friendRemoveToolBuild", () => {
             await storage.connections.upsertRequest(bob.id, alice.id, 100);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendRemoveToolBuild();
+            const tool = friendRemoveToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "swift-fox-42" },
                 contextBuild(alice.id, storage, postToUserAgents),
@@ -72,7 +73,7 @@ describe("friendRemoveToolBuild", () => {
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendRemoveToolBuild();
+            const tool = friendRemoveToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "swift-fox-42" },
                 contextBuild(alice.id, storage, postToUserAgents),
@@ -105,7 +106,7 @@ describe("friendRemoveToolBuild", () => {
             await storage.connections.upsertRequest(bob.id, subuser.id, 200);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendRemoveToolBuild();
+            const tool = friendRemoveToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "cool-cat-11" },
                 contextBuild(bob.id, storage, postToUserAgents),
@@ -145,7 +146,7 @@ describe("friendRemoveToolBuild", () => {
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendRemoveToolBuild();
+            const tool = friendRemoveToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "cool-cat-11" },
                 contextBuild(bob.id, storage, postToUserAgents),
@@ -186,7 +187,7 @@ describe("friendRemoveToolBuild", () => {
             await storage.connections.upsertRequest(alice.id, bobSub.id, 600);
 
             const postToUserAgents = vi.fn(async () => undefined);
-            const tool = friendRemoveToolBuild();
+            const tool = friendRemoveToolBuild(new Friends({ storage, postToUserAgents }));
             const result = await tool.execute(
                 { nametag: "swift-fox-42" },
                 contextBuild(alice.id, storage, postToUserAgents),

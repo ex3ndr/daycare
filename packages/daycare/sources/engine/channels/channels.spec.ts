@@ -17,6 +17,7 @@ describe("Channels", () => {
                 channels: storage.channels,
                 channelMessages: storage.channelMessages,
                 signals: { subscribe, unsubscribe },
+                observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async (agentId: string) => agentId !== "missing",
                     contextForAgentId: async (agentId: string) => ({
@@ -47,6 +48,16 @@ describe("Channels", () => {
                 ctx: expect.objectContaining({ userId: "user-1", agentId: "agent-bob" }),
                 pattern: "channel.dev:*"
             });
+            await expect(channels.delete("dev")).resolves.toBe(true);
+            const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-caller" });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining([
+                    "channel:created",
+                    "channel:member_joined",
+                    "channel:member_left",
+                    "channel:deleted"
+                ])
+            );
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -64,6 +75,7 @@ describe("Channels", () => {
                     subscribe: vi.fn(),
                     unsubscribe: vi.fn()
                 } as never,
+                observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async () => true,
                     contextForAgentId: async (agentId: string) => ({
@@ -136,6 +148,7 @@ describe("Channels", () => {
                     subscribe: vi.fn(),
                     unsubscribe: vi.fn()
                 } as never,
+                observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async () => true,
                     contextForAgentId: async (agentId: string) => ({
@@ -157,6 +170,7 @@ describe("Channels", () => {
                     subscribe,
                     unsubscribe: vi.fn()
                 } as never,
+                observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async () => true,
                     contextForAgentId: async (agentId: string) => ({

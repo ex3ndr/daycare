@@ -9,6 +9,7 @@ import { configResolve } from "../../../config/configResolve.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
+import { Subusers } from "../../subusers/subusers.js";
 import { UserHome } from "../../users/userHome.js";
 import { subuserCreateToolBuild } from "./subuserCreateToolBuild.js";
 
@@ -25,7 +26,13 @@ describe("subuserCreateToolBuild", () => {
             const owner = await storage.users.findOwner();
             const ownerUserId = owner!.id;
 
-            const tool = subuserCreateToolBuild();
+            const tool = subuserCreateToolBuild(
+                new Subusers({
+                    storage,
+                    userHomeForUserId: (uid) => new UserHome(config.usersDir, uid),
+                    updateAgentDescriptor: () => undefined
+                })
+            );
             const context = contextBuild(ownerUserId, {
                 config: { current: config },
                 storage
@@ -70,7 +77,13 @@ describe("subuserCreateToolBuild", () => {
             // Bootstrap creates owner; create a regular user
             await storage.users.create({ id: "regular-user" });
 
-            const tool = subuserCreateToolBuild();
+            const tool = subuserCreateToolBuild(
+                new Subusers({
+                    storage,
+                    userHomeForUserId: (uid) => new UserHome(config.usersDir, uid),
+                    updateAgentDescriptor: () => undefined
+                })
+            );
             const context = contextBuild("regular-user", {
                 config: { current: config },
                 storage
@@ -87,7 +100,11 @@ describe("subuserCreateToolBuild", () => {
     });
 
     it("hides from subuser agents", () => {
-        const tool = subuserCreateToolBuild();
+        const tool = subuserCreateToolBuild({
+            create: async () => {
+                throw new Error("not called");
+            }
+        });
         expect(
             tool.visibleByDefault?.({
                 ctx: contextForAgent({ userId: "u1", agentId: "a1" }),

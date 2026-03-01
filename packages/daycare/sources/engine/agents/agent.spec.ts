@@ -2034,6 +2034,7 @@ async function signalsBuild(
     const storage = await storageOpenTest();
     return new Signals({
         eventBus,
+        observationLog: storage.observationLog,
         signalEvents: storage.signalEvents,
         signalSubscriptions: storage.signalSubscriptions,
         onDeliver

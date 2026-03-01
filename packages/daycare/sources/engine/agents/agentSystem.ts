@@ -124,7 +124,12 @@ export class AgentSystem {
         this.inferenceRouter = options.inferenceRouter;
         this.authStore = options.authStore;
         this.memory = options.memory ?? new Memory({ usersDir: this.config.current.usersDir });
-        this.secrets = options.secrets ?? new Secrets(this.config.current.usersDir);
+        this.secrets =
+            options.secrets ??
+            new Secrets({
+                usersDir: this.config.current.usersDir,
+                observationLog: this.storage.observationLog
+            });
         this.delayedSignals = options.delayedSignals ?? null;
         this.eventBus.onEvent((event) => {
             if (event.type !== "signal.generated") {

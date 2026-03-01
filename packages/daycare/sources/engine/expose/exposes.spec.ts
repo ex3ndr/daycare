@@ -63,6 +63,10 @@ describe("Exposes", () => {
             await exposes.remove(created.endpoint.id);
             expect(await exposes.list()).toEqual([]);
             expect(provider.destroyTunnel).toHaveBeenCalledWith("ep1.a.example.com");
+            const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-1" });
+            expect(observations.map((entry) => entry.type)).toEqual(
+                expect.arrayContaining(["expose:created", "expose:updated", "expose:removed"])
+            );
 
             await exposes.stop();
         } finally {
@@ -383,7 +387,8 @@ function createExposes(rootDir: string, storage: Storage): Exposes {
     return new Exposes({
         config: new ConfigModule(config),
         eventBus: new EngineEventBus(),
-        exposeEndpoints: storage.exposeEndpoints
+        exposeEndpoints: storage.exposeEndpoints,
+        observationLog: storage.observationLog
     });
 }
 
