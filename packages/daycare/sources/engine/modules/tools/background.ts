@@ -104,7 +104,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         tool: {
             name: "send_agent_message",
             description:
-                "Send a system message to another agent (defaults to the most recent foreground agent). Set steering=true to interrupt the agent's current work.",
+                "Send a system message to another agent (defaults to parent for child agents, latest swarm contact for swarms, otherwise most recent foreground agent). Set steering=true to interrupt the agent's current work.",
             parameters: sendSchema
         },
         returns: backgroundReturns,
@@ -113,16 +113,27 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             const outbound = await agentMessageOverflowHandle(payload.text, toolContext);
             const descriptor = toolContext.agent.descriptor;
             const origin = toolContext.agent.id;
+            const defaultSwarmContactTarget = await swarmContactDefaultTargetResolve(descriptor, toolContext);
             const targetAgentId =
                 payload.agentId ??
-                (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
+                (descriptor.type === "subagent" || descriptor.type === "memory-search"
                     ? descriptor.parentAgentId
-                    : undefined);
+                    : (defaultSwarmContactTarget ?? undefined));
             const resolvedTarget =
                 targetAgentId ?? toolContext.agentSystem.agentFor(toolContext.ctx, "most-recent-foreground");
             if (!resolvedTarget) {
+                if (descriptor.type === "swarm") {
+                    throw new Error("No known swarm contacts found. Provide agentId or wait for an inbound message.");
+                }
                 throw new Error("No recent foreground agent found.");
             }
+            const deliveryContext = await agentMessageDeliveryContextResolve(descriptor, toolContext, resolvedTarget);
+            const swarmContactTarget = await swarmContactTargetResolve(
+                descriptor,
+                toolContext,
+                resolvedTarget,
+                deliveryContext
+            );
 
             // If steering flag is set, use steering delivery
             if (payload.steering) {
@@ -131,7 +142,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     throw new Error(`Agent not found: ${resolvedTarget}`);
                 }
 
-                await toolContext.agentSystem.steer(toolContext.ctx, resolvedTarget, {
+                await toolContext.agentSystem.steer(deliveryContext, resolvedTarget, {
                     type: "steering",
                     text: outbound.text,
                     origin,
@@ -154,6 +165,12 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     isError: false,
                     timestamp: Date.now()
                 };
+                if (swarmContactTarget) {
+                    await toolContext.agentSystem.storage.swarmContacts.recordSent(
+                        toolContext.agent.userId,
+                        swarmContactTarget
+                    );
+                }
 
                 return {
                     toolMessage,
@@ -167,10 +184,16 @@ export function buildSendAgentMessageTool(): ToolDefinition {
 
             // Normal system message delivery
             await toolContext.agentSystem.post(
-                toolContext.ctx,
+                deliveryContext,
                 { agentId: resolvedTarget },
                 { type: "system_message", text: outbound.text, origin }
             );
+            if (swarmContactTarget) {
+                await toolContext.agentSystem.storage.swarmContacts.recordSent(
+                    toolContext.agent.userId,
+                    swarmContactTarget
+                );
+            }
 
             const summary = outbound.outputPath
                 ? `System message sent. Full content saved to ${outbound.outputPath}.`
@@ -246,4 +269,52 @@ function writeOutputPathResolve(value: unknown): string {
         throw new Error("write_output result path is missing.");
     }
     return path;
+}
+
+async function agentMessageDeliveryContextResolve(
+    descriptor: ToolExecutionContext["agent"]["descriptor"],
+    toolContext: ToolExecutionContext,
+    targetAgentId: string
+): Promise<ToolExecutionContext["ctx"]> {
+    if (descriptor.type !== "swarm") {
+        return toolContext.ctx;
+    }
+    const targetContext = await toolContext.agentSystem.contextForAgentId(targetAgentId);
+    if (!targetContext) {
+        throw new Error(`Agent not found: ${targetAgentId}`);
+    }
+    return targetContext;
+}
+
+async function swarmContactDefaultTargetResolve(
+    descriptor: ToolExecutionContext["agent"]["descriptor"],
+    toolContext: ToolExecutionContext
+): Promise<string | null> {
+    if (descriptor.type !== "swarm") {
+        return null;
+    }
+    const contacts = await toolContext.agentSystem.storage.swarmContacts.listContacts(toolContext.agent.userId);
+    return contacts[0]?.contactAgentId ?? null;
+}
+
+async function swarmContactTargetResolve(
+    descriptor: ToolExecutionContext["agent"]["descriptor"],
+    toolContext: ToolExecutionContext,
+    targetAgentId: string,
+    deliveryContext: ToolExecutionContext["ctx"]
+): Promise<string | null> {
+    if (descriptor.type !== "swarm") {
+        return null;
+    }
+    if (deliveryContext.userId === toolContext.ctx.userId) {
+        return null;
+    }
+    const known = await toolContext.agentSystem.storage.swarmContacts.isKnownContact(
+        toolContext.agent.userId,
+        targetAgentId
+    );
+    if (!known) {
+        throw new Error("Can only message agents that have contacted this swarm");
+    }
+    return targetAgentId;
 }

@@ -60,98 +60,12 @@ describe("friendSendToolBuild", () => {
             storage.connection.close();
         }
     });
-
-    it("sends to a shared subuser gateway agent", async () => {
-        const storage = await storageOpenTest();
-        try {
-            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
-            const subuser = await storage.users.create({
-                id: "alice-sub-1",
-                parentUserId: alice.id,
-                name: "helper",
-                nametag: "cool-cat-11"
-            });
-
-            await storage.agents.create({
-                id: "subuser-gateway",
-                userId: subuser.id,
-                type: "subuser",
-                descriptor: { type: "subuser", id: subuser.id, name: "helper", systemPrompt: "prompt" },
-                activeSessionId: null,
-                permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
-                tokens: null,
-                stats: {},
-                lifecycle: "active",
-                createdAt: 1,
-                updatedAt: 1
-            });
-
-            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
-            await storage.connections.upsertRequest(bob.id, subuser.id, 200);
-
-            const postToUserAgents = vi.fn(async () => undefined);
-            const post = vi.fn(async () => undefined);
-            const tool = friendSendToolBuild();
-            const result = await tool.execute(
-                { nametag: "cool-cat-11", message: "Hello helper" },
-                contextBuild(bob.id, storage, postToUserAgents, post),
-                toolCall
-            );
-
-            expect(result.typedResult.summary).toContain("Sent message");
-            expect(post).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: "alice-sub-1" }),
-                { agentId: "subuser-gateway" },
-                expect.objectContaining({
-                    type: "system_message",
-                    origin: "friend:swift-fox-42",
-                    text: expect.stringContaining("Message from swift-fox-42: Hello helper")
-                })
-            );
-            expect(postToUserAgents).not.toHaveBeenCalled();
-        } finally {
-            storage.connection.close();
-        }
-    });
-
-    it("fails when subuser share is not active", async () => {
-        const storage = await storageOpenTest();
-        try {
-            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
-            const subuser = await storage.users.create({
-                id: "alice-sub-1",
-                parentUserId: alice.id,
-                name: "helper",
-                nametag: "cool-cat-11"
-            });
-            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
-
-            const tool = friendSendToolBuild();
-            await expect(
-                tool.execute(
-                    { nametag: "cool-cat-11", message: "Hello" },
-                    contextBuild(
-                        bob.id,
-                        storage,
-                        vi.fn(async () => undefined),
-                        vi.fn(async () => undefined)
-                    ),
-                    toolCall
-                )
-            ).rejects.toThrow("No active shared access");
-        } finally {
-            storage.connection.close();
-        }
-    });
 });
 
 function contextBuild(
     userId: string,
     storage: Storage,
-    postToUserAgents: (targetUserId: string, item: unknown) => Promise<void>,
-    post: (ctx: unknown, target: unknown, item: unknown) => Promise<void> = async () => undefined
+    postToUserAgents: (targetUserId: string, item: unknown) => Promise<void>
 ): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -165,8 +79,7 @@ function contextBuild(
         messageContext: {},
         agentSystem: {
             storage,
-            postToUserAgents,
-            post
+            postToUserAgents
         } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

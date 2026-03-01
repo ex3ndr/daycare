@@ -464,7 +464,7 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         );
         return contextForUser({ userId: user.id });
     }
-    if (target.descriptor.type === "subuser") {
+    if (target.descriptor.type === "swarm") {
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();

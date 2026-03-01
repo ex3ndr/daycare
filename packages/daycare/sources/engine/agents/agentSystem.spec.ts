@@ -616,6 +616,52 @@ describe("AgentSystem", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("refreshes sandboxes only for loaded agents of the target user", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const firstDescriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                userId: "connector-a",
+                channelId: "channel-a"
+            };
+            const secondDescriptor: AgentDescriptor = {
+                type: "user",
+                connector: "telegram",
+                userId: "connector-b",
+                channelId: "channel-b"
+            };
+            await postAndAwait(harness.agentSystem, { descriptor: firstDescriptor }, { type: "reset", message: "a" });
+            await postAndAwait(harness.agentSystem, { descriptor: secondDescriptor }, { type: "reset", message: "b" });
+            const firstAgentId = await agentIdForTarget(harness.agentSystem, { descriptor: firstDescriptor });
+            const secondAgentId = await agentIdForTarget(harness.agentSystem, { descriptor: secondDescriptor });
+            const entries = (
+                harness.agentSystem as unknown as {
+                    entries: Map<string, { ctx: Context; agent: { sandboxRefresh: () => void } }>;
+                }
+            ).entries;
+            const firstEntry = entries.get(firstAgentId);
+            const secondEntry = entries.get(secondAgentId);
+            if (!firstEntry || !secondEntry) {
+                throw new Error("Expected loaded entries");
+            }
+            const firstSpy = vi.spyOn(firstEntry.agent, "sandboxRefresh");
+            const secondSpy = vi.spyOn(secondEntry.agent, "sandboxRefresh");
+
+            const refreshed = harness.agentSystem.refreshSandboxesForUserId(firstEntry.ctx.userId);
+
+            expect(refreshed).toBe(1);
+            expect(firstSpy).toHaveBeenCalledTimes(1);
+            expect(secondSpy).toHaveBeenCalledTimes(0);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 async function harnessCreate(
@@ -800,7 +846,7 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         );
         return contextForUser({ userId: user.id });
     }
-    if (target.descriptor.type === "subuser") {
+    if (target.descriptor.type === "swarm") {
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();

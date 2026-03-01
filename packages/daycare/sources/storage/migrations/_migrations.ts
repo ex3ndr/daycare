@@ -48,5 +48,9 @@ export const migrations: Migration[] = [
     {
         name: "20260301_drop_legacy_task_trigger_table",
         fileName: "20260301_drop_legacy_task_trigger_table.sql"
+    },
+    {
+        name: "20260301_swarms",
+        fileName: "20260301_swarms.sql"
     }
 ];

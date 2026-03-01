@@ -9,7 +9,8 @@ type TopologyStorageMock = {
             id: string;
             parentUserId: string | null;
             nametag: string | null;
-            name: string | null;
+            firstName: string | null;
+            lastName: string | null;
         } | null>;
         findByParentUserId: (parentUserId: string) => Promise<Array<{ id: string }>>;
     };
@@ -59,7 +60,13 @@ type TopologyStorageMock = {
 
 function createToolContext(options: {
     caller: { userId: string; agentId: string };
-    users: Array<{ id: string; parentUserId: string | null; nametag?: string | null; name?: string | null }>;
+    users: Array<{
+        id: string;
+        parentUserId: string | null;
+        nametag?: string | null;
+        firstName?: string | null;
+        lastName?: string | null;
+    }>;
     agents: Array<{ id: string; userId: string; descriptor: { type: string }; lifecycle?: string; updatedAt?: number }>;
     tasksByUser: Record<string, Array<{ id: string; title: string; description: string | null; updatedAt: number }>>;
     cronTasks?: Array<{
@@ -91,7 +98,8 @@ function createToolContext(options: {
                     id: user.id,
                     parentUserId: user.parentUserId,
                     nametag: user.nametag ?? null,
-                    name: user.name ?? null
+                    firstName: user.firstName ?? null,
+                    lastName: user.lastName ?? null
                 };
             },
             findByParentUserId: async (parentUserId) =>

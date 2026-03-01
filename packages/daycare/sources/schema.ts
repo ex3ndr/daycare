@@ -29,14 +29,18 @@ export const usersTable = pgTable(
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
         isOwner: integer("is_owner").notNull().default(0),
+        isSwarm: integer("is_swarm").notNull().default(0),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
         parentUserId: text("parent_user_id"),
-        name: text("name"),
         firstName: text("first_name"),
         lastName: text("last_name"),
+        bio: text("bio"),
+        about: text("about"),
         country: text("country"),
         timezone: text("timezone"),
+        systemPrompt: text("system_prompt"),
+        memory: integer("memory").notNull().default(0),
         nametag: text("nametag").notNull()
     },
     (table) => [
@@ -474,6 +478,24 @@ export const systemPromptsTable = pgTable(
     ]
 );
 
+export const swarmContactsTable = pgTable(
+    "swarm_contacts",
+    {
+        swarmUserId: text("swarm_user_id").notNull(),
+        contactAgentId: text("contact_agent_id").notNull(),
+        swarmAgentId: text("swarm_agent_id").notNull(),
+        messagesSent: integer("messages_sent").notNull().default(0),
+        messagesReceived: integer("messages_received").notNull().default(0),
+        firstContactAt: bigint("first_contact_at", { mode: "number" }).notNull(),
+        lastContactAt: bigint("last_contact_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.swarmUserId, table.contactAgentId] }),
+        index("idx_swarm_contacts_swarm_user_id").on(table.swarmUserId),
+        index("idx_swarm_contacts_swarm_agent_id").on(table.swarmAgentId)
+    ]
+);
+
 export const tokenStatsHourlyTable = pgTable(
     "token_stats_hourly",
     {
@@ -541,6 +563,7 @@ export const schema = {
     processesTable,
     connectionsTable,
     systemPromptsTable,
+    swarmContactsTable,
     tokenStatsHourlyTable,
     observationLogTable
 };

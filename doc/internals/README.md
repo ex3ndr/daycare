@@ -23,14 +23,15 @@ This folder documents the current Daycare CLI, plugins, agents, and runtime.
 - `heartbeat.md` - heartbeat scheduler and storage
 - `signals.md` - signal generation framework and `generate_signal` tool
 - `signal-events-csv-tool.md` - CSV export tool for persisted signal events with time/type filtering
-- `apps.md` - app discovery, registration, and reviewed tool execution
+- `swarms.md` - swarm discovery, dynamic tool registration, and contact resolution
+- `apps.md` - retired legacy app runtime notes
 - `agent-group-channels.md` - agent group channel model, storage, and signal delivery flow
 - `auth.md` - auth store and helper commands
 - `inference.md` - inference runtime and provider catalog
 - `rlm-snapshot-reload-unknown-tool.md` - dump/load snapshot safety for unknown-tool RLM resumes
 - `permissions.md` - permission system and resolution
 - `workspace-permission.md` - `@workspace` permission behavior and defaults
-- `app-folder-prompt-path.md` - app folder path rendering in permissions system prompt
+- `app-folder-prompt-path.md` - retired legacy app-folder prompt notes
 - `agent-creation-permissions.md` - creation-time permission pre-grants for subagents and permanent agents
 - `read-write-permission-alignment.md` - sandbox read/write permission path resolution
 - `read-tool-robustness.md` - robust read behavior (pagination, truncation, image handling)

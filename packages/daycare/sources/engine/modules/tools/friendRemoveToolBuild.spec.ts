@@ -91,7 +91,7 @@ describe("friendRemoveToolBuild", () => {
         }
     });
 
-    it("removes an active shared subuser and notifies the owner", async () => {
+    it("unfriends an active child-user relationship and notifies that user", async () => {
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.create({ id: "owner", nametag: "happy-penguin-42" });
@@ -99,7 +99,7 @@ describe("friendRemoveToolBuild", () => {
             const subuser = await storage.users.create({
                 id: "owner-sub-1",
                 parentUserId: owner.id,
-                name: "helper",
+                firstName: "helper",
                 nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
@@ -113,9 +113,9 @@ describe("friendRemoveToolBuild", () => {
                 toolCall
             );
 
-            expect(result.typedResult.status).toBe("removed_share");
+            expect(result.typedResult.status).toBe("unfriended");
             expect(postToUserAgents).toHaveBeenCalledWith(
-                owner.id,
+                subuser.id,
                 expect.objectContaining({ type: "system_message", origin: "friend:swift-fox-42" })
             );
 
@@ -132,7 +132,7 @@ describe("friendRemoveToolBuild", () => {
         }
     });
 
-    it("rejects an incoming shared subuser offer without notification", async () => {
+    it("rejects an incoming child-user offer without notification", async () => {
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.create({ id: "owner", nametag: "happy-penguin-42" });
@@ -140,7 +140,7 @@ describe("friendRemoveToolBuild", () => {
             const subuser = await storage.users.create({
                 id: "owner-sub-1",
                 parentUserId: owner.id,
-                name: "helper",
+                firstName: "helper",
                 nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(subuser.id, bob.id, 100);
@@ -153,15 +153,17 @@ describe("friendRemoveToolBuild", () => {
                 toolCall
             );
 
-            expect(result.typedResult.status).toBe("rejected_share");
+            expect(result.typedResult.status).toBe("rejected");
             expect(postToUserAgents).not.toHaveBeenCalled();
-            expect(await storage.connections.find(subuser.id, bob.id)).toBeNull();
+            const state = await storage.connections.find(subuser.id, bob.id);
+            expect(state?.requestedA).toBe(false);
+            expect(state?.requestedB).toBe(false);
         } finally {
             storage.connection.close();
         }
     });
 
-    it("cascades subuser-share cleanup when unfriending a user", async () => {
+    it("does not cascade unrelated child-user relationships when unfriending a user", async () => {
         const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
@@ -169,13 +171,13 @@ describe("friendRemoveToolBuild", () => {
             const aliceSub = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
-                name: "a-helper",
+                firstName: "a-helper",
                 nametag: "cool-cat-11"
             });
             const bobSub = await storage.users.create({
                 id: "bob-sub-1",
                 parentUserId: bob.id,
-                name: "b-helper",
+                firstName: "b-helper",
                 nametag: "smart-owl-22"
             });
 
@@ -195,8 +197,12 @@ describe("friendRemoveToolBuild", () => {
             );
 
             expect(result.typedResult.status).toBe("unfriended");
-            expect(await storage.connections.find(aliceSub.id, bob.id)).toBeNull();
-            expect(await storage.connections.find(bobSub.id, alice.id)).toBeNull();
+            const aliceSubConnection = await storage.connections.find(aliceSub.id, bob.id);
+            const bobSubConnection = await storage.connections.find(bobSub.id, alice.id);
+            expect(aliceSubConnection?.requestedA).toBe(true);
+            expect(aliceSubConnection?.requestedB).toBe(true);
+            expect(bobSubConnection?.requestedA).toBe(true);
+            expect(bobSubConnection?.requestedB).toBe(true);
         } finally {
             storage.connection.close();
         }

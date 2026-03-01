@@ -8,12 +8,10 @@ describe("agentDescriptorRoleResolve", () => {
         expect(agentDescriptorRoleResolve(d)).toBe("user");
     });
 
-    it("maps subuser descriptor to 'user'", () => {
+    it("maps swarm descriptor to 'user'", () => {
         const d: AgentDescriptor = {
-            type: "subuser",
-            id: "su1",
-            name: "my-app",
-            systemPrompt: "sp"
+            type: "swarm",
+            id: "swarm-1"
         };
         expect(agentDescriptorRoleResolve(d)).toBe("user");
     });
@@ -41,18 +39,6 @@ describe("agentDescriptorRoleResolve", () => {
 
     it("maps subagent descriptor to 'subagent'", () => {
         const d: AgentDescriptor = { type: "subagent", id: "s1", parentAgentId: "p1", name: "worker" };
-        expect(agentDescriptorRoleResolve(d)).toBe("subagent");
-    });
-
-    it("maps app descriptor to 'subagent'", () => {
-        const d: AgentDescriptor = {
-            type: "app",
-            id: "a1",
-            parentAgentId: "p1",
-            name: "app",
-            systemPrompt: "sp",
-            appId: "aid"
-        };
         expect(agentDescriptorRoleResolve(d)).toBe("subagent");
     });
 

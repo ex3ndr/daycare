@@ -57,7 +57,12 @@ describe("system-feedback plugin tool", () => {
 
     it("logs feedback and delivers system message when target agent is configured", async () => {
         const appendSpy = vi.spyOn(fs, "appendFile").mockResolvedValue(undefined);
-        const usersFindById = vi.fn(async () => ({ id: "user-1", name: "Steve", nametag: "steve" }));
+        const usersFindById = vi.fn(async () => ({
+            id: "user-1",
+            firstName: "Steve",
+            lastName: null,
+            nametag: "steve"
+        }));
         const post = vi.fn(async () => undefined);
 
         const api = createPluginApi({ targetAgentId: "feedback-agent" });
@@ -142,7 +147,12 @@ describe("system-feedback plugin tool", () => {
 
     it("works in log-only mode when target agent is not configured", async () => {
         const appendSpy = vi.spyOn(fs, "appendFile").mockResolvedValue(undefined);
-        const usersFindById = vi.fn(async () => ({ id: "user-1", name: "Steve", nametag: "steve" }));
+        const usersFindById = vi.fn(async () => ({
+            id: "user-1",
+            firstName: "Steve",
+            lastName: null,
+            nametag: "steve"
+        }));
         const post = vi.fn(async () => undefined);
 
         const api = createPluginApi({});
@@ -226,7 +236,12 @@ describe("system-feedback plugin tool", () => {
 
     it("returns an error result when delivery fails", async () => {
         const appendSpy = vi.spyOn(fs, "appendFile").mockResolvedValue(undefined);
-        const usersFindById = vi.fn(async () => ({ id: "user-1", name: "Steve", nametag: "steve" }));
+        const usersFindById = vi.fn(async () => ({
+            id: "user-1",
+            firstName: "Steve",
+            lastName: null,
+            nametag: "steve"
+        }));
         const post = vi.fn(async () => {
             throw new Error("post failed");
         });

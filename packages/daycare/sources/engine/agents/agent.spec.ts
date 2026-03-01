@@ -1428,7 +1428,9 @@ describe("Agent", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const agentSystem = {} as unknown as AgentSystem;
+            const agentSystem = {
+                extraMountsForUserId: () => []
+            } as unknown as AgentSystem;
 
             const agentId = createId();
             const userId = createId();
@@ -2312,7 +2314,9 @@ describe("Agent", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const agentSystem = {} as unknown as AgentSystem;
+            const agentSystem = {
+                extraMountsForUserId: () => []
+            } as unknown as AgentSystem;
 
             const agentId = createId();
             const userId = createId();
@@ -2414,7 +2418,7 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         );
         return contextForUser({ userId: user.id });
     }
-    if (target.descriptor.type === "subuser") {
+    if (target.descriptor.type === "swarm") {
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();

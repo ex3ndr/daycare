@@ -64,7 +64,9 @@ describe("database plugin", () => {
             descriptor,
             state,
             new AgentInbox(agentId),
-            {} as unknown as Parameters<typeof Agent.restore>[4],
+            {
+                extraMountsForUserId: () => []
+            } as unknown as Parameters<typeof Agent.restore>[4],
             new UserHome(path.join(baseDir, "users"), "user-1")
         );
         const api = {
@@ -158,7 +160,9 @@ describe("database plugin", () => {
             descriptor,
             state,
             new AgentInbox(user2AgentId),
-            {} as unknown as Parameters<typeof Agent.restore>[4],
+            {
+                extraMountsForUserId: () => []
+            } as unknown as Parameters<typeof Agent.restore>[4],
             new UserHome(path.join(baseDir, "users"), "user-2")
         );
         const selectToolCall: ToolCall = {

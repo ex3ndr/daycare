@@ -26,15 +26,6 @@ export type {
     AgentTokenStats,
     BackgroundAgentState
 } from "./engine/agents/ops/agentTypes.js";
-// Apps
-export type {
-    AppDescriptor,
-    AppManifest,
-    AppPermissions,
-    AppReviewDecision,
-    AppRule,
-    AppRuleSet
-} from "./engine/apps/appTypes.js";
 // Channels
 export type {
     Channel,
@@ -142,6 +133,8 @@ export type {
 } from "./engine/signals/signalTypes.js";
 // Skills
 export type { AgentSkill } from "./engine/skills/skillTypes.js";
+// Swarms
+export type { SwarmConfig, SwarmContact, SwarmRecord } from "./engine/swarms/swarmTypes.js";
 // Tasks
 export type {
     TaskActiveCronTrigger,

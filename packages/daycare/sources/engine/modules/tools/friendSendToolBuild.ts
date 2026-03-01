@@ -2,7 +2,6 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { xmlEscape } from "../../../util/xmlEscape.js";
-import { contextForAgent } from "../../agents/context.js";
 import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js";
 
 const schema = Type.Object(
@@ -75,28 +74,10 @@ export function friendSendToolBuild(): ToolDefinition {
                 text: messageBuildSystemText(`Message from ${myNametag}: ${xmlEscape(message)}`, origin)
             } as const;
 
-            if (target.parentUserId) {
-                if (!connection || !connection.requestedA || !connection.requestedB) {
-                    throw new Error(`No active shared access to ${targetNametag}.`);
-                }
-                const agents = await toolContext.agentSystem.storage.agents.findMany();
-                const gateway = agents.find(
-                    (agent) => agent.descriptor.type === "subuser" && agent.descriptor.id === target.id
-                );
-                if (!gateway) {
-                    throw new Error(`Gateway agent not found for shared subuser ${targetNametag}.`);
-                }
-                await toolContext.agentSystem.post(
-                    contextForAgent({ userId: target.id, agentId: gateway.id }),
-                    { agentId: gateway.id },
-                    item
-                );
-            } else {
-                if (!connection || !connection.requestedA || !connection.requestedB) {
-                    throw new Error(`You are not friends with ${targetNametag}.`);
-                }
-                await toolContext.agentSystem.postToUserAgents(target.id, item);
+            if (!connection || !connection.requestedA || !connection.requestedB) {
+                throw new Error(`You are not friends with ${targetNametag}.`);
             }
+            await toolContext.agentSystem.postToUserAgents(target.id, item);
 
             const summary = `Sent message to ${targetNametag}.`;
             const toolMessage: ToolResultMessage = {

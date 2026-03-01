@@ -475,11 +475,11 @@ export function topologyTool(
                 ? []
                 : ownerSubusers.map((subuser) => {
                       const gateway = allAgentRecords.find(
-                          (agent) => agent.descriptor.type === "subuser" && agent.descriptor.id === subuser.id
+                          (agent) => agent.descriptor.type === "swarm" && agent.descriptor.id === subuser.id
                       );
                       return {
                           id: subuser.id,
-                          name: subuser.name ?? null,
+                          name: userDisplayName(subuser),
                           nametag: subuser.nametag ?? null,
                           gatewayAgentId: gateway?.id ?? null,
                           gatewayLifecycle: gateway?.lifecycle ?? null
@@ -562,7 +562,8 @@ async function friendsListBuild(
                 id: string;
                 parentUserId: string | null;
                 nametag: string | null;
-                name: string | null;
+                firstName: string | null;
+                lastName: string | null;
             } | null>;
         };
     },
@@ -571,7 +572,13 @@ async function friendsListBuild(
     const friendConnections = await storage.connections.findFriends(callerUserId);
     const userCache = new Map<
         string,
-        { id: string; parentUserId: string | null; nametag: string | null; name: string | null }
+        {
+            id: string;
+            parentUserId: string | null;
+            nametag: string | null;
+            firstName: string | null;
+            lastName: string | null;
+        }
     >();
 
     const friendUsers = (
@@ -602,8 +609,13 @@ async function friendsListBuild(
         .filter(
             (
                 entry
-            ): entry is { id: string; parentUserId: string | null; nametag: string | null; name: string | null } =>
-                !!entry
+            ): entry is {
+                id: string;
+                parentUserId: string | null;
+                nametag: string | null;
+                firstName: string | null;
+                lastName: string | null;
+            } => !!entry
         )
         .sort((left, right) => {
             const leftTag = left.nametag ?? left.id;
@@ -613,7 +625,7 @@ async function friendsListBuild(
 
     const gatewayBySubuserId = new Map(
         agents
-            .filter((agent) => agent.descriptor.type === "subuser" && typeof agent.descriptor.id === "string")
+            .filter((agent) => agent.descriptor.type === "swarm" && typeof agent.descriptor.id === "string")
             .map((agent) => [agent.descriptor.id as string, agent.id])
     );
 
@@ -627,7 +639,7 @@ async function friendsListBuild(
         friends.push({
             userId: friend.id,
             nametag: friend.nametag,
-            name: friend.name,
+            name: userDisplayName(friend),
             sharedOut: await sharedSubusersBuild({
                 connections: outgoing,
                 knownUserId: friend.id,
@@ -652,11 +664,24 @@ async function sharedSubusersBuild(options: {
     connections: Array<{ userAId: string; userBId: string; requestedA: boolean; requestedB: boolean }>;
     knownUserId: string;
     users: {
-        findById: (
-            id: string
-        ) => Promise<{ id: string; parentUserId: string | null; nametag: string | null; name: string | null } | null>;
+        findById: (id: string) => Promise<{
+            id: string;
+            parentUserId: string | null;
+            nametag: string | null;
+            firstName: string | null;
+            lastName: string | null;
+        } | null>;
     };
-    userCache: Map<string, { id: string; parentUserId: string | null; nametag: string | null; name: string | null }>;
+    userCache: Map<
+        string,
+        {
+            id: string;
+            parentUserId: string | null;
+            nametag: string | null;
+            firstName: string | null;
+            lastName: string | null;
+        }
+    >;
     gatewayBySubuserId: Map<string, string>;
 }): Promise<TopologyFriendShare[]> {
     const sorted = options.connections
@@ -679,7 +704,7 @@ async function sharedSubusersBuild(options: {
 
         entries.push({
             subuserId,
-            subuserName: subuser.name ?? subuser.id,
+            subuserName: userDisplayName(subuser) ?? subuser.id,
             subuserNametag: subuser.nametag,
             gatewayAgentId: options.gatewayBySubuserId.get(subuserId) ?? null,
             status: connection.requestedA && connection.requestedB ? "active" : "pending"
@@ -691,6 +716,20 @@ async function sharedSubusersBuild(options: {
 
 function connectionOtherUserId(connection: { userAId: string; userBId: string }, knownUserId: string): string {
     return connection.userAId === knownUserId ? connection.userBId : connection.userAId;
+}
+
+function userDisplayName(user: {
+    firstName: string | null;
+    lastName: string | null;
+    nametag: string | null;
+}): string | null {
+    const firstName = user.firstName?.trim() ?? "";
+    const lastName = user.lastName?.trim() ?? "";
+    const name = [firstName, lastName].filter((value) => value.length > 0).join(" ");
+    if (name.length > 0) {
+        return name;
+    }
+    return user.nametag ?? null;
 }
 
 function topologyAgentVisibleByDefault(record: { descriptor: { type: string }; lifecycle: string }): boolean {

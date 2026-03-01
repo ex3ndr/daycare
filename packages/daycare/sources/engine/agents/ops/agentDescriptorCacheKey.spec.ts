@@ -32,18 +32,16 @@ describe("agentDescriptorCacheKey", () => {
         ).toBe("/memory-search/ms-1");
     });
 
-    it("returns stable key for subuser descriptor", () => {
+    it("returns stable key for swarm descriptor", () => {
         expect(
             agentDescriptorCacheKey({
-                type: "subuser",
-                id: "sub-user-1",
-                name: "my-app",
-                systemPrompt: "prompt"
+                type: "swarm",
+                id: "swarm-user-1"
             })
-        ).toBe("/subuser/sub-user-1");
+        ).toBe("/swarm/swarm-user-1");
     });
 
-    it("returns stable keys for subagent, app, and permanent descriptors", () => {
+    it("returns stable keys for subagent and permanent descriptors", () => {
         expect(
             agentDescriptorCacheKey({
                 type: "subagent",
@@ -52,16 +50,6 @@ describe("agentDescriptorCacheKey", () => {
                 name: "sub"
             })
         ).toBe("/subagent/a-1");
-        expect(
-            agentDescriptorCacheKey({
-                type: "app",
-                id: "a-2",
-                parentAgentId: "system",
-                name: "reviewer",
-                systemPrompt: "prompt",
-                appId: "github-reviewer"
-            })
-        ).toBe("/app/a-2");
         expect(
             agentDescriptorCacheKey({
                 type: "permanent",

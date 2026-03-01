@@ -18,36 +18,6 @@ describe("agentPromptResolve", () => {
         });
     });
 
-    it("resolves subuser agent prompt without replacement", async () => {
-        const resolved = await agentPromptResolve({
-            type: "subuser",
-            id: "su-1",
-            name: "my-isolated-app",
-            systemPrompt: "  You are a helpful assistant.  "
-        });
-
-        expect(resolved).toEqual({
-            agentPrompt: "You are a helpful assistant.",
-            replaceSystemPrompt: false
-        });
-    });
-
-    it("resolves app agent prompt without replacement", async () => {
-        const resolved = await agentPromptResolve({
-            type: "app",
-            id: "app-1",
-            parentAgentId: "parent",
-            name: "github-reviewer",
-            systemPrompt: "  Review pull requests.  ",
-            appId: "github-reviewer"
-        });
-
-        expect(resolved).toEqual({
-            agentPrompt: "Review pull requests.",
-            replaceSystemPrompt: false
-        });
-    });
-
     it("resolves memory-agent prompt with full replacement", async () => {
         const resolved = await agentPromptResolve({
             type: "memory-agent",

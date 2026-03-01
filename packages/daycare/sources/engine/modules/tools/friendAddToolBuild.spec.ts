@@ -59,7 +59,7 @@ describe("friendAddToolBuild", () => {
         }
     });
 
-    it("accepts a pending subuser share and notifies the owner", async () => {
+    it("accepts a pending incoming request from a child user and notifies that user", async () => {
         const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
@@ -67,7 +67,7 @@ describe("friendAddToolBuild", () => {
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
-                name: "helper",
+                firstName: "helper",
                 nametag: "cool-cat-11"
             });
             await storage.connections.upsertRequest(alice.id, bob.id, 100);
@@ -82,9 +82,9 @@ describe("friendAddToolBuild", () => {
                 toolCall
             );
 
-            expect(result.typedResult.status).toBe("accepted_share");
+            expect(result.typedResult.status).toBe("accepted");
             expect(postToUserAgents).toHaveBeenCalledWith(
-                alice.id,
+                subuser.id,
                 expect.objectContaining({
                     type: "system_message",
                     origin: "friend:swift-fox-42"
@@ -99,43 +99,7 @@ describe("friendAddToolBuild", () => {
         }
     });
 
-    it("rejects subuser accept when no pending offer exists", async () => {
-        const storage = await storageOpenTest();
-        try {
-            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
-            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
-            await storage.users.create({
-                id: "alice-sub-1",
-                parentUserId: alice.id,
-                name: "helper",
-                nametag: "cool-cat-11"
-            });
-            await storage.connections.upsertRequest(alice.id, bob.id, 100);
-            await storage.connections.upsertRequest(bob.id, alice.id, 200);
-            const tool = friendAddToolBuild(
-                new Friends({
-                    storage,
-                    postToUserAgents: vi.fn(async () => undefined)
-                })
-            );
-
-            await expect(
-                tool.execute(
-                    { nametag: "cool-cat-11" },
-                    contextBuild(
-                        bob.id,
-                        storage,
-                        vi.fn(async () => undefined)
-                    ),
-                    toolCall
-                )
-            ).rejects.toThrow("No pending share request for this subuser.");
-        } finally {
-            storage.connection.close();
-        }
-    });
-
-    it("rejects subuser accept when caller is not friends with owner", async () => {
+    it("sends a request when no prior relationship exists with a child user", async () => {
         const storage = await storageOpenTest();
         try {
             const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
@@ -143,28 +107,72 @@ describe("friendAddToolBuild", () => {
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
                 parentUserId: alice.id,
-                name: "helper",
+                firstName: "helper",
                 nametag: "cool-cat-11"
             });
-            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
+            await storage.connections.upsertRequest(alice.id, bob.id, 100);
+            await storage.connections.upsertRequest(bob.id, alice.id, 200);
+            const postToUserAgents = vi.fn(async () => undefined);
             const tool = friendAddToolBuild(
                 new Friends({
                     storage,
-                    postToUserAgents: vi.fn(async () => undefined)
+                    postToUserAgents
                 })
             );
 
-            await expect(
-                tool.execute(
-                    { nametag: "cool-cat-11" },
-                    contextBuild(
-                        bob.id,
-                        storage,
-                        vi.fn(async () => undefined)
-                    ),
-                    toolCall
-                )
-            ).rejects.toThrow("You are not friends with subuser owner");
+            const result = await tool.execute(
+                { nametag: "cool-cat-11" },
+                contextBuild(bob.id, storage, postToUserAgents),
+                toolCall
+            );
+
+            expect(result.typedResult.status).toBe("requested");
+            expect(postToUserAgents).toHaveBeenCalledWith(
+                subuser.id,
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "friend:swift-fox-42"
+                })
+            );
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("accepts incoming child-user request even when caller is not friends with the parent", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const alice = await storage.users.create({ id: "alice", nametag: "happy-penguin-42" });
+            const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
+            const subuser = await storage.users.create({
+                id: "alice-sub-1",
+                parentUserId: alice.id,
+                firstName: "helper",
+                nametag: "cool-cat-11"
+            });
+            await storage.connections.upsertRequest(subuser.id, bob.id, 100);
+            const postToUserAgents = vi.fn(async () => undefined);
+            const tool = friendAddToolBuild(
+                new Friends({
+                    storage,
+                    postToUserAgents
+                })
+            );
+
+            const result = await tool.execute(
+                { nametag: "cool-cat-11" },
+                contextBuild(bob.id, storage, postToUserAgents),
+                toolCall
+            );
+
+            expect(result.typedResult.status).toBe("accepted");
+            expect(postToUserAgents).toHaveBeenCalledWith(
+                subuser.id,
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "friend:swift-fox-42"
+                })
+            );
         } finally {
             storage.connection.close();
         }

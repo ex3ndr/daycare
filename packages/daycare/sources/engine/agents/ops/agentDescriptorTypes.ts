@@ -14,14 +14,6 @@ export type AgentDescriptor =
           name: string;
       }
     | {
-          type: "app";
-          id: string;
-          parentAgentId: string;
-          name: string;
-          systemPrompt: string;
-          appId: string;
-      }
-    | {
           type: "permanent";
           id: string;
           name: string;
@@ -38,10 +30,8 @@ export type AgentDescriptor =
           name: string;
       }
     | {
-          type: "subuser";
+          type: "swarm";
           id: string;
-          name: string;
-          systemPrompt: string;
       };
 
 export type AgentFetchStrategy = "most-recent-foreground";

@@ -11,7 +11,6 @@ export async function userHomeEnsure(userHome: UserHome): Promise<void> {
     await Promise.all([
         fs.mkdir(userHome.skillsPersonal, { recursive: true }),
         fs.mkdir(userHome.skillsActive, { recursive: true }),
-        fs.mkdir(userHome.apps, { recursive: true }),
         fs.mkdir(userHome.desktop, { recursive: true }),
         fs.mkdir(userHome.downloads, { recursive: true }),
         fs.mkdir(userHome.documents, { recursive: true }),

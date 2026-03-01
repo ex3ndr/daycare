@@ -15,7 +15,7 @@ export type SessionPermissions = {
 
 - `workingDir`: path base for relative tool operations.
 - `writeDirs`: explicit writable roots.
-- Reads are globally allowed except sandbox deny-lists and app isolation checks.
+- Reads are globally allowed except sandbox deny-lists.
 
 ```mermaid
 flowchart TD
@@ -30,14 +30,14 @@ flowchart TD
 ## Agent defaults
 
 - User agents: `permissionBuildUser(userHome)` => `workingDir=userHome.desktop`, `writeDirs=[userHome.home]`.
-- App agents: `appPermissionBuild(...)` => `workingDir=appDataDir`, `writeDirs=[appDataDir]`.
+- Swarm agents: same baseline as user-scoped agents, plus owner-mounted swarm shares when applicable.
 
 ```mermaid
 flowchart LR
   U[UserHome] --> UP[User permissions]
-  A[App data dir] --> AP[App permissions]
+  S[Swarm home share] --> SP[Swarm-visible mounts]
   UP --> R[Runtime sandbox]
-  AP --> R
+  SP --> R
 ```
 
 ## Removed system

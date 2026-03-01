@@ -225,17 +225,12 @@ function systemFeedbackResultBuild(
     };
 }
 
-function userDisplayNameResolve(user: {
-    firstName: string | null;
-    lastName: string | null;
-    name: string | null;
-}): string {
+function userDisplayNameResolve(user: { firstName: string | null; lastName: string | null; nametag: string }): string {
     const firstName = user.firstName?.trim() ?? "";
     const lastName = user.lastName?.trim() ?? "";
     const structured = [firstName, lastName].filter((entry) => entry.length > 0).join(" ");
     if (structured) {
         return structured;
     }
-    const legacy = user.name?.trim() ?? "";
-    return legacy || "Unknown";
+    return user.nametag.trim() || "Unknown";
 }

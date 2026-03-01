@@ -16,16 +16,14 @@ export function agentDescriptorCacheKey(descriptor: AgentDescriptor): string {
             return `/connectors/${descriptor.connector}/${descriptor.userId}/${descriptor.channelId}`;
         case "subagent":
             return `/subagent/${descriptor.id}`;
-        case "app":
-            return `/app/${descriptor.id}`;
         case "permanent":
             return `/permanent/${descriptor.id}`;
         case "memory-agent":
             return `/memory-agent/${descriptor.id}`;
         case "memory-search":
             return `/memory-search/${descriptor.id}`;
-        case "subuser":
-            return `/subuser/${descriptor.id}`;
+        case "swarm":
+            return `/swarm/${descriptor.id}`;
     }
     return descriptorTypeUnreachable(descriptor);
 }

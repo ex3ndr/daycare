@@ -92,9 +92,6 @@ function senderUsernameResolve(descriptor: AgentDescriptor): string {
     if (descriptor.type === "subagent") {
         return usernameNormalize(descriptor.name);
     }
-    if (descriptor.type === "app") {
-        return usernameNormalize(descriptor.name);
-    }
     if (descriptor.type === "cron") {
         return usernameNormalize(descriptor.name ?? descriptor.id);
     }
@@ -110,8 +107,8 @@ function senderUsernameResolve(descriptor: AgentDescriptor): string {
     if (descriptor.type === "task") {
         return usernameNormalize(descriptor.id);
     }
-    if (descriptor.type === "subuser") {
-        return usernameNormalize(descriptor.name);
+    if (descriptor.type === "swarm") {
+        return usernameNormalize(`swarm-${descriptor.id}`);
     }
     return usernameNormalize(descriptor.userId);
 }

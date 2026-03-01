@@ -74,7 +74,8 @@ flowchart LR
 
 ## Agent Ownership Rules
 - `user` agents: resolved by connector key; user auto-created when unseen.
-- `subagent` and `app` agents: inherit parent user when available.
+- `subagent` agents: inherit parent user when available.
+- `swarm` agents: run under the swarm user id (`descriptor.id`).
 - system/cron/heartbeat/permanent agents: owner user by default.
 
 ## Notes

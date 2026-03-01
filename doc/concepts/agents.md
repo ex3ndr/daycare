@@ -10,7 +10,7 @@ Agents provide per-channel sequencing of messages. Each agent processes one mess
 | `cron` | Scheduled task agent |
 | `system` | Built-in tag-addressable agent |
 | `subagent` | Background agent with a parent |
-| `app` | App sandbox agent with reviewed tool calls |
+| `swarm` | Swarm-side agent serving one contacting user |
 | `permanent` | Background agent with stable name and system prompt |
 
 ## Identity

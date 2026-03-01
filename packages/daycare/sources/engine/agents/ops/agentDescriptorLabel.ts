@@ -8,9 +8,6 @@ export function agentDescriptorLabel(descriptor: AgentDescriptor): string {
     if (descriptor.type === "subagent") {
         return descriptor.name ?? descriptor.type;
     }
-    if (descriptor.type === "app") {
-        return appLabelFormat(descriptor.name ?? descriptor.type);
-    }
     if (descriptor.type === "permanent") {
         if (descriptor.username) {
             return `${descriptor.name} (@${descriptor.username})`;
@@ -32,17 +29,8 @@ export function agentDescriptorLabel(descriptor: AgentDescriptor): string {
     if (descriptor.type === "memory-search") {
         return descriptor.name;
     }
-    if (descriptor.type === "subuser") {
-        return descriptor.name;
+    if (descriptor.type === "swarm") {
+        return `swarm ${descriptor.id}`;
     }
     return "user";
-}
-
-function appLabelFormat(value: string): string {
-    if (!value) {
-        return "app";
-    }
-    // Prefer a human label when app names are slug-like.
-    const text = value.includes(" ") ? value : value.replace(/[_-]+/g, " ");
-    return text.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
 }

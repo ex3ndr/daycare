@@ -11,14 +11,13 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 export async function agentSystemPromptSectionAutonomousOperation(context: AgentSystemPromptContext): Promise<string> {
     const descriptor = context.descriptor;
     const parentAgentId =
-        descriptor &&
-        (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search")
+        descriptor && (descriptor.type === "subagent" || descriptor.type === "memory-search")
             ? (descriptor.parentAgentId ?? "")
             : "";
     const agentPrompt = descriptor ? (await agentPromptResolve(descriptor)).agentPrompt : "";
     const template = await agentPromptBundledRead("SYSTEM_AGENCY.md");
     const section = Handlebars.compile(template)({
-        isForeground: descriptor?.type === "user" || descriptor?.type === "subuser",
+        isForeground: descriptor?.type === "user" || descriptor?.type === "swarm",
         parentAgentId,
         agentPrompt
     });

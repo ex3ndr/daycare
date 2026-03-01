@@ -51,11 +51,7 @@ export function friendAddToolBuild(friends: Pick<Friends, "add">): ToolDefinitio
 
 function success(status: FriendAddResult["status"], nametag: string, toolCall: { id: string; name: string }) {
     const summary =
-        status === "requested"
-            ? `Friend request sent to ${nametag}.`
-            : status === "accepted_share"
-              ? `Accepted shared access to ${nametag}.`
-              : `${nametag} accepted. You are now friends.`;
+        status === "requested" ? `Friend request sent to ${nametag}.` : `${nametag} accepted. You are now friends.`;
     const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,

@@ -12,7 +12,7 @@ export type AgentPromptResolved = {
  * Expects: descriptor is a validated agent descriptor.
  */
 export async function agentPromptResolve(descriptor: AgentDescriptor): Promise<AgentPromptResolved> {
-    if (descriptor.type === "permanent" || descriptor.type === "app" || descriptor.type === "subuser") {
+    if (descriptor.type === "permanent") {
         return {
             agentPrompt: descriptor.systemPrompt.trim(),
             replaceSystemPrompt: false

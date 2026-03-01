@@ -142,10 +142,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const historyRecords: AgentHistoryRecord[] = [];
     const tokenStatsUpdates: AgentLoopResult["tokenStatsUpdates"] = [];
     let activeSkills: AgentSkill[] = [];
-    const isChildAgent =
-        agent.descriptor.type === "subagent" ||
-        agent.descriptor.type === "app" ||
-        agent.descriptor.type === "memory-search";
+    const isChildAgent = agent.descriptor.type === "subagent" || agent.descriptor.type === "memory-search";
     let childAgentNudged = false;
     let childAgentMessageSent = false;
     const target = agentDescriptorTargetResolve(agent.descriptor);

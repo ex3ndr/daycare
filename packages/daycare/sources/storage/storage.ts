@@ -20,6 +20,7 @@ import { ProcessesRepository } from "./processesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
+import { SwarmContactsRepository } from "./swarmContactsRepository.js";
 import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
@@ -49,6 +50,7 @@ export class Storage {
     readonly exposeEndpoints: ExposeEndpointsRepository;
     readonly processes: ProcessesRepository;
     readonly systemPrompts: SystemPromptsRepository;
+    readonly swarmContacts: SwarmContactsRepository;
     readonly tokenStats: TokenStatsRepository;
     readonly observationLog: ObservationLogRepository;
 
@@ -78,6 +80,7 @@ export class Storage {
         this.exposeEndpoints = new ExposeEndpointsRepository(db);
         this.processes = new ProcessesRepository(db);
         this.systemPrompts = new SystemPromptsRepository(db);
+        this.swarmContacts = new SwarmContactsRepository(db);
         this.tokenStats = new TokenStatsRepository(db);
         this.observationLog = new ObservationLogRepository(db);
     }

@@ -88,6 +88,7 @@ export type AgentSystemOptions = {
     authStore: AuthStore;
     secrets?: Secrets;
     delayedSignals?: DelayedSignalsFacade;
+    extraMountsForUserId?: (userId: string) => Array<{ hostPath: string; mappedPath: string }>;
 };
 
 export class AgentSystem {
@@ -103,6 +104,7 @@ export class AgentSystem {
     readonly authStore: AuthStore;
     readonly secrets: Secrets;
     private readonly delayedSignals: DelayedSignalsFacade | null;
+    private extraMountsForUserIdProvider: ((userId: string) => Array<{ hostPath: string; mappedPath: string }>) | null;
     private _crons: Crons | null = null;
     private _webhooks: Webhooks | null = null;
     private _signals: Signals | null = null;
@@ -129,6 +131,7 @@ export class AgentSystem {
                 observationLog: this.storage.observationLog
             });
         this.delayedSignals = options.delayedSignals ?? null;
+        this.extraMountsForUserIdProvider = options.extraMountsForUserId ?? null;
         this.eventBus.onEvent((event) => {
             if (event.type !== "signal.generated") {
                 return;
@@ -640,9 +643,7 @@ export class AgentSystem {
 
         const agentId = stableDescriptorId ?? createId();
         const resolvedDescriptor =
-            (descriptor.type === "subagent" || descriptor.type === "app") && descriptor.id !== agentId
-                ? { ...descriptor, id: agentId }
-                : descriptor;
+            descriptor.type === "subagent" && descriptor.id !== agentId ? { ...descriptor, id: agentId } : descriptor;
         logger.debug(`event: Creating agent entry agentId=${agentId} type=${resolvedDescriptor.type}`);
         const inbox = new AgentInbox(agentId);
         const userId = await this.resolveUserIdForDescriptor(ctx, resolvedDescriptor);
@@ -1026,7 +1027,7 @@ export class AgentSystem {
             const connectorKey = userConnectorKeyCreate(descriptor.connector, descriptor.userId);
             return this.resolveUserIdForConnectorKey(connectorKey);
         }
-        if (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search") {
+        if (descriptor.type === "subagent" || descriptor.type === "memory-search") {
             const parent = await this.contextForAgentId(descriptor.parentAgentId);
             if (parent) {
                 return parent.userId;
@@ -1040,8 +1041,7 @@ export class AgentSystem {
             }
             throw new Error("Source agent not found for memory-agent");
         }
-        // Subuser gateway agents belong to the subuser — descriptor.id IS the subuser's userId
-        if (descriptor.type === "subuser") {
+        if (descriptor.type === "swarm") {
             return descriptor.id;
         }
         if (
@@ -1106,6 +1106,35 @@ export class AgentSystem {
      */
     userHomeForCtx(ctx: Context): UserHome {
         return this.userHomeForUserId(ctx.userId);
+    }
+
+    extraMountsForUserId(userId: string): Array<{ hostPath: string; mappedPath: string }> {
+        if (!this.extraMountsForUserIdProvider) {
+            return [];
+        }
+        return this.extraMountsForUserIdProvider(userId);
+    }
+
+    setExtraMountsForUserId(
+        provider: ((userId: string) => Array<{ hostPath: string; mappedPath: string }>) | null
+    ): void {
+        this.extraMountsForUserIdProvider = provider;
+    }
+
+    /**
+     * Rebuilds sandboxes for loaded agents of a specific user.
+     * Expects: mount provider already reflects the latest external mounts.
+     */
+    refreshSandboxesForUserId(userId: string): number {
+        let refreshed = 0;
+        for (const entry of this.entries.values()) {
+            if (entry.ctx.userId !== userId) {
+                continue;
+            }
+            entry.agent.sandboxRefresh();
+            refreshed += 1;
+        }
+        return refreshed;
     }
 
     private createCompletion(): {

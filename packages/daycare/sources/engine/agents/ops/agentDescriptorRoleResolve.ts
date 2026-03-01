@@ -9,14 +9,13 @@ export function agentDescriptorRoleResolve(descriptor: AgentDescriptor): ModelRo
     switch (descriptor.type) {
         case "user":
         case "permanent":
-        case "subuser":
+        case "swarm":
             return "user";
         case "memory-agent":
             return "memory";
         case "memory-search":
             return "memorySearch";
         case "subagent":
-        case "app":
             return "subagent";
         case "task":
             return "task";

@@ -103,7 +103,9 @@ function createContext(workingDir: string): ToolExecutionContext {
         descriptor,
         state,
         new AgentInbox(agentId),
-        {} as unknown as Parameters<typeof Agent.restore>[4],
+        {
+            extraMountsForUserId: () => []
+        } as unknown as Parameters<typeof Agent.restore>[4],
         new UserHome(path.join(workingDir, "users"), "user-1")
     );
 

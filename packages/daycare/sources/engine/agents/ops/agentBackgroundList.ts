@@ -21,23 +21,21 @@ export async function agentBackgroundList(storageOrConfig: Storage | Config): Pr
         const name =
             descriptor.type === "subagent"
                 ? (descriptor.name ?? "subagent")
-                : descriptor.type === "app"
-                  ? descriptor.name
-                  : descriptor.type === "permanent"
-                    ? (descriptor.name ?? "permanent")
-                    : descriptor.type === "cron"
-                      ? (descriptor.name ?? "cron task")
-                      : descriptor.type === "task"
-                        ? `task ${descriptor.id}`
-                        : descriptor.type === "memory-agent"
-                          ? "memory-agent"
-                          : descriptor.type === "memory-search"
-                            ? (descriptor.name ?? "memory-search")
-                            : descriptor.type === "subuser"
-                              ? descriptor.name
-                              : descriptor.tag;
+                : descriptor.type === "permanent"
+                  ? (descriptor.name ?? "permanent")
+                  : descriptor.type === "cron"
+                    ? (descriptor.name ?? "cron task")
+                    : descriptor.type === "task"
+                      ? `task ${descriptor.id}`
+                      : descriptor.type === "memory-agent"
+                        ? "memory-agent"
+                        : descriptor.type === "memory-search"
+                          ? (descriptor.name ?? "memory-search")
+                          : descriptor.type === "swarm"
+                            ? `swarm ${descriptor.id}`
+                            : descriptor.tag;
         const parentAgentId =
-            descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search"
+            descriptor.type === "subagent" || descriptor.type === "memory-search"
                 ? (descriptor.parentAgentId ?? null)
                 : null;
 

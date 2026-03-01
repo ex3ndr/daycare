@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AgentDescriptor, Connector, ConnectorMessage, MessageContext } from "@/types";
 import { configResolve } from "../config/configResolve.js";
 import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
+import { storageOpen } from "../storage/storageOpen.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
@@ -290,6 +291,42 @@ describe("Engine startup plugin hooks", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("discovers swarms before loading agents so restored sandboxes include swarm mounts", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            const discoverSpy = vi.spyOn(engine.swarms, "discover").mockResolvedValue([]);
+            const loadSpy = vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
+            vi.spyOn(engine.processes, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
+            vi.spyOn(engine.appServer, "start").mockResolvedValue();
+            vi.spyOn(engine.channels, "load").mockResolvedValue();
+            vi.spyOn(engine.exposes, "start").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            vi.spyOn(engine.crons, "start").mockResolvedValue();
+            vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
+            vi.spyOn(engine.appServer, "stop").mockResolvedValue();
+            vi.spyOn(engine.modules.connectors, "unregisterAll").mockResolvedValue();
+            vi.spyOn(engine.exposes, "stop").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "unloadAll").mockResolvedValue();
+
+            await engine.start();
+
+            const discoverOrder = discoverSpy.mock.invocationCallOrder[0] ?? 0;
+            const loadOrder = loadSpy.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER;
+            expect(discoverOrder).toBeGreaterThan(0);
+            expect(discoverOrder).toBeLessThan(loadOrder);
+
+            await engine.shutdown();
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("Engine Docker stale container cleanup", () => {
@@ -383,51 +420,41 @@ describe("Engine tool registration", () => {
     });
 });
 
-describe("Engine app registration", () => {
-    it("discovers apps on startup and registers app tools", async () => {
+describe("Engine swarm registration", () => {
+    it("discovers swarms on startup and exposes swarm_create", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
-            const appDir = path.join(dir, "users", "user-1", "apps", "github-reviewer");
-            await fs.mkdir(appDir, { recursive: true });
-            await fs.writeFile(
-                path.join(appDir, "APP.md"),
-                [
-                    "---",
-                    "name: github-reviewer",
-                    "title: GitHub Reviewer",
-                    "description: Reviews pull requests",
-                    "---",
-                    "",
-                    "## System Prompt",
-                    "",
-                    "You are a focused PR review assistant."
-                ].join("\n")
-            );
-            await fs.writeFile(
-                path.join(appDir, "PERMISSIONS.md"),
-                [
-                    "## Source Intent",
-                    "",
-                    "Review pull requests safely.",
-                    "",
-                    "## Rules",
-                    "",
-                    "### Allow",
-                    "- Read files",
-                    "",
-                    "### Deny",
-                    "- Delete files"
-                ].join("\n")
-            );
-
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const seedStorage = await storageOpen(config.db.path, {
+                url: config.db.url,
+                autoMigrate: true
+            });
+            try {
+                const owner = await seedStorage.users.findOwner();
+                if (!owner) {
+                    throw new Error("Owner user not found.");
+                }
+                await seedStorage.users.create({
+                    id: "swarm-user-1",
+                    parentUserId: owner.id,
+                    isSwarm: true,
+                    nametag: "github-reviewer",
+                    firstName: "GitHub",
+                    lastName: "Reviewer",
+                    bio: "Reviews pull requests",
+                    about: "PR-focused assistant",
+                    systemPrompt: "You are a focused PR review assistant.",
+                    memory: false
+                });
+            } finally {
+                seedStorage.connection.close();
+            }
+
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.start();
 
             const toolNames = engine.modules.tools.listTools().map((tool) => tool.name);
-            expect(toolNames).toContain("install_app");
-            expect(toolNames).toContain("app_rules");
-            expect(toolNames).toContain("app_github_reviewer");
+            expect(toolNames).toContain("swarm_create");
 
             await engine.shutdown();
         } finally {

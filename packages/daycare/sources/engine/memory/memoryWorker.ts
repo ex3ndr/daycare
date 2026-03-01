@@ -121,6 +121,11 @@ export class MemoryWorker {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }
+                const agentUser = await this.storage.users.findById(agent.userId);
+                if (agentUser?.isSwarm && !agentUser.memory) {
+                    await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
+                    continue;
+                }
 
                 const processedUntil = session.processedUntil ?? 0;
                 const records = await this.storage.history.findSinceId(session.id, processedUntil);
@@ -129,7 +134,7 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const isForeground = agent.descriptor.type === "user" || agent.descriptor.type === "subuser";
+                const isForeground = agent.descriptor.type === "user" || agent.descriptor.type === "swarm";
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);

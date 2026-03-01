@@ -451,18 +451,42 @@ export type ProcessDbRecord = {
     lastExitedAt: number | null;
 };
 
+export type DatabaseSwarmContactRow = {
+    swarm_user_id: string;
+    contact_agent_id: string;
+    swarm_agent_id: string;
+    messages_sent: number;
+    messages_received: number;
+    first_contact_at: number;
+    last_contact_at: number;
+};
+
+export type SwarmContactDbRecord = {
+    swarmUserId: string;
+    contactAgentId: string;
+    swarmAgentId: string;
+    messagesSent: number;
+    messagesReceived: number;
+    firstContactAt: number;
+    lastContactAt: number;
+};
+
 export type DatabaseUserRow = {
     id: string;
     version: number;
     valid_from: number;
     valid_to: number | null;
     is_owner: number;
+    is_swarm: number;
     parent_user_id: string | null;
-    name: string | null;
     first_name: string | null;
     last_name: string | null;
+    bio: string | null;
+    about: string | null;
     country: string | null;
     timezone: string | null;
+    system_prompt: string | null;
+    memory: number;
     nametag: string;
     created_at: number;
     updated_at: number;
@@ -480,12 +504,16 @@ export type UserDbRecord = {
     validFrom?: number;
     validTo?: number | null;
     isOwner: boolean;
+    isSwarm: boolean;
     parentUserId: string | null;
-    name: string | null;
     firstName: string | null;
     lastName: string | null;
+    bio: string | null;
+    about: string | null;
     country: string | null;
     timezone: string | null;
+    systemPrompt: string | null;
+    memory: boolean;
     nametag: string;
     createdAt: number;
     updatedAt: number;
@@ -592,12 +620,16 @@ export type ObservationLogRecentOptions = {
 export type CreateUserInput = {
     id?: string;
     isOwner?: boolean;
+    isSwarm?: boolean;
     parentUserId?: string;
-    name?: string;
     firstName?: string | null;
     lastName?: string | null;
+    bio?: string | null;
+    about?: string | null;
     country?: string | null;
     timezone?: string | null;
+    systemPrompt?: string | null;
+    memory?: boolean;
     nametag?: string;
     createdAt?: number;
     updatedAt?: number;
@@ -640,10 +672,15 @@ export type SystemPromptDbRecord = {
 
 export type UpdateUserInput = {
     isOwner?: boolean;
+    isSwarm?: boolean;
     firstName?: string | null;
     lastName?: string | null;
+    bio?: string | null;
+    about?: string | null;
     country?: string | null;
     timezone?: string | null;
+    systemPrompt?: string | null;
+    memory?: boolean;
     createdAt?: number;
     updatedAt?: number;
 };

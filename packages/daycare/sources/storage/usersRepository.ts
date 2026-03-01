@@ -142,12 +142,16 @@ export class UsersRepository {
                 validFrom: row.validFrom ?? row.createdAt,
                 validTo: row.validTo ?? null,
                 isOwner: row.isOwner === 1,
+                isSwarm: row.isSwarm === 1,
                 parentUserId: row.parentUserId ?? null,
-                name: row.name ?? null,
                 firstName: row.firstName ?? null,
                 lastName: row.lastName ?? null,
+                bio: row.bio ?? null,
+                about: row.about ?? null,
                 country: row.country ?? null,
                 timezone: row.timezone ?? null,
+                systemPrompt: row.systemPrompt ?? null,
+                memory: row.memory === 1,
                 nametag: row.nametag,
                 createdAt: row.createdAt,
                 updatedAt: row.updatedAt,
@@ -199,12 +203,16 @@ export class UsersRepository {
             const createdAt = input.createdAt ?? now;
             const updatedAt = input.updatedAt ?? createdAt;
             const isOwner = input.isOwner ?? false;
+            const isSwarm = input.isSwarm ?? false;
             const parentUserId = input.parentUserId ?? null;
-            const name = input.name ?? null;
             const firstName = textNullableNormalize(input.firstName);
             const lastName = textNullableNormalize(input.lastName);
+            const bio = textNullableNormalize(input.bio);
+            const about = textNullableNormalize(input.about);
             const country = textNullableNormalize(input.country);
             const timezone = textNullableNormalize(input.timezone);
+            const systemPrompt = textNullableNormalize(input.systemPrompt);
+            const memory = input.memory ?? false;
             const connectorKey = input.connectorKey?.trim() ?? "";
             const explicitNametag = input.nametag?.trim() ?? "";
             const shouldGenerateNametag = explicitNametag.length === 0;
@@ -220,12 +228,16 @@ export class UsersRepository {
                         validFrom: createdAt,
                         validTo: null,
                         isOwner: isOwner ? 1 : 0,
+                        isSwarm: isSwarm ? 1 : 0,
                         parentUserId,
-                        name,
                         firstName,
                         lastName,
+                        bio,
+                        about,
                         country,
                         timezone,
+                        systemPrompt,
+                        memory: memory ? 1 : 0,
                         nametag,
                         createdAt,
                         updatedAt
@@ -262,12 +274,16 @@ export class UsersRepository {
                 validFrom: createdAt,
                 validTo: null,
                 isOwner,
+                isSwarm,
                 parentUserId,
-                name,
                 firstName,
                 lastName,
+                bio,
+                about,
                 country,
                 timezone,
+                systemPrompt,
+                memory,
                 nametag,
                 createdAt,
                 updatedAt,
@@ -291,10 +307,15 @@ export class UsersRepository {
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
                 ...(data.isOwner === undefined ? {} : { isOwner: data.isOwner }),
+                ...(data.isSwarm === undefined ? {} : { isSwarm: data.isSwarm }),
                 ...(data.firstName === undefined ? {} : { firstName: textNullableNormalize(data.firstName) }),
                 ...(data.lastName === undefined ? {} : { lastName: textNullableNormalize(data.lastName) }),
+                ...(data.bio === undefined ? {} : { bio: textNullableNormalize(data.bio) }),
+                ...(data.about === undefined ? {} : { about: textNullableNormalize(data.about) }),
                 ...(data.country === undefined ? {} : { country: textNullableNormalize(data.country) }),
                 ...(data.timezone === undefined ? {} : { timezone: textNullableNormalize(data.timezone) }),
+                ...(data.systemPrompt === undefined ? {} : { systemPrompt: textNullableNormalize(data.systemPrompt) }),
+                ...(data.memory === undefined ? {} : { memory: data.memory }),
                 createdAt: data.createdAt ?? current.createdAt,
                 updatedAt: data.updatedAt ?? current.updatedAt
             };
@@ -303,10 +324,15 @@ export class UsersRepository {
                 versionAdvance<UserWithConnectorKeysDbRecord>({
                     changes: {
                         isOwner: next.isOwner,
+                        isSwarm: next.isSwarm,
                         firstName: next.firstName,
                         lastName: next.lastName,
+                        bio: next.bio,
+                        about: next.about,
                         country: next.country,
                         timezone: next.timezone,
+                        systemPrompt: next.systemPrompt,
+                        memory: next.memory,
                         createdAt: next.createdAt,
                         updatedAt: next.updatedAt
                     },
@@ -332,12 +358,16 @@ export class UsersRepository {
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
                             isOwner: row.isOwner ? 1 : 0,
+                            isSwarm: row.isSwarm ? 1 : 0,
                             parentUserId: row.parentUserId,
-                            name: row.name,
                             firstName: row.firstName,
                             lastName: row.lastName,
+                            bio: row.bio,
+                            about: row.about,
                             country: row.country,
                             timezone: row.timezone,
+                            systemPrompt: row.systemPrompt,
+                            memory: row.memory ? 1 : 0,
                             nametag: row.nametag,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
@@ -456,12 +486,16 @@ export class UsersRepository {
             validFrom: userRow.validFrom ?? userRow.createdAt,
             validTo: userRow.validTo ?? null,
             isOwner: userRow.isOwner === 1,
+            isSwarm: userRow.isSwarm === 1,
             parentUserId: userRow.parentUserId ?? null,
-            name: userRow.name ?? null,
             firstName: userRow.firstName ?? null,
             lastName: userRow.lastName ?? null,
+            bio: userRow.bio ?? null,
+            about: userRow.about ?? null,
             country: userRow.country ?? null,
             timezone: userRow.timezone ?? null,
+            systemPrompt: userRow.systemPrompt ?? null,
+            memory: userRow.memory === 1,
             nametag: userRow.nametag,
             createdAt: userRow.createdAt,
             updatedAt: userRow.updatedAt,

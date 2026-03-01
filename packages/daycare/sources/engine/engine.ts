@@ -22,9 +22,6 @@ import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
 import { agentDescriptorTargetResolve } from "./agents/ops/agentDescriptorTargetResolve.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
-import { appInstallToolBuild } from "./apps/appInstallToolBuild.js";
-import { Apps } from "./apps/appManager.js";
-import { appRuleToolBuild } from "./apps/appRuleToolBuild.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
@@ -56,11 +53,11 @@ import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js"
 import { friendAddToolBuild } from "./modules/tools/friendAddToolBuild.js";
 import { friendRemoveToolBuild } from "./modules/tools/friendRemoveToolBuild.js";
 import { friendSendToolBuild } from "./modules/tools/friendSendToolBuild.js";
-import { friendShareSubuserToolBuild } from "./modules/tools/friendShareSubuserToolBuild.js";
-import { friendUnshareSubuserToolBuild } from "./modules/tools/friendUnshareSubuserToolBuild.js";
 import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
 import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
+import { memoryNodeReadToolBuild } from "./modules/tools/memoryNodeReadToolBuild.js";
+import { memoryNodeWriteToolBuild } from "./modules/tools/memoryNodeWriteToolBuild.js";
 import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
 import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
@@ -80,9 +77,6 @@ import { skillAddToolBuild } from "./modules/tools/skillAddToolBuild.js";
 import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { buildSpeechGenerationTool } from "./modules/tools/speech-generation.js";
-import { subuserConfigureToolBuild } from "./modules/tools/subuserConfigureToolBuild.js";
-import { subuserCreateToolBuild } from "./modules/tools/subuserCreateToolBuild.js";
-import { subuserListToolBuild } from "./modules/tools/subuserListToolBuild.js";
 import {
     buildTaskCreateTool,
     buildTaskDeleteTool,
@@ -103,8 +97,9 @@ import { Processes } from "./processes/processes.js";
 import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
-import { Subusers } from "./subusers/subusers.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
+import { swarmCreateToolBuild } from "./swarms/swarmCreateToolBuild.js";
+import { Swarms } from "./swarms/swarms.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
@@ -137,10 +132,9 @@ export class Engine {
     readonly processes: Processes;
     readonly inferenceRouter: InferenceRouter;
     readonly eventBus: EngineEventBus;
-    readonly apps: Apps;
+    readonly swarms: Swarms;
     readonly secrets: Secrets;
     readonly exposes: Exposes;
-    readonly subusers: Subusers;
     readonly friends: Friends;
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
@@ -224,7 +218,7 @@ export class Engine {
                 this.runConnectorCallback("command", async () => {
                     const connector = descriptor.type === "user" ? descriptor.connector : "unknown";
                     let messageContext = context;
-                    if (descriptor.type === "user" || descriptor.type === "subuser") {
+                    if (descriptor.type === "user") {
                         const ctx = await this.descriptorContextResolve(descriptor);
                         messageContext = await this.messageContextWithTimezone(ctx, context);
                     }
@@ -356,15 +350,15 @@ export class Engine {
             secrets: this.secrets,
             delayedSignals: this.delayedSignals
         });
-        this.subusers = new Subusers({
-            storage: this.storage,
-            userHomeForUserId: (userId) => this.agentSystem.userHomeForUserId(userId),
-            updateAgentDescriptor: (agentId, descriptor) => this.agentSystem.updateAgentDescriptor(agentId, descriptor)
-        });
         this.friends = new Friends({
             storage: this.storage,
             postToUserAgents: (userId, item) => this.agentSystem.postToUserAgents(userId, item)
         });
+        this.swarms = new Swarms({
+            storage: this.storage,
+            userHomeForUserId: (userId) => this.agentSystem.userHomeForUserId(userId)
+        });
+        this.agentSystem.setExtraMountsForUserId((userId) => this.swarms.mountsForOwner(userId));
 
         this.memoryWorker.setPostFn((ctx, target, item) => this.agentSystem.post(ctx, target, item));
         this.taskExecutions = new TaskExecutions({
@@ -404,9 +398,6 @@ export class Engine {
             agentSystem: this.agentSystem,
             observationLog: this.storage.observationLog
         });
-        this.apps = new Apps({
-            usersDir: this.config.current.usersDir
-        });
     }
 
     async start(): Promise<void> {
@@ -428,6 +419,7 @@ export class Engine {
                 logger.warn({ imageRef, error }, "stale: Failed to remove stale Docker sandbox containers on startup");
             }
         }
+        await this.swarms.discover(ownerCtx.userId);
 
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
@@ -476,9 +468,7 @@ export class Engine {
         );
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
-        this.modules.tools.register("core", subuserCreateToolBuild(this.subusers));
-        this.modules.tools.register("core", subuserConfigureToolBuild(this.subusers));
-        this.modules.tools.register("core", subuserListToolBuild());
+        this.modules.tools.register("core", swarmCreateToolBuild(this.swarms));
         this.modules.tools.register("core", channelCreateToolBuild(this.channels));
         this.modules.tools.register("core", channelSendToolBuild(this.channels));
         this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
@@ -487,8 +477,6 @@ export class Engine {
         this.modules.tools.register("core", friendAddToolBuild(this.friends));
         this.modules.tools.register("core", friendRemoveToolBuild(this.friends));
         this.modules.tools.register("core", friendSendToolBuild());
-        this.modules.tools.register("core", friendShareSubuserToolBuild(this.friends));
-        this.modules.tools.register("core", friendUnshareSubuserToolBuild(this.friends));
         this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
         this.modules.tools.register("core", buildSpeechGenerationTool(this.modules.speech));
         this.modules.tools.register("core", buildVoiceListTool(this.modules.speech));
@@ -502,8 +490,6 @@ export class Engine {
         this.modules.tools.register("core", signalEventsCsvToolBuild(this.signals));
         this.modules.tools.register("core", buildSignalSubscribeTool(this.signals));
         this.modules.tools.register("core", buildSignalUnsubscribeTool(this.signals));
-        this.modules.tools.register("core", appInstallToolBuild(this.apps));
-        this.modules.tools.register("core", appRuleToolBuild(this.apps));
         this.modules.tools.register("core", exposeCreateToolBuild(this.exposes));
         this.modules.tools.register("core", exposeRemoveToolBuild(this.exposes));
         this.modules.tools.register("core", exposeUpdateToolBuild(this.exposes));
@@ -511,10 +497,10 @@ export class Engine {
         this.modules.tools.register("core", observationQueryToolBuild(this.storage.observationLog));
         this.modules.tools.register("core", documentReadToolBuild());
         this.modules.tools.register("core", documentWriteToolBuild());
-        await this.apps.discover();
-        this.apps.registerTools(this.modules.tools);
+        this.modules.tools.register("core", memoryNodeReadToolBuild());
+        this.modules.tools.register("core", memoryNodeWriteToolBuild());
         logger.debug(
-            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, install_app, app_rules"
+            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, swarms, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe"
         );
 
         await this.pluginManager.preStartAll();
@@ -696,9 +682,6 @@ export class Engine {
                     cause: error
                 });
             }
-        }
-        if (descriptor.type === "subuser") {
-            return contextForUser({ userId: descriptor.id });
         }
         throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
     }

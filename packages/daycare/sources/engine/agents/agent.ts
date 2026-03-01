@@ -74,7 +74,7 @@ export class Agent {
     private started = false;
     private inferenceAbortController: AbortController | null = null;
     private readonly userHome: UserHome;
-    readonly sandbox: Sandbox;
+    sandbox: Sandbox;
     private endTurnCount = 0;
     private readonly documentLastReadVersions = new Map<string, number>();
 
@@ -95,34 +95,7 @@ export class Agent {
         this.inbox = inbox;
         this.agentSystem = agentSystem;
         this.userHome = userHome;
-        const dockerSettings = this.agentSystem.config?.current?.settings?.docker;
-        const examplesDir = bundledExamplesDirResolve();
-        this.sandbox = new Sandbox({
-            homeDir: this.userHome.home,
-            permissions: this.state.permissions,
-            mounts: [
-                { hostPath: this.userHome.skillsActive, mappedPath: "/shared/skills" },
-                ...(examplesDir ? [{ hostPath: examplesDir, mappedPath: "/shared/examples" }] : [])
-            ],
-            docker: dockerSettings?.enabled
-                ? {
-                      enabled: true,
-                      image: dockerSettings.image,
-                      tag: dockerSettings.tag,
-                      socketPath: dockerSettings.socketPath,
-                      runtime: dockerSettings.runtime,
-                      enableWeakerNestedSandbox: dockerSettings.enableWeakerNestedSandbox,
-                      readOnly: dockerSettings.readOnly,
-                      unconfinedSecurity: dockerSettings.unconfinedSecurity,
-                      capAdd: dockerSettings.capAdd,
-                      capDrop: dockerSettings.capDrop,
-                      allowLocalNetworkingForUsers: dockerSettings.allowLocalNetworkingForUsers,
-                      isolatedDnsServers: dockerSettings.isolatedDnsServers,
-                      localDnsServers: dockerSettings.localDnsServers,
-                      userId: this.ctx.userId
-                  }
-                : undefined
-        });
+        this.sandbox = this.sandboxBuild();
     }
 
     /**
@@ -256,6 +229,14 @@ export class Agent {
         }
         controller.abort();
         return true;
+    }
+
+    /**
+     * Rebuilds the sandbox to pick up updated mounts for this user.
+     * Expects: external mount providers are already refreshed.
+     */
+    sandboxRefresh(): void {
+        this.sandbox = this.sandboxBuild();
     }
 
     private async runLoop(): Promise<void> {
@@ -455,7 +436,7 @@ export class Agent {
 
         // First-message prompts are user-facing guidance and should not alter
         // internal/background agent inputs (memory-agent, cron, subagent, app, etc.).
-        const shouldPrependFirstMessagePrompt = this.descriptor.type === "user" || this.descriptor.type === "subuser";
+        const shouldPrependFirstMessagePrompt = this.descriptor.type === "user" || this.descriptor.type === "swarm";
         if (shouldPrependFirstMessagePrompt && resolvedPrompts.firstMessagePrompt && entry.message.text !== null) {
             entry.message.text = `${resolvedPrompts.firstMessagePrompt}\n\n${entry.message.text}`;
             pendingUserRecord = {
@@ -1308,7 +1289,7 @@ export class Agent {
      * Expects: parent agent exists.
      */
     async notifySubagentFailure(reason: string, error?: unknown): Promise<void> {
-        if (this.descriptor.type !== "subagent" && this.descriptor.type !== "app") {
+        if (this.descriptor.type !== "subagent") {
             return;
         }
         const parentAgentId = this.descriptor.parentAgentId ?? null;
@@ -1339,7 +1320,7 @@ export class Agent {
     }
 
     private resolveAgentKind(): "background" | "foreground" {
-        if (this.descriptor.type === "user" || this.descriptor.type === "subuser") {
+        if (this.descriptor.type === "user" || this.descriptor.type === "swarm") {
             return "foreground";
         }
         return "background";
@@ -1351,6 +1332,39 @@ export class Agent {
             : this.descriptor.type === "system"
               ? this.descriptor.tag
               : this.descriptor.type;
+    }
+
+    private sandboxBuild(): Sandbox {
+        const dockerSettings = this.agentSystem.config?.current?.settings?.docker;
+        const examplesDir = bundledExamplesDirResolve();
+        const extraMounts = this.agentSystem.extraMountsForUserId(this.ctx.userId);
+        return new Sandbox({
+            homeDir: this.userHome.home,
+            permissions: this.state.permissions,
+            mounts: [
+                { hostPath: this.userHome.skillsActive, mappedPath: "/shared/skills" },
+                ...(examplesDir ? [{ hostPath: examplesDir, mappedPath: "/shared/examples" }] : []),
+                ...extraMounts
+            ],
+            docker: dockerSettings?.enabled
+                ? {
+                      enabled: true,
+                      image: dockerSettings.image,
+                      tag: dockerSettings.tag,
+                      socketPath: dockerSettings.socketPath,
+                      runtime: dockerSettings.runtime,
+                      enableWeakerNestedSandbox: dockerSettings.enableWeakerNestedSandbox,
+                      readOnly: dockerSettings.readOnly,
+                      unconfinedSecurity: dockerSettings.unconfinedSecurity,
+                      capAdd: dockerSettings.capAdd,
+                      capDrop: dockerSettings.capDrop,
+                      allowLocalNetworkingForUsers: dockerSettings.allowLocalNetworkingForUsers,
+                      isolatedDnsServers: dockerSettings.isolatedDnsServers,
+                      localDnsServers: dockerSettings.localDnsServers,
+                      userId: this.ctx.userId
+                  }
+                : undefined
+        });
     }
 
     private inferenceProvidersResolve(): {

@@ -55,13 +55,7 @@ function success(status: FriendRemoveResult["status"], nametag: string, toolCall
             ? `Removed ${nametag} from friends.`
             : status === "rejected"
               ? `Rejected friend request from ${nametag}.`
-              : status === "removed_share"
-                ? `Removed shared access to ${nametag}.`
-                : status === "rejected_share"
-                  ? `Rejected shared subuser offer from ${nametag}.`
-                  : status === "canceled_share"
-                    ? `Canceled pending shared subuser access to ${nametag}.`
-                    : `Canceled pending friend request to ${nametag}.`;
+              : `Canceled pending friend request to ${nametag}.`;
     const toolMessage: ToolResultMessage = {
         role: "toolResult",
         toolCallId: toolCall.id,

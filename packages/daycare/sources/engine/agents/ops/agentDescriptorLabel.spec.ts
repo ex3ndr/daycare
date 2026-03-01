@@ -22,26 +22,6 @@ describe("agentDescriptorLabel", () => {
                 systemPrompt: "prompt"
             })
         ).toBe("memory (@memorybot)");
-        expect(
-            agentDescriptorLabel({
-                type: "app",
-                id: "app-agent-1",
-                parentAgentId: "parent",
-                name: "github-reviewer",
-                systemPrompt: "prompt",
-                appId: "github-reviewer"
-            })
-        ).toBe("Github Reviewer");
-        expect(
-            agentDescriptorLabel({
-                type: "app",
-                id: "app-agent-2",
-                parentAgentId: "parent",
-                name: "RuTracker Search",
-                systemPrompt: "prompt",
-                appId: "rutracker-search"
-            })
-        ).toBe("RuTracker Search");
     });
 
     it("labels non-user agents", () => {
@@ -67,15 +47,13 @@ describe("agentDescriptorLabel", () => {
         expect(agentDescriptorLabel({ type: "system", tag: "status" })).toBe("status");
     });
 
-    it("labels subuser agents", () => {
+    it("labels swarm agents", () => {
         expect(
             agentDescriptorLabel({
-                type: "subuser",
-                id: "sub-1",
-                name: "my-isolated-app",
-                systemPrompt: "prompt"
+                type: "swarm",
+                id: "swarm-1"
             })
-        ).toBe("my-isolated-app");
+        ).toBe("swarm swarm-1");
     });
 
     it("labels user agents", () => {
