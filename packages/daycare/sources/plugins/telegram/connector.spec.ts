@@ -131,7 +131,7 @@ describe("TelegramConnector commands", () => {
 
         expect(commandHandler).toHaveBeenCalledTimes(1);
         const target = commandHandler.mock.calls[0]?.[2] as string;
-        expect(target).toBe("/-100321/telegram/-100321/456");
+        expect(target).toBe("/456/telegram/-100321/456");
     });
 });
 

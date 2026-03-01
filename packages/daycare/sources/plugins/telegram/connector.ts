@@ -1021,7 +1021,7 @@ function connectorStateParse(value: unknown): TelegramConnectorState | null {
 function telegramPathBuild(channelId: string, telegramUserId: string): AgentPath {
     const normalizedChannelId = telegramSegmentRequire(channelId, "channelId");
     const normalizedTelegramUserId = telegramSegmentRequire(telegramUserId, "telegramUserId");
-    return agentPath(`/${normalizedChannelId}/telegram/${normalizedChannelId}/${normalizedTelegramUserId}`);
+    return agentPath(`/${normalizedTelegramUserId}/telegram/${normalizedChannelId}/${normalizedTelegramUserId}`);
 }
 
 function telegramSegmentRequire(value: string, label: string): string {

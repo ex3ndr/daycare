@@ -5,14 +5,14 @@
 Telegram connector paths now include both chat and sender identity so connector resolution can disambiguate multiple users in the same channel.
 
 - New connector path shape: `/<internalUserId>/telegram/<channelId>/<telegramUserId>`
-- Incoming Telegram messages emit path hints as `/<channelId>/telegram/<channelId>/<telegramUserId>` and are canonicalized to internal user scope.
+- Incoming Telegram messages emit path hints as `/<telegramUserId>/telegram/<channelId>/<telegramUserId>` and are canonicalized to internal user scope.
 - Connector target resolution prefers exact `telegram:<channelId>/<telegramUserId>` keys, with a private-chat fallback to legacy `telegram:<channelId>`.
 
 ## Routing flow
 
 ```mermaid
 flowchart TD
-    A[Telegram update chatId + fromId] --> B[Connector emits /chatId/telegram/chatId/fromId]
+    A[Telegram update chatId + fromId] --> B[Connector emits /fromId/telegram/chatId/fromId]
     B --> C[Engine canonicalizes via connector key lookup]
     C --> D[Resolve/create user for telegram:chatId/fromId]
     D --> E[Canonical path /internalUserId/telegram/chatId/fromId]

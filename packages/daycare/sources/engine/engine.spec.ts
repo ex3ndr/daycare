@@ -715,7 +715,7 @@ describe("Engine message batching", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            await handler({ text: "hello" }, { messageId: "1" }, "/channel-1/telegram/channel-1/user-7" as AgentPath);
+            await handler({ text: "hello" }, { messageId: "1" }, "/user-7/telegram/channel-1/user-7" as AgentPath);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
