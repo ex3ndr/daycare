@@ -85,10 +85,11 @@ export class TokenStatsRepository {
         ctx: Context,
         options: Omit<TokenStatsFindManyOptions, "userId"> = {}
     ): Promise<TokenStatsHourlyDbRecord[]> {
+        const agentId = options.agentId ?? (ctx.hasAgentId === true ? ctx.agentId : undefined);
         return this.findAll({
             ...options,
             userId: ctx.userId,
-            agentId: options.agentId ?? ctx.agentId
+            agentId
         });
     }
 

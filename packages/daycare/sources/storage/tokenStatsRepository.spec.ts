@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Context } from "@/types";
+import { type Context, contextForUser } from "../engine/agents/context.js";
 import { agentsTable, usersTable } from "../schema.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
@@ -141,6 +141,48 @@ describe("TokenStatsRepository", () => {
             const byModel = await repository.findAll({ model: "openai/gpt-5" });
             expect(byModel).toHaveLength(2);
             expect(byModel.every((row) => row.model === "openai/gpt-5")).toBe(true);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("findMany works for user context without agentId", async () => {
+        const storage = await storageOpenTest();
+        try {
+            await createTestEntities(storage, ["user-a", "user-b"], ["agent-a", "agent-b"]);
+            const repository = new TokenStatsRepository(storage.db);
+
+            await repository.increment(ctxBuild("user-a", "agent-a"), {
+                at: Date.UTC(2026, 1, 26, 8, 5, 0, 0),
+                model: "openai/gpt-5",
+                input: 10,
+                output: 1,
+                cacheRead: 0,
+                cacheWrite: 0,
+                cost: 0.2
+            });
+            await repository.increment(ctxBuild("user-a", "agent-b"), {
+                at: Date.UTC(2026, 1, 26, 9, 5, 0, 0),
+                model: "openai/gpt-5-mini",
+                input: 2,
+                output: 3,
+                cacheRead: 1,
+                cacheWrite: 1,
+                cost: 0.1
+            });
+            await repository.increment(ctxBuild("user-b", "agent-a"), {
+                at: Date.UTC(2026, 1, 26, 10, 5, 0, 0),
+                model: "openai/gpt-5",
+                input: 9,
+                output: 9,
+                cacheRead: 9,
+                cacheWrite: 9,
+                cost: 0.9
+            });
+
+            const rows = await repository.findMany(contextForUser({ userId: "user-a" }));
+            expect(rows).toHaveLength(2);
+            expect(rows.every((row) => row.userId === "user-a")).toBe(true);
         } finally {
             storage.connection.close();
         }
