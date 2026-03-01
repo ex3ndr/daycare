@@ -71,6 +71,7 @@ All sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/run` as writa
 - `HostConfig.Tmpfs["/run"] = "rw"`
 - `HostConfig.Tmpfs["/var/tmp"] = "rw"`
 - `HostConfig.Tmpfs["/var/run"] = "rw"`
+- Containers are also created with `HostConfig.ShmSize = 1073741824` (1 GiB) so headless Chrome has enough shared memory.
 - Docker `Sandbox.exec()` includes `/tmp`, `/run`, and `/var/tmp` in `sandbox-runtime` `allowWrite`.
 - `Sandbox.exec()` intentionally excludes `/var/run` because `sandbox-runtime` already maps `/run` and fails when
   `/var/run` is explicitly listed.
@@ -121,6 +122,7 @@ Each sandbox container is stamped at creation time with:
 - `daycare.tmpfs.run` fixed to `"1"` when `/run` tmpfs mount is enabled
 - `daycare.tmpfs.var_tmp` fixed to `"1"` when `/var/tmp` tmpfs mount is enabled
 - `daycare.tmpfs.var_run` fixed to `"1"` when `/var/run` tmpfs mount is enabled
+- `daycare.tmpfs.dev_shm` fixed to `"1"` when 1 GiB shared memory is enabled
 
 `dockerContainerEnsure` compares these labels against current values. If any label is missing or mismatched, the
 container is treated as stale, then stopped and removed; recreation with fresh labels is deferred to the same ensure

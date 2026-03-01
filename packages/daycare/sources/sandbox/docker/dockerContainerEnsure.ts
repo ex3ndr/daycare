@@ -47,6 +47,7 @@ const DOCKER_TMPFS_TMP_LABEL = "daycare.tmpfs.tmp";
 const DOCKER_TMPFS_RUN_LABEL = "daycare.tmpfs.run";
 const DOCKER_TMPFS_VAR_TMP_LABEL = "daycare.tmpfs.var_tmp";
 const DOCKER_TMPFS_VAR_RUN_LABEL = "daycare.tmpfs.var_run";
+const DOCKER_TMPFS_DEV_SHM_LABEL = "daycare.tmpfs.dev_shm";
 const DOCKER_SECURITY_PROFILE_DEFAULT = "default";
 const DOCKER_SECURITY_PROFILE_UNCONFINED = "unconfined";
 const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
@@ -56,6 +57,8 @@ const DOCKER_TMPFS_TMP_ENABLED = "1";
 const DOCKER_TMPFS_RUN_ENABLED = "1";
 const DOCKER_TMPFS_VAR_TMP_ENABLED = "1";
 const DOCKER_TMPFS_VAR_RUN_ENABLED = "1";
+const DOCKER_TMPFS_DEV_SHM_ENABLED = "1";
+const DOCKER_SHM_SIZE_BYTES = 1024 * 1024 * 1024;
 
 /**
  * Ensures a long-lived sandbox container exists and is running for a user.
@@ -144,11 +147,13 @@ export async function dockerContainerEnsure(
                 [DOCKER_TMPFS_TMP_LABEL]: DOCKER_TMPFS_TMP_ENABLED,
                 [DOCKER_TMPFS_RUN_LABEL]: DOCKER_TMPFS_RUN_ENABLED,
                 [DOCKER_TMPFS_VAR_TMP_LABEL]: DOCKER_TMPFS_VAR_TMP_ENABLED,
-                [DOCKER_TMPFS_VAR_RUN_LABEL]: DOCKER_TMPFS_VAR_RUN_ENABLED
+                [DOCKER_TMPFS_VAR_RUN_LABEL]: DOCKER_TMPFS_VAR_RUN_ENABLED,
+                [DOCKER_TMPFS_DEV_SHM_LABEL]: DOCKER_TMPFS_DEV_SHM_ENABLED
             },
             HostConfig: {
                 Binds: binds,
                 NetworkMode: config.networkName,
+                ShmSize: DOCKER_SHM_SIZE_BYTES,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -238,6 +243,7 @@ function containerStaleReasonResolve(
     const tmpfsRunLabel = labels?.[DOCKER_TMPFS_RUN_LABEL];
     const tmpfsVarTmpLabel = labels?.[DOCKER_TMPFS_VAR_TMP_LABEL];
     const tmpfsVarRunLabel = labels?.[DOCKER_TMPFS_VAR_RUN_LABEL];
+    const tmpfsDevShmLabel = labels?.[DOCKER_TMPFS_DEV_SHM_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -279,6 +285,9 @@ function containerStaleReasonResolve(
     }
     if (!tmpfsVarRunLabel) {
         return "missing-tmpfs-var-run-label";
+    }
+    if (!tmpfsDevShmLabel) {
+        return "missing-tmpfs-dev-shm-label";
     }
     const networkState = dockerContainerNetworkStateResolve(details, expectedNetworkName);
     if (networkState !== "correct") {
@@ -334,6 +343,9 @@ function containerStaleReasonResolve(
     }
     if (tmpfsVarRunLabel !== DOCKER_TMPFS_VAR_RUN_ENABLED) {
         return `tmpfs-var-run-mismatch:${tmpfsVarRunLabel}->${DOCKER_TMPFS_VAR_RUN_ENABLED}`;
+    }
+    if (tmpfsDevShmLabel !== DOCKER_TMPFS_DEV_SHM_ENABLED) {
+        return `tmpfs-dev-shm-mismatch:${tmpfsDevShmLabel}->${DOCKER_TMPFS_DEV_SHM_ENABLED}`;
     }
     return null;
 }
