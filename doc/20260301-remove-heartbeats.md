@@ -40,5 +40,5 @@ flowchart TD
 ## Notes
 
 - Cron and webhook behavior are unchanged.
-- `topology` now reports task cron triggers only.
-- Active-task summaries now contain `cron` and `webhook` triggers.
+- Observability split is intentional: `topology` reports task cron triggers only.
+- Active-task summaries (`task_list_active`) include both `cron` and `webhook` triggers.

@@ -300,7 +300,7 @@ describe("Agent", () => {
                 id: createId(),
                 name: "Executable prompt cron"
             };
-            await postAndAwait(
+            const result = await postAndAwait(
                 agentSystem,
                 { descriptor },
                 {
@@ -310,6 +310,10 @@ describe("Agent", () => {
                     execute: true
                 }
             );
+            if (result.type !== "system_message") {
+                throw new Error("Expected system_message result");
+            }
+            expect(result.responseError).toBe(true);
 
             const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const history = await agentHistoryLoadAll(

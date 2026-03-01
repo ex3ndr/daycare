@@ -55,10 +55,15 @@ export class Crons {
                     execute: true,
                     context: messageContext
                 });
-                if (result.type === "system_message" && result.responseError) {
-                    throw new Error(
-                        `Cron execution failed with code errors for trigger ${task.triggerId} task ${task.taskId}.`
-                    );
+                if (result.type !== "system_message") {
+                    throw new Error(`Unexpected cron execution result type: ${result.type}`);
+                }
+                if (result.responseError) {
+                    const output = result.responseText?.trim();
+                    if (output && output.length > 0) {
+                        throw new Error(output);
+                    }
+                    throw new Error(`Cron trigger failed: ${task.triggerId}`);
                 }
             },
             onError: async (error, triggerId) => {

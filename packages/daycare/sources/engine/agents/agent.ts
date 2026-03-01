@@ -731,6 +731,7 @@ export class Agent {
                 }
 
                 systemText = [systemText, ...outputs].filter((s) => s.trim().length > 0).join("\n\n");
+                responseError = hasError;
                 logger.info(
                     {
                         agentId: this.id,
@@ -766,7 +767,7 @@ export class Agent {
                 }
                 systemText = expandResult.expanded;
                 const errorTagCount = tagExtractAll(systemText, "exec_error").length;
-                executionHasError = errorTagCount > 0;
+                executionHasError = runPythonTagCount > 0 && errorTagCount > 0;
                 logger.info(
                     {
                         agentId: this.id,

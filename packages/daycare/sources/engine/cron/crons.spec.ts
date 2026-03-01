@@ -137,7 +137,7 @@ describe("Crons", () => {
             post: vi.fn(async () => {}),
             postAndAwait: vi.fn(async () => ({
                 type: "system_message",
-                responseText: null,
+                responseText: "<exec_error>boom</exec_error>",
                 responseError: true
             }))
         };
@@ -174,16 +174,16 @@ describe("Crons", () => {
             await expect(
                 callback!(
                     {
-                        triggerId: "trigger-err",
-                        taskId: "task-err",
-                        taskName: "Task with error",
-                        code: "raise RuntimeError('boom')",
+                        triggerId: "trigger-1",
+                        taskId: "task-1",
+                        taskName: "Nightly sync",
+                        code: "Run checks",
                         timezone: "UTC",
                         userId: "user-1"
                     },
                     {}
                 )
-            ).rejects.toThrow("Cron execution failed with code errors");
+            ).rejects.toThrow("<exec_error>boom</exec_error>");
         } finally {
             storage.connection.close();
         }
