@@ -152,6 +152,10 @@ describe("Crons", () => {
                 taskId: "task-1",
                 taskVersion: 5,
                 target: { path: agentPathTask("user-1", "task-1") },
+                creationConfig: {
+                    kind: "task",
+                    name: "Nightly sync"
+                },
                 text: "[cron]\ntriggerId: trigger-1\ntaskId: task-1\ntaskName: Nightly sync\ntimezone: UTC",
                 parameters: { env: "prod" },
                 context: messageContext

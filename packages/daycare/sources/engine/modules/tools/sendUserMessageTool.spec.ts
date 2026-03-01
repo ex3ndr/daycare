@@ -164,7 +164,8 @@ function contextBuild(opts: {
         assistant: null,
         agent: {
             id: opts.agentId,
-            descriptor: opts.descriptor
+            path: pathFromDescriptorFixture(opts.descriptor, "user-1", opts.agentId),
+            config: configFromDescriptorFixture(opts.descriptor)
         } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "user-1", agentId: opts.agentId }),
         source: "test",
@@ -180,6 +181,13 @@ function contextBuild(opts: {
                     findById: opts.usersFindById ?? (vi.fn(async () => null) as never)
                 },
                 agents: {
+                    findByPath: vi.fn(async (pathValue: string) => {
+                        const parts = String(pathValue)
+                            .split("/")
+                            .filter((segment) => segment.length > 0);
+                        const id = parts.at(-1) ?? null;
+                        return id ? { id } : null;
+                    }),
                     findById: opts.agentsFindById ?? (vi.fn(async () => null) as never)
                 },
                 swarmContacts: {
@@ -188,5 +196,51 @@ function contextBuild(opts: {
                 }
             }
         } as unknown as ToolExecutionContext["agentSystem"]
+    };
+}
+
+function pathFromDescriptorFixture(descriptor: Record<string, unknown>, userId: string, agentId: string): string {
+    const type = typeof descriptor.type === "string" ? descriptor.type : "";
+    if (type === "subagent") {
+        const id = typeof descriptor.id === "string" ? descriptor.id : agentId;
+        const parentAgentId = typeof descriptor.parentAgentId === "string" ? descriptor.parentAgentId : "parent-agent";
+        return `/${userId}/agent/${parentAgentId}/sub/${id}`;
+    }
+    if (type === "permanent") {
+        const name = typeof descriptor.name === "string" ? descriptor.name : agentId;
+        return `/${userId}/agent/${name}`;
+    }
+    if (type === "user") {
+        const connector = typeof descriptor.connector === "string" ? descriptor.connector : "telegram";
+        return `/${userId}/${connector}`;
+    }
+    return `/${userId}/agent/${agentId}`;
+}
+
+function configFromDescriptorFixture(descriptor: Record<string, unknown>): {
+    kind?: string;
+    modelRole?: string | null;
+    connectorName?: string | null;
+    parentAgentId?: string | null;
+    foreground: boolean;
+    name: string | null;
+    description: string | null;
+    systemPrompt: string | null;
+    workspaceDir: string | null;
+} {
+    const type = typeof descriptor.type === "string" ? descriptor.type : "";
+    const parentAgentId = typeof descriptor.parentAgentId === "string" ? descriptor.parentAgentId : null;
+    const connectorName = typeof descriptor.connector === "string" ? descriptor.connector : null;
+    const kind = type === "subagent" ? "sub" : type === "user" ? "connector" : type === "swarm" ? "swarm" : "agent";
+    return {
+        kind,
+        modelRole: kind === "sub" ? "subagent" : "user",
+        connectorName: kind === "connector" ? connectorName : null,
+        parentAgentId,
+        foreground: type === "user" || type === "swarm",
+        name: typeof descriptor.name === "string" ? descriptor.name : null,
+        description: null,
+        systemPrompt: null,
+        workspaceDir: null
     };
 }

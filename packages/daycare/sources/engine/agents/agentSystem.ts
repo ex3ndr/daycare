@@ -15,9 +15,9 @@ import type {
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { getLogger } from "../../log.js";
+import type { AgentDbRecord } from "../../storage/databaseTypes.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { AsyncLock } from "../../util/lock.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import type { ConfigModule } from "../config/configModule.js";
@@ -36,18 +36,15 @@ import { UserHome } from "../users/userHome.js";
 import type { Webhooks } from "../webhook/webhooks.js";
 import { Agent } from "./agent.js";
 import { contextForAgent, contextForUser } from "./context.js";
-import { agentConfigFromDescriptor } from "./ops/agentConfigFromDescriptor.js";
-import { agentDescriptorMatchesStrategy } from "./ops/agentDescriptorMatchesStrategy.js";
-import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
-import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
-import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { agentTimestampGet } from "./ops/agentTimestampGet.js";
 import type {
+    AgentCreationConfig,
+    AgentFetchStrategy,
     AgentInboxCompletion,
     AgentInboxItem,
     AgentInboxResult,
@@ -71,8 +68,7 @@ type DelayedSignalsFacade = {
 type AgentEntry = {
     ctx: Context;
     path: AgentPath;
-    config: AgentConfig | null;
-    descriptor: AgentDescriptor;
+    config: AgentConfig;
     agent: Agent;
     inbox: AgentInbox;
     running: boolean;
@@ -224,18 +220,18 @@ export class AgentSystem {
             if (!state) {
                 continue;
             }
-            const descriptor = record.descriptor;
-            const path = await this.pathEnsure(record);
-            const config = record.config ?? null;
+            const path = record.path;
+            const config = agentConfigFromRecord(record);
             if (state.state === "dead") {
-                await this.cancelPoisonPill(agentId, { descriptor });
+                await this.cancelPoisonPill(agentId, { kind: config.kind });
                 logger.info({ agentId }, "restore: Agent restore skipped (dead)");
                 continue;
             }
             if (state.state === "sleeping") {
-                if (descriptor.type === "subagent") {
+                const kind = config.kind;
+                if (kind === "sub" || kind === "search") {
                     await this.schedulePoisonPill(agentId, {
-                        descriptor,
+                        kind,
                         deliverAt: state.updatedAt + AGENT_POISON_PILL_DELAY_MS
                     });
                 }
@@ -245,12 +241,11 @@ export class AgentSystem {
             }
             const inbox = new AgentInbox(agentId);
             const userHome = this.userHomeForUserId(record.userId);
-            const agent = Agent.restore(ctx, descriptor, state, inbox, this, userHome);
+            const agent = Agent.restore(ctx, path, config, state, inbox, this, userHome);
             const registered = this.registerEntry({
                 ctx,
                 path,
                 config,
-                descriptor,
                 agent,
                 inbox
             });
@@ -276,21 +271,31 @@ export class AgentSystem {
         }
     }
 
-    async post(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<void> {
+    async post(
+        ctx: Context,
+        target: AgentPostTarget,
+        item: AgentInboxItem,
+        creationConfig?: AgentCreationConfig
+    ): Promise<void> {
         if (this.stage === "idle" && (item.type === "message" || item.type === "system_message")) {
             const agentType = "path" in target ? "path" : "agent";
             logger.warn({ agentType }, "load: AgentSystem received message before load");
         }
         const targetLabel = "path" in target ? `path:${target.path}` : `agent:${target.agentId}`;
         logger.debug(`receive: post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
-        const entry = await this.resolveEntry(ctx, target, item);
+        const entry = await this.resolveEntry(ctx, target, item, creationConfig);
         await this.enqueueEntry(entry, item, null);
         logger.debug(`event: post() queued item agentId=${entry.ctx.agentId} inboxSize=${entry.inbox.size()}`);
         this.startEntryIfRunning(entry);
     }
 
-    async postAndAwait(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<AgentInboxResult> {
-        const entry = await this.resolveEntry(ctx, target, item);
+    async postAndAwait(
+        ctx: Context,
+        target: AgentPostTarget,
+        item: AgentInboxItem,
+        creationConfig?: AgentCreationConfig
+    ): Promise<AgentInboxResult> {
+        const entry = await this.resolveEntry(ctx, target, item, creationConfig);
         const completion = this.createCompletion();
         await this.enqueueEntry(entry, item, completion.completion);
         this.startEntryIfRunning(entry);
@@ -303,7 +308,7 @@ export class AgentSystem {
      */
     async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void> {
         const records = await this.storage.agents.findByUserId(targetUserId);
-        const frontendAgents = records.filter((record) => record.descriptor.type === "user");
+        const frontendAgents = records.filter((record) => record.foreground);
         await Promise.all(
             frontendAgents.map(async (record) => {
                 const targetCtx = contextForAgent({ userId: targetUserId, agentId: record.id });
@@ -316,21 +321,39 @@ export class AgentSystem {
      * Resolves a target to its concrete agent id, creating/restoring when needed.
      * Expects: path targets are valid for agent creation.
      */
-    async agentIdForTarget(ctx: Context, target: AgentPostTarget): Promise<string> {
-        const entry = await this.resolveEntry(ctx, target, {
-            type: "message",
-            message: { text: null },
-            context: {}
-        });
+    async agentIdForTarget(
+        ctx: Context,
+        target: AgentPostTarget,
+        creationConfig?: AgentCreationConfig
+    ): Promise<string> {
+        const entry = await this.resolveEntry(
+            ctx,
+            target,
+            {
+                type: "message",
+                message: { text: null },
+                context: {}
+            },
+            creationConfig
+        );
         return entry.ctx.agentId;
     }
 
-    async tokensForTarget(ctx: Context, target: AgentPostTarget): Promise<AgentTokenEntry | null> {
-        const entry = await this.resolveEntry(ctx, target, {
-            type: "message",
-            message: { text: null },
-            context: {}
-        });
+    async tokensForTarget(
+        ctx: Context,
+        target: AgentPostTarget,
+        creationConfig?: AgentCreationConfig
+    ): Promise<AgentTokenEntry | null> {
+        const entry = await this.resolveEntry(
+            ctx,
+            target,
+            {
+                type: "message",
+                message: { text: null },
+                context: {}
+            },
+            creationConfig
+        );
         const tokens = entry.agent.state.tokens;
         if (!tokens) {
             return null;
@@ -473,7 +496,8 @@ export class AgentSystem {
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
             // Mark session for memory processing on idle
             // Memory-agents must never trigger the memory worker
-            if (entry.descriptor.type !== "memory-agent" && entry.descriptor.type !== "memory-search") {
+            const kind = entry.config.kind ?? "agent";
+            if (kind !== "memory" && kind !== "search") {
                 const sessionId = entry.agent.state.activeSessionId;
                 if (sessionId) {
                     const maxHistoryId = await this.storage.history.maxId(sessionId);
@@ -485,7 +509,7 @@ export class AgentSystem {
             // Keep sleep->idle scheduling under the same lock as wake->cancel to avoid
             // interleaving that could leave stale idle lifecycle signals behind.
             await this.scheduleIdleSignal(agentId);
-            await this.schedulePoisonPill(agentId, { descriptor: entry.descriptor });
+            await this.schedulePoisonPill(agentId, { kind });
             slept = true;
         });
         if (slept) {
@@ -495,28 +519,30 @@ export class AgentSystem {
 
     agentFor(ctx: Context, strategy: AgentFetchStrategy): string | null {
         const candidates = Array.from(this.entries.values()).filter((entry) => {
-            return entry.ctx.userId === ctx.userId && agentDescriptorMatchesStrategy(entry.descriptor, strategy);
+            return entry.ctx.userId === ctx.userId && agentMatchesStrategy(entry.config, strategy);
         });
         if (candidates.length === 0) {
             return null;
         }
         candidates.sort((a, b) => {
-            const aPrefix =
-                a.descriptor.type === "user"
-                    ? a.descriptor.connector === "telegram"
-                        ? "aa-telegram"
-                        : "bb-user"
-                    : a.descriptor.type === "swarm"
-                      ? "cc-swarm"
-                      : "zz-other";
-            const bPrefix =
-                b.descriptor.type === "user"
-                    ? b.descriptor.connector === "telegram"
-                        ? "aa-telegram"
-                        : "bb-user"
-                    : b.descriptor.type === "swarm"
-                      ? "cc-swarm"
-                      : "zz-other";
+            const aConnector = a.config.connectorName;
+            const bConnector = b.config.connectorName;
+            const aKind = a.config.kind ?? "agent";
+            const bKind = b.config.kind ?? "agent";
+            const aPrefix = aConnector
+                ? aConnector === "telegram"
+                    ? "aa-telegram"
+                    : "bb-user"
+                : aKind === "swarm"
+                  ? "cc-swarm"
+                  : "zz-other";
+            const bPrefix = bConnector
+                ? bConnector === "telegram"
+                    ? "aa-telegram"
+                    : "bb-user"
+                : bKind === "swarm"
+                  ? "cc-swarm"
+                  : "zz-other";
             if (aPrefix !== bPrefix) {
                 return aPrefix.localeCompare(bPrefix);
             }
@@ -532,15 +558,6 @@ export class AgentSystem {
             return bTime - aTime;
         });
         return candidates[0]?.ctx.agentId ?? null;
-    }
-
-    /**
-     * Returns the descriptor for an agent by id.
-     * Returns null if the agent is not found.
-     */
-    getAgentDescriptor(agentId: string): AgentDescriptor | null {
-        const entry = this.entries.get(agentId);
-        return entry?.descriptor ?? null;
     }
 
     /**
@@ -562,23 +579,16 @@ export class AgentSystem {
     }
 
     /**
-     * Updates a loaded agent descriptor in memory without changing its identity.
-     * Expects: descriptor type does not require keyMap changes (e.g. permanent agents).
+     * Updates loaded agent config metadata in memory.
+     * Expects: caller persisted config change to storage when required.
      */
-    updateAgentDescriptor(agentId: string, descriptor: AgentDescriptor): void {
+    updateAgentConfig(agentId: string, config: Partial<AgentConfig>): void {
         const entry = this.entries.get(agentId);
         if (!entry) {
             return;
         }
-        const nextPath = agentPathFromDescriptor(descriptor, { userId: entry.ctx.userId });
-        if (nextPath !== entry.path) {
-            this.pathMap.delete(entry.path);
-            entry.path = nextPath;
-            this.pathMap.set(nextPath, agentId);
-        }
-        entry.config = agentConfigFromDescriptor(descriptor);
-        Object.assign(entry.descriptor, descriptor);
-        Object.assign(entry.agent.descriptor, descriptor);
+        entry.config = { ...entry.config, ...config };
+        Object.assign(entry.agent.config, entry.config);
     }
 
     /**
@@ -631,7 +641,12 @@ export class AgentSystem {
         return this.entries.get(agentId) ?? null;
     }
 
-    private async resolveEntry(ctx: Context, target: AgentPostTarget, _item: AgentInboxItem): Promise<AgentEntry> {
+    private async resolveEntry(
+        ctx: Context,
+        target: AgentPostTarget,
+        _item: AgentInboxItem,
+        creationConfig?: AgentCreationConfig
+    ): Promise<AgentEntry> {
         if ("agentId" in target) {
             const existing = this.entries.get(target.agentId);
             if (existing) {
@@ -686,51 +701,23 @@ export class AgentSystem {
             }
         }
 
-        const descriptor = await this.descriptorForPath(ctx, path);
-
-        const stableDescriptorId =
-            (descriptor.type === "cron" || descriptor.type === "task") && cuid2Is(descriptor.id) ? descriptor.id : null;
-        if (stableDescriptorId) {
-            const existing = this.entries.get(stableDescriptorId);
-            if (existing) {
-                if (existing.agent.state.state === "dead" || existing.terminating) {
-                    throw new Error(`Agent is dead: ${stableDescriptorId}`);
-                }
-                if (existing.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${stableDescriptorId}`);
-                }
-                return existing;
-            }
-            const restored = await this.restoreAgent(stableDescriptorId, { allowSleeping: true });
-            if (restored) {
-                if (restored.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${stableDescriptorId}`);
-                }
-                return restored;
-            }
-        }
-
-        const agentId = stableDescriptorId ?? createId();
-        const resolvedDescriptor =
-            descriptor.type === "subagent" && descriptor.id !== agentId ? { ...descriptor, id: agentId } : descriptor;
-        const resolvedPath = path;
-        logger.debug(
-            `event: Creating agent entry agentId=${agentId} path=${resolvedPath} type=${resolvedDescriptor.type}`
-        );
+        const config = configForCreation(path, creationConfig);
+        const stablePathId = stableAgentIdForPath(path, config.kind);
+        const agentId = stablePathId ?? createId();
+        logger.debug(`event: Creating agent entry agentId=${agentId} path=${path} kind=${config.kind}`);
         const inbox = new AgentInbox(agentId);
-        const userId = await this.resolveUserIdForDescriptor(ctx, resolvedDescriptor);
+        const userId = await this.resolveUserIdForPath(ctx, path);
         if (userId !== ctx.userId) {
             throw new Error(`Cannot create agent for another user: ${agentId}`);
         }
         const createdCtx = contextForAgent({ userId, agentId });
         const userHome = this.userHomeForCtx(createdCtx);
-        const agent = await Agent.create(createdCtx, resolvedDescriptor, inbox, this, userHome);
+        const agent = await Agent.create(createdCtx, path, config, inbox, this, userHome);
         const persisted = await this.storage.agents.findById(agentId);
         const entry = this.registerEntry({
             ctx: createdCtx,
-            path: (persisted?.path ?? resolvedPath) as AgentPath,
-            config: persisted?.config ?? agentConfigFromDescriptor(resolvedDescriptor),
-            descriptor: resolvedDescriptor,
+            path: persisted?.path ?? path,
+            config: persisted ? agentConfigFromRecord(persisted) : config,
             agent,
             inbox
         });
@@ -741,8 +728,7 @@ export class AgentSystem {
     private registerEntry(input: {
         ctx: Context;
         path: AgentPath;
-        config: AgentConfig | null;
-        descriptor: AgentDescriptor;
+        config: AgentConfig;
         agent: Agent;
         inbox: AgentInbox;
     }): AgentEntry {
@@ -750,7 +736,6 @@ export class AgentSystem {
             ctx: input.ctx,
             path: input.path,
             config: input.config,
-            descriptor: input.descriptor,
             agent: input.agent,
             inbox: input.inbox,
             running: false,
@@ -771,7 +756,9 @@ export class AgentSystem {
             logger.debug(`skip: startEntryIfRunning skipped agentId=${entry.ctx.agentId} reason=already-running`);
             return;
         }
-        logger.debug(`start: startEntryIfRunning starting agentId=${entry.ctx.agentId} type=${entry.descriptor.type}`);
+        logger.debug(
+            `start: startEntryIfRunning starting agentId=${entry.ctx.agentId} kind=${entry.config.kind ?? "agent"}`
+        );
         entry.running = true;
         entry.agent.start();
     }
@@ -854,7 +841,7 @@ export class AgentSystem {
             return false;
         }
         await this.cancelIdleSignal(entry.ctx.agentId);
-        await this.cancelPoisonPill(entry.ctx.agentId, { descriptor: entry.descriptor });
+        await this.cancelPoisonPill(entry.ctx.agentId, { kind: entry.config.kind });
         entry.agent.state.state = "active";
         await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
         this.eventBus.emit("agent.woke", { agentId: entry.ctx.agentId });
@@ -901,13 +888,13 @@ export class AgentSystem {
 
     private async schedulePoisonPill(
         agentId: string,
-        options?: { descriptor?: AgentDescriptor; deliverAt?: number }
+        options?: { kind?: AgentConfig["kind"]; deliverAt?: number }
     ): Promise<void> {
         if (!this.delayedSignals) {
             return;
         }
-        const descriptor = options?.descriptor ?? this.entries.get(agentId)?.descriptor;
-        if (descriptor?.type !== "subagent" && descriptor?.type !== "memory-search") {
+        const kind = options?.kind ?? this.entries.get(agentId)?.config.kind ?? null;
+        if (kind !== "sub" && kind !== "search") {
             return;
         }
         const context = await this.contextForAgentId(agentId);
@@ -929,12 +916,12 @@ export class AgentSystem {
         }
     }
 
-    private async cancelPoisonPill(agentId: string, options?: { descriptor?: AgentDescriptor }): Promise<void> {
+    private async cancelPoisonPill(agentId: string, options?: { kind?: AgentConfig["kind"] }): Promise<void> {
         if (!this.delayedSignals) {
             return;
         }
-        const descriptor = options?.descriptor ?? this.entries.get(agentId)?.descriptor;
-        if (descriptor?.type !== "subagent" && descriptor?.type !== "memory-search") {
+        const kind = options?.kind ?? this.entries.get(agentId)?.config.kind ?? null;
+        if (kind !== "sub" && kind !== "search") {
             return;
         }
         try {
@@ -969,7 +956,8 @@ export class AgentSystem {
     private async handlePoisonPill(agentId: string): Promise<void> {
         const entry = this.entries.get(agentId);
         if (entry) {
-            if (entry.descriptor.type !== "subagent") {
+            const entryKind = entry.config.kind ?? "agent";
+            if (entryKind !== "sub" && entryKind !== "search") {
                 return;
             }
             if (entry.agent.state.state === "dead") {
@@ -998,26 +986,27 @@ export class AgentSystem {
             return;
         }
 
-        let descriptor: AgentDescriptor | null = null;
+        let kind: AgentDbRecord["kind"] | null = null;
         let state: Awaited<ReturnType<typeof agentStateRead>> = null;
         try {
             const context = await this.contextForAgentId(agentId);
             if (!context) {
                 return;
             }
-            descriptor = await agentDescriptorRead(this.storage, context);
+            const persisted = await this.storage.agents.findById(agentId);
+            kind = persisted?.kind ?? null;
             state = await agentStateRead(this.storage, context);
         } catch (error) {
             logger.warn({ agentId, error }, "error: Poison-pill read failed");
             return;
         }
-        if (!descriptor || !state || descriptor.type !== "subagent") {
+        if (!state || (kind !== "sub" && kind !== "search")) {
             return;
         }
         if (state.state === "dead") {
             return;
         }
-        await this.cancelPoisonPill(agentId, { descriptor });
+        await this.cancelPoisonPill(agentId, { kind });
         state.state = "dead";
         state.updatedAt = Date.now();
         const context = await this.contextForAgentId(agentId);
@@ -1039,7 +1028,7 @@ export class AgentSystem {
                 return;
             }
             await this.cancelIdleSignal(entry.ctx.agentId);
-            await this.cancelPoisonPill(entry.ctx.agentId, { descriptor: entry.descriptor });
+            await this.cancelPoisonPill(entry.ctx.agentId, { kind: entry.config.kind });
             entry.agent.state.state = "dead";
             entry.agent.state.updatedAt = Date.now();
             await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
@@ -1061,21 +1050,20 @@ export class AgentSystem {
     }
 
     private async restoreAgent(agentId: string, options?: { allowSleeping?: boolean }): Promise<AgentEntry | null> {
-        let descriptor: AgentDescriptor | null = null;
         let state: Awaited<ReturnType<typeof agentStateRead>> = null;
         let ctx: Context | null = null;
+        const persisted = await this.storage.agents.findById(agentId);
         try {
             ctx = await this.contextForAgentId(agentId);
             if (!ctx) {
                 return null;
             }
-            descriptor = await agentDescriptorRead(this.storage, ctx);
             state = await agentStateRead(this.storage, ctx);
         } catch (error) {
             logger.warn({ agentId, error }, "error: Agent restore failed due to invalid persisted data");
             return null;
         }
-        if (!descriptor || !state || !ctx) {
+        if (!persisted || !state || !ctx) {
             return null;
         }
         if (state.state === "dead") {
@@ -1086,13 +1074,12 @@ export class AgentSystem {
         }
         const inbox = new AgentInbox(agentId);
         const userHome = this.userHomeForCtx(ctx);
-        const agent = Agent.restore(ctx, descriptor, state, inbox, this, userHome);
-        const persisted = await this.storage.agents.findById(agentId);
+        const config = agentConfigFromRecord(persisted);
+        const agent = Agent.restore(ctx, persisted.path, config, state, inbox, this, userHome);
         const entry = this.registerEntry({
             ctx,
-            path: (persisted?.path ?? agentPathFromDescriptor(descriptor, { userId: ctx.userId })) as AgentPath,
-            config: persisted?.config ?? agentConfigFromDescriptor(descriptor),
-            descriptor,
+            path: persisted.path,
+            config,
             agent,
             inbox
         });
@@ -1102,220 +1089,8 @@ export class AgentSystem {
         return entry;
     }
 
-    private async pathEnsure(record: {
-        id: string;
-        userId: string;
-        descriptor: AgentDescriptor;
-        path?: AgentPath | null;
-        config?: AgentConfig | null;
-    }): Promise<AgentPath> {
-        if (record.path && record.descriptor.type === "swarm") {
-            const canonicalPath = agentPathFromDescriptor(record.descriptor, { userId: record.userId });
-            if (record.path !== canonicalPath) {
-                try {
-                    await this.storage.agents.update(record.id, {
-                        path: canonicalPath,
-                        config: record.config ?? agentConfigFromDescriptor(record.descriptor),
-                        updatedAt: Date.now()
-                    });
-                    return canonicalPath;
-                } catch (error) {
-                    logger.warn(
-                        { agentId: record.id, path: canonicalPath, error },
-                        "warn: Failed to persist canonical swarm path"
-                    );
-                }
-            }
-        }
-        if (record.path) {
-            return record.path;
-        }
-        const path = agentPathFromDescriptor(record.descriptor, { userId: record.userId });
-        try {
-            await this.storage.agents.update(record.id, {
-                path,
-                config: record.config ?? agentConfigFromDescriptor(record.descriptor),
-                updatedAt: Date.now()
-            });
-        } catch (error) {
-            logger.warn({ agentId: record.id, path, error }, "warn: Failed to persist derived agent path");
-        }
-        return path;
-    }
-
-    private async descriptorForPath(ctx: Context, path: AgentPath): Promise<AgentDescriptor> {
-        const segments = pathSegments(path);
-        const kind = pathKindResolve(path, segments);
-        if (kind === "connector") {
-            const connector = segments[1]?.trim() ?? "";
-            const userId = segments[0]?.trim() ?? "";
-            if (!connector || !userId) {
-                throw new Error(`Invalid connector path: ${path}`);
-            }
-            const targetId = await this.connectorTargetIdForUser(userId, connector);
-            return {
-                type: "user",
-                connector,
-                userId: targetId,
-                channelId: targetId
-            };
-        }
-        if (kind === "cron") {
-            const id = segments[2]?.trim() ?? "";
-            if (!id) {
-                throw new Error(`Invalid cron path: ${path}`);
-            }
-            return { type: "cron", id };
-        }
-        if (kind === "task") {
-            const id = segments[2]?.trim() ?? "";
-            if (!id) {
-                throw new Error(`Invalid task path: ${path}`);
-            }
-            return { type: "task", id };
-        }
-        if (kind === "system") {
-            const tag = segments[1]?.trim() ?? "";
-            if (!tag) {
-                throw new Error(`Invalid system path: ${path}`);
-            }
-            return { type: "system", tag };
-        }
-        if (kind === "subuser") {
-            const subuserId = segments[2]?.trim() ?? "";
-            if (!subuserId) {
-                throw new Error(`Invalid subuser path: ${path}`);
-            }
-            return {
-                type: "permanent",
-                id: ctx.hasAgentId ? ctx.agentId : createId(),
-                name: subuserId,
-                description: "",
-                systemPrompt: ""
-            };
-        }
-        if (kind === "agent") {
-            const name = segments[2]?.trim() ?? "";
-            if (!name) {
-                throw new Error(`Invalid agent path: ${path}`);
-            }
-            const userId = segments[0]?.trim() ?? "";
-            if (name === "swarm" && userId) {
-                const user = await this.storage.users.findById(userId);
-                if (user?.isSwarm) {
-                    return {
-                        type: "swarm",
-                        id: user.id
-                    };
-                }
-            }
-            return {
-                type: "permanent",
-                id: ctx.hasAgentId ? ctx.agentId : createId(),
-                name,
-                description: "",
-                systemPrompt: ""
-            };
-        }
-        if (kind === "sub") {
-            const parentPath = pathTrimSegments(path, 2);
-            const parent = await this.storage.agents.findByPath(parentPath);
-            if (!parent) {
-                throw new Error(`Parent agent not found for path: ${path}`);
-            }
-            return {
-                type: "subagent",
-                id: ctx.hasAgentId ? ctx.agentId : createId(),
-                parentAgentId: parent.id,
-                name: "subagent"
-            };
-        }
-        if (kind === "memory") {
-            const sourcePath = pathTrimSegments(path, 1);
-            const source = await this.storage.agents.findByPath(sourcePath);
-            if (!source) {
-                throw new Error(`Source agent not found for memory path: ${path}`);
-            }
-            return {
-                type: "memory-agent",
-                id: source.id
-            };
-        }
-        if (kind === "search") {
-            const parentPath = pathTrimSegments(path, 2);
-            const parent = await this.storage.agents.findByPath(parentPath);
-            if (!parent) {
-                throw new Error(`Parent agent not found for search path: ${path}`);
-            }
-            return {
-                type: "memory-search",
-                id: ctx.hasAgentId ? ctx.agentId : createId(),
-                parentAgentId: parent.id,
-                name: "memory-search"
-            };
-        }
-        throw new Error(`Cannot create descriptor from path kind: ${kind}`);
-    }
-
-    private async connectorTargetIdForUser(userId: string, connector: string): Promise<string> {
-        const user = await this.storage.users.findById(userId);
-        if (!user) {
-            throw new Error(`User not found for connector path: ${userId}`);
-        }
-        const prefix = `${connector}:`;
-        const match = user.connectorKeys.find((entry) => entry.connectorKey.startsWith(prefix));
-        if (!match) {
-            logger.warn({ userId, connector }, "warn: Connector key not found for user path, using userId as target");
-            return userId;
-        }
-        const targetId = match.connectorKey.slice(prefix.length).trim();
-        return targetId.length > 0 ? targetId : userId;
-    }
-
-    private async resolveUserIdForDescriptor(ctx: Context, descriptor: AgentDescriptor): Promise<string> {
-        if (descriptor.type === "user") {
-            const connectorKey = userConnectorKeyCreate(descriptor.connector, descriptor.userId);
-            return this.resolveUserIdForConnectorKey(connectorKey);
-        }
-        if (descriptor.type === "subagent" || descriptor.type === "memory-search") {
-            const parent = await this.contextForAgentId(descriptor.parentAgentId);
-            if (parent) {
-                return parent.userId;
-            }
-            throw new Error("Parent agent not found");
-        }
-        if (descriptor.type === "memory-agent") {
-            const source = await this.contextForAgentId(descriptor.id);
-            if (source) {
-                return source.userId;
-            }
-            throw new Error("Source agent not found for memory-agent");
-        }
-        if (descriptor.type === "swarm") {
-            return descriptor.id;
-        }
-        if (
-            descriptor.type === "system" ||
-            descriptor.type === "cron" ||
-            descriptor.type === "task" ||
-            descriptor.type === "permanent"
-        ) {
-            return ctx.userId;
-        }
-        throw new Error("Cannot resolve user for descriptor");
-    }
-
-    private async resolveUserIdForConnectorKey(connectorKey: string): Promise<string> {
-        try {
-            const user = await this.storage.resolveUserByConnectorKey(connectorKey);
-            const userId = user.id?.trim() ?? "";
-            if (userId) {
-                return userId;
-            }
-        } catch (error) {
-            logger.warn({ connectorKey, error }, "warn: Failed to resolve connector user");
-        }
-        throw new Error("User not found for connector key");
+    private async resolveUserIdForPath(ctx: Context, _path: AgentPath): Promise<string> {
+        return ctx.userId;
     }
 
     async ownerCtxEnsure(): Promise<Context> {
@@ -1410,53 +1185,87 @@ export class AgentSystem {
     }
 }
 
-type AgentPathKindLocal = "connector" | "agent" | "cron" | "task" | "subuser" | "system" | "sub" | "memory" | "search";
+function agentConfigFromRecord(
+    record: Pick<
+        AgentDbRecord,
+        | "kind"
+        | "modelRole"
+        | "connectorName"
+        | "parentAgentId"
+        | "foreground"
+        | "name"
+        | "description"
+        | "systemPrompt"
+        | "workspaceDir"
+    >
+): AgentConfig {
+    return {
+        kind: record.kind,
+        modelRole: record.modelRole,
+        connectorName: record.connectorName,
+        parentAgentId: record.parentAgentId,
+        foreground: record.foreground,
+        name: record.name,
+        description: record.description,
+        systemPrompt: record.systemPrompt,
+        workspaceDir: record.workspaceDir
+    };
+}
 
-const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser"]);
+function configForCreation(
+    path: AgentPath,
+    creationConfig?: AgentCreationConfig
+): AgentConfig & { kind: NonNullable<AgentConfig["kind"]> } {
+    const kind = creationConfig?.kind;
+    if (!kind) {
+        throw new Error(`Missing creationConfig.kind for new agent path: ${path}`);
+    }
+    return {
+        kind,
+        modelRole: creationConfig.modelRole === undefined ? modelRoleForKind(kind) : creationConfig.modelRole,
+        connectorName: creationConfig.connectorName === undefined ? null : creationConfig.connectorName,
+        parentAgentId: creationConfig.parentAgentId === undefined ? null : creationConfig.parentAgentId,
+        foreground: creationConfig.foreground ?? (kind === "connector" || kind === "swarm"),
+        name: creationConfig.name ?? null,
+        description: creationConfig.description ?? null,
+        systemPrompt: creationConfig.systemPrompt ?? null,
+        workspaceDir: creationConfig.workspaceDir ?? null
+    };
+}
 
-function pathSegments(path: AgentPath): string[] {
-    return String(path)
+function stableAgentIdForPath(path: AgentPath, kind: NonNullable<AgentConfig["kind"]>): string | null {
+    if (kind !== "cron" && kind !== "task") {
+        return null;
+    }
+    const segments = String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
+    const id = segments[2]?.trim();
+    return id && cuid2Is(id) ? id : null;
 }
 
-function pathKindResolve(path: AgentPath, segments = pathSegments(path)): AgentPathKindLocal {
-    const raw = String(path);
-    if (raw.startsWith("/system/")) {
-        return "system";
+function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
+    if (kind === "connector" || kind === "agent" || kind === "subuser" || kind === "swarm") {
+        return "user";
     }
-    if (raw.endsWith("/memory")) {
+    if (kind === "sub") {
+        return "subagent";
+    }
+    if (kind === "memory") {
         return "memory";
     }
-    if (/\/search\/\d+$/.test(raw)) {
-        return "search";
+    if (kind === "search") {
+        return "memorySearch";
     }
-    if (/\/sub\/\d+$/.test(raw)) {
-        return "sub";
-    }
-    const scope = segments[1]?.trim() ?? "";
-    if (scope === "agent") {
-        return "agent";
-    }
-    if (scope === "cron") {
-        return "cron";
-    }
-    if (scope === "task") {
+    if (kind === "task") {
         return "task";
     }
-    if (scope === "subuser") {
-        return "subuser";
-    }
-    if (scope && !RESERVED_USER_SCOPE_SEGMENTS.has(scope)) {
-        return "connector";
-    }
-    throw new Error(`Unknown path pattern: ${path}`);
+    return null;
 }
 
-function pathTrimSegments(path: AgentPath, count: number): AgentPath {
-    const segments = pathSegments(path);
-    if (count <= 0 || count >= segments.length) {
-        throw new Error(`Cannot trim ${count} segments from path: ${path}`);
+function agentMatchesStrategy(config: AgentConfig, strategy: AgentFetchStrategy): boolean {
+    if (strategy !== "most-recent-foreground") {
+        return false;
     }
-    return `/${segments.slice(0, segments.length - count).join("/")}` as AgentPath;
+    return config.foreground || config.kind === "swarm";
 }

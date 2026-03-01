@@ -19,7 +19,10 @@ type TopologyStorageMock = {
             Array<{
                 id: string;
                 userId: string;
-                descriptor: { type: string };
+                path: string;
+                kind?: string | null;
+                name?: string | null;
+                foreground?: boolean;
                 lifecycle: string;
                 updatedAt: number;
             }>
@@ -67,7 +70,16 @@ function createToolContext(options: {
         firstName?: string | null;
         lastName?: string | null;
     }>;
-    agents: Array<{ id: string; userId: string; descriptor: { type: string }; lifecycle?: string; updatedAt?: number }>;
+    agents: Array<{
+        id: string;
+        userId: string;
+        path: string;
+        kind?: string | null;
+        name?: string | null;
+        foreground?: boolean;
+        lifecycle?: string;
+        updatedAt?: number;
+    }>;
     tasksByUser: Record<string, Array<{ id: string; title: string; description: string | null; updatedAt: number }>>;
     cronTasks?: Array<{
         id: string;
@@ -114,7 +126,10 @@ function createToolContext(options: {
                 options.agents.map((agent) => ({
                     id: agent.id,
                     userId: agent.userId,
-                    descriptor: agent.descriptor,
+                    path: agent.path,
+                    kind: agent.kind ?? null,
+                    name: agent.name ?? null,
+                    foreground: agent.foreground ?? false,
                     lifecycle: agent.lifecycle ?? "active",
                     updatedAt: agent.updatedAt ?? 1
                 }))
@@ -161,7 +176,21 @@ function createToolContext(options: {
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        agent: { id: options.caller.agentId } as unknown as ToolExecutionContext["agent"],
+        agent: {
+            id: options.caller.agentId,
+            path: `/${options.caller.userId}/telegram`,
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
+        } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent(options.caller),
         source: "test",
         messageContext: {},
@@ -177,8 +206,21 @@ describe("topologyTool", () => {
             caller: { userId: "owner", agentId: "agent-owner" },
             users: [{ id: "owner", parentUserId: null }],
             agents: [
-                { id: "agent-owner", userId: "owner", descriptor: { type: "user" }, updatedAt: 5 },
-                { id: "agent-memory", userId: "owner", descriptor: { type: "memory-agent" }, updatedAt: 6 }
+                {
+                    id: "agent-owner",
+                    userId: "owner",
+                    path: "/owner/telegram",
+                    kind: "connector",
+                    foreground: true,
+                    updatedAt: 5
+                },
+                {
+                    id: "agent-memory",
+                    userId: "owner",
+                    path: "/owner/memory/agent-memory",
+                    kind: "memory",
+                    updatedAt: 6
+                }
             ],
             tasksByUser: {
                 owner: [{ id: "task-report", title: "Daily report", description: null, updatedAt: 20 }]
@@ -220,8 +262,8 @@ describe("topologyTool", () => {
                 { id: "sub-2", parentUserId: "owner" }
             ],
             agents: [
-                { id: "agent-sub-1", userId: "sub-1", descriptor: { type: "subuser" }, updatedAt: 10 },
-                { id: "agent-sub-2", userId: "sub-2", descriptor: { type: "subuser" }, updatedAt: 9 }
+                { id: "agent-sub-1", userId: "sub-1", path: "/sub-1/subuser/main", kind: "subuser", updatedAt: 10 },
+                { id: "agent-sub-2", userId: "sub-2", path: "/sub-2/subuser/main", kind: "subuser", updatedAt: 9 }
             ],
             tasksByUser: {
                 owner: [{ id: "owner-task", title: "Owner task", description: null, updatedAt: 20 }],

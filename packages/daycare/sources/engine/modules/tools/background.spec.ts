@@ -372,6 +372,9 @@ type AgentSystemStub = Partial<{
     steer: (ctx: unknown, agentId: string, item: unknown) => Promise<void>;
     contextForAgentId: (agentId: string) => Promise<unknown>;
     storage: {
+        agents?: {
+            findByPath: (path: string) => Promise<{ id: string } | null>;
+        };
         swarmContacts: {
             listContacts: (swarmUserId: string) => Promise<Array<{ contactAgentId: string }>>;
             isKnownContact: (swarmUserId: string, contactAgentId: string) => Promise<boolean>;
@@ -409,6 +412,8 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
             resolvedPath: "/tmp/unused.md",
             sandboxPath: "~/outputs/unused.md"
         })) as ContextBuildOptions["sandboxWrite"]);
+    const agentPath = agentPathFromDescriptorFixture(descriptor, userId, agentId);
+    const agentConfig = agentConfigFromDescriptorFixture(descriptor);
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: {
@@ -418,7 +423,12 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
-        agent: { id: agentId, descriptor, userId } as unknown as ToolExecutionContext["agent"],
+        agent: {
+            id: agentId,
+            path: agentPath,
+            config: agentConfig,
+            userId
+        } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId, agentId }),
         source: "test",
         messageContext: {},
@@ -437,6 +447,15 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
             storage:
                 agentSystem.storage ??
                 ({
+                    agents: {
+                        findByPath: vi.fn(async (pathValue: string) => {
+                            const parts = String(pathValue)
+                                .split("/")
+                                .filter((segment) => segment.length > 0);
+                            const id = parts.at(-1) ?? null;
+                            return id ? { id } : null;
+                        })
+                    },
                     swarmContacts: {
                         listContacts: vi.fn(async () => []),
                         isKnownContact: vi.fn(async () => false),
@@ -444,6 +463,75 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
                     }
                 } as AgentSystemStub["storage"])
         } as unknown as ToolExecutionContext["agentSystem"]
+    };
+}
+
+function agentPathFromDescriptorFixture(descriptor: unknown, userId: string, agentId: string): string {
+    if (typeof descriptor !== "object" || !descriptor) {
+        return `/${userId}/sub/${agentId}`;
+    }
+    const value = descriptor as Record<string, unknown>;
+    const type = typeof value.type === "string" ? value.type : "";
+    if (type === "user") {
+        const connector = typeof value.connector === "string" ? value.connector : "telegram";
+        return `/${userId}/${connector}`;
+    }
+    if (type === "swarm") {
+        return `/${userId}/agent/swarm`;
+    }
+    if (type === "permanent") {
+        const name = typeof value.name === "string" ? value.name : agentId;
+        return `/${userId}/agent/${name}`;
+    }
+    if (type === "subagent") {
+        const id = typeof value.id === "string" ? value.id : agentId;
+        const parentAgentId = typeof value.parentAgentId === "string" ? value.parentAgentId : "parent-agent";
+        return `/${userId}/agent/${parentAgentId}/sub/${id}`;
+    }
+    return `/${userId}/sub/${agentId}`;
+}
+
+function agentConfigFromDescriptorFixture(descriptor: unknown): {
+    kind?: string;
+    modelRole?: string | null;
+    connectorName?: string | null;
+    parentAgentId?: string | null;
+    foreground: boolean;
+    name: string | null;
+    description: string | null;
+    systemPrompt: string | null;
+    workspaceDir: string | null;
+} {
+    if (typeof descriptor !== "object" || !descriptor) {
+        return {
+            kind: "agent",
+            modelRole: "user",
+            connectorName: null,
+            parentAgentId: null,
+            foreground: false,
+            name: null,
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        };
+    }
+    const value = descriptor as Record<string, unknown>;
+    const type = typeof value.type === "string" ? value.type : "";
+    const connector = typeof value.connector === "string" ? value.connector : null;
+    const parentAgentId = typeof value.parentAgentId === "string" ? value.parentAgentId : null;
+    const name = typeof value.name === "string" ? value.name : null;
+    const kind = type === "subagent" ? "sub" : type === "swarm" ? "swarm" : type === "user" ? "connector" : "agent";
+    const modelRole = kind === "sub" ? "subagent" : "user";
+    return {
+        kind,
+        modelRole,
+        connectorName: kind === "connector" ? connector : null,
+        parentAgentId,
+        foreground: type === "user" || type === "swarm",
+        name,
+        description: null,
+        systemPrompt: null,
+        workspaceDir: null
     };
 }
 

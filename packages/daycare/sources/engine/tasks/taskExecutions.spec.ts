@@ -45,8 +45,12 @@ describe("TaskExecutions", () => {
             expect.objectContaining({
                 type: "system_message",
                 taskId: "task-1",
-                task: { id: "task-1", version: 3 }
-            })
+                task: { id: "task-1", version: 3 },
+                origin: "cron",
+                sync: false,
+                text: "[cron]"
+            }),
+            undefined
         );
 
         const after = facade.listStats();

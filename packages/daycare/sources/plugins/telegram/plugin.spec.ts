@@ -271,7 +271,7 @@ describe("telegram plugin system prompt", () => {
         }
     });
 
-    it("returns null for non-telegram descriptors", async () => {
+    it("returns null for non-telegram paths", async () => {
         const dataDir = await tempDirCreate();
         const built = pluginApiBuild(dataDir);
         const instance = await plugin.create(built.api as never);
@@ -280,12 +280,19 @@ describe("telegram plugin system prompt", () => {
 
         const result = await systemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: {
-                type: "user",
-                connector: "whatsapp",
-                userId: "123",
-                channelId: "123"
+            path: "/user-1/whatsapp",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "whatsapp",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             },
+            connectorTargetId: "123",
             userDownloadsDir: path.join(dataDir, "downloads")
         });
 
@@ -322,12 +329,19 @@ describe("telegram plugin system prompt", () => {
 
         const first = await systemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                userId: "123",
-                channelId: "123"
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             },
+            connectorTargetId: "123",
             userDownloadsDir
         });
 
@@ -340,12 +354,19 @@ describe("telegram plugin system prompt", () => {
         await rm(firstResult.images![0]!, { force: true });
         const second = await systemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                userId: "123",
-                channelId: "123"
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             },
+            connectorTargetId: "123",
             userDownloadsDir
         });
 
@@ -391,12 +412,19 @@ describe("telegram plugin system prompt", () => {
 
         const stale = await systemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                userId: "123",
-                channelId: "123"
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             },
+            connectorTargetId: "123",
             userDownloadsDir: path.join(dataDir, "user-downloads")
         });
 
@@ -409,12 +437,19 @@ describe("telegram plugin system prompt", () => {
         await vi.waitFor(async () => {
             const fresh = await systemPrompt({
                 ctx: contextForUser({ userId: "user-1" }),
-                descriptor: {
-                    type: "user",
-                    connector: "telegram",
-                    userId: "123",
-                    channelId: "123"
+                path: "/user-1/telegram",
+                config: {
+                    kind: "connector",
+                    modelRole: "user",
+                    connectorName: "telegram",
+                    parentAgentId: null,
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
+                connectorTargetId: "123",
                 userDownloadsDir: path.join(dataDir, "user-downloads")
             });
             expect(systemPromptResultRequire(fresh).text).toContain("Name: Fresh Name");
@@ -469,12 +504,19 @@ describe("telegram plugin system prompt", () => {
 
         const stale = await systemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                userId: "123",
-                channelId: "123"
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             },
+            connectorTargetId: "123",
             userDownloadsDir
         });
         expect(systemPromptResultRequire(stale).images).toEqual([oldDownloadA, oldDownloadB]);
@@ -490,12 +532,19 @@ describe("telegram plugin system prompt", () => {
 
         const fresh = await systemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                userId: "123",
-                channelId: "123"
+            path: "/user-1/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
             },
+            connectorTargetId: "123",
             userDownloadsDir
         });
         expect(systemPromptResultRequire(fresh).images).toBeUndefined();

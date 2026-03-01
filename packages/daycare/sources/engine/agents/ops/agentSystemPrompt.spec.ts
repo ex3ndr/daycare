@@ -17,7 +17,18 @@ describe("agentSystemPrompt", () => {
     it("renders plugin prompt sections and collects system prompt images", async () => {
         const context: AgentSystemPromptParameter = {
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: { type: "memory-agent", id: "memory-1" },
+            path: "/user-1/memory/memory-1",
+            config: {
+                kind: "memory",
+                modelRole: null,
+                connectorName: null,
+                parentAgentId: null,
+                foreground: false,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            },
             pluginPrompts: [
                 { text: "Telegram profile available.", images: ["/tmp/downloads/profile-telegram-1.jpg"] },
                 { text: "Preferred language: French." }
@@ -32,12 +43,23 @@ describe("agentSystemPrompt", () => {
         expect(context.systemPromptImages).toEqual(["/tmp/downloads/profile-telegram-1.jpg"]);
     });
 
-    it("returns replacement prompt for memory-agent descriptor", async () => {
+    it("returns replacement prompt for memory-agent path", async () => {
         const expected = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
 
         const rendered = await agentSystemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: { type: "memory-agent", id: "agent-1" }
+            path: "/user-1/memory/agent-1",
+            config: {
+                kind: "memory",
+                modelRole: null,
+                connectorName: null,
+                parentAgentId: null,
+                foreground: false,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
         });
 
         expect(rendered).toContain(expected);
@@ -56,7 +78,7 @@ describe("agentSystemPrompt", () => {
 
         const rendered = await agentSystemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            descriptor: { type: "system", tag: "architect" }
+            path: "/system/architect"
         });
 
         expect(rendered).toContain(expected);
@@ -76,7 +98,7 @@ describe("agentSystemPrompt", () => {
 
             const rendered = await agentSystemPrompt({
                 ctx: contextForAgent({ userId: "user-1", agentId: "agent-system-1" }),
-                descriptor: { type: "system", tag: "cron" },
+                path: "/system/cron",
                 userHome,
                 agentSystem: {
                     config: {
@@ -128,6 +150,22 @@ describe("agentSystemPrompt", () => {
                         }
                     }
                 },
+                storage: {
+                    users: {
+                        findById: async (id: string) =>
+                            id === "user-1"
+                                ? {
+                                      id,
+                                      nametag: "user-1",
+                                      firstName: null,
+                                      lastName: null,
+                                      country: null,
+                                      timezone: null,
+                                      connectorKeys: [{ connectorKey: "telegram:channel-1" }]
+                                  }
+                                : null
+                    }
+                },
                 toolResolver: {
                     listTools: () => [],
                     listToolsForAgent: () => []
@@ -142,11 +180,17 @@ describe("agentSystemPrompt", () => {
                     workingDir: "/tmp/workspace",
                     writeDirs: ["/tmp/workspace"]
                 },
-                descriptor: {
-                    type: "user",
-                    connector: "telegram",
-                    channelId: "channel-1",
-                    userId: "user-1"
+                path: "/user-1/telegram",
+                config: {
+                    kind: "connector",
+                    modelRole: "user",
+                    connectorName: "telegram",
+                    parentAgentId: null,
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
                 },
                 userHome,
                 agentSystem
@@ -239,12 +283,13 @@ describe("agentSystemPrompt", () => {
                     workingDir: "/tmp/workspace",
                     writeDirs: ["/tmp/workspace"]
                 },
-                descriptor: {
-                    type: "permanent",
-                    id: "agent-id",
+                path: "/user-1/agent/helper",
+                config: {
+                    foreground: false,
                     name: "helper",
                     description: "Helper agent",
-                    systemPrompt: "Handle long-running research."
+                    systemPrompt: "Handle long-running research.",
+                    workspaceDir: null
                 },
                 userHome,
                 agentSystem

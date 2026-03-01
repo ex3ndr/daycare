@@ -133,7 +133,8 @@ describe("startEngineServer", () => {
         expect(response.statusCode).toBe(200);
         expect(agentIdForTarget).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "user-1", hasAgentId: false }),
-            { path: "/user-1/task/task-1" }
+            { path: "/user-1/task/task-1" },
+            { kind: "task" }
         );
         expect(post).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "user-1", hasAgentId: false }),
