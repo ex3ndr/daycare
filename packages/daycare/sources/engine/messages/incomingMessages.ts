@@ -1,11 +1,9 @@
-import type { AgentDescriptor, AgentPath, ConnectorMessage, MessageContext } from "@/types";
-import { agentDescriptorCacheKey } from "../agents/ops/agentDescriptorCacheKey.js";
+import type { AgentPath, ConnectorMessage, MessageContext } from "@/types";
 import { messageContextMerge } from "./messageContextMerge.js";
 import { messageIsEmpty } from "./messageIsEmpty.js";
 
 export type IncomingMessageInput = {
-    path?: AgentPath;
-    descriptor?: AgentDescriptor;
+    path: AgentPath;
     message: ConnectorMessage;
     context: MessageContext;
 };
@@ -39,9 +37,6 @@ export class IncomingMessages {
         if (messageIsEmpty(input.message)) {
             return;
         }
-        if (!input.path && !input.descriptor) {
-            throw new Error("Incoming message requires either path or descriptor.");
-        }
         this.pending.push(input);
         this.schedule();
     }
@@ -55,20 +50,6 @@ export class IncomingMessages {
             return 0;
         }
         const key = batchKeyBuild(path);
-        const before = this.pending.length;
-        this.pending = this.pending.filter((entry) => batchKeyBuild(entry) !== key);
-        return before - this.pending.length;
-    }
-
-    /**
-     * Drops queued (not yet flushed) messages for one descriptor.
-     * Expects: caller uses this for command-style control flows like /reset.
-     */
-    dropForDescriptor(descriptor: AgentDescriptor): number {
-        if (this.pending.length === 0) {
-            return 0;
-        }
-        const key = batchKeyBuild(descriptor);
         const before = this.pending.length;
         this.pending = this.pending.filter((entry) => batchKeyBuild(entry) !== key);
         return before - this.pending.length;
@@ -131,12 +112,6 @@ function batchBuild(inputs: IncomingMessageInput[]): IncomingMessageBatch[] {
             keys.push(key);
             continue;
         }
-        if (!existing.path && input.path) {
-            existing.path = input.path;
-        }
-        if (!existing.descriptor && input.descriptor) {
-            existing.descriptor = input.descriptor;
-        }
         existing.message = connectorMessageMerge(existing.message, input.message);
         existing.context = messageContextMerge(existing.context, input.context);
         existing.count += 1;
@@ -144,20 +119,11 @@ function batchBuild(inputs: IncomingMessageInput[]): IncomingMessageBatch[] {
     return keys.map((key) => grouped.get(key)).filter((item): item is IncomingMessageBatch => !!item);
 }
 
-function batchKeyBuild(value: IncomingMessageInput | AgentPath | AgentDescriptor): string {
+function batchKeyBuild(value: IncomingMessageInput | AgentPath): string {
     if (typeof value === "string") {
         return value;
     }
-    if ("type" in value) {
-        return agentDescriptorCacheKey(value);
-    }
-    if (value.path) {
-        return value.path;
-    }
-    if (value.descriptor) {
-        return agentDescriptorCacheKey(value.descriptor);
-    }
-    throw new Error("Incoming message key requires either path or descriptor.");
+    return value.path;
 }
 
 function connectorMessageMerge(left: ConnectorMessage, right: ConnectorMessage): ConnectorMessage {

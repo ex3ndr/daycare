@@ -6,12 +6,7 @@ type BuildContextInput = {
 };
 
 function buildContext(input?: BuildContextInput) {
-    const agentIdForTarget = vi.fn(
-        async (
-            _ctx: unknown,
-            _target: { descriptor: { type: "memory-search"; parentAgentId: string; name: string; id: string } }
-        ) => "memory-search-agent-1"
-    );
+    const agentIdForTarget = vi.fn(async (_ctx: unknown, _target: unknown) => "memory-search-agent-1");
     const post = vi.fn(async (_ctx: unknown, _target: { agentId: string }, _item: unknown) => undefined);
     const responseText = input && "responseText" in input ? input.responseText : "Found prior decision in documents.";
     const postAndAwait = vi.fn(async (_ctx: unknown, _target: { agentId: string }, _item: unknown) => {
@@ -56,11 +51,7 @@ describe("documentSearchToolBuild", () => {
 
         expect(agentIdForTarget).toHaveBeenCalledTimes(1);
         expect(agentIdForTarget.mock.calls[0]?.[1]).toMatchObject({
-            descriptor: {
-                type: "memory-search",
-                parentAgentId: "agent-parent-1",
-                name: "daily metrics"
-            }
+            path: expect.stringContaining("/search/0")
         });
         expect(post).toHaveBeenCalledWith(
             ctx,

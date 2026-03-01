@@ -7,6 +7,7 @@ import type { Context } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForAgent } from "../agents/context.js";
+import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../config/configModule.js";
 import { Crons, type CronsOptions } from "./crons.js";
 
@@ -150,7 +151,7 @@ describe("Crons", () => {
                 source: "cron",
                 taskId: "task-1",
                 taskVersion: 5,
-                target: { descriptor: { type: "task", id: "task-1" } },
+                target: { path: agentPathTask("user-1", "task-1") },
                 text: "[cron]\ntriggerId: trigger-1\ntaskId: task-1\ntaskName: Nightly sync\ntimezone: UTC",
                 parameters: { env: "prod" },
                 context: messageContext

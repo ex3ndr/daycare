@@ -1,7 +1,10 @@
+import type { AgentPath } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import { type Context, contextForAgent } from "../agents/context.js";
-import type { AgentDescriptor } from "../agents/ops/agentDescriptorTypes.js";
+import { agentPathMemory } from "../agents/ops/agentPathBuild.js";
+import { agentPathFromDescriptor } from "../agents/ops/agentPathFromDescriptor.js";
+import { agentPathKind } from "../agents/ops/agentPathParse.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { formatHistoryMessages } from "./infer/utils/formatHistoryMessages.js";
 import { memoryRootDocumentEnsure } from "./memoryRootDocumentEnsure.js";
@@ -13,7 +16,7 @@ const DEFAULT_BATCH_SIZE = 10;
 
 export type MemoryWorkerPostFn = (
     ctx: Context,
-    target: { descriptor: AgentDescriptor },
+    target: { path: AgentPath },
     item: { type: "system_message"; text: string; origin: string }
 ) => Promise<void>;
 
@@ -115,9 +118,17 @@ export class MemoryWorker {
                     );
                     continue;
                 }
+                const sourcePath = agent.path ?? agentPathFromDescriptor(agent.descriptor, { userId: agent.userId });
+                const sourceKind = agentPathKind(sourcePath);
+                const descriptorType = agent.descriptor.type;
 
                 // Skip sessions belonging to memory-agents and memory-search agents
-                if (agent.descriptor.type === "memory-agent" || agent.descriptor.type === "memory-search") {
+                if (
+                    sourceKind === "memory" ||
+                    sourceKind === "search" ||
+                    descriptorType === "memory-agent" ||
+                    descriptorType === "memory-search"
+                ) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }
@@ -134,7 +145,11 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const isForeground = agent.descriptor.type === "user" || agent.descriptor.type === "swarm";
+                const isForeground =
+                    sourceKind === "connector" ||
+                    descriptorType === "user" ||
+                    descriptorType === "swarm" ||
+                    agentUser?.isSwarm === true;
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
@@ -148,12 +163,12 @@ export class MemoryWorker {
                     : "> Source: This transcript is from an automated agent performing background work. There is no human participant.\n> Review the following transcript and update memory documents with any new facts about what was done, what succeeded/failed, and what was learned about systems and processes. Do NOT reply with summaries — only use tools to update memory.";
                 const text = `${preamble}\n\n${transcript}`;
 
-                const descriptor: AgentDescriptor = { type: "memory-agent", id: session.agentId };
+                const path = agentPathMemory(sourcePath);
                 const ctx = contextForAgent({ userId: agent.userId, agentId: session.agentId });
                 await memoryRootDocumentEnsure(ctx, this.storage);
                 await this.postToAgent(
                     ctx,
-                    { descriptor },
+                    { path },
                     {
                         type: "system_message",
                         text,

@@ -4,6 +4,7 @@ import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForUser } from "../agents/context.js";
+import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_WEBHOOKS, topographyObservationEmit } from "../observations/topographyEvents.js";
 import type { WebhookDefinition } from "./webhookTypes.js";
 
@@ -155,7 +156,7 @@ export class Webhooks {
 
         const target = trigger.agentId
             ? { agentId: trigger.agentId }
-            : { descriptor: { type: "task" as const, id: trigger.taskId } };
+            : { path: agentPathTask(trigger.userId, trigger.taskId) };
         const text = webhookPromptBuild(trigger, task.title, data);
         const messageContext = webhookMessageContextBuild(data);
         this.agentSystem.taskExecutions.dispatch({

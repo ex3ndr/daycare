@@ -1,6 +1,7 @@
 import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 
 import type {
+    AgentPath,
     ConnectorMessage,
     FileReference,
     MessageContext,
@@ -9,8 +10,6 @@ import type {
     Signal
 } from "@/types";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
-import type { AgentDescriptor } from "./agentDescriptorTypes.js";
-import type { AgentPath } from "./agentPathTypes.js";
 
 export type AgentMessage = {
     id: string;
@@ -235,7 +234,7 @@ export type AgentInboxEntry = {
     completion: AgentInboxCompletion | null;
 };
 
-export type AgentPostTarget = { agentId: string } | { path: AgentPath } | { descriptor: AgentDescriptor };
+export type AgentPostTarget = { agentId: string } | { path: AgentPath };
 
 export type BackgroundAgentState = {
     agentId: string;

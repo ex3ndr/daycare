@@ -2,6 +2,7 @@ import type { Context } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import type { AgentSystem } from "../agents/agentSystem.js";
+import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_CRONS, topographyObservationEmit } from "../observations/topographyEvents.js";
@@ -39,7 +40,7 @@ export class Crons {
             onTask: async (task, messageContext) => {
                 const target = task.agentId
                     ? { agentId: task.agentId }
-                    : { descriptor: { type: "task" as const, id: task.taskId } };
+                    : { path: agentPathTask(task.userId, task.taskId) };
                 logger.debug(
                     `event: CronScheduler.onTask triggered triggerId=${task.triggerId} taskId=${task.taskId} agentId=${task.agentId ?? `task:${task.taskId}`}`
                 );

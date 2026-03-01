@@ -95,7 +95,7 @@ describe("MemoryWorker", () => {
             const worker = createWorker(storage, postFn);
             worker.start();
 
-            await vi.advanceTimersByTimeAsync(150);
+            await vi.advanceTimersByTimeAsync(300);
             await expectEventually(() => {
                 expect(postFn).toHaveBeenCalledOnce();
             });
@@ -103,7 +103,7 @@ describe("MemoryWorker", () => {
             const [ctx, target, item] = postFn.mock.calls[0];
             expect(ctx.userId).toBeTypeOf("string");
             expect(ctx.agentId).toBe("agent-1");
-            expect(target.descriptor).toEqual({ type: "memory-agent", id: "agent-1" });
+            expect(target.path).toMatch(/\/memory$/);
             expect(item.type).toBe("system_message");
             expect(item.text).toContain("hello");
             // Background agent (cron) gets preamble and background labels
@@ -155,7 +155,7 @@ describe("MemoryWorker", () => {
             const worker = createWorker(storage, postFn);
             worker.start();
 
-            await vi.advanceTimersByTimeAsync(150);
+            await vi.advanceTimersByTimeAsync(300);
             await expectEventually(() => {
                 expect(postFn).toHaveBeenCalledOnce();
             });

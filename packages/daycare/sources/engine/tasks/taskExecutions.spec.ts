@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import { TaskExecutions } from "./taskExecutions.js";
 
 describe("TaskExecutions", () => {
@@ -21,7 +22,7 @@ describe("TaskExecutions", () => {
             source: "cron",
             taskId: "task-1",
             taskVersion: 3,
-            target: { descriptor: { type: "task", id: "task-1" } },
+            target: { path: agentPathTask("user-1", "task-1") },
             text: "[cron]"
         });
 
@@ -40,7 +41,7 @@ describe("TaskExecutions", () => {
 
         expect(postAndAwait).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "user-1" }),
-            { descriptor: { type: "task", id: "task-1" } },
+            { path: agentPathTask("user-1", "task-1") },
             expect.objectContaining({
                 type: "system_message",
                 taskId: "task-1",
@@ -68,14 +69,14 @@ describe("TaskExecutions", () => {
             userId: "user-1",
             source: "webhook",
             taskId: "task-1",
-            target: { descriptor: { type: "task", id: "task-1" } },
+            target: { path: agentPathTask("user-1", "task-1") },
             text: "[webhook]"
         });
         facade.dispatch({
             userId: "user-1",
             source: "webhook",
             taskId: "task-1",
-            target: { descriptor: { type: "task", id: "task-1" } },
+            target: { path: agentPathTask("user-1", "task-1") },
             text: "[webhook]"
         });
         await tick();
@@ -100,7 +101,7 @@ describe("TaskExecutions", () => {
             taskId: "task-1",
             taskVersion: 9,
             origin: "task",
-            target: { descriptor: { type: "task", id: "task-1" } },
+            target: { path: agentPathTask("user-1", "task-1") },
             text: "[task]",
             sync: true
         });

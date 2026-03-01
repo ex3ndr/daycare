@@ -1,8 +1,8 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
 
 const searchSchema = Type.Object(
     {
@@ -58,13 +58,12 @@ export function documentSearchToolBuild(): ToolDefinition {
                 throw new Error("Search query is required");
             }
 
-            const descriptor = {
-                type: "memory-search" as const,
-                id: createId(),
+            const path = await agentPathChildAllocate({
+                storage: toolContext.agentSystem.storage,
                 parentAgentId: toolContext.agent.id,
-                name: query
-            };
-            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { descriptor });
+                kind: "search"
+            });
+            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { path });
             const message = { type: "message" as const, message: { text: query }, context: {} };
             let summary = "";
             if (sync) {

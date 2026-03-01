@@ -40,8 +40,8 @@ describe("swarmAgentResolve", () => {
             const ids = new Map<string, string>();
             const agentSystem = {
                 storage,
-                agentIdForTarget: async (_ctx: unknown, target: { descriptor: { type: string; id: string } }) => {
-                    const key = target.descriptor.id;
+                agentIdForTarget: async (_ctx: unknown, target: { path: string }) => {
+                    const key = target.path;
                     const existing = ids.get(key);
                     if (existing) {
                         return existing;
@@ -65,8 +65,8 @@ describe("swarmAgentResolve", () => {
 
             expect(first.swarmAgentId).toBe("swarm-agent-1");
             expect(second.swarmAgentId).toBe("swarm-agent-1");
-            expect(first.descriptor.type).toBe("swarm");
-            expect(first.descriptor.id).toBe("swarm-1");
+            expect(first.path).toBe("/swarm-1/agent/swarm");
+            expect(second.path).toBe("/swarm-1/agent/swarm");
 
             const contacts = await storage.swarmContacts.listContacts("swarm-1");
             expect(contacts).toHaveLength(1);

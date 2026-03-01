@@ -2,7 +2,6 @@ import http from "node:http";
 import type { AgentPath, AgentSkill, ConnectorMessage, ConnectorTarget, Context, TaskActiveSummary } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
-import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { agentPathConnectorName, agentPathKind, agentPathUserId } from "../../engine/agents/ops/agentPathParse.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
@@ -362,13 +361,7 @@ export class AppServer {
     }
 
     private pathFromConnectorTarget(target: ConnectorTarget): AgentPath | null {
-        if (typeof target === "string") {
-            return target as AgentPath;
-        }
-        if (target.type !== "user") {
-            return null;
-        }
-        return agentPathConnector(target.userId, target.connector);
+        return target as AgentPath;
     }
 
     private settingsRequire(): AppServerResolvedSettings {

@@ -5,11 +5,12 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentDescriptor, Connector, ConnectorMessage, MessageContext } from "@/types";
+import type { AgentPath, Connector, ConnectorMessage, MessageContext } from "@/types";
 import { configResolve } from "../config/configResolve.js";
 import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
 import { storageOpen } from "../storage/storageOpen.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
+import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
 
@@ -23,11 +24,7 @@ describe("Engine reset command", () => {
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
-                handler?: (
-                    command: string,
-                    context: MessageContext,
-                    descriptor: AgentDescriptor
-                ) => void | Promise<void>;
+                handler?: (command: string, context: MessageContext, target: AgentPath) => void | Promise<void>;
             } = {};
 
             const connector: Connector = {
@@ -47,15 +44,10 @@ describe("Engine reset command", () => {
                 throw new Error("Expected command handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const context: MessageContext = { messageId: "55" };
 
-            await commandHandler("/reset", context, descriptor);
+            await commandHandler("/reset", context, target);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
             const postCall = postSpy.mock.calls[0];
@@ -63,10 +55,10 @@ describe("Engine reset command", () => {
                 throw new Error("Expected reset post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const target = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { path: string };
             const payload = postCall[2] as { type: string; message: string; context: MessageContext };
-            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
             expect(payload).toEqual({
                 type: "reset",
                 message: "Manual reset requested by the user.",
@@ -92,13 +84,9 @@ describe("Engine reset command", () => {
                 messageHandler?: (
                     message: ConnectorMessage,
                     context: MessageContext,
-                    descriptor: AgentDescriptor
+                    target: AgentPath
                 ) => void | Promise<void>;
-                commandHandler?: (
-                    command: string,
-                    context: MessageContext,
-                    descriptor: AgentDescriptor
-                ) => void | Promise<void>;
+                commandHandler?: (command: string, context: MessageContext, target: AgentPath) => void | Promise<void>;
             } = {};
 
             const connector: Connector = {
@@ -117,20 +105,15 @@ describe("Engine reset command", () => {
             const registerResult = engine.modules.connectors.register("telegram", connector);
             expect(registerResult).toEqual({ ok: true, status: "loaded" });
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const messageHandler = state.messageHandler;
             const commandHandler = state.commandHandler;
             if (!messageHandler || !commandHandler) {
                 throw new Error("Expected handlers to be registered");
             }
 
-            await messageHandler({ text: "can you check downloads?" }, { messageId: "1" }, descriptor);
-            await commandHandler("/reset", { messageId: "2" }, descriptor);
+            await messageHandler({ text: "can you check downloads?" }, { messageId: "1" }, target);
+            await commandHandler("/reset", { messageId: "2" }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
@@ -139,10 +122,10 @@ describe("Engine reset command", () => {
                 throw new Error("Expected reset post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const target = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { path: string };
             const payload = postCall[2] as { type: string; message: string; context: MessageContext };
-            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
             expect(payload).toEqual({
                 type: "reset",
                 message: "Manual reset requested by the user.",
@@ -188,7 +171,7 @@ describe("Engine timezone mismatch handling", () => {
                 messageHandler?: (
                     message: ConnectorMessage,
                     context: MessageContext,
-                    descriptor: AgentDescriptor
+                    target: AgentPath
                 ) => void | Promise<void>;
             } = {};
 
@@ -205,18 +188,13 @@ describe("Engine timezone mismatch handling", () => {
             const registerResult = engine.modules.connectors.register("telegram", connector);
             expect(registerResult).toEqual({ ok: true, status: "loaded" });
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const messageHandler = state.messageHandler;
             if (!messageHandler) {
                 throw new Error("Expected message handler to be registered");
             }
 
-            await messageHandler({ text: "seed" }, { messageId: "seed-1" }, descriptor);
+            await messageHandler({ text: "seed" }, { messageId: "seed-1" }, target);
             await vi.advanceTimersByTimeAsync(100);
             postSpy.mockClear();
 
@@ -226,7 +204,7 @@ describe("Engine timezone mismatch handling", () => {
                 updatedAt: Date.now()
             });
 
-            await messageHandler({ text: "hello" }, { messageId: "msg-1", timezone: "America/New_York" }, descriptor);
+            await messageHandler({ text: "hello" }, { messageId: "msg-1", timezone: "America/New_York" }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
@@ -483,11 +461,7 @@ describe("Engine abort command", () => {
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
-                handler?: (
-                    command: string,
-                    context: MessageContext,
-                    descriptor: AgentDescriptor
-                ) => void | Promise<void>;
+                handler?: (command: string, context: MessageContext, target: AgentPath) => void | Promise<void>;
             } = {};
 
             const connector: Connector = {
@@ -507,15 +481,10 @@ describe("Engine abort command", () => {
                 throw new Error("Expected command handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const context: MessageContext = { messageId: "56" };
 
-            await commandHandler("/abort", context, descriptor);
+            await commandHandler("/abort", context, target);
 
             expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({
                 path: expect.stringMatching(/^\/[^/]+\/telegram$/)
@@ -544,11 +513,7 @@ describe("Engine compact command", () => {
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
-                handler?: (
-                    command: string,
-                    context: MessageContext,
-                    descriptor: AgentDescriptor
-                ) => void | Promise<void>;
+                handler?: (command: string, context: MessageContext, target: AgentPath) => void | Promise<void>;
             } = {};
 
             const connector: Connector = {
@@ -568,15 +533,10 @@ describe("Engine compact command", () => {
                 throw new Error("Expected command handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const context: MessageContext = { messageId: "57" };
 
-            await commandHandler("/compact", context, descriptor);
+            await commandHandler("/compact", context, target);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
             const postCall = postSpy.mock.calls[0];
@@ -584,10 +544,10 @@ describe("Engine compact command", () => {
                 throw new Error("Expected compact post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const target = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { path: string };
             const payload = postCall[2] as { type: string; context: MessageContext };
-            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
             expect(payload).toEqual({ type: "compact", context: expect.objectContaining(context) });
             expect(sendMessage).not.toHaveBeenCalled();
 
@@ -613,11 +573,7 @@ describe("Engine plugin commands", () => {
             });
 
             const commandState: {
-                handler?: (
-                    command: string,
-                    context: MessageContext,
-                    descriptor: AgentDescriptor
-                ) => void | Promise<void>;
+                handler?: (command: string, context: MessageContext, target: AgentPath) => void | Promise<void>;
             } = {};
 
             const connector: Connector = {
@@ -637,14 +593,9 @@ describe("Engine plugin commands", () => {
                 throw new Error("Expected command handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const context: MessageContext = { messageId: "56" };
-            await commandHandler("/upgrade now", context, descriptor);
+            await commandHandler("/upgrade now", context, target);
 
             expect(pluginHandler).toHaveBeenCalledWith(
                 "/upgrade now",
@@ -672,7 +623,7 @@ describe("Engine message batching", () => {
                 handler?: (
                     message: ConnectorMessage,
                     context: MessageContext,
-                    descriptor: AgentDescriptor
+                    target: AgentPath
                 ) => void | Promise<void>;
             } = {};
 
@@ -692,15 +643,10 @@ describe("Engine message batching", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
-            await handler({ text: "first" }, { messageId: "1" }, descriptor);
+            const target = agentPathConnector("123", "telegram");
+            await handler({ text: "first" }, { messageId: "1" }, target);
             await vi.advanceTimersByTimeAsync(50);
-            await handler({ text: "second" }, { messageId: "2" }, descriptor);
+            await handler({ text: "second" }, { messageId: "2" }, target);
             await vi.advanceTimersByTimeAsync(99);
             expect(postSpy).not.toHaveBeenCalled();
 
@@ -711,10 +657,10 @@ describe("Engine message batching", () => {
                 throw new Error("Expected batched post call");
             }
             const ctx = postCall[0] as { userId: string };
-            const target = postCall[1] as { path: string };
+            const postTarget = postCall[1] as { path: string };
             const payload = postCall[2] as { type: string; message: ConnectorMessage; context: MessageContext };
-            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
-            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(postTarget.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(postTarget.path.split("/")[1]).toBe(ctx.userId);
             expect(payload).toEqual({
                 type: "message",
                 message: { text: "first\nsecond", rawText: "first\nsecond" },
@@ -740,7 +686,7 @@ describe("Engine message batching", () => {
                 handler?: (
                     message: ConnectorMessage,
                     context: MessageContext,
-                    descriptor: AgentDescriptor
+                    target: AgentPath
                 ) => void | Promise<void>;
             } = {};
 
@@ -760,13 +706,8 @@ describe("Engine message batching", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
-            await handler({ text: "   " }, { messageId: "1" }, descriptor);
+            const target = agentPathConnector("123", "telegram");
+            await handler({ text: "   " }, { messageId: "1" }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).not.toHaveBeenCalled();
@@ -789,7 +730,7 @@ describe("Engine message batching", () => {
                 handler?: (
                     message: ConnectorMessage,
                     context: MessageContext,
-                    descriptor: AgentDescriptor
+                    target: AgentPath
                 ) => void | Promise<void>;
             } = {};
 
@@ -809,12 +750,7 @@ describe("Engine message batching", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            };
+            const target = agentPathConnector("123", "telegram");
             const stagedDir = path.join(config.dataDir, "tmp", "staging");
             const stagedPath = path.join(stagedDir, "photo.jpg");
             await fs.mkdir(stagedDir, { recursive: true });
@@ -834,7 +770,7 @@ describe("Engine message batching", () => {
                     ]
                 },
                 { messageId: "1" },
-                descriptor
+                target
             );
 
             await new Promise((resolve) => setTimeout(resolve, 120));

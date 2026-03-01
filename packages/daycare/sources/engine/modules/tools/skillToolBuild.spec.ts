@@ -102,7 +102,7 @@ describe("skillToolBuild", () => {
             expect(agentIdForTarget).toHaveBeenCalledWith(
                 context.ctx,
                 expect.objectContaining({
-                    descriptor: expect.objectContaining({ name: "deploy Skill" })
+                    path: expect.stringContaining("/sub/0")
                 })
             );
             expect(postAndAwait).toHaveBeenCalledWith(

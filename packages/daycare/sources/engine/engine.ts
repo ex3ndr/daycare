@@ -30,7 +30,6 @@ import { stringSlugify } from "../utils/stringSlugify.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
-import { agentPathFromDescriptor } from "./agents/ops/agentPathFromDescriptor.js";
 import { agentPathConnectorName, agentPathKind, agentPathUserId } from "./agents/ops/agentPathParse.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
@@ -197,15 +196,7 @@ export class Engine {
             onFlush: async (items) => {
                 await this.runConnectorCallback("message", async () => {
                     for (const item of items) {
-                        const resolved =
-                            item.path !== undefined
-                                ? await this.pathCanonicalize(item.path)
-                                : item.descriptor
-                                  ? await this.targetCanonicalize(item.descriptor)
-                                  : null;
-                        if (!resolved) {
-                            continue;
-                        }
+                        const resolved = await this.pathCanonicalize(item.path);
                         const connector = agentPathConnectorName(resolved.path) ?? "unknown";
                         logger.debug(
                             `receive: Connector message received: connector=${connector} path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
@@ -861,32 +852,8 @@ export class Engine {
         }
     }
 
-    /**
-     * Resolves runtime user context from an incoming descriptor.
-     * Expects: paths are rooted under /<userId>/... for user-scoped agents.
-     */
     private async targetCanonicalize(target: ConnectorTarget): Promise<{ ctx: Context; path: AgentPath }> {
-        await this.migrationReady;
-        if (typeof target === "string") {
-            return this.pathCanonicalize(target as AgentPath);
-        }
-        if (target.type === "user") {
-            const connectorKey = userConnectorKeyCreate(target.connector, target.userId);
-            const user = await this.storage.resolveUserByConnectorKey(connectorKey);
-            const path = agentPathConnector(user.id, target.connector);
-            return {
-                ctx: contextForUser({ userId: user.id }),
-                path
-            };
-        }
-        if (target.type === "subuser") {
-            const path = agentPathFromDescriptor(target, { userId: target.id });
-            return {
-                ctx: contextForUser({ userId: target.id }),
-                path
-            };
-        }
-        throw new Error(`Connector target type is not supported: ${target.type}`);
+        return this.pathCanonicalize(target);
     }
 
     /**

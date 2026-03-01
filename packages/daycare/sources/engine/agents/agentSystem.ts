@@ -37,8 +37,6 @@ import type { Webhooks } from "../webhook/webhooks.js";
 import { Agent } from "./agent.js";
 import { contextForAgent, contextForUser } from "./context.js";
 import { agentConfigFromDescriptor } from "./ops/agentConfigFromDescriptor.js";
-import { agentDescriptorCacheKey } from "./ops/agentDescriptorCacheKey.js";
-import { agentDescriptorMatchesStrategy } from "./ops/agentDescriptorMatchesStrategy.js";
 import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import type { AgentDescriptor, AgentFetchStrategy } from "./ops/agentDescriptorTypes.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
@@ -273,15 +271,10 @@ export class AgentSystem {
 
     async post(ctx: Context, target: AgentPostTarget, item: AgentInboxItem): Promise<void> {
         if (this.stage === "idle" && (item.type === "message" || item.type === "system_message")) {
-            const agentType = "descriptor" in target ? target.descriptor.type : "path" in target ? "path" : "agent";
+            const agentType = "path" in target ? "path" : "agent";
             logger.warn({ agentType }, "load: AgentSystem received message before load");
         }
-        const targetLabel =
-            "descriptor" in target
-                ? `descriptor:${target.descriptor.type}`
-                : "path" in target
-                  ? `path:${target.path}`
-                  : `agent:${target.agentId}`;
+        const targetLabel = "path" in target ? `path:${target.path}` : `agent:${target.agentId}`;
         logger.debug(`receive: post() received itemType=${item.type} target=${targetLabel} stage=${this.stage}`);
         const entry = await this.resolveEntry(ctx, target, item);
         await this.enqueueEntry(entry, item, null);
@@ -303,7 +296,12 @@ export class AgentSystem {
      */
     async postToUserAgents(targetUserId: string, item: AgentInboxItem): Promise<void> {
         const records = await this.storage.agents.findByUserId(targetUserId);
-        const frontendAgents = records.filter((record) => record.descriptor.type === "user");
+        const frontendAgents = records.filter((record) => {
+            if (!record.path) {
+                return false;
+            }
+            return agentPathKind(record.path) === "connector";
+        });
         await Promise.all(
             frontendAgents.map(async (record) => {
                 const targetCtx = contextForAgent({ userId: targetUserId, agentId: record.id });
@@ -314,7 +312,7 @@ export class AgentSystem {
 
     /**
      * Resolves a target to its concrete agent id, creating/restoring when needed.
-     * Expects: descriptor targets are valid for agent creation.
+     * Expects: path targets are valid for agent creation.
      */
     async agentIdForTarget(ctx: Context, target: AgentPostTarget): Promise<string> {
         const entry = await this.resolveEntry(ctx, target, {
@@ -346,16 +344,8 @@ export class AgentSystem {
         if (this.entries.has(agentId)) {
             return true;
         }
-        try {
-            const context = await this.contextForAgentId(agentId);
-            if (!context) {
-                return false;
-            }
-            const descriptor = await agentDescriptorRead(this.storage, context);
-            return !!descriptor;
-        } catch {
-            return false;
-        }
+        const context = await this.contextForAgentId(agentId);
+        return context !== null;
     }
 
     /**
@@ -503,11 +493,7 @@ export class AgentSystem {
 
     agentFor(ctx: Context, strategy: AgentFetchStrategy): string | null {
         const candidates = Array.from(this.entries.values()).filter((entry) => {
-            return (
-                entry.ctx.userId === ctx.userId &&
-                (agentPathMatchesStrategy(entry.path, strategy) ||
-                    agentDescriptorMatchesStrategy(entry.descriptor, strategy))
-            );
+            return entry.ctx.userId === ctx.userId && agentPathMatchesStrategy(entry.path, strategy);
         });
         if (candidates.length === 0) {
             return null;
@@ -610,20 +596,11 @@ export class AgentSystem {
         if ("agentId" in target) {
             return this.entries.get(target.agentId) ?? null;
         }
-        if ("path" in target) {
-            const agentId = this.pathMap.get(target.path);
-            if (!agentId) {
-                return null;
-            }
-            return this.entries.get(agentId) ?? null;
+        const agentId = this.pathMap.get(target.path);
+        if (!agentId) {
+            return null;
         }
-        const descriptorKey = agentDescriptorCacheKey(target.descriptor);
-        for (const entry of this.entries.values()) {
-            if (agentDescriptorCacheKey(entry.descriptor) === descriptorKey) {
-                return entry;
-            }
-        }
-        return null;
+        return this.entries.get(agentId) ?? null;
     }
 
     private async resolveEntry(ctx: Context, target: AgentPostTarget, _item: AgentInboxItem): Promise<AgentEntry> {
@@ -648,17 +625,8 @@ export class AgentSystem {
             throw new Error(`Agent not found: ${target.agentId}`);
         }
 
-        let descriptor = "descriptor" in target ? target.descriptor : null;
-        let path =
-            "path" in target
-                ? target.path
-                : descriptor
-                  ? agentPathFromDescriptor(descriptor, { userId: ctx.userId })
-                  : null;
-        if (!path && descriptor) {
-            path = agentPathFromDescriptor(descriptor, { userId: ctx.userId });
-        }
-        const existingAgentId = path ? this.pathMap.get(path) : null;
+        const path = target.path;
+        const existingAgentId = this.pathMap.get(path);
         if (existingAgentId) {
             const existing = this.entries.get(existingAgentId);
             if (existing) {
@@ -679,25 +647,18 @@ export class AgentSystem {
             }
         }
 
-        if (path) {
-            const persisted = await this.storage.agents.findByPath(path);
-            if (persisted) {
-                const restored = await this.restoreAgent(persisted.id, { allowSleeping: true });
-                if (restored) {
-                    if (restored.ctx.userId !== ctx.userId) {
-                        throw new Error(`Cannot resolve agent from another user: ${persisted.id}`);
-                    }
-                    return restored;
+        const persistedByPath = await this.storage.agents.findByPath(path);
+        if (persistedByPath) {
+            const restored = await this.restoreAgent(persistedByPath.id, { allowSleeping: true });
+            if (restored) {
+                if (restored.ctx.userId !== ctx.userId) {
+                    throw new Error(`Cannot resolve agent from another user: ${persistedByPath.id}`);
                 }
+                return restored;
             }
         }
 
-        if (!descriptor) {
-            if (!path) {
-                throw new Error("Target must include descriptor or path");
-            }
-            descriptor = await this.descriptorForPath(ctx, path);
-        }
+        const descriptor = await this.descriptorForPath(ctx, path);
 
         const stableDescriptorId =
             (descriptor.type === "cron" || descriptor.type === "task") && cuid2Is(descriptor.id) ? descriptor.id : null;
@@ -723,10 +684,8 @@ export class AgentSystem {
 
         const agentId = stableDescriptorId ?? createId();
         const resolvedDescriptor =
-            (descriptor.type === "subagent" || descriptor.type === "app") && descriptor.id !== agentId
-                ? { ...descriptor, id: agentId }
-                : descriptor;
-        const resolvedPath = path ?? agentPathFromDescriptor(resolvedDescriptor, { userId: ctx.userId });
+            descriptor.type === "subagent" && descriptor.id !== agentId ? { ...descriptor, id: agentId } : descriptor;
+        const resolvedPath = path;
         logger.debug(
             `event: Creating agent entry agentId=${agentId} path=${resolvedPath} type=${resolvedDescriptor.type}`
         );
@@ -1184,9 +1143,10 @@ export class AgentSystem {
                 throw new Error(`Invalid subuser path: ${path}`);
             }
             return {
-                type: "subuser",
-                id: subuserId,
+                type: "permanent",
+                id: ctx.hasAgentId ? ctx.agentId : createId(),
                 name: subuserId,
+                description: "",
                 systemPrompt: ""
             };
         }
@@ -1201,6 +1161,43 @@ export class AgentSystem {
                 name,
                 description: "",
                 systemPrompt: ""
+            };
+        }
+        if (kind === "sub") {
+            const parentPath = pathTrimSegments(path, 2);
+            const parent = await this.storage.agents.findByPath(parentPath);
+            if (!parent) {
+                throw new Error(`Parent agent not found for path: ${path}`);
+            }
+            return {
+                type: "subagent",
+                id: ctx.hasAgentId ? ctx.agentId : createId(),
+                parentAgentId: parent.id,
+                name: "subagent"
+            };
+        }
+        if (kind === "memory") {
+            const sourcePath = pathTrimSegments(path, 1);
+            const source = await this.storage.agents.findByPath(sourcePath);
+            if (!source) {
+                throw new Error(`Source agent not found for memory path: ${path}`);
+            }
+            return {
+                type: "memory-agent",
+                id: source.id
+            };
+        }
+        if (kind === "search") {
+            const parentPath = pathTrimSegments(path, 2);
+            const parent = await this.storage.agents.findByPath(parentPath);
+            if (!parent) {
+                throw new Error(`Parent agent not found for search path: ${path}`);
+            }
+            return {
+                type: "memory-search",
+                id: ctx.hasAgentId ? ctx.agentId : createId(),
+                parentAgentId: parent.id,
+                name: "memory-search"
             };
         }
         throw new Error(`Cannot create descriptor from path kind: ${kind}`);
@@ -1357,6 +1354,16 @@ export class AgentSystem {
             }
         };
     }
+}
+
+function pathTrimSegments(path: AgentPath, count: number): AgentPath {
+    const segments = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0);
+    if (count <= 0 || count >= segments.length) {
+        throw new Error(`Cannot trim ${count} segments from path: ${path}`);
+    }
+    return `/${segments.slice(0, segments.length - count).join("/")}` as AgentPath;
 }
 
 function lifecycleSignalTypeBuild(agentId: string, state: "wake" | "sleep" | "idle" | "poison-pill"): string {

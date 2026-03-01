@@ -6,7 +6,6 @@ import {
     agentPathMemory,
     agentPathSearch,
     agentPathSub,
-    agentPathSubuser,
     agentPathSystem,
     agentPathTask
 } from "./agentPathBuild.js";
@@ -48,11 +47,8 @@ export function agentPathFromDescriptor(
     if (descriptor.type === "permanent") {
         return agentPathAgent(userId, descriptor.name);
     }
-    if (descriptor.type === "subuser") {
-        return agentPathSubuser(userId, descriptor.id);
-    }
 
-    if (descriptor.type === "subagent" || descriptor.type === "app") {
+    if (descriptor.type === "subagent") {
         const parentPath = options.parentPath;
         const subIndex = options.subIndex;
         if (parentPath && typeof subIndex === "number") {
@@ -75,6 +71,9 @@ export function agentPathFromDescriptor(
             return agentPathSearch(parentPath, searchIndex);
         }
         return agentPath(`/${userId}/search/${descriptor.id}`);
+    }
+    if (descriptor.type === "swarm") {
+        return agentPathAgent(userId, "swarm");
     }
 
     return descriptorTypeUnreachable(descriptor);

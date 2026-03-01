@@ -5,6 +5,7 @@ import { appJwtSecretResolve } from "../../../api/app-server/appJwtSecretResolve
 import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
+import { agentPathTask } from "../../agents/ops/agentPathBuild.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_TASKS, topographyObservationEmit } from "../../observations/topographyEvents.js";
@@ -465,7 +466,7 @@ export function buildTaskRunTool(): ToolDefinition {
             const task = await taskResolveForUser(toolContext, payload.taskId);
             const target = payload.agentId
                 ? { agentId: payload.agentId }
-                : { descriptor: { type: "task" as const, id: task.id } };
+                : { path: agentPathTask(task.userId, task.id) };
 
             // Validate parameters and pass as native inputs
             let inputValues: Record<string, unknown> | undefined;

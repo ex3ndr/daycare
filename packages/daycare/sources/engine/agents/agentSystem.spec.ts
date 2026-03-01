@@ -23,7 +23,10 @@ import { DelayedSignals } from "../signals/delayedSignals.js";
 import { Signals } from "../signals/signals.js";
 import { AgentSystem } from "./agentSystem.js";
 import { contextForUser } from "./context.js";
+import { agentPathChildAllocate } from "./ops/agentPathChildAllocate.js";
+import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentPathUserId } from "./ops/agentPathParse.js";
+import { agentPath } from "./ops/agentPathTypes.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 
@@ -492,21 +495,18 @@ describe("AgentSystem", () => {
                 throw new Error("Parent agent context missing");
             }
 
-            const subagentDescriptor: AgentDescriptor = {
-                type: "subagent",
-                id: createId(),
+            const subagentPath = await agentPathChildAllocate({
+                storage: harness.agentSystem.storage,
                 parentAgentId,
-                name: "worker"
-            };
+                kind: "sub"
+            });
             await postAndAwait(
                 harness.agentSystem,
                 parentContext,
-                { descriptor: subagentDescriptor },
+                { path: subagentPath },
                 { type: "reset", message: "subagent" }
             );
-            const subagentId = await agentIdForTarget(harness.agentSystem, parentContext, {
-                descriptor: subagentDescriptor
-            });
+            const subagentId = await agentIdForTarget(harness.agentSystem, parentContext, { path: subagentPath });
             const subagentContext = await harness.agentSystem.contextForAgentId(subagentId);
 
             expect(subagentContext?.userId).toBe(parentContext.userId);
@@ -559,6 +559,7 @@ describe("AgentSystem", () => {
                 userId: user.id,
                 type: "user",
                 descriptor: { type: "user", connector: "telegram", userId: "conn", channelId: "chan-1" },
+                path: agentPath(`/${user.id}/telegram`),
                 activeSessionId: null,
                 permissions,
                 tokens: null,
@@ -571,7 +572,8 @@ describe("AgentSystem", () => {
                 id: "user-agent-2",
                 userId: user.id,
                 type: "user",
-                descriptor: { type: "user", connector: "telegram", userId: "conn", channelId: "chan-2" },
+                descriptor: { type: "user", connector: "whatsapp", userId: "conn", channelId: "chan-2" },
+                path: agentPath(`/${user.id}/whatsapp`),
                 activeSessionId: null,
                 permissions,
                 tokens: null,
@@ -585,6 +587,7 @@ describe("AgentSystem", () => {
                 userId: user.id,
                 type: "subagent",
                 descriptor: { type: "subagent", id: "subagent-1", parentAgentId: "parent", name: "worker" },
+                path: agentPath(`/${user.id}/agent/worker/sub/0`),
                 activeSessionId: null,
                 permissions,
                 tokens: null,
@@ -750,13 +753,12 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
         };
         await postAndAwait(agentSystem, { descriptor: parentDescriptor }, { type: "reset", message: "init parent" });
         const parentAgentId = await agentIdForTarget(agentSystem, { descriptor: parentDescriptor });
-        const descriptor: AgentDescriptor = {
-            type: "subagent",
-            id: createId(),
+        const subagentPath = await agentPathChildAllocate({
+            storage: agentSystem.storage,
             parentAgentId,
-            name: `subagent-${createId()}`
-        };
-        await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init subagent" });
+            kind: "sub"
+        });
+        await postAndAwait(agentSystem, { path: subagentPath }, { type: "reset", message: "init subagent" });
     } finally {
         unsubscribe();
     }
@@ -792,48 +794,60 @@ function inferenceResponse(text: string) {
 
 async function postAndAwait(
     agentSystem: AgentSystem,
-    ctxOrTarget: Context | AgentPostTarget,
-    targetOrItem: AgentPostTarget | AgentInboxItem,
+    ctxOrTarget: Context | AgentTargetInput,
+    targetOrItem: AgentTargetInput | AgentInboxItem,
     maybeItem?: AgentInboxItem
 ): Promise<AgentInboxResult> {
     if (maybeItem) {
-        return agentSystem.postAndAwait(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        return agentSystem.postAndAwait(
+            ctxOrTarget as Context,
+            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
+            maybeItem
+        );
     }
-    const target = ctxOrTarget as AgentPostTarget;
-    return agentSystem.postAndAwait(
-        await callerCtxResolve(agentSystem, target),
-        target,
-        targetOrItem as AgentInboxItem
-    );
+    const target = ctxOrTarget as AgentTargetInput;
+    const ctx = await callerCtxResolve(agentSystem, target);
+    return agentSystem.postAndAwait(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
 }
 
 async function post(
     agentSystem: AgentSystem,
-    ctxOrTarget: Context | AgentPostTarget,
-    targetOrItem: AgentPostTarget | AgentInboxItem,
+    ctxOrTarget: Context | AgentTargetInput,
+    targetOrItem: AgentTargetInput | AgentInboxItem,
     maybeItem?: AgentInboxItem
 ): Promise<void> {
     if (maybeItem) {
-        await agentSystem.post(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        await agentSystem.post(
+            ctxOrTarget as Context,
+            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
+            maybeItem
+        );
         return;
     }
-    const target = ctxOrTarget as AgentPostTarget;
-    await agentSystem.post(await callerCtxResolve(agentSystem, target), target, targetOrItem as AgentInboxItem);
+    const target = ctxOrTarget as AgentTargetInput;
+    const ctx = await callerCtxResolve(agentSystem, target);
+    await agentSystem.post(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
 }
 
 async function agentIdForTarget(
     agentSystem: AgentSystem,
-    ctxOrTarget: Context | AgentPostTarget,
-    maybeTarget?: AgentPostTarget
+    ctxOrTarget: Context | AgentTargetInput,
+    maybeTarget?: AgentTargetInput
 ): Promise<string> {
     if (maybeTarget) {
-        return agentSystem.agentIdForTarget(ctxOrTarget as Context, maybeTarget);
+        return agentSystem.agentIdForTarget(
+            ctxOrTarget as Context,
+            targetNormalize(maybeTarget, ctxOrTarget as Context)
+        );
     }
-    const target = ctxOrTarget as AgentPostTarget;
-    return agentSystem.agentIdForTarget(await callerCtxResolve(agentSystem, target), target);
+    const target = ctxOrTarget as AgentTargetInput;
+    const ctx = await callerCtxResolve(agentSystem, target);
+    return agentSystem.agentIdForTarget(ctx, targetNormalize(target, ctx));
 }
 
-async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarget): Promise<Context> {
+type AgentTargetInput = AgentPostTarget | { descriptor: AgentDescriptor };
+
+async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInput): Promise<Context> {
     if ("agentId" in target) {
         const targetCtx = await agentSystem.contextForAgentId(target.agentId);
         if (!targetCtx) {
@@ -858,6 +872,13 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();
+}
+
+function targetNormalize(target: AgentTargetInput, ctx: Context): AgentPostTarget {
+    if ("agentId" in target || "path" in target) {
+        return target;
+    }
+    return { path: agentPathFromDescriptor(target.descriptor, { userId: ctx.userId }) };
 }
 
 async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {

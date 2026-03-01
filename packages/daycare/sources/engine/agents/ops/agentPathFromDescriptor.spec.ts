@@ -23,19 +23,6 @@ describe("agentPathFromDescriptor", () => {
         expect(
             agentPathFromDescriptor(
                 {
-                    type: "app",
-                    id: "a2",
-                    parentAgentId: "p1",
-                    name: "app",
-                    systemPrompt: "",
-                    appId: "calculator"
-                },
-                { userId: "u1", parentPath: agentPath("/u1/telegram"), subIndex: 3 }
-            )
-        ).toBe("/u1/telegram/sub/3");
-        expect(
-            agentPathFromDescriptor(
-                {
                     type: "permanent",
                     id: "p1",
                     name: "claude",
@@ -57,8 +44,6 @@ describe("agentPathFromDescriptor", () => {
                 { userId: "u1", parentPath: agentPath("/u1/telegram"), searchIndex: 0 }
             )
         ).toBe("/u1/telegram/search/0");
-        expect(
-            agentPathFromDescriptor({ type: "subuser", id: "sub1", name: "Sub", systemPrompt: "" }, { userId: "u1" })
-        ).toBe("/u1/subuser/sub1");
+        expect(agentPathFromDescriptor({ type: "swarm", id: "swarm-1" }, { userId: "u1" })).toBe("/u1/agent/swarm");
     });
 });

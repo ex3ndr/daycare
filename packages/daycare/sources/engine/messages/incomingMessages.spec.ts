@@ -1,18 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentDescriptor } from "@/types";
+import { agentPathConnector } from "../agents/ops/agentPathBuild.js";
 import type { IncomingMessageBatch } from "./incomingMessages.js";
 import { IncomingMessages } from "./incomingMessages.js";
 
-const userDescriptor = (channelId: string): AgentDescriptor => ({
-    type: "user",
-    connector: "telegram",
-    userId: "user-1",
-    channelId
-});
+const userPath = (channelId: string) => agentPathConnector(channelId, "telegram");
 
 describe("IncomingMessages", () => {
-    it("debounces and combines messages for the same descriptor", async () => {
+    it("debounces and combines messages for the same path", async () => {
         vi.useFakeTimers();
         const records: IncomingMessageBatch[][] = [];
         const incoming = new IncomingMessages({
@@ -24,13 +19,13 @@ describe("IncomingMessages", () => {
 
         try {
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "hello" },
                 context: { messageId: "1", timezone: "UTC" }
             });
             await vi.advanceTimersByTimeAsync(50);
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "world" },
                 context: { messageId: "2", timezone: "America/New_York" }
             });
@@ -43,6 +38,7 @@ describe("IncomingMessages", () => {
             const batch = records[0] ?? [];
             expect(batch).toHaveLength(1);
             expect(batch[0]?.count).toBe(2);
+            expect(batch[0]?.path).toBe(userPath("channel-1"));
             expect(batch[0]?.message.text).toBe("hello\nworld");
             expect(batch[0]?.context).toEqual({
                 messageId: "2",
@@ -54,31 +50,24 @@ describe("IncomingMessages", () => {
         }
     });
 
-    it("keeps different descriptors as separate batched items", async () => {
+    it("keeps different paths as separate batched items", async () => {
         vi.useFakeTimers();
-        const records: Array<Array<{ descriptor: AgentDescriptor; count: number }>> = [];
+        const records: Array<Array<{ path: string; count: number }>> = [];
         const incoming = new IncomingMessages({
             delayMs: 100,
             onFlush: async (items) => {
-                records.push(
-                    items.map((item) => {
-                        if (!item.descriptor) {
-                            throw new Error("Expected descriptor in test batch item");
-                        }
-                        return { descriptor: item.descriptor, count: item.count };
-                    })
-                );
+                records.push(items.map((item) => ({ path: item.path, count: item.count })));
             }
         });
 
         try {
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "first" },
                 context: {}
             });
             incoming.post({
-                descriptor: userDescriptor("channel-2"),
+                path: userPath("channel-2"),
                 message: { text: "second" },
                 context: {}
             });
@@ -92,15 +81,15 @@ describe("IncomingMessages", () => {
             expect(batch).toHaveLength(2);
             expect(batch[0]?.count).toBe(1);
             expect(batch[1]?.count).toBe(1);
-            expect(batch[0]?.descriptor).toEqual(userDescriptor("channel-1"));
-            expect(batch[1]?.descriptor).toEqual(userDescriptor("channel-2"));
+            expect(batch[0]?.path).toBe(userPath("channel-1"));
+            expect(batch[1]?.path).toBe(userPath("channel-2"));
         } finally {
             await incoming.flush();
             vi.useRealTimers();
         }
     });
 
-    it("drops queued messages for one descriptor", async () => {
+    it("drops queued messages for one path", async () => {
         vi.useFakeTimers();
         const records: IncomingMessageBatch[][] = [];
         const incoming = new IncomingMessages({
@@ -112,23 +101,23 @@ describe("IncomingMessages", () => {
 
         try {
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "old" },
                 context: {}
             });
             incoming.post({
-                descriptor: userDescriptor("channel-2"),
+                path: userPath("channel-2"),
                 message: { text: "keep" },
                 context: {}
             });
 
-            const dropped = incoming.dropForDescriptor(userDescriptor("channel-1"));
+            const dropped = incoming.dropForPath(userPath("channel-1"));
             expect(dropped).toBe(1);
 
             await vi.advanceTimersByTimeAsync(100);
             expect(records).toHaveLength(1);
             expect(records[0]).toHaveLength(1);
-            expect(records[0]?.[0]?.descriptor).toEqual(userDescriptor("channel-2"));
+            expect(records[0]?.[0]?.path).toBe(userPath("channel-2"));
             expect(records[0]?.[0]?.message.text).toBe("keep");
         } finally {
             await incoming.flush();
@@ -148,12 +137,12 @@ describe("IncomingMessages", () => {
 
         try {
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "   " },
                 context: {}
             });
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: null, rawText: "  " },
                 context: {}
             });
@@ -178,14 +167,14 @@ describe("IncomingMessages", () => {
 
         try {
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "a" },
                 context: {
                     enrichments: [{ key: "profile_name_notice", value: "Set profile name." }]
                 }
             });
             incoming.post({
-                descriptor: userDescriptor("channel-1"),
+                path: userPath("channel-1"),
                 message: { text: "b" },
                 context: {
                     enrichments: [

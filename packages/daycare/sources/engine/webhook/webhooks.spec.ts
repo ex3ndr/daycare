@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForUser } from "../agents/context.js";
+import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import type { WebhooksOptions } from "./webhooks.js";
 import { Webhooks } from "./webhooks.js";
 
@@ -137,7 +138,7 @@ describe("Webhooks", () => {
 
             expect(dispatch).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    target: { descriptor: { type: "task", id: "task-default-target" } },
+                    target: { path: agentPathTask("user-1", "task-default-target") },
                     source: "webhook"
                 })
             );

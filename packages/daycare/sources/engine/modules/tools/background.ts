@@ -4,6 +4,7 @@ import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { buildWriteOutputTool } from "../../../plugins/shell/writeOutputTool.js";
+import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
 
 const AGENT_MESSAGE_INLINE_CHAR_LIMIT = 8_000;
 
@@ -65,24 +66,26 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as StartBackgroundArgs;
             const prompt = payload.prompt.trim();
+            const requestedName = payload.name?.trim() ?? "";
             if (!prompt) {
                 throw new Error("Background agent prompt is required");
             }
 
-            const descriptor = {
-                type: "subagent" as const,
-                id: createId(),
+            const path = await agentPathChildAllocate({
+                storage: toolContext.agentSystem.storage,
                 parentAgentId: toolContext.agent.id,
-                name: payload.name ?? "subagent"
-            };
-            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { descriptor });
+                kind: "sub"
+            });
+            const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { path });
             await toolContext.agentSystem.post(
                 toolContext.ctx,
                 { agentId },
                 { type: "message", message: { text: prompt }, context: {} }
             );
 
-            const summary = `Background agent started: ${agentId}.`;
+            const summary = requestedName
+                ? `Background agent started (${requestedName}): ${agentId}.`
+                : `Background agent started: ${agentId}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,

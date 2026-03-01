@@ -1,8 +1,7 @@
 import type { FileReference } from "../../../files/types.js";
-import type { AgentDescriptor } from "../../agents/ops/agentDescriptorTypes.js";
 import type { AgentPath } from "../../agents/ops/agentPathTypes.js";
 
-export type ConnectorTarget = AgentPath | AgentDescriptor;
+export type ConnectorTarget = AgentPath;
 
 export type ConnectorFileMode = "document" | "photo" | "video" | "voice";
 export type ConnectorFileDisposition = ConnectorFileMode | "auto";

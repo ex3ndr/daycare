@@ -1,6 +1,7 @@
-import type { AgentDescriptor } from "@/types";
+import type { AgentPath } from "@/types";
 import type { AgentSystem } from "../agents/agentSystem.js";
 import { contextForUser } from "../agents/context.js";
+import { agentPathAgent } from "../agents/ops/agentPathBuild.js";
 
 type SwarmAgentResolveInput = {
     swarmUserId: string;
@@ -10,7 +11,7 @@ type SwarmAgentResolveInput = {
 
 export type SwarmAgentResolved = {
     swarmAgentId: string;
-    descriptor: Extract<AgentDescriptor, { type: "swarm" }>;
+    path: AgentPath;
 };
 
 /**
@@ -37,16 +38,13 @@ export async function swarmAgentResolve(input: SwarmAgentResolveInput): Promise<
         throw new Error(`Contact agent not found: ${contactAgentId}`);
     }
 
-    const descriptor: Extract<AgentDescriptor, { type: "swarm" }> = {
-        type: "swarm",
-        id: swarmUser.id
-    };
+    const path = agentPathAgent(swarmUser.id, "swarm");
     const swarmCtx = contextForUser({ userId: swarmUserId });
-    const swarmAgentId = await input.agentSystem.agentIdForTarget(swarmCtx, { descriptor });
+    const swarmAgentId = await input.agentSystem.agentIdForTarget(swarmCtx, { path });
     await input.agentSystem.storage.swarmContacts.findOrCreate(swarmUserId, contactAgentId, swarmAgentId);
 
     return {
         swarmAgentId,
-        descriptor
+        path
     };
 }

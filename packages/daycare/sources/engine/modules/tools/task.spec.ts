@@ -10,6 +10,7 @@ import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
 import { contextForAgent } from "../../agents/context.js";
+import { agentPathTask } from "../../agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
 import { TaskExecutions } from "../../tasks/taskExecutions.js";
@@ -87,7 +88,7 @@ describe("task tools", () => {
                 userId: "user-1",
                 source: "manual",
                 taskId,
-                target: { descriptor: { type: "task", id: taskId } }
+                target: { path: agentPathTask("user-1", taskId) }
             })
         );
 

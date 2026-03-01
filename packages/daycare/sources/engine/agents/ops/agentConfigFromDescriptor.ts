@@ -20,22 +20,9 @@ export function agentConfigFromDescriptor(descriptor: AgentDescriptor): AgentCon
             name: descriptor.name
         };
     }
-    if (descriptor.type === "app") {
-        return {
-            name: descriptor.name,
-            systemPrompt: descriptor.systemPrompt,
-            appId: descriptor.appId
-        };
-    }
     if (descriptor.type === "memory-search") {
         return {
             name: descriptor.name
-        };
-    }
-    if (descriptor.type === "subuser") {
-        return {
-            name: descriptor.name,
-            systemPrompt: descriptor.systemPrompt
         };
     }
     if (descriptor.type === "cron") {

@@ -3,7 +3,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
-import type { AgentDescriptor, Context, MessageContext } from "@/types";
+import type { AgentPath, Context, MessageContext } from "@/types";
 
 import { getLogger } from "../../log.js";
 import {
@@ -120,66 +120,7 @@ const systemPromptUpdateSchema = z.object({
     prompt: z.string().min(1).optional(),
     enabled: z.boolean().optional()
 });
-const agentDescriptorSchema = z.discriminatedUnion("type", [
-    z.object({
-        type: z.literal("user"),
-        connector: z.string().min(1),
-        userId: z.string().min(1),
-        channelId: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("cron"),
-        id: z.string().min(1),
-        name: z.string().min(1).optional()
-    }),
-    z.object({
-        type: z.literal("task"),
-        id: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("system"),
-        tag: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("subagent"),
-        id: z.string().min(1),
-        parentAgentId: z.string().min(1),
-        name: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("app"),
-        id: z.string().min(1),
-        parentAgentId: z.string().min(1),
-        name: z.string().min(1),
-        systemPrompt: z.string().min(1),
-        appId: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("permanent"),
-        id: z.string().min(1),
-        name: z.string().min(1),
-        description: z.string().min(1),
-        systemPrompt: z.string().min(1),
-        username: z.string().min(1).optional(),
-        workspaceDir: z.string().min(1).optional()
-    }),
-    z.object({
-        type: z.literal("memory-agent"),
-        id: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("memory-search"),
-        id: z.string().min(1),
-        parentAgentId: z.string().min(1),
-        name: z.string().min(1)
-    }),
-    z.object({
-        type: z.literal("subuser"),
-        id: z.string().min(1),
-        name: z.string().min(1),
-        systemPrompt: z.string().min(1)
-    })
-]);
+const agentPathSchema = z.string().min(1);
 const messageContextSchema = z.object({
     messageId: z.string().min(1).optional(),
     timezone: z.string().min(1).optional(),
@@ -194,26 +135,19 @@ const messageContextSchema = z.object({
 });
 const agentMessageSchema = z
     .object({
-        userId: z.string().min(1).optional(),
         agentId: z.string().min(1).optional(),
-        descriptor: agentDescriptorSchema.optional(),
+        path: agentPathSchema.optional(),
         text: z.string().min(1),
         context: messageContextSchema.optional(),
         awaitResponse: z.boolean().optional()
     })
     .superRefine((value, refinementContext) => {
         const hasAgentId = typeof value.agentId === "string" && value.agentId.trim().length > 0;
-        const hasDescriptor = value.descriptor !== undefined;
-        if (hasAgentId === hasDescriptor) {
+        const hasPath = typeof value.path === "string" && value.path.trim().length > 0;
+        if (hasAgentId === hasPath) {
             refinementContext.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: "Provide exactly one of agentId or descriptor."
-            });
-        }
-        if (hasDescriptor && (!value.userId || value.userId.trim().length === 0)) {
-            refinementContext.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "userId is required when targeting a descriptor."
+                message: "Provide exactly one of agentId or path."
             });
         }
     });
@@ -932,19 +866,22 @@ async function messageTargetResolve(
         if (!targetContext) {
             throw new Error(`Agent not found: ${payload.agentId}`);
         }
-        if (payload.userId && payload.userId !== targetContext.userId) {
-            throw new Error(`Message target user mismatch for agent: ${payload.agentId}`);
-        }
         return {
             ctx: contextForUser({ userId: targetContext.userId }),
             agentId: payload.agentId
         };
     }
-    if (!payload.descriptor || !payload.userId) {
+    if (!payload.path) {
         throw new Error("Invalid message target.");
     }
-    const ctx = contextForUser({ userId: payload.userId });
-    const descriptor = payload.descriptor as AgentDescriptor;
-    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { descriptor });
+    const path = payload.path as AgentPath;
+    const userId = String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0)[0];
+    if (!userId) {
+        throw new Error("Message path must include user scope.");
+    }
+    const ctx = contextForUser({ userId });
+    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { path });
     return { ctx, agentId };
 }

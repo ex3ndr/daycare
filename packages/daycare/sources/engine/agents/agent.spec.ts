@@ -46,6 +46,8 @@ import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 import { AgentInbox } from "./ops/agentInbox.js";
+import { agentPathMemory } from "./ops/agentPathBuild.js";
+import { agentPathFromDescriptor } from "./ops/agentPathFromDescriptor.js";
 import { agentPathUserId } from "./ops/agentPathParse.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 
@@ -148,7 +150,7 @@ describe("Agent", () => {
             );
 
             expect(result).toEqual({ type: "reset", ok: true });
-            expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+            expect(sendMessage).toHaveBeenCalledWith("user-1", {
                 text: "🔄 Session reset.",
                 replyToMessageId: "42"
             });
@@ -646,9 +648,13 @@ describe("Agent", () => {
                 updatedAt: now
             });
 
+            const sourcePath = agentSystem.getAgentPath(sourceAgentId);
+            if (!sourcePath) {
+                throw new Error("Missing source path for memory agent");
+            }
             await postAndAwait(
                 agentSystem,
-                { descriptor: { type: "memory-agent", id: sourceAgentId } },
+                { path: agentPathMemory(sourcePath) },
                 {
                     type: "system_message",
                     text: "PostgreSQL in production was upgraded to version 16.",
@@ -772,9 +778,9 @@ describe("Agent", () => {
             expect(result).toEqual({ type: "compact", ok: true });
             expect(complete).toHaveBeenCalledTimes(1);
             expect(receivedSessionId).toBe(beforeCompaction?.inferenceSessionId);
-            expect(startTyping).toHaveBeenCalledWith("channel-1");
+            expect(startTyping).toHaveBeenCalledWith("user-1");
             expect(stopTyping).toHaveBeenCalledTimes(1);
-            expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
+            expect(sendMessage).toHaveBeenLastCalledWith("user-1", {
                 text: "Session compacted.",
                 replyToMessageId: "88"
             });
@@ -882,7 +888,7 @@ describe("Agent", () => {
             );
 
             expect(result).toEqual({ type: "compact", ok: false });
-            expect(sendMessage).toHaveBeenLastCalledWith("channel-1", {
+            expect(sendMessage).toHaveBeenLastCalledWith("user-1", {
                 text: "Compaction produced an empty summary; context unchanged.",
                 replyToMessageId: "89"
             });
@@ -1047,7 +1053,7 @@ describe("Agent", () => {
 
             expect(result).toEqual({ type: "message", responseText: "after compaction" });
             expect(complete).toHaveBeenCalledTimes(3);
-            expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+            expect(sendMessage).toHaveBeenCalledWith("user-1", {
                 text: "⏳ Compacting session context. I'll continue shortly.",
                 replyToMessageId: "90"
             });
@@ -1764,7 +1770,7 @@ describe("Agent", () => {
             const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
             expect(restoreResult).toEqual({ type: "restore", ok: true });
             expect(sendMessage).toHaveBeenCalledWith(
-                "channel-1",
+                "user-1",
                 expect.objectContaining({
                     text: "continued after restart"
                 })
@@ -2301,7 +2307,7 @@ describe("Agent", () => {
             expect(restoredSession?.resetMessage).toBe("Session restore failed - starting from scratch.");
 
             expect(sendMessage).toHaveBeenCalledWith(
-                "channel-1",
+                "user-1",
                 expect.objectContaining({
                     text: "Session restore failed - starting from scratch."
                 })
@@ -2364,48 +2370,60 @@ describe("Agent", () => {
 
 async function postAndAwait(
     agentSystem: AgentSystem,
-    ctxOrTarget: Context | AgentPostTarget,
-    targetOrItem: AgentPostTarget | AgentInboxItem,
+    ctxOrTarget: Context | AgentTargetInput,
+    targetOrItem: AgentTargetInput | AgentInboxItem,
     maybeItem?: AgentInboxItem
 ): Promise<AgentInboxResult> {
     if (maybeItem) {
-        return agentSystem.postAndAwait(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        return agentSystem.postAndAwait(
+            ctxOrTarget as Context,
+            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
+            maybeItem
+        );
     }
-    const target = ctxOrTarget as AgentPostTarget;
-    return agentSystem.postAndAwait(
-        await callerCtxResolve(agentSystem, target),
-        target,
-        targetOrItem as AgentInboxItem
-    );
+    const target = ctxOrTarget as AgentTargetInput;
+    const ctx = await callerCtxResolve(agentSystem, target);
+    return agentSystem.postAndAwait(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
 }
 
 async function post(
     agentSystem: AgentSystem,
-    ctxOrTarget: Context | AgentPostTarget,
-    targetOrItem: AgentPostTarget | AgentInboxItem,
+    ctxOrTarget: Context | AgentTargetInput,
+    targetOrItem: AgentTargetInput | AgentInboxItem,
     maybeItem?: AgentInboxItem
 ): Promise<void> {
     if (maybeItem) {
-        await agentSystem.post(ctxOrTarget as Context, targetOrItem as AgentPostTarget, maybeItem);
+        await agentSystem.post(
+            ctxOrTarget as Context,
+            targetNormalize(targetOrItem as AgentTargetInput, ctxOrTarget as Context),
+            maybeItem
+        );
         return;
     }
-    const target = ctxOrTarget as AgentPostTarget;
-    await agentSystem.post(await callerCtxResolve(agentSystem, target), target, targetOrItem as AgentInboxItem);
+    const target = ctxOrTarget as AgentTargetInput;
+    const ctx = await callerCtxResolve(agentSystem, target);
+    await agentSystem.post(ctx, targetNormalize(target, ctx), targetOrItem as AgentInboxItem);
 }
 
 async function agentIdForTarget(
     agentSystem: AgentSystem,
-    ctxOrTarget: Context | AgentPostTarget,
-    maybeTarget?: AgentPostTarget
+    ctxOrTarget: Context | AgentTargetInput,
+    maybeTarget?: AgentTargetInput
 ): Promise<string> {
     if (maybeTarget) {
-        return agentSystem.agentIdForTarget(ctxOrTarget as Context, maybeTarget);
+        return agentSystem.agentIdForTarget(
+            ctxOrTarget as Context,
+            targetNormalize(maybeTarget, ctxOrTarget as Context)
+        );
     }
-    const target = ctxOrTarget as AgentPostTarget;
-    return agentSystem.agentIdForTarget(await callerCtxResolve(agentSystem, target), target);
+    const target = ctxOrTarget as AgentTargetInput;
+    const ctx = await callerCtxResolve(agentSystem, target);
+    return agentSystem.agentIdForTarget(ctx, targetNormalize(target, ctx));
 }
 
-async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarget): Promise<Context> {
+type AgentTargetInput = AgentPostTarget | { descriptor: AgentDescriptor };
+
+async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInput): Promise<Context> {
     if ("agentId" in target) {
         const targetCtx = await agentSystem.contextForAgentId(target.agentId);
         if (!targetCtx) {
@@ -2430,6 +2448,13 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();
+}
+
+function targetNormalize(target: AgentTargetInput, ctx: Context): AgentPostTarget {
+    if ("agentId" in target || "path" in target) {
+        return target;
+    }
+    return { path: agentPathFromDescriptor(target.descriptor, { userId: ctx.userId }) };
 }
 
 async function contextForAgentIdRequire(agentSystem: AgentSystem, agentId: string): Promise<Context> {

@@ -96,7 +96,7 @@ describe("startEngineServer", () => {
         expect(payload.responseText).toBe("ok");
     });
 
-    it("posts text to descriptor target by resolving agent id", async () => {
+    it("posts text to path target by resolving agent id", async () => {
         const post = vi.fn(async () => {});
         const agentIdForTarget = vi.fn(async () => "resolved-agent");
         const runtime = {
@@ -124,8 +124,7 @@ describe("startEngineServer", () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                userId: "user-1",
-                descriptor: { type: "system", tag: "task" },
+                path: "/user-1/task/task-1",
                 text: "create cron",
                 awaitResponse: false
             })
@@ -134,7 +133,7 @@ describe("startEngineServer", () => {
         expect(response.statusCode).toBe(200);
         expect(agentIdForTarget).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "user-1", hasAgentId: false }),
-            { descriptor: { type: "system", tag: "task" } }
+            { path: "/user-1/task/task-1" }
         );
         expect(post).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "user-1", hasAgentId: false }),

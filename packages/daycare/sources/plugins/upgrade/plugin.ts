@@ -3,7 +3,6 @@ import type { Static } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
 import { z } from "zod";
 import type { AgentPath, ConnectorTarget, MessageContext, ToolDefinition, ToolResultContract } from "@/types";
-import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { agentPathKind } from "../../engine/agents/ops/agentPathParse.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 import { upgradePm2ProcessDetect } from "./upgradePm2ProcessDetect.js";
@@ -19,13 +18,7 @@ const RESTART_COMMAND = "restart";
 const RESTART_CONFIRM_MAX_AGE_MS = 5 * 60 * 1000;
 
 function pathFromTarget(target: ConnectorTarget): AgentPath | null {
-    if (typeof target === "string") {
-        return target;
-    }
-    if (target.type !== "user") {
-        return null;
-    }
-    return agentPathConnector(target.userId, target.connector);
+    return target;
 }
 
 const settingsSchema = z

@@ -107,7 +107,7 @@ async function descriptorPathResolve(
         return existing.path;
     }
 
-    if (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search") {
+    if (descriptor.type === "subagent" || descriptor.type === "memory-search") {
         const parent = await storage.agents.findById(descriptor.parentAgentId);
         if (parent) {
             const parentPath = parent.path ?? agentPathFromDescriptor(parent.descriptor, { userId: parent.userId });

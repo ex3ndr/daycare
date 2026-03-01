@@ -1,11 +1,11 @@
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { SandboxReadResult } from "../../../sandbox/sandboxTypes.js";
 import { agentDescriptorTargetResolve } from "../../agents/ops/agentDescriptorTargetResolve.js";
+import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
 import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import { toolMessageTextExtract } from "./toolReturnOutcome.js";
@@ -79,19 +79,17 @@ export function skillToolBuild(): ToolDefinition {
             const loaded = await skillContentRead(target, toolContext);
             const skillBodyDecorated = skillBodyDecorate(loaded.body, skill.name, loaded.baseDir);
             if (skill.sandbox === true) {
-                const skillSource = skillSourceBuild(skill.name);
                 const prompt = payload.prompt?.trim() ?? "";
                 if (!prompt) {
                     throw new Error(`Skill "${skill.name}" requires prompt in sandbox mode.`);
                 }
 
-                const descriptor = {
-                    type: "subagent" as const,
-                    id: createId(),
+                const path = await agentPathChildAllocate({
+                    storage: toolContext.agentSystem.storage,
                     parentAgentId: toolContext.agent.id,
-                    name: skillSource
-                };
-                const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { descriptor });
+                    kind: "sub"
+                });
+                const agentId = await toolContext.agentSystem.agentIdForTarget(toolContext.ctx, { path });
 
                 const sandboxPrompt = skillSandboxPromptBuild(skillBodyDecorated, prompt);
                 const result = await toolContext.agentSystem.postAndAwait(
@@ -298,10 +296,6 @@ function skillBodyDecorate(skillBody: string, skillName: string, baseDirectory: 
     return [`Base directory for this skill: ${baseDirectory}`, `Skill name: ${skillName}`, "", skillBody.trim()].join(
         "\n"
     );
-}
-
-function skillSourceBuild(skillName: string): string {
-    return `${skillName} Skill`;
 }
 
 function skillSandboxPromptBuild(skillBody: string, prompt: string): string {
