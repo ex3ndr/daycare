@@ -16,9 +16,6 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "inbox", icon: "inbox", label: "Inbox" },
     { mode: "todos", icon: "checklist", label: "Todos" },
     { mode: "routines", icon: "clock", label: "Routines" },
-    { mode: "inventory", icon: "package", label: "Inventory" },
-    { mode: "workflows", icon: "workflow", label: "Workflows" },
-    { mode: "coaching", icon: "mortar-board", label: "Coaching" },
     { mode: "costs", icon: "credit-card", label: "Costs" },
     { mode: "documents", icon: "file", label: "Documents" }
 ];
@@ -52,21 +49,6 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     routines: [
         { id: "r1", title: "Active" },
         { id: "r2", title: "Disabled" }
-    ],
-    inventory: [
-        { id: "inv1", title: "API Keys" },
-        { id: "inv2", title: "Compute" },
-        { id: "inv3", title: "Storage" },
-        { id: "inv4", title: "Integrations" }
-    ],
-    workflows: [
-        { id: "wf1", title: "Recent" },
-        { id: "wf2", title: "Completed" }
-    ],
-    coaching: [
-        { id: "ch1", title: "Training" },
-        { id: "ch2", title: "Feedback" },
-        { id: "ch3", title: "Completed" }
     ],
     costs: [
         { id: "co1", title: "This Month" },

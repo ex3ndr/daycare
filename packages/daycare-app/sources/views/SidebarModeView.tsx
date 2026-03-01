@@ -5,7 +5,6 @@ import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { AgentsView } from "@/views/AgentsView";
-import { CoachingView } from "@/views/CoachingView";
 import { CostsView } from "@/views/CostsView";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
@@ -13,11 +12,9 @@ import { DocumentsView } from "@/views/documents/DocumentsView";
 import { EmailView } from "@/views/EmailView";
 import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
-import { InventoryView } from "@/views/InventoryView";
 import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { TodosView } from "@/views/TodosView";
-import { WorkflowsView } from "@/views/WorkflowsView";
 
 const viewComponents: Record<AppMode, React.ComponentType> = {
     home: HomeView,
@@ -27,9 +24,6 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     inbox: InboxView,
     todos: TodosView,
     routines: RoutinesView,
-    inventory: InventoryView,
-    workflows: WorkflowsView,
-    coaching: CoachingView,
     costs: CostsView,
     documents: DocumentsView
 };

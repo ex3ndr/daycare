@@ -9,7 +9,6 @@ import { TreePanelLayout } from "@/components/layout/TreePanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { AgentsView } from "@/views/AgentsView";
-import { CoachingView } from "@/views/CoachingView";
 import { CostsView } from "@/views/CostsView";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
@@ -18,11 +17,9 @@ import { DocumentTreePanel } from "@/views/documents/DocumentTreePanel";
 import { EmailView } from "@/views/EmailView";
 import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
-import { InventoryView } from "@/views/InventoryView";
 import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { TodosView } from "@/views/TodosView";
-import { WorkflowsView } from "@/views/WorkflowsView";
 
 const leftItems: Record<
     Exclude<AppMode, "documents" | "home">,
@@ -55,21 +52,6 @@ const leftItems: Record<
         { id: "r1", title: "Active", subtitle: "4 routines" },
         { id: "r2", title: "Disabled", subtitle: "2 routines" }
     ],
-    inventory: [
-        { id: "inv1", title: "API Keys", subtitle: "3 keys" },
-        { id: "inv2", title: "Compute", subtitle: "3 resources" },
-        { id: "inv3", title: "Storage", subtitle: "3 stores" },
-        { id: "inv4", title: "Integrations", subtitle: "4 connected" }
-    ],
-    workflows: [
-        { id: "wf1", title: "Recent", subtitle: "3 workflows" },
-        { id: "wf2", title: "Completed", subtitle: "2 workflows" }
-    ],
-    coaching: [
-        { id: "ch1", title: "Training", subtitle: "4 active" },
-        { id: "ch2", title: "Feedback", subtitle: "3 recent" },
-        { id: "ch3", title: "Completed", subtitle: "3 lessons" }
-    ],
     costs: [
         { id: "co1", title: "This Month", subtitle: "$142.50" },
         { id: "co2", title: "Last Month", subtitle: "$161.80" }
@@ -84,9 +66,6 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     inbox: InboxView,
     todos: TodosView,
     routines: RoutinesView,
-    inventory: InventoryView,
-    workflows: WorkflowsView,
-    coaching: CoachingView,
     costs: CostsView,
     documents: DocumentsView
 };

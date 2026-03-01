@@ -1,100 +1,94 @@
-import { Octicons } from "@expo/vector-icons";
-import { View } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { useTasksStore } from "@/modules/tasks/tasksContext";
+import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
+import type { TaskActiveSummary } from "@/modules/tasks/tasksTypes";
 
-function Checkbox({ checked }: { checked: boolean }) {
-    const { theme } = useUnistyles();
-    return (
-        <View
-            style={[
-                checkboxStyles.box,
-                {
-                    borderColor: checked ? theme.colors.primary : theme.colors.outline,
-                    backgroundColor: checked ? theme.colors.primary : "transparent"
-                }
-            ]}
-        >
-            {checked && <Octicons name="check" size={12} color={theme.colors.surface} />}
-        </View>
-    );
+/** Formats a relative time label for task display. */
+function taskTimeLabel(task: TaskActiveSummary): string {
+    const now = Date.now();
+    const age = now - task.updatedAt;
+    const hours = Math.floor(age / 3_600_000);
+    const days = Math.floor(age / 86_400_000);
+
+    if (hours < 1) return "Just now";
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return new Date(task.updatedAt).toLocaleDateString();
 }
 
-const checkboxStyles = StyleSheet.create({
-    box: {
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        borderWidth: 2,
-        alignItems: "center",
-        justifyContent: "center"
-    }
-});
-
 export function TodosView() {
+    const { theme } = useUnistyles();
+
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+
+    const tasks = useTasksStore((s) => s.tasks);
+    const loading = useTasksStore((s) => s.loading);
+    const error = useTasksStore((s) => s.error);
+    const fetchTasks = useTasksStore((s) => s.fetch);
+
+    useEffect(() => {
+        if (baseUrl && token) {
+            void fetchTasks(baseUrl, token);
+        }
+    }, [baseUrl, token, fetchTasks]);
+
+    if (loading && tasks.length === 0) {
+        return (
+            <View style={[styles.centered, { flex: 1 }]}>
+                <ActivityIndicator color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    if (error && tasks.length === 0) {
+        return (
+            <View style={[styles.centered, { flex: 1 }]}>
+                <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+            </View>
+        );
+    }
+
+    if (tasks.length === 0) {
+        return (
+            <View style={[styles.centered, { flex: 1 }]}>
+                <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No active tasks</Text>
+            </View>
+        );
+    }
+
     return (
         <ItemListStatic>
-            <ItemGroup title="Today">
-                <Item
-                    title="Review agent heartbeat PR"
-                    subtitle="Assigned by Jordan · High priority"
-                    leftElement={<Checkbox checked={false} />}
-                    detail="Due today"
-                    showChevron={false}
-                />
-                <Item
-                    title="Approve February cost report"
-                    subtitle="Finance review needed"
-                    leftElement={<Checkbox checked={false} />}
-                    detail="Due today"
-                    showChevron={false}
-                />
-                <Item
-                    title="Fix Operator agent error logs"
-                    subtitle="Failing since 2h ago"
-                    leftElement={<Checkbox checked={false} />}
-                    detail="Due today"
-                    showChevron={false}
-                />
-            </ItemGroup>
-            <ItemGroup title="This Week">
-                <Item
-                    title="Write onboarding docs for new plugins"
-                    subtitle="Docs · Medium priority"
-                    leftElement={<Checkbox checked={false} />}
-                    detail="Thu"
-                    showChevron={false}
-                />
-                <Item
-                    title="Set up staging environment for v3"
-                    subtitle="Infrastructure · Low priority"
-                    leftElement={<Checkbox checked={false} />}
-                    detail="Fri"
-                    showChevron={false}
-                />
-            </ItemGroup>
-            <ItemGroup title="Completed">
-                <Item
-                    title="Deploy Builder agent v2.4.1"
-                    subtitle="Completed yesterday"
-                    leftElement={<Checkbox checked={true} />}
-                    showChevron={false}
-                />
-                <Item
-                    title="Update cron schedule for email digest"
-                    subtitle="Completed Feb 26"
-                    leftElement={<Checkbox checked={true} />}
-                    showChevron={false}
-                />
-                <Item
-                    title="Add cost tracking for S3 storage"
-                    subtitle="Completed Feb 25"
-                    leftElement={<Checkbox checked={true} />}
-                    showChevron={false}
-                />
+            <ItemGroup title="Active Tasks">
+                {tasks.map((task) => (
+                    <Item
+                        key={task.id}
+                        title={task.title}
+                        subtitle={tasksSubtitle(task)}
+                        detail={taskTimeLabel(task)}
+                        showChevron={false}
+                    />
+                ))}
             </ItemGroup>
         </ItemListStatic>
     );
 }
+
+const styles = StyleSheet.create({
+    centered: {
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 32
+    },
+    errorText: {
+        fontSize: 14,
+        fontFamily: "IBMPlexSans-Regular",
+        textAlign: "center"
+    }
+});

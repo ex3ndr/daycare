@@ -1,10 +1,16 @@
 import { Platform } from "react-native";
 import sourceTheme from "./themes/bg_2.json";
 
-// Determine if this is a mobile layout (Android or iPhone) vs desktop (iPad or Web)
-// Mobile: Android OR (iOS AND NOT iPad)
-// Desktop: iPad OR Web
-const isMobileLayout = Platform.OS === "android" || (Platform.OS === "ios" && !Platform.isPad);
+// Detect Telegram WebApp context (web running inside Telegram's mobile container)
+const isTelegramWebApp =
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    !!(window as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp;
+
+// Determine if this is a mobile layout (Android or iPhone or Telegram WebApp) vs desktop (iPad or Web)
+// Mobile: Android OR (iOS AND NOT iPad) OR Telegram WebApp
+// Desktop: iPad OR Web (non-Telegram)
+const isMobileLayout = Platform.OS === "android" || (Platform.OS === "ios" && !Platform.isPad) || isTelegramWebApp;
 
 const common = {
     layout: {
