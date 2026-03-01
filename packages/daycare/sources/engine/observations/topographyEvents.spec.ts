@@ -166,7 +166,7 @@ describe("topographyObservationEmit", () => {
                         taskId: "task-1",
                         userId: "user-1",
                         name: "backup",
-                        path: "/v1/webhooks/token"
+                        routeTemplate: "/v1/webhooks/:token"
                     },
                     scopeIds: ["user-1"]
                 }),

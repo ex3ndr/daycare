@@ -102,6 +102,7 @@ export class Friends {
                     origin
                 )
             });
+            await this.subuserSharedEmit(target.id, target.name ?? target.id, owner.id, me.id, me.nametag);
             return { status: "accepted_share", nametag: targetNametag };
         }
 
@@ -308,7 +309,6 @@ export class Friends {
                 origin
             )
         });
-        await this.subuserSharedEmit(subuser.id, subuserName, me.id, friend.id, friend.nametag);
 
         return {
             status: "offered",

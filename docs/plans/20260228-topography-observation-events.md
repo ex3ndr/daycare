@@ -63,7 +63,7 @@ Scope IDs: `[userId]`
 
 | Type | Message | Details | Data |
 |------|---------|---------|------|
-| `webhook:added` | `Webhook added: <name>` | `Webhook trigger <id> added for task <taskId>, path "<path>"` | `{ webhookId: string; taskId: string; userId: string; name: string; path: string }` |
+| `webhook:added` | `Webhook added: <name>` | `Webhook trigger <id> added for task <taskId>, route template "/v1/webhooks/:token"` | `{ webhookId: string; taskId: string; userId: string; name: string; routeTemplate: string }` |
 | `webhook:deleted` | `Webhook deleted: <name>` | `Webhook trigger <id> deleted for task <taskId>` | `{ webhookId: string; taskId: string; userId: string; name: string }` |
 
 Source: `system:webhooks`

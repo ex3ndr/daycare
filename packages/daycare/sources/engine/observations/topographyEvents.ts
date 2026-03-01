@@ -138,7 +138,7 @@ export type WebhookAddedData = {
     taskId: string;
     userId: string;
     name: string;
-    path: string;
+    routeTemplate: string;
 };
 
 export type WebhookDeletedData = {

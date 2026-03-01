@@ -73,19 +73,19 @@ export class Webhooks {
             updatedAt: now
         };
         await this.storage.webhookTasks.create(created);
-        const path = `/v1/webhooks/${created.id}`;
+        const routeTemplate = "/v1/webhooks/:token";
         await topographyObservationEmit(this.storage.observationLog, {
             userId,
             type: TOPO_EVENT_TYPES.WEBHOOK_ADDED,
             source: TOPO_SOURCE_WEBHOOKS,
             message: `Webhook added: ${task.title}`,
-            details: `Webhook trigger ${created.id} added for task ${created.taskId}, path "${path}"`,
+            details: `Webhook trigger ${created.id} added for task ${created.taskId}, route template "${routeTemplate}"`,
             data: {
                 webhookId: created.id,
                 taskId: created.taskId,
                 userId,
                 name: task.title,
-                path
+                routeTemplate
             },
             scopeIds: [userId]
         });

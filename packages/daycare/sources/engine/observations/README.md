@@ -37,7 +37,7 @@ Topography events are defined in `observations/topographyEvents.ts` and emitted 
 - `cron:disabled` — `{ cronId, taskId, userId, name }`
 
 ### `system:webhooks`
-- `webhook:added` — `{ webhookId, taskId, userId, name, path }`
+- `webhook:added` — `{ webhookId, taskId, userId, name, routeTemplate }`
 - `webhook:deleted` — `{ webhookId, taskId, userId, name }`
 
 ### `system:signals`

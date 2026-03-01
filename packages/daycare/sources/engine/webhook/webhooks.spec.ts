@@ -44,6 +44,12 @@ describe("Webhooks", () => {
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["webhook:added", "webhook:deleted"])
             );
+            const webhookAdded = observations.find((entry) => entry.type === "webhook:added");
+            expect(webhookAdded?.details).toContain('route template "/v1/webhooks/:token"');
+            expect(webhookAdded?.data).toMatchObject({
+                webhookId: "hook-a",
+                routeTemplate: "/v1/webhooks/:token"
+            });
         } finally {
             storage.connection.close();
         }

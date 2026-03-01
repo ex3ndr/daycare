@@ -24,6 +24,14 @@ describe("Friends", () => {
                 friendNametag: bob.nametag,
                 subuserId: subuser.id
             });
+            const afterOfferObservations = await storage.observationLog.findMany({
+                userId: alice.id,
+                agentId: "agent-a"
+            });
+            expect(afterOfferObservations.map((entry) => entry.type)).not.toContain("friend:subuser_shared");
+
+            await friends.add(contextForAgent({ userId: bob.id, agentId: "agent-b" }), { nametag: subuser.nametag });
+
             await friends.unshareSubuser(contextForAgent({ userId: alice.id, agentId: "agent-a" }), {
                 friendNametag: bob.nametag,
                 subuserId: subuser.id
