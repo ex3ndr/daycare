@@ -514,6 +514,39 @@ describe("AgentSystem", () => {
         }
     });
 
+    it("keeps executable system-message failures inline without follow-up re-post", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const postSpy = vi.spyOn(harness.agentSystem, "post");
+            const descriptor: AgentDescriptor = { type: "task", id: createId() };
+            const result = await postAndAwait(
+                harness.agentSystem,
+                { descriptor },
+                {
+                    type: "system_message",
+                    text: "[cron]\ntriggerId: trigger-1\ntaskId: task-1",
+                    code: ["raise Exception('boom')"],
+                    execute: true,
+                    origin: "cron"
+                }
+            );
+
+            if (result.type !== "system_message") {
+                throw new Error("Expected system_message result");
+            }
+            expect(result.responseError).toBe(true);
+            expect(result.executionErrorText).toContain("boom");
+            expect(result.responseText).toBe("ok");
+            expect(postSpy).not.toHaveBeenCalled();
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("posts cross-user items to all frontend agents for a target user", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {

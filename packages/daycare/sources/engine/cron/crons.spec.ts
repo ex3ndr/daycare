@@ -235,6 +235,69 @@ describe("Crons", () => {
         }
     });
 
+    it("prefers executionErrorText over responseText for cron responseError failures", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-response-error-text-"));
+        tempDirs.push(dir);
+
+        const agentSystemMock = {
+            ownerUserIdEnsure: vi.fn(async () => "owner"),
+            userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            post: vi.fn(async () => {}),
+            postAndAwait: vi.fn(async () => ({
+                type: "system_message",
+                responseText: "fallback response",
+                responseError: true,
+                executionErrorText: "explicit execution error"
+            }))
+        };
+        const agentSystem = agentSystemMock as unknown as CronsOptions["agentSystem"];
+        const storage = await storageOpenTest();
+        try {
+            const crons = new Crons({
+                config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
+                storage,
+                eventBus: { emit: vi.fn() } as unknown as CronsOptions["eventBus"],
+                agentSystem
+            });
+
+            const callback = (
+                crons as unknown as {
+                    scheduler: {
+                        onTask?: (
+                            task: {
+                                triggerId: string;
+                                taskId: string;
+                                taskName: string;
+                                code: string;
+                                timezone: string;
+                                agentId?: string;
+                                userId?: string;
+                            },
+                            messageContext: { messageId?: string; timezone?: string }
+                        ) => Promise<void>;
+                    };
+                }
+            ).scheduler.onTask;
+            expect(callback).toBeTypeOf("function");
+
+            await expect(
+                callback!(
+                    {
+                        triggerId: "trigger-1",
+                        taskId: "task-1",
+                        taskName: "Nightly sync",
+                        code: "Run checks",
+                        timezone: "UTC",
+                        userId: "user-1"
+                    },
+                    {}
+                )
+            ).rejects.toThrow("explicit execution error");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("does not post cron-specific failure messages from cron facade", async () => {
         const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-failure-report-"));
         tempDirs.push(dir);
