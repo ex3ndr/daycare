@@ -64,6 +64,76 @@ describe("buildSendAgentMessageTool", () => {
         );
     });
 
+    it("defers sending during pythonExecution", async () => {
+        const post = vi.fn(async () => {});
+        const context = contextBuild(
+            { post },
+            {
+                agentId: "child-agent",
+                descriptor: {
+                    type: "subagent",
+                    id: "child-agent",
+                    parentAgentId: "parent-agent",
+                    name: "child"
+                }
+            }
+        );
+        (context as Record<string, unknown>).pythonExecution = true;
+        const tool = buildSendAgentMessageTool();
+
+        const result = await tool.execute({ text: "short update" }, context, sendToolCall);
+
+        expect(post).not.toHaveBeenCalled();
+        expect(result.deferredPayload).toBeDefined();
+        expect(result.toolMessage.isError).toBe(false);
+    });
+
+    it("sends immediately during pythonExecution when now=true", async () => {
+        const post = vi.fn(async () => {});
+        const context = contextBuild(
+            { post },
+            {
+                agentId: "child-agent",
+                descriptor: {
+                    type: "subagent",
+                    id: "child-agent",
+                    parentAgentId: "parent-agent",
+                    name: "child"
+                }
+            }
+        );
+        (context as Record<string, unknown>).pythonExecution = true;
+        const tool = buildSendAgentMessageTool();
+
+        const result = await tool.execute({ text: "urgent", now: true }, context, sendToolCall);
+
+        expect(post).toHaveBeenCalled();
+        expect(result.deferredPayload).toBeUndefined();
+    });
+
+    it("always sends steering immediately even during pythonExecution", async () => {
+        const steer = vi.fn(async () => {});
+        const context = contextBuild(
+            { steer, agentExists: vi.fn(async () => true) },
+            {
+                agentId: "child-agent",
+                descriptor: {
+                    type: "subagent",
+                    id: "child-agent",
+                    parentAgentId: "parent-agent",
+                    name: "child"
+                }
+            }
+        );
+        (context as Record<string, unknown>).pythonExecution = true;
+        const tool = buildSendAgentMessageTool();
+
+        const result = await tool.execute({ text: "interrupt!", steering: true }, context, sendToolCall);
+
+        expect(steer).toHaveBeenCalled();
+        expect(result.deferredPayload).toBeUndefined();
+    });
+
     it("writes oversized text to output file and sends a reference", async () => {
         let postedItem: unknown = null;
         const post = vi.fn(async (_ctx: unknown, _target: unknown, item: unknown) => {

@@ -28,7 +28,8 @@ const schema = Type.Object(
         ),
         text: Type.Optional(Type.String()),
         source: Type.Optional(Type.String({ minLength: 1 })),
-        channelId: Type.Optional(Type.String({ minLength: 1 }))
+        channelId: Type.Optional(Type.String({ minLength: 1 })),
+        now: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
 );
@@ -41,6 +42,15 @@ type SendFileArgs = {
     text?: string;
     source?: string;
     channelId?: string;
+    now?: boolean;
+};
+
+type SendFileDeferredPayload = {
+    source: string;
+    targetId: string;
+    text: string | null;
+    file: FileReference;
+    sendAs: ConnectorFileDisposition | "auto";
 };
 
 const sendFileResultSchema = Type.Object(
@@ -111,6 +121,39 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             if (!targetId) {
                 throw new Error("Send file requires a user agent or explicit channelId.");
             }
+
+            // Defer sending during Python execution unless now=true
+            if (context.pythonExecution && !payload.now) {
+                const summary = `File ${file.name} deferred.`;
+                const toolMessage: ToolResultMessage = {
+                    role: "toolResult",
+                    toolCallId: toolCall.id,
+                    toolName: toolCall.name,
+                    content: [{ type: "text", text: summary }],
+                    isError: false,
+                    timestamp: Date.now()
+                };
+                const deferredPayload: SendFileDeferredPayload = {
+                    source,
+                    targetId,
+                    text: messageText,
+                    file,
+                    sendAs
+                };
+                return {
+                    toolMessage,
+                    typedResult: {
+                        summary,
+                        fileId: file.id,
+                        fileName: file.name,
+                        mimeType: file.mimeType,
+                        size: file.size,
+                        sendAs
+                    },
+                    deferredPayload
+                };
+            }
+
             await connector.sendMessage(targetId, {
                 text: messageText,
                 files: [{ ...file, sendAs }]
@@ -148,6 +191,17 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                     sendAs
                 }
             };
+        },
+        executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
+            const p = payload as SendFileDeferredPayload;
+            const connector = context.connectorRegistry.get(p.source);
+            if (!connector) {
+                throw new Error(`Connector not loaded: ${p.source}`);
+            }
+            await connector.sendMessage(p.targetId, {
+                text: p.text,
+                files: [{ ...p.file, sendAs: p.sendAs }]
+            });
         }
     };
 }

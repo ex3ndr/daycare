@@ -45,6 +45,51 @@ describe("buildSendFileTool", () => {
         );
     });
 
+    it("defers sending during pythonExecution", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = buildSendFileTool();
+        const ctx = contextBuild({
+            connector: {
+                capabilities: {
+                    sendText: true,
+                    sendFiles: { modes: ["document", "photo", "video"] }
+                },
+                sendMessage
+            }
+        });
+        (ctx as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute({ path: "/tmp/voice-note.ogg", mimeType: "audio/ogg" }, ctx, toolCall);
+
+        expect(sendMessage).not.toHaveBeenCalled();
+        expect(result.deferredPayload).toBeDefined();
+        expect(result.toolMessage.isError).toBe(false);
+    });
+
+    it("sends immediately during pythonExecution when now=true", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = buildSendFileTool();
+        const ctx = contextBuild({
+            connector: {
+                capabilities: {
+                    sendText: true,
+                    sendFiles: { modes: ["document", "photo", "video"] }
+                },
+                sendMessage
+            }
+        });
+        (ctx as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute(
+            { path: "/tmp/voice-note.ogg", mimeType: "audio/ogg", now: true },
+            ctx,
+            toolCall
+        );
+
+        expect(sendMessage).toHaveBeenCalled();
+        expect(result.deferredPayload).toBeUndefined();
+    });
+
     it("rejects voice send mode when connector does not support it", async () => {
         const sendMessage = vi.fn(async () => undefined);
         const tool = buildSendFileTool();

@@ -96,6 +96,10 @@ export class ToolResolver {
             if (!result.toolMessage.toolName) {
                 result.toolMessage.toolName = toolCall.name;
             }
+            // Auto-attach deferred handler from definition when tool returned a deferred payload
+            if (result.deferredPayload !== undefined && entry.executeDeferred) {
+                result.deferredHandler = entry.executeDeferred;
+            }
             return toolResultTruncate(result);
         } catch (error) {
             if (abortErrorIs(error, context.abortSignal)) {

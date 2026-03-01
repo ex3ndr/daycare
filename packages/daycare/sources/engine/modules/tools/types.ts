@@ -65,10 +65,16 @@ export type ToolResultContract<TResult extends ToolResultObject = ToolResultObje
     toLLMText(result: TResult): string;
 };
 
+export type DeferredToolHandler = (payload: unknown, context: ToolExecutionContext) => Promise<void>;
+
 export type ToolExecutionResult<TResult extends ToolResultObject = ToolResultObject> = {
     toolMessage: ToolResultMessage;
     typedResult: TResult;
     skipTurn?: boolean;
+    /** Opaque serializable data for deferred execution after successful script completion. */
+    deferredPayload?: unknown;
+    /** Handler to execute the deferred payload. Auto-attached by ToolResolver from the definition. */
+    deferredHandler?: DeferredToolHandler;
 };
 
 export type ToolDefinition<TParams extends TSchema = TSchema, TResult extends ToolResultObject = ToolResultObject> = {
@@ -79,5 +85,7 @@ export type ToolDefinition<TParams extends TSchema = TSchema, TResult extends To
         context: ToolExecutionContext,
         toolCall: { id: string; name: string }
     ) => Promise<ToolExecutionResult<TResult>>;
+    /** Called after successful script completion for each deferred payload produced by execute. */
+    executeDeferred?: DeferredToolHandler;
     visibleByDefault?: (context: ToolVisibilityContext) => boolean;
 };

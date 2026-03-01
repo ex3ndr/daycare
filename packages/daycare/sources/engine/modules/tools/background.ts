@@ -20,10 +20,20 @@ const sendSchema = Type.Object(
         text: Type.String({ minLength: 1 }),
         agentId: Type.Optional(Type.String({ minLength: 1 })),
         steering: Type.Optional(Type.Boolean()),
-        cancelReason: Type.Optional(Type.String({ minLength: 1 }))
+        cancelReason: Type.Optional(Type.String({ minLength: 1 })),
+        now: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
 );
+
+type SendAgentMessageDeferredPayload = {
+    deliveryContextUserId: string;
+    resolvedTarget: string;
+    text: string;
+    origin: string;
+    swarmContactTarget: string | null;
+    senderUserId: string;
+};
 
 type StartBackgroundArgs = Static<typeof startSchema>;
 type SendAgentMessageArgs = Static<typeof sendSchema>;
@@ -182,6 +192,37 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                 };
             }
 
+            // Defer normal system message during Python execution unless now=true
+            // (steering is always immediate — time-sensitive interrupt)
+            if (toolContext.pythonExecution && !payload.now) {
+                const summary = "System message deferred.";
+                const toolMessage: ToolResultMessage = {
+                    role: "toolResult",
+                    toolCallId: toolCall.id,
+                    toolName: toolCall.name,
+                    content: [{ type: "text", text: summary }],
+                    isError: false,
+                    timestamp: Date.now()
+                };
+                const deferredPayload: SendAgentMessageDeferredPayload = {
+                    deliveryContextUserId: deliveryContext.userId,
+                    resolvedTarget,
+                    text: outbound.text,
+                    origin,
+                    swarmContactTarget,
+                    senderUserId: toolContext.agent.userId
+                };
+                return {
+                    toolMessage,
+                    typedResult: {
+                        summary,
+                        targetAgentId: resolvedTarget,
+                        originAgentId: origin
+                    },
+                    deferredPayload
+                };
+            }
+
             // Normal system message delivery
             await toolContext.agentSystem.post(
                 deliveryContext,
@@ -220,6 +261,18 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     originAgentId: origin
                 }
             };
+        },
+        executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
+            const p = payload as SendAgentMessageDeferredPayload;
+            const deliveryContext = { userId: p.deliveryContextUserId, agentId: context.agent.ctx.agentId };
+            await context.agentSystem.post(
+                deliveryContext,
+                { agentId: p.resolvedTarget },
+                { type: "system_message", text: p.text, origin: p.origin }
+            );
+            if (p.swarmContactTarget) {
+                await context.agentSystem.storage.swarmContacts.recordSent(p.senderUserId, p.swarmContactTarget);
+            }
         }
     };
 }

@@ -4,6 +4,7 @@ import type { RlmPrintCaptureState } from "../../modules/rlm/rlmPrintCapture.js"
 import type { RlmVmSnapshot } from "../../modules/rlm/rlmVmProgress.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
+import type { DeferredToolEntry } from "../../modules/tools/deferredToolFlush.js";
 
 type AgentLoopBlockState = {
     iteration: number;
@@ -40,12 +41,14 @@ export type ToolCallPhase = {
     printCapture: RlmPrintCaptureState;
     printCallback: (...values: unknown[]) => void;
     toolCallCount: number;
+    deferredEntries: DeferredToolEntry[];
 };
 
 export type BlockCompletePhase = {
     type: "block_complete";
     blockState: AgentLoopBlockState;
     result: RlmExecuteResult;
+    deferredEntries: DeferredToolEntry[];
 };
 
 export type DonePhase = {

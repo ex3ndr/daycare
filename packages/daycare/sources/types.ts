@@ -75,6 +75,7 @@ export type { MediaAnalysisProvider, MediaType } from "./engine/modules/media-an
 export type { SpeechGenerationProvider } from "./engine/modules/speech/types.js";
 // Tools
 export type {
+    DeferredToolHandler,
     ToolDefinition,
     ToolExecutionContext,
     ToolExecutionResult,

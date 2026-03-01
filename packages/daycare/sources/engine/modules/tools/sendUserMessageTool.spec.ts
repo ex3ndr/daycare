@@ -49,6 +49,39 @@ describe("sendUserMessageToolBuild", () => {
         );
     });
 
+    it("defers sending during pythonExecution for non-swarm path", async () => {
+        const post = vi.fn();
+        const tool = sendUserMessageToolBuild();
+        const ctx = contextBuild({
+            agentId: "bg-1",
+            descriptor: { type: "subagent", id: "bg-1", parentAgentId: "fg-1", name: "worker" },
+            post
+        });
+        (ctx as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute({ text: "task done" }, ctx, toolCall);
+
+        expect(post).not.toHaveBeenCalled();
+        expect(result.deferredPayload).toBeDefined();
+        expect(result.toolMessage.isError).toBe(false);
+    });
+
+    it("sends immediately during pythonExecution when now=true", async () => {
+        const post = vi.fn();
+        const tool = sendUserMessageToolBuild();
+        const ctx = contextBuild({
+            agentId: "bg-1",
+            descriptor: { type: "subagent", id: "bg-1", parentAgentId: "fg-1", name: "worker" },
+            post
+        });
+        (ctx as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute({ text: "urgent", now: true }, ctx, toolCall);
+
+        expect(post).toHaveBeenCalled();
+        expect(result.deferredPayload).toBeUndefined();
+    });
+
     it("throws when no foreground agent is found", async () => {
         const tool = sendUserMessageToolBuild();
         const ctx = contextBuild({

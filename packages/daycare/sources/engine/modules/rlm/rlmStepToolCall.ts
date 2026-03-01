@@ -1,7 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 
-import type { ToolExecutionContext } from "@/types";
+import type { DeferredToolHandler, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 import { rlmRuntimeToolExecute } from "./rlmRuntimeToolExecute.js";
@@ -26,6 +26,10 @@ export type RlmStepToolCallResult = {
     toolResult: string;
     toolIsError: boolean;
     resumeOptions: RlmStepResumeOptions;
+    /** Deferred payload from the tool, only set on successful non-error results. */
+    deferredPayload?: unknown;
+    /** Handler to flush the deferred payload after successful script completion. */
+    deferredHandler?: DeferredToolHandler;
 };
 
 /**
@@ -67,6 +71,8 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
     let resumeOptions: RlmStepResumeOptions;
     let toolResultText = "";
     let toolIsError = false;
+    let deferredPayload: unknown;
+    let deferredHandler: DeferredToolHandler | undefined;
     try {
         await options.beforeExecute?.({
             snapshotDump,
@@ -106,6 +112,8 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
                 };
             } else {
                 resumeOptions = { returnValue: value };
+                deferredPayload = toolResult.deferredPayload;
+                deferredHandler = toolResult.deferredHandler;
             }
         }
     } catch (error) {
@@ -129,7 +137,9 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
         toolArgs,
         toolResult: toolResultText,
         toolIsError,
-        resumeOptions
+        resumeOptions,
+        deferredPayload,
+        deferredHandler
     };
 }
 

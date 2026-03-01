@@ -21,6 +21,55 @@ describe("sayTool", () => {
         expect(result.toolMessage.isError).toBe(false);
     });
 
+    it("defers sending during pythonExecution", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = sayTool();
+        const context = contextBuild({ sendMessage });
+        (context as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute({ text: "Hello user" }, context, toolCall);
+
+        expect(sendMessage).not.toHaveBeenCalled();
+        expect(result.deferredPayload).toEqual({
+            connector: "telegram",
+            targetId: "channel-1",
+            text: "Hello user",
+            replyToMessageId: "message-1"
+        });
+        expect(result.toolMessage.isError).toBe(false);
+    });
+
+    it("sends immediately during pythonExecution when now=true", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = sayTool();
+        const context = contextBuild({ sendMessage });
+        (context as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute({ text: "Urgent", now: true }, context, toolCall);
+
+        expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+            text: "Urgent",
+            replyToMessageId: "message-1"
+        });
+        expect(result.deferredPayload).toBeUndefined();
+    });
+
+    it("executeDeferred sends via connector", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = sayTool();
+        const context = contextBuild({ sendMessage });
+
+        await tool.executeDeferred!(
+            { connector: "telegram", targetId: "channel-1", text: "deferred msg", replyToMessageId: "msg-1" },
+            context
+        );
+
+        expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+            text: "deferred msg",
+            replyToMessageId: "msg-1"
+        });
+    });
+
     it("is visible by default only for foreground user agents", () => {
         const tool = sayTool();
         const isUserVisible = tool.visibleByDefault?.({

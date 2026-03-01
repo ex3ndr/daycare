@@ -37,6 +37,7 @@ import { rlmWorkerKeyResolve } from "../../modules/rlm/rlmWorkerKeyResolve.js";
 import { taskParameterPreambleStubs } from "../../modules/tasks/taskParameterCodegen.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
+import { deferredToolFlush, deferredToolStatusBuild } from "../../modules/tools/deferredToolFlush.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
@@ -234,7 +235,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const runPythonFailureHandle = async (
         blockState: AgentLoopBlockState,
         error: unknown,
-        options?: { printOutput?: string[]; toolCallCount?: number }
+        options?: { printOutput?: string[]; toolCallCount?: number; deferredDiscardCount?: number }
     ): Promise<void> => {
         const message = error instanceof Error ? error.message : String(error);
         await appendHistoryRecord?.(
@@ -245,9 +246,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 options?.toolCallCount ?? 0
             )
         );
+        const errorText = rlmErrorTextBuild(error) + deferredToolStatusBuild(null, options?.deferredDiscardCount ?? 0);
         context.messages.push(
-            rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, rlmErrorTextBuild(error), true)
-                .toolMessage
+            rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, errorText, true).toolMessage
         );
         const truncated = agentMessageRunPythonFailureTrim(blockState.historyResponseText, blockState.blockIndex);
         if (truncated !== null && response?.message) {
@@ -393,7 +394,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             printOutput,
                             printCapture,
                             printCallback,
-                            toolCallCount: initialPhase.snapshot.toolCallCount
+                            toolCallCount: initialPhase.snapshot.toolCallCount,
+                            deferredEntries: []
                         };
                     } else {
                         rlmPrintCaptureFlushTrailing(printCapture);
@@ -404,7 +406,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 output: rlmValueFormat(resumed.output),
                                 printOutput,
                                 toolCallCount: initialPhase.snapshot.toolCallCount
-                            }
+                            },
+                            deferredEntries: []
                         };
                     }
                 } catch (error) {
@@ -720,7 +723,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 printOutput,
                                 printCapture,
                                 printCallback,
-                                toolCallCount: 0
+                                toolCallCount: 0,
+                                deferredEntries: []
                             };
                             break;
                         }
@@ -733,7 +737,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 output: rlmValueFormat(progress.output),
                                 printOutput,
                                 toolCallCount: 0
-                            }
+                            },
+                            deferredEntries: []
                         };
                     } catch (error) {
                         await runPythonFailureHandle(blockState, error);
@@ -754,7 +759,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                     printOutput: phase.printOutput,
                                     toolCallCount: phase.toolCallCount,
                                     skipTurn: true
-                                }
+                                },
+                                deferredEntries: phase.deferredEntries
                             };
                             break;
                         }
@@ -790,7 +796,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                     output: rlmValueFormat(resumed.output),
                                     printOutput: phase.printOutput,
                                     toolCallCount: phase.toolCallCount
-                                }
+                                },
+                                deferredEntries: phase.deferredEntries
                             };
                             break;
                         }
@@ -847,6 +854,15 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             toolIsError: stepResult.toolIsError
                         });
 
+                        // Accumulate deferred tool entries for flush after block success
+                        if (stepResult.deferredPayload !== undefined && stepResult.deferredHandler) {
+                            phase.deferredEntries.push({
+                                toolName: stepResult.toolName,
+                                payload: stepResult.deferredPayload,
+                                handler: stepResult.deferredHandler
+                            });
+                        }
+
                         const steering = blockState.checkSteering();
                         if (steering) {
                             rlmPrintCaptureFlushTrailing(phase.printCapture);
@@ -873,7 +889,8 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                                         text: steering.text,
                                         origin: steering.origin
                                     }
-                                }
+                                },
+                                deferredEntries: phase.deferredEntries
                             };
                             break;
                         }
@@ -901,19 +918,33 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                                 output: rlmValueFormat(resumed.output),
                                 printOutput: phase.printOutput,
                                 toolCallCount: nextToolCallCount
-                            }
+                            },
+                            deferredEntries: phase.deferredEntries
                         };
                     } catch (error) {
                         if (isInferenceAbortError(error, abortSignal)) {
                             throw error;
                         }
-                        await runPythonFailureHandle(blockState, error);
+                        const discardedCount = phase.type === "tool_call" ? phase.deferredEntries.length : 0;
+                        await runPythonFailureHandle(blockState, error, {
+                            printOutput: phase.type === "tool_call" ? phase.printOutput : undefined,
+                            toolCallCount: phase.type === "tool_call" ? phase.toolCallCount : undefined,
+                            deferredDiscardCount: discardedCount
+                        });
                         phase = runPythonErrorPhaseResolve(blockState);
                     }
                     break;
                 }
                 case "block_complete": {
-                    const { blockState, result } = phase;
+                    const { blockState, result, deferredEntries } = phase;
+
+                    // Flush deferred tool entries on successful block completion
+                    let deferredStatus = "";
+                    if (deferredEntries.length > 0) {
+                        const flushResult = await deferredToolFlush(deferredEntries, blockState.executionContext);
+                        deferredStatus = deferredToolStatusBuild(flushResult, deferredEntries.length);
+                    }
+
                     await appendHistoryRecord?.({
                         type: "rlm_complete",
                         at: Date.now(),
@@ -923,12 +954,10 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         toolCallCount: result.toolCallCount,
                         isError: false
                     });
+                    const resultText = rlmResultTextBuild(result) + deferredStatus;
                     context.messages.push(
-                        rlmToolResultBuild(
-                            { id: blockState.toolCallId, name: RLM_TOOL_NAME },
-                            rlmResultTextBuild(result),
-                            false
-                        ).toolMessage
+                        rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, resultText, false)
+                            .toolMessage
                     );
 
                     if (result.skipTurn) {

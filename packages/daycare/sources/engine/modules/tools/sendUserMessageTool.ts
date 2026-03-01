@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
 import { messageBuildUserFacing } from "../../messages/messageBuildUserFacing.js";
 import { swarmAgentResolve } from "../../swarms/swarmAgentResolve.js";
@@ -10,12 +10,29 @@ const schema = Type.Object(
     {
         text: Type.String({ minLength: 1 }),
         nametag: Type.Optional(Type.String({ minLength: 1 })),
-        wait: Type.Optional(Type.Boolean())
+        wait: Type.Optional(Type.Boolean()),
+        now: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
 );
 
 type SendUserMessageArgs = Static<typeof schema>;
+
+type SendUserMessageDeferredPayload =
+    | {
+          kind: "foreground";
+          ctxUserId: string;
+          resolvedTarget: string;
+          wrappedText: string;
+          origin: string;
+      }
+    | {
+          kind: "swarm";
+          swarmUserId: string;
+          swarmAgentId: string;
+          text: string;
+          origin: string;
+      };
 
 const sendUserMessageResultSchema = Type.Object(
     {
@@ -55,11 +72,13 @@ export function sendUserMessageToolBuild(): ToolDefinition {
             const origin = toolContext.agent.id;
             const targetNametag = payload.nametag?.trim().toLowerCase() ?? "";
 
+            // Swarm path: wait=true cannot be deferred (needs synchronous response)
             if (targetNametag) {
                 return sendSwarmMessage(toolContext, toolCall, {
                     text: payload.text,
                     nametag: targetNametag,
                     wait: payload.wait ?? false,
+                    now: payload.now,
                     origin
                 });
             }
@@ -76,6 +95,36 @@ export function sendUserMessageToolBuild(): ToolDefinition {
             }
 
             const wrappedText = messageBuildUserFacing(payload.text, origin);
+
+            // Defer sending during Python execution unless now=true
+            if (toolContext.pythonExecution && !payload.now) {
+                const summary = "Message deferred for user delivery.";
+                const toolMessage: ToolResultMessage = {
+                    role: "toolResult",
+                    toolCallId: toolCall.id,
+                    toolName: toolCall.name,
+                    content: [{ type: "text", text: summary }],
+                    isError: false,
+                    timestamp: Date.now()
+                };
+                const deferredPayload: SendUserMessageDeferredPayload = {
+                    kind: "foreground",
+                    ctxUserId: toolContext.ctx.userId,
+                    resolvedTarget,
+                    wrappedText,
+                    origin
+                };
+                return {
+                    toolMessage,
+                    typedResult: {
+                        summary,
+                        targetAgentId: resolvedTarget,
+                        originAgentId: origin
+                    },
+                    deferredPayload
+                };
+            }
+
             await toolContext.agentSystem.post(
                 toolContext.ctx,
                 { agentId: resolvedTarget },
@@ -109,6 +158,31 @@ export function sendUserMessageToolBuild(): ToolDefinition {
                     originAgentId: origin
                 }
             };
+        },
+        executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
+            const p = payload as SendUserMessageDeferredPayload;
+            if (p.kind === "foreground") {
+                await context.agentSystem.post(
+                    { userId: p.ctxUserId, agentId: context.agent.ctx.agentId },
+                    { agentId: p.resolvedTarget },
+                    {
+                        type: "system_message",
+                        text: p.wrappedText,
+                        origin: p.origin
+                    }
+                );
+            } else {
+                const swarmCtx = contextForUser({ userId: p.swarmUserId });
+                await context.agentSystem.post(
+                    swarmCtx,
+                    { agentId: p.swarmAgentId },
+                    {
+                        type: "system_message",
+                        text: p.text,
+                        origin: p.origin
+                    }
+                );
+            }
         }
     };
 }
@@ -117,6 +191,7 @@ type SendSwarmMessageInput = {
     text: string;
     nametag: string;
     wait: boolean;
+    now?: boolean;
     origin: string;
 };
 
@@ -127,6 +202,7 @@ async function sendSwarmMessage(
 ): Promise<{
     toolMessage: ToolResultMessage;
     typedResult: SendUserMessageResult;
+    deferredPayload?: unknown;
 }> {
     const targetUser = await toolContext.agentSystem.storage.users.findByNametag(input.nametag);
     if (!targetUser) {
@@ -153,6 +229,35 @@ async function sendSwarmMessage(
         text: messageText,
         origin: input.origin
     };
+
+    // Defer swarm sends during Python execution (auto-bypass when wait=true since we need the response)
+    if (toolContext.pythonExecution && !input.now && !input.wait) {
+        const summary = `Message to swarm @${input.nametag} deferred.`;
+        const toolMessage: ToolResultMessage = {
+            role: "toolResult",
+            toolCallId: toolCall.id,
+            toolName: toolCall.name,
+            content: [{ type: "text", text: summary }],
+            isError: false,
+            timestamp: Date.now()
+        };
+        const deferredPayload: SendUserMessageDeferredPayload = {
+            kind: "swarm",
+            swarmUserId: targetUser.id,
+            swarmAgentId: resolved.swarmAgentId,
+            text: messageText,
+            origin: input.origin
+        };
+        return {
+            toolMessage,
+            typedResult: {
+                summary,
+                targetAgentId: resolved.swarmAgentId,
+                originAgentId: input.origin
+            },
+            deferredPayload
+        };
+    }
 
     let summary = `Message sent to swarm @${input.nametag}.`;
     if (input.wait) {
