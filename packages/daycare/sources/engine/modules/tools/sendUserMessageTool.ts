@@ -30,6 +30,7 @@ type SendUserMessageDeferredPayload =
           kind: "swarm";
           swarmUserId: string;
           swarmAgentId: string;
+          contactAgentId: string;
           text: string;
           origin: string;
       };
@@ -173,6 +174,7 @@ export function sendUserMessageToolBuild(): ToolDefinition {
                 );
             } else {
                 const swarmCtx = contextForUser({ userId: p.swarmUserId });
+                await context.agentSystem.storage.swarmContacts.recordReceived(p.swarmUserId, p.contactAgentId);
                 await context.agentSystem.post(
                     swarmCtx,
                     { agentId: p.swarmAgentId },
@@ -217,7 +219,6 @@ async function sendSwarmMessage(
         contactAgentId: toolContext.agent.id,
         agentSystem: toolContext.agentSystem
     });
-    await toolContext.agentSystem.storage.swarmContacts.recordReceived(targetUser.id, toolContext.agent.id);
 
     const messageText = input.text.trim();
     if (!messageText) {
@@ -245,6 +246,7 @@ async function sendSwarmMessage(
             kind: "swarm",
             swarmUserId: targetUser.id,
             swarmAgentId: resolved.swarmAgentId,
+            contactAgentId: toolContext.agent.id,
             text: messageText,
             origin: input.origin
         };
@@ -258,6 +260,8 @@ async function sendSwarmMessage(
             deferredPayload
         };
     }
+
+    await toolContext.agentSystem.storage.swarmContacts.recordReceived(targetUser.id, toolContext.agent.id);
 
     let summary = `Message sent to swarm @${input.nametag}.`;
     if (input.wait) {
