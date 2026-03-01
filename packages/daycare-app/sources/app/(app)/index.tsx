@@ -159,6 +159,7 @@ export default function DaycareHomeScreen() {
                 panel2={<PanelTwo mode={mode} />}
                 panel3={isDocuments && selectedId ? <DocumentMetadataPanel /> : undefined}
                 panel3Placeholder={undefined}
+                keepPanel1={isDocuments}
             />
             {isDocuments && (
                 <DocumentCreateDialog

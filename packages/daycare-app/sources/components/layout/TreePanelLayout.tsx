@@ -10,10 +10,12 @@ export type TreePanelLayoutProps = {
     panel3?: React.ReactNode;
     panel3Placeholder?: React.ReactNode;
     onClosePanel3?: () => void;
+    /** When true, panel1 stays visible when panel3 opens instead of sliding off-screen. */
+    keepPanel1?: boolean;
 };
 
 export const TreePanelLayout = React.memo<TreePanelLayoutProps>(
-    ({ panel1, panel2, panel3, panel3Placeholder, onClosePanel3 }) => {
+    ({ panel1, panel2, panel3, panel3Placeholder, onClosePanel3, keepPanel1 }) => {
         const { rt } = useUnistyles();
 
         // Wide screen (xl): All 3 panels visible, panel 3 or placeholder
@@ -26,6 +28,7 @@ export const TreePanelLayout = React.memo<TreePanelLayoutProps>(
                         panel3={panel3}
                         panel3Placeholder={panel3Placeholder || null}
                         onClosePanel3={onClosePanel3}
+                        keepPanel1={keepPanel1}
                     />
                 </View>
             );
@@ -39,6 +42,7 @@ export const TreePanelLayout = React.memo<TreePanelLayoutProps>(
                     panel2={panel2}
                     panel3={panel3}
                     onClosePanel3={onClosePanel3}
+                    keepPanel1={keepPanel1}
                 />
             </View>
         );

@@ -12,12 +12,14 @@ export type TreePanelLayoutWideProps = {
     panel3?: React.ReactNode;
     panel3Placeholder: React.ReactNode;
     onClosePanel3?: () => void;
+    keepPanel1?: boolean;
 };
 
 export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
-    ({ panel1, panel2, panel3, panel3Placeholder, onClosePanel3 }) => {
+    ({ panel1, panel2, panel3, panel3Placeholder, onClosePanel3, keepPanel1 }) => {
         const { rt } = useUnistyles();
         const hasPanel3Content = !!panel3;
+        const shouldSlidePanel1 = hasPanel3Content && !keepPanel1;
 
         // Hover state for left overlay
         const [isOverlayHovered, setIsOverlayHovered] = React.useState(false);
@@ -26,12 +28,18 @@ export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
         const containerWidth = useSharedValue(rt.screen.width);
 
         // Shared values for animations
-        const translateX = useSharedValue(hasPanel3Content ? -SIDEBAR_WIDTH : 0);
+        const translateX = useSharedValue(shouldSlidePanel1 ? -SIDEBAR_WIDTH : 0);
         const panel1HoverOffset = useSharedValue(0);
         const panel3Flex = useSharedValue(hasPanel3Content ? 1 : 0);
         const panel3Width = useSharedValue(hasPanel3Content ? 0 : SIDEBAR_WIDTH);
         const contentOpacity = useSharedValue(hasPanel3Content ? 1 : 0);
         const placeholderOpacity = useSharedValue(hasPanel3Content ? 0 : 1);
+        const keepPanel1Shared = useSharedValue(keepPanel1 ? 1 : 0);
+
+        // Sync keepPanel1 prop to shared value
+        React.useEffect(() => {
+            keepPanel1Shared.value = keepPanel1 ? 1 : 0;
+        }, [keepPanel1, keepPanel1Shared]);
 
         // Calculate panels 2&3 wrapper width
         const panels23TargetWidth = useDerivedValue(() => {
@@ -42,16 +50,25 @@ export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
             // When expanded: innerWidth - 16 (gap, panel1 shifted off screen but gap remains)
             const innerWidth = containerWidth.value - 32;
             const collapsedWidth = innerWidth - SIDEBAR_WIDTH - 16;
+            if (keepPanel1Shared.value === 1) {
+                // When keeping panel1, panels23 stays at collapsed width
+                return collapsedWidth;
+            }
             const expandedWidth = innerWidth - 16;
             return collapsedWidth + (expandedWidth - collapsedWidth) * panel3Flex.value;
         });
 
-        // Calculate panel3 content width - always at expanded size
+        // Calculate panel3 content width
         const panel3ContentTargetWidth = useDerivedValue(() => {
             "worklet";
             if (containerWidth.value === 0) return 0;
-            // Content width is half of the expanded panels23 wrapper (minus gap)
             const innerWidth = containerWidth.value - 32;
+            if (keepPanel1Shared.value === 1) {
+                // When keeping panel1, split the collapsed panels23 area in half
+                const collapsedWidth = innerWidth - SIDEBAR_WIDTH - 16;
+                return (collapsedWidth - 16) / 2;
+            }
+            // Content width is half of the expanded panels23 wrapper (minus gap)
             const expandedPanels23Width = innerWidth - 16;
             return (expandedPanels23Width - 16) / 2; // 16 is the gap between panel2 and panel3
         });
@@ -84,7 +101,9 @@ export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
         // Update animations when panel3 content changes
         React.useEffect(() => {
             if (hasPanel3Content) {
-                translateX.value = withTiming(-SIDEBAR_WIDTH, { duration: ANIMATION_DURATION });
+                translateX.value = withTiming(shouldSlidePanel1 ? -SIDEBAR_WIDTH : 0, {
+                    duration: ANIMATION_DURATION
+                });
                 panel3Flex.value = withTiming(1, { duration: ANIMATION_DURATION });
                 panel3Width.value = withTiming(0, { duration: ANIMATION_DURATION });
                 contentOpacity.value = withTiming(1, { duration: ANIMATION_DURATION });
@@ -96,16 +115,24 @@ export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
                 contentOpacity.value = withTiming(0, { duration: ANIMATION_DURATION });
                 placeholderOpacity.value = withTiming(1, { duration: ANIMATION_DURATION });
             }
-        }, [hasPanel3Content, translateX, panel3Flex, panel3Width, contentOpacity, placeholderOpacity]);
+        }, [
+            hasPanel3Content,
+            shouldSlidePanel1,
+            translateX,
+            panel3Flex,
+            panel3Width,
+            contentOpacity,
+            placeholderOpacity
+        ]);
 
-        // Update hover offset when overlay is hovered (only when panel 3 is expanded)
+        // Update hover offset when overlay is hovered (only when panel1 is sliding)
         React.useEffect(() => {
-            if (hasPanel3Content && isOverlayHovered) {
+            if (shouldSlidePanel1 && isOverlayHovered) {
                 panel1HoverOffset.value = withTiming(5, { duration: 200 });
             } else {
                 panel1HoverOffset.value = withTiming(0, { duration: 200 });
             }
-        }, [isOverlayHovered, hasPanel3Content, panel1HoverOffset]);
+        }, [isOverlayHovered, shouldSlidePanel1, panel1HoverOffset]);
 
         // Animated styles
         const wrapperAnimatedStyle = useAnimatedStyle(() => ({
@@ -152,7 +179,7 @@ export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
 
         return (
             <View style={styles.container}>
-                {hasPanel3Content && (
+                {shouldSlidePanel1 && (
                     <Pressable
                         style={styles.leftOverlay}
                         onHoverIn={handleOverlayMouseEnter}
@@ -163,7 +190,7 @@ export const TreePanelLayoutWide = React.memo<TreePanelLayoutWideProps>(
                 <Animated.View style={[styles.panelsWrapper, wrapperAnimatedStyle]}>
                     <Animated.View
                         style={[styles.panel1, panel1AnimatedStyle]}
-                        pointerEvents={hasPanel3Content ? "none" : "auto"}
+                        pointerEvents={shouldSlidePanel1 ? "none" : "auto"}
                     >
                         {panel1}
                     </Animated.View>
