@@ -151,17 +151,19 @@ function rowParse(row: typeof tokenStatsHourlyTable.$inferSelect): TokenStatsHou
 }
 
 function numberTokenNormalize(value: unknown): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
+    const parsed = numberParse(value);
+    if (parsed === null) {
         return 0;
     }
-    return Math.max(0, Math.trunc(value));
+    return Math.max(0, Math.trunc(parsed));
 }
 
 function numberCostNormalize(value: unknown): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
+    const parsed = numberParse(value);
+    if (parsed === null) {
         return 0;
     }
-    return Math.max(0, value);
+    return Math.max(0, parsed);
 }
 
 function hourStartResolve(value: number): number {
@@ -176,4 +178,19 @@ function numberLimitResolve(value: number | undefined): number | null {
         return null;
     }
     return Math.max(1, Math.floor(value));
+}
+
+function numberParse(value: unknown): number | null {
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+            return null;
+        }
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
 }

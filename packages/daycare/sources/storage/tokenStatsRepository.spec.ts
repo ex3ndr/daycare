@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Context } from "@/types";
 import { agentsTable, usersTable } from "../schema.js";
 import { storageOpenTest } from "./storageOpenTest.js";
@@ -139,6 +139,49 @@ describe("TokenStatsRepository", () => {
         } finally {
             storage.connection.close();
         }
+    });
+
+    it("coerces numeric string rows from db drivers into numeric token stats", async () => {
+        const dbRows = [
+            {
+                hourStart: 1772326800000,
+                userId: "user-a",
+                agentId: "agent-a",
+                model: "google/gemini-2.5-flash",
+                inputTokens: "1316725",
+                outputTokens: "5923245",
+                cacheReadTokens: "0",
+                cacheWriteTokens: "",
+                cost: "3.25"
+            }
+        ];
+        const baseQuery = {
+            where: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            limit: vi.fn(async () => dbRows)
+        };
+        const db = {
+            select: vi.fn(() => ({
+                from: vi.fn(() => baseQuery)
+            }))
+        } as unknown as ConstructorParameters<typeof TokenStatsRepository>[0];
+
+        const repository = new TokenStatsRepository(db);
+        const rows = await repository.findAll({ limit: 1 });
+
+        expect(rows).toEqual([
+            {
+                hourStart: 1772326800000,
+                userId: "user-a",
+                agentId: "agent-a",
+                model: "google/gemini-2.5-flash",
+                input: 1316725,
+                output: 5923245,
+                cacheRead: 0,
+                cacheWrite: 0,
+                cost: 3.25
+            }
+        ]);
     });
 });
 
