@@ -142,7 +142,15 @@ export class AgentSystem {
                 return;
             }
             const signal = event.payload as Signal;
-            const agentId = parsePoisonPillAgentId(signal.type);
+            const parts = signal.type.split(":");
+            if (parts.length !== 3) {
+                return;
+            }
+            const [prefix, parsedAgentId, suffix] = parts;
+            if (prefix !== "agent" || suffix !== "poison-pill") {
+                return;
+            }
+            const agentId = parsedAgentId?.trim() ?? "";
             if (!agentId) {
                 return;
             }
@@ -493,14 +501,28 @@ export class AgentSystem {
             return null;
         }
         candidates.sort((a, b) => {
-            const aPrefix = foregroundPriorityPrefix(a.descriptor);
-            const bPrefix = foregroundPriorityPrefix(b.descriptor);
+            const aPrefix =
+                a.descriptor.type === "user"
+                    ? a.descriptor.connector === "telegram"
+                        ? "aa-telegram"
+                        : "bb-user"
+                    : a.descriptor.type === "swarm"
+                      ? "cc-swarm"
+                      : "zz-other";
+            const bPrefix =
+                b.descriptor.type === "user"
+                    ? b.descriptor.connector === "telegram"
+                        ? "aa-telegram"
+                        : "bb-user"
+                    : b.descriptor.type === "swarm"
+                      ? "cc-swarm"
+                      : "zz-other";
             if (aPrefix !== bPrefix) {
                 return aPrefix.localeCompare(bPrefix);
             }
 
-            const aStateRank = statePriorityRank(a.agent.state.state);
-            const bStateRank = statePriorityRank(b.agent.state.state);
+            const aStateRank = a.agent.state.state === "active" ? 0 : a.agent.state.state === "sleeping" ? 1 : 2;
+            const bStateRank = b.agent.state.state === "active" ? 0 : b.agent.state.state === "sleeping" ? 1 : 2;
             if (aStateRank !== bStateRank) {
                 return aStateRank - bStateRank;
             }
@@ -614,7 +636,7 @@ export class AgentSystem {
             const existing = this.entries.get(target.agentId);
             if (existing) {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
-                    throw deadErrorBuild(target.agentId);
+                    throw new Error(`Agent is dead: ${target.agentId}`);
                 }
                 if (existing.ctx.userId !== ctx.userId) {
                     throw new Error(`Cannot post to agent from another user: ${target.agentId}`);
@@ -637,7 +659,7 @@ export class AgentSystem {
             const existing = this.entries.get(existingAgentId);
             if (existing) {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
-                    throw deadErrorBuild(existingAgentId);
+                    throw new Error(`Agent is dead: ${existingAgentId}`);
                 }
                 if (existing.ctx.userId !== ctx.userId) {
                     throw new Error(`Cannot resolve agent from another user: ${existingAgentId}`);
@@ -672,7 +694,7 @@ export class AgentSystem {
             const existing = this.entries.get(stableDescriptorId);
             if (existing) {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
-                    throw deadErrorBuild(stableDescriptorId);
+                    throw new Error(`Agent is dead: ${stableDescriptorId}`);
                 }
                 if (existing.ctx.userId !== ctx.userId) {
                     throw new Error(`Cannot resolve agent from another user: ${stableDescriptorId}`);
@@ -849,7 +871,7 @@ export class AgentSystem {
             return;
         }
         const deliverAt = Date.now() + AGENT_IDLE_DELAY_MS;
-        const type = lifecycleSignalTypeBuild(agentId, "idle");
+        const type = `agent:${agentId}:idle`;
         try {
             await this.delayedSignals.schedule({
                 type,
@@ -869,7 +891,7 @@ export class AgentSystem {
         }
         try {
             await this.delayedSignals.cancelByRepeatKey({
-                type: lifecycleSignalTypeBuild(agentId, "idle"),
+                type: `agent:${agentId}:idle`,
                 repeatKey: AGENT_IDLE_REPEAT_KEY
             });
         } catch (error) {
@@ -896,7 +918,7 @@ export class AgentSystem {
             // load() runs before DelayedSignals.start(); ensure persistence directory exists.
             await fs.mkdir(`${this.config.current.configDir}/signals`, { recursive: true });
             await this.delayedSignals.schedule({
-                type: lifecycleSignalTypeBuild(agentId, "poison-pill"),
+                type: `agent:${agentId}:poison-pill`,
                 deliverAt: options?.deliverAt ?? Date.now() + AGENT_POISON_PILL_DELAY_MS,
                 source: { type: "agent", id: agentId, userId: context.userId },
                 data: { agentId, state: "poison-pill" },
@@ -917,7 +939,7 @@ export class AgentSystem {
         }
         try {
             await this.delayedSignals.cancelByRepeatKey({
-                type: lifecycleSignalTypeBuild(agentId, "poison-pill"),
+                type: `agent:${agentId}:poison-pill`,
                 repeatKey: AGENT_POISON_PILL_REPEAT_KEY
             });
         } catch (error) {
@@ -935,7 +957,7 @@ export class AgentSystem {
         }
         try {
             await this._signals.generate({
-                type: lifecycleSignalTypeBuild(agentId, state),
+                type: `agent:${agentId}:${state}`,
                 source: { type: "agent", id: agentId, userId: context.userId },
                 data: { agentId, state }
             });
@@ -1031,7 +1053,7 @@ export class AgentSystem {
         entry.running = false;
         this.entries.delete(entry.ctx.agentId);
         this.pathMap.delete(entry.path);
-        const deadError = deadErrorBuild(entry.ctx.agentId);
+        const deadError = new Error(`Agent is dead: ${entry.ctx.agentId}`);
         for (const queued of pending) {
             queued.completion?.reject(deadError);
         }
@@ -1057,7 +1079,7 @@ export class AgentSystem {
             return null;
         }
         if (state.state === "dead") {
-            throw deadErrorBuild(agentId);
+            throw new Error(`Agent is dead: ${agentId}`);
         }
         if (state.state === "sleeping" && !options?.allowSleeping) {
             return null;
@@ -1431,54 +1453,10 @@ function pathKindResolve(path: AgentPath, segments = pathSegments(path)): AgentP
     throw new Error(`Unknown path pattern: ${path}`);
 }
 
-function foregroundPriorityPrefix(descriptor: AgentDescriptor): string {
-    if (descriptor.type === "user" && descriptor.connector === "telegram") {
-        return "aa-telegram";
-    }
-    if (descriptor.type === "user") {
-        return "bb-user";
-    }
-    if (descriptor.type === "swarm") {
-        return "cc-swarm";
-    }
-    return "zz-other";
-}
-
-function statePriorityRank(state: "active" | "sleeping" | "dead"): number {
-    if (state === "active") {
-        return 0;
-    }
-    if (state === "sleeping") {
-        return 1;
-    }
-    return 2;
-}
-
 function pathTrimSegments(path: AgentPath, count: number): AgentPath {
     const segments = pathSegments(path);
     if (count <= 0 || count >= segments.length) {
         throw new Error(`Cannot trim ${count} segments from path: ${path}`);
     }
     return `/${segments.slice(0, segments.length - count).join("/")}` as AgentPath;
-}
-
-function lifecycleSignalTypeBuild(agentId: string, state: "wake" | "sleep" | "idle" | "poison-pill"): string {
-    return `agent:${agentId}:${state}`;
-}
-
-function parsePoisonPillAgentId(signalType: string): string | null {
-    const parts = signalType.split(":");
-    if (parts.length !== 3) {
-        return null;
-    }
-    const [prefix, agentId, suffix] = parts;
-    if (prefix !== "agent" || suffix !== "poison-pill") {
-        return null;
-    }
-    const normalized = agentId?.trim() ?? "";
-    return normalized ? normalized : null;
-}
-
-function deadErrorBuild(agentId: string): Error {
-    return new Error(`Agent is dead: ${agentId}`);
 }
