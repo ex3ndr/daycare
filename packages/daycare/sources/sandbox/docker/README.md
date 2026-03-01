@@ -75,6 +75,8 @@ All sandbox containers mount `/tmp`, `/run`, `/var/tmp`, and `/var/run` as writa
 - Docker `Sandbox.exec()` includes `/tmp`, `/run`, and `/var/tmp` in `sandbox-runtime` `allowWrite`.
 - `Sandbox.exec()` intentionally excludes `/var/run` because `sandbox-runtime` already maps `/run` and fails when
   `/var/run` is explicitly listed.
+- Docker execution normalizes `TMPDIR`, `TMP`, and `TEMP` to `/tmp` so headless Chrome does not attempt to create
+  runtime shared-memory files under `/home/.tmp`.
 
 When `enableWeakerNestedSandbox` is `true`, `Sandbox.exec()` includes this runtime config:
 

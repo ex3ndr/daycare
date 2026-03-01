@@ -61,7 +61,7 @@ export async function dockerRunInSandbox(
         env: options.env ?? process.env,
         home: hostHomeDir
     });
-    const containerEnv = envPathRewrite(env, mounts);
+    const containerEnv = dockerTmpEnvNormalize(envPathRewrite(env, mounts));
     const containerCwd = options.cwd ? containerPathRewriteStrict(options.cwd, mounts) : undefined;
     const settingsContainerPath = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: settingsHostPath });
     if (!settingsContainerPath) {
@@ -146,6 +146,19 @@ function envPathRewrite(env: NodeJS.ProcessEnv, mounts: PathMountPoint[]): NodeJ
     }
 
     return rewritten;
+}
+
+/**
+ * Normalizes temp paths for Docker execution to avoid Chrome sandbox failures with /home/.tmp.
+ * Expects: env has already been path-rewritten for container mounts.
+ */
+function dockerTmpEnvNormalize(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    return {
+        ...env,
+        TMPDIR: "/tmp",
+        TMP: "/tmp",
+        TEMP: "/tmp"
+    };
 }
 
 function containerPathRewrite(value: string, mounts: PathMountPoint[]): string {

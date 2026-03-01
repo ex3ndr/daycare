@@ -122,7 +122,9 @@ describe("dockerRunInSandbox", () => {
             }
         });
         expect(capturedEnv?.HOME).toBe("/home");
-        expect(capturedEnv?.TMPDIR).toBe("/home/.tmp");
+        expect(capturedEnv?.TMPDIR).toBe("/tmp");
+        expect(capturedEnv?.TMP).toBe("/tmp");
+        expect(capturedEnv?.TEMP).toBe("/tmp");
         expect(capturedCwd).toBe("/home/desktop/project");
         expect(capturedReadOnly).toBe(false);
         expect(capturedUnconfinedSecurity).toBe(false);
