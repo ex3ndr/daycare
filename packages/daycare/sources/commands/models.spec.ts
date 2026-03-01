@@ -8,6 +8,13 @@ import {
 } from "./models.js";
 
 describe("models command helpers", () => {
+    it("parses role assignment targets including task", () => {
+        expect(assignmentTargetParse("role:task")).toEqual({
+            type: "role",
+            key: "task"
+        });
+    });
+
     it("parses flavor assignment targets", () => {
         expect(assignmentTargetParse("flavor:coding")).toEqual({
             type: "flavor",

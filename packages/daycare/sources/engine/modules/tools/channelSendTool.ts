@@ -107,6 +107,9 @@ function senderUsernameResolve(descriptor: AgentDescriptor): string {
     if (descriptor.type === "memory-search") {
         return usernameNormalize(descriptor.name);
     }
+    if (descriptor.type === "task") {
+        return usernameNormalize(descriptor.id);
+    }
     if (descriptor.type === "subuser") {
         return usernameNormalize(descriptor.name);
     }

@@ -112,7 +112,7 @@ describe("Crons", () => {
 
             expect(agentSystemMock.postAndAwait).toHaveBeenCalledWith(
                 expect.objectContaining({ userId: "user-1", hasAgentId: false }),
-                { descriptor: { type: "system", tag: "cron" } },
+                { descriptor: { type: "task", id: "task-1" } },
                 expect.objectContaining({
                     type: "system_message",
                     origin: "cron",

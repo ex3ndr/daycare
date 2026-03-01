@@ -35,7 +35,7 @@ export type ProviderSettings = {
     image?: ProviderImageSettings;
 };
 
-export type ModelRoleKey = "user" | "memory" | "memorySearch" | "subagent" | "heartbeat";
+export type ModelRoleKey = "user" | "memory" | "memorySearch" | "subagent" | "heartbeat" | "task";
 export type ModelFlavorKey = string;
 
 export type BuiltinModelFlavor = "small" | "normal" | "large";

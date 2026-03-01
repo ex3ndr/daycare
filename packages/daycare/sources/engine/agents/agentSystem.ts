@@ -615,27 +615,29 @@ export class AgentSystem {
             }
         }
 
-        if (descriptor.type === "cron" && cuid2Is(descriptor.id)) {
-            const existing = this.entries.get(descriptor.id);
+        const stableDescriptorId =
+            (descriptor.type === "cron" || descriptor.type === "task") && cuid2Is(descriptor.id) ? descriptor.id : null;
+        if (stableDescriptorId) {
+            const existing = this.entries.get(stableDescriptorId);
             if (existing) {
                 if (existing.agent.state.state === "dead" || existing.terminating) {
-                    throw deadErrorBuild(descriptor.id);
+                    throw deadErrorBuild(stableDescriptorId);
                 }
                 if (existing.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${descriptor.id}`);
+                    throw new Error(`Cannot resolve agent from another user: ${stableDescriptorId}`);
                 }
                 return existing;
             }
-            const restored = await this.restoreAgent(descriptor.id, { allowSleeping: true });
+            const restored = await this.restoreAgent(stableDescriptorId, { allowSleeping: true });
             if (restored) {
                 if (restored.ctx.userId !== ctx.userId) {
-                    throw new Error(`Cannot resolve agent from another user: ${descriptor.id}`);
+                    throw new Error(`Cannot resolve agent from another user: ${stableDescriptorId}`);
                 }
                 return restored;
             }
         }
 
-        const agentId = descriptor.type === "cron" && cuid2Is(descriptor.id) ? descriptor.id : createId();
+        const agentId = stableDescriptorId ?? createId();
         const resolvedDescriptor =
             (descriptor.type === "subagent" || descriptor.type === "app") && descriptor.id !== agentId
                 ? { ...descriptor, id: agentId }
@@ -1041,7 +1043,12 @@ export class AgentSystem {
         if (descriptor.type === "subuser") {
             return descriptor.id;
         }
-        if (descriptor.type === "system" || descriptor.type === "cron" || descriptor.type === "permanent") {
+        if (
+            descriptor.type === "system" ||
+            descriptor.type === "cron" ||
+            descriptor.type === "task" ||
+            descriptor.type === "permanent"
+        ) {
             return ctx.userId;
         }
         throw new Error("Cannot resolve user for descriptor");

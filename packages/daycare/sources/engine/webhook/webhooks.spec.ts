@@ -98,6 +98,48 @@ describe("Webhooks", () => {
         }
     });
 
+    it("uses task descriptor target when webhook trigger has no agentId", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const postAndAwait = vi.fn(async () => ({ status: "completed" }));
+            const webhooks = new Webhooks({
+                storage,
+                agentSystem: {
+                    postAndAwait
+                } as unknown as WebhooksOptions["agentSystem"]
+            });
+
+            await storage.tasks.create({
+                id: "task-default-target",
+                userId: "user-1",
+                title: "Task default target",
+                description: null,
+                code: "print('run')",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await webhooks.addTrigger(contextBuild("user-1"), {
+                taskId: "task-default-target",
+                id: "hook-default-target"
+            });
+
+            await webhooks.trigger("hook-default-target");
+
+            expect(postAndAwait).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1" }),
+                { descriptor: { type: "task", id: "task-default-target" } },
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "webhook",
+                    execute: true
+                })
+            );
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("throws on missing webhook id", async () => {
         const storage = await storageOpenTest();
         try {

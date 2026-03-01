@@ -107,6 +107,28 @@ describe("AgentSystem", () => {
         }
     });
 
+    it("reuses cuid2 task descriptor id as the persistent agent id", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const descriptor: AgentDescriptor = { type: "task", id: createId() };
+            const ownerCtx = await harness.agentSystem.ownerCtxEnsure();
+            await postAndAwait(harness.agentSystem, ownerCtx, { descriptor }, { type: "reset", message: "task init" });
+            const firstAgentId = await agentIdForTarget(harness.agentSystem, ownerCtx, { descriptor });
+
+            await postAndAwait(harness.agentSystem, ownerCtx, { descriptor }, { type: "reset", message: "task rerun" });
+            const secondAgentId = await agentIdForTarget(harness.agentSystem, ownerCtx, { descriptor });
+
+            expect(firstAgentId).toBe(descriptor.id);
+            expect(secondAgentId).toBe(descriptor.id);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("marks sleeping subagents dead when the poison-pill signal fires", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));

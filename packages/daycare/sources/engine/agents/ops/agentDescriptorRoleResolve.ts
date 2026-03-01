@@ -18,6 +18,8 @@ export function agentDescriptorRoleResolve(descriptor: AgentDescriptor): ModelRo
         case "subagent":
         case "app":
             return "subagent";
+        case "task":
+            return "task";
         case "system":
             if (descriptor.tag === "heartbeat") {
                 return "heartbeat";

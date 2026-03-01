@@ -119,7 +119,8 @@ describe("configSettingsParse", () => {
     it("accepts model role and flavor overrides", () => {
         const parsed = configSettingsParse({
             models: {
-                user: "anthropic/claude-sonnet-4-5"
+                user: "anthropic/claude-sonnet-4-5",
+                task: "openai/gpt-5-mini"
             },
             modelFlavors: {
                 coding: {
@@ -134,7 +135,8 @@ describe("configSettingsParse", () => {
         });
 
         expect(parsed.models).toEqual({
-            user: "anthropic/claude-sonnet-4-5"
+            user: "anthropic/claude-sonnet-4-5",
+            task: "openai/gpt-5-mini"
         });
         expect(parsed.modelFlavors).toEqual({
             coding: {

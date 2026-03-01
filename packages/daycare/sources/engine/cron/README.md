@@ -31,7 +31,7 @@ Schedules are evaluated in each trigger's configured IANA timezone.
 
 ## Execution Flow
 
-At execution time, cron routes to the `system:cron` agent (or explicit `agentId`) with one Python code block. The code source of truth is `tasks.code`. The code either produces text output (becomes an LLM prompt) or calls tools and `skip()` to suppress LLM inference.
+At execution time, cron routes to a task-scoped descriptor `{ type: "task", id: task_id }` (or explicit `agentId`) with one Python code block. The code source of truth is `tasks.code`. The code either produces text output (becomes an LLM prompt) or calls tools and `skip()` to suppress LLM inference.
 
 ```mermaid
 flowchart TD

@@ -70,4 +70,9 @@ describe("agentDescriptorRoleResolve", () => {
         const d: AgentDescriptor = { type: "cron", id: "c1" };
         expect(agentDescriptorRoleResolve(d)).toBeNull();
     });
+
+    it("maps task descriptor to 'task'", () => {
+        const d: AgentDescriptor = { type: "task", id: "task-1" };
+        expect(agentDescriptorRoleResolve(d)).toBe("task");
+    });
 });

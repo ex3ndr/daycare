@@ -39,16 +39,10 @@ export class Heartbeats {
             tasksRepository: options.storage.tasks,
             intervalMs: options.intervalMs,
             onRun: async (tasks) => {
-                const tasksByUser = new Map<string, typeof tasks>();
                 for (const task of tasks) {
-                    const list = tasksByUser.get(task.userId) ?? [];
-                    list.push(task);
-                    tasksByUser.set(task.userId, list);
-                }
-                for (const [userId, userTasks] of tasksByUser.entries()) {
-                    const target = { descriptor: { type: "system" as const, tag: "heartbeat" } };
-                    const batch = heartbeatPromptBuildBatch(userTasks);
-                    await this.agentSystem.postAndAwait(contextForUser({ userId }), target, {
+                    const target = { descriptor: { type: "task" as const, id: task.taskId } };
+                    const batch = heartbeatPromptBuildBatch([task]);
+                    await this.agentSystem.postAndAwait(contextForUser({ userId: task.userId }), target, {
                         type: "system_message",
                         text: batch.text,
                         code: batch.code,

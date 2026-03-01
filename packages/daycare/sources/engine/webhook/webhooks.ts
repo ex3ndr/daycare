@@ -122,7 +122,7 @@ export class Webhooks {
 
         const target = trigger.agentId
             ? { agentId: trigger.agentId }
-            : { descriptor: { type: "system" as const, tag: "webhook" } };
+            : { descriptor: { type: "task" as const, id: trigger.taskId } };
         const text = webhookPromptBuild(trigger, task.title, data);
         const messageContext = webhookMessageContextBuild(data);
         await this.agentSystem.postAndAwait(ctx, target, {

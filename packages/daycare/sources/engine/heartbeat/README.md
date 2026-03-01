@@ -25,7 +25,7 @@ Heartbeat triggers live in `tasks_heartbeat`:
 
 ## Execution Flow
 
-Heartbeat groups triggers by user and posts one batch per user to `system:heartbeat`. Runtime code comes from `tasks.code`. The code either produces text output (becomes an LLM prompt) or calls tools and `skip()` to suppress LLM inference.
+Heartbeat posts each trigger to its own task-scoped descriptor `{ type: "task", id: task_id }`. Runtime code comes from `tasks.code`. The code either produces text output (becomes an LLM prompt) or calls tools and `skip()` to suppress LLM inference.
 
 ```mermaid
 flowchart TD
@@ -35,8 +35,8 @@ flowchart TD
   Scheduler --> Tick[Interval tick]
   Tick --> Load[repo.findMany]
   Load --> Resolve["Resolve task code from tasksRepository by task_id"]
-  Resolve --> Batch["heartbeatPromptBuildBatch: { text, code[] }"]
-  Batch --> AgentSystem["post system_message with code[] array"]
+  Resolve --> Build["heartbeatPromptBuildBatch([singleTask])"]
+  Build --> AgentSystem["post system_message to descriptor:{type:'task',id:task_id}"]
   AgentSystem --> RLM["handleSystemMessage: rlmExecute each code block"]
   RLM --> Record[repo.recordRun unix ms]
 ```

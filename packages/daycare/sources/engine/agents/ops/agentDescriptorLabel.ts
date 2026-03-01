@@ -20,6 +20,9 @@ export function agentDescriptorLabel(descriptor: AgentDescriptor): string {
     if (descriptor.type === "cron") {
         return descriptor.name ?? "cron task";
     }
+    if (descriptor.type === "task") {
+        return `task ${descriptor.id}`;
+    }
     if (descriptor.type === "system") {
         return descriptor.tag;
     }

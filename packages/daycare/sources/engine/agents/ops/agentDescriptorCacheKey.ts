@@ -8,6 +8,8 @@ export function agentDescriptorCacheKey(descriptor: AgentDescriptor): string {
     switch (descriptor.type) {
         case "cron":
             return `/cron/${descriptor.id}`;
+        case "task":
+            return `/task/${descriptor.id}`;
         case "system":
             return `/system/${descriptor.tag}`;
         case "user":

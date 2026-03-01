@@ -58,6 +58,12 @@ describe("agentDescriptorLabel", () => {
                 name: "daily summary"
             })
         ).toBe("daily summary");
+        expect(
+            agentDescriptorLabel({
+                type: "task",
+                id: "task-1"
+            })
+        ).toBe("task task-1");
         expect(agentDescriptorLabel({ type: "system", tag: "heartbeat" })).toBe("heartbeat");
     });
 

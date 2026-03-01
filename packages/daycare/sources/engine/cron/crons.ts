@@ -39,9 +39,9 @@ export class Crons {
             onTask: async (task, messageContext) => {
                 const target = task.agentId
                     ? { agentId: task.agentId }
-                    : { descriptor: { type: "system" as const, tag: "cron" } };
+                    : { descriptor: { type: "task" as const, id: task.taskId } };
                 logger.debug(
-                    `event: CronScheduler.onTask triggered triggerId=${task.triggerId} taskId=${task.taskId} agentId=${task.agentId ?? "system:cron"}`
+                    `event: CronScheduler.onTask triggered triggerId=${task.triggerId} taskId=${task.taskId} agentId=${task.agentId ?? `task:${task.taskId}`}`
                 );
 
                 const built = cronTaskPromptBuild(task);

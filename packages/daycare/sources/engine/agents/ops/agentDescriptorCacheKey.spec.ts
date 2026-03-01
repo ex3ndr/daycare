@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { agentDescriptorCacheKey } from "./agentDescriptorCacheKey.js";
 
 describe("agentDescriptorCacheKey", () => {
-    it("returns stable keys for user, cron, and system descriptors", () => {
+    it("returns stable keys for user, cron, task, and system descriptors", () => {
         expect(
             agentDescriptorCacheKey({
                 type: "user",
@@ -13,6 +13,7 @@ describe("agentDescriptorCacheKey", () => {
             })
         ).toBe("/connectors/telegram/u-1/c-1");
         expect(agentDescriptorCacheKey({ type: "cron", id: "cron-1" })).toBe("/cron/cron-1");
+        expect(agentDescriptorCacheKey({ type: "task", id: "task-1" })).toBe("/task/task-1");
         expect(agentDescriptorCacheKey({ type: "system", tag: "scheduler" })).toBe("/system/scheduler");
     });
 

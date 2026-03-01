@@ -98,7 +98,94 @@ describe("Heartbeats", () => {
 
             expect(agentSystemMock.postAndAwait).toHaveBeenCalledWith(
                 expect.objectContaining({ userId: "user-1" }),
-                { descriptor: { type: "system", tag: "heartbeat" } },
+                { descriptor: { type: "task", id: "task-hb-1" } },
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "heartbeat",
+                    execute: true
+                })
+            );
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("routes each heartbeat trigger to its own task descriptor", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-heartbeats-per-task-"));
+        tempDirs.push(dir);
+
+        const agentSystemMock = {
+            ownerUserIdEnsure: vi.fn(async () => "owner"),
+            userHomeForUserId: vi.fn((userId: string) => ({ home: path.join(dir, "users", userId, "home") })),
+            postAndAwait: vi.fn(async () => ({ type: "system_message", responseText: null }))
+        };
+        const storage = await storageOpenTest();
+        try {
+            const heartbeats = new Heartbeats({
+                config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
+                storage,
+                eventBus: { emit: vi.fn() } as unknown as HeartbeatsOptions["eventBus"],
+                agentSystem: agentSystemMock as unknown as HeartbeatsOptions["agentSystem"],
+                intervalMs: 60_000
+            });
+
+            const now = Date.now();
+            await storage.tasks.create({
+                id: "task-hb-a",
+                userId: "user-1",
+                title: "beat a",
+                description: null,
+                code: "check a",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now
+            });
+            await storage.tasks.create({
+                id: "task-hb-b",
+                userId: "user-1",
+                title: "beat b",
+                description: null,
+                code: "check b",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now
+            });
+            await storage.heartbeatTasks.create({
+                id: "hb-a",
+                taskId: "task-hb-a",
+                userId: "user-1",
+                title: "beat a",
+                parameters: null,
+                lastRunAt: null,
+                createdAt: now,
+                updatedAt: now
+            });
+            await storage.heartbeatTasks.create({
+                id: "hb-b",
+                taskId: "task-hb-b",
+                userId: "user-1",
+                title: "beat b",
+                parameters: null,
+                lastRunAt: null,
+                createdAt: now,
+                updatedAt: now
+            });
+
+            await heartbeats.runNow();
+
+            expect(agentSystemMock.postAndAwait).toHaveBeenCalledTimes(2);
+            expect(agentSystemMock.postAndAwait).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1" }),
+                { descriptor: { type: "task", id: "task-hb-a" } },
+                expect.objectContaining({
+                    type: "system_message",
+                    origin: "heartbeat",
+                    execute: true
+                })
+            );
+            expect(agentSystemMock.postAndAwait).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: "user-1" }),
+                { descriptor: { type: "task", id: "task-hb-b" } },
                 expect.objectContaining({
                     type: "system_message",
                     origin: "heartbeat",
