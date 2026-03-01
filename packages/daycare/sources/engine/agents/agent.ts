@@ -731,7 +731,6 @@ export class Agent {
                 }
 
                 systemText = [systemText, ...outputs].filter((s) => s.trim().length > 0).join("\n\n");
-                responseError = hasError;
                 logger.info(
                     {
                         agentId: this.id,
