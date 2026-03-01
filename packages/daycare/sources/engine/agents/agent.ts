@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
-import type { Context, MessageContext, ToolExecutionContext } from "@/types";
+import type { Context, MessageContext } from "@/types";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
@@ -16,11 +16,9 @@ import { messageBuildSystemText } from "../messages/messageBuildSystemText.js";
 import { messageBuildUser } from "../messages/messageBuildUser.js";
 import { messageExtractText } from "../messages/messageExtractText.js";
 import { messageFormatIncoming } from "../messages/messageFormatIncoming.js";
-import { executablePromptExpand } from "../modules/executablePrompts/executablePromptExpand.js";
-import { montyPreambleBuild } from "../modules/monty/montyPreambleBuild.js";
-import { rlmExecute } from "../modules/rlm/rlmExecute.js";
+import { executablePromptTagReplace } from "../modules/executablePrompts/executablePromptTagReplace.js";
 import { rlmHistoryCompleteErrorRecordBuild } from "../modules/rlm/rlmHistoryCompleteErrorRecordBuild.js";
-import { rlmToolsForContextResolve } from "../modules/rlm/rlmToolsForContextResolve.js";
+import type { TaskParameter } from "../modules/tasks/taskParameterTypes.js";
 import { permissionBuildUser } from "../permissions/permissionBuildUser.js";
 import { signalMessageBuild } from "../signals/signalMessageBuild.js";
 import { Skills } from "../skills/skills.js";
@@ -44,7 +42,6 @@ import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
 import { agentTokenPromptUsedFromUsage } from "./ops/agentTokenPromptUsedFromUsage.js";
-import { agentToolExecutionAllowlistResolve } from "./ops/agentToolExecutionAllowlistResolve.js";
 import type {
     AgentHistoryRecord,
     AgentInboxCompact,
@@ -684,6 +681,108 @@ export class Agent {
         return result.responseText ?? null;
     }
 
+    private async executableBlocksRun(input: {
+        blocks: string[];
+        source: string;
+        messageContext: MessageContext;
+        blockInputs?: Array<Record<string, unknown> | null>;
+        blockInputSchemas?: Array<TaskParameter[] | null>;
+    }): Promise<{ outputs: string[]; errorMessages: string[]; skipTurn: boolean }> {
+        if (input.blocks.length === 0) {
+            return { outputs: [], errorMessages: [], skipTurn: false };
+        }
+
+        const now = Date.now();
+        const source = input.source.trim().length > 0 ? input.source : "system";
+        const blockToolCallIds = input.blocks.map(() => createId());
+        const connector = this.agentSystem.connectorRegistry.get(source);
+        const { providers, providerId } = this.inferenceProvidersResolve();
+        const providersForAgent = providersForAgentResolve(providers, providerId);
+        const skills = this.skillsResolve();
+        const context: InferenceContext = { messages: [] };
+        const entry: AgentMessage = {
+            id: createId(),
+            receivedAt: now,
+            context: input.messageContext,
+            message: {
+                text: "",
+                rawText: "",
+                files: []
+            }
+        };
+        await agentLoopRun({
+            entry,
+            agent: this,
+            source,
+            context,
+            connector,
+            connectorRegistry: this.agentSystem.connectorRegistry,
+            inferenceRouter: this.agentSystem.inferenceRouter,
+            toolResolver: this.agentSystem.toolResolver,
+            authStore: this.agentSystem.authStore,
+            eventBus: this.agentSystem.eventBus,
+            assistant: this.agentSystem.config.current.settings.assistant ?? null,
+            agentSystem: this.agentSystem,
+            webhooks: this.agentSystem.webhooks,
+            skills,
+            skillsActiveRoot: this.userHome.skillsActive,
+            skillsPersonalRoot: this.userHome.skillsPersonal,
+            providersForAgent,
+            logger,
+            appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
+            notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error),
+            initialPhase: {
+                type: "vm_start",
+                blocks: input.blocks,
+                blockToolCallIds,
+                ...(input.blockInputs ? { blockInputs: input.blockInputs } : {}),
+                ...(input.blockInputSchemas ? { blockInputSchemas: input.blockInputSchemas } : {}),
+                blockIndex: 0,
+                assistantAt: now,
+                historyResponseText: ""
+            },
+            stopAfterPendingPhase: true,
+            continueAfterRunPythonError: true
+        });
+
+        const persistedHistory = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+        const completions = new Map<string, Extract<AgentHistoryRecord, { type: "rlm_complete" }>>();
+        for (const record of persistedHistory) {
+            if (record.type !== "rlm_complete") {
+                continue;
+            }
+            if (!blockToolCallIds.includes(record.toolCallId)) {
+                continue;
+            }
+            completions.set(record.toolCallId, record);
+        }
+
+        const outputs: string[] = [];
+        const errorMessages: string[] = [];
+        for (const toolCallId of blockToolCallIds) {
+            const completion = completions.get(toolCallId);
+            if (!completion) {
+                const missing = "Python execution failed before completion.";
+                errorMessages.push(missing);
+                outputs.push(`<exec_error>${missing}</exec_error>`);
+                continue;
+            }
+            if (!completion.isError && completion.output === "Turn skipped") {
+                return { outputs, errorMessages, skipTurn: true };
+            }
+            if (completion.isError) {
+                const message = completion.error?.trim() ?? "";
+                const errorText = message.length > 0 ? message : "Python execution failed.";
+                errorMessages.push(errorText);
+                outputs.push(`<exec_error>${errorText}</exec_error>`);
+                continue;
+            }
+            const output = completion.printOutput.length > 0 ? completion.printOutput.join("\n") : completion.output;
+            outputs.push(output);
+        }
+        return { outputs, errorMessages, skipTurn: false };
+    }
+
     private async handleSystemMessage(
         item: AgentInboxSystemMessage
     ): Promise<{ responseText: string | null; responseError?: boolean; executionErrorText?: string }> {
@@ -692,51 +791,15 @@ export class Agent {
         let executionErrorText: string | null = null;
         if (item.execute) {
             if (item.code && item.code.length > 0) {
-                // Execute code blocks directly via rlmExecute
                 const startedAt = Date.now();
-                const context: ToolExecutionContext = {
-                    ...this.rlmRestoreContextBuild(item.origin ?? "system"),
-                    messageContext: item.context ?? {}
-                };
-                const preamble = montyPreambleBuild(rlmToolsForContextResolve(this.agentSystem.toolResolver, context));
-                const outputs: string[] = [];
-                let skipTurn = false;
-                let hasError = false;
-                const errorMessages: string[] = [];
-                for (let codeIdx = 0; codeIdx < item.code.length; codeIdx++) {
-                    const code = item.code[codeIdx]!;
-                    const codeInputs = item.inputs?.[codeIdx] ?? undefined;
-                    const codeInputSchema = item.inputSchemas?.[codeIdx] ?? undefined;
-                    try {
-                        const result = await rlmExecute(
-                            code,
-                            preamble,
-                            context,
-                            this.agentSystem.toolResolver,
-                            createId(),
-                            context.appendHistoryRecord,
-                            undefined,
-                            codeInputs,
-                            codeInputSchema
-                        );
-                        if (result.skipTurn) {
-                            skipTurn = true;
-                            break;
-                        }
-                        const output = result.printOutput.length > 0 ? result.printOutput.join("\n") : result.output;
-                        outputs.push(output);
-                    } catch (error) {
-                        hasError = true;
-                        const message = error instanceof Error ? error.message : String(error);
-                        errorMessages.push(message);
-                        outputs.push(`<exec_error>${message}</exec_error>`);
-                    }
-                }
-                executionHasError = hasError;
-                if (errorMessages.length > 0) {
-                    executionErrorText = errorMessages.join("\n");
-                }
-                if (skipTurn) {
+                const run = await this.executableBlocksRun({
+                    blocks: item.code,
+                    source: item.origin ?? "system",
+                    messageContext: item.context ?? {},
+                    blockInputs: item.inputs,
+                    blockInputSchemas: item.inputSchemas
+                });
+                if (run.skipTurn) {
                     logger.info(
                         {
                             agentId: this.id,
@@ -748,77 +811,92 @@ export class Agent {
                     );
                     return { responseText: null };
                 }
+                executionHasError = run.errorMessages.length > 0;
+                if (run.errorMessages.length > 0) {
+                    executionErrorText = run.errorMessages.join("\n");
+                }
 
                 // Sync mode: return code output directly without LLM inference
                 if (item.sync) {
-                    const output = outputs.join("\n\n");
+                    const output = run.outputs.join("\n\n");
                     logger.info(
                         {
                             agentId: this.id,
                             origin: item.origin ?? "system",
                             codeBlockCount: item.code.length,
-                            outputCount: outputs.length,
-                            hasError,
+                            outputCount: run.outputs.length,
+                            hasError: executionHasError,
                             durationMs: Date.now() - startedAt
                         },
                         "event: Sync code execution completed"
                     );
                     return {
                         responseText: output,
-                        responseError: hasError,
-                        ...(hasError ? { executionErrorText: executionErrorText ?? undefined } : {})
+                        responseError: executionHasError,
+                        ...(executionHasError ? { executionErrorText: executionErrorText ?? undefined } : {})
                     };
                 }
 
-                systemText = [systemText, ...outputs].filter((s) => s.trim().length > 0).join("\n\n");
+                systemText = [systemText, ...run.outputs].filter((s) => s.trim().length > 0).join("\n\n");
                 logger.info(
                     {
                         agentId: this.id,
                         origin: item.origin ?? "system",
                         codeBlockCount: item.code.length,
-                        outputCount: outputs.length,
+                        outputCount: run.outputs.length,
                         durationMs: Date.now() - startedAt
                     },
                     "event: Code blocks executed"
                 );
             } else {
-                // Fallback: expand <run_python> tags in text
                 const startedAt = Date.now();
                 const runPythonTagCount = tagExtractAll(systemText, "run_python").length;
-                const expandResult = await executablePromptExpand(
-                    systemText,
-                    {
-                        ...this.rlmRestoreContextBuild(item.origin ?? "system"),
+                const tagMatches = [...systemText.matchAll(/<run_python(\s[^>]*)?>[\s\S]*?<\/run_python\s*>/gi)];
+                if (runPythonTagCount > 0 && tagMatches.length > 0) {
+                    const run = await this.executableBlocksRun({
+                        blocks: tagExtractAll(systemText, "run_python"),
+                        source: item.origin ?? "system",
                         messageContext: item.context ?? {}
-                    },
-                    this.agentSystem.toolResolver
-                );
-                if (expandResult.skipTurn) {
+                    });
+                    if (run.skipTurn) {
+                        logger.info(
+                            {
+                                agentId: this.id,
+                                origin: item.origin ?? "system",
+                                durationMs: Date.now() - startedAt
+                            },
+                            "event: Executable system message skipped via skip()"
+                        );
+                        return { responseText: null };
+                    }
+                    executionHasError = run.errorMessages.length > 0;
+                    if (run.errorMessages.length > 0) {
+                        executionErrorText = run.errorMessages.join("\n");
+                    }
+
+                    let expanded = systemText;
+                    const replacementCount = Math.min(tagMatches.length, run.outputs.length);
+                    for (let index = replacementCount - 1; index >= 0; index -= 1) {
+                        const tagMatch = tagMatches[index]!;
+                        expanded = executablePromptTagReplace(expanded, tagMatch, run.outputs[index] ?? "");
+                    }
+                    systemText = expanded;
+                } else if (runPythonTagCount > 0) {
                     logger.info(
                         {
                             agentId: this.id,
                             origin: item.origin ?? "system",
                             durationMs: Date.now() - startedAt
                         },
-                        "event: Executable system message skipped via skip()"
+                        "event: Executable system message tags detected but no matches were replaced"
                     );
-                    return { responseText: null };
-                }
-                systemText = expandResult.expanded;
-                const execErrors = tagExtractAll(systemText, "exec_error")
-                    .map((entry) => entry.trim())
-                    .filter(Boolean);
-                const errorTagCount = execErrors.length;
-                executionHasError = runPythonTagCount > 0 && errorTagCount > 0;
-                if (executionHasError) {
-                    executionErrorText = execErrors.join("\n");
                 }
                 logger.info(
                     {
                         agentId: this.id,
                         origin: item.origin ?? "system",
                         runPythonTagCount,
-                        errorTagCount,
+                        errorTagCount: executionHasError ? tagExtractAll(systemText, "exec_error").length : 0,
                         durationMs: Date.now() - startedAt
                     },
                     "event: Executable system message expanded"
@@ -1220,29 +1298,6 @@ export class Agent {
             },
             "event: Completed pending loop phase in history"
         );
-    }
-
-    private rlmRestoreContextBuild(source: string): ToolExecutionContext {
-        const allowedToolNames = agentToolExecutionAllowlistResolve(this.descriptor);
-
-        return {
-            connectorRegistry: this.agentSystem.connectorRegistry,
-            sandbox: this.sandbox,
-            auth: this.agentSystem.authStore,
-            logger,
-            assistant: this.agentSystem.config.current.settings.assistant ?? null,
-            agent: this,
-            ctx: this.ctx,
-            source,
-            messageContext: {},
-            agentSystem: this.agentSystem,
-            storage: this.agentSystem.storage,
-            webhooks: this.agentSystem.webhooks,
-            secrets: this.agentSystem.secrets,
-            toolResolver: this.agentSystem.toolResolver,
-            skills: [],
-            allowedToolNames
-        };
     }
 
     /**

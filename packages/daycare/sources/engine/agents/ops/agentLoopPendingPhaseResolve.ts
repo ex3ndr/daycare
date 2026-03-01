@@ -2,6 +2,7 @@ import type { AgentHistoryRecord, AgentHistoryRlmStartRecord, AgentHistoryRlmToo
 import { messageContentExtractText } from "../../messages/messageContentExtractText.js";
 import { messageContentExtractToolCalls } from "../../messages/messageContentExtractToolCalls.js";
 import { RLM_TOOL_NAME } from "../../modules/rlm/rlmConstants.js";
+import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 
 type AssistantRunPythonContext = {
     assistantAt: number;
@@ -15,6 +16,8 @@ export type AgentLoopPendingPhase =
           type: "vm_start";
           blocks: string[];
           blockToolCallIds: string[];
+          blockInputs?: Array<Record<string, unknown> | null>;
+          blockInputSchemas?: Array<TaskParameter[] | null>;
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;
@@ -25,6 +28,8 @@ export type AgentLoopPendingPhase =
           snapshot: AgentHistoryRlmToolCallRecord;
           blocks: string[];
           blockToolCallIds: string[];
+          blockInputs?: Array<Record<string, unknown> | null>;
+          blockInputSchemas?: Array<TaskParameter[] | null>;
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;

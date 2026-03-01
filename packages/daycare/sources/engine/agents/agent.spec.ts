@@ -326,6 +326,153 @@ describe("Agent", () => {
             }
             expect(userRecord.text).toContain("<exec_error>");
             expect(userRecord.text).not.toContain("<run_python>");
+            const starts = history.filter(
+                (record): record is Extract<AgentHistoryRecord, { type: "rlm_start" }> => record.type === "rlm_start"
+            );
+            const completes = history.filter(
+                (record): record is Extract<AgentHistoryRecord, { type: "rlm_complete" }> =>
+                    record.type === "rlm_complete"
+            );
+            expect(starts).toHaveLength(1);
+            expect(completes).toHaveLength(1);
+            expect(completes[0]?.isError).toBe(true);
+            expect(completes[0]?.error && completes[0].error.length > 0).toBe(true);
+            expect(completes[0]?.toolCallId).toBe(starts[0]?.toolCallId);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("writes rlm history for executable skip() without adding context history", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: inferenceRouterStubBuild(),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "Executable prompt cron"
+            };
+            const result = await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "system_message",
+                    text: "run skip",
+                    code: ["skip()"],
+                    origin: "cron",
+                    execute: true
+                }
+            );
+            if (result.type !== "system_message") {
+                throw new Error("Expected system_message result");
+            }
+            expect(result.responseText).toBeNull();
+            expect(result.responseError).toBeUndefined();
+
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
+            const ctx = await contextForAgentIdRequire(agentSystem, agentId);
+            const history = await agentHistoryLoadAll(agentSystem.storage, ctx);
+            const starts = history.filter(
+                (record): record is Extract<AgentHistoryRecord, { type: "rlm_start" }> => record.type === "rlm_start"
+            );
+            const completes = history.filter(
+                (record): record is Extract<AgentHistoryRecord, { type: "rlm_complete" }> =>
+                    record.type === "rlm_complete"
+            );
+            expect(starts).toHaveLength(1);
+            expect(completes).toHaveLength(1);
+            expect(completes[0]?.isError).toBe(false);
+            expect(completes[0]?.output).toBe("Turn skipped");
+            expect(history.some((record) => record.type === "user_message")).toBe(false);
+
+            const state = await agentStateRead(agentSystem.storage, ctx);
+            if (!state) {
+                throw new Error("State not found");
+            }
+            expect(state.context.messages ?? []).toHaveLength(0);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("continues sync executable blocks after per-block failures", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: inferenceRouterStubBuild(),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const descriptor: AgentDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "Executable prompt cron"
+            };
+            const result = await postAndAwait(
+                agentSystem,
+                { descriptor },
+                {
+                    type: "system_message",
+                    text: "sync run",
+                    code: ["raise Exception('boom')", "1 + 1"],
+                    origin: "cron",
+                    execute: true,
+                    sync: true
+                }
+            );
+            if (result.type !== "system_message") {
+                throw new Error("Expected system_message result");
+            }
+            expect(result.responseError).toBe(true);
+            expect(result.executionErrorText).toContain("boom");
+            expect(result.responseText).toContain("<exec_error>");
+            expect(result.responseText).toContain("2");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

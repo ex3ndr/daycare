@@ -34,6 +34,8 @@ import { rlmToolsForContextResolve } from "../../modules/rlm/rlmToolsForContextR
 import { rlmValueFormat } from "../../modules/rlm/rlmValueFormat.js";
 import { rlmVmSnapshotIs } from "../../modules/rlm/rlmVmProgress.js";
 import { rlmWorkerKeyResolve } from "../../modules/rlm/rlmWorkerKeyResolve.js";
+import { taskParameterPreambleStubs } from "../../modules/tasks/taskParameterCodegen.js";
+import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
@@ -76,6 +78,7 @@ type AgentLoopRunOptions = {
     notifySubagentFailure: (reason: string, error?: unknown) => Promise<void>;
     initialPhase?: AgentLoopPendingPhase;
     stopAfterPendingPhase?: boolean;
+    continueAfterRunPythonError?: boolean;
 };
 
 type AgentLoopResult = {
@@ -126,7 +129,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         appendHistoryRecord,
         notifySubagentFailure,
         initialPhase,
-        stopAfterPendingPhase
+        stopAfterPendingPhase,
+        continueAfterRunPythonError
     } = options;
 
     let response: Awaited<ReturnType<InferenceRouter["complete"]>> | null = null;
@@ -158,6 +162,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         iteration: number;
         blocks: string[];
         blockToolCallIds?: string[];
+        blockInputs?: Array<Record<string, unknown> | null>;
+        blockInputSchemas?: Array<TaskParameter[] | null>;
         blockIndex: number;
         preamble: string;
         toolCallId: string;
@@ -263,6 +269,25 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         }
     };
 
+    const runPythonErrorPhaseResolve = (blockState: AgentLoopBlockState): AgentLoopPhase => {
+        if (restoreOnly) {
+            const hasNextBlock = blockState.blockIndex + 1 < blockState.blocks.length;
+            if (continueAfterRunPythonError && hasNextBlock) {
+                const nextBlockIndex = blockState.blockIndex + 1;
+                return {
+                    type: "vm_start",
+                    blockState: {
+                        ...blockState,
+                        blockIndex: nextBlockIndex,
+                        toolCallId: blockState.blockToolCallIds[nextBlockIndex] ?? createId()
+                    }
+                };
+            }
+            return { type: "done", reason: "complete" };
+        }
+        return { type: "inference", iteration: blockState.iteration + 1 };
+    };
+
     try {
         logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
         let phase: AgentLoopPhase = { type: "inference", iteration: 0 };
@@ -290,6 +315,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         iteration: 0,
                         blocks: initialPhase.blocks,
                         blockToolCallIds: initialPhase.blockToolCallIds,
+                        blockInputs: initialPhase.blockInputs,
+                        blockInputSchemas: initialPhase.blockInputSchemas,
                         blockIndex: initialPhase.blockIndex,
                         preamble: montyPreambleBuild(availableTools),
                         toolCallId: initialToolCallId,
@@ -302,6 +329,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     iteration: 0,
                     blocks: initialPhase.blocks,
                     blockToolCallIds: initialPhase.blockToolCallIds,
+                    blockInputs: initialPhase.blockInputs,
+                    blockInputSchemas: initialPhase.blockInputSchemas,
                     blockIndex: initialPhase.blockIndex,
                     preamble: initialPhase.start.preamble,
                     toolCallId: initialPhase.start.toolCallId,
@@ -651,14 +680,20 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
                             externalFunctions.push(SKIP_TOOL_NAME);
                         }
+                        const inputSchema = blockState.blockInputSchemas?.[blockState.blockIndex] ?? undefined;
+                        const inputPreamble = inputSchema?.length ? taskParameterPreambleStubs(inputSchema) : "";
+                        const effectivePreamble =
+                            inputPreamble.length > 0 ? `${blockState.preamble}\n${inputPreamble}` : blockState.preamble;
+                        const inputs = blockState.blockInputs?.[blockState.blockIndex] ?? undefined;
 
                         const progress = (
                             await rlmStepStart({
                                 workerKey: blockState.workerKey,
                                 code: runPythonCode,
-                                preamble: blockState.preamble,
+                                preamble: effectivePreamble,
                                 externalFunctions,
                                 limits: RLM_LIMITS,
+                                inputs,
                                 printCallback
                             })
                         ).progress;
@@ -688,9 +723,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         };
                     } catch (error) {
                         await runPythonFailureHandle(blockState, error);
-                        phase = restoreOnly
-                            ? { type: "done", reason: "complete" }
-                            : { type: "inference", iteration: blockState.iteration + 1 };
+                        phase = runPythonErrorPhaseResolve(blockState);
                     }
                     break;
                 }
@@ -861,9 +894,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                             throw error;
                         }
                         await runPythonFailureHandle(blockState, error);
-                        phase = restoreOnly
-                            ? { type: "done", reason: "complete" }
-                            : { type: "inference", iteration: blockState.iteration + 1 };
+                        phase = runPythonErrorPhaseResolve(blockState);
                     }
                     break;
                 }

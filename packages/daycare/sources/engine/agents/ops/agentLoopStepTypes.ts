@@ -2,12 +2,15 @@ import type { ToolExecutionContext } from "@/types";
 import type { RlmCheckSteeringCallback, RlmExecuteResult } from "../../modules/rlm/rlmExecute.js";
 import type { RlmPrintCaptureState } from "../../modules/rlm/rlmPrintCapture.js";
 import type { RlmVmSnapshot } from "../../modules/rlm/rlmVmProgress.js";
+import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 
 type AgentLoopBlockState = {
     iteration: number;
     blocks: string[];
     blockToolCallIds: string[];
+    blockInputs?: Array<Record<string, unknown> | null>;
+    blockInputSchemas?: Array<TaskParameter[] | null>;
     blockIndex: number;
     preamble: string;
     toolCallId: string;
