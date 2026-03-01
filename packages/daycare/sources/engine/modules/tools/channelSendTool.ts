@@ -100,9 +100,6 @@ function senderUsernameResolve(context: ToolExecutionContext): string {
     if (kind === "cron") {
         return usernameNormalize(config.name ?? "cron");
     }
-    if (kind === "system") {
-        return usernameNormalize(config.name ?? "system");
-    }
     if (kind === "memory") {
         return usernameNormalize("memory-agent");
     }

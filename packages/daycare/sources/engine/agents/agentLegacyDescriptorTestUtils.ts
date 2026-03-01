@@ -6,7 +6,6 @@ import {
     agentPathMemory,
     agentPathSearch,
     agentPathSub,
-    agentPathSystem,
     agentPathTask
 } from "./ops/agentPathBuild.js";
 import { type AgentPath, agentPath } from "./ops/agentPathTypes.js";
@@ -15,7 +14,6 @@ export type AgentLegacyDescriptor =
     | { type: "user"; connector: string; userId: string; channelId: string }
     | { type: "cron"; id: string; name?: string }
     | { type: "task"; id: string }
-    | { type: "system"; tag: string }
     | {
           type: "subagent";
           id: string;
@@ -58,10 +56,6 @@ export function agentPathFromLegacyDescriptor(
     descriptor: AgentLegacyDescriptor,
     options: AgentPathFromLegacyDescriptorOptions
 ): AgentPath {
-    if (descriptor.type === "system") {
-        return agentPathSystem(descriptor.tag);
-    }
-
     const userId = options.userId.trim();
     if (!userId) {
         throw new Error("userId is required to derive AgentPath from descriptor.");
@@ -137,12 +131,6 @@ export function agentCreationConfigFromLegacyDescriptor(descriptor: AgentLegacyD
         return {
             kind: "task",
             name: null
-        };
-    }
-    if (descriptor.type === "system") {
-        return {
-            kind: "system",
-            name: descriptor.tag
         };
     }
     if (descriptor.type === "subagent") {

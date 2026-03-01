@@ -19,7 +19,6 @@ import type { AgentDbRecord } from "../../storage/databaseTypes.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
 import { AsyncLock } from "../../util/lock.js";
-import { cuid2Is } from "../../utils/cuid2Is.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { EngineEventBus } from "../ipc/events.js";
@@ -689,8 +688,7 @@ export class AgentSystem {
             throw new Error(`Agent not found for path: ${path}`);
         }
         const config = configForCreation(path, creationConfig);
-        const stablePathId = stableAgentIdForPath(path, config.kind);
-        const agentId = stablePathId ?? createId();
+        const agentId = createId();
         logger.debug(`event: Creating agent entry agentId=${agentId} path=${path} kind=${config.kind}`);
         const inbox = new AgentInbox(agentId);
         const userId = await this.resolveUserIdForPath(ctx, path);
@@ -1258,17 +1256,6 @@ function configForCreation(
         systemPrompt: creationConfig.systemPrompt ?? null,
         workspaceDir: creationConfig.workspaceDir ?? null
     };
-}
-
-function stableAgentIdForPath(path: AgentPath, kind: NonNullable<AgentConfig["kind"]>): string | null {
-    if (kind !== "cron" && kind !== "task") {
-        return null;
-    }
-    const segments = String(path)
-        .split("/")
-        .filter((segment) => segment.length > 0);
-    const id = segments[2]?.trim();
-    return id && cuid2Is(id) ? id : null;
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {

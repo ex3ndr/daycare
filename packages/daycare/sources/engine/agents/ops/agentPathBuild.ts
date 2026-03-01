@@ -41,14 +41,6 @@ export function agentPathSubuser(userId: string, id: string): AgentPath {
 }
 
 /**
- * Builds a system agent path.
- * Expects: tag is a non-empty path segment.
- */
-export function agentPathSystem(tag: string): AgentPath {
-    return agentPath(`/system/${segmentRequire(tag, "tag")}`);
-}
-
-/**
  * Builds a child subagent path.
  * Expects: parentPath is valid and index is a non-negative integer.
  */

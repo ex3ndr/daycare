@@ -1108,9 +1108,9 @@ describe("Agent", () => {
             agentSystem.setSignals(signals);
             await agentSystem.load();
 
-            const agentId = createId();
-            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "Signal agent" };
             await post(agentSystem, { descriptor }, { type: "reset", message: "init" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const ctx = await agentSystem.contextForAgentId(agentId);
             if (!ctx) {
                 throw new Error("Missing agent context");
@@ -1162,9 +1162,9 @@ describe("Agent", () => {
             agentSystem.setSignals(signals);
             await agentSystem.load();
 
-            const agentId = createId();
-            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Signal agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "Signal agent" };
             await post(agentSystem, { descriptor }, { type: "reset", message: "init" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const ctx = await agentSystem.contextForAgentId(agentId);
             if (!ctx) {
                 throw new Error("Missing agent context");
@@ -1221,18 +1221,20 @@ describe("Agent", () => {
             agentSystem.setSignals(signals);
             await agentSystem.load();
 
-            const sourceAgentId = createId();
-            const peerAgentId = createId();
-            await post(
-                agentSystem,
-                { descriptor: { type: "cron", id: sourceAgentId, name: "Source agent" } },
-                { type: "reset", message: "init source" }
-            );
-            await post(
-                agentSystem,
-                { descriptor: { type: "cron", id: peerAgentId, name: "Peer agent" } },
-                { type: "reset", message: "init peer" }
-            );
+            const sourceDescriptor: AgentLegacyDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "Source agent"
+            };
+            const peerDescriptor: AgentLegacyDescriptor = {
+                type: "cron",
+                id: createId(),
+                name: "Peer agent"
+            };
+            await post(agentSystem, { descriptor: sourceDescriptor }, { type: "reset", message: "init source" });
+            await post(agentSystem, { descriptor: peerDescriptor }, { type: "reset", message: "init peer" });
+            const sourceAgentId = await agentIdForTarget(agentSystem, { descriptor: sourceDescriptor });
+            const peerAgentId = await agentIdForTarget(agentSystem, { descriptor: peerDescriptor });
 
             const sourceCtx = await agentSystem.contextForAgentId(sourceAgentId);
             const peerCtx = await agentSystem.contextForAgentId(peerAgentId);
@@ -1319,10 +1321,10 @@ describe("Agent", () => {
                 lifecycleTypes.push(payload.type);
             });
 
-            const agentId = createId();
-            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Lifecycle agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "Lifecycle agent" };
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init lifecycle" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "wake lifecycle" });
 
             unsubscribe();
@@ -1374,10 +1376,10 @@ describe("Agent", () => {
                 lifecycleTypes.push(payload.type);
             });
 
-            const agentId = createId();
-            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Idle agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "Idle agent" };
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "init idle lifecycle" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
 
             await vi.advanceTimersByTimeAsync(59_000);
             expect(lifecycleTypes).not.toContain(`agent:${agentId}:idle`);
@@ -1426,10 +1428,10 @@ describe("Agent", () => {
             await agentSystem.load();
             await agentSystem.start();
 
-            const agentId = createId();
-            const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "Wake cancel agent" };
+            const descriptor: AgentLegacyDescriptor = { type: "cron", id: createId(), name: "Wake cancel agent" };
 
             await postAndAwait(agentSystem, { descriptor }, { type: "reset", message: "initial sleep" });
+            const agentId = await agentIdForTarget(agentSystem, { descriptor });
             const signalType = `agent:${agentId}:idle`;
             const firstIdle = delayedSignals.list().find((entry) => entry.type === signalType);
             expect(firstIdle).toBeTruthy();
@@ -2518,7 +2520,7 @@ function pathUserIdResolve(path: AgentPath): string | null {
         .split("/")
         .filter((segment) => segment.length > 0);
     const first = segments[0]?.trim() ?? "";
-    if (!first || first === "system") {
+    if (!first) {
         return null;
     }
     return first;
@@ -2528,9 +2530,6 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     const segments = String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
-    if (segments[0] === "system") {
-        return { kind: "system", name: segments[1] ?? null };
-    }
     if (segments[1] === "agent" && segments[2] === "swarm") {
         return { kind: "swarm", foreground: true, name: "swarm" };
     }

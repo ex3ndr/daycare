@@ -404,34 +404,38 @@ export class AgentsRepository {
 }
 
 function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbRecord | null): AgentDbRecord {
-    const legacyType = agentLegacyTypeResolve(input);
-    const path =
-        (typeof input.path === "string" ? input.path.trim() : "") ||
-        current?.path ||
-        agentLegacyPathResolve({
-            id: input.id,
-            userId: input.userId,
-            type: legacyType,
-            descriptor: input.descriptor
-        });
-    if (!path) {
-        throw new Error(`Agent path is required: ${input.id}`);
-    }
-    const kind = input.kind ?? current?.kind ?? agentKindFromLegacyType(legacyType);
-    if (!kind) {
-        throw new Error(`Agent kind is required: ${input.id}`);
-    }
-    const foreground = input.foreground ?? current?.foreground ?? (legacyType === "user" || legacyType === "swarm");
-    const modelRole =
-        input.modelRole === undefined ? (current?.modelRole ?? agentModelRoleFromKind(kind)) : input.modelRole;
+    const descriptor =
+        typeof input.descriptor === "object" && input.descriptor ? (input.descriptor as Record<string, unknown>) : null;
+    const descriptorType = typeof descriptor?.type === "string" ? descriptor.type.trim() : "";
+    const kind = input.kind ?? current?.kind ?? "agent";
+    const connectorNameFromDescriptor =
+        descriptorType === "user" && typeof descriptor?.connector === "string" && descriptor.connector.trim().length > 0
+            ? descriptor.connector.trim()
+            : null;
+    const parentAgentIdFromDescriptor =
+        typeof descriptor?.parentAgentId === "string" && descriptor.parentAgentId.trim().length > 0
+            ? descriptor.parentAgentId.trim()
+            : null;
     const connectorName =
         input.connectorName === undefined
-            ? (current?.connectorName ?? agentLegacyConnectorNameResolve(input.descriptor, legacyType))
+            ? (current?.connectorName ?? connectorNameFromDescriptor)
             : input.connectorName;
     const parentAgentId =
         input.parentAgentId === undefined
-            ? (current?.parentAgentId ?? agentLegacyParentAgentIdResolve(input.descriptor))
+            ? (current?.parentAgentId ?? parentAgentIdFromDescriptor)
             : input.parentAgentId;
+    const path =
+        (typeof input.path === "string" ? input.path.trim() : "") ||
+        current?.path ||
+        agentPathDefaultResolve({
+            id: input.id,
+            userId: input.userId,
+            kind,
+            connectorName
+        });
+    const foreground = input.foreground ?? current?.foreground ?? (kind === "connector" || kind === "swarm");
+    const modelRole =
+        input.modelRole === undefined ? (current?.modelRole ?? agentModelRoleFromKind(kind)) : input.modelRole;
     const name = input.name === undefined ? (current?.name ?? null) : input.name;
     const description = input.description === undefined ? (current?.description ?? null) : input.description;
     const systemPrompt = input.systemPrompt === undefined ? (current?.systemPrompt ?? null) : input.systemPrompt;
@@ -452,46 +456,43 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
     } as AgentDbRecord;
 }
 
-function agentLegacyTypeResolve(input: AgentCreateInput): string | null {
-    if (typeof input.type === "string" && input.type.trim().length > 0) {
-        return input.type.trim();
+function agentPathDefaultResolve(input: {
+    id: string;
+    userId: string;
+    kind: AgentDbRecord["kind"];
+    connectorName: string | null;
+}): string {
+    const id = input.id.trim();
+    const userId = input.userId.trim();
+    if (!id || !userId) {
+        throw new Error(`Agent path is required: ${input.id}`);
     }
-    if (typeof input.descriptor !== "object" || !input.descriptor) {
-        return null;
+    if (input.kind === "connector") {
+        const connector = input.connectorName?.trim() || "user";
+        return `/${userId}/${connector}`;
     }
-    const value = input.descriptor as { type?: unknown };
-    return typeof value.type === "string" ? value.type : null;
-}
-
-function agentKindFromLegacyType(type: string | null): AgentDbRecord["kind"] {
-    if (type === "user") {
-        return "connector";
+    if (input.kind === "cron") {
+        return `/${userId}/cron/${id}`;
     }
-    if (type === "cron") {
-        return "cron";
+    if (input.kind === "task") {
+        return `/${userId}/task/${id}`;
     }
-    if (type === "task") {
-        return "task";
+    if (input.kind === "subuser") {
+        return `/${userId}/subuser/${id}`;
     }
-    if (type === "subuser") {
-        return "subuser";
+    if (input.kind === "sub") {
+        return `/${userId}/sub/${id}`;
     }
-    if (type === "system") {
-        return "system";
+    if (input.kind === "memory") {
+        return `/${userId}/memory/${id}`;
     }
-    if (type === "subagent") {
-        return "sub";
+    if (input.kind === "search") {
+        return `/${userId}/search/${id}`;
     }
-    if (type === "memory-agent") {
-        return "memory";
+    if (input.kind === "swarm") {
+        return `/${userId}/agent/swarm`;
     }
-    if (type === "memory-search") {
-        return "search";
-    }
-    if (type === "swarm") {
-        return "swarm";
-    }
-    return "agent";
+    return `/${userId}/agent/${id}`;
 }
 
 function agentModelRoleFromKind(kind: AgentDbRecord["kind"]): AgentDbRecord["modelRole"] {
@@ -511,73 +512,6 @@ function agentModelRoleFromKind(kind: AgentDbRecord["kind"]): AgentDbRecord["mod
         return "task";
     }
     return null;
-}
-
-function agentLegacyPathResolve(input: {
-    id: string;
-    userId: string;
-    type: string | null;
-    descriptor: unknown;
-}): string {
-    const type = input.type;
-    const descriptor = (typeof input.descriptor === "object" && input.descriptor ? input.descriptor : {}) as Record<
-        string,
-        unknown
-    >;
-    const descriptorId = typeof descriptor.id === "string" && descriptor.id.length > 0 ? descriptor.id : input.id;
-    if (type === "system") {
-        const tag = typeof descriptor.tag === "string" && descriptor.tag.length > 0 ? descriptor.tag : descriptorId;
-        return `/system/${tag}`;
-    }
-    if (type === "user") {
-        const connector =
-            typeof descriptor.connector === "string" && descriptor.connector.length > 0 ? descriptor.connector : "user";
-        return `/${input.userId}/${connector}`;
-    }
-    if (type === "cron") {
-        return `/${input.userId}/cron/${descriptorId}`;
-    }
-    if (type === "task") {
-        return `/${input.userId}/task/${descriptorId}`;
-    }
-    if (type === "subagent") {
-        return `/${input.userId}/sub/${descriptorId}`;
-    }
-    if (type === "memory-agent") {
-        return `/${input.userId}/memory/${descriptorId}`;
-    }
-    if (type === "memory-search") {
-        return `/${input.userId}/search/${descriptorId}`;
-    }
-    if (type === "permanent") {
-        const name = typeof descriptor.name === "string" && descriptor.name.length > 0 ? descriptor.name : descriptorId;
-        return `/${input.userId}/agent/${name}`;
-    }
-    if (type === "swarm") {
-        return `/${input.userId}/agent/swarm`;
-    }
-    return `/${input.userId}/agent/${descriptorId}`;
-}
-
-function agentLegacyConnectorNameResolve(descriptorInput: unknown, type: string | null): string | null {
-    if (type !== "user") {
-        return null;
-    }
-    if (typeof descriptorInput !== "object" || !descriptorInput) {
-        return null;
-    }
-    const descriptor = descriptorInput as Record<string, unknown>;
-    const connector = descriptor.connector;
-    return typeof connector === "string" && connector.trim().length > 0 ? connector.trim() : null;
-}
-
-function agentLegacyParentAgentIdResolve(descriptorInput: unknown): string | null {
-    if (typeof descriptorInput !== "object" || !descriptorInput) {
-        return null;
-    }
-    const descriptor = descriptorInput as Record<string, unknown>;
-    const parentAgentId = descriptor.parentAgentId;
-    return typeof parentAgentId === "string" && parentAgentId.trim().length > 0 ? parentAgentId.trim() : null;
 }
 
 function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {

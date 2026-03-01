@@ -27,6 +27,7 @@ async function createTestStorage() {
     await storage.agents.create({
         id: "agent-1",
         userId: owner.id,
+        kind: "cron",
         type: "cron",
         descriptor: { type: "cron", id: "agent-1", name: "job" },
         activeSessionId: null,
@@ -135,6 +136,7 @@ describe("MemoryWorker", () => {
             await storage.agents.create({
                 id: "user-agent-1",
                 userId: ownerId,
+                kind: "connector",
                 type: "user",
                 descriptor: { type: "user", connector: "web", userId: "u1", channelId: "ch1" },
                 activeSessionId: null,
@@ -179,6 +181,7 @@ describe("MemoryWorker", () => {
             await storage.agents.create({
                 id: "mem-agent-1",
                 userId: ownerId,
+                kind: "memory",
                 type: "memory-agent",
                 descriptor: { type: "memory-agent", id: "agent-1" },
                 activeSessionId: null,

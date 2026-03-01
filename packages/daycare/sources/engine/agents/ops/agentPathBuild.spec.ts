@@ -8,7 +8,6 @@ import {
     agentPathSearch,
     agentPathSub,
     agentPathSubuser,
-    agentPathSystem,
     agentPathTask
 } from "./agentPathBuild.js";
 
@@ -19,7 +18,6 @@ describe("agentPathBuild", () => {
         expect(agentPathCron("u1", "daily")).toBe("/u1/cron/daily");
         expect(agentPathTask("u1", "task1")).toBe("/u1/task/task1");
         expect(agentPathSubuser("u1", "sub1")).toBe("/u1/subuser/sub1");
-        expect(agentPathSystem("gc")).toBe("/system/gc");
     });
 
     it("builds nested paths", () => {

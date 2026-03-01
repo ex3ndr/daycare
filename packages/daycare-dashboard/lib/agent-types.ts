@@ -6,14 +6,12 @@ export type AgentType =
   | { type: "connection"; connector: string; path: string }
   | { type: "cron"; id: string; path: string }
   | { type: "task"; id: string; path: string }
-  | { type: "heartbeat"; path: string }
   | { type: "subagent"; index: number; parentPath: string; path: string }
   | { type: "app"; appId: string; path: string }
   | { type: "permanent"; name: string; path: string }
   | { type: "memory-agent"; parentPath: string; path: string }
   | { type: "memory-search"; index: number; parentPath: string; path: string }
   | { type: "subuser"; id: string; path: string }
-  | { type: "system"; tag: string; path: string }
   | { type: "unknown"; path: string };
 
 export function buildAgentType(agent: AgentSummary): AgentType {
@@ -24,14 +22,6 @@ export function buildAgentType(agent: AgentSummary): AgentType {
   const segments = pathSegments(path);
   if (segments.length === 0) {
     return { type: "unknown", path };
-  }
-
-  if (segments[0] === "system") {
-    const tag = segments[1] ?? "unknown";
-    if (tag === "heartbeat") {
-      return { type: "heartbeat", path };
-    }
-    return { type: "system", tag, path };
   }
 
   const memoryParent = suffixParentPathResolve(path, "memory");
@@ -91,8 +81,6 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "Cron";
     case "task":
       return "Task";
-    case "heartbeat":
-      return "Heartbeat";
     case "subagent":
       return "Subagent";
     case "app":
@@ -105,8 +93,6 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "Memory Search";
     case "subuser":
       return "Subuser";
-    case "system":
-      return "System";
     case "unknown":
       return "Unknown";
     default:

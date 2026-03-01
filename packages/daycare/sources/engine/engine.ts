@@ -1075,7 +1075,7 @@ function pathSegments(path: AgentPath): string[] {
 function pathUserIdResolve(path: AgentPath): string | null {
     const segments = pathSegments(path);
     const first = segments[0]?.trim() ?? "";
-    if (!first || first === "system") {
+    if (!first) {
         return null;
     }
     return first;
@@ -1088,7 +1088,7 @@ function connectorPathResolve(path: AgentPath): ConnectorPath | null {
     }
     const ownerId = segments[0]?.trim() ?? "";
     const connector = segments[1]?.trim() ?? "";
-    if (!ownerId || !connector || ownerId === "system") {
+    if (!ownerId || !connector) {
         return null;
     }
     if (RESERVED_USER_SCOPE_SEGMENTS.has(connector)) {

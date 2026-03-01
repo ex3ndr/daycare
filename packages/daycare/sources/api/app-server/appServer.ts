@@ -384,7 +384,7 @@ function pathUserIdResolve(path: AgentPath): string | null {
         .split("/")
         .filter((segment) => segment.length > 0);
     const first = segments[0]?.trim() ?? "";
-    if (!first || first === "system") {
+    if (!first) {
         return null;
     }
     return first;

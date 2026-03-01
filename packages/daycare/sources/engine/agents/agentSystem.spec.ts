@@ -111,8 +111,11 @@ describe("AgentSystem", () => {
             const agentId = createId();
             const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
             await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init cron" });
+            const createdAgentId = await agentIdForTarget(harness.agentSystem, { descriptor });
 
-            expect(delayedSignals.list().some((event) => event.type === `agent:${agentId}:poison-pill`)).toBe(false);
+            expect(delayedSignals.list().some((event) => event.type === `agent:${createdAgentId}:poison-pill`)).toBe(
+                false
+            );
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
@@ -120,7 +123,7 @@ describe("AgentSystem", () => {
         }
     });
 
-    it("reuses cuid2 task descriptor id as the persistent agent id", async () => {
+    it("reuses task path as the persistent agent identity", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
             const harness = await harnessCreate(dir);
@@ -135,8 +138,8 @@ describe("AgentSystem", () => {
             await postAndAwait(harness.agentSystem, ownerCtx, { descriptor }, { type: "reset", message: "task rerun" });
             const secondAgentId = await agentIdForTarget(harness.agentSystem, ownerCtx, { descriptor });
 
-            expect(firstAgentId).toBe(descriptor.id);
-            expect(secondAgentId).toBe(descriptor.id);
+            expect(firstAgentId).toBe(secondAgentId);
+            expect(firstAgentId).not.toBe(descriptor.id);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -182,14 +185,15 @@ describe("AgentSystem", () => {
             const agentId = createId();
             const descriptor: AgentLegacyDescriptor = { type: "cron", id: agentId, name: "cron-worker" };
             await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init cron" });
+            const createdAgentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             await harness.signals.generate({
-                type: `agent:${agentId}:poison-pill`,
+                type: `agent:${createdAgentId}:poison-pill`,
                 source: { type: "system", userId: "user-1" }
             });
 
             const state = await agentStateRead(
                 harness.storage,
-                await contextForAgentIdRequire(harness.agentSystem, agentId)
+                await contextForAgentIdRequire(harness.agentSystem, createdAgentId)
             );
             expect(state?.state).toBe("sleeping");
         } finally {
@@ -536,6 +540,7 @@ describe("AgentSystem", () => {
             await harness.storage.agents.create({
                 id: "tg-agent",
                 userId: ownerCtx.userId,
+                kind: "connector",
                 type: "user",
                 descriptor: { type: "user", connector: "telegram", userId: "tg-ext", channelId: "tg-ext" },
                 path: agentPath(`/${ownerCtx.userId}/telegram`),
@@ -564,6 +569,7 @@ describe("AgentSystem", () => {
             await harness.storage.agents.create({
                 id: "wa-agent",
                 userId: ownerCtx.userId,
+                kind: "connector",
                 type: "user",
                 descriptor: { type: "user", connector: "whatsapp", userId: "wa-ext", channelId: "wa-ext" },
                 path: agentPath(`/${ownerCtx.userId}/whatsapp`),
@@ -694,6 +700,7 @@ describe("AgentSystem", () => {
             await harness.storage.agents.create({
                 id: "user-agent-1",
                 userId: user.id,
+                kind: "connector",
                 type: "user",
                 descriptor: { type: "user", connector: "telegram", userId: "conn", channelId: "chan-1" },
                 path: agentPath(`/${user.id}/telegram`),
@@ -708,6 +715,7 @@ describe("AgentSystem", () => {
             await harness.storage.agents.create({
                 id: "user-agent-2",
                 userId: user.id,
+                kind: "connector",
                 type: "user",
                 descriptor: { type: "user", connector: "whatsapp", userId: "conn", channelId: "chan-2" },
                 path: agentPath(`/${user.id}/whatsapp`),
@@ -722,6 +730,7 @@ describe("AgentSystem", () => {
             await harness.storage.agents.create({
                 id: "subagent-1",
                 userId: user.id,
+                kind: "sub",
                 type: "subagent",
                 descriptor: { type: "subagent", id: "subagent-1", parentAgentId: "parent", name: "worker" },
                 path: agentPath(`/${user.id}/agent/worker/sub/0`),
@@ -1051,7 +1060,7 @@ function pathUserIdResolve(path: AgentPath): string | null {
         .split("/")
         .filter((segment) => segment.length > 0);
     const first = segments[0]?.trim() ?? "";
-    if (!first || first === "system") {
+    if (!first) {
         return null;
     }
     return first;
@@ -1061,9 +1070,6 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     const segments = String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
-    if (segments[0] === "system") {
-        return { kind: "system", name: segments[1] ?? null };
-    }
     if (segments[1] === "agent" && segments[2] === "swarm") {
         return { kind: "swarm", foreground: true, name: "swarm" };
     }

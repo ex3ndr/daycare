@@ -20,10 +20,10 @@ describe("agentStateWrite", () => {
             await agentWrite(
                 storage,
                 ctx,
-                "/system/cron",
+                "/user-lifecycle/cron/cron",
                 {
-                    kind: "system",
-                    modelRole: null,
+                    kind: "cron",
+                    modelRole: "user",
                     connectorName: null,
                     parentAgentId: null,
                     foreground: false,

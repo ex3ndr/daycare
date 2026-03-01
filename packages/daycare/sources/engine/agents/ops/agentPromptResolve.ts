@@ -1,4 +1,3 @@
-import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
 import type { AgentConfig } from "./agentConfigTypes.js";
 import type { AgentPath } from "./agentPathTypes.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
@@ -37,30 +36,8 @@ export async function agentPromptResolve(
             replaceSystemPrompt: true
         };
     }
-    if (kind !== "system") {
-        return {
-            agentPrompt: "",
-            replaceSystemPrompt: false
-        };
-    }
-
-    const tag = config?.name?.trim();
-    if (!tag) {
-        return {
-            agentPrompt: "",
-            replaceSystemPrompt: false
-        };
-    }
-
-    const resolved = await systemAgentPromptResolve(tag);
-    if (!resolved) {
-        return {
-            agentPrompt: "",
-            replaceSystemPrompt: false
-        };
-    }
     return {
-        agentPrompt: resolved.systemPrompt,
-        replaceSystemPrompt: resolved.replaceSystemPrompt
+        agentPrompt: "",
+        replaceSystemPrompt: false
     };
 }

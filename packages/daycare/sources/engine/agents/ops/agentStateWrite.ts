@@ -75,8 +75,5 @@ function agentLabelResolve(config: Pick<AgentConfig, "kind" | "name">): string {
     if (config.kind === "sub") {
         return config.name?.trim() || "subagent";
     }
-    if (config.kind === "system") {
-        return config.name?.trim() || "system";
-    }
     return config.name?.trim() || "agent";
 }

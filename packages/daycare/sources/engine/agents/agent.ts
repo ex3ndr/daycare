@@ -1356,11 +1356,7 @@ export class Agent {
         if (connector) {
             return connector;
         }
-        const kind = this.agentKindResolve();
-        if (kind === "system") {
-            return this.config.name?.trim() || "system";
-        }
-        return kind;
+        return this.agentKindResolve();
     }
 
     private sandboxBuild(): Sandbox {

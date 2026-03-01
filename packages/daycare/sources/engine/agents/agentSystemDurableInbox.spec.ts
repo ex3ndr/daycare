@@ -539,7 +539,7 @@ function pathUserIdResolve(path: AgentPath): string | null {
         .split("/")
         .filter((segment) => segment.length > 0);
     const first = segments[0]?.trim() ?? "";
-    if (!first || first === "system") {
+    if (!first) {
         return null;
     }
     return first;
@@ -549,9 +549,6 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     const segments = String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
-    if (segments[0] === "system") {
-        return { kind: "system", name: segments[1] ?? null };
-    }
     if (segments[1] === "agent" && segments[2] === "swarm") {
         return { kind: "swarm", foreground: true, name: "swarm" };
     }

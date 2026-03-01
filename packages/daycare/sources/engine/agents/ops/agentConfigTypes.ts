@@ -1,16 +1,6 @@
 import type { ModelRoleKey } from "../../../settings.js";
 
-export type AgentKind =
-    | "connector"
-    | "agent"
-    | "swarm"
-    | "cron"
-    | "task"
-    | "subuser"
-    | "system"
-    | "sub"
-    | "memory"
-    | "search";
+export type AgentKind = "connector" | "agent" | "swarm" | "cron" | "task" | "subuser" | "sub" | "memory" | "search";
 
 export type AgentConfig = {
     kind?: AgentKind;

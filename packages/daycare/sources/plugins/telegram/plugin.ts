@@ -175,8 +175,15 @@ export const plugin = definePlugin({
                     return null;
                 }
 
-                const telegramTargetId = context.connectorTargetId?.trim();
-                const telegramUserId = telegramTargetUserIdResolve(telegramTargetId);
+                const telegramTargetId = context.connectorTargetId?.trim() ?? "";
+                if (!telegramTargetId) {
+                    return null;
+                }
+                const targetSegments = telegramTargetId
+                    .split("/")
+                    .map((segment) => segment.trim())
+                    .filter(Boolean);
+                const telegramUserId = targetSegments.at(-1) ?? telegramTargetId;
                 if (!telegramUserId) {
                     return null;
                 }
@@ -302,19 +309,4 @@ function parseAllowedUids(input: string): string[] {
         .map((entry) => entry.trim())
         .filter(Boolean);
     return Array.from(new Set(entries));
-}
-
-function telegramTargetUserIdResolve(targetId: string | null | undefined): string | null {
-    const normalized = targetId?.trim() ?? "";
-    if (!normalized) {
-        return null;
-    }
-    const segments = normalized
-        .split("/")
-        .map((segment) => segment.trim())
-        .filter(Boolean);
-    if (segments.length === 0) {
-        return null;
-    }
-    return segments.at(-1) ?? null;
 }

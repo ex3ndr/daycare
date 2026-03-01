@@ -72,9 +72,6 @@ function formatAgentType(path) {
   if (segments.length === 0) {
     return "unknown";
   }
-  if (segments[0] === "system") {
-    return segments[1] === "heartbeat" ? "heartbeat" : "system";
-  }
   if (path.endsWith("/memory")) {
     return "memory-agent";
   }

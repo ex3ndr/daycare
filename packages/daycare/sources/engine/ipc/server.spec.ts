@@ -125,6 +125,10 @@ describe("startEngineServer", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 path: "/user-1/task/task-1",
+                userId: "user-1",
+                creationConfig: {
+                    kind: "task"
+                },
                 text: "create cron",
                 awaitResponse: false
             })

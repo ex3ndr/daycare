@@ -75,10 +75,10 @@ describe("agentPromptResolve", () => {
         });
     });
 
-    it("returns empty prompt for system tags without bundled prompts", async () => {
-        const resolved = await agentPromptResolve("/system/status", {
-            kind: "system",
-            modelRole: null,
+    it("returns empty prompt for non-agent kinds without bundled prompt overrides", async () => {
+        const resolved = await agentPromptResolve("/u1/task/status", {
+            kind: "task",
+            modelRole: "task",
             connectorName: null,
             parentAgentId: null,
             foreground: false,

@@ -3,7 +3,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { z } from "zod";
-import type { AgentCreationConfig, AgentPath, Context, MessageContext } from "@/types";
+import type { AgentPath, Context, MessageContext } from "@/types";
 
 import { getLogger } from "../../log.js";
 import {
@@ -133,10 +133,23 @@ const messageContextSchema = z.object({
         )
         .optional()
 });
+const agentCreationConfigSchema = z.object({
+    kind: z.enum(["connector", "agent", "swarm", "cron", "task", "subuser", "sub", "memory", "search"]),
+    modelRole: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
+    connectorName: z.string().nullable().optional(),
+    parentAgentId: z.string().nullable().optional(),
+    foreground: z.boolean().optional(),
+    name: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    systemPrompt: z.string().nullable().optional(),
+    workspaceDir: z.string().nullable().optional()
+});
 const agentMessageSchema = z
     .object({
         agentId: z.string().min(1).optional(),
         path: agentPathSchema.optional(),
+        userId: z.string().min(1).optional(),
+        creationConfig: agentCreationConfigSchema.optional(),
         text: z.string().min(1),
         context: messageContextSchema.optional(),
         awaitResponse: z.boolean().optional()
@@ -148,6 +161,13 @@ const agentMessageSchema = z
             refinementContext.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: "Provide exactly one of agentId or path."
+            });
+            return;
+        }
+        if (hasPath && (!value.userId || value.userId.trim().length === 0)) {
+            refinementContext.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Provide userId when targeting by path."
             });
         }
     });
@@ -875,53 +895,12 @@ async function messageTargetResolve(
         throw new Error("Invalid message target.");
     }
     const path = payload.path as AgentPath;
-    const userId = String(path)
-        .split("/")
-        .filter((segment) => segment.length > 0)[0];
+    const userId = payload.userId?.trim() ?? "";
     if (!userId) {
-        throw new Error("Message path must include user scope.");
+        throw new Error("Message path target requires userId.");
     }
     const ctx = contextForUser({ userId });
-    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { path }, creationConfigFromPath(path));
+    const creationConfig = payload.creationConfig;
+    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { path }, creationConfig);
     return { ctx, agentId };
-}
-
-function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
-    const segments = String(path)
-        .split("/")
-        .filter((segment) => segment.length > 0);
-    if (segments[0] === "system") {
-        return { kind: "system" };
-    }
-    if (segments[1] === "agent" && segments[2] === "swarm") {
-        return { kind: "swarm", foreground: true };
-    }
-    if (segments[1] === "agent") {
-        if (segments.at(-2) === "sub") {
-            return { kind: "sub" };
-        }
-        if (segments.at(-2) === "search") {
-            return { kind: "search" };
-        }
-        return { kind: "agent" };
-    }
-    if (segments[1] === "sub" || segments.at(-2) === "sub") {
-        return { kind: "sub" };
-    }
-    if (segments[1] === "search" || segments.at(-2) === "search") {
-        return { kind: "search" };
-    }
-    if (segments[1] === "memory" || segments.at(-1) === "memory") {
-        return { kind: "memory" };
-    }
-    if (segments[1] === "cron") {
-        return { kind: "cron" };
-    }
-    if (segments[1] === "task") {
-        return { kind: "task" };
-    }
-    if (segments[1] === "subuser") {
-        return { kind: "subuser" };
-    }
-    return { kind: "connector", connectorName: segments[1] ?? null, foreground: true };
 }
