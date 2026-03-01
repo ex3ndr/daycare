@@ -88,6 +88,7 @@ export type MessageContext = {
 export type AgentDescriptor =
   | { type: "user"; connector: string; userId: string; channelId: string }
   | { type: "cron"; id: string }
+  | { type: "task"; id: string }
   | { type: "system"; tag: string }
   | { type: "subagent"; id: string; parentAgentId: string; name: string }
   | { type: "app"; id: string; parentAgentId: string; name: string; appId: string }
@@ -100,7 +101,8 @@ export type AgentDescriptor =
       workspaceDir?: string;
     }
   | { type: "memory-agent"; id: string }
-  | { type: "memory-search"; id: string; parentAgentId: string; name: string };
+  | { type: "memory-search"; id: string; parentAgentId: string; name: string }
+  | { type: "subuser"; id: string; name: string };
 
 export type AgentSummary = {
   agentId: string;

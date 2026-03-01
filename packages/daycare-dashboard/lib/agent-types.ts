@@ -3,12 +3,14 @@ import type { AgentSummary } from "./engine-client";
 export type AgentType =
   | { type: "connection"; connector: string; userId: string; channelId: string }
   | { type: "cron"; id: string }
+  | { type: "task"; id: string }
   | { type: "heartbeat" }
   | { type: "subagent"; id: string; parentAgentId: string; name: string }
   | { type: "app"; id: string; parentAgentId: string; name: string; appId: string }
   | { type: "permanent"; id: string; name: string }
   | { type: "memory-agent"; id: string }
   | { type: "memory-search"; id: string; parentAgentId: string; name: string }
+  | { type: "subuser"; id: string; name: string }
   | { type: "system"; tag: string };
 
 export function buildAgentType(agent: AgentSummary): AgentType {
@@ -23,6 +25,8 @@ export function buildAgentType(agent: AgentSummary): AgentType {
       };
     case "cron":
       return { type: "cron", id: descriptor.id };
+    case "task":
+      return { type: "task", id: descriptor.id };
     case "system":
       if (descriptor.tag === "heartbeat") {
         return { type: "heartbeat" };
@@ -58,6 +62,12 @@ export function buildAgentType(agent: AgentSummary): AgentType {
         parentAgentId: descriptor.parentAgentId,
         name: descriptor.name
       };
+    case "subuser":
+      return {
+        type: "subuser",
+        id: descriptor.id,
+        name: descriptor.name
+      };
     default:
       return { type: "system", tag: "unknown" };
   }
@@ -69,6 +79,8 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "Connection";
     case "cron":
       return "Cron";
+    case "task":
+      return "Task";
     case "heartbeat":
       return "Heartbeat";
     case "subagent":
@@ -81,6 +93,8 @@ export function formatAgentTypeLabel(agentType: AgentType): string {
       return "Memory";
     case "memory-search":
       return "Memory Search";
+    case "subuser":
+      return "Subuser";
     case "system":
       return "System";
     default:

@@ -321,6 +321,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `${descriptor.connector}:${descriptor.userId} / ${descriptor.channelId}`;
     case "cron":
       return `cron:${descriptor.id}`;
+    case "task":
+      return `task:${descriptor.id}`;
     case "system":
       return `system:${descriptor.tag}`;
     case "subagent":
@@ -333,6 +335,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `memory-agent:${descriptor.id}`;
     case "memory-search":
       return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
+    case "subuser":
+      return `subuser:${descriptor.name} / ${descriptor.id}`;
     default:
       return "system";
   }
@@ -348,6 +352,8 @@ function formatAgentTypeKey(type: string) {
       return "Connection";
     case "cron":
       return "Cron";
+    case "task":
+      return "Task";
     case "heartbeat":
       return "Heartbeat";
     case "subagent":
@@ -360,6 +366,8 @@ function formatAgentTypeKey(type: string) {
       return "Memory";
     case "memory-search":
       return "Memory Search";
+    case "subuser":
+      return "Subuser";
     case "system":
       return "System";
     default:

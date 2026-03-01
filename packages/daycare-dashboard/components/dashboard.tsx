@@ -1150,6 +1150,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `${descriptor.connector}:${descriptor.userId} / ${descriptor.channelId}`;
     case "cron":
       return `cron:${descriptor.id}`;
+    case "task":
+      return `task:${descriptor.id}`;
     case "system":
       return `system:${descriptor.tag}`;
     case "subagent":
@@ -1162,6 +1164,8 @@ function formatAgentDescriptor(descriptor: AgentDescriptor) {
       return `memory-agent:${descriptor.id}`;
     case "memory-search":
       return descriptor.name ? `memory-search: ${descriptor.name}` : `memory-search:${descriptor.id}`;
+    case "subuser":
+      return `subuser:${descriptor.name} / ${descriptor.id}`;
     default:
       return "system";
   }
