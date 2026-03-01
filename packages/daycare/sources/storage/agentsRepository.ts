@@ -294,6 +294,26 @@ export class AgentsRepository {
                 tokens: data.tokens === undefined ? current.tokens : data.tokens
             };
 
+            if (agentLifecycleOnlyChangeIs(current, next)) {
+                await this.db
+                    .update(agentsTable)
+                    .set({
+                        lifecycle: next.lifecycle,
+                        updatedAt: next.updatedAt
+                    })
+                    .where(
+                        and(
+                            eq(agentsTable.id, current.id),
+                            eq(agentsTable.version, current.version ?? 1),
+                            isNull(agentsTable.validTo)
+                        )
+                    );
+                await this.cacheLock.inLock(() => {
+                    this.agentCacheSet(next);
+                });
+                return;
+            }
+
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<AgentDbRecord>({
                     changes: {
@@ -553,4 +573,41 @@ function agentClone(record: AgentDbRecord): AgentDbRecord {
 
 function agentsSort(records: AgentDbRecord[]): AgentDbRecord[] {
     return records.slice().sort((left, right) => left.updatedAt - right.updatedAt);
+}
+
+/**
+ * Resolves whether the effective update only changes lifecycle metadata.
+ * Expects: `next` is merged from `current` and user-provided patch data.
+ */
+function agentLifecycleOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): boolean {
+    if (current.lifecycle === next.lifecycle) {
+        return false;
+    }
+    return (
+        current.id === next.id &&
+        (current.version ?? 1) === (next.version ?? 1) &&
+        (current.validFrom ?? current.createdAt) === (next.validFrom ?? next.createdAt) &&
+        (current.validTo ?? null) === (next.validTo ?? null) &&
+        current.userId === next.userId &&
+        current.path === next.path &&
+        current.kind === next.kind &&
+        current.modelRole === next.modelRole &&
+        current.connectorName === next.connectorName &&
+        current.parentAgentId === next.parentAgentId &&
+        current.foreground === next.foreground &&
+        current.name === next.name &&
+        current.description === next.description &&
+        current.systemPrompt === next.systemPrompt &&
+        current.workspaceDir === next.workspaceDir &&
+        (current.nextSubIndex ?? 0) === (next.nextSubIndex ?? 0) &&
+        (current.activeSessionId ?? null) === (next.activeSessionId ?? null) &&
+        agentJsonEqual(current.permissions, next.permissions) &&
+        agentJsonEqual(current.tokens, next.tokens) &&
+        agentJsonEqual(current.stats, next.stats) &&
+        current.createdAt === next.createdAt
+    );
+}
+
+function agentJsonEqual(left: unknown, right: unknown): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
 }

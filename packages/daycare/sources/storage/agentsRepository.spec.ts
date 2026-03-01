@@ -65,6 +65,57 @@ describe("AgentsRepository", () => {
         }
     });
 
+    it("updates lifecycle in place without advancing version", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ownerUser = (await storage.users.findMany())[0];
+            if (!ownerUser) {
+                throw new Error("Owner user missing");
+            }
+            const repo = new AgentsRepository(storage.db);
+            await repo.create({
+                id: "agent-lifecycle-inplace",
+                userId: ownerUser.id,
+                path: `/${ownerUser.id}/cron/agent-lifecycle-inplace`,
+                foreground: false,
+                name: "lifecycle",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
+                type: "cron",
+                descriptor: { type: "cron", id: "agent-lifecycle-inplace", name: "lifecycle" },
+                activeSessionId: null,
+                permissions,
+                tokens: null,
+                stats: {},
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            await repo.update("agent-lifecycle-inplace", {
+                lifecycle: "sleeping",
+                updatedAt: 2
+            });
+
+            const current = await repo.findById("agent-lifecycle-inplace");
+            expect(current?.version).toBe(1);
+            expect(current?.lifecycle).toBe("sleeping");
+            expect(current?.updatedAt).toBe(2);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to, lifecycle FROM agents WHERE id = ? ORDER BY version ASC")
+                .all("agent-lifecycle-inplace")) as Array<{
+                version: number;
+                valid_to: number | null;
+                lifecycle: string;
+            }>;
+            expect(rows).toEqual([{ version: 1, valid_to: null, lifecycle: "sleeping" }]);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("returns cached agent on repeated read", async () => {
         const storage = await storageOpenTest();
         try {
