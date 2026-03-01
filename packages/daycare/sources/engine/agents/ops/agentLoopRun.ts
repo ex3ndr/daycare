@@ -53,6 +53,7 @@ import { inferenceErrorAnthropicPromptOverflowTokensExtract } from "./inferenceE
 import { tokensResolve } from "./tokensResolve.js";
 
 const MAX_TOOL_ITERATIONS = 500; // Make this big enough to handle complex tasks
+const INFERENCE_FAILURE_DETAIL_MAX_CHARS = 600;
 
 type AgentLoopRunOptions = {
     entry: AgentMessage;
@@ -286,6 +287,22 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             return { type: "done", reason: "complete" };
         }
         return { type: "inference", iteration: blockState.iteration + 1 };
+    };
+
+    const inferenceFailureNoteAppend = async (error: unknown, providerId?: string, modelId?: string): Promise<void> => {
+        try {
+            await historyRecordAppend(
+                historyRecords,
+                inferenceFailureHistoryNoteBuild({
+                    error,
+                    providerId,
+                    modelId
+                }),
+                appendHistoryRecord
+            );
+        } catch (historyError) {
+            logger.warn({ agentId: agent.id, error: historyError }, "error: Failed to append inference failure note");
+        }
     };
 
     try {
@@ -964,6 +981,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
             logger.info({ agentId: agent.id }, "event: Inference aborted");
             return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
         }
+        await inferenceFailureNoteAppend(error, response?.providerId, response?.modelId);
         logger.warn({ connector: source, error }, "error: Inference failed");
         const message =
             error instanceof Error && error.message === "No inference provider available"
@@ -1003,6 +1021,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
             response.message.errorMessage && response.message.errorMessage.length > 0
                 ? response.message.errorMessage
                 : "unknown";
+        await inferenceFailureNoteAppend(response.message.errorMessage, response.providerId, response.modelId);
         if (
             inferenceErrorAnthropicPromptOverflowIs({
                 providerId: response.providerId,
@@ -1240,6 +1259,35 @@ function errorMessageResolve(error: unknown): string {
         return error.message;
     }
     return String(error);
+}
+
+function inferenceFailureHistoryNoteBuild(options: {
+    error: unknown;
+    providerId?: string;
+    modelId?: string;
+}): Extract<AgentHistoryRecord, { type: "note" }> {
+    const provider = stringValueOrUnknown(options.providerId);
+    const model = stringValueOrUnknown(options.modelId);
+    const detail = inferenceFailureDetailResolve(options.error);
+    return {
+        type: "note",
+        at: Date.now(),
+        text: `Inference failure provider=${provider} model=${model}: ${detail}`
+    };
+}
+
+function stringValueOrUnknown(value: string | undefined): string {
+    const trimmed = value?.trim();
+    return trimmed && trimmed.length > 0 ? trimmed : "unknown";
+}
+
+function inferenceFailureDetailResolve(error: unknown): string {
+    const raw = errorMessageResolve(error).trim();
+    const detail = raw.length > 0 && raw !== "undefined" ? raw : "unknown";
+    if (detail.length <= INFERENCE_FAILURE_DETAIL_MAX_CHARS) {
+        return detail;
+    }
+    return `${detail.slice(0, INFERENCE_FAILURE_DETAIL_MAX_CHARS)}...`;
 }
 
 function abortErrorBuild(): Error {

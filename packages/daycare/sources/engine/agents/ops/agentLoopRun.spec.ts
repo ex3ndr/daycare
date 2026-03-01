@@ -278,6 +278,52 @@ describe("agentLoopRun", () => {
             }
         ]);
     });
+
+    it("records a note when inference throws", async () => {
+        const complete = vi.fn(async () => {
+            throw new Error("provider offline");
+        });
+        const inferenceRouter = { complete } as unknown as InferenceRouter;
+        const notifySubagentFailure = vi.fn(async () => undefined);
+        const options = optionsBuild({
+            connector: null,
+            inferenceRouter
+        });
+        options.notifySubagentFailure = notifySubagentFailure;
+        const result = await agentLoopRun(options);
+
+        const note = result.historyRecords.find(
+            (record): record is Extract<(typeof result.historyRecords)[number], { type: "note" }> =>
+                record.type === "note"
+        );
+
+        expect(note?.text).toContain("Inference failure provider=unknown model=unknown");
+        expect(note?.text).toContain("provider offline");
+        expect(complete).toHaveBeenCalledTimes(1);
+        expect(notifySubagentFailure).toHaveBeenCalledWith("Inference failed", expect.any(Error));
+    });
+
+    it("records a note when inference returns error stop reason", async () => {
+        const response = assistantMessageBuild("");
+        response.stopReason = "error";
+        response.errorMessage = "rate limit";
+        const inferenceRouter = inferenceRouterBuild([response]);
+
+        const result = await agentLoopRun(
+            optionsBuild({
+                connector: null,
+                inferenceRouter
+            })
+        );
+
+        const note = result.historyRecords.find(
+            (record): record is Extract<(typeof result.historyRecords)[number], { type: "note" }> =>
+                record.type === "note"
+        );
+
+        expect(note?.text).toContain("Inference failure provider=openai model=gpt-test");
+        expect(note?.text).toContain("rate limit");
+    });
 });
 
 function optionsBuild(params?: {
