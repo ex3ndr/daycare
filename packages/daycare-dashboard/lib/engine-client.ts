@@ -195,6 +195,8 @@ export type MemoryGraph = {
   children: Record<string, MemoryNode[]>;
 };
 
+export type MemoryGraphScope = "memory" | "documents";
+
 export type EngineEvent = {
   type: string;
   payload?: {
@@ -516,19 +518,33 @@ export async function deleteSystemPrompt(id: string): Promise<void> {
   }
 }
 
-export async function fetchMemoryGraph(userId: string): Promise<MemoryGraph> {
+export async function fetchMemoryGraph(userId: string, options?: { scope?: MemoryGraphScope }): Promise<MemoryGraph> {
   const encoded = encodeURIComponent(userId);
-  const data = await fetchJSON<MemoryGraphResponse>(`/api/v1/engine/memory/${encoded}/graph`);
+  const query = new URLSearchParams();
+  if (options?.scope) {
+    query.set("scope", options.scope);
+  }
+  const suffix = query.size > 0 ? `?${query}` : "";
+  const data = await fetchJSON<MemoryGraphResponse>(`/api/v1/engine/memory/${encoded}/graph${suffix}`);
   if (!data.graph) {
     throw new Error("Memory graph payload missing");
   }
   return data.graph;
 }
 
-export async function fetchMemoryNode(userId: string, nodeId: string): Promise<MemoryNode | null> {
+export async function fetchMemoryNode(
+  userId: string,
+  nodeId: string,
+  options?: { scope?: MemoryGraphScope }
+): Promise<MemoryNode | null> {
   const userEncoded = encodeURIComponent(userId);
   const nodeEncoded = encodeURIComponent(nodeId);
-  const response = await fetch(`/api/v1/engine/memory/${userEncoded}/node/${nodeEncoded}`);
+  const query = new URLSearchParams();
+  if (options?.scope) {
+    query.set("scope", options.scope);
+  }
+  const suffix = query.size > 0 ? `?${query}` : "";
+  const response = await fetch(`/api/v1/engine/memory/${userEncoded}/node/${nodeEncoded}${suffix}`);
   if (response.status === 404) {
     return null;
   }

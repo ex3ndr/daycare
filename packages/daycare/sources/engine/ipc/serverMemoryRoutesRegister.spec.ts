@@ -106,6 +106,80 @@ describe("serverMemoryRoutesRegister", () => {
             storage.connection.close();
         }
     });
+
+    it("returns document-scope graph including root-level documents", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ctx = contextForUser({ userId: "usr_1" });
+            await storage.documents.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Structured summary",
+                body: "# Memory Summary",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "orphan",
+                slug: "orphan",
+                title: "Orphan",
+                description: "Root-level document",
+                body: "root body",
+                createdAt: 2,
+                updatedAt: 2
+            });
+            await storage.documents.create(ctx, {
+                id: "child",
+                slug: "child",
+                title: "Child",
+                description: "Child of orphan",
+                body: "child body",
+                createdAt: 3,
+                updatedAt: 3,
+                parentId: "orphan"
+            });
+
+            serverMemoryRoutesRegister(app, { storage });
+
+            const graphResponse = await app.inject({
+                method: "GET",
+                url: "/v1/engine/memory/usr_1/graph?scope=documents"
+            });
+            expect(graphResponse.statusCode).toBe(200);
+            const graphPayload = graphResponse.json() as {
+                ok: boolean;
+                graph: { root: { id: string }; children: Record<string, Array<{ id: string }>> };
+            };
+            expect(graphPayload.ok).toBe(true);
+            expect(graphPayload.graph.root.id).toBe("__documents_root__");
+            expect(graphPayload.graph.children.__documents_root__?.map((entry) => entry.id)).toEqual([
+                "memory",
+                "orphan"
+            ]);
+            expect(graphPayload.graph.children.orphan?.map((entry) => entry.id)).toEqual(["child"]);
+
+            const rootNode = await app.inject({
+                method: "GET",
+                url: "/v1/engine/memory/usr_1/node/__documents_root__?scope=documents"
+            });
+            expect(rootNode.statusCode).toBe(200);
+            const rootPayload = rootNode.json() as { ok: boolean; node: { id: string } };
+            expect(rootPayload.ok).toBe(true);
+            expect(rootPayload.node.id).toBe("__documents_root__");
+
+            const orphanNode = await app.inject({
+                method: "GET",
+                url: "/v1/engine/memory/usr_1/node/orphan?scope=documents"
+            });
+            expect(orphanNode.statusCode).toBe(200);
+            const orphanPayload = orphanNode.json() as { ok: boolean; node: { id: string } };
+            expect(orphanPayload.ok).toBe(true);
+            expect(orphanPayload.node.id).toBe("orphan");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });
 
 describe("graphTreeJsonBuild", () => {

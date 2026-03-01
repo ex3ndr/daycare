@@ -57,6 +57,10 @@ type GraphTreeRuntime = {
     children: Map<string, GraphNode[]>;
 };
 
+type MemoryGraphScope = "memory" | "documents";
+
+const DOCUMENTS_ROOT_NODE_ID = "__documents_root__";
+
 /**
  * Registers engine API routes for memory graph read access backed by documents.
  * Expects: runtime.storage documents repository is available.
@@ -68,16 +72,23 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
             return reply.status(400).send({ ok: false, error: "userId is required" });
         }
 
+        const scope = memoryGraphScopeResolve((request.query as { scope?: string }).scope);
+        if (!scope) {
+            return reply.status(400).send({ ok: false, error: "scope must be either 'memory' or 'documents'" });
+        }
+
         try {
             const ctx = contextForUser({ userId });
-            const root = await runtime.storage.documents.findBySlugAndParent(ctx, "memory", null);
-            if (!root) {
-                return reply.status(404).send({ ok: false, error: "Memory root document not found" });
-            }
-            const tree = await memoryTreeBuild(ctx, root.id, runtime.storage.documents);
+            const tree =
+                scope === "documents"
+                    ? await documentsTreeBuild(ctx, runtime.storage.documents)
+                    : await memoryGraphTreeBuild(ctx, runtime.storage.documents);
             return reply.send({ ok: true, graph: graphTreeJsonBuild(tree) });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to read memory graph";
+            if (message === "Memory root document not found") {
+                return reply.status(404).send({ ok: false, error: message });
+            }
             return reply.status(500).send({ ok: false, error: message });
         }
     });
@@ -90,17 +101,34 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
             return reply.status(400).send({ ok: false, error: "userId and nodeId are required" });
         }
 
+        const scope = memoryGraphScopeResolve((request.query as { scope?: string }).scope);
+        if (!scope) {
+            return reply.status(400).send({ ok: false, error: "scope must be either 'memory' or 'documents'" });
+        }
+
         try {
             const ctx = contextForUser({ userId });
-            const root = await runtime.storage.documents.findBySlugAndParent(ctx, "memory", null);
-            if (!root) {
+            if (scope === "documents") {
+                if (nodeId === DOCUMENTS_ROOT_NODE_ID) {
+                    return reply.send({ ok: true, node: documentsRootNodeBuild() });
+                }
+                const node = await graphNodeBuild(ctx, nodeId, runtime.storage.documents);
+                if (!node) {
+                    return reply.status(404).send({ ok: false, error: `Node not found: ${nodeId}` });
+                }
+                return reply.send({ ok: true, node });
+            }
+
+            const memoryRoot = await runtime.storage.documents.findBySlugAndParent(ctx, "memory", null);
+            if (!memoryRoot) {
                 return reply.status(404).send({ ok: false, error: "Memory root document not found" });
             }
-            const targetId = nodeId === "__root__" ? root.id : nodeId;
-            const inTree = await memoryNodeInTreeIs(ctx, targetId, root.id, runtime.storage.documents);
+            const targetId = nodeId === "__root__" ? memoryRoot.id : nodeId;
+            const inTree = await memoryNodeInTreeIs(ctx, targetId, memoryRoot.id, runtime.storage.documents);
             if (!inTree) {
                 return reply.status(404).send({ ok: false, error: `Node not found: ${nodeId}` });
             }
+
             const node = await graphNodeBuild(ctx, targetId, runtime.storage.documents);
             if (!node) {
                 return reply.status(404).send({ ok: false, error: `Node not found: ${nodeId}` });
@@ -126,6 +154,53 @@ export function graphTreeJsonBuild(tree: GraphTreeRuntime): GraphTreeJson {
         root: tree.root,
         children
     };
+}
+
+async function memoryGraphTreeBuild(
+    ctx: Context,
+    documents: MemoryRoutesRuntime["storage"]["documents"]
+): Promise<GraphTreeRuntime> {
+    const memoryRoot = await documents.findBySlugAndParent(ctx, "memory", null);
+    if (!memoryRoot) {
+        throw new Error("Memory root document not found");
+    }
+    return memoryTreeBuild(ctx, memoryRoot.id, documents);
+}
+
+async function documentsTreeBuild(
+    ctx: Context,
+    documents: MemoryRoutesRuntime["storage"]["documents"]
+): Promise<GraphTreeRuntime> {
+    const root = documentsRootNodeBuild();
+    const children = new Map<string, GraphNode[]>();
+    const visited = new Set<string>();
+
+    const walk = async (parentId: string | null, graphParentId: string): Promise<void> => {
+        if (parentId && visited.has(parentId)) {
+            return;
+        }
+        if (parentId) {
+            visited.add(parentId);
+        }
+
+        const docs = await documents.findChildren(ctx, parentId);
+        const nodes: GraphNode[] = [];
+        for (const doc of docs) {
+            const node = await graphNodeBuild(ctx, doc.id, documents, parentId);
+            if (!node) {
+                continue;
+            }
+            nodes.push(node);
+        }
+        children.set(graphParentId, nodes);
+
+        for (const node of nodes) {
+            await walk(node.id, node.id);
+        }
+    };
+
+    await walk(null, root.id);
+    return { root, children };
 }
 
 async function memoryTreeBuild(
@@ -242,4 +317,30 @@ async function memoryNodeInTreeIs(
     }
 
     return false;
+}
+
+function documentsRootNodeBuild(): GraphNode {
+    return {
+        id: DOCUMENTS_ROOT_NODE_ID,
+        frontmatter: {
+            title: "Documents",
+            description: "Virtual root that groups top-level documents.",
+            parents: [],
+            version: 1,
+            createdAt: 0,
+            updatedAt: 0
+        },
+        content: "",
+        refs: []
+    };
+}
+
+function memoryGraphScopeResolve(scope: string | undefined): MemoryGraphScope | null {
+    if (!scope || scope === "memory") {
+        return "memory";
+    }
+    if (scope === "documents") {
+        return "documents";
+    }
+    return null;
 }

@@ -38,7 +38,7 @@ export default function MemoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const nextGraph = await fetchMemoryGraph(normalized);
+      const nextGraph = await fetchMemoryGraph(normalized, { scope: "documents" });
       setGraph(nextGraph);
       setActiveUserId(normalized);
       setLastUpdated(new Date());
@@ -56,7 +56,7 @@ export default function MemoryPage() {
       setSelectedNode(nextGraph.root);
       setExpandedNodeIds(new Set([nextGraph.root.id]));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load memory graph");
+      setError(err instanceof Error ? err.message : "Failed to load document graph");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function MemoryPage() {
       }
 
       try {
-        const fullNode = await fetchMemoryNode(activeUserId, nodeId);
+        const fullNode = await fetchMemoryNode(activeUserId, nodeId, { scope: "documents" });
         if (fullNode) {
           setSelectedNode(fullNode);
           setNodeCache((previous) => {
@@ -123,8 +123,8 @@ export default function MemoryPage() {
 
   return (
     <DashboardShell
-      title="Memory"
-      subtitle="Graph memory tree projected from markdown nodes."
+      title="Documents"
+      subtitle="Hierarchical tree across all user documents, including memory."
       toolbar={
         <>
           <Select
@@ -175,7 +175,7 @@ export default function MemoryPage() {
               <FolderTree className="h-4 w-4" />
               Tree
             </CardTitle>
-            <CardDescription>Hierarchical path projection plus cross-reference links.</CardDescription>
+            <CardDescription>Root-level and nested documents projected as a single tree.</CardDescription>
           </CardHeader>
           <CardContent>
             {graph ? (
@@ -215,7 +215,7 @@ export default function MemoryPage() {
               <Brain className="h-4 w-4" />
               Node Details
             </CardTitle>
-            <CardDescription>Full content and outbound references for the selected node.</CardDescription>
+            <CardDescription>Full content and outbound references for the selected document.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedNode ? (
