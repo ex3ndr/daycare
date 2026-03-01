@@ -46,6 +46,7 @@ import { agentDescriptorRead } from "./ops/agentDescriptorRead.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { agentHistoryLoadAll } from "./ops/agentHistoryLoadAll.js";
 import { AgentInbox } from "./ops/agentInbox.js";
+import { agentPathUserId } from "./ops/agentPathParse.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 
 describe("Agent", () => {
@@ -2411,6 +2412,13 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
             throw new Error(`Agent not found: ${target.agentId}`);
         }
         return contextForUser({ userId: targetCtx.userId });
+    }
+    if ("path" in target) {
+        const userId = agentPathUserId(target.path);
+        if (userId) {
+            return contextForUser({ userId });
+        }
+        return agentSystem.ownerCtxEnsure();
     }
     if (target.descriptor.type === "user") {
         const user = await agentSystem.storage.resolveUserByConnectorKey(

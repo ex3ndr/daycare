@@ -1,8 +1,9 @@
 import http from "node:http";
-import type { AgentSkill, ConnectorMessage, Context, TaskActiveSummary } from "@/types";
+import type { AgentPath, AgentSkill, ConnectorMessage, ConnectorTarget, Context, TaskActiveSummary } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
-import { agentDescriptorTargetResolve } from "../../engine/agents/ops/agentDescriptorTargetResolve.js";
+import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
+import { agentPathConnectorName, agentPathKind, agentPathUserId } from "../../engine/agents/ops/agentPathParse.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
@@ -45,6 +46,7 @@ export type AppServerOptions = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
+    connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>;
 };
 
 /**
@@ -68,6 +70,7 @@ export class AppServer {
     private readonly taskCallbacks: RouteTaskCallbacks | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
+    private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
 
     private server: http.Server | null = null;
@@ -89,6 +92,7 @@ export class AppServer {
         this.taskCallbacks = options.taskCallbacks;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
+        this.connectorTargetResolve = options.connectorTargetResolve;
     }
 
     async start(): Promise<void> {
@@ -282,8 +286,17 @@ export class AppServer {
         this.commandRegistry.register(APP_SERVER_OWNER, {
             command: "app",
             description: "Get a link to open the Daycare app",
-            handler: async (_command, context, descriptor) => {
-                if (descriptor.type !== "user") {
+            handler: async (_command, context, target) => {
+                const path = this.pathFromConnectorTarget(target);
+                if (!path) {
+                    return;
+                }
+                if (agentPathKind(path) !== "connector") {
+                    return;
+                }
+                const userId = agentPathUserId(path);
+                const connector = agentPathConnectorName(path);
+                if (!userId || !connector) {
                     return;
                 }
                 const link = await appAuthLinkGenerate({
@@ -291,12 +304,12 @@ export class AppServer {
                     port: settings.port,
                     appEndpoint: settings.appEndpoint,
                     serverEndpoint: settings.serverEndpoint,
-                    userId: descriptor.userId,
+                    userId,
                     secret: await this.secretResolve(),
                     expiresInSeconds: APP_AUTH_LINK_EXPIRES_IN_SECONDS
                 });
-                if (descriptor.connector === "telegram") {
-                    await this.messageSend(descriptor, context, {
+                if (connector === "telegram") {
+                    await this.messageSend(path, context, {
                         text: "Open your Daycare app using the button below.",
                         buttons: [
                             {
@@ -307,7 +320,7 @@ export class AppServer {
                     });
                     return;
                 }
-                await this.messageSend(descriptor, context, {
+                await this.messageSend(path, context, {
                     text: `Open your Daycare app: ${link.url}`
                 });
             }
@@ -330,11 +343,11 @@ export class AppServer {
     }
 
     private async messageSend(
-        descriptor: Parameters<typeof agentDescriptorTargetResolve>[0],
+        path: AgentPath,
         context: { messageId?: string },
         message: ConnectorMessage
     ): Promise<void> {
-        const target = agentDescriptorTargetResolve(descriptor);
+        const target = await this.connectorTargetResolve(path);
         if (!target) {
             return;
         }
@@ -346,6 +359,16 @@ export class AppServer {
             ...message,
             replyToMessageId: context.messageId
         });
+    }
+
+    private pathFromConnectorTarget(target: ConnectorTarget): AgentPath | null {
+        if (typeof target === "string") {
+            return target as AgentPath;
+        }
+        if (target.type !== "user") {
+            return null;
+        }
+        return agentPathConnector(target.userId, target.connector);
     }
 
     private settingsRequire(): AppServerResolvedSettings {

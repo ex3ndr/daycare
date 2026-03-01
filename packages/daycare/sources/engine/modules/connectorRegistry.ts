@@ -1,4 +1,3 @@
-import type { AgentDescriptor } from "@/types";
 import { getLogger } from "../../log.js";
 import { CommandRegistry } from "./commandRegistry.js";
 import type {
@@ -6,6 +5,7 @@ import type {
     CommandUnsubscribe,
     Connector,
     ConnectorMessage,
+    ConnectorTarget,
     MessageContext,
     MessageHandler,
     MessageUnsubscribe,
@@ -18,12 +18,8 @@ export type ConnectorActionResult =
 
 export type ConnectorRegistryOptions = {
     commandRegistry?: CommandRegistry;
-    onMessage: (
-        message: ConnectorMessage,
-        context: MessageContext,
-        descriptor: AgentDescriptor
-    ) => void | Promise<void>;
-    onCommand?: (command: string, context: MessageContext, descriptor: AgentDescriptor) => void | Promise<void>;
+    onMessage: (message: ConnectorMessage, context: MessageContext, target: ConnectorTarget) => void | Promise<void>;
+    onCommand?: (command: string, context: MessageContext, target: ConnectorTarget) => void | Promise<void>;
     onFatal?: (source: string, reason: string, error?: unknown) => void;
 };
 
@@ -143,8 +139,8 @@ export class ConnectorRegistry {
     }
 
     private attach(connector: Connector): MessageUnsubscribe {
-        const handler: MessageHandler = (message, context, descriptor) => {
-            return this.onMessage(message, context, descriptor);
+        const handler: MessageHandler = (message, context, path) => {
+            return this.onMessage(message, context, path);
         };
         return connector.onMessage(handler);
     }
@@ -153,8 +149,8 @@ export class ConnectorRegistry {
         if (!this.onCommand || !connector.onCommand) {
             return undefined;
         }
-        const handler: CommandHandler = (command, context, descriptor) => {
-            return this.onCommand?.(command, context, descriptor);
+        const handler: CommandHandler = (command, context, path) => {
+            return this.onCommand?.(command, context, path);
         };
         return connector.onCommand(handler);
     }

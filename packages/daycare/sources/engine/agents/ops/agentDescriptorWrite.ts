@@ -5,8 +5,13 @@ import {
     TOPO_SOURCE_AGENTS,
     topographyObservationEmit
 } from "../../observations/topographyEvents.js";
+import { agentConfigFromDescriptor } from "./agentConfigFromDescriptor.js";
+import type { AgentConfig } from "./agentConfigTypes.js";
 import { agentDescriptorLabel } from "./agentDescriptorLabel.js";
 import type { AgentDescriptor } from "./agentDescriptorTypes.js";
+import { agentPathMemory, agentPathSearch, agentPathSub } from "./agentPathBuild.js";
+import { agentPathFromDescriptor } from "./agentPathFromDescriptor.js";
+import type { AgentPath } from "./agentPathTypes.js";
 
 /**
  * Writes an agent descriptor into SQLite storage.
@@ -25,11 +30,16 @@ export async function agentDescriptorWrite(
     }
     const now = Date.now();
     const nextPermissions = existing?.permissions ?? defaultPermissions;
+    const nextPath = await descriptorPathResolve(storage, ctx, descriptor, existing, now);
+    const nextConfig = descriptorConfigResolve(descriptor, existing?.config ?? null);
     await storage.agents.create({
         id: ctx.agentId,
         userId: ctx.userId,
         type: descriptor.type,
         descriptor,
+        path: nextPath,
+        config: nextConfig,
+        nextSubIndex: existing?.nextSubIndex ?? 0,
         activeSessionId: existing?.activeSessionId ?? null,
         permissions: nextPermissions,
         tokens: existing?.tokens ?? null,
@@ -84,4 +94,50 @@ function descriptorParentAgentIdResolve(descriptor: AgentDescriptor): string | u
         }
     }
     return undefined;
+}
+
+async function descriptorPathResolve(
+    storage: Storage,
+    ctx: Context,
+    descriptor: AgentDescriptor,
+    existing: Awaited<ReturnType<Storage["agents"]["findById"]>>,
+    now: number
+): Promise<AgentPath> {
+    if (existing?.path) {
+        return existing.path;
+    }
+
+    if (descriptor.type === "subagent" || descriptor.type === "app" || descriptor.type === "memory-search") {
+        const parent = await storage.agents.findById(descriptor.parentAgentId);
+        if (parent) {
+            const parentPath = parent.path ?? agentPathFromDescriptor(parent.descriptor, { userId: parent.userId });
+            const parentIndex = parent.nextSubIndex ?? 0;
+            await storage.agents.update(parent.id, {
+                nextSubIndex: parentIndex + 1,
+                updatedAt: now
+            });
+            if (descriptor.type === "memory-search") {
+                return agentPathSearch(parentPath, parentIndex);
+            }
+            return agentPathSub(parentPath, parentIndex);
+        }
+    }
+
+    if (descriptor.type === "memory-agent") {
+        const source = await storage.agents.findById(descriptor.id);
+        if (source) {
+            const sourcePath = source.path ?? agentPathFromDescriptor(source.descriptor, { userId: source.userId });
+            return agentPathMemory(sourcePath);
+        }
+    }
+
+    return agentPathFromDescriptor(descriptor, { userId: ctx.userId });
+}
+
+function descriptorConfigResolve(descriptor: AgentDescriptor, existing: AgentConfig | null): AgentConfig | null {
+    const derived = agentConfigFromDescriptor(descriptor);
+    if (Object.keys(derived).length === 0) {
+        return existing;
+    }
+    return derived;
 }

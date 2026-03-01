@@ -4,7 +4,6 @@ import path from "node:path";
 import TelegramBot from "node-telegram-bot-api";
 
 import type {
-    AgentDescriptor,
     CommandHandler,
     Connector,
     ConnectorCapabilities,
@@ -15,6 +14,7 @@ import type {
     MessageHandler,
     SlashCommandEntry
 } from "@/types";
+import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
@@ -148,24 +148,20 @@ export class TelegramConnector implements Connector {
             const trimmedText = rawText?.trim() ?? "";
             const isCommand = trimmedText.startsWith("/");
 
-            const descriptor: AgentDescriptor = {
-                type: "user",
-                connector: "telegram",
-                userId: String(message.from?.id ?? message.chat.id),
-                channelId: String(message.chat.id)
-            };
+            const externalTargetId = String(message.chat.id);
+            const path = agentPathConnector(externalTargetId, "telegram");
             const context: MessageContext = {
                 messageId: message.message_id ? String(message.message_id) : undefined
             };
 
             if (isCommand && rawText) {
                 logger.debug(
-                    `event: Dispatching to command handlers handlerCount=${this.commandHandlers.length} channelId=${descriptor.channelId}`
+                    `event: Dispatching to command handlers handlerCount=${this.commandHandlers.length} path=${path}`
                 );
                 for (const handler of this.commandHandlers) {
-                    await handler(rawText, context, descriptor);
+                    await handler(rawText, context, path);
                 }
-                logger.debug(`event: All command handlers completed channelId=${descriptor.channelId}`);
+                logger.debug(`event: All command handlers completed path=${path}`);
                 return;
             }
 
@@ -177,13 +173,11 @@ export class TelegramConnector implements Connector {
                 files: files.length > 0 ? files : undefined
             };
 
-            logger.debug(
-                `event: Dispatching to handlers handlerCount=${this.handlers.length} channelId=${descriptor.channelId}`
-            );
+            logger.debug(`event: Dispatching to handlers handlerCount=${this.handlers.length} path=${path}`);
             for (const handler of this.handlers) {
-                await handler(payload, context, descriptor);
+                await handler(payload, context, path);
             }
-            logger.debug(`event: All handlers completed channelId=${descriptor.channelId}`);
+            logger.debug(`event: All handlers completed path=${path}`);
         });
 
         this.bot.on("polling_error", (error) => {

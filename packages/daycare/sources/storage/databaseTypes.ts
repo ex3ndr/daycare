@@ -1,6 +1,8 @@
 import type {
+    AgentConfig,
     AgentDescriptor,
     AgentLifecycleState,
+    AgentPath,
     AgentTokenEntry,
     AgentTokenStats,
     ExposeEndpointAuth,
@@ -19,6 +21,9 @@ export type DatabaseAgentRow = {
     user_id: string;
     type: AgentDescriptor["type"];
     descriptor: string;
+    path: string | null;
+    config: string | null;
+    next_sub_index: number;
     active_session_id: string | null;
     permissions: string;
     tokens: string | null;
@@ -63,6 +68,9 @@ export type AgentDbRecord = {
     userId: string;
     type: AgentDescriptor["type"];
     descriptor: AgentDescriptor;
+    path?: AgentPath | null;
+    config?: AgentConfig | null;
+    nextSubIndex?: number;
     activeSessionId: string | null;
     permissions: SessionPermissions;
     tokens: AgentTokenEntry | null;

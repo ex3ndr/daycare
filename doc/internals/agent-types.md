@@ -1,8 +1,12 @@
 # Agent types
 
-Agent types are persisted descriptors that capture what an agent represents
-and how it should be resolved later. They are written once on creation and
-restored on boot to keep agent identity stable across restarts.
+Agent identity is now path-first.
+
+See [agent-paths.md](./agent-paths.md) for the canonical runtime model.
+
+This document is kept for descriptor compatibility details while the migration
+window is open. In runtime routing, descriptor targets are normalized to
+`AgentPath` before dispatch.
 
 ```mermaid
 flowchart TD

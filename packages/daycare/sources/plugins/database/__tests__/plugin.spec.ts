@@ -31,7 +31,7 @@ describe("database plugin", () => {
         const auth = new AuthStore(config);
         const fileStore = new FileFolder(path.join(config.dataDir, "files"));
         const modules = new ModuleRegistry({ onMessage: async () => undefined });
-        const pluginRegistry = new PluginRegistry(modules);
+        const pluginRegistry = new PluginRegistry(modules, async () => null);
         const storage = await storageOpenTest();
 
         const instanceId = "database-1";

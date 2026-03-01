@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { plugin } from "./plugin.js";
 import { upgradePm2ProcessDetect } from "./upgradePm2ProcessDetect.js";
 import { upgradeRestartPendingClear } from "./upgradeRestartPendingClear.js";
@@ -163,7 +164,7 @@ describe("upgrade plugin commands", () => {
         expect(registrar.unregisterCommand).toHaveBeenNthCalledWith(2, "restart");
     });
 
-    it("dispatches /upgrade and /restart handlers for user descriptors", async () => {
+    it("dispatches /upgrade and /restart handlers for user paths", async () => {
         vi.mocked(upgradeRun).mockResolvedValue(undefined);
         vi.mocked(upgradeRestartRun).mockResolvedValue(undefined);
         const registrar = {
@@ -201,19 +202,14 @@ describe("upgrade plugin commands", () => {
         if (!upgradeCommand || !restartCommand) {
             throw new Error("Expected upgrade and restart commands to be registered");
         }
-        const descriptor = {
-            type: "user",
-            connector: "telegram",
-            channelId: "123",
-            userId: "123"
-        };
+        const targetPath = agentPathConnector("123", "telegram");
         const context = { messageId: "56" };
 
-        await upgradeCommand.handler("/upgrade", context, descriptor);
-        await restartCommand.handler("/restart", context, descriptor);
+        await upgradeCommand.handler("/upgrade", context, targetPath);
+        await restartCommand.handler("/restart", context, targetPath);
 
-        expect(registrar.sendMessage).toHaveBeenCalledWith(descriptor, context, { text: "Upgrading Daycare..." });
-        expect(registrar.sendMessage).toHaveBeenCalledWith(descriptor, context, { text: "Restarting Daycare..." });
+        expect(registrar.sendMessage).toHaveBeenCalledWith(targetPath, context, { text: "Upgrading Daycare..." });
+        expect(registrar.sendMessage).toHaveBeenCalledWith(targetPath, context, { text: "Restarting Daycare..." });
         expect(upgradeRun).toHaveBeenCalledWith(
             expect.objectContaining({
                 strategy: "pm2",
@@ -232,7 +228,7 @@ describe("upgrade plugin commands", () => {
             1,
             expect.objectContaining({
                 dataDir: "/tmp/daycare",
-                descriptor,
+                path: targetPath,
                 context,
                 previousVersion: "0.0.30"
             })
@@ -241,7 +237,7 @@ describe("upgrade plugin commands", () => {
             2,
             expect.objectContaining({
                 dataDir: "/tmp/daycare",
-                descriptor,
+                path: targetPath,
                 context
             })
         );
@@ -284,27 +280,17 @@ describe("upgrade plugin commands", () => {
         if (!restartCommand) {
             throw new Error("Expected restart command to be registered");
         }
-        const descriptor = {
-            type: "user",
-            connector: "telegram",
-            channelId: "123",
-            userId: "123"
-        };
+        const targetPath = "/123/telegram";
         const context = { messageId: "56" };
 
-        await restartCommand.handler("/restart", context, descriptor);
+        await restartCommand.handler("/restart", context, targetPath);
 
         expect(upgradeRestartPendingClear).toHaveBeenCalledWith("/tmp/daycare");
     });
 
     it("sends restart completion from postStart when a recent marker exists", async () => {
         vi.mocked(upgradeRestartPendingTake).mockResolvedValue({
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            },
+            path: agentPathConnector("123", "telegram"),
             context: { messageId: "77" },
             requestedAtMs: Date.now(),
             requesterPid: process.pid - 1
@@ -339,12 +325,7 @@ describe("upgrade plugin commands", () => {
         await instance.postStart?.();
 
         expect(registrar.sendMessage).toHaveBeenCalledWith(
-            {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            },
+            agentPathConnector("123", "telegram"),
             { messageId: "77" },
             { text: "Restart complete. Daycare is back online." }
         );
@@ -352,12 +333,7 @@ describe("upgrade plugin commands", () => {
 
     it("sends upgrade completion from postStart when the version changed", async () => {
         vi.mocked(upgradeRestartPendingTake).mockResolvedValue({
-            descriptor: {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            },
+            path: agentPathConnector("123", "telegram"),
             context: { messageId: "77" },
             requestedAtMs: Date.now(),
             requesterPid: process.pid - 1,
@@ -394,12 +370,7 @@ describe("upgrade plugin commands", () => {
         await instance.postStart?.();
 
         expect(registrar.sendMessage).toHaveBeenCalledWith(
-            {
-                type: "user",
-                connector: "telegram",
-                channelId: "123",
-                userId: "123"
-            },
+            agentPathConnector("123", "telegram"),
             { messageId: "77" },
             { text: "Upgrade complete: Daycare 0.0.30 -> 0.0.31." }
         );

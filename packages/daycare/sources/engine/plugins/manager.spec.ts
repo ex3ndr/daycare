@@ -39,7 +39,7 @@ async function createManager(
     processes?: Processes
 ): Promise<{ manager: PluginManager; modules: ModuleRegistry; config: ConfigModule }> {
     const modules = new ModuleRegistry({ onMessage: () => {} });
-    const pluginRegistry = new PluginRegistry(modules);
+    const pluginRegistry = new PluginRegistry(modules, async () => null);
     const config = configResolve({ engine: { dataDir: rootDir } }, path.join(rootDir, "settings.json"));
     const configModule = new ConfigModule(config);
     const auth = new AuthStore(config);

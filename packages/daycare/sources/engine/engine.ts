@@ -3,7 +3,15 @@ import path from "node:path";
 
 import Docker from "dockerode";
 
-import type { AgentDescriptor, AgentTokenEntry, Config, ConnectorMessage, Context, MessageContext } from "@/types";
+import type {
+    AgentPath,
+    AgentTokenEntry,
+    Config,
+    ConnectorMessage,
+    ConnectorTarget,
+    Context,
+    MessageContext
+} from "@/types";
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
@@ -21,7 +29,9 @@ import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { stringSlugify } from "../utils/stringSlugify.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForUser } from "./agents/context.js";
-import { agentDescriptorTargetResolve } from "./agents/ops/agentDescriptorTargetResolve.js";
+import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
+import { agentPathFromDescriptor } from "./agents/ops/agentPathFromDescriptor.js";
+import { agentPathConnectorName, agentPathKind, agentPathUserId } from "./agents/ops/agentPathParse.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
@@ -187,14 +197,22 @@ export class Engine {
             onFlush: async (items) => {
                 await this.runConnectorCallback("message", async () => {
                     for (const item of items) {
-                        const connector = item.descriptor.type === "user" ? item.descriptor.connector : "unknown";
+                        const resolved =
+                            item.path !== undefined
+                                ? await this.pathCanonicalize(item.path)
+                                : item.descriptor
+                                  ? await this.targetCanonicalize(item.descriptor)
+                                  : null;
+                        if (!resolved) {
+                            continue;
+                        }
+                        const connector = agentPathConnectorName(resolved.path) ?? "unknown";
                         logger.debug(
-                            `receive: Connector message received: connector=${connector} type=${item.descriptor.type} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
+                            `receive: Connector message received: connector=${connector} path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
-                        const ctx = await this.descriptorContextResolve(item.descriptor);
                         await this.agentSystem.post(
-                            ctx,
-                            { descriptor: item.descriptor },
+                            resolved.ctx,
+                            { path: resolved.path },
                             { type: "message", message: item.message, context: item.context }
                         );
                     }
@@ -210,70 +228,60 @@ export class Engine {
         });
 
         this.modules = new ModuleRegistry({
-            onMessage: async (message, context, descriptor) =>
+            onMessage: async (message, context, target) =>
                 this.runConnectorCallback("message", async () => {
-                    const ctx = await this.descriptorContextResolve(descriptor);
+                    const resolved = await this.targetCanonicalize(target);
+                    const ctx = resolved.ctx;
                     const messageContext = await this.messageContextWithTimezone(ctx, context);
                     const normalized = await this.messageFilesToDownloads(ctx, message);
-                    this.incomingMessages.post({ descriptor, message: normalized, context: messageContext });
+                    this.incomingMessages.post({ path: resolved.path, message: normalized, context: messageContext });
                 }),
-            onCommand: async (command, context, descriptor) =>
+            onCommand: async (command, context, target) =>
                 this.runConnectorCallback("command", async () => {
-                    const connector = descriptor.type === "user" ? descriptor.connector : "unknown";
+                    const resolved = await this.targetCanonicalize(target);
+                    const connector = agentPathConnectorName(resolved.path) ?? "unknown";
+                    const kind = agentPathKind(resolved.path);
                     let messageContext = context;
-                    if (descriptor.type === "user") {
-                        const ctx = await this.descriptorContextResolve(descriptor);
-                        messageContext = await this.messageContextWithTimezone(ctx, context);
+                    if (kind === "connector" || kind === "subuser") {
+                        messageContext = await this.messageContextWithTimezone(resolved.ctx, context);
                     }
                     const parsed = parseCommand(command);
                     if (!parsed) {
                         return;
                     }
                     if (parsed.name === "reset") {
-                        if (descriptor.type !== "user") {
+                        if (kind !== "connector") {
                             return;
                         }
-                        logger.info(
-                            { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-                            "receive: Reset command received"
-                        );
-                        await this.handleResetCommand(descriptor, messageContext);
+                        logger.info({ connector, path: resolved.path }, "receive: Reset command received");
+                        await this.handleResetCommand(resolved.path, messageContext);
                         return;
                     }
                     if (parsed.name === "context") {
-                        if (descriptor.type !== "user") {
+                        if (kind !== "connector") {
                             return;
                         }
-                        logger.info(
-                            { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-                            "receive: Context command received"
-                        );
-                        await this.handleContextCommand(descriptor, messageContext);
+                        logger.info({ connector, path: resolved.path }, "receive: Context command received");
+                        await this.handleContextCommand(resolved.path, messageContext);
                         return;
                     }
                     if (parsed.name === "compact") {
-                        if (descriptor.type !== "user") {
+                        if (kind !== "connector") {
                             return;
                         }
-                        logger.info(
-                            { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-                            "receive: Compact command received"
-                        );
-                        await this.handleCompactCommand(descriptor, messageContext);
+                        logger.info({ connector, path: resolved.path }, "receive: Compact command received");
+                        await this.handleCompactCommand(resolved.path, messageContext);
                         return;
                     }
                     if (parsed.name === "abort") {
-                        if (descriptor.type !== "user") {
+                        if (kind !== "connector") {
                             return;
                         }
-                        logger.info(
-                            { connector, channelId: descriptor.channelId, userId: descriptor.userId },
-                            "stop: Abort command received"
-                        );
-                        await this.handleStopCommand(descriptor, messageContext);
+                        logger.info({ connector, path: resolved.path }, "stop: Abort command received");
+                        await this.handleStopCommand(resolved.path, messageContext);
                         return;
                     }
-                    if (descriptor.type !== "user") {
+                    if (kind !== "connector") {
                         return;
                     }
                     const pluginCommand = this.modules.commands.get(parsed.name);
@@ -282,12 +290,11 @@ export class Engine {
                             {
                                 connector,
                                 command: parsed.name,
-                                channelId: descriptor.channelId,
-                                userId: descriptor.userId
+                                path: resolved.path
                             },
                             "event: Dispatching plugin slash command"
                         );
-                        await pluginCommand.handler(command, messageContext, descriptor);
+                        await pluginCommand.handler(command, messageContext, resolved.path);
                         return;
                     }
                     logger.debug({ connector, command: parsed.name }, "event: Unknown command ignored");
@@ -310,7 +317,7 @@ export class Engine {
         });
         const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));
 
-        this.pluginRegistry = new PluginRegistry(this.modules);
+        this.pluginRegistry = new PluginRegistry(this.modules, (path) => this.connectorTargetResolve(path));
 
         this.pluginManager = new PluginManager({
             config: this.config,
@@ -579,7 +586,8 @@ export class Engine {
                 webhookTriggerRemove: (ctx, taskId) => this.webhooks.deleteTriggersForTask(ctx, taskId)
             },
             tokenStatsFetch: (_ctx, options) => this.storage.tokenStats.findAll(options),
-            documents: this.storage.documents
+            documents: this.storage.documents,
+            connectorTargetResolve: (path) => this.connectorTargetResolve(path)
         });
         this.channels = new Channels({
             channels: this.storage.channels,
@@ -766,8 +774,8 @@ export class Engine {
         };
     }
 
-    private async handleContextCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
-        const target = agentDescriptorTargetResolve(descriptor);
+    private async handleContextCommand(path: AgentPath, context: MessageContext): Promise<void> {
+        const target = await this.connectorTargetResolve(path);
         if (!target) {
             return;
         }
@@ -777,8 +785,8 @@ export class Engine {
         }
         let tokens: AgentTokenEntry | null = null;
         try {
-            const ctx = await this.descriptorContextResolve(descriptor);
-            tokens = await this.agentSystem.tokensForTarget(ctx, { descriptor });
+            const ctx = await this.pathContextResolve(path);
+            tokens = await this.agentSystem.tokensForTarget(ctx, { path });
         } catch (error) {
             logger.warn({ connector: target.connector, error }, "error: Context command failed to load tokens");
         }
@@ -794,26 +802,26 @@ export class Engine {
         }
     }
 
-    private async handleCompactCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
-        const ctx = await this.descriptorContextResolve(descriptor);
-        await this.agentSystem.post(ctx, { descriptor }, { type: "compact", context });
+    private async handleCompactCommand(path: AgentPath, context: MessageContext): Promise<void> {
+        const ctx = await this.pathContextResolve(path);
+        await this.agentSystem.post(ctx, { path }, { type: "compact", context });
     }
 
-    private async handleResetCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
-        const dropped = this.incomingMessages.dropForDescriptor(descriptor);
+    private async handleResetCommand(path: AgentPath, context: MessageContext): Promise<void> {
+        const dropped = this.incomingMessages.dropForPath(path);
         if (dropped > 0) {
             logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
         }
-        const ctx = await this.descriptorContextResolve(descriptor);
+        const ctx = await this.pathContextResolve(path);
         await this.agentSystem.post(
             ctx,
-            { descriptor },
+            { path },
             { type: "reset", message: "Manual reset requested by the user.", context }
         );
     }
 
-    private async handleStopCommand(descriptor: AgentDescriptor, context: MessageContext): Promise<void> {
-        const target = agentDescriptorTargetResolve(descriptor);
+    private async handleStopCommand(path: AgentPath, context: MessageContext): Promise<void> {
+        const target = await this.connectorTargetResolve(path);
         if (!target) {
             return;
         }
@@ -821,7 +829,7 @@ export class Engine {
         if (!connector?.capabilities.sendText) {
             return;
         }
-        const aborted = this.agentSystem.abortInferenceForTarget({ descriptor });
+        const aborted = this.agentSystem.abortInferenceForTarget({ path });
         const text = aborted ? "Stopped current inference." : "No active inference to stop.";
         try {
             await connector.sendMessage(target.targetId, {
@@ -855,23 +863,93 @@ export class Engine {
 
     /**
      * Resolves runtime user context from an incoming descriptor.
-     * Expects: user descriptors map connector identity to an internal user id.
+     * Expects: paths are rooted under /<userId>/... for user-scoped agents.
      */
-    private async descriptorContextResolve(descriptor: AgentDescriptor) {
+    private async targetCanonicalize(target: ConnectorTarget): Promise<{ ctx: Context; path: AgentPath }> {
         await this.migrationReady;
-        if (descriptor.type === "user") {
-            const connectorKey = userConnectorKeyCreate(descriptor.connector, descriptor.userId);
-            try {
-                const user = await this.storage.resolveUserByConnectorKey(connectorKey);
-                return contextForUser({ userId: user.id });
-            } catch (error) {
-                const detail = error instanceof Error ? error.message : String(error);
-                throw new Error(`Failed to resolve user for connector key ${connectorKey}: ${detail}`, {
-                    cause: error
-                });
-            }
+        if (typeof target === "string") {
+            return this.pathCanonicalize(target as AgentPath);
         }
-        throw new Error(`Descriptor type does not resolve to a user context: ${descriptor.type}`);
+        if (target.type === "user") {
+            const connectorKey = userConnectorKeyCreate(target.connector, target.userId);
+            const user = await this.storage.resolveUserByConnectorKey(connectorKey);
+            const path = agentPathConnector(user.id, target.connector);
+            return {
+                ctx: contextForUser({ userId: user.id }),
+                path
+            };
+        }
+        if (target.type === "subuser") {
+            const path = agentPathFromDescriptor(target, { userId: target.id });
+            return {
+                ctx: contextForUser({ userId: target.id }),
+                path
+            };
+        }
+        throw new Error(`Connector target type is not supported: ${target.type}`);
+    }
+
+    /**
+     * Resolves runtime user context from an incoming path.
+     * Expects: paths are rooted under /<userId>/... for user-scoped agents.
+     */
+    private async pathCanonicalize(path: AgentPath): Promise<{ ctx: Context; path: AgentPath }> {
+        await this.migrationReady;
+        const kind = agentPathKind(path);
+        if (kind !== "connector") {
+            const ctx = await this.pathContextResolve(path);
+            return { ctx, path };
+        }
+        const connector = agentPathConnectorName(path);
+        const externalId = agentPathUserId(path);
+        if (!connector || !externalId) {
+            throw new Error(`Invalid connector path: ${path}`);
+        }
+        const connectorKey = userConnectorKeyCreate(connector, externalId);
+        const user = await this.storage.resolveUserByConnectorKey(connectorKey);
+        const canonicalPath = agentPathConnector(user.id, connector);
+        return {
+            ctx: contextForUser({ userId: user.id }),
+            path: canonicalPath
+        };
+    }
+
+    /**
+     * Resolves runtime user context from an incoming path.
+     * Expects: paths are rooted under /<userId>/... for user-scoped agents.
+     */
+    private async pathContextResolve(path: AgentPath) {
+        await this.migrationReady;
+        const userId = agentPathUserId(path);
+        if (!userId) {
+            throw new Error(`Path does not resolve to a user context: ${path}`);
+        }
+        return contextForUser({ userId });
+    }
+
+    private async connectorTargetResolve(path: AgentPath): Promise<{ connector: string; targetId: string } | null> {
+        if (agentPathKind(path) !== "connector") {
+            return null;
+        }
+        const connector = agentPathConnectorName(path);
+        const userId = agentPathUserId(path);
+        if (!connector || !userId) {
+            return null;
+        }
+        const user = await this.storage.users.findById(userId);
+        if (!user) {
+            return null;
+        }
+        const keyPrefix = `${connector}:`;
+        const connectorKey = user.connectorKeys.find((entry) => entry.connectorKey.startsWith(keyPrefix));
+        if (!connectorKey) {
+            return null;
+        }
+        const targetId = connectorKey.connectorKey.slice(keyPrefix.length).trim();
+        if (!targetId) {
+            return null;
+        }
+        return { connector, targetId };
     }
 
     /**

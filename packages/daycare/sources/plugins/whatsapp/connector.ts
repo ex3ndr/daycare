@@ -13,7 +13,6 @@ import pino from "pino";
 import qrcodeTerminal from "qrcode-terminal";
 
 import type {
-    AgentDescriptor,
     CommandHandler,
     Connector,
     ConnectorCapabilities,
@@ -24,6 +23,7 @@ import type {
     MessageHandler
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
+import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { useAuthStoreState } from "./authState.js";
@@ -304,12 +304,7 @@ export class WhatsAppConnector implements Connector {
 
         logger.debug(`receive: Received WhatsApp message phone=${phone} messageId=${messageId} hasText=${!!text}`);
 
-        const descriptor: AgentDescriptor = {
-            type: "user",
-            connector: "whatsapp",
-            userId: phone,
-            channelId: phone
-        };
+        const path = agentPathConnector(phone, "whatsapp");
         const context: MessageContext = {
             messageId
         };
@@ -319,7 +314,7 @@ export class WhatsAppConnector implements Connector {
         if (trimmedText.startsWith("/")) {
             logger.debug(`event: Dispatching to command handlers phone=${phone}`);
             for (const handler of this.commandHandlers) {
-                await handler(trimmedText, context, descriptor);
+                await handler(trimmedText, context, path);
             }
             return;
         }
@@ -334,7 +329,7 @@ export class WhatsAppConnector implements Connector {
 
         logger.debug(`event: Dispatching to message handlers phone=${phone}`);
         for (const handler of this.handlers) {
-            await handler(payload, context, descriptor);
+            await handler(payload, context, path);
         }
     }
 

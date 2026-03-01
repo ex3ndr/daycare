@@ -1,7 +1,7 @@
-import type { AgentDescriptor, MessageContext } from "@/types";
+import type { AgentPath, MessageContext } from "@/types";
 
 export type UpgradeRestartPending = {
-    descriptor: AgentDescriptor;
+    path: AgentPath;
     context: MessageContext;
     requestedAtMs: number;
     requesterPid: number;

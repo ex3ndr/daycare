@@ -52,5 +52,9 @@ export const migrations: Migration[] = [
     {
         name: "20260301_swarms",
         fileName: "20260301_swarms.sql"
+    },
+    {
+        name: "20260301_agent_paths",
+        fileName: "20260301_agent_paths.sql"
     }
 ];

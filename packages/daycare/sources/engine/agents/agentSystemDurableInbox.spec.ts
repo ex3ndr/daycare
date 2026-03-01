@@ -29,6 +29,7 @@ import { Signals } from "../signals/signals.js";
 import { AgentSystem } from "./agentSystem.js";
 import { contextForUser } from "./context.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
+import { agentPathUserId } from "./ops/agentPathParse.js";
 import { agentStateRead } from "./ops/agentStateRead.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { inboxItemDeserialize } from "./ops/inboxItemDeserialize.js";
@@ -457,6 +458,13 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentPostTarge
             throw new Error(`Agent not found: ${target.agentId}`);
         }
         return contextForUser({ userId: targetCtx.userId });
+    }
+    if ("path" in target) {
+        const userId = agentPathUserId(target.path);
+        if (userId) {
+            return contextForUser({ userId });
+        }
+        return agentSystem.ownerCtxEnsure();
     }
     if (target.descriptor.type === "user") {
         const user = await agentSystem.storage.resolveUserByConnectorKey(

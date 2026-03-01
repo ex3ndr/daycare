@@ -4,7 +4,9 @@
 // Config
 export type { Config } from "./config/configTypes.js";
 export { Context, contextForAgent, contextForUser } from "./engine/agents/context.js";
+export type { AgentConfig } from "./engine/agents/ops/agentConfigTypes.js";
 export type { AgentDescriptor, AgentFetchStrategy } from "./engine/agents/ops/agentDescriptorTypes.js";
+export type { AgentPath, AgentPathKind } from "./engine/agents/ops/agentPathTypes.js";
 // Agents
 export type {
     AgentHistoryAssistantRewriteRecord,
@@ -55,6 +57,7 @@ export type {
     ConnectorFileMode,
     ConnectorMessage,
     ConnectorMessageButton,
+    ConnectorTarget,
     MessageContext,
     MessageContextEnrichment,
     MessageHandler,

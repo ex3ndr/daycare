@@ -1,11 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { AgentDescriptor, MessageContext } from "@/types";
+import type { AgentPath, MessageContext } from "@/types";
 
 type UpgradeRestartPendingSetOptions = {
     dataDir: string;
-    descriptor: AgentDescriptor;
+    path: AgentPath;
     context: MessageContext;
     requestedAtMs: number;
     requesterPid: number;
@@ -21,7 +21,7 @@ export async function upgradeRestartPendingSet(options: UpgradeRestartPendingSet
     await writeFile(
         path.join(options.dataDir, "restart-pending.json"),
         JSON.stringify({
-            descriptor: options.descriptor,
+            path: options.path,
             context: options.context,
             requestedAtMs: options.requestedAtMs,
             requesterPid: options.requesterPid,

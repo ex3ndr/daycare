@@ -1,5 +1,8 @@
 import type { FileReference } from "../../../files/types.js";
 import type { AgentDescriptor } from "../../agents/ops/agentDescriptorTypes.js";
+import type { AgentPath } from "../../agents/ops/agentPathTypes.js";
+
+export type ConnectorTarget = AgentPath | AgentDescriptor;
 
 export type ConnectorFileMode = "document" | "photo" | "video" | "voice";
 export type ConnectorFileDisposition = ConnectorFileMode | "auto";
@@ -45,13 +48,13 @@ export type MessageContextEnrichment = {
 export type MessageHandler = (
     message: ConnectorMessage,
     context: MessageContext,
-    descriptor: AgentDescriptor
+    target: ConnectorTarget
 ) => void | Promise<void>;
 
 export type CommandHandler = (
     command: string,
     context: MessageContext,
-    descriptor: AgentDescriptor
+    target: ConnectorTarget
 ) => void | Promise<void>;
 
 export type SlashCommandEntry = {

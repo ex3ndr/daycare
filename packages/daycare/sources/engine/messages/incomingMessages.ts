@@ -1,10 +1,11 @@
-import type { AgentDescriptor, ConnectorMessage, MessageContext } from "@/types";
+import type { AgentDescriptor, AgentPath, ConnectorMessage, MessageContext } from "@/types";
 import { agentDescriptorCacheKey } from "../agents/ops/agentDescriptorCacheKey.js";
 import { messageContextMerge } from "./messageContextMerge.js";
 import { messageIsEmpty } from "./messageIsEmpty.js";
 
 export type IncomingMessageInput = {
-    descriptor: AgentDescriptor;
+    path?: AgentPath;
+    descriptor?: AgentDescriptor;
     message: ConnectorMessage;
     context: MessageContext;
 };
@@ -38,8 +39,25 @@ export class IncomingMessages {
         if (messageIsEmpty(input.message)) {
             return;
         }
+        if (!input.path && !input.descriptor) {
+            throw new Error("Incoming message requires either path or descriptor.");
+        }
         this.pending.push(input);
         this.schedule();
+    }
+
+    /**
+     * Drops queued (not yet flushed) messages for one path.
+     * Expects: caller uses this for command-style control flows like /reset.
+     */
+    dropForPath(path: AgentPath): number {
+        if (this.pending.length === 0) {
+            return 0;
+        }
+        const key = batchKeyBuild(path);
+        const before = this.pending.length;
+        this.pending = this.pending.filter((entry) => batchKeyBuild(entry) !== key);
+        return before - this.pending.length;
     }
 
     /**
@@ -52,7 +70,7 @@ export class IncomingMessages {
         }
         const key = batchKeyBuild(descriptor);
         const before = this.pending.length;
-        this.pending = this.pending.filter((entry) => batchKeyBuild(entry.descriptor) !== key);
+        this.pending = this.pending.filter((entry) => batchKeyBuild(entry) !== key);
         return before - this.pending.length;
     }
 
@@ -106,12 +124,18 @@ function batchBuild(inputs: IncomingMessageInput[]): IncomingMessageBatch[] {
     const grouped = new Map<string, IncomingMessageBatch>();
     const keys: string[] = [];
     for (const input of inputs) {
-        const key = batchKeyBuild(input.descriptor);
+        const key = batchKeyBuild(input);
         const existing = grouped.get(key);
         if (!existing) {
             grouped.set(key, { ...input, count: 1 });
             keys.push(key);
             continue;
+        }
+        if (!existing.path && input.path) {
+            existing.path = input.path;
+        }
+        if (!existing.descriptor && input.descriptor) {
+            existing.descriptor = input.descriptor;
         }
         existing.message = connectorMessageMerge(existing.message, input.message);
         existing.context = messageContextMerge(existing.context, input.context);
@@ -120,8 +144,20 @@ function batchBuild(inputs: IncomingMessageInput[]): IncomingMessageBatch[] {
     return keys.map((key) => grouped.get(key)).filter((item): item is IncomingMessageBatch => !!item);
 }
 
-function batchKeyBuild(descriptor: AgentDescriptor): string {
-    return agentDescriptorCacheKey(descriptor);
+function batchKeyBuild(value: IncomingMessageInput | AgentPath | AgentDescriptor): string {
+    if (typeof value === "string") {
+        return value;
+    }
+    if ("type" in value) {
+        return agentDescriptorCacheKey(value);
+    }
+    if (value.path) {
+        return value.path;
+    }
+    if (value.descriptor) {
+        return agentDescriptorCacheKey(value.descriptor);
+    }
+    throw new Error("Incoming message key requires either path or descriptor.");
 }
 
 function connectorMessageMerge(left: ConnectorMessage, right: ConnectorMessage): ConnectorMessage {

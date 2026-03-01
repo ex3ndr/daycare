@@ -97,19 +97,10 @@ describe("TelegramConnector commands", () => {
 
         expect(messageHandlerMock).not.toHaveBeenCalled();
         expect(commandHandler).toHaveBeenCalledTimes(1);
-        const [command, context, descriptor] = commandHandler.mock.calls[0] as [
-            string,
-            MessageContext,
-            AgentDescriptor
-        ];
+        const [command, context, target] = commandHandler.mock.calls[0] as [string, MessageContext, string];
         expect(command).toBe("/reset");
         expect(context).toMatchObject({ messageId: "55" });
-        expect(descriptor).toMatchObject({
-            type: "user",
-            connector: "telegram",
-            channelId: "123",
-            userId: "123"
-        });
+        expect(target).toBe("/123/telegram");
     });
 });
 
@@ -157,10 +148,10 @@ describe("TelegramConnector incoming documents", () => {
         });
 
         expect(messageHandlerMock).toHaveBeenCalledTimes(1);
-        const [message, context, descriptor] = messageHandlerMock.mock.calls[0] as [
+        const [message, context, target] = messageHandlerMock.mock.calls[0] as [
             { text: string | null; files?: Array<{ name: string; mimeType: string; path: string; size: number }> },
             MessageContext,
-            AgentDescriptor
+            string
         ];
         expect(message.text).toBe("Document received: report.pdf.");
         expect(message.files).toEqual([
@@ -173,12 +164,7 @@ describe("TelegramConnector incoming documents", () => {
             }
         ]);
         expect(context).toMatchObject({ messageId: "55" });
-        expect(descriptor).toMatchObject({
-            type: "user",
-            connector: "telegram",
-            channelId: "123",
-            userId: "123"
-        });
+        expect(target).toBe("/123/telegram");
     });
 
     it("adds fallback text when document download fails", async () => {
@@ -267,10 +253,10 @@ describe("TelegramConnector incoming voice", () => {
         });
 
         expect(messageHandlerMock).toHaveBeenCalledTimes(1);
-        const [message, context, descriptor] = messageHandlerMock.mock.calls[0] as [
+        const [message, context, target] = messageHandlerMock.mock.calls[0] as [
             { text: string | null; files?: Array<{ name: string; mimeType: string; path: string; size: number }> },
             MessageContext,
-            AgentDescriptor
+            string
         ];
         expect(message.text).toBeNull();
         expect(message.files).toEqual([
@@ -283,12 +269,7 @@ describe("TelegramConnector incoming voice", () => {
             }
         ]);
         expect(context).toMatchObject({ messageId: "57" });
-        expect(descriptor).toMatchObject({
-            type: "user",
-            connector: "telegram",
-            channelId: "123",
-            userId: "123"
-        });
+        expect(target).toBe("/123/telegram");
     });
 });
 

@@ -35,7 +35,7 @@ function pendingParse(value: string): UpgradeRestartPending | null {
         return null;
     }
     const candidate = parsed as {
-        descriptor?: unknown;
+        path?: unknown;
         context?: unknown;
         requestedAtMs?: unknown;
         requesterPid?: unknown;
@@ -47,7 +47,7 @@ function pendingParse(value: string): UpgradeRestartPending | null {
     if (typeof candidate.requesterPid !== "number") {
         return null;
     }
-    if (!candidate.descriptor || typeof candidate.descriptor !== "object") {
+    if (typeof candidate.path !== "string" || candidate.path.trim().length === 0) {
         return null;
     }
     if (!candidate.context || typeof candidate.context !== "object") {
@@ -55,7 +55,7 @@ function pendingParse(value: string): UpgradeRestartPending | null {
     }
 
     return {
-        descriptor: candidate.descriptor as UpgradeRestartPending["descriptor"],
+        path: candidate.path as UpgradeRestartPending["path"],
         context: candidate.context as UpgradeRestartPending["context"],
         requestedAtMs: candidate.requestedAtMs,
         requesterPid: candidate.requesterPid,

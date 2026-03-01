@@ -57,16 +57,21 @@ describe("Engine reset command", () => {
 
             await commandHandler("/reset", context, descriptor);
 
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
-            expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: user.id }),
-                { descriptor },
-                {
-                    type: "reset",
-                    message: "Manual reset requested by the user.",
-                    context: expect.objectContaining(context)
-                }
-            );
+            expect(postSpy).toHaveBeenCalledTimes(1);
+            const postCall = postSpy.mock.calls[0];
+            if (!postCall) {
+                throw new Error("Expected reset post call");
+            }
+            const ctx = postCall[0] as { userId: string };
+            const target = postCall[1] as { path: string };
+            const payload = postCall[2] as { type: string; message: string; context: MessageContext };
+            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(payload).toEqual({
+                type: "reset",
+                message: "Manual reset requested by the user.",
+                context: expect.objectContaining(context)
+            });
             expect(sendMessage).not.toHaveBeenCalled();
 
             await engine.modules.connectors.unregisterAll("test");
@@ -128,17 +133,21 @@ describe("Engine reset command", () => {
             await commandHandler("/reset", { messageId: "2" }, descriptor);
             await vi.advanceTimersByTimeAsync(100);
 
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(postSpy).toHaveBeenCalledTimes(1);
-            expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: user.id }),
-                { descriptor },
-                {
-                    type: "reset",
-                    message: "Manual reset requested by the user.",
-                    context: expect.objectContaining({ messageId: "2" })
-                }
-            );
+            const postCall = postSpy.mock.calls[0];
+            if (!postCall) {
+                throw new Error("Expected reset post call");
+            }
+            const ctx = postCall[0] as { userId: string };
+            const target = postCall[1] as { path: string };
+            const payload = postCall[2] as { type: string; message: string; context: MessageContext };
+            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(payload).toEqual({
+                type: "reset",
+                message: "Manual reset requested by the user.",
+                context: expect.objectContaining({ messageId: "2" })
+            });
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();
@@ -508,7 +517,9 @@ describe("Engine abort command", () => {
 
             await commandHandler("/abort", context, descriptor);
 
-            expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({ descriptor });
+            expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({
+                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+            });
             expect(sendMessage).toHaveBeenCalledWith("123", {
                 text: "Stopped current inference.",
                 replyToMessageId: "56"
@@ -567,12 +578,17 @@ describe("Engine compact command", () => {
 
             await commandHandler("/compact", context, descriptor);
 
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
-            expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: user.id }),
-                { descriptor },
-                { type: "compact", context: expect.objectContaining(context) }
-            );
+            expect(postSpy).toHaveBeenCalledTimes(1);
+            const postCall = postSpy.mock.calls[0];
+            if (!postCall) {
+                throw new Error("Expected compact post call");
+            }
+            const ctx = postCall[0] as { userId: string };
+            const target = postCall[1] as { path: string };
+            const payload = postCall[2] as { type: string; context: MessageContext };
+            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(payload).toEqual({ type: "compact", context: expect.objectContaining(context) });
             expect(sendMessage).not.toHaveBeenCalled();
 
             await engine.modules.connectors.unregisterAll("test");
@@ -630,7 +646,11 @@ describe("Engine plugin commands", () => {
             const context: MessageContext = { messageId: "56" };
             await commandHandler("/upgrade now", context, descriptor);
 
-            expect(pluginHandler).toHaveBeenCalledWith("/upgrade now", expect.objectContaining(context), descriptor);
+            expect(pluginHandler).toHaveBeenCalledWith(
+                "/upgrade now",
+                expect.objectContaining(context),
+                expect.stringMatching(/^\/[^/]+\/telegram$/)
+            );
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();
@@ -685,17 +705,21 @@ describe("Engine message batching", () => {
             expect(postSpy).not.toHaveBeenCalled();
 
             await vi.advanceTimersByTimeAsync(1);
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(postSpy).toHaveBeenCalledTimes(1);
-            expect(postSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ userId: user.id }),
-                { descriptor },
-                {
-                    type: "message",
-                    message: { text: "first\nsecond", rawText: "first\nsecond" },
-                    context: expect.objectContaining({ messageId: "2" })
-                }
-            );
+            const postCall = postSpy.mock.calls[0];
+            if (!postCall) {
+                throw new Error("Expected batched post call");
+            }
+            const ctx = postCall[0] as { userId: string };
+            const target = postCall[1] as { path: string };
+            const payload = postCall[2] as { type: string; message: ConnectorMessage; context: MessageContext };
+            expect(target.path).toMatch(/^\/[^/]+\/telegram$/);
+            expect(target.path.split("/")[1]).toBe(ctx.userId);
+            expect(payload).toEqual({
+                type: "message",
+                message: { text: "first\nsecond", rawText: "first\nsecond" },
+                context: expect.objectContaining({ messageId: "2" })
+            });
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();

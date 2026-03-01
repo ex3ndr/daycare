@@ -4,7 +4,7 @@ import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TaskActiveSummary } from "@/types";
+import type { ConnectorTarget, TaskActiveSummary } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
 import { ModuleRegistry } from "../../engine/modules/moduleRegistry.js";
@@ -177,7 +177,22 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         },
         taskCallbacks: options.taskCallbacks ?? null,
         tokenStatsFetch: async () => [],
-        documents: null
+        documents: null,
+        connectorTargetResolve: async (target: ConnectorTarget) => {
+            if (typeof target !== "string") {
+                if (target.type !== "user") {
+                    return null;
+                }
+                return { connector: target.connector, targetId: target.channelId };
+            }
+            const segments = target.split("/").filter((segment) => segment.length > 0);
+            const userId = segments[0] ?? "";
+            const connector = segments[1] ?? "";
+            if (!userId || !connector) {
+                return null;
+            }
+            return { connector, targetId: userId };
+        }
     });
 
     await appServer.start();

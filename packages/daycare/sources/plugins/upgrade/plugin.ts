@@ -2,7 +2,9 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import type { Static } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
 import { z } from "zod";
-import type { AgentDescriptor, MessageContext, ToolDefinition, ToolResultContract } from "@/types";
+import type { AgentPath, ConnectorTarget, MessageContext, ToolDefinition, ToolResultContract } from "@/types";
+import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
+import { agentPathKind } from "../../engine/agents/ops/agentPathParse.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 import { upgradePm2ProcessDetect } from "./upgradePm2ProcessDetect.js";
 import { upgradeRestartPendingClear } from "./upgradeRestartPendingClear.js";
@@ -15,6 +17,16 @@ import { upgradeVersionRead } from "./upgradeVersionRead.js";
 const UPGRADE_COMMAND = "upgrade";
 const RESTART_COMMAND = "restart";
 const RESTART_CONFIRM_MAX_AGE_MS = 5 * 60 * 1000;
+
+function pathFromTarget(target: ConnectorTarget): AgentPath | null {
+    if (typeof target === "string") {
+        return target;
+    }
+    if (target.type !== "user") {
+        return null;
+    }
+    return agentPathConnector(target.userId, target.connector);
+}
 
 const settingsSchema = z
     .object({
@@ -101,15 +113,19 @@ export const plugin = definePlugin({
         const upgradeHandler = async (
             _command: string,
             context: MessageContext,
-            descriptor: AgentDescriptor
+            target: ConnectorTarget
         ): Promise<void> => {
-            if (descriptor.type !== "user") {
+            const path = pathFromTarget(target);
+            if (!path) {
+                return;
+            }
+            if (agentPathKind(path) !== "connector") {
                 return;
             }
 
             const sendStatus = async (text: string): Promise<void> => {
                 try {
-                    await api.registrar.sendMessage(descriptor, context, { text });
+                    await api.registrar.sendMessage(path, context, { text });
                 } catch (error) {
                     api.logger.warn({ error }, "error: Failed to send upgrade status message");
                 }
@@ -121,7 +137,7 @@ export const plugin = definePlugin({
                 try {
                     await upgradeRestartPendingSet({
                         dataDir: api.dataDir,
-                        descriptor,
+                        path,
                         context,
                         requestedAtMs: Date.now(),
                         requesterPid: process.pid,
@@ -146,15 +162,19 @@ export const plugin = definePlugin({
         const restartHandler = async (
             _command: string,
             context: MessageContext,
-            descriptor: AgentDescriptor
+            target: ConnectorTarget
         ): Promise<void> => {
-            if (descriptor.type !== "user") {
+            const path = pathFromTarget(target);
+            if (!path) {
+                return;
+            }
+            if (agentPathKind(path) !== "connector") {
                 return;
             }
 
             const sendStatus = async (text: string): Promise<void> => {
                 try {
-                    await api.registrar.sendMessage(descriptor, context, { text });
+                    await api.registrar.sendMessage(path, context, { text });
                 } catch (error) {
                     api.logger.warn({ error }, "error: Failed to send restart status message");
                 }
@@ -164,7 +184,7 @@ export const plugin = definePlugin({
             try {
                 await upgradeRestartPendingSet({
                     dataDir: api.dataDir,
-                    descriptor,
+                    path,
                     context,
                     requestedAtMs: Date.now(),
                     requesterPid: process.pid
@@ -241,7 +261,7 @@ export const plugin = definePlugin({
                         }
                     };
                 }
-                if (descriptor.userId !== toolContext.ctx.userId) {
+                if (toolContext.agent.userId !== toolContext.ctx.userId) {
                     const message = "Self-upgrade requires direct ownership of the current user context.";
                     const toolMessage: ToolResultMessage = {
                         role: "toolResult",
@@ -268,9 +288,13 @@ export const plugin = definePlugin({
                 // Set up pending marker for post-restart confirmation
                 if (previousVersion) {
                     try {
+                        const agentPath = toolContext.agentSystem.getAgentPath(toolContext.agent.id);
+                        if (!agentPath) {
+                            throw new Error("Unable to resolve agent path for self-upgrade pending marker.");
+                        }
                         await upgradeRestartPendingSet({
                             dataDir: api.dataDir,
-                            descriptor,
+                            path: agentPath,
                             context: toolContext.messageContext,
                             requestedAtMs: Date.now(),
                             requesterPid: process.pid,
@@ -375,7 +399,7 @@ export const plugin = definePlugin({
                         return;
                     }
                     try {
-                        await api.registrar.sendMessage(pending.descriptor, pending.context, {
+                        await api.registrar.sendMessage(pending.path, pending.context, {
                             text: `Upgrade complete: Daycare ${pending.previousVersion} -> ${currentVersion}.`
                         });
                     } catch (error) {
@@ -384,7 +408,7 @@ export const plugin = definePlugin({
                     return;
                 }
                 try {
-                    await api.registrar.sendMessage(pending.descriptor, pending.context, {
+                    await api.registrar.sendMessage(pending.path, pending.context, {
                         text: "Restart complete. Daycare is back online."
                     });
                 } catch (error) {

@@ -1,15 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { Connector } from "@/types";
+import type { AgentPath, Connector } from "@/types";
 import { ModuleRegistry } from "../modules/moduleRegistry.js";
 import { PluginRegistry } from "./registry.js";
 
 describe("PluginRegistrar command registration", () => {
+    const connectorTargetResolve = async (path: AgentPath) => {
+        const segments = path.split("/").filter((segment) => segment.length > 0);
+        const userId = segments[0] ?? "";
+        const connector = segments[1] ?? "";
+        if (!userId || !connector) {
+            return null;
+        }
+        return { connector, targetId: userId };
+    };
+
     it("registers and unregisters plugin commands", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules);
+        const registry = new PluginRegistry(modules, connectorTargetResolve);
         const registrar = registry.createRegistrar("upgrade-instance");
         const handler = vi.fn(async () => undefined);
 
@@ -34,7 +44,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules);
+        const registry = new PluginRegistry(modules, connectorTargetResolve);
         const registrar = registry.createRegistrar("upgrade-instance");
 
         registrar.registerCommand({
@@ -57,7 +67,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules);
+        const registry = new PluginRegistry(modules, connectorTargetResolve);
         const registrar = registry.createRegistrar("upgrade-instance");
         const sendMessage = vi.fn(async () => undefined);
         const connector: Connector = {
@@ -67,16 +77,7 @@ describe("PluginRegistrar command registration", () => {
         };
         modules.connectors.register("telegram", connector);
 
-        await registrar.sendMessage(
-            {
-                type: "user",
-                connector: "telegram",
-                userId: "123",
-                channelId: "123"
-            },
-            { messageId: "77" },
-            { text: "Upgrading..." }
-        );
+        await registrar.sendMessage("/123/telegram" as AgentPath, { messageId: "77" }, { text: "Upgrading..." });
 
         expect(sendMessage).toHaveBeenCalledWith("123", {
             text: "Upgrading...",
@@ -88,7 +89,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules);
+        const registry = new PluginRegistry(modules, connectorTargetResolve);
         const registrar = registry.createRegistrar("media-instance");
 
         registrar.registerMediaAnalysisProvider({
@@ -113,7 +114,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules);
+        const registry = new PluginRegistry(modules, connectorTargetResolve);
         const registrar = registry.createRegistrar("speech-instance");
 
         registrar.registerSpeechProvider({

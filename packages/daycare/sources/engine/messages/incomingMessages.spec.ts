@@ -60,7 +60,14 @@ describe("IncomingMessages", () => {
         const incoming = new IncomingMessages({
             delayMs: 100,
             onFlush: async (items) => {
-                records.push(items.map((item) => ({ descriptor: item.descriptor, count: item.count })));
+                records.push(
+                    items.map((item) => {
+                        if (!item.descriptor) {
+                            throw new Error("Expected descriptor in test batch item");
+                        }
+                        return { descriptor: item.descriptor, count: item.count };
+                    })
+                );
             }
         });
 
