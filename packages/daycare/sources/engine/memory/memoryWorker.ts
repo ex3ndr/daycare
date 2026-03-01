@@ -135,11 +135,12 @@ export class MemoryWorker {
                     continue;
                 }
 
-                // Prepend source context for background agents so the memory model
-                // knows this is automated task execution, not a human conversation.
-                const text = isForeground
-                    ? transcript
-                    : `> Source: This transcript is from an automated agent performing background work. There is no human participant. Extract facts about what was done, what succeeded/failed, and what was learned about systems and processes.\n\n${transcript}`;
+                // Prepend memory-graph update instruction so each batch reminds the
+                // memory agent to persist any new knowledge found in the transcript.
+                const preamble = isForeground
+                    ? "> Review the following transcript and update the memory graph with any new facts, relationships, or events."
+                    : "> Source: This transcript is from an automated agent performing background work. There is no human participant.\n> Review the following transcript and update the memory graph with any new facts about what was done, what succeeded/failed, and what was learned about systems and processes.";
+                const text = `${preamble}\n\n${transcript}`;
 
                 const descriptor: AgentDescriptor = { type: "memory-agent", id: session.agentId };
                 const ctx = contextForAgent({ userId: agent.userId, agentId: session.agentId });
