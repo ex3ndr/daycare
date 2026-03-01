@@ -13,6 +13,12 @@
 - tests must be minimal and live next to the file under test
 - repositories must use `ctx` (user-scoped context) instead of raw `agentId` arguments
 
+## App API Conventions
+- All mutation endpoints use `POST` with action-based paths (never `PUT` or `DELETE`)
+- Pattern: `POST /<domain>/create`, `POST /<domain>/:id/update`, `POST /<domain>/:id/delete`
+- Read endpoints use `GET`
+- Examples: `POST /tasks/create`, `POST /tasks/:id/update`, `POST /tasks/:id/delete`, `POST /profile/update`
+
 ## Build, Test, and Development Commands
 - Runtime baseline: Node **22+**.
 - Install deps: `yarn install`
