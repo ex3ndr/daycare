@@ -2,19 +2,13 @@
 
 ## Summary
 
-Cron task failures now produce a follow-up system message instead of only logging.
+Cron task failures are now surfaced by the original executable system-message result.
 
 Changes:
 - Executable system messages now preserve `responseError` even when not running in `sync` mode.
 - Cron execution treats `responseError` as a task failure.
-- Cron `onError` now posts a `cron:failure` system message with:
-  - `triggerId`
-  - `taskId`
-  - failure detail
-  - instruction to try fixing the task before the next run
-- Failure report routing now matches execution routing:
-  - explicit `agentId` when set on the trigger
-  - otherwise task descriptor `{ type: "task", id: taskId }`
+- Cron `onError` logs scheduler-level failure details.
+- No secondary `cron:failure` or `<origin>:failure` message is re-posted by cron or agent-system layers.
 
 ## Flow
 
@@ -24,8 +18,5 @@ flowchart TD
     B --> C{responseError or throw?}
     C -->|No| D[Run succeeds]
     C -->|Yes| E[CronScheduler onError]
-    E --> F[Load trigger from tasks_cron]
-    F --> G[Resolve target: agentId or task descriptor]
-    G --> H[Post cron:failure system_message]
-    H --> I[Message includes triggerId + taskId and fix instruction]
+    E --> F[Log trigger failure]
 ```
