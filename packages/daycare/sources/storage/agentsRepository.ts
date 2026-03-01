@@ -136,7 +136,7 @@ export class AgentsRepository {
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
-                            await tx
+                            const closedRows = await tx
                                 .update(agentsTable)
                                 .set({ validTo: now })
                                 .where(
@@ -145,7 +145,9 @@ export class AgentsRepository {
                                         eq(agentsTable.version, row.version ?? 1),
                                         isNull(agentsTable.validTo)
                                     )
-                                );
+                                )
+                                .returning({ version: agentsTable.version });
+                            return closedRows.length;
                         },
                         insertNext: async (row) => {
                             await tx.insert(agentsTable).values({
@@ -208,7 +210,7 @@ export class AgentsRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(agentsTable)
                             .set({ validTo: now })
                             .where(
@@ -217,7 +219,9 @@ export class AgentsRepository {
                                     eq(agentsTable.version, row.version ?? 1),
                                     isNull(agentsTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: agentsTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(agentsTable).values({

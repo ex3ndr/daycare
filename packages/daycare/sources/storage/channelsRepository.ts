@@ -38,7 +38,7 @@ export class ChannelsRepository {
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
-                              await tx
+                              const closedRows = await tx
                                   .update(channelsTable)
                                   .set({ validTo: now })
                                   .where(
@@ -47,7 +47,9 @@ export class ChannelsRepository {
                                           eq(channelsTable.version, row.version ?? 1),
                                           isNull(channelsTable.validTo)
                                       )
-                                  );
+                                  )
+                                  .returning({ version: channelsTable.version });
+                              return closedRows.length;
                           },
                           insertNext: async (row) => {
                               await tx.insert(channelsTable).values({
@@ -206,7 +208,7 @@ export class ChannelsRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(channelsTable)
                             .set({ validTo: now })
                             .where(
@@ -215,7 +217,9 @@ export class ChannelsRepository {
                                     eq(channelsTable.version, row.version ?? 1),
                                     isNull(channelsTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: channelsTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(channelsTable).values({

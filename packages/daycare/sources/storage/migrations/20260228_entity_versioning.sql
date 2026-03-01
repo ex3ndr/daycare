@@ -48,7 +48,15 @@ ALTER TABLE system_prompts ADD COLUMN IF NOT EXISTS valid_to bigint;
 --> statement-breakpoint
 UPDATE users SET version = 1, valid_from = created_at, valid_to = NULL WHERE version IS NULL OR valid_from IS NULL;
 UPDATE agents SET version = 1, valid_from = created_at, valid_to = NULL WHERE version IS NULL OR valid_from IS NULL;
-UPDATE tasks SET version = 1, valid_from = created_at, valid_to = NULL WHERE version IS NULL OR valid_from IS NULL;
+UPDATE tasks
+SET
+    version = 1,
+    valid_from = created_at,
+    valid_to = CASE
+        WHEN deleted_at IS NOT NULL THEN deleted_at
+        ELSE NULL
+    END
+WHERE version IS NULL OR valid_from IS NULL;
 UPDATE tasks_cron SET version = 1, valid_from = created_at, valid_to = NULL WHERE version IS NULL OR valid_from IS NULL;
 UPDATE tasks_heartbeat SET version = 1, valid_from = created_at, valid_to = NULL WHERE version IS NULL OR valid_from IS NULL;
 UPDATE tasks_webhook SET version = 1, valid_from = created_at, valid_to = NULL WHERE version IS NULL OR valid_from IS NULL;

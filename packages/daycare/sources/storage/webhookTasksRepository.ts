@@ -138,7 +138,7 @@ export class WebhookTasksRepository {
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
-                            await tx
+                            const closedRows = await tx
                                 .update(tasksWebhookTable)
                                 .set({ validTo: now })
                                 .where(
@@ -147,7 +147,9 @@ export class WebhookTasksRepository {
                                         eq(tasksWebhookTable.version, row.version ?? 1),
                                         isNull(tasksWebhookTable.validTo)
                                     )
-                                );
+                                )
+                                .returning({ version: tasksWebhookTable.version });
+                            return closedRows.length;
                         },
                         insertNext: async (row) => {
                             await tx.insert(tasksWebhookTable).values({
@@ -175,47 +177,52 @@ export class WebhookTasksRepository {
 
     async recordRun(id: string, runAt: number): Promise<void> {
         await this.runLock.inLock(async () => {
-            const current = this.tasksById.get(id) ?? (await this.taskLoadById(id));
-            if (!current) {
-                return;
-            }
+            const lock = this.taskLockForId(id);
+            await lock.inLock(async () => {
+                const current = await this.taskLoadById(id);
+                if (!current) {
+                    return;
+                }
 
-            const next = await this.db.transaction(async (tx) =>
-                versionAdvance<WebhookTaskDbRecord>({
-                    now: runAt,
-                    changes: { lastRunAt: runAt, updatedAt: runAt },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await tx
-                            .update(tasksWebhookTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(tasksWebhookTable.id, row.id),
-                                    eq(tasksWebhookTable.version, row.version ?? 1),
-                                    isNull(tasksWebhookTable.validTo)
+                const next = await this.db.transaction(async (tx) =>
+                    versionAdvance<WebhookTaskDbRecord>({
+                        now: runAt,
+                        changes: { lastRunAt: runAt, updatedAt: runAt },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            const closedRows = await tx
+                                .update(tasksWebhookTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(tasksWebhookTable.id, row.id),
+                                        eq(tasksWebhookTable.version, row.version ?? 1),
+                                        isNull(tasksWebhookTable.validTo)
+                                    )
                                 )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await tx.insert(tasksWebhookTable).values({
-                            id: row.id,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? row.createdAt,
-                            validTo: row.validTo ?? null,
-                            taskId: row.taskId,
-                            userId: row.userId,
-                            agentId: row.agentId,
-                            lastRunAt: row.lastRunAt,
-                            createdAt: row.createdAt,
-                            updatedAt: row.updatedAt
-                        });
-                    }
-                })
-            );
+                                .returning({ version: tasksWebhookTable.version });
+                            return closedRows.length;
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(tasksWebhookTable).values({
+                                id: row.id,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? row.createdAt,
+                                validTo: row.validTo ?? null,
+                                taskId: row.taskId,
+                                userId: row.userId,
+                                agentId: row.agentId,
+                                lastRunAt: row.lastRunAt,
+                                createdAt: row.createdAt,
+                                updatedAt: row.updatedAt
+                            });
+                        }
+                    })
+                );
 
-            await this.cacheLock.inLock(() => {
-                this.taskCacheSet(next);
+                await this.cacheLock.inLock(() => {
+                    this.taskCacheSet(next);
+                });
             });
         });
     }

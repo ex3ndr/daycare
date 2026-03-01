@@ -122,4 +122,73 @@ describe("HeartbeatTasksRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("does not recreate a heartbeat trigger when delete races with recordRun", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new HeartbeatTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-race-heartbeat",
+                userId: "user-1",
+                title: "Race Heartbeat",
+                description: null,
+                code: "Prompt",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "race-heartbeat",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
+                taskId: "task-race-heartbeat",
+                userId: "user-1",
+                title: "Race Heartbeat",
+                parameters: null,
+                lastRunAt: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const db = (
+                repo as unknown as {
+                    db: { transaction: (callback: (tx: unknown) => Promise<unknown>) => Promise<unknown> };
+                }
+            ).db;
+            const originalTransaction = db.transaction.bind(db);
+
+            let markPaused: (() => void) | null = null;
+            const paused = new Promise<void>((resolve) => {
+                markPaused = resolve;
+            });
+            const releaseGate = {
+                run: (): void => undefined
+            };
+            const release = new Promise<void>((resolve) => {
+                releaseGate.run = resolve;
+            });
+
+            db.transaction = async (callback: (tx: unknown) => Promise<unknown>) => {
+                if (markPaused) {
+                    markPaused();
+                    markPaused = null;
+                    await release;
+                }
+                return originalTransaction(callback);
+            };
+
+            const runPromise = repo.recordRun(99);
+            await paused;
+            const deletePromise = repo.delete("race-heartbeat");
+            releaseGate.run();
+
+            const [runResult, deleteResult] = await Promise.all([runPromise, deletePromise]);
+            expect(runResult).toBeUndefined();
+            expect(deleteResult).toBe(true);
+            expect(await repo.findById("race-heartbeat")).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

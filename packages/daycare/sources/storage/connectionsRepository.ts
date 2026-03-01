@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { connectionsTable, usersTable } from "../schema.js";
+import { AsyncLock } from "../util/lock.js";
 import type { ConnectionDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -10,6 +11,7 @@ import { versionAdvance } from "./versionAdvance.js";
  */
 export class ConnectionsRepository {
     private readonly db: DaycareDb;
+    private readonly pairLocks = new Map<string, AsyncLock>();
 
     constructor(db: DaycareDb) {
         this.db = db;
@@ -17,141 +19,155 @@ export class ConnectionsRepository {
 
     async upsertRequest(requesterId: string, targetId: string, requestedAt = Date.now()): Promise<ConnectionDbRecord> {
         const [userAId, userBId] = sortPair(requesterId, targetId);
-        const current = await this.find(userAId, userBId);
-        if (!current) {
-            await this.db.insert(connectionsTable).values({
-                userAId,
-                userBId,
-                version: 1,
-                validFrom: requestedAt,
-                validTo: null,
-                requestedA: requesterId === userAId ? 1 : 0,
-                requestedB: requesterId === userBId ? 1 : 0,
-                requestedAAt: requesterId === userAId ? requestedAt : null,
-                requestedBAt: requesterId === userBId ? requestedAt : null
-            });
-        } else if (requesterId === userAId) {
-            await this.db.transaction(async (tx) =>
-                versionAdvance<ConnectionDbRecord>({
-                    now: requestedAt,
-                    changes: {
-                        requestedA: true,
-                        requestedAAt: requestedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await tx
-                            .update(connectionsTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(connectionsTable.userAId, row.userAId),
-                                    eq(connectionsTable.userBId, row.userBId),
-                                    eq(connectionsTable.version, row.version ?? 1),
-                                    isNull(connectionsTable.validTo)
+        const lock = this.pairLockFor(userAId, userBId);
+        return lock.inLock(async () => {
+            const current = await this.find(userAId, userBId);
+            if (!current) {
+                await this.db.insert(connectionsTable).values({
+                    userAId,
+                    userBId,
+                    version: 1,
+                    validFrom: requestedAt,
+                    validTo: null,
+                    requestedA: requesterId === userAId ? 1 : 0,
+                    requestedB: requesterId === userBId ? 1 : 0,
+                    requestedAAt: requesterId === userAId ? requestedAt : null,
+                    requestedBAt: requesterId === userBId ? requestedAt : null
+                });
+            } else if (requesterId === userAId) {
+                await this.db.transaction(async (tx) =>
+                    versionAdvance<ConnectionDbRecord>({
+                        now: requestedAt,
+                        changes: {
+                            requestedA: true,
+                            requestedAAt: requestedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            const closedRows = await tx
+                                .update(connectionsTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(connectionsTable.userAId, row.userAId),
+                                        eq(connectionsTable.userBId, row.userBId),
+                                        eq(connectionsTable.version, row.version ?? 1),
+                                        isNull(connectionsTable.validTo)
+                                    )
                                 )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await tx.insert(connectionsTable).values({
-                            userAId: row.userAId,
-                            userBId: row.userBId,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? 0,
-                            validTo: row.validTo ?? null,
-                            requestedA: row.requestedA ? 1 : 0,
-                            requestedB: row.requestedB ? 1 : 0,
-                            requestedAAt: row.requestedAAt,
-                            requestedBAt: row.requestedBAt
-                        });
-                    }
-                })
-            );
-        } else {
-            await this.db.transaction(async (tx) =>
-                versionAdvance<ConnectionDbRecord>({
-                    now: requestedAt,
-                    changes: {
-                        requestedB: true,
-                        requestedBAt: requestedAt
-                    },
-                    findCurrent: async () => current,
-                    closeCurrent: async (row, now) => {
-                        await tx
-                            .update(connectionsTable)
-                            .set({ validTo: now })
-                            .where(
-                                and(
-                                    eq(connectionsTable.userAId, row.userAId),
-                                    eq(connectionsTable.userBId, row.userBId),
-                                    eq(connectionsTable.version, row.version ?? 1),
-                                    isNull(connectionsTable.validTo)
+                                .returning({ version: connectionsTable.version });
+                            return closedRows.length;
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(connectionsTable).values({
+                                userAId: row.userAId,
+                                userBId: row.userBId,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? 0,
+                                validTo: row.validTo ?? null,
+                                requestedA: row.requestedA ? 1 : 0,
+                                requestedB: row.requestedB ? 1 : 0,
+                                requestedAAt: row.requestedAAt,
+                                requestedBAt: row.requestedBAt
+                            });
+                        }
+                    })
+                );
+            } else {
+                await this.db.transaction(async (tx) =>
+                    versionAdvance<ConnectionDbRecord>({
+                        now: requestedAt,
+                        changes: {
+                            requestedB: true,
+                            requestedBAt: requestedAt
+                        },
+                        findCurrent: async () => current,
+                        closeCurrent: async (row, now) => {
+                            const closedRows = await tx
+                                .update(connectionsTable)
+                                .set({ validTo: now })
+                                .where(
+                                    and(
+                                        eq(connectionsTable.userAId, row.userAId),
+                                        eq(connectionsTable.userBId, row.userBId),
+                                        eq(connectionsTable.version, row.version ?? 1),
+                                        isNull(connectionsTable.validTo)
+                                    )
                                 )
-                            );
-                    },
-                    insertNext: async (row) => {
-                        await tx.insert(connectionsTable).values({
-                            userAId: row.userAId,
-                            userBId: row.userBId,
-                            version: row.version ?? 1,
-                            validFrom: row.validFrom ?? 0,
-                            validTo: row.validTo ?? null,
-                            requestedA: row.requestedA ? 1 : 0,
-                            requestedB: row.requestedB ? 1 : 0,
-                            requestedAAt: row.requestedAAt,
-                            requestedBAt: row.requestedBAt
-                        });
-                    }
-                })
-            );
-        }
+                                .returning({ version: connectionsTable.version });
+                            return closedRows.length;
+                        },
+                        insertNext: async (row) => {
+                            await tx.insert(connectionsTable).values({
+                                userAId: row.userAId,
+                                userBId: row.userBId,
+                                version: row.version ?? 1,
+                                validFrom: row.validFrom ?? 0,
+                                validTo: row.validTo ?? null,
+                                requestedA: row.requestedA ? 1 : 0,
+                                requestedB: row.requestedB ? 1 : 0,
+                                requestedAAt: row.requestedAAt,
+                                requestedBAt: row.requestedBAt
+                            });
+                        }
+                    })
+                );
+            }
 
-        const record = await this.find(userAId, userBId);
-        if (!record) {
-            throw new Error("Failed to upsert connection request.");
-        }
-        return record;
+            const record = await this.find(userAId, userBId);
+            if (!record) {
+                throw new Error("Failed to upsert connection request.");
+            }
+            return record;
+        });
     }
 
     async clearSide(userId: string, otherId: string): Promise<ConnectionDbRecord | null> {
         const [userAId, userBId] = sortPair(userId, otherId);
-        const current = await this.find(userAId, userBId);
-        if (!current) {
-            return null;
-        }
-        await this.db.transaction(async (tx) =>
-            versionAdvance<ConnectionDbRecord>({
-                changes: userId === userAId ? { requestedA: false } : { requestedB: false },
-                findCurrent: async () => current,
-                closeCurrent: async (row, now) => {
-                    await tx
-                        .update(connectionsTable)
-                        .set({ validTo: now })
-                        .where(
-                            and(
-                                eq(connectionsTable.userAId, row.userAId),
-                                eq(connectionsTable.userBId, row.userBId),
-                                eq(connectionsTable.version, row.version ?? 1),
-                                isNull(connectionsTable.validTo)
+        const lock = this.pairLockFor(userAId, userBId);
+        return lock.inLock(async () => {
+            const current = await this.find(userAId, userBId);
+            if (!current) {
+                return null;
+            }
+
+            await this.db.transaction(async (tx) =>
+                versionAdvance<ConnectionDbRecord>({
+                    changes: userId === userAId ? { requestedA: false } : { requestedB: false },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, now) => {
+                        const closedRows = await tx
+                            .update(connectionsTable)
+                            .set({ validTo: now })
+                            .where(
+                                and(
+                                    eq(connectionsTable.userAId, row.userAId),
+                                    eq(connectionsTable.userBId, row.userBId),
+                                    eq(connectionsTable.version, row.version ?? 1),
+                                    isNull(connectionsTable.validTo)
+                                )
                             )
-                        );
-                },
-                insertNext: async (row) => {
-                    await tx.insert(connectionsTable).values({
-                        userAId: row.userAId,
-                        userBId: row.userBId,
-                        version: row.version ?? 1,
-                        validFrom: row.validFrom ?? 0,
-                        validTo: row.validTo ?? null,
-                        requestedA: row.requestedA ? 1 : 0,
-                        requestedB: row.requestedB ? 1 : 0,
-                        requestedAAt: row.requestedAAt,
-                        requestedBAt: row.requestedBAt
-                    });
-                }
-            })
-        );
-        return this.find(userAId, userBId);
+                            .returning({ version: connectionsTable.version });
+                        return closedRows.length;
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(connectionsTable).values({
+                            userAId: row.userAId,
+                            userBId: row.userBId,
+                            version: row.version ?? 1,
+                            validFrom: row.validFrom ?? 0,
+                            validTo: row.validTo ?? null,
+                            requestedA: row.requestedA ? 1 : 0,
+                            requestedB: row.requestedB ? 1 : 0,
+                            requestedAAt: row.requestedAAt,
+                            requestedBAt: row.requestedBAt
+                        });
+                    }
+                })
+            );
+
+            return this.find(userAId, userBId);
+        });
     }
 
     async find(id1: string, id2: string): Promise<ConnectionDbRecord | null> {
@@ -257,22 +273,38 @@ export class ConnectionsRepository {
 
     async delete(id1: string, id2: string): Promise<boolean> {
         const [userAId, userBId] = sortPair(id1, id2);
-        const current = await this.find(userAId, userBId);
-        if (!current) {
-            return false;
-        }
-        await this.db
-            .update(connectionsTable)
-            .set({ validTo: Date.now() })
-            .where(
-                and(
-                    eq(connectionsTable.userAId, current.userAId),
-                    eq(connectionsTable.userBId, current.userBId),
-                    eq(connectionsTable.version, current.version ?? 1),
-                    isNull(connectionsTable.validTo)
+        const lock = this.pairLockFor(userAId, userBId);
+        return lock.inLock(async () => {
+            const current = await this.find(userAId, userBId);
+            if (!current) {
+                return false;
+            }
+
+            const closedRows = await this.db
+                .update(connectionsTable)
+                .set({ validTo: Date.now() })
+                .where(
+                    and(
+                        eq(connectionsTable.userAId, current.userAId),
+                        eq(connectionsTable.userBId, current.userBId),
+                        eq(connectionsTable.version, current.version ?? 1),
+                        isNull(connectionsTable.validTo)
+                    )
                 )
-            );
-        return true;
+                .returning({ version: connectionsTable.version });
+            return closedRows.length === 1;
+        });
+    }
+
+    private pairLockFor(userAId: string, userBId: string): AsyncLock {
+        const key = `${userAId}\u0000${userBId}`;
+        const existing = this.pairLocks.get(key);
+        if (existing) {
+            return existing;
+        }
+        const lock = new AsyncLock();
+        this.pairLocks.set(key, lock);
+        return lock;
     }
 }
 

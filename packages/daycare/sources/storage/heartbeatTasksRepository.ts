@@ -139,7 +139,7 @@ export class HeartbeatTasksRepository {
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
-                            await tx
+                            const closedRows = await tx
                                 .update(tasksHeartbeatTable)
                                 .set({ validTo: now })
                                 .where(
@@ -148,7 +148,9 @@ export class HeartbeatTasksRepository {
                                         eq(tasksHeartbeatTable.version, row.version ?? 1),
                                         isNull(tasksHeartbeatTable.validTo)
                                     )
-                                );
+                                )
+                                .returning({ version: tasksHeartbeatTable.version });
+                            return closedRows.length;
                         },
                         insertNext: async (row) => {
                             await tx.insert(tasksHeartbeatTable).values({
@@ -209,7 +211,7 @@ export class HeartbeatTasksRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(tasksHeartbeatTable)
                             .set({ validTo: now })
                             .where(
@@ -218,7 +220,9 @@ export class HeartbeatTasksRepository {
                                     eq(tasksHeartbeatTable.version, row.version ?? 1),
                                     isNull(tasksHeartbeatTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: tasksHeartbeatTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(tasksHeartbeatTable).values({
@@ -280,43 +284,53 @@ export class HeartbeatTasksRepository {
                 .orderBy(asc(tasksHeartbeatTable.id));
 
             for (const row of currentRows) {
-                const current = heartbeatTaskParse(row);
-                const next = await this.db.transaction(async (tx) =>
-                    versionAdvance<HeartbeatTaskDbRecord>({
-                        now: runAt,
-                        changes: { lastRunAt: runAt, updatedAt: runAt },
-                        findCurrent: async () => current,
-                        closeCurrent: async (record, now) => {
-                            await tx
-                                .update(tasksHeartbeatTable)
-                                .set({ validTo: now })
-                                .where(
-                                    and(
-                                        eq(tasksHeartbeatTable.id, record.id),
-                                        eq(tasksHeartbeatTable.version, record.version ?? 1),
-                                        isNull(tasksHeartbeatTable.validTo)
+                const lock = this.taskLockForId(row.id);
+                await lock.inLock(async () => {
+                    const current = await this.taskLoadById(row.id);
+                    if (!current) {
+                        return;
+                    }
+
+                    const next = await this.db.transaction(async (tx) =>
+                        versionAdvance<HeartbeatTaskDbRecord>({
+                            now: runAt,
+                            changes: { lastRunAt: runAt, updatedAt: runAt },
+                            findCurrent: async () => current,
+                            closeCurrent: async (record, now) => {
+                                const closedRows = await tx
+                                    .update(tasksHeartbeatTable)
+                                    .set({ validTo: now })
+                                    .where(
+                                        and(
+                                            eq(tasksHeartbeatTable.id, record.id),
+                                            eq(tasksHeartbeatTable.version, record.version ?? 1),
+                                            isNull(tasksHeartbeatTable.validTo)
+                                        )
                                     )
-                                );
-                        },
-                        insertNext: async (record) => {
-                            await tx.insert(tasksHeartbeatTable).values({
-                                id: record.id,
-                                version: record.version ?? 1,
-                                validFrom: record.validFrom ?? record.createdAt,
-                                validTo: record.validTo ?? null,
-                                taskId: record.taskId,
-                                userId: record.userId,
-                                title: record.title,
-                                parameters: record.parameters ? JSON.stringify(record.parameters) : null,
-                                lastRunAt: record.lastRunAt,
-                                createdAt: record.createdAt,
-                                updatedAt: record.updatedAt
-                            });
-                        }
-                    })
-                );
-                await this.cacheLock.inLock(() => {
-                    this.taskCacheSet(next);
+                                    .returning({ version: tasksHeartbeatTable.version });
+                                return closedRows.length;
+                            },
+                            insertNext: async (record) => {
+                                await tx.insert(tasksHeartbeatTable).values({
+                                    id: record.id,
+                                    version: record.version ?? 1,
+                                    validFrom: record.validFrom ?? record.createdAt,
+                                    validTo: record.validTo ?? null,
+                                    taskId: record.taskId,
+                                    userId: record.userId,
+                                    title: record.title,
+                                    parameters: record.parameters ? JSON.stringify(record.parameters) : null,
+                                    lastRunAt: record.lastRunAt,
+                                    createdAt: record.createdAt,
+                                    updatedAt: record.updatedAt
+                                });
+                            }
+                        })
+                    );
+
+                    await this.cacheLock.inLock(() => {
+                        this.taskCacheSet(next);
+                    });
                 });
             }
         });

@@ -172,7 +172,7 @@ export class CronTasksRepository {
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
-                            await tx
+                            const closedRows = await tx
                                 .update(tasksCronTable)
                                 .set({ validTo: now })
                                 .where(
@@ -181,7 +181,9 @@ export class CronTasksRepository {
                                         eq(tasksCronTable.version, row.version ?? 1),
                                         isNull(tasksCronTable.validTo)
                                     )
-                                );
+                                )
+                                .returning({ version: tasksCronTable.version });
+                            return closedRows.length;
                         },
                         insertNext: async (row) => {
                             await tx.insert(tasksCronTable).values({
@@ -258,7 +260,7 @@ export class CronTasksRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(tasksCronTable)
                             .set({ validTo: now })
                             .where(
@@ -267,7 +269,9 @@ export class CronTasksRepository {
                                     eq(tasksCronTable.version, row.version ?? 1),
                                     isNull(tasksCronTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: tasksCronTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(tasksCronTable).values({

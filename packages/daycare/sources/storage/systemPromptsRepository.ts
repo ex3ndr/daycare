@@ -143,7 +143,7 @@ export class SystemPromptsRepository {
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
-                              await tx
+                              const closedRows = await tx
                                   .update(systemPromptsTable)
                                   .set({ validTo: now })
                                   .where(
@@ -152,7 +152,9 @@ export class SystemPromptsRepository {
                                           eq(systemPromptsTable.version, row.version ?? 1),
                                           isNull(systemPromptsTable.validTo)
                                       )
-                                  );
+                                  )
+                                  .returning({ version: systemPromptsTable.version });
+                              return closedRows.length;
                           },
                           insertNext: async (row) => {
                               await tx.insert(systemPromptsTable).values({
@@ -230,7 +232,7 @@ export class SystemPromptsRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(systemPromptsTable)
                             .set({ validTo: now })
                             .where(
@@ -239,7 +241,9 @@ export class SystemPromptsRepository {
                                     eq(systemPromptsTable.version, row.version ?? 1),
                                     isNull(systemPromptsTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: systemPromptsTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(systemPromptsTable).values({

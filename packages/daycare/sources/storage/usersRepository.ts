@@ -312,7 +312,7 @@ export class UsersRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(usersTable)
                             .set({ validTo: now })
                             .where(
@@ -321,7 +321,9 @@ export class UsersRepository {
                                     eq(usersTable.version, row.version ?? 1),
                                     isNull(usersTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: usersTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(usersTable).values({

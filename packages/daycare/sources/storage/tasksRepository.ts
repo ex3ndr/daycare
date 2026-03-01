@@ -151,7 +151,7 @@ export class TasksRepository {
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
-                            await tx
+                            const closedRows = await tx
                                 .update(tasksTable)
                                 .set({ validTo: now })
                                 .where(
@@ -161,7 +161,9 @@ export class TasksRepository {
                                         eq(tasksTable.version, row.version ?? 1),
                                         isNull(tasksTable.validTo)
                                     )
-                                );
+                                )
+                                .returning({ version: tasksTable.version });
+                            return closedRows.length;
                         },
                         insertNext: async (row) => {
                             await tx.insert(tasksTable).values({
@@ -223,7 +225,7 @@ export class TasksRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(tasksTable)
                             .set({ validTo: now })
                             .where(
@@ -233,7 +235,9 @@ export class TasksRepository {
                                     eq(tasksTable.version, row.version ?? 1),
                                     isNull(tasksTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: tasksTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(tasksTable).values({
@@ -245,6 +249,7 @@ export class TasksRepository {
                             title: row.title,
                             description: row.description,
                             code: row.code,
+                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
                         });

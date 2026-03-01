@@ -69,7 +69,7 @@ export class ProcessesRepository {
                         changes: processVersionChanges(resolved),
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
-                            await tx
+                            const closedRows = await tx
                                 .update(processesTable)
                                 .set({ validTo: now })
                                 .where(
@@ -78,7 +78,9 @@ export class ProcessesRepository {
                                         eq(processesTable.version, row.version ?? 1),
                                         isNull(processesTable.validTo)
                                     )
-                                );
+                                )
+                                .returning({ version: processesTable.version });
+                            return closedRows.length;
                         },
                         insertNext: async (row) => {
                             await tx.insert(processesTable).values(processRowInsert(row));
@@ -183,7 +185,7 @@ export class ProcessesRepository {
                     changes: processVersionChanges(next),
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(processesTable)
                             .set({ validTo: now })
                             .where(
@@ -192,7 +194,9 @@ export class ProcessesRepository {
                                     eq(processesTable.version, row.version ?? 1),
                                     isNull(processesTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: processesTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(processesTable).values(processRowInsert(row));

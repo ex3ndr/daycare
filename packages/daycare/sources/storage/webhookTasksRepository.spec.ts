@@ -184,4 +184,71 @@ describe("WebhookTasksRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("does not recreate a webhook trigger when delete races with recordRun", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new WebhookTasksRepository(storage.db);
+            await storage.tasks.create({
+                id: "task-race",
+                userId: "user-1",
+                title: "Race",
+                description: null,
+                code: "Prompt",
+                parameters: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await repo.create({
+                id: "hook-race",
+                version: 1,
+                validFrom: 1,
+                validTo: null,
+                taskId: "task-race",
+                userId: "user-1",
+                agentId: null,
+                lastRunAt: null,
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const repoInternal = repo as unknown as {
+                taskLoadById: (id: string) => Promise<WebhookTaskDbRecord | null>;
+            };
+            const originalTaskLoadById = repoInternal.taskLoadById.bind(repo);
+
+            let markPaused: (() => void) | null = null;
+            const paused = new Promise<void>((resolve) => {
+                markPaused = resolve;
+            });
+            const releaseGate = {
+                run: (): void => undefined
+            };
+            const release = new Promise<void>((resolve) => {
+                releaseGate.run = resolve;
+            });
+
+            repoInternal.taskLoadById = async (id: string) => {
+                const loaded = await originalTaskLoadById(id);
+                if (id === "hook-race" && markPaused) {
+                    markPaused();
+                    markPaused = null;
+                    await release;
+                }
+                return loaded;
+            };
+
+            const runPromise = repo.recordRun("hook-race", 99);
+            await paused;
+            const deletePromise = repo.delete("hook-race");
+            releaseGate.run();
+
+            const [runResult, deleteResult] = await Promise.all([runPromise, deletePromise]);
+            expect(runResult).toBeUndefined();
+            expect(deleteResult).toBe(true);
+            expect(await repo.findById("hook-race")).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

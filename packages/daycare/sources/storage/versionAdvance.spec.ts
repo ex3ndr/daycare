@@ -29,7 +29,9 @@ describe("versionAdvance", () => {
                 const target = rows.find((row) => row.id === current.id && row.version === current.version);
                 if (target) {
                     target.validTo = now;
+                    return 1;
                 }
+                return 0;
             },
             insertNext: async (record) => {
                 rows.push(record);
@@ -50,7 +52,7 @@ describe("versionAdvance", () => {
             versionAdvance<TestRecord>({
                 changes: { value: "next" },
                 findCurrent: async () => null,
-                closeCurrent: async () => undefined,
+                closeCurrent: async () => 0,
                 insertNext: async () => undefined
             })
         ).rejects.toThrow("Current version not found.");
@@ -73,7 +75,9 @@ describe("versionAdvance", () => {
                 const target = rows.find((row) => row.id === current.id && row.version === current.version);
                 if (target) {
                     target.validTo = now;
+                    return 1;
                 }
+                return 0;
             },
             insertNext: async (record: TestRecord) => {
                 rows.push(record);
@@ -95,5 +99,23 @@ describe("versionAdvance", () => {
         expect(third.version).toBe(3);
         expect(rows.filter((row) => row.validTo === null)).toHaveLength(1);
         expect(rows.find((row) => row.version === 3)?.value).toBe("v3");
+    });
+
+    it("throws when closing current version affects zero rows", async () => {
+        await expect(
+            versionAdvance<TestRecord>({
+                now: 20,
+                changes: { value: "second" },
+                findCurrent: async () => ({
+                    id: "item-1",
+                    value: "first",
+                    version: 1,
+                    validFrom: 10,
+                    validTo: null
+                }),
+                closeCurrent: async () => 0,
+                insertNext: async () => undefined
+            })
+        ).rejects.toThrow("Current version close failed. Expected 1 row, got 0.");
     });
 });

@@ -18,7 +18,7 @@ export type VersionAdvanceOptions<TRecord extends VersionedRecord> = {
     now?: number;
     changes: VersionAdvanceChanges<TRecord>;
     findCurrent: () => Promise<TRecord | null>;
-    closeCurrent: (current: TRecord, now: number) => Promise<void>;
+    closeCurrent: (current: TRecord, now: number) => Promise<number>;
     insertNext: (next: TRecord) => Promise<void>;
 };
 
@@ -38,7 +38,10 @@ export async function versionAdvance<TRecord extends VersionedRecord>(
     }
 
     const now = options.now ?? Date.now();
-    await options.closeCurrent(current, now);
+    const closedCount = await options.closeCurrent(current, now);
+    if (closedCount !== 1) {
+        throw new Error(`Current version close failed. Expected 1 row, got ${closedCount}.`);
+    }
 
     const next = {
         ...current,

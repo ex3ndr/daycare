@@ -41,7 +41,7 @@ export class ExposeEndpointsRepository {
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
-                              await tx
+                              const closedRows = await tx
                                   .update(exposeEndpointsTable)
                                   .set({ validTo: now })
                                   .where(
@@ -50,7 +50,9 @@ export class ExposeEndpointsRepository {
                                           eq(exposeEndpointsTable.version, row.version ?? 1),
                                           isNull(exposeEndpointsTable.validTo)
                                       )
-                                  );
+                                  )
+                                  .returning({ version: exposeEndpointsTable.version });
+                              return closedRows.length;
                           },
                           insertNext: async (row) => {
                               await tx.insert(exposeEndpointsTable).values({
@@ -211,7 +213,7 @@ export class ExposeEndpointsRepository {
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
-                        await tx
+                        const closedRows = await tx
                             .update(exposeEndpointsTable)
                             .set({ validTo: now })
                             .where(
@@ -220,7 +222,9 @@ export class ExposeEndpointsRepository {
                                     eq(exposeEndpointsTable.version, row.version ?? 1),
                                     isNull(exposeEndpointsTable.validTo)
                                 )
-                            );
+                            )
+                            .returning({ version: exposeEndpointsTable.version });
+                        return closedRows.length;
                     },
                     insertNext: async (row) => {
                         await tx.insert(exposeEndpointsTable).values({

@@ -47,7 +47,7 @@ export class SignalSubscriptionsRepository {
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
-                              await tx
+                              const closedRows = await tx
                                   .update(signalsSubscriptionsTable)
                                   .set({ validTo: now })
                                   .where(
@@ -56,7 +56,9 @@ export class SignalSubscriptionsRepository {
                                           eq(signalsSubscriptionsTable.version, row.version ?? 1),
                                           isNull(signalsSubscriptionsTable.validTo)
                                       )
-                                  );
+                                  )
+                                  .returning({ version: signalsSubscriptionsTable.version });
+                              return closedRows.length;
                           },
                           insertNext: async (row) => {
                               await tx.insert(signalsSubscriptionsTable).values({
