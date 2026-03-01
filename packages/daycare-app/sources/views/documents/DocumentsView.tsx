@@ -52,7 +52,7 @@ export const DocumentsView = React.memo(() => {
     }
 
     return (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, overflow: "hidden" }}>
             <View
                 style={{
                     flexDirection: "row",
