@@ -3,7 +3,8 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
-import { ItemListStatic } from "@/components/ItemList";
+import { ItemList } from "@/components/ItemList";
+import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { costsBreakdownByAgent } from "@/modules/costs/costsBreakdownByAgent";
 import { costsBreakdownByModel } from "@/modules/costs/costsBreakdownByModel";
@@ -49,6 +50,25 @@ export function CostsView() {
         }
     }, [baseUrl, token, fetchCosts, period]);
 
+    const agents = useAgentsStore((s) => s.agents);
+    const fetchAgents = useAgentsStore((s) => s.fetch);
+
+    useEffect(() => {
+        if (baseUrl && token) {
+            void fetchAgents(baseUrl, token);
+        }
+    }, [baseUrl, token, fetchAgents]);
+
+    // Map agentId -> display name
+    const agentNames = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const agent of agents) {
+            const name = agent.name?.trim() || agent.path?.trim() || agent.agentId.slice(0, 8);
+            map.set(agent.agentId, name);
+        }
+        return map;
+    }, [agents]);
+
     const summary = useMemo(() => costsSummarize(rows), [rows]);
     const agentBreakdown = useMemo(() => costsBreakdownByAgent(rows), [rows]);
     const modelBreakdown = useMemo(() => costsBreakdownByModel(rows), [rows]);
@@ -74,7 +94,7 @@ export function CostsView() {
     }
 
     return (
-        <ItemListStatic>
+        <ItemList>
             <ItemGroup>
                 <CostsPeriodSelector value={period} onChange={setPeriod} />
             </ItemGroup>
@@ -89,7 +109,7 @@ export function CostsView() {
                     {agentBreakdown.map((entry) => (
                         <Item
                             key={entry.agentId}
-                            title={entry.agentId}
+                            title={agentNames.get(entry.agentId) ?? entry.agentId.slice(0, 8)}
                             subtitle={`${entry.rows} hourly rows`}
                             detail={costsFormatCurrency(entry.cost)}
                             showChevron={false}
@@ -110,6 +130,6 @@ export function CostsView() {
                     ))}
                 </ItemGroup>
             )}
-        </ItemListStatic>
+        </ItemList>
     );
 }

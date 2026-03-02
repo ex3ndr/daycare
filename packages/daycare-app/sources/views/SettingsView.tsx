@@ -57,11 +57,6 @@ export function SettingsView() {
                 </ItemGroup>
             )}
 
-            <ItemGroup title="Connection">
-                <Item title="Server" subtitle={baseUrl ?? "—"} showChevron={false} />
-                <Item title="Token" subtitle={token ? `${token.slice(0, 12)}...` : "—"} showChevron={false} />
-            </ItemGroup>
-
             <ItemGroup>
                 <Item
                     title="Sign Out"
