@@ -10,7 +10,14 @@ export type AgentsListResult = {
     ok: true;
     agents: Array<{
         agentId: string;
+        path: string | null;
+        kind: string;
+        name: string | null;
+        description: string | null;
+        connectorName: string | null;
+        foreground: boolean;
         lifecycle: AgentListItem["lifecycle"];
+        createdAt: number;
         updatedAt: number;
     }>;
 };
@@ -25,7 +32,14 @@ export async function agentsList(input: AgentsListInput): Promise<AgentsListResu
         .filter((agent) => agent.userId === undefined || agent.userId === input.ctx.userId)
         .map((agent) => ({
             agentId: agent.agentId,
+            path: agent.path,
+            kind: agent.kind,
+            name: agent.name,
+            description: agent.description,
+            connectorName: agent.connectorName,
+            foreground: agent.foreground,
             lifecycle: agent.lifecycle,
+            createdAt: agent.createdAt,
             updatedAt: agent.updatedAt
         }));
 

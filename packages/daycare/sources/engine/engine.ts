@@ -394,7 +394,14 @@ export class Engine {
                     const records = await this.storage.agents.findByUserId(ctx.userId);
                     return records.map((record) => ({
                         agentId: record.id,
+                        path: record.path,
+                        kind: record.kind,
+                        name: record.name,
+                        description: record.description,
+                        connectorName: record.connectorName,
+                        foreground: record.foreground,
                         lifecycle: record.lifecycle,
+                        createdAt: record.createdAt,
                         updatedAt: record.updatedAt,
                         userId: record.userId
                     }));

@@ -11,7 +11,14 @@ describe("agentsList", () => {
             agentList: async () => [
                 {
                     agentId: "a1",
+                    path: "/u1/agent/claude",
+                    kind: "agent",
+                    name: "claude",
+                    description: "Main assistant",
+                    connectorName: null,
+                    foreground: false,
                     lifecycle: "active",
+                    createdAt: 1_700_000_000_000,
                     updatedAt: 1_700_000_000_000
                 }
             ]
@@ -22,7 +29,14 @@ describe("agentsList", () => {
             agents: [
                 {
                     agentId: "a1",
+                    path: "/u1/agent/claude",
+                    kind: "agent",
+                    name: "claude",
+                    description: "Main assistant",
+                    connectorName: null,
+                    foreground: false,
                     lifecycle: "active",
+                    createdAt: 1_700_000_000_000,
                     updatedAt: 1_700_000_000_000
                 }
             ]
@@ -46,13 +60,27 @@ describe("agentsList", () => {
             agentList: async () => [
                 {
                     agentId: "a1",
+                    path: "/u1/agent/claude",
+                    kind: "agent",
+                    name: "claude",
+                    description: null,
+                    connectorName: null,
+                    foreground: false,
                     lifecycle: "active",
+                    createdAt: 1,
                     updatedAt: 1,
                     userId: "u1"
                 },
                 {
                     agentId: "a2",
+                    path: "/u2/telegram",
+                    kind: "connector",
+                    name: null,
+                    description: null,
+                    connectorName: "telegram",
+                    foreground: true,
                     lifecycle: "active",
+                    createdAt: 2,
                     updatedAt: 2,
                     userId: "u2"
                 }
@@ -64,7 +92,14 @@ describe("agentsList", () => {
             agents: [
                 {
                     agentId: "a1",
+                    path: "/u1/agent/claude",
+                    kind: "agent",
+                    name: "claude",
+                    description: null,
+                    connectorName: null,
+                    foreground: false,
                     lifecycle: "active",
+                    createdAt: 1,
                     updatedAt: 1
                 }
             ]

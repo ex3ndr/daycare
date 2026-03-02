@@ -9,14 +9,68 @@ import { useAgentsStore } from "@/modules/agents/agentsContext";
 import type { AgentLifecycleState, AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
 
-/** Derives a display name from an agent id. */
-function agentDisplayName(agentId: string): string {
-    return `Agent ${agentId.slice(0, 8)}`;
+/** Capitalizes the first letter of a string. */
+function capitalize(value: string): string {
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-/** Derives a subtitle from an agent id. */
-function agentSubtitle(agentId: string): string {
-    return `ID: ${agentId}`;
+/** Well-known connector display names. */
+const CONNECTOR_NAMES: Record<string, string> = {
+    whatsapp: "WhatsApp",
+    telegram: "Telegram",
+    discord: "Discord",
+    slack: "Slack",
+    web: "Web Chat",
+    sms: "SMS",
+    email: "Email"
+};
+
+/** Derives a display name from agent metadata. */
+function agentDisplayName(agent: AgentListItem): string {
+    if (agent.name?.trim()) {
+        return capitalize(agent.name.trim());
+    }
+
+    const path = agent.path?.trim();
+    if (path) {
+        const segments = path.split("/").filter((s) => s.length > 0);
+
+        if (agent.kind === "connector" && segments.length >= 2) {
+            const connector = segments[1];
+            return CONNECTOR_NAMES[connector] ?? capitalize(connector);
+        }
+        if (agent.kind === "agent" && segments.length >= 3) {
+            return capitalize(segments[2]);
+        }
+        if (agent.kind === "cron") return "Cron Task";
+        if (agent.kind === "task") return "Task";
+        if (agent.kind === "memory") return "Memory Worker";
+        if (agent.kind === "search") {
+            return `Memory Search #${segments[segments.length - 1]}`;
+        }
+        if (agent.kind === "sub") {
+            return `Subagent #${segments[segments.length - 1]}`;
+        }
+        if (agent.kind === "subuser") return "Subuser";
+        if (agent.kind === "swarm") return "Swarm";
+    }
+
+    if (agent.kind === "connector") return "Connection";
+    if (agent.kind === "cron") return "Cron Task";
+    if (agent.kind === "task") return "Task";
+    if (agent.kind === "memory") return "Memory Worker";
+    if (agent.kind === "search") return "Memory Search";
+    if (agent.kind === "sub") return "Subagent";
+
+    return `Agent ${agent.agentId.slice(0, 8)}`;
+}
+
+/** Derives a subtitle from agent metadata. */
+function agentSubtitle(agent: AgentListItem): string {
+    if (agent.path?.trim()) {
+        return agent.path.trim();
+    }
+    return `ID: ${agent.agentId}`;
 }
 
 const lifecycleColors: Record<AgentLifecycleState, string> = {
@@ -145,8 +199,8 @@ export function AgentsView() {
                     {groupAgents.map((agent) => (
                         <Item
                             key={agent.agentId}
-                            title={agentDisplayName(agent.agentId)}
-                            subtitle={agentSubtitle(agent.agentId)}
+                            title={agentDisplayName(agent)}
+                            subtitle={agentSubtitle(agent)}
                             rightElement={<AgentStatus lifecycle={agent.lifecycle} />}
                             onPress={() => handleAgentPress(agent.agentId)}
                             showChevron
