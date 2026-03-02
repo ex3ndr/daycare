@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
@@ -88,6 +89,7 @@ function groupAgents(agents: AgentListItem[]): Record<string, AgentListItem[]> {
 
 export function AgentsView() {
     const { theme } = useUnistyles();
+    const router = useRouter();
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
@@ -102,6 +104,13 @@ export function AgentsView() {
             void fetchAgents(baseUrl, token);
         }
     }, [baseUrl, token, fetchAgents]);
+
+    const handleAgentPress = useCallback(
+        (agentId: string) => {
+            router.push(`/agents/${agentId}`);
+        },
+        [router]
+    );
 
     if (loading && agents.length === 0) {
         return (
@@ -139,7 +148,8 @@ export function AgentsView() {
                             title={agentDisplayName(agent.agentId)}
                             subtitle={agentSubtitle(agent.agentId)}
                             rightElement={<AgentStatus lifecycle={agent.lifecycle} />}
-                            showChevron={false}
+                            onPress={() => handleAgentPress(agent.agentId)}
+                            showChevron
                         />
                     ))}
                 </ItemGroup>
