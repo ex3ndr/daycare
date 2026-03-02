@@ -22,7 +22,6 @@ async function createTestStorage() {
         descriptor: { type: "cron", id: "agent-1", name: "job" },
         activeSessionId: null,
         permissions,
-        tokens: null,
         lifecycle: "active",
         createdAt: 1,
         updatedAt: 1

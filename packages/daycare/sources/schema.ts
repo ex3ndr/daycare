@@ -87,7 +87,6 @@ export const agentsTable = pgTable(
         nextSubIndex: integer("next_sub_index").notNull().default(0),
         activeSessionId: text("active_session_id"),
         permissions: jsonb("permissions").notNull(),
-        tokens: jsonb("tokens"),
         lifecycle: text("lifecycle").notNull().default("active"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),

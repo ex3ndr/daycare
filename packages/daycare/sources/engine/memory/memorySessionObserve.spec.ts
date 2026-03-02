@@ -53,7 +53,6 @@ describe("memorySessionObserve", () => {
                 descriptor: { type: "cron", id: "agent-1", name: "job" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -108,7 +107,6 @@ describe("memorySessionObserve", () => {
                 descriptor: { type: "cron", id: "agent-bg", name: "job" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1

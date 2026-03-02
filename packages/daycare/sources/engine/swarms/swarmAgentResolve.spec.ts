@@ -30,7 +30,6 @@ describe("swarmAgentResolve", () => {
                 descriptor: { type: "user", connector: "local", userId: "contact", channelId: "ch-1" },
                 activeSessionId: null,
                 permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 10,
                 updatedAt: 10

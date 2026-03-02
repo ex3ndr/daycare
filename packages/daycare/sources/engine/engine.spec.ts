@@ -423,10 +423,15 @@ describe("Engine swarm registration", () => {
                 autoMigrate: true
             });
             try {
-                const owner = await seedStorage.users.findOwner();
-                if (!owner) {
-                    throw new Error("Owner user not found.");
-                }
+                const owner =
+                    (await seedStorage.users.findOwner()) ??
+                    (await seedStorage.users.create({
+                        id: "sy45wijd1hmr03ef2wu7busv",
+                        isOwner: true,
+                        createdAt: 0,
+                        updatedAt: 0,
+                        nametag: "owner"
+                    }));
                 await seedStorage.users.create({
                     id: "swarm-user-1",
                     parentUserId: owner.id,

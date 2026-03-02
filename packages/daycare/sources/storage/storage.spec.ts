@@ -155,7 +155,6 @@ describe("Storage", () => {
                         descriptor: { type: "cron", id: agentId, name: "sync" },
                         activeSessionId: null,
                         permissions,
-                        tokens: null,
                         lifecycle: "active",
                         createdAt,
                         updatedAt: createdAt
@@ -202,7 +201,6 @@ describe("Storage", () => {
                     descriptor: { type: "cron", id: agentId, name: "sync" },
                     activeSessionId: null,
                     permissions,
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: 1,
                     updatedAt: 1
@@ -247,7 +245,6 @@ describe("Storage", () => {
                     descriptor: { type: "cron", id: agentId, name: "sync" },
                     activeSessionId: null,
                     permissions,
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: 1,
                     updatedAt: 1

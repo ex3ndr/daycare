@@ -51,7 +51,6 @@ CREATE TABLE "agents" (
     "next_sub_index" integer DEFAULT 0 NOT NULL,
     "active_session_id" text,
     "permissions" jsonb NOT NULL,
-    "tokens" jsonb,
     "lifecycle" text DEFAULT 'active' NOT NULL,
     "created_at" bigint NOT NULL,
     "updated_at" bigint NOT NULL,

@@ -59,7 +59,6 @@ describe("userStateDetect", () => {
                     descriptor: { type: "user", connector: "test", userId: "u1", channelId: "ch1" },
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: now - 1000,
                     updatedAt: now
@@ -99,7 +98,6 @@ describe("userStateDetect", () => {
                     descriptor: { type: "user", connector: "test", userId: "u1", channelId: "ch1" },
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: oldCreatedAt,
                     updatedAt: now
@@ -145,7 +143,6 @@ describe("userStateDetect", () => {
                     descriptor: { type: "user", connector: "test", userId: "u1", channelId: "ch1" },
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: oldCreatedAt,
                     updatedAt: oldUpdatedAt
@@ -190,7 +187,6 @@ describe("userStateDetect", () => {
                     descriptor: { type: "user", connector: "test", userId: "u1", channelId: "ch1" },
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: recentCreatedAt,
                     updatedAt: now

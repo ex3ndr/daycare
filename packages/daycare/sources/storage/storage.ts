@@ -171,7 +171,6 @@ export class Storage {
                 nextSubIndex: baseRecord.nextSubIndex ?? 0,
                 activeSessionId: sessionId,
                 permissions: baseRecord.permissions,
-                tokens: baseRecord.tokens,
                 lifecycle: baseRecord.lifecycle,
                 createdAt: baseRecord.createdAt,
                 updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)

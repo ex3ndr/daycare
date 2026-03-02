@@ -38,7 +38,6 @@ describe("AgentsRepository", () => {
                 nextSubIndex: 0,
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active" as const,
                 createdAt: 1,
                 updatedAt: 1
@@ -85,7 +84,6 @@ describe("AgentsRepository", () => {
                 descriptor: { type: "cron", id: "agent-lifecycle-inplace", name: "lifecycle" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -95,17 +93,6 @@ describe("AgentsRepository", () => {
                 lifecycle: "sleeping",
                 nextSubIndex: 2,
                 activeSessionId: "session-1",
-                tokens: {
-                    provider: "openai",
-                    model: "gpt-5",
-                    size: {
-                        input: 10,
-                        output: 4,
-                        cacheRead: 0,
-                        cacheWrite: 0,
-                        total: 14
-                    }
-                },
                 updatedAt: 2
             });
 
@@ -114,12 +101,11 @@ describe("AgentsRepository", () => {
             expect(current?.lifecycle).toBe("sleeping");
             expect(current?.nextSubIndex).toBe(2);
             expect(current?.activeSessionId).toBe("session-1");
-            expect(current?.tokens?.model).toBe("gpt-5");
             expect(current?.updatedAt).toBe(2);
 
             const rows = (await storage.connection
                 .prepare(
-                    "SELECT version, valid_to, lifecycle, next_sub_index, active_session_id, tokens FROM agents WHERE id = ? ORDER BY version ASC"
+                    "SELECT version, valid_to, lifecycle, next_sub_index, active_session_id FROM agents WHERE id = ? ORDER BY version ASC"
                 )
                 .all("agent-lifecycle-inplace")) as Array<{
                 version: number;
@@ -127,7 +113,6 @@ describe("AgentsRepository", () => {
                 lifecycle: string;
                 next_sub_index: number;
                 active_session_id: string | null;
-                tokens: unknown | null;
             }>;
             expect(rows).toHaveLength(1);
             expect(rows[0]?.version).toBe(1);
@@ -135,9 +120,6 @@ describe("AgentsRepository", () => {
             expect(rows[0]?.lifecycle).toBe("sleeping");
             expect(rows[0]?.next_sub_index).toBe(2);
             expect(rows[0]?.active_session_id).toBe("session-1");
-            const tokens = rows[0]?.tokens;
-            const serializedTokens = typeof tokens === "string" ? tokens : JSON.stringify(tokens);
-            expect(serializedTokens).toContain('"gpt-5"');
         } finally {
             storage.connection.close();
         }
@@ -164,7 +146,6 @@ describe("AgentsRepository", () => {
                 descriptor: { type: "cron", id: "agent-cache", name: "cache" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -207,11 +188,10 @@ describe("AgentsRepository", () => {
                     next_sub_index,
                     active_session_id,
                     permissions,
-                    tokens,
                     lifecycle,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `
                 )
                 .run(
@@ -229,7 +209,6 @@ describe("AgentsRepository", () => {
                     0,
                     null,
                     JSON.stringify(permissions),
-                    null,
                     "active",
                     1,
                     2
@@ -267,7 +246,6 @@ describe("AgentsRepository", () => {
                 descriptor: { type: "cron", id: "agent-owner", name: "owner" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -285,7 +263,6 @@ describe("AgentsRepository", () => {
                 descriptor: { type: "cron", id: "agent-other", name: "other" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 2,
                 updatedAt: 2

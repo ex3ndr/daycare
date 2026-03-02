@@ -185,7 +185,6 @@ export class AgentsRepository {
                     nextSubIndex: next.nextSubIndex ?? 0,
                     activeSessionId: next.activeSessionId,
                     permissions: next.permissions,
-                    tokens: next.tokens,
                     lifecycle: next.lifecycle,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
@@ -208,7 +207,6 @@ export class AgentsRepository {
                             nextSubIndex: normalized.nextSubIndex,
                             activeSessionId: normalized.activeSessionId,
                             permissions: normalized.permissions,
-                            tokens: normalized.tokens,
                             lifecycle: normalized.lifecycle,
                             createdAt: normalized.createdAt,
                             updatedAt: normalized.updatedAt
@@ -248,7 +246,6 @@ export class AgentsRepository {
                                 nextSubIndex: row.nextSubIndex ?? 0,
                                 activeSessionId: row.activeSessionId,
                                 permissions: row.permissions,
-                                tokens: row.tokens,
                                 lifecycle: row.lifecycle,
                                 createdAt: row.createdAt,
                                 updatedAt: row.updatedAt
@@ -286,8 +283,7 @@ export class AgentsRepository {
                 systemPrompt: data.systemPrompt === undefined ? current.systemPrompt : data.systemPrompt,
                 workspaceDir: data.workspaceDir === undefined ? current.workspaceDir : data.workspaceDir,
                 nextSubIndex: data.nextSubIndex ?? current.nextSubIndex ?? 0,
-                permissions: data.permissions ?? current.permissions,
-                tokens: data.tokens === undefined ? current.tokens : data.tokens
+                permissions: data.permissions ?? current.permissions
             };
 
             if (agentRuntimeOnlyChangeIs(current, next)) {
@@ -297,7 +293,6 @@ export class AgentsRepository {
                         lifecycle: next.lifecycle,
                         nextSubIndex: next.nextSubIndex ?? 0,
                         activeSessionId: next.activeSessionId,
-                        tokens: next.tokens,
                         updatedAt: next.updatedAt
                     })
                     .where(
@@ -330,7 +325,6 @@ export class AgentsRepository {
                         nextSubIndex: next.nextSubIndex,
                         activeSessionId: next.activeSessionId,
                         permissions: next.permissions,
-                        tokens: next.tokens,
                         lifecycle: next.lifecycle,
                         createdAt: next.createdAt,
                         updatedAt: next.updatedAt
@@ -370,7 +364,6 @@ export class AgentsRepository {
                             nextSubIndex: row.nextSubIndex ?? 0,
                             activeSessionId: row.activeSessionId,
                             permissions: row.permissions,
-                            tokens: row.tokens,
                             lifecycle: row.lifecycle,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
@@ -551,7 +544,6 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
         nextSubIndex: row.nextSubIndex ?? 0,
         activeSessionId: row.activeSessionId,
         permissions: jsonValueParse(row.permissions) as AgentDbRecord["permissions"],
-        tokens: row.tokens ? (jsonValueParse(row.tokens) as NonNullable<AgentDbRecord["tokens"]>) : null,
         lifecycle: row.lifecycle as AgentDbRecord["lifecycle"],
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
@@ -561,8 +553,7 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
 function agentClone(record: AgentDbRecord): AgentDbRecord {
     return {
         ...record,
-        permissions: structuredClone(record.permissions),
-        tokens: record.tokens ? structuredClone(record.tokens) : null
+        permissions: structuredClone(record.permissions)
     };
 }
 
@@ -578,8 +569,7 @@ function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): 
     const lifecycleChanged = current.lifecycle !== next.lifecycle;
     const nextSubIndexChanged = (current.nextSubIndex ?? 0) !== (next.nextSubIndex ?? 0);
     const activeSessionIdChanged = (current.activeSessionId ?? null) !== (next.activeSessionId ?? null);
-    const tokensChanged = !agentJsonEqual(current.tokens, next.tokens);
-    if (!lifecycleChanged && !nextSubIndexChanged && !activeSessionIdChanged && !tokensChanged) {
+    if (!lifecycleChanged && !nextSubIndexChanged && !activeSessionIdChanged) {
         return false;
     }
     return (

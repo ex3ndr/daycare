@@ -32,7 +32,6 @@ async function createTestStorage() {
         descriptor: { type: "cron", id: "agent-1", name: "job" },
         activeSessionId: null,
         permissions,
-        tokens: null,
         lifecycle: "active",
         createdAt: 1,
         updatedAt: 1
@@ -140,7 +139,6 @@ describe("MemoryWorker", () => {
                 descriptor: { type: "user", connector: "web", userId: "u1", channelId: "ch1" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -184,7 +182,6 @@ describe("MemoryWorker", () => {
                 descriptor: { type: "memory-agent", id: "agent-1" },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1

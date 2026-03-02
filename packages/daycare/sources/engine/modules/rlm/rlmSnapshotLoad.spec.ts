@@ -28,7 +28,6 @@ describe("rlmSnapshotLoad", () => {
                     descriptor: { type: "cron", id: agentId, name: "sync" },
                     activeSessionId: null,
                     permissions,
-                    tokens: null,
                     lifecycle: "active",
                     createdAt: 1,
                     updatedAt: 1

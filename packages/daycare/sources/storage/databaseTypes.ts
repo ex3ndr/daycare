@@ -2,7 +2,6 @@ import type {
     AgentKind,
     AgentLifecycleState,
     AgentPath,
-    AgentTokenEntry,
     ExposeEndpointAuth,
     ExposeMode,
     ExposeTarget,
@@ -31,7 +30,6 @@ export type DatabaseAgentRow = {
     next_sub_index: number;
     active_session_id: string | null;
     permissions: unknown;
-    tokens: unknown | null;
     lifecycle: AgentLifecycleState;
     created_at: number;
     updated_at: number;
@@ -83,7 +81,6 @@ export type AgentDbRecord = {
     nextSubIndex?: number;
     activeSessionId: string | null;
     permissions: SessionPermissions;
-    tokens: AgentTokenEntry | null;
     lifecycle: AgentLifecycleState;
     createdAt: number;
     updatedAt: number;

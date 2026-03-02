@@ -548,7 +548,6 @@ describe("AgentSystem", () => {
                 nextSubIndex: 0,
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: now - 10_000,
                 updatedAt: now - 10_000
@@ -574,7 +573,6 @@ describe("AgentSystem", () => {
                 nextSubIndex: 0,
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: now - 1_000,
                 updatedAt: now - 1_000
@@ -633,7 +631,6 @@ describe("AgentSystem", () => {
                 path: agentPath("/swarm-user-2/agent/legacy-swarm-agent"),
                 activeSessionId: null,
                 permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -699,7 +696,6 @@ describe("AgentSystem", () => {
                 path: agentPath(`/${user.id}/telegram`),
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -713,7 +709,6 @@ describe("AgentSystem", () => {
                 path: agentPath(`/${user.id}/whatsapp`),
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 2,
                 updatedAt: 2
@@ -727,7 +722,6 @@ describe("AgentSystem", () => {
                 path: agentPath(`/${user.id}/agent/worker/sub/0`),
                 activeSessionId: null,
                 permissions,
-                tokens: null,
                 lifecycle: "active",
                 createdAt: 3,
                 updatedAt: 3

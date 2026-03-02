@@ -43,7 +43,6 @@ export async function agentWrite(
         nextSubIndex: existing?.nextSubIndex ?? 0,
         activeSessionId: existing?.activeSessionId ?? null,
         permissions: nextPermissions,
-        tokens: existing?.tokens ?? null,
         lifecycle: existing?.lifecycle ?? "active",
         createdAt: existing?.createdAt ?? now,
         updatedAt: now

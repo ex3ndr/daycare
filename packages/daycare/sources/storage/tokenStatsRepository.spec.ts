@@ -37,7 +37,6 @@ async function createTestEntities(
             nextSubIndex: 0,
             activeSessionId: null,
             permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
-            tokens: null,
             lifecycle: "active",
             createdAt: 1,
             updatedAt: 1
