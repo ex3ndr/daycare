@@ -23,6 +23,19 @@ function ReorderingList2Component<T>(props: ReorderingList2Props<T>) {
     const itemSpan = itemHeight + gap;
     const listHeight = itemKeys.length * itemHeight + Math.max(0, itemKeys.length - 1) * gap;
 
+    const itemKeysRef = React.useRef(itemKeys);
+    const itemsRef = React.useRef(items);
+    const itemSpanRef = React.useRef(itemSpan);
+
+    React.useEffect(() => {
+        itemKeysRef.current = itemKeys;
+        itemsRef.current = items;
+        itemSpanRef.current = itemSpan;
+    }, [itemKeys, items, itemSpan]);
+
+    const containerViewRef = React.useRef<View | null>(null);
+    const containerPageY = React.useRef(0);
+
     const isDraggingKey = React.useRef<string>("");
     const dragOffset = React.useRef(new Animated.Value(0)).current;
     const dragStartOffset = React.useRef(0);
@@ -32,33 +45,78 @@ function ReorderingList2Component<T>(props: ReorderingList2Props<T>) {
     const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const touchStartTime = React.useRef(0);
 
+    const clearLongPressTimer = React.useCallback(() => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    }, []);
+
+    const updateContainerPosition = React.useCallback((callback?: (pageY: number) => void) => {
+        if (!containerViewRef.current) {
+            callback?.(containerPageY.current);
+            return;
+        }
+
+        containerViewRef.current.measure(
+            (_x: number, _y: number, _width: number, _height: number, _pageX: number, pageY: number) => {
+                containerPageY.current = pageY;
+                callback?.(pageY);
+            }
+        );
+    }, []);
+
+    const startDragFromTouchY = React.useCallback(
+        (touchY: number) => {
+            clearLongPressTimer();
+
+            longPressTimer.current = setTimeout(() => {
+                const span = itemSpanRef.current;
+                const keys = itemKeysRef.current;
+                const itemIndex = Math.floor(touchY / span);
+
+                if (itemIndex >= 0 && itemIndex < keys.length) {
+                    const key = keys[itemIndex];
+                    isDraggingKey.current = key;
+                    setDraggingKey(key);
+                    dragStartOffset.current = itemIndex * span;
+                    dragOffset.setValue(dragStartOffset.current);
+                    lastMoveIndex.current = itemIndex;
+                }
+            }, LONG_PRESS_DURATION);
+        },
+        [clearLongPressTimer, dragOffset]
+    );
+
+    React.useEffect(() => {
+        return () => {
+            clearLongPressTimer();
+        };
+    }, [clearLongPressTimer]);
+
     const panResponder = React.useRef<PanResponderInstance>(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: () => isDraggingKey.current !== "",
             onPanResponderGrant: (event) => {
                 touchStartTime.current = Date.now();
-                const touchY = event.nativeEvent.locationY;
 
-                longPressTimer.current = setTimeout(() => {
-                    const itemIndex = Math.floor(touchY / itemSpan);
-                    if (itemIndex >= 0 && itemIndex < itemKeys.length) {
-                        const key = itemKeys[itemIndex];
-                        isDraggingKey.current = key;
-                        setDraggingKey(key);
-                        dragStartOffset.current = itemIndex * itemSpan;
-                        dragOffset.setValue(dragStartOffset.current);
-                        lastMoveIndex.current = itemIndex;
-                    }
-                }, LONG_PRESS_DURATION);
+                const pageY = event.nativeEvent.pageY;
+                updateContainerPosition((containerY) => {
+                    const touchY = pageY - containerY;
+                    startDragFromTouchY(touchY);
+                });
             },
             onPanResponderMove: (_event, gestureState) => {
                 if (isDraggingKey.current !== "") {
                     const nextOffset = dragStartOffset.current + gestureState.dy;
                     dragOffset.setValue(nextOffset);
 
-                    const targetIndex = Math.round(nextOffset / itemSpan);
-                    const clampedIndex = Math.max(0, Math.min(itemKeys.length - 1, targetIndex));
+                    const span = itemSpanRef.current;
+                    const keys = itemKeysRef.current;
+                    const targetIndex = Math.round(nextOffset / span);
+                    const clampedIndex = Math.max(0, Math.min(keys.length - 1, targetIndex));
+
                     if (props.onMove && clampedIndex !== lastMoveIndex.current) {
                         lastMoveIndex.current = clampedIndex;
                         props.onMove(isDraggingKey.current, clampedIndex);
@@ -66,18 +124,12 @@ function ReorderingList2Component<T>(props: ReorderingList2Props<T>) {
                     return;
                 }
 
-                if (Math.abs(gestureState.dx) > 8 || Math.abs(gestureState.dy) > 8) {
-                    if (longPressTimer.current) {
-                        clearTimeout(longPressTimer.current);
-                        longPressTimer.current = null;
-                    }
+                if (Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10) {
+                    clearLongPressTimer();
                 }
             },
             onPanResponderRelease: (event) => {
-                if (longPressTimer.current) {
-                    clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
-                }
+                clearLongPressTimer();
 
                 if (isDraggingKey.current !== "") {
                     isDraggingKey.current = "";
@@ -88,20 +140,22 @@ function ReorderingList2Component<T>(props: ReorderingList2Props<T>) {
 
                 const touchDuration = Date.now() - touchStartTime.current;
                 if (touchDuration < LONG_PRESS_DURATION && props.onItemPress) {
-                    const itemIndex = Math.floor(event.nativeEvent.locationY / itemSpan);
-                    if (itemIndex >= 0 && itemIndex < itemKeys.length) {
-                        const key = itemKeys[itemIndex];
-                        const item = items[itemIndex];
-                        props.onItemPress(item, key);
-                    }
+                    const pageY = event.nativeEvent.pageY;
+                    updateContainerPosition((containerY) => {
+                        const span = itemSpanRef.current;
+                        const touchY = pageY - containerY;
+                        const itemIndex = Math.floor(touchY / span);
+
+                        const keys = itemKeysRef.current;
+                        const currentItems = itemsRef.current;
+                        if (itemIndex >= 0 && itemIndex < keys.length) {
+                            props.onItemPress?.(currentItems[itemIndex], keys[itemIndex]);
+                        }
+                    });
                 }
             },
             onPanResponderTerminate: () => {
-                if (longPressTimer.current) {
-                    clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
-                }
-
+                clearLongPressTimer();
                 isDraggingKey.current = "";
                 setDraggingKey("");
                 lastMoveIndex.current = -1;
@@ -116,11 +170,17 @@ function ReorderingList2Component<T>(props: ReorderingList2Props<T>) {
             scrollIndicatorInsets={{ top: props.contentInsetTop || 0, bottom: 0, left: 0, right: 0 }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
+            scrollEnabled={draggingKey === ""}
         >
             <View style={{ paddingTop: props.contentInsetTop || 0, paddingBottom: 24 }}>
                 {props.header}
                 <View style={{ height: listHeight }}>
-                    <Animated.View {...panResponder.panHandlers} style={{ height: listHeight }}>
+                    <Animated.View
+                        ref={containerViewRef}
+                        {...panResponder.panHandlers}
+                        onLayout={() => updateContainerPosition()}
+                        style={{ height: listHeight }}
+                    >
                         {items.map((item, index) => (
                             <ItemView2<T>
                                 key={keyExtractor(item)}
