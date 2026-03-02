@@ -1,11 +1,4 @@
-import type {
-    AgentDescriptor,
-    AgentHistoryRecord,
-    AgentInboxItem,
-    AgentLifecycleState,
-    AgentPostTarget,
-    Context
-} from "@/types";
+import type { AgentHistoryRecord, AgentInboxItem, AgentLifecycleState, AgentPostTarget, Context } from "@/types";
 import type { TaskParameter } from "../../engine/modules/tasks/taskParameterTypes.js";
 import type {
     CronTaskDbRecord,
@@ -17,7 +10,6 @@ import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 
 export type AgentListItem = {
     agentId: string;
-    descriptor: AgentDescriptor;
     lifecycle: AgentLifecycleState;
     updatedAt: number;
     userId?: string;

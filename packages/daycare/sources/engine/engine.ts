@@ -22,7 +22,7 @@ import { valueDeepEqual } from "../utils/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
-import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
+import { agentPathConnector, agentPathTask } from "./agents/ops/agentPathBuild.js";
 import { agentPath } from "./agents/ops/agentPathTypes.js";
 import { contextEstimateTokens } from "./agents/ops/contextEstimateTokens.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
@@ -393,7 +393,6 @@ export class Engine {
                     const records = await this.storage.agents.findByUserId(ctx.userId);
                     return records.map((record) => ({
                         agentId: record.id,
-                        descriptor: record.descriptor,
                         lifecycle: record.lifecycle,
                         updatedAt: record.updatedAt,
                         userId: record.userId
@@ -526,7 +525,7 @@ export class Engine {
 
                     const target = input.agentId
                         ? { agentId: input.agentId }
-                        : { descriptor: { type: "task" as const, id: task.id } };
+                        : { path: agentPathTask(task.userId, task.id) };
                     const text = ["[task]", `taskId: ${task.id}`, `taskTitle: ${task.title}`].join("\n");
 
                     if (input.sync === true) {

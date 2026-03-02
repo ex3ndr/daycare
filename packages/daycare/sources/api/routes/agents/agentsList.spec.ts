@@ -11,7 +11,6 @@ describe("agentsList", () => {
             agentList: async () => [
                 {
                     agentId: "a1",
-                    descriptor: { type: "task", id: "task-1" },
                     lifecycle: "active",
                     updatedAt: 1_700_000_000_000
                 }
@@ -23,7 +22,6 @@ describe("agentsList", () => {
             agents: [
                 {
                     agentId: "a1",
-                    descriptor: { type: "task", id: "task-1" },
                     lifecycle: "active",
                     updatedAt: 1_700_000_000_000
                 }
@@ -48,14 +46,12 @@ describe("agentsList", () => {
             agentList: async () => [
                 {
                     agentId: "a1",
-                    descriptor: { type: "task", id: "task-1" },
                     lifecycle: "active",
                     updatedAt: 1,
                     userId: "u1"
                 },
                 {
                     agentId: "a2",
-                    descriptor: { type: "task", id: "task-2" },
                     lifecycle: "active",
                     updatedAt: 2,
                     userId: "u2"
@@ -68,7 +64,6 @@ describe("agentsList", () => {
             agents: [
                 {
                     agentId: "a1",
-                    descriptor: { type: "task", id: "task-1" },
                     lifecycle: "active",
                     updatedAt: 1
                 }

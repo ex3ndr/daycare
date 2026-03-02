@@ -10,7 +10,6 @@ export type AgentsListResult = {
     ok: true;
     agents: Array<{
         agentId: string;
-        descriptor: AgentListItem["descriptor"];
         lifecycle: AgentListItem["lifecycle"];
         updatedAt: number;
     }>;
@@ -26,7 +25,6 @@ export async function agentsList(input: AgentsListInput): Promise<AgentsListResu
         .filter((agent) => agent.userId === undefined || agent.userId === input.ctx.userId)
         .map((agent) => ({
             agentId: agent.agentId,
-            descriptor: agent.descriptor,
             lifecycle: agent.lifecycle,
             updatedAt: agent.updatedAt
         }));

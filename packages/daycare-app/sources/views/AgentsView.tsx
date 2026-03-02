@@ -5,55 +5,17 @@ import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
-import type { AgentDescriptor, AgentLifecycleState, AgentListItem } from "@/modules/agents/agentsTypes";
+import type { AgentLifecycleState, AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
 
-/** Derives a display name from an agent descriptor. */
-function agentDisplayName(descriptor: AgentDescriptor): string {
-    switch (descriptor.type) {
-        case "permanent":
-            return descriptor.name;
-        case "subagent":
-            return descriptor.name;
-        case "cron":
-            return descriptor.name ?? `Cron ${descriptor.id.slice(0, 8)}`;
-        case "task":
-            return `Task ${descriptor.id.slice(0, 8)}`;
-        case "user":
-            return `${descriptor.connector} user`;
-        case "system":
-            return `System (${descriptor.tag})`;
-        case "memory-agent":
-            return "Memory Agent";
-        case "memory-search":
-            return descriptor.name;
-        case "swarm":
-            return `Swarm ${descriptor.id.slice(0, 8)}`;
-    }
+/** Derives a display name from an agent id. */
+function agentDisplayName(agentId: string): string {
+    return `Agent ${agentId.slice(0, 8)}`;
 }
 
-/** Derives a subtitle from an agent descriptor. */
-function agentSubtitle(descriptor: AgentDescriptor): string {
-    switch (descriptor.type) {
-        case "permanent":
-            return descriptor.description;
-        case "subagent":
-            return `Subagent of ${descriptor.parentAgentId.slice(0, 8)}`;
-        case "cron":
-            return "Scheduled agent";
-        case "task":
-            return "Task agent";
-        case "user":
-            return `Channel ${descriptor.channelId}`;
-        case "system":
-            return "System agent";
-        case "memory-agent":
-            return "Memory management";
-        case "memory-search":
-            return "Memory search";
-        case "swarm":
-            return "Swarm agent";
-    }
+/** Derives a subtitle from an agent id. */
+function agentSubtitle(agentId: string): string {
+    return `ID: ${agentId}`;
 }
 
 const lifecycleColors: Record<AgentLifecycleState, string> = {
@@ -174,8 +136,8 @@ export function AgentsView() {
                     {groupAgents.map((agent) => (
                         <Item
                             key={agent.agentId}
-                            title={agentDisplayName(agent.descriptor)}
-                            subtitle={agentSubtitle(agent.descriptor)}
+                            title={agentDisplayName(agent.agentId)}
+                            subtitle={agentSubtitle(agent.agentId)}
                             rightElement={<AgentStatus lifecycle={agent.lifecycle} />}
                             showChevron={false}
                         />
