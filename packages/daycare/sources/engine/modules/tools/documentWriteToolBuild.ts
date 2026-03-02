@@ -6,6 +6,7 @@ import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@
 import { documentChainResolve } from "../../../storage/documentChainResolve.js";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
 import { documentSlugNormalize } from "../../../storage/documentSlugNormalize.js";
+import { peopleDocumentFrontmatterAssert } from "../../people/peopleDocumentFrontmatterAssert.js";
 
 const schema = Type.Object(
     {
@@ -96,6 +97,12 @@ export function documentWriteToolBuild(): ToolDefinition {
             if (parentId) {
                 await parentChainReadAssert(toolContext, storage.documents, parentId);
             }
+            await peopleDocumentFrontmatterAssert({
+                ctx: toolContext.ctx,
+                documents: storage.documents,
+                parentId: parentId ?? null,
+                body: payload.body
+            });
             const now = Date.now();
 
             if (documentId) {

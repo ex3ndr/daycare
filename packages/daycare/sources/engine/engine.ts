@@ -94,6 +94,7 @@ import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
 import { buildVoiceListTool } from "./modules/tools/voice-list.js";
 import { observationQueryToolBuild } from "./observations/observationQueryToolBuild.js";
+import { peopleRootDocumentEnsure } from "./people/peopleRootDocumentEnsure.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -604,6 +605,7 @@ export class Engine {
         const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
         await userHomeEnsure(ownerUserHome);
         await memoryRootDocumentEnsure(ownerCtx, this.storage);
+        await peopleRootDocumentEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
         if (this.config.current.docker.enabled) {
             const imageRef = `${this.config.current.docker.image}:${this.config.current.docker.tag}`;

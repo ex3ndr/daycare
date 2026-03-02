@@ -1,4 +1,5 @@
 import type http from "node:http";
+import { peopleDocumentFrontmatterAssert } from "../../../engine/people/peopleDocumentFrontmatterAssert.js";
 import type { DocumentsRouteContext } from "./documentsRoutes.js";
 
 /**
@@ -14,6 +15,7 @@ export async function documentsUpdate(
     context: DocumentsRouteContext
 ): Promise<void> {
     const body = await context.readJsonBody(request);
+    const existing = await context.documents.findById(context.ctx, id);
 
     const input: Record<string, unknown> = {};
     if (typeof body.slug === "string") input.slug = body.slug;
@@ -23,6 +25,21 @@ export async function documentsUpdate(
     if (body.parentId === null || typeof body.parentId === "string") input.parentId = body.parentId;
 
     try {
+        if (existing) {
+            const currentParentId = await context.documents.findParentId(context.ctx, id);
+            const nextParentIdRaw =
+                body.parentId === null ? null : typeof body.parentId === "string" ? body.parentId.trim() : undefined;
+            const nextParentId = nextParentIdRaw === undefined ? currentParentId : nextParentIdRaw || null;
+            const nextBody = typeof body.body === "string" ? body.body : existing.body;
+
+            await peopleDocumentFrontmatterAssert({
+                ctx: context.ctx,
+                documents: context.documents,
+                parentId: nextParentId,
+                body: nextBody
+            });
+        }
+
         const doc = await context.documents.update(context.ctx, id, {
             ...input,
             updatedAt: Date.now()

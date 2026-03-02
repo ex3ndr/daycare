@@ -323,6 +323,81 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
+    it("requires firstName frontmatter for documents under ~/people", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "people",
+                slug: "people",
+                title: "People",
+                description: "People root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const readTool = documentReadToolBuild();
+            await readTool.execute({ path: "~/people" }, contextBuild(storage, readVersions), readToolCall);
+
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        slug: "ada",
+                        title: "Ada",
+                        description: "Person profile",
+                        body: "# Ada",
+                        parentPath: "~/people"
+                    },
+                    contextBuild(storage, readVersions),
+                    toolCall
+                )
+            ).rejects.toThrow("firstName");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("accepts valid frontmatter for documents under ~/people", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "people",
+                slug: "people",
+                title: "People",
+                description: "People root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const readTool = documentReadToolBuild();
+            await readTool.execute({ path: "~/people" }, contextBuild(storage, readVersions), readToolCall);
+
+            const tool = documentWriteToolBuild();
+            const result = await tool.execute(
+                {
+                    slug: "ada",
+                    title: "Ada",
+                    description: "Person profile",
+                    body: "---\nfirstName: Ada\nlastName: Lovelace\n---\nMathematician.",
+                    parentPath: "~/people"
+                },
+                contextBuild(storage, readVersions),
+                toolCall
+            );
+
+            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.documentId ?? ""));
+            expect(parentId).toBe("people");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("allows memory-agent writes under ~/memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();

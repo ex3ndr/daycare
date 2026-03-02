@@ -1,4 +1,5 @@
 import type http from "node:http";
+import { peopleDocumentFrontmatterAssert } from "../../../engine/people/peopleDocumentFrontmatterAssert.js";
 import type { DocumentsRouteContext } from "./documentsRoutes.js";
 
 /**
@@ -27,6 +28,13 @@ export async function documentsCreate(
     }
 
     try {
+        await peopleDocumentFrontmatterAssert({
+            ctx: context.ctx,
+            documents: context.documents,
+            parentId,
+            body: docBody
+        });
+
         const now = Date.now();
         const doc = await context.documents.create(context.ctx, {
             id,
