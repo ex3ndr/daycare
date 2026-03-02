@@ -9,6 +9,9 @@ import { configResolve } from "../../config/configResolve.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
 import { ModuleRegistry } from "../../engine/modules/moduleRegistry.js";
+import type { Storage } from "../../storage/storage.js";
+import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../utils/jwt.js";
 import type { RouteTaskCallbacks } from "../routes/routeTypes.js";
 import { APP_AUTH_SEED_KEY } from "./appJwtSecretResolve.js";
@@ -19,6 +22,7 @@ type ActiveAppServer = {
 };
 
 const activeServers: ActiveAppServer[] = [];
+const activeStorages: Storage[] = [];
 const tmpDirs: string[] = [];
 
 async function portAvailableResolve(): Promise<number> {
@@ -141,6 +145,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
     const modules = new ModuleRegistry({
         onMessage: () => undefined
     });
+    const storage = await storageOpenTest();
+    activeStorages.push(storage);
 
     const auth = {
         getEntry: vi.fn(async (id: string) => entries.get(id) ?? null),
@@ -166,7 +172,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                     throw new Error("Webhook runtime unavailable.");
                 })
         } as never,
-        users: null,
+        users: storage.users,
         agentCallbacks: null,
         eventBus: null,
         skills: null,
@@ -196,6 +202,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
     return {
         port,
         auth,
+        storage,
         commands: modules.commands,
         tools: modules.tools,
         connectors: modules.connectors
@@ -205,6 +212,9 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
 afterEach(async () => {
     for (const server of activeServers.splice(0, activeServers.length)) {
         await server.stop();
+    }
+    for (const storage of activeStorages.splice(0, activeStorages.length)) {
+        await storage.connection.close();
     }
     for (const dir of tmpDirs.splice(0, tmpDirs.length)) {
         await fs.rm(dir, { recursive: true, force: true });
@@ -364,12 +374,39 @@ describe("AppServer auth endpoints", () => {
             expiresAt?: number;
         };
         expect(payload.ok).toBe(true);
-        expect(payload.userId).toBe("123");
         expect(typeof payload.token).toBe("string");
         expect(typeof payload.expiresAt).toBe("number");
+        const mappedUser = await built.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+        expect(payload.userId).toBe(mappedUser.id);
 
         const verified = await jwtVerify(payload.token!, secret);
-        expect(verified.userId).toBe("123");
+        expect(verified.userId).toBe(mappedUser.id);
+    });
+
+    it("normalizes legacy Telegram session tokens to internal user ids", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({ secret });
+        const legacyTelegramToken = await jwtSign({ userId: "123" }, secret, 3600);
+
+        const response = await fetch(`http://127.0.0.1:${built.port}/auth/validate`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ token: legacyTelegramToken })
+        });
+
+        const payload = (await response.json()) as {
+            ok: boolean;
+            userId?: string;
+            token?: string;
+            expiresAt?: number;
+        };
+        expect(payload.ok).toBe(true);
+        expect(typeof payload.userId).toBe("string");
+        expect(typeof payload.token).toBe("string");
+        const mappedUser = await built.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+        expect(payload.userId).toBe(mappedUser.id);
+        const verified = await jwtVerify(payload.token!, secret);
+        expect(verified.userId).toBe(mappedUser.id);
     });
 
     it("returns 401 for unauthenticated unknown routes", async () => {

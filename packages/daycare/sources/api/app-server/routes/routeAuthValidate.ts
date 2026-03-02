@@ -3,14 +3,19 @@ import { jwtSign, jwtVerify } from "../../../utils/jwt.js";
 import { APP_AUTH_LINK_SERVICE, APP_AUTH_SESSION_EXPIRES_IN_SECONDS } from "../appAuthLinkTool.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 
+export type RouteAuthValidateOptions = {
+    secretResolve: () => Promise<string>;
+    sessionUserIdNormalize?: (userId: string) => Promise<string>;
+};
+
 /**
  * Handles POST /auth/validate — validates auth tokens and exchanges link tokens to session tokens.
- * Expects: secretResolve returns the active JWT signing secret.
+ * Expects: options.secretResolve returns the active JWT signing secret.
  */
 export async function routeAuthValidate(
     request: http.IncomingMessage,
     response: http.ServerResponse,
-    secretResolve: () => Promise<string>
+    options: RouteAuthValidateOptions
 ): Promise<void> {
     const body = await appReadJsonBody(request);
     const token = typeof body.token === "string" ? body.token.trim() : "";
@@ -20,14 +25,33 @@ export async function routeAuthValidate(
     }
 
     try {
-        const secret = await secretResolve();
+        const secret = await options.secretResolve();
 
         // Session token remains valid as-is and can be reused by clients.
         try {
             const sessionPayload = await jwtVerify(token, secret);
+            const normalizedUserId = options.sessionUserIdNormalize
+                ? await options.sessionUserIdNormalize(sessionPayload.userId)
+                : sessionPayload.userId;
+
+            if (normalizedUserId !== sessionPayload.userId) {
+                const normalizedToken = await jwtSign(
+                    { userId: normalizedUserId },
+                    secret,
+                    APP_AUTH_SESSION_EXPIRES_IN_SECONDS
+                );
+                appSendJson(response, 200, {
+                    ok: true,
+                    userId: normalizedUserId,
+                    token: normalizedToken,
+                    expiresAt: Date.now() + APP_AUTH_SESSION_EXPIRES_IN_SECONDS * 1000
+                });
+                return;
+            }
+
             appSendJson(response, 200, {
                 ok: true,
-                userId: sessionPayload.userId,
+                userId: normalizedUserId,
                 token,
                 expiresAt: sessionPayload.exp * 1000
             });

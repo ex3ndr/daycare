@@ -5,6 +5,7 @@ import { appReadJsonBody, appSendJson } from "../appHttp.js";
 
 export type RouteAuthRefreshOptions = {
     secretResolve: () => Promise<string>;
+    sessionUserIdNormalize?: (userId: string) => Promise<string>;
 };
 
 /**
@@ -29,7 +30,9 @@ export async function routeAuthRefresh(
 
         try {
             const sessionPayload = await jwtVerify(token, secret);
-            userId = sessionPayload.userId;
+            userId = options.sessionUserIdNormalize
+                ? await options.sessionUserIdNormalize(sessionPayload.userId)
+                : sessionPayload.userId;
         } catch {
             const linkPayload = await jwtVerify(token, secret, { service: APP_AUTH_LINK_SERVICE });
             userId = linkPayload.userId;

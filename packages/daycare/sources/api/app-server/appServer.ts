@@ -11,6 +11,7 @@ import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
 import { eventsRouteHandle } from "../routes/events/eventsRoutes.js";
@@ -160,19 +161,24 @@ export class AppServer {
         const pathname = requestUrl.pathname;
 
         if (pathname === "/auth/validate" && request.method === "POST") {
-            await routeAuthValidate(request, response, () => this.secretResolve());
+            await routeAuthValidate(request, response, {
+                secretResolve: () => this.secretResolve(),
+                sessionUserIdNormalize: (userId) => this.sessionAuthUserIdNormalize(userId)
+            });
             return;
         }
         if (pathname === "/auth/refresh" && request.method === "POST") {
             await routeAuthRefresh(request, response, {
-                secretResolve: () => this.secretResolve()
+                secretResolve: () => this.secretResolve(),
+                sessionUserIdNormalize: (userId) => this.sessionAuthUserIdNormalize(userId)
             });
             return;
         }
         if (pathname === "/auth/telegram" && request.method === "POST") {
             await routeAuthTelegram(request, response, {
                 secretResolve: () => this.secretResolve(),
-                telegramTokenResolve: (requestedInstanceId) => this.telegramTokenResolve(requestedInstanceId)
+                telegramTokenResolve: (requestedInstanceId) => this.telegramTokenResolve(requestedInstanceId),
+                userIdResolve: (telegramUserId) => this.telegramAuthUserIdResolve(telegramUserId)
             });
             return;
         }
@@ -259,6 +265,54 @@ export class AppServer {
         }
 
         return token;
+    }
+
+    private async telegramAuthUserIdResolve(telegramUserId: string): Promise<string> {
+        const users = this.users;
+        if (!users) {
+            throw new Error("User repository is unavailable.");
+        }
+        return this.userIdResolveByTelegramConnectorKey(users, telegramUserId);
+    }
+
+    private async sessionAuthUserIdNormalize(userId: string): Promise<string> {
+        const users = this.users;
+        const normalizedUserId = userId.trim();
+        if (!users || !normalizedUserId) {
+            return normalizedUserId;
+        }
+
+        const existing = await users.findById(normalizedUserId);
+        if (existing) {
+            return existing.id;
+        }
+        if (!/^[0-9]+$/.test(normalizedUserId)) {
+            return normalizedUserId;
+        }
+        return this.userIdResolveByTelegramConnectorKey(users, normalizedUserId);
+    }
+
+    private async userIdResolveByTelegramConnectorKey(users: UsersRepository, telegramUserId: string): Promise<string> {
+        const connectorKey = userConnectorKeyCreate("telegram", telegramUserId);
+        const existing = await users.findByConnectorKey(connectorKey);
+        if (existing) {
+            return existing.id;
+        }
+
+        const allUsers = await users.findMany();
+        try {
+            const created = await users.create({
+                isOwner: allUsers.length === 0,
+                connectorKey
+            });
+            return created.id;
+        } catch (error) {
+            const raced = await users.findByConnectorKey(connectorKey);
+            if (raced) {
+                return raced.id;
+            }
+            throw error;
+        }
     }
 
     private async secretResolve(): Promise<string> {
