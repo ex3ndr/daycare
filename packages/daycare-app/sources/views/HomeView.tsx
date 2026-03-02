@@ -110,28 +110,28 @@ export function HomeView() {
                     <Octicons name="flame" size={14} color={theme.colors.primary} />
                     <Text style={[styles.streakValue, { color: theme.colors.onSurface }]}>{PLAYER.streak}</Text>
                 </View>
-                <Text style={styles.sillyFace}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
             </View>
 
-            {/* Revenue card */}
-            <View style={[styles.revenueCard, { backgroundColor: theme.colors.primaryContainer }]}>
-                <View style={styles.revenueTop}>
-                    <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>REVENUE</Text>
-                    <Text style={[styles.revenueDelta, { color: theme.colors.onPrimaryContainer }]}>+18%</Text>
-                </View>
-                <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
-                <View style={styles.revenueMetrics}>
-                    <RevenueMetric label="Ad Spend" value="$2.6K" theme={theme} />
-                    <RevenueMetric label="ROAS" value="4.9x" theme={theme} />
-                    <RevenueMetric label="Customers" value="847" theme={theme} />
-                    <RevenueMetric label="Avg LTV" value="$38" theme={theme} />
-                </View>
-            </View>
+            {/* Top row: revenue + milestones on the left, silly face square on the right */}
+            <View style={styles.topRow}>
+                <View style={styles.topLeft}>
+                    {/* Revenue card */}
+                    <View style={[styles.revenueCard, { backgroundColor: theme.colors.primaryContainer }]}>
+                        <View style={styles.revenueTop}>
+                            <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>
+                                REVENUE
+                            </Text>
+                            <Text style={[styles.revenueDelta, { color: theme.colors.onPrimaryContainer }]}>+18%</Text>
+                        </View>
+                        <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
+                        <View style={styles.revenueMetrics}>
+                            <RevenueMetric label="Ad Spend" value="$2.6K" theme={theme} />
+                            <RevenueMetric label="ROAS" value="4.9x" theme={theme} />
+                            <RevenueMetric label="Customers" value="847" theme={theme} />
+                            <RevenueMetric label="Avg LTV" value="$38" theme={theme} />
+                        </View>
+                    </View>
 
-            {/* Grid */}
-            <View style={styles.grid}>
-                {/* Left column */}
-                <View style={styles.col}>
                     {/* Milestones */}
                     <SectionHeader title="Milestones" icon="milestone" theme={theme} />
                     <View style={styles.sectionBody}>
@@ -184,7 +184,18 @@ export function HomeView() {
                             );
                         })}
                     </View>
+                </View>
 
+                {/* Silly face square */}
+                <View style={[styles.faceCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text style={styles.faceText}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
+                </View>
+            </View>
+
+            {/* Grid */}
+            <View style={styles.grid}>
+                {/* Left column */}
+                <View style={styles.col}>
                     {/* Ads */}
                     <SectionHeader title="Ad Campaigns" icon="broadcast" theme={theme} />
                     <View style={styles.sectionBody}>
@@ -437,10 +448,20 @@ const styles = StyleSheet.create({
         borderRadius: 16
     },
     streakValue: { fontSize: 15, fontWeight: "700" },
-    sillyFace: { fontSize: 22 },
+
+    // Top row (revenue + milestones | face)
+    topRow: { flexDirection: "row", gap: 24, marginBottom: 24 },
+    topLeft: { flex: 1 },
+    faceCard: {
+        width: 200,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center"
+    },
+    faceText: { fontSize: 36 },
 
     // Revenue
-    revenueCard: { borderRadius: 16, padding: 24, marginBottom: 24 },
+    revenueCard: { borderRadius: 16, padding: 24, marginBottom: 16 },
     revenueTop: {
         flexDirection: "row",
         justifyContent: "space-between",
