@@ -7,12 +7,19 @@ import { documentWriteToolBuild } from "./documentWriteToolBuild.js";
 const toolCall = { id: "tc1", name: "document_write" };
 const readToolCall = { id: "tc-read", name: "document_read" };
 
-function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, readVersions: Map<string, number>) {
+function contextBuild(
+    storage: Awaited<ReturnType<typeof storageOpenTest>>,
+    readVersions: Map<string, number>,
+    agentKind: "agent" | "memory" = "agent"
+) {
     return {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         storage,
         agentSystem: { storage },
         agent: {
+            config: {
+                kind: agentKind
+            },
             documentChainReadMark: (entries: Array<{ id: string; version: number }>) => {
                 for (const entry of entries) {
                     readVersions.set(entry.id, entry.version);
@@ -289,6 +296,100 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow("Parent chain changed since last read");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects creating a non-memory root document for memory-agents", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        slug: "notes",
+                        title: "Notes",
+                        description: "General notes",
+                        body: "x"
+                    },
+                    contextBuild(storage, readVersions, "memory"),
+                    toolCall
+                )
+            ).rejects.toThrow("Memory agents can only write inside the ~/memory document tree.");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("allows memory-agent writes under ~/memory", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const readTool = documentReadToolBuild();
+            await readTool.execute({ path: "~/memory" }, contextBuild(storage, readVersions, "memory"), readToolCall);
+
+            const tool = documentWriteToolBuild();
+            const result = await tool.execute(
+                {
+                    slug: "user",
+                    title: "User",
+                    description: "User facts",
+                    body: "Prefers concise answers.",
+                    parentPath: "~/memory"
+                },
+                contextBuild(storage, readVersions, "memory"),
+                toolCall
+            );
+
+            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.documentId ?? ""));
+            expect(parentId).toBe("memory");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects memory-agent updates for documents outside ~/memory", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "notes",
+                slug: "notes",
+                title: "Notes",
+                description: "General notes",
+                body: "v1",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        documentId: "notes",
+                        slug: "notes",
+                        title: "Notes Updated",
+                        description: "General notes",
+                        body: "v2"
+                    },
+                    contextBuild(storage, readVersions, "memory"),
+                    toolCall
+                )
+            ).rejects.toThrow("Memory agents can only write inside the ~/memory document tree.");
         } finally {
             storage.connection.close();
         }

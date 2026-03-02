@@ -37,6 +37,7 @@ const returns: ToolResultContract<DocumentWriteResult> = {
     schema: resultSchema,
     toLLMText: (result) => result.summary
 };
+const MEMORY_ROOT_SLUG = "memory";
 
 /**
  * Builds the document_write tool that creates or updates a document row.
@@ -81,11 +82,21 @@ export function documentWriteToolBuild(): ToolDefinition {
             }
 
             const parentId = parentIdFromPath !== undefined ? parentIdFromPath : parentIdFromArgs;
+            const documentId = payload.documentId?.trim();
+            if (toolContext.agent.config.kind === "memory") {
+                await memoryAgentDocumentTreeWriteAssert(
+                    toolContext,
+                    storage.documents,
+                    documentId,
+                    slug,
+                    parentIdFromPath,
+                    parentIdFromArgs
+                );
+            }
             if (parentId) {
                 await parentChainReadAssert(toolContext, storage.documents, parentId);
             }
             const now = Date.now();
-            const documentId = payload.documentId?.trim();
 
             if (documentId) {
                 const updated = await storage.documents.update(toolContext.ctx, documentId, {
@@ -191,6 +202,69 @@ async function parentChainReadAssert(
             );
         }
     }
+}
+
+async function memoryAgentDocumentTreeWriteAssert(
+    toolContext: ToolExecutionContext,
+    documents: {
+        findById: (
+            ctx: ToolExecutionContext["ctx"],
+            id: string
+        ) => Promise<{
+            id: string;
+            slug: string;
+            version?: number | null;
+        } | null>;
+        findParentId: (ctx: ToolExecutionContext["ctx"], id: string) => Promise<string | null>;
+    },
+    documentId: string | undefined,
+    slug: string,
+    parentIdFromPath: string | null | undefined,
+    parentIdFromArgs: string | undefined
+): Promise<void> {
+    const parentId = await writeParentIdResolve(
+        toolContext.ctx,
+        documents,
+        documentId,
+        parentIdFromPath,
+        parentIdFromArgs
+    );
+    if (parentId === null) {
+        if (slug !== MEMORY_ROOT_SLUG) {
+            throw new Error("Memory agents can only write inside the ~/memory document tree.");
+        }
+        return;
+    }
+
+    const chain = await documentChainResolve(toolContext.ctx, parentId, documents);
+    if (!chain || chain.length === 0) {
+        throw new Error(`Parent document not found: ${parentId}`);
+    }
+    const root = chain[0];
+    if (!root || root.slug !== MEMORY_ROOT_SLUG) {
+        throw new Error("Memory agents can only write inside the ~/memory document tree.");
+    }
+}
+
+async function writeParentIdResolve(
+    ctx: ToolExecutionContext["ctx"],
+    documents: {
+        findParentId: (ctx: ToolExecutionContext["ctx"], id: string) => Promise<string | null>;
+    },
+    documentId: string | undefined,
+    parentIdFromPath: string | null | undefined,
+    parentIdFromArgs: string | undefined
+): Promise<string | null> {
+    if (parentIdFromPath !== undefined) {
+        return parentIdFromPath;
+    }
+    if (parentIdFromArgs !== undefined) {
+        return parentIdFromArgs;
+    }
+    if (!documentId) {
+        return null;
+    }
+    return documents.findParentId(ctx, documentId);
 }
 
 function toolResultBuild(
