@@ -188,7 +188,9 @@ export function HomeView() {
 
                 {/* Silly face square */}
                 <View style={[styles.faceCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                    <Text style={styles.faceText}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
+                    <Text style={[styles.faceText, { transform: [{ scaleX: -1 }] }]}>
+                        {"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}
+                    </Text>
                 </View>
             </View>
 
