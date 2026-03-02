@@ -66,6 +66,8 @@ export function RoutinesView() {
     const loading = useTasksStore((s) => s.loading);
     const error = useTasksStore((s) => s.error);
     const fetchTasks = useTasksStore((s) => s.fetch);
+    const selectedTaskId = useTasksStore((s) => s.selectedTaskId);
+    const selectTask = useTasksStore((s) => s.selectTask);
 
     useEffect(() => {
         if (baseUrl && token) {
@@ -100,6 +102,15 @@ export function RoutinesView() {
     const taskWebhook = useCallback(
         (taskId: string) => triggersByTask.webhookByTask.get(taskId) ?? [],
         [triggersByTask]
+    );
+
+    const handleTaskPress = useCallback(
+        (taskId: string) => {
+            if (!baseUrl || !token) return;
+            // Toggle: deselect if already selected
+            selectTask(baseUrl, token, selectedTaskId === taskId ? null : taskId);
+        },
+        [baseUrl, token, selectTask, selectedTaskId]
     );
 
     // Recalculate "now" when tasks change so relative times are fresh
@@ -138,13 +149,14 @@ export function RoutinesView() {
                         key={task.id}
                         title={task.title}
                         subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
+                        selected={selectedTaskId === task.id}
+                        onPress={() => handleTaskPress(task.id)}
                         rightElement={
                             <RoutineStatus
                                 status={tasksStatus(task)}
                                 label={tasksFormatLastRun(task.lastExecutedAt, now)}
                             />
                         }
-                        showChevron={false}
                     />
                 ))}
             </ItemGroup>

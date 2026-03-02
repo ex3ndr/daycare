@@ -59,4 +59,51 @@ export type TaskListAllResult = {
     };
 };
 
+export type TaskDetail = {
+    id: string;
+    title: string;
+    description: string | null;
+    code: string;
+    parameters: TaskDetailParameter[] | null;
+    createdAt: number;
+    updatedAt: number;
+};
+
+export type TaskDetailParameter = {
+    name: string;
+    type: string;
+    description?: string;
+    required?: boolean;
+    default?: unknown;
+};
+
+export type TaskDetailCronTrigger = {
+    id: string;
+    schedule: string;
+    timezone: string;
+    agentId: string | null;
+    enabled: boolean;
+    deleteAfterRun: boolean;
+    parameters: Record<string, unknown> | null;
+    lastRunAt: number | null;
+    createdAt: number;
+    updatedAt: number;
+};
+
+export type TaskDetailWebhookTrigger = {
+    id: string;
+    agentId: string | null;
+    lastRunAt: number | null;
+    createdAt: number;
+    updatedAt: number;
+};
+
+export type TaskDetailResult = {
+    task: TaskDetail;
+    triggers: {
+        cron: TaskDetailCronTrigger[];
+        webhook: TaskDetailWebhookTrigger[];
+    };
+};
+
 export type TaskStatus = "ok" | "warning";
