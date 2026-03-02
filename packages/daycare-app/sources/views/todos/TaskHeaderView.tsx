@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Platform, Pressable, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useUnistyles } from "react-native-unistyles";
 import { TODO_HEIGHT } from "./TodoView";
 
@@ -17,6 +18,9 @@ export const TaskHeaderView = React.memo<TaskHeaderViewProps>((props) => {
     const horizontalPadding = isMobile ? 16 : 12;
 
     const displayText = props.value.startsWith("# ") ? props.value.slice(2) : props.value;
+    const overlayGesture = Gesture.Tap().onEnd(() => {
+        props.onPress?.(props.id);
+    });
 
     const content = (
         <View
@@ -69,12 +73,15 @@ export const TaskHeaderView = React.memo<TaskHeaderViewProps>((props) => {
             }}
         >
             {props.onPress ? (
-                <Pressable
-                    onPress={() => props.onPress?.(props.id)}
-                    style={[containerStyle, Platform.OS === "web" ? { cursor: "pointer" as const } : null]}
-                >
-                    {content}
-                </Pressable>
+                Platform.OS === "web" ? (
+                    <GestureDetector gesture={overlayGesture}>
+                        <View style={[containerStyle, { cursor: "pointer" as const }]}>{content}</View>
+                    </GestureDetector>
+                ) : (
+                    <Pressable onPress={() => props.onPress?.(props.id)} style={containerStyle}>
+                        {content}
+                    </Pressable>
+                )
             ) : (
                 <View style={containerStyle}>{content}</View>
             )}

@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as React from "react";
 import type { NativeSyntheticEvent, TextInputKeyPressEventData } from "react-native";
 import { Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useUnistyles } from "react-native-unistyles";
 import type { TodoDueDate, TodoSubtask } from "./todoTypes";
@@ -133,6 +134,18 @@ export const TodoView = React.memo<TodoViewProps>((props) => {
         [handleRevert, handleSubmit]
     );
 
+    const favoriteGesture = Gesture.Tap().onEnd(() => {
+        props.onToggleFavorite?.(props.id, !props.favorite);
+    });
+
+    const checkboxGesture = Gesture.Tap().onEnd(() => {
+        props.onToggle?.(props.id, !props.done);
+    });
+
+    const overlayGesture = Gesture.Tap().onEnd(() => {
+        props.onPress?.(props.id);
+    });
+
     const indicatorsAnimatedStyle = useAnimatedStyle(() => {
         if (!isMobile) {
             return {};
@@ -162,33 +175,67 @@ export const TodoView = React.memo<TodoViewProps>((props) => {
 
     const content = (
         <>
-            <Pressable
-                onPress={() => props.onToggle?.(props.id, !props.done)}
-                hitSlop={isMobile ? 16 : 8}
-                style={{
-                    width: checkboxTouchTarget,
-                    height: checkboxTouchTarget,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: checkboxMargin,
-                    ...(Platform.OS === "web" ? { cursor: "pointer" as const } : null)
-                }}
-            >
-                <View
+            {Platform.OS === "web" ? (
+                <GestureDetector gesture={checkboxGesture}>
+                    <Animated.View
+                        hitSlop={isMobile ? 16 : 8}
+                        style={{
+                            width: checkboxTouchTarget,
+                            height: checkboxTouchTarget,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginRight: checkboxMargin,
+                            cursor: "pointer"
+                        }}
+                    >
+                        <View
+                            style={{
+                                width: checkboxSize,
+                                height: checkboxSize,
+                                borderRadius: checkboxSize / 2,
+                                borderWidth: 2,
+                                borderColor: props.done ? theme.colors.primary : theme.colors.onSurfaceVariant,
+                                backgroundColor: props.done ? theme.colors.primary : "transparent",
+                                alignItems: "center",
+                                justifyContent: "center"
+                            }}
+                        >
+                            {props.done && (
+                                <Octicons name="check" size={isMobile ? 18 : 14} color={theme.colors.onPrimary} />
+                            )}
+                        </View>
+                    </Animated.View>
+                </GestureDetector>
+            ) : (
+                <Pressable
+                    onPress={() => props.onToggle?.(props.id, !props.done)}
+                    hitSlop={isMobile ? 16 : 8}
                     style={{
-                        width: checkboxSize,
-                        height: checkboxSize,
-                        borderRadius: checkboxSize / 2,
-                        borderWidth: 2,
-                        borderColor: props.done ? theme.colors.primary : theme.colors.onSurfaceVariant,
-                        backgroundColor: props.done ? theme.colors.primary : "transparent",
+                        width: checkboxTouchTarget,
+                        height: checkboxTouchTarget,
                         alignItems: "center",
-                        justifyContent: "center"
+                        justifyContent: "center",
+                        marginRight: checkboxMargin
                     }}
                 >
-                    {props.done && <Octicons name="check" size={isMobile ? 18 : 14} color={theme.colors.onPrimary} />}
-                </View>
-            </Pressable>
+                    <View
+                        style={{
+                            width: checkboxSize,
+                            height: checkboxSize,
+                            borderRadius: checkboxSize / 2,
+                            borderWidth: 2,
+                            borderColor: props.done ? theme.colors.primary : theme.colors.onSurfaceVariant,
+                            backgroundColor: props.done ? theme.colors.primary : "transparent",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}
+                    >
+                        {props.done && (
+                            <Octicons name="check" size={isMobile ? 18 : 14} color={theme.colors.onPrimary} />
+                        )}
+                    </View>
+                </Pressable>
+            )}
 
             <View
                 style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
@@ -266,18 +313,33 @@ export const TodoView = React.memo<TodoViewProps>((props) => {
                                       />
                                   </View>
 
-                                  <Pressable
-                                      onPress={() => props.onPress?.(props.id)}
-                                      style={{
-                                          position: "absolute",
-                                          left: overlayLeft,
-                                          top: 0,
-                                          bottom: 0,
-                                          right: rightPadding,
-                                          backgroundColor: theme.colors.surfaceContainer,
-                                          ...(Platform.OS === "web" ? { cursor: "pointer" as const } : null)
-                                      }}
-                                  />
+                                  {Platform.OS === "web" ? (
+                                      <GestureDetector gesture={overlayGesture}>
+                                          <Animated.View
+                                              style={{
+                                                  position: "absolute",
+                                                  left: overlayLeft,
+                                                  top: 0,
+                                                  bottom: 0,
+                                                  right: rightPadding,
+                                                  cursor: "pointer",
+                                                  backgroundColor: theme.colors.surfaceContainer
+                                              }}
+                                          />
+                                      </GestureDetector>
+                                  ) : (
+                                      <Pressable
+                                          onPress={() => props.onPress?.(props.id)}
+                                          style={{
+                                              position: "absolute",
+                                              left: overlayLeft,
+                                              top: 0,
+                                              bottom: 0,
+                                              right: rightPadding,
+                                              backgroundColor: theme.colors.surfaceContainer
+                                          }}
+                                      />
+                                  )}
                               </>
                           );
                       })()
@@ -382,23 +444,43 @@ export const TodoView = React.memo<TodoViewProps>((props) => {
             </Animated.View>
 
             <Animated.View style={indicatorsAnimatedStyle}>
-                <Pressable
-                    onPress={() => props.onToggleFavorite?.(props.id, !props.favorite)}
-                    hitSlop={isMobile ? 16 : 8}
-                    style={{
-                        width: starButtonSize,
-                        height: starButtonSize,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        ...(Platform.OS === "web" ? { cursor: "pointer" as const } : null)
-                    }}
-                >
-                    <Octicons
-                        name={props.favorite ? "star-fill" : "star"}
-                        size={starIconSize}
-                        color={props.favorite ? theme.colors.tertiary : theme.colors.onSurfaceVariant}
-                    />
-                </Pressable>
+                {Platform.OS === "web" ? (
+                    <GestureDetector gesture={favoriteGesture}>
+                        <Animated.View
+                            hitSlop={isMobile ? 16 : 8}
+                            style={{
+                                width: starButtonSize,
+                                height: starButtonSize,
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer"
+                            }}
+                        >
+                            <Octicons
+                                name={props.favorite ? "star-fill" : "star"}
+                                size={starIconSize}
+                                color={props.favorite ? theme.colors.tertiary : theme.colors.onSurfaceVariant}
+                            />
+                        </Animated.View>
+                    </GestureDetector>
+                ) : (
+                    <Pressable
+                        onPress={() => props.onToggleFavorite?.(props.id, !props.favorite)}
+                        hitSlop={isMobile ? 16 : 8}
+                        style={{
+                            width: starButtonSize,
+                            height: starButtonSize,
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}
+                    >
+                        <Octicons
+                            name={props.favorite ? "star-fill" : "star"}
+                            size={starIconSize}
+                            color={props.favorite ? theme.colors.tertiary : theme.colors.onSurfaceVariant}
+                        />
+                    </Pressable>
+                )}
             </Animated.View>
         </>
     );

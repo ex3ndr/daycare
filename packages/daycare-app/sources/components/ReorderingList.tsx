@@ -24,6 +24,12 @@ type ReorderingListProps<T> = {
     contentInsetTop?: number;
 };
 
+type RenderEntry<T> = {
+    key: string;
+    item: T;
+    targetIndex: number;
+};
+
 const SPRING_CONFIG = {
     damping: 28,
     stiffness: 300,
@@ -33,14 +39,69 @@ const SPRING_CONFIG = {
 function ReorderingListComponent<T>(props: ReorderingListProps<T>) {
     const { itemHeight, gap, items, renderItem, keyExtractor } = props;
 
+    const [renderOrderKeys, setRenderOrderKeys] = React.useState<string[]>(() =>
+        items.map((item) => keyExtractor(item))
+    );
     const itemKeys = React.useMemo(() => items.map((item) => keyExtractor(item)), [items, keyExtractor]);
     const itemSpan = itemHeight + gap;
-    const listHeight = itemKeys.length * itemHeight + Math.max(0, itemKeys.length - 1) * gap;
 
     const isDragging = useSharedValue<string>("");
     const dragOffset = useSharedValue(0);
     const dragStartOffset = useSharedValue(0);
     const lastMoveIndex = useSharedValue(-1);
+
+    React.useEffect(() => {
+        const presentKeys = items.map((item) => keyExtractor(item));
+
+        // Keep render order stable on web: changing child order while dragging can cancel
+        // pointer gestures mid-flight. We only remove missing keys and append truly new keys.
+        setRenderOrderKeys((previous) => {
+            const next = previous.filter((key) => presentKeys.includes(key));
+            for (const key of presentKeys) {
+                if (!next.includes(key)) {
+                    next.push(key);
+                }
+            }
+
+            if (next.length === previous.length && next.every((key, index) => key === previous[index])) {
+                return previous;
+            }
+
+            return next;
+        });
+    }, [items, keyExtractor]);
+
+    const itemsByKey = React.useMemo(() => {
+        const map = new Map<string, T>();
+        for (const item of items) {
+            map.set(keyExtractor(item), item);
+        }
+        return map;
+    }, [items, keyExtractor]);
+
+    const entries = React.useMemo<RenderEntry<T>[]>(() => {
+        const keyToIndex = new Map<string, number>();
+        for (let i = 0; i < items.length; i++) {
+            keyToIndex.set(keyExtractor(items[i]), i);
+        }
+
+        const next: RenderEntry<T>[] = [];
+        for (const key of renderOrderKeys) {
+            const item = itemsByKey.get(key);
+            const targetIndex = keyToIndex.get(key);
+            if (item && targetIndex !== undefined) {
+                next.push({
+                    key,
+                    item,
+                    targetIndex
+                });
+            }
+        }
+
+        return next;
+    }, [items, keyExtractor, itemsByKey, renderOrderKeys]);
+
+    const listHeight = entries.length * itemHeight + Math.max(0, entries.length - 1) * gap;
 
     const tapGesture = Gesture.Tap().onEnd((event) => {
         "worklet";
@@ -106,12 +167,12 @@ function ReorderingListComponent<T>(props: ReorderingListProps<T>) {
                 <View style={{ height: listHeight }}>
                     <GestureDetector gesture={composedGesture}>
                         <View style={{ height: listHeight }}>
-                            {items.map((item, index) => (
+                            {entries.map((entry) => (
                                 <ItemView<T>
-                                    key={keyExtractor(item)}
-                                    id={keyExtractor(item)}
-                                    item={item}
-                                    index={index}
+                                    key={entry.key}
+                                    id={entry.key}
+                                    item={entry.item}
+                                    index={entry.targetIndex}
                                     gap={gap}
                                     itemHeight={itemHeight}
                                     render={renderItem}
