@@ -10,7 +10,8 @@ type Theme = ReturnType<typeof useUnistyles>["theme"];
 const ADS = [
     { id: "ad1", network: "Meta", campaign: "Spring promo", spend: "$1,240", impressions: "48.2K", ctr: "3.1%" },
     { id: "ad2", network: "Google", campaign: "Brand search", spend: "$860", impressions: "31.5K", ctr: "4.7%" },
-    { id: "ad3", network: "TikTok", campaign: "UGC push", spend: "$520", impressions: "112K", ctr: "1.8%" }
+    { id: "ad3", network: "TikTok", campaign: "UGC push", spend: "$520", impressions: "112K", ctr: "1.8%" },
+    { id: "ad4", network: "LinkedIn", campaign: "B2B retarget", spend: "$340", impressions: "8.1K", ctr: "2.4%" }
 ];
 
 const TASKS = [
@@ -39,7 +40,7 @@ const TWEETS = [
 ];
 
 /**
- * Home dashboard view — activity feed with ads, tasks, docs, emails, twitter, and revenue.
+ * Home dashboard view — full-width grid layout with ads, tasks, docs, emails, twitter, revenue.
  */
 export function HomeView() {
     const { theme } = useUnistyles();
@@ -52,105 +53,158 @@ export function HomeView() {
         >
             <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Home</Text>
 
-            {/* Revenue banner */}
+            {/* Revenue banner — full width */}
             <View style={[styles.revenueBanner, { backgroundColor: theme.colors.primaryContainer }]}>
-                <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>BUSINESS</Text>
-                <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
-                <Text style={[styles.revenueSubtitle, { color: theme.colors.onPrimaryContainer }]}>
-                    Revenue this month &middot; +18% vs last
-                </Text>
+                <View style={styles.revenueLeft}>
+                    <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>BUSINESS</Text>
+                    <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
+                    <Text style={[styles.revenueSubtitle, { color: theme.colors.onPrimaryContainer }]}>
+                        Revenue this month
+                    </Text>
+                </View>
+                <View style={styles.revenueRight}>
+                    <View style={styles.revenueStat}>
+                        <Text style={[styles.revenueStatValue, { color: theme.colors.onPrimaryContainer }]}>+18%</Text>
+                        <Text style={[styles.revenueStatLabel, { color: theme.colors.onPrimaryContainer }]}>
+                            vs last month
+                        </Text>
+                    </View>
+                    <View style={styles.revenueStat}>
+                        <Text style={[styles.revenueStatValue, { color: theme.colors.onPrimaryContainer }]}>
+                            $2,620
+                        </Text>
+                        <Text style={[styles.revenueStatLabel, { color: theme.colors.onPrimaryContainer }]}>
+                            ad spend
+                        </Text>
+                    </View>
+                    <View style={styles.revenueStat}>
+                        <Text style={[styles.revenueStatValue, { color: theme.colors.onPrimaryContainer }]}>4.9x</Text>
+                        <Text style={[styles.revenueStatLabel, { color: theme.colors.onPrimaryContainer }]}>ROAS</Text>
+                    </View>
+                </View>
             </View>
 
-            {/* Ads */}
-            <Section title="Ads" icon="broadcast" theme={theme}>
-                {ADS.map((ad) => (
-                    <View key={ad.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                        <View style={styles.rowMain}>
-                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{ad.campaign}</Text>
-                            <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>{ad.network}</Text>
-                        </View>
-                        <View style={styles.rowStats}>
-                            <Text style={[styles.rowStat, { color: theme.colors.onSurfaceVariant }]}>
-                                {ad.impressions}
-                            </Text>
-                            <Text style={[styles.rowStat, { color: theme.colors.primary }]}>{ad.ctr}</Text>
-                            <Text style={[styles.rowStat, { color: theme.colors.onSurface }]}>{ad.spend}</Text>
-                        </View>
-                    </View>
-                ))}
-            </Section>
+            {/* Two-column grid */}
+            <View style={styles.grid}>
+                {/* Left column */}
+                <View style={styles.col}>
+                    <Section title="Ads" icon="broadcast" theme={theme}>
+                        {ADS.map((ad) => (
+                            <View key={ad.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {ad.campaign}
+                                    </Text>
+                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                        {ad.network}
+                                    </Text>
+                                </View>
+                                <View style={styles.rowStats}>
+                                    <Text style={[styles.rowStat, { color: theme.colors.onSurfaceVariant }]}>
+                                        {ad.impressions}
+                                    </Text>
+                                    <Text style={[styles.rowStat, { color: theme.colors.primary }]}>{ad.ctr}</Text>
+                                    <Text style={[styles.rowStat, { color: theme.colors.onSurface }]}>{ad.spend}</Text>
+                                </View>
+                            </View>
+                        ))}
+                    </Section>
 
-            {/* Active tasks */}
-            <Section title="Active Tasks" icon="tasklist" theme={theme}>
-                {TASKS.map((task) => (
-                    <View key={task.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                        <View style={styles.rowMain}>
-                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{task.title}</Text>
-                            <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
-                                {task.assignee}
-                            </Text>
-                        </View>
-                        <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>{task.due}</Text>
-                    </View>
-                ))}
-            </Section>
-
-            {/* Recent documents */}
-            <Section title="Recent Documents" icon="file" theme={theme}>
-                {DOCUMENTS.map((doc) => (
-                    <View key={doc.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                        <View style={styles.rowMain}>
-                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{doc.title}</Text>
-                        </View>
-                        <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>{doc.updated}</Text>
-                    </View>
-                ))}
-            </Section>
-
-            {/* Sent emails */}
-            <Section title="Sent Emails" icon="mail" theme={theme}>
-                {EMAILS.map((email) => (
-                    <View key={email.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                        <View style={styles.rowMain}>
-                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{email.subject}</Text>
-                            <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>{email.to}</Text>
-                        </View>
-                        <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>{email.sent}</Text>
-                    </View>
-                ))}
-            </Section>
-
-            {/* Twitter */}
-            <Section title="Twitter" icon="megaphone" theme={theme}>
-                {TWEETS.map((tw) => (
-                    <View key={tw.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                        <View style={styles.rowMain}>
-                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
-                                {tw.text}
-                            </Text>
-                            {tw.status === "scheduled" ? (
-                                <Text style={[styles.rowSub, { color: theme.colors.outline }]}>Scheduled</Text>
-                            ) : (
-                                <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
-                                    {tw.likes} likes &middot; {tw.retweets} RT
+                    <Section title="Sent Emails" icon="mail" theme={theme}>
+                        {EMAILS.map((email) => (
+                            <View
+                                key={email.id}
+                                style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
+                            >
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {email.subject}
+                                    </Text>
+                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                        {email.to}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>
+                                    {email.sent}
                                 </Text>
-                            )}
-                        </View>
-                        <Octicons
-                            name={tw.status === "live" ? "dot-fill" : "clock"}
-                            size={12}
-                            color={tw.status === "live" ? theme.colors.tertiary : theme.colors.outline}
-                        />
-                    </View>
-                ))}
-            </Section>
+                            </View>
+                        ))}
+                    </Section>
 
-            {/* Funny picture placeholder */}
-            <View style={[styles.funnyCard, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
-                <Text style={{ fontSize: 48 }}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
-                <Text style={[styles.funnyText, { color: theme.colors.onSurfaceVariant }]}>
-                    Everything is running smoothly. Have a nice day.
-                </Text>
+                    {/* Funny card */}
+                    <View style={[styles.funnyCard, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
+                        <Text style={{ fontSize: 48 }}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
+                        <Text style={[styles.funnyText, { color: theme.colors.onSurfaceVariant }]}>
+                            Everything is running smoothly. Have a nice day.
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Right column */}
+                <View style={styles.col}>
+                    <Section title="Active Tasks" icon="tasklist" theme={theme}>
+                        {TASKS.map((task) => (
+                            <View
+                                key={task.id}
+                                style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
+                            >
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {task.title}
+                                    </Text>
+                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                        {task.assignee}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>
+                                    {task.due}
+                                </Text>
+                            </View>
+                        ))}
+                    </Section>
+
+                    <Section title="Twitter" icon="megaphone" theme={theme}>
+                        {TWEETS.map((tw) => (
+                            <View key={tw.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                                <View style={styles.rowMain}>
+                                    <Text
+                                        style={[styles.rowTitle, { color: theme.colors.onSurface }]}
+                                        numberOfLines={1}
+                                    >
+                                        {tw.text}
+                                    </Text>
+                                    {tw.status === "scheduled" ? (
+                                        <Text style={[styles.rowSub, { color: theme.colors.outline }]}>Scheduled</Text>
+                                    ) : (
+                                        <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                            {tw.likes} likes &middot; {tw.retweets} RT
+                                        </Text>
+                                    )}
+                                </View>
+                                <Octicons
+                                    name={tw.status === "live" ? "dot-fill" : "clock"}
+                                    size={12}
+                                    color={tw.status === "live" ? theme.colors.tertiary : theme.colors.outline}
+                                />
+                            </View>
+                        ))}
+                    </Section>
+
+                    <Section title="Recent Documents" icon="file" theme={theme}>
+                        {DOCUMENTS.map((doc) => (
+                            <View key={doc.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {doc.title}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>
+                                    {doc.updated}
+                                </Text>
+                            </View>
+                        ))}
+                    </Section>
+                </View>
             </View>
         </ScrollView>
     );
@@ -186,10 +240,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
-        paddingBottom: 48,
-        maxWidth: 640,
-        width: "100%",
-        alignSelf: "center"
+        paddingBottom: 48
     },
     pageTitle: {
         fontSize: 26,
@@ -198,10 +249,14 @@ const styles = StyleSheet.create({
     },
     revenueBanner: {
         borderRadius: 16,
-        padding: 24,
+        padding: 28,
+        marginBottom: 24,
+        flexDirection: "row",
         alignItems: "center",
-        marginBottom: 28,
-        gap: 4
+        justifyContent: "space-between"
+    },
+    revenueLeft: {
+        gap: 2
     },
     revenueLabel: {
         fontSize: 12,
@@ -209,12 +264,35 @@ const styles = StyleSheet.create({
         letterSpacing: 2
     },
     revenueValue: {
-        fontSize: 40,
+        fontSize: 44,
         fontWeight: "800"
     },
     revenueSubtitle: {
         fontSize: 13,
         opacity: 0.8
+    },
+    revenueRight: {
+        flexDirection: "row",
+        gap: 32
+    },
+    revenueStat: {
+        alignItems: "center",
+        gap: 2
+    },
+    revenueStatValue: {
+        fontSize: 20,
+        fontWeight: "700"
+    },
+    revenueStatLabel: {
+        fontSize: 11,
+        opacity: 0.7
+    },
+    grid: {
+        flexDirection: "row",
+        gap: 24
+    },
+    col: {
+        flex: 1
     },
     section: {
         marginBottom: 24
@@ -270,8 +348,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         alignItems: "center",
-        gap: 12,
-        marginBottom: 24
+        gap: 12
     },
     funnyText: {
         fontSize: 13,
