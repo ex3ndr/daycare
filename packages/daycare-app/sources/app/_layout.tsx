@@ -56,7 +56,7 @@ export default function RootLayout() {
                 colors: {
                     ...DarkTheme.colors,
                     primary: theme.colors.primary,
-                    background: theme.colors.surface,
+                    background: theme.colors.surfaceDim,
                     card: theme.colors.surfaceContainer,
                     text: theme.colors.onSurface,
                     border: theme.colors.outlineVariant,
@@ -70,7 +70,7 @@ export default function RootLayout() {
             colors: {
                 ...DefaultTheme.colors,
                 primary: theme.colors.primary,
-                background: theme.colors.surface,
+                background: theme.colors.surfaceDim,
                 card: theme.colors.surfaceContainer,
                 text: theme.colors.onSurface,
                 border: theme.colors.outlineVariant,

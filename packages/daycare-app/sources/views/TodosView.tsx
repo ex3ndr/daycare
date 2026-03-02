@@ -97,65 +97,73 @@ export function TodosView() {
     }, [selectedId, todos]);
 
     return (
-        <View style={styles.container}>
-            <View style={[styles.header, { borderBottomColor: theme.colors.outlineVariant }]}>
-                <View style={styles.headerLeft}>
-                    <Octicons name="checklist" size={16} color={theme.colors.primary} />
-                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>Todo List UI</Text>
+        <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.inner}>
+                <View style={[styles.header, { borderBottomColor: theme.colors.outlineVariant }]}>
+                    <View style={styles.headerLeft}>
+                        <Octicons name="checklist" size={16} color={theme.colors.primary} />
+                        <Text style={[styles.title, { color: theme.colors.onSurface }]}>Todo List UI</Text>
+                    </View>
+                    <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>No backend wiring</Text>
                 </View>
-                <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>No backend wiring</Text>
-            </View>
 
-            <TodoList
-                todos={todos}
-                onToggleTodo={handleToggleTodo}
-                onToggleFavorite={handleToggleFavorite}
-                onUpdateTodo={handleUpdateTodo}
-                onReorderTodo={handleReorderTodo}
-                onTaskPress={setSelectedId}
-                editable={true}
-                footer={
-                    selectedTodo ? (
-                        <View
-                            style={[
-                                styles.selection,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer,
-                                    borderColor: theme.colors.outlineVariant
-                                }
-                            ]}
-                        >
-                            <Text style={[styles.selectionTitle, { color: theme.colors.onSurface }]}>
-                                Selected task
-                            </Text>
-                            <Text style={[styles.selectionValue, { color: theme.colors.onSurfaceVariant }]}>
-                                {selectedTodo.title}
-                            </Text>
-                        </View>
-                    ) : (
-                        <View
-                            style={[
-                                styles.selection,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer,
-                                    borderColor: theme.colors.outlineVariant
-                                }
-                            ]}
-                        >
-                            <Text style={[styles.selectionValue, { color: theme.colors.onSurfaceVariant }]}>
-                                Select a task
-                            </Text>
-                        </View>
-                    )
-                }
-            />
+                <TodoList
+                    todos={todos}
+                    onToggleTodo={handleToggleTodo}
+                    onToggleFavorite={handleToggleFavorite}
+                    onUpdateTodo={handleUpdateTodo}
+                    onReorderTodo={handleReorderTodo}
+                    onTaskPress={setSelectedId}
+                    editable={true}
+                    footer={
+                        selectedTodo ? (
+                            <View
+                                style={[
+                                    styles.selection,
+                                    {
+                                        backgroundColor: theme.colors.surfaceContainer,
+                                        borderColor: theme.colors.outlineVariant
+                                    }
+                                ]}
+                            >
+                                <Text style={[styles.selectionTitle, { color: theme.colors.onSurface }]}>
+                                    Selected task
+                                </Text>
+                                <Text style={[styles.selectionValue, { color: theme.colors.onSurfaceVariant }]}>
+                                    {selectedTodo.title}
+                                </Text>
+                            </View>
+                        ) : (
+                            <View
+                                style={[
+                                    styles.selection,
+                                    {
+                                        backgroundColor: theme.colors.surfaceContainer,
+                                        borderColor: theme.colors.outlineVariant
+                                    }
+                                ]}
+                            >
+                                <Text style={[styles.selectionValue, { color: theme.colors.onSurfaceVariant }]}>
+                                    Select a task
+                                </Text>
+                            </View>
+                        )
+                    }
+                />
+            </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     container: {
         flex: 1
+    },
+    inner: {
+        flex: 1,
+        maxWidth: theme.layout.maxWidth,
+        width: "100%",
+        alignSelf: "center"
     },
     header: {
         height: 64,
@@ -194,4 +202,4 @@ const styles = StyleSheet.create({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     }
-});
+}));

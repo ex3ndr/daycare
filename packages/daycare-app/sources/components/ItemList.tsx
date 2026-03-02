@@ -15,6 +15,9 @@ const stylesheet = StyleSheet.create((theme, _runtime) => ({
         backgroundColor: theme.colors.surface
     },
     contentContainer: {
+        maxWidth: theme.layout.maxWidth,
+        width: "100%",
+        alignSelf: "center",
         paddingBottom: Platform.select({ ios: 34, default: 16 }),
         paddingTop: 0
     }
@@ -68,7 +71,15 @@ export const ItemListStatic = React.memo<
 
     return (
         <View style={[{ backgroundColor }, style]}>
-            <View style={containerStyle}>{children}</View>
+            <View style={[staticStyles.innerContainer, containerStyle]}>{children}</View>
         </View>
     );
 });
+
+const staticStyles = StyleSheet.create((theme) => ({
+    innerContainer: {
+        maxWidth: theme.layout.maxWidth,
+        width: "100%",
+        alignSelf: "center"
+    }
+}));

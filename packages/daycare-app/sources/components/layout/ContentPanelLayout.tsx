@@ -43,17 +43,19 @@ export const ContentPanelLayout = React.memo<ContentPanelLayoutProps>(({ panel2,
     );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
         flexDirection: "row"
     },
     panel2: {
         flex: 1,
-        overflow: "hidden"
+        overflow: "hidden",
+        backgroundColor: theme.colors.surface
     },
     panel3: {
         overflow: "hidden",
+        backgroundColor: theme.colors.surface,
         flexBasis: 0
     }
-});
+}));

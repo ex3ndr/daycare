@@ -243,6 +243,7 @@ const styles = StyleSheet.create((theme) => ({
         width: SIDEBAR_WIDTH,
         borderRadius: 16,
         overflow: "hidden",
+        backgroundColor: theme.colors.surface,
         boxShadow: theme.elevation.level1,
         flexShrink: 0
     },
@@ -255,12 +256,14 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         borderRadius: 16,
         overflow: "hidden",
+        backgroundColor: theme.colors.surface,
         boxShadow: theme.elevation.level1,
         flexShrink: 0
     },
     panel3: {
         borderRadius: 16,
         overflow: "hidden",
+        backgroundColor: theme.colors.surface,
         boxShadow: theme.elevation.level1,
         position: "relative",
         flexShrink: 0

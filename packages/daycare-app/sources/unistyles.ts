@@ -65,15 +65,15 @@ StyleSheet.configure({
     themes: appThemes
 });
 
-// Set initial root view background color based on theme
+// Set initial root view background color based on theme (uses surfaceDim for contrast behind panels)
 const setRootBackgroundColor = () => {
     if (themePreference === "adaptive") {
         const systemTheme = Appearance.getColorScheme();
-        const color = systemTheme === "dark" ? appThemes.dark.colors.surface : appThemes.light.colors.surface;
+        const color = systemTheme === "dark" ? appThemes.dark.colors.surfaceDim : appThemes.light.colors.surfaceDim;
         UnistylesRuntime.setRootViewBackgroundColor(color);
         SystemUI.setBackgroundColorAsync(color);
     } else {
-        const color = themePreference === "dark" ? appThemes.dark.colors.surface : appThemes.light.colors.surface;
+        const color = themePreference === "dark" ? appThemes.dark.colors.surfaceDim : appThemes.light.colors.surfaceDim;
         UnistylesRuntime.setRootViewBackgroundColor(color);
         SystemUI.setBackgroundColorAsync(color);
     }
