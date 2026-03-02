@@ -24,7 +24,7 @@ function DesktopLayout() {
     const insets = useSafeAreaInsets();
 
     return (
-        <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+        <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>
             <View
                 style={[
                     styles.sidebarCard,
@@ -57,7 +57,7 @@ function MobileLayout() {
     const renderDrawerContent = React.useCallback(() => <AppSidebar onNavigate={closeDrawer} />, [closeDrawer]);
 
     return (
-        <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+        <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surface }]}>
             <Drawer
                 isOpen={drawerOpen}
                 onClose={closeDrawer}

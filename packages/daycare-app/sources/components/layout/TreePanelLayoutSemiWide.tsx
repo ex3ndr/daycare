@@ -209,7 +209,6 @@ const styles = StyleSheet.create((theme) => ({
     },
     panel1: {
         width: PANEL1_WIDTH,
-        backgroundColor: theme.colors.surface,
         borderRadius: 16,
         overflow: "hidden",
         boxShadow: theme.elevation.level1,
@@ -222,14 +221,12 @@ const styles = StyleSheet.create((theme) => ({
         overflow: "hidden"
     },
     panel2: {
-        backgroundColor: theme.colors.surface,
         borderRadius: 16,
         overflow: "hidden",
         boxShadow: theme.elevation.level1,
         flexShrink: 0
     },
     panel3: {
-        backgroundColor: theme.colors.surface,
         borderRadius: 16,
         overflow: "hidden",
         boxShadow: theme.elevation.level1,
