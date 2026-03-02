@@ -30,9 +30,10 @@ export const SinglePanelLayout = React.memo(function SinglePanelLayout({ childre
     );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
+        backgroundColor: theme.colors.surface,
         alignItems: "center"
     },
     panel: {
@@ -56,4 +57,4 @@ const styles = StyleSheet.create({
             md: "center"
         }
     }
-});
+}));

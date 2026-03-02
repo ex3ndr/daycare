@@ -7,11 +7,17 @@ export default function AuthLayout() {
     return (
         <Stack
             screenOptions={{
+                headerStyle: {
+                    backgroundColor: theme.colors.surface
+                },
                 headerTintColor: theme.colors.onSurface,
                 headerTitleStyle: {
                     color: theme.colors.onSurface
                 },
-                headerShadowVisible: false
+                headerShadowVisible: false,
+                contentStyle: {
+                    backgroundColor: theme.colors.background
+                }
             }}
         >
             <Stack.Screen name="index" options={{ headerShown: false }} />
