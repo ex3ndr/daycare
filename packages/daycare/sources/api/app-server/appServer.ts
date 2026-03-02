@@ -15,6 +15,7 @@ import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
+import type { Secret } from "../../engine/secrets/secretTypes.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
@@ -54,6 +55,11 @@ export type AppServerOptions = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
+    secrets: {
+        list: (ctx: Context) => Promise<Secret[]>;
+        add: (ctx: Context, secret: Secret) => Promise<void>;
+        remove: (ctx: Context, name: string) => Promise<boolean>;
+    } | null;
     connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>;
 };
 
@@ -79,6 +85,7 @@ export class AppServer {
     private readonly taskCallbacks: RouteTaskCallbacks | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
+    private readonly secrets: AppServerOptions["secrets"];
     private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
 
@@ -102,6 +109,7 @@ export class AppServer {
         this.taskCallbacks = options.taskCallbacks;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
+        this.secrets = options.secrets;
         this.connectorTargetResolve = options.connectorTargetResolve;
     }
 
@@ -241,7 +249,8 @@ export class AppServer {
             tasksListAll: this.tasksListAll,
             taskCallbacks: this.taskCallbacks,
             tokenStatsFetch: this.tokenStatsFetch,
-            documents: this.documents
+            documents: this.documents,
+            secrets: this.secrets
         });
         if (handled) {
             return;

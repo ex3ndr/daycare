@@ -34,6 +34,15 @@ Notes:
 ### Tasks (authenticated via `Authorization: Bearer <token>`)
 - `GET /tasks/active`: list active tasks with cron/webhook triggers and last execution timestamps
 
+### Secrets (authenticated via `Authorization: Bearer <token>`)
+- `GET /secrets`: list secret metadata (`name`, `displayName`, `description`, `variableNames`, `variableCount`)
+- `GET /secrets/:name`: read one secret metadata entry
+- `POST /secrets/create`: create/replace a secret
+- `POST /secrets/:name/update`: update display metadata and/or variable mappings
+- `POST /secrets/:name/delete`: delete a secret
+
+Responses never include secret variable values.
+
 Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
 
 ### Other

@@ -1,6 +1,7 @@
 import type http from "node:http";
 import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
+import type { Secret } from "../../engine/secrets/secretTypes.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
@@ -11,6 +12,7 @@ import { documentsRouteHandle } from "./documents/documentsRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
 import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
+import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 
@@ -28,6 +30,11 @@ export type ApiRouteContext = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
     documents: DocumentsRepository | null;
+    secrets: {
+        list: (ctx: Context) => Promise<Secret[]>;
+        add: (ctx: Context, secret: Secret) => Promise<void>;
+        remove: (ctx: Context, name: string) => Promise<boolean>;
+    } | null;
 };
 
 /**
@@ -75,6 +82,14 @@ export async function apiRouteHandle(
         return skillsRouteHandle(request, response, pathname, {
             sendJson: context.sendJson,
             skills: context.skills
+        });
+    }
+    if (pathname.startsWith("/secrets")) {
+        return secretsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            secrets: context.secrets
         });
     }
     if (pathname.startsWith("/costs")) {

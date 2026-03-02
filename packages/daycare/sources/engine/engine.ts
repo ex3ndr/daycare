@@ -585,6 +585,7 @@ export class Engine {
             },
             tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findMany(ctx, options),
             documents: this.storage.documents,
+            secrets: this.secrets,
             connectorTargetResolve: (path) => this.connectorTargetResolve(path)
         });
         this.channels = new Channels({

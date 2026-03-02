@@ -6,9 +6,11 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TaskActiveSummary } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
+import { contextForUser } from "../../engine/agents/context.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
 import { ModuleRegistry } from "../../engine/modules/moduleRegistry.js";
+import { Secrets } from "../../engine/secrets/secrets.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
@@ -147,6 +149,10 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
     });
     const storage = await storageOpenTest();
     activeStorages.push(storage);
+    const secrets = new Secrets({
+        usersDir: config.current.usersDir,
+        observationLog: storage.observationLog
+    });
 
     const auth = {
         getEntry: vi.fn(async (id: string) => entries.get(id) ?? null),
@@ -186,6 +192,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         taskCallbacks: options.taskCallbacks ?? null,
         tokenStatsFetch: async () => [],
         documents: null,
+        secrets,
         connectorTargetResolve: async (target) => {
             const segments = target.split("/").filter((segment) => segment.length > 0);
             const userId = segments[0] ?? "";
@@ -204,6 +211,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         port,
         auth,
         storage,
+        secrets,
         commands: modules.commands,
         tools: modules.tools,
         connectors: modules.connectors
@@ -522,6 +530,128 @@ describe("AppServer authenticated routes", () => {
         await expect(response.json()).resolves.toEqual({
             ok: false,
             error: "Invalid cron timezone: Not/AZone"
+        });
+    });
+
+    it("handles secrets CRUD and never returns secret values", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({ secret });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const createResponse = await fetch(`http://127.0.0.1:${built.port}/secrets/create`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "API credentials",
+                variables: {
+                    OPENAI_API_KEY: "sk-secret",
+                    ENABLED: true
+                }
+            })
+        });
+
+        expect(createResponse.status).toBe(200);
+        const createPayload = await createResponse.json();
+        expect(createPayload).toEqual({
+            ok: true,
+            secret: {
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "API credentials",
+                variableNames: ["ENABLED", "OPENAI_API_KEY"],
+                variableCount: 2
+            }
+        });
+        expect(JSON.stringify(createPayload)).not.toContain("sk-secret");
+
+        const readResponse = await fetch(`http://127.0.0.1:${built.port}/secrets/openai-key`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(readResponse.status).toBe(200);
+        const readPayload = await readResponse.json();
+        expect(readPayload).toEqual({
+            ok: true,
+            secret: {
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "API credentials",
+                variableNames: ["ENABLED", "OPENAI_API_KEY"],
+                variableCount: 2
+            }
+        });
+        expect(JSON.stringify(readPayload)).not.toContain("sk-secret");
+
+        const updateResponse = await fetch(`http://127.0.0.1:${built.port}/secrets/openai-key/update`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                description: "Updated",
+                variables: {
+                    OPENAI_API_KEY: "sk-updated"
+                }
+            })
+        });
+        expect(updateResponse.status).toBe(200);
+        const updatePayload = await updateResponse.json();
+        expect(updatePayload).toEqual({
+            ok: true,
+            secret: {
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "Updated",
+                variableNames: ["OPENAI_API_KEY"],
+                variableCount: 1
+            }
+        });
+        expect(JSON.stringify(updatePayload)).not.toContain("sk-updated");
+
+        const listResponse = await fetch(`http://127.0.0.1:${built.port}/secrets`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(listResponse.status).toBe(200);
+        const listPayload = await listResponse.json();
+        expect(listPayload).toEqual({
+            ok: true,
+            secrets: [
+                {
+                    name: "openai-key",
+                    displayName: "OpenAI",
+                    description: "Updated",
+                    variableNames: ["OPENAI_API_KEY"],
+                    variableCount: 1
+                }
+            ]
+        });
+        expect(JSON.stringify(listPayload)).not.toContain("sk-updated");
+
+        const stored = await built.secrets.list(contextForUser({ userId: "user-1" }));
+        expect(stored).toEqual([
+            {
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "Updated",
+                variables: {
+                    OPENAI_API_KEY: "sk-updated"
+                }
+            }
+        ]);
+
+        const deleteResponse = await fetch(`http://127.0.0.1:${built.port}/secrets/openai-key/delete`, {
+            method: "POST",
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(deleteResponse.status).toBe(200);
+        await expect(deleteResponse.json()).resolves.toEqual({
+            ok: true,
+            deleted: true
         });
     });
 });
