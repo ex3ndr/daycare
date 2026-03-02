@@ -9,7 +9,7 @@ import { Avatar } from "@/components/Avatar";
 export const SIDEBAR_WIDTH = 240;
 
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
-    { mode: "home", icon: "milestone", label: "Missions" },
+    { mode: "home", icon: "home", label: "Home" },
     { mode: "agents", icon: "device-desktop", label: "Agents" },
     { mode: "people", icon: "people", label: "People" },
     { mode: "email", icon: "mail", label: "Email" },

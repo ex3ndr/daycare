@@ -3,90 +3,46 @@ import type * as React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
-type MissionStatus = "active" | "completed" | "upcoming";
+type Theme = ReturnType<typeof useUnistyles>["theme"];
 
-type Mission = {
-    id: string;
-    title: string;
-    description: string;
-    status: MissionStatus;
-    progress: number; // 0-1
-    tasksTotal: number;
-    tasksDone: number;
-    dueLabel: string;
-};
+// -- Mock data --
 
-const MISSIONS: Mission[] = [
-    {
-        id: "m1",
-        title: "Onboard first 10 users",
-        description: "Get initial users set up with agents and verify the onboarding flow works end to end.",
-        status: "completed",
-        progress: 1,
-        tasksTotal: 10,
-        tasksDone: 10,
-        dueLabel: "Completed Feb 18"
-    },
-    {
-        id: "m2",
-        title: "Launch email integration",
-        description: "Ship the email connector so agents can send and receive messages on behalf of users.",
-        status: "active",
-        progress: 0.65,
-        tasksTotal: 12,
-        tasksDone: 8,
-        dueLabel: "Due Mar 15"
-    },
-    {
-        id: "m3",
-        title: "Cost tracking under $200/mo",
-        description: "Optimize inference costs and set up alerts to keep monthly spend below the target.",
-        status: "active",
-        progress: 0.4,
-        tasksTotal: 8,
-        tasksDone: 3,
-        dueLabel: "Due Mar 30"
-    },
-    {
-        id: "m4",
-        title: "Document all agent APIs",
-        description: "Write comprehensive API docs for every public agent endpoint and publish them.",
-        status: "upcoming",
-        progress: 0,
-        tasksTotal: 15,
-        tasksDone: 0,
-        dueLabel: "Starts Apr 1"
-    },
-    {
-        id: "m5",
-        title: "Multi-tenant support",
-        description: "Enable workspace isolation so multiple teams can use the platform independently.",
-        status: "upcoming",
-        progress: 0,
-        tasksTotal: 20,
-        tasksDone: 0,
-        dueLabel: "Starts Apr 15"
-    }
+const ADS = [
+    { id: "ad1", network: "Meta", campaign: "Spring promo", spend: "$1,240", impressions: "48.2K", ctr: "3.1%" },
+    { id: "ad2", network: "Google", campaign: "Brand search", spend: "$860", impressions: "31.5K", ctr: "4.7%" },
+    { id: "ad3", network: "TikTok", campaign: "UGC push", spend: "$520", impressions: "112K", ctr: "1.8%" }
 ];
 
-const STATUS_CONFIG: Record<MissionStatus, { icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = {
-    active: { icon: "dot-fill", label: "Active" },
-    completed: { icon: "check-circle-fill", label: "Done" },
-    upcoming: { icon: "clock", label: "Upcoming" }
-};
+const TASKS = [
+    { id: "t1", title: "Review campaign creatives", assignee: "Scout", due: "Today" },
+    { id: "t2", title: "Fix tracking pixel on landing", assignee: "Builder", due: "Today" },
+    { id: "t3", title: "Send weekly digest to team", assignee: "Operator", due: "Tomorrow" },
+    { id: "t4", title: "Update audience segments", assignee: "Scout", due: "Mar 4" }
+];
+
+const DOCUMENTS = [
+    { id: "d1", title: "Q1 Campaign Brief", updated: "2 hours ago" },
+    { id: "d2", title: "Brand Guidelines v3", updated: "Yesterday" },
+    { id: "d3", title: "Competitor Analysis Feb", updated: "3 days ago" }
+];
+
+const EMAILS = [
+    { id: "e1", to: "partners@acme.co", subject: "Partnership proposal follow-up", sent: "11:30 AM" },
+    { id: "e2", to: "team@company.io", subject: "Weekly metrics report", sent: "9:00 AM" },
+    { id: "e3", to: "lisa@agency.com", subject: "Creative assets handoff", sent: "Yesterday" }
+];
+
+const TWEETS = [
+    { id: "tw1", text: "Just shipped our new onboarding flow! Try it out", likes: 42, retweets: 12, status: "live" },
+    { id: "tw2", text: "Thread: 5 things we learned scaling to 10K users", likes: 128, retweets: 47, status: "live" },
+    { id: "tw3", text: "Announcing partnerships with three new agencies", likes: 0, retweets: 0, status: "scheduled" }
+];
 
 /**
- * Home dashboard view — shows the "Missions" overview with milestone cards.
+ * Home dashboard view — activity feed with ads, tasks, docs, emails, twitter, and revenue.
  */
 export function HomeView() {
     const { theme } = useUnistyles();
-
-    const active = MISSIONS.filter((m) => m.status === "active");
-    const completed = MISSIONS.filter((m) => m.status === "completed");
-    const upcoming = MISSIONS.filter((m) => m.status === "upcoming");
-
-    const overallDone = MISSIONS.filter((m) => m.status === "completed").length;
-    const overallTotal = MISSIONS.length;
 
     return (
         <ScrollView
@@ -94,109 +50,132 @@ export function HomeView() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
         >
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Missions</Text>
-                <Text style={[styles.pageSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-                    {overallDone} of {overallTotal} completed
+            <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Home</Text>
+
+            {/* Revenue banner */}
+            <View style={[styles.revenueBanner, { backgroundColor: theme.colors.primaryContainer }]}>
+                <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>BUSINESS</Text>
+                <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
+                <Text style={[styles.revenueSubtitle, { color: theme.colors.onPrimaryContainer }]}>
+                    Revenue this month &middot; +18% vs last
                 </Text>
             </View>
 
-            {/* Summary stats row */}
-            <View style={styles.statsRow}>
-                <StatCard label="Active" value={active.length} color={theme.colors.primary} theme={theme} />
-                <StatCard label="Done" value={completed.length} color={theme.colors.tertiary} theme={theme} />
-                <StatCard label="Upcoming" value={upcoming.length} color={theme.colors.outline} theme={theme} />
+            {/* Ads */}
+            <Section title="Ads" icon="broadcast" theme={theme}>
+                {ADS.map((ad) => (
+                    <View key={ad.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View style={styles.rowMain}>
+                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{ad.campaign}</Text>
+                            <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>{ad.network}</Text>
+                        </View>
+                        <View style={styles.rowStats}>
+                            <Text style={[styles.rowStat, { color: theme.colors.onSurfaceVariant }]}>
+                                {ad.impressions}
+                            </Text>
+                            <Text style={[styles.rowStat, { color: theme.colors.primary }]}>{ad.ctr}</Text>
+                            <Text style={[styles.rowStat, { color: theme.colors.onSurface }]}>{ad.spend}</Text>
+                        </View>
+                    </View>
+                ))}
+            </Section>
+
+            {/* Active tasks */}
+            <Section title="Active Tasks" icon="tasklist" theme={theme}>
+                {TASKS.map((task) => (
+                    <View key={task.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View style={styles.rowMain}>
+                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{task.title}</Text>
+                            <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                {task.assignee}
+                            </Text>
+                        </View>
+                        <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>{task.due}</Text>
+                    </View>
+                ))}
+            </Section>
+
+            {/* Recent documents */}
+            <Section title="Recent Documents" icon="file" theme={theme}>
+                {DOCUMENTS.map((doc) => (
+                    <View key={doc.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View style={styles.rowMain}>
+                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{doc.title}</Text>
+                        </View>
+                        <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>{doc.updated}</Text>
+                    </View>
+                ))}
+            </Section>
+
+            {/* Sent emails */}
+            <Section title="Sent Emails" icon="mail" theme={theme}>
+                {EMAILS.map((email) => (
+                    <View key={email.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View style={styles.rowMain}>
+                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>{email.subject}</Text>
+                            <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>{email.to}</Text>
+                        </View>
+                        <Text style={[styles.rowDetail, { color: theme.colors.onSurfaceVariant }]}>{email.sent}</Text>
+                    </View>
+                ))}
+            </Section>
+
+            {/* Twitter */}
+            <Section title="Twitter" icon="megaphone" theme={theme}>
+                {TWEETS.map((tw) => (
+                    <View key={tw.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View style={styles.rowMain}>
+                            <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                                {tw.text}
+                            </Text>
+                            {tw.status === "scheduled" ? (
+                                <Text style={[styles.rowSub, { color: theme.colors.outline }]}>Scheduled</Text>
+                            ) : (
+                                <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                    {tw.likes} likes &middot; {tw.retweets} RT
+                                </Text>
+                            )}
+                        </View>
+                        <Octicons
+                            name={tw.status === "live" ? "dot-fill" : "clock"}
+                            size={12}
+                            color={tw.status === "live" ? theme.colors.tertiary : theme.colors.outline}
+                        />
+                    </View>
+                ))}
+            </Section>
+
+            {/* Funny picture placeholder */}
+            <View style={[styles.funnyCard, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
+                <Text style={{ fontSize: 48 }}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
+                <Text style={[styles.funnyText, { color: theme.colors.onSurfaceVariant }]}>
+                    Everything is running smoothly. Have a nice day.
+                </Text>
             </View>
-
-            {/* Active missions */}
-            {active.length > 0 && <MissionGroup title="Active" missions={active} theme={theme} />}
-
-            {/* Upcoming missions */}
-            {upcoming.length > 0 && <MissionGroup title="Upcoming" missions={upcoming} theme={theme} />}
-
-            {/* Completed missions */}
-            {completed.length > 0 && <MissionGroup title="Completed" missions={completed} theme={theme} />}
         </ScrollView>
     );
 }
 
 // -- Sub-components --
 
-type Theme = ReturnType<typeof useUnistyles>["theme"];
-
-function StatCard({ label, value, color, theme }: { label: string; value: number; color: string; theme: Theme }) {
+function Section({
+    title,
+    icon,
+    theme,
+    children
+}: {
+    title: string;
+    icon: React.ComponentProps<typeof Octicons>["name"];
+    theme: Theme;
+    children: React.ReactNode;
+}) {
     return (
-        <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
-            <Text style={[styles.statValue, { color }]}>{value}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
-    );
-}
-
-function MissionGroup({ title, missions, theme }: { title: string; missions: Mission[]; theme: Theme }) {
-    return (
-        <View style={styles.group}>
-            <Text style={[styles.groupTitle, { color: theme.colors.onSurfaceVariant }]}>{title}</Text>
-            {missions.map((mission) => (
-                <MissionCard key={mission.id} mission={mission} theme={theme} />
-            ))}
-        </View>
-    );
-}
-
-function MissionCard({ mission, theme }: { mission: Mission; theme: Theme }) {
-    const config = STATUS_CONFIG[mission.status];
-    const progressPct = Math.round(mission.progress * 100);
-
-    const statusColor =
-        mission.status === "active"
-            ? theme.colors.primary
-            : mission.status === "completed"
-              ? theme.colors.tertiary
-              : theme.colors.outline;
-
-    return (
-        <View style={[styles.card, { backgroundColor: theme.colors.surfaceContainer }]}>
-            {/* Top row: status + due */}
-            <View style={styles.cardTopRow}>
-                <View style={styles.statusBadge}>
-                    <Octicons name={config.icon} size={12} color={statusColor} />
-                    <Text style={[styles.statusText, { color: statusColor }]}>{config.label}</Text>
-                </View>
-                <Text style={[styles.dueLabel, { color: theme.colors.onSurfaceVariant }]}>{mission.dueLabel}</Text>
+        <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+                <Octicons name={icon} size={14} color={theme.colors.onSurfaceVariant} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>{title}</Text>
             </View>
-
-            {/* Title */}
-            <Text style={[styles.cardTitle, { color: theme.colors.onSurface }]}>{mission.title}</Text>
-
-            {/* Description */}
-            <Text style={[styles.cardDesc, { color: theme.colors.onSurfaceVariant }]} numberOfLines={2}>
-                {mission.description}
-            </Text>
-
-            {/* Progress bar */}
-            <View style={styles.progressSection}>
-                <View style={[styles.progressTrack, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
-                    {mission.progress > 0 && (
-                        <View
-                            style={[
-                                styles.progressFill,
-                                {
-                                    width: `${progressPct}%`,
-                                    backgroundColor: statusColor
-                                }
-                            ]}
-                        />
-                    )}
-                </View>
-                <View style={styles.progressStats}>
-                    <Text style={[styles.progressText, { color: theme.colors.onSurfaceVariant }]}>
-                        {mission.tasksDone}/{mission.tasksTotal} tasks
-                    </Text>
-                    <Text style={[styles.progressText, { color: theme.colors.onSurfaceVariant }]}>{progressPct}%</Text>
-                </View>
-            </View>
+            <View style={styles.sectionBody}>{children}</View>
         </View>
     );
 }
@@ -212,96 +191,90 @@ const styles = StyleSheet.create({
         width: "100%",
         alignSelf: "center"
     },
-    header: {
-        marginBottom: 24
-    },
     pageTitle: {
         fontSize: 26,
-        fontWeight: "700"
+        fontWeight: "700",
+        marginBottom: 20
     },
-    pageSubtitle: {
-        fontSize: 14,
-        marginTop: 4
-    },
-    statsRow: {
-        flexDirection: "row",
-        gap: 12,
-        marginBottom: 28
-    },
-    statCard: {
-        flex: 1,
-        borderRadius: 12,
-        padding: 16,
+    revenueBanner: {
+        borderRadius: 16,
+        padding: 24,
         alignItems: "center",
+        marginBottom: 28,
         gap: 4
     },
-    statValue: {
-        fontSize: 28,
-        fontWeight: "700"
-    },
-    statLabel: {
+    revenueLabel: {
         fontSize: 12,
-        fontWeight: "500"
+        fontWeight: "700",
+        letterSpacing: 2
     },
-    group: {
+    revenueValue: {
+        fontSize: 40,
+        fontWeight: "800"
+    },
+    revenueSubtitle: {
+        fontSize: 13,
+        opacity: 0.8
+    },
+    section: {
         marginBottom: 24
     },
-    groupTitle: {
+    sectionHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 10
+    },
+    sectionTitle: {
         fontSize: 13,
         fontWeight: "600",
         textTransform: "uppercase",
-        letterSpacing: 0.5,
-        marginBottom: 10
+        letterSpacing: 0.5
     },
-    card: {
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 10,
-        gap: 8
+    sectionBody: {
+        gap: 6
     },
-    cardTopRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center"
-    },
-    statusBadge: {
+    row: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 6
+        borderRadius: 10,
+        padding: 12,
+        gap: 12
     },
-    statusText: {
-        fontSize: 12,
-        fontWeight: "600"
+    rowMain: {
+        flex: 1,
+        gap: 2
     },
-    dueLabel: {
+    rowTitle: {
+        fontSize: 14,
+        fontWeight: "500"
+    },
+    rowSub: {
         fontSize: 12
     },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: "600"
-    },
-    cardDesc: {
-        fontSize: 13,
-        lineHeight: 19
-    },
-    progressSection: {
-        marginTop: 4,
-        gap: 6
-    },
-    progressTrack: {
-        height: 6,
-        borderRadius: 3,
-        overflow: "hidden"
-    },
-    progressFill: {
-        height: "100%",
-        borderRadius: 3
-    },
-    progressStats: {
+    rowStats: {
         flexDirection: "row",
-        justifyContent: "space-between"
+        gap: 12,
+        alignItems: "center"
     },
-    progressText: {
+    rowStat: {
+        fontSize: 12,
+        fontWeight: "500",
+        minWidth: 44,
+        textAlign: "right"
+    },
+    rowDetail: {
         fontSize: 12
+    },
+    funnyCard: {
+        borderRadius: 16,
+        padding: 24,
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 24
+    },
+    funnyText: {
+        fontSize: 13,
+        textAlign: "center"
     }
 });
