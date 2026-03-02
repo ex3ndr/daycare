@@ -219,54 +219,57 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
         paddingHorizontal: 20,
         height: 56
     },
     title: {
         fontSize: 18,
-        fontWeight: "600"
+        fontFamily: "BricolageGrotesque-Bold",
+        letterSpacing: 0.5
     },
     treeContainer: {
         flex: 1,
-        paddingHorizontal: 8
+        paddingHorizontal: 10
     },
     modeRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
-        paddingHorizontal: 12,
-        height: 36,
-        borderRadius: 8,
+        gap: 12,
+        paddingHorizontal: 14,
+        height: 38,
+        borderRadius: 4,
         marginVertical: 1
     },
     modeLabel: {
         fontSize: 14,
-        fontWeight: "400",
+        fontFamily: "IBMPlexSans-Regular",
+        letterSpacing: 0.2,
         flex: 1
     },
     modeLabelActive: {
-        fontWeight: "600"
+        fontFamily: "IBMPlexSans-SemiBold"
     },
     subItems: {
-        paddingLeft: 16,
-        marginBottom: 4
+        paddingLeft: 18,
+        marginBottom: 6
     },
     subItemRow: {
-        paddingHorizontal: 12,
-        paddingLeft: 22,
-        height: 32,
-        borderRadius: 6,
+        paddingHorizontal: 14,
+        paddingLeft: 24,
+        height: 34,
+        borderRadius: 4,
         justifyContent: "center",
         marginVertical: 1
     },
     subItemLabel: {
         fontSize: 13,
-        fontWeight: "400"
+        fontFamily: "IBMPlexSans-Regular",
+        letterSpacing: 0.2
     },
     footer: {
         paddingHorizontal: 20,
-        paddingVertical: 12,
+        paddingVertical: 14,
         borderTopWidth: StyleSheet.hairlineWidth,
         alignItems: "flex-start"
     }
